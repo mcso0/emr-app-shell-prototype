@@ -41,9 +41,13 @@ patient, provider, ward, device, or price authority into the central master.
 - Implementation worktree:
   `/Users/iseung-ug/project/emr-app-shell-prototype/.worktrees/clinical-master-execution-presets-20260831`
 - Branch: `codex/clinical-master-execution-presets-20260831`
-- Rebased `origin/main` baseline: `4a160fdad66953cc8d5b666f17ad8424aa00b1a9`
-- Candidate commit at remote execution gate:
+- Current `origin/main` baseline: `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f`
+- Historical candidate commit used at the completed remote execution gate:
   `1c75aa04079bcdda36e50bfcc9ce0bf4350f4494`
+- Current-main feature commit: `b465608c`.
+- The final local candidate is rebased and exactly 3 commits ahead / 0 behind
+  `origin/main`. Its final branch-head SHA is read from Git after documentation
+  finalization; it is not a remote execution approval.
 - The primary checkout and the prior audit worktree are excluded from edits,
   staging, reset, stash, checkout, and cleanup.
 - Live read-only evidence found 510 published normal master orders: 108 complete
@@ -183,11 +187,12 @@ action, present:
   `02c4ad67463545fa502e263fd7681b203b3e866702d23cbf364edbfe6276f6c0`.
 - Frozen live 510-row lineage SHA-256:
   `b4d56f15dfcf53e867db2e022f6e7c742c2354b507eb4a88feb981b351b039bb`.
-- All 13 changed specs with the normal Next server: 169/172 PASS. The three
+- All 14 changed specs with the normal Next server: 179/182 PASS. The three
   failures are the pre-existing 56px expected versus 44px current Hospital
   Admin header geometry; all preset/catalog/chart/fulfillment specs pass.
-- The three route tests that cannot run without a base URL: 3/3 PASS under the
-  normal server configuration.
+- The chart draft route server suite is 20/20 PASS and the four current-main
+  billing/retry-focused chart checks are 4/4 PASS under isolated normal server
+  ports.
 - Final clinical-master/security focused specs after the permission fix: 52/52
   PASS.
 - Isolated local DB: 522 current presets; 522 catalog rows in each of the three
@@ -209,19 +214,34 @@ action, present:
   path/ACL state, old/new validator equivalence across all nine supported
   clinical order types, negative clinical gates, digest-marker absent/wrong/
   exact paths, and GUC/data residue after normal, retry, and timeout rollback.
-  An independent latest run returned first publish 3.224s, retry 1.376s, and
-  no residue after the forced 1.5s timeout.
+  On an ownership-preserving clone with the current-main billing, realtime,
+  and SOAP migrations applied in chronological order around PR-022, the latest
+  run returned marker-absent fallback 3.581s, wrong-digest fallback 2.927s,
+  first publish 2.888s, retry 1.296s, and no residue after the forced 1.5s
+  timeout (`57014`).
+- A fresh chronological clone and a current-main-first incremental clone both
+  apply the final compatibility migration and converge on function-definition
+  MD5 `a85f22b4af1e2cb1e5262b3ce0993a30`, owner `supabase_admin`,
+  `SECURITY DEFINER`, empty `search_path`, authenticated-only public execute,
+  and no authenticated execute on any retained base writer. Both rollback-only
+  compatibility rehearsals pass, including individual and set-child clinician
+  normalization, nullable-primary-veterinarian handling, billing summary,
+  Realtime, and update-only nonexistent-encounter denial with `42501`.
+- The consultation runtime compatibility migration static/rehearsal contract
+  spec is 7/7 PASS; the independent resolver-and-route replay is 27/27 PASS.
 - Buffer-cold exact-baseline benchmark: old publisher
   `6.122/5.703/5.646s` (median 5.703s), candidate
   `3.477/3.082/3.136s` (median 3.136s), candidate 3/3 under 60s.
 - A hospital-admin membership assigned a permission role without
   `service_catalog:manage` is denied for both `accept_source` and `dismiss` with
   SQLSTATE `42501`; the test transaction rolls back.
-- Independent security hard gate: feature candidate APPROVE with P0/P1 0;
-  performance candidate LOCAL APPROVE with High/Medium/Low 0/0/0 and related
-  publisher spec independent replay 24/24 PASS. This approves the exact local
-  boundary only, not the behind-17 branch as a PR candidate or any remote
-  operation.
+- Independent security hard gate before the current-main rebase: feature
+  candidate APPROVE with P0/P1 0; performance candidate LOCAL APPROVE with
+  High/Medium/Low 0/0/0 and related publisher spec independent replay 24/24
+  PASS. The post-rebase review then found two Medium issues in the final
+  consultation writer composition and permission ordering. Migration
+  `20260831120100` closes both, and the final exact-file review is
+  High/Medium/Low 0/0/0, LOCAL APPROVE. No verdict approves a remote operation.
 - Performance candidate working-tree SHA packet: migration
   `aaa9795baf380e16d24973e344e5e3be2bf2b6696ef614326520cc8885b0a495`,
   exact payload file
@@ -230,12 +250,19 @@ action, present:
   `746afecaea71f157ecf4f250d9c0b343d7536cf2364c78bf432522d12aacbb03`,
   static spec
   `a21815e3d662b10430432d61f67550d989dd37533046708f467db5b97a2f2427`.
-  These are uncommitted file hashes, not a PR/merge SHA or remote approval.
+  These hashes remained identical after the current-main rebase. They are file
+  content hashes, not a PR/merge SHA or remote approval.
+- Final consultation compatibility packet: migration
+  `6a952519fb7c762d1f5da931b166b7605ddbb54deff58a567ef98091f44f788f`,
+  rollback-only rehearsal
+  `744673aef64ff67dae7239a21fb781f8a487d49dedc0951283e9e66fe2083fb7`,
+  and static spec
+  `92e04acdb2f7268654f5df29c680d2bfff92cf98d9fafaadb75717a6d1af6f6e`.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS.
 - `npm run build`: PASS with one pre-existing PRD-viewer NFT trace warning.
-- `npm run docs:check`: PASS, 956 docs/agent Markdown files.
-- `npm run security:secrets`: PASS, 3,928 tracked files.
+- `npm run docs:check`: PASS.
+- `npm run security:secrets`: PASS.
 - `git diff --check`: PASS.
 
 Implementation report:
@@ -268,5 +295,6 @@ local performance candidate removes duplicate schema construction and the
 digest-identical second canonicalization without changing diagnosis dispatch,
 API, ACL, fingerprint, manifest, trigger, or transaction boundaries. It passed
 the exact rollback-only rehearsal and 60s local gate, but local timing does not
-prove the remote 524 is resolved. Independent review, a new exact SHA packet,
-and new approval remain required before any remote write.
+prove the remote 524 is resolved. The final independent local review is
+High/Medium/Low 0/0/0. A new exact SHA packet and new approval remain required
+before either final local migration or any publish/adoption remote write.

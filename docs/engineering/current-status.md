@@ -203,14 +203,29 @@ and lineage mismatches 0, and rollback residue 0. This does not prove remote
 owner/security-definer/search-path/ACL inspection, all-nine-type validator
 equivalence, negative clinical-use/status/detail-field rejection, absent/wrong/
 exact digest-marker paths, retry idempotency, and forced-timeout residue checks.
-An independent rerun returned first publish 3.224s and retry 1.376s. The
-working-tree migration SHA-256 is
+An ownership-preserving isolated clone with the current-main billing, realtime,
+and SOAP migrations applied around PR-022 returned marker-absent fallback
+3.581s, wrong-digest fallback 2.927s, first publish 2.888s, retry 1.296s, and
+SQLSTATE `57014` with zero residue after a forced 1.5s timeout. The performance
+migration SHA-256 is
 `aaa9795baf380e16d24973e344e5e3be2bf2b6696ef614326520cc8885b0a495`;
 it is not a Git candidate SHA or remote approval. Independent final security
-review is High/Medium/Low `0/0/0` and approves the exact isolated local files.
-The current branch is still 17 commits behind `origin/main`, so safe
-current-main rebasing, a new candidate commit/SHA packet, and new remote
-approval remain required before applying the migration or publishing.
+review after the current-main rebase found that the later billing/Realtime
+wrapper had replaced the consultation clinician normalization and that
+`chart:view` was checked after privileged encounter reads. Final migration
+`20260831120100` restores clinician normalization, billing summary, and
+Realtime in one transaction; checks actor, membership, `chart:update`, and
+`chart:view` before encounter/catalog reads; and re-closes all base-function
+ACLs. Fresh chronological and current-main-first isolated clones converge on
+the same final function definition MD5, `supabase_admin` owner,
+`SECURITY DEFINER`, empty `search_path`, and authenticated-only public ACL.
+Both compatibility rehearsals pass, including the update-only nonexistent-
+encounter `42501` denial. The final independent verdict is High/Medium/Low
+`0/0/0`, LOCAL APPROVE for the exact local files. The branch is rebased onto
+`origin/main` `00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f` and, after the final
+compatibility closeout commit, is 3 commits ahead / 0 behind. A new exact-SHA
+remote approval remains required before applying the performance and
+compatibility migrations or publishing.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,

@@ -59,6 +59,7 @@
       <p class="warning">모든 프리셋은 <code>synthetic_unreviewed</code>, <code>clinicalUseAllowed=false</code>다. 기술 후보가 완성됐다는 뜻이지 임상 승인 또는 실제 진료 활성화를 뜻하지 않는다.</p>
       <p class="blocked">승인된 원격 Supabase에는 PR-022 migration 6개가 적용됐다. 689-record publish는 두 번 모두 약 120초 뒤 Cloudflare 524로 종료됐지만, 10:19:53 UTC 권위 SQL readback으로 두 번째 호출도 완전 rollback됐음을 확인했다.</p>
       <p class="status">새 performance migration은 정확한 510/108 기준 DB에서 중앙값 5.703초를 3.136초로 약 45.0% 줄였고, cold 3회 모두 60초 gate를 통과했다. 원격 적용은 별도 승인 대상이다.</p>
+      <p class="status">current-main 최종 호환 migration은 상담 담당자 정규화, billing summary, Realtime, 선행 권한 검사를 한 transaction에 보존하며 독립 재심사 High/Medium/Low 0/0/0 LOCAL APPROVE를 받았다.</p>
 
       <h2>2. 구현 계약</h2>
       <ol>
@@ -204,7 +205,7 @@
       <p><code>orders</code>, <code>order_confirmation_commands</code>, <code>order_fulfillment_work_items</code>, <code>order_tasks</code>, <code>order_billing_candidates</code>는 모두 0을 유지했다. 게시·채택 리허설이 확정·실행·청구 데이터를 만들거나 수정하지 않았고 snapshot 불변은 집중 테스트로 별도 검증했다.</p>
 
       <h3>승인된 원격 실행 경과</h3>
-      <p>대상은 Supabase project <code>qmerxgzrwaaahpkhjqlc</code>와 <code>clair-demo</code>, <code>workspace-clair-cheongdam</code>, <code>workspace-clinical-master-pilot-v1</code> 세 workspace였다. <code>clair-foreign-demo</code>는 negative control이다. 후보 commit은 <code>1c75aa04079bcdda36e50bfcc9ce0bf4350f4494</code>, 게시 semantic SHA-256은 <code>1eeb5035d70d5f28035df49d1d32c3689ffe79a4bb28062e5606256802572e0c</code>다.</p>
+      <p>대상은 Supabase project <code>qmerxgzrwaaahpkhjqlc</code>와 <code>clair-demo</code>, <code>workspace-clair-cheongdam</code>, <code>workspace-clinical-master-pilot-v1</code> 세 workspace였다. <code>clair-foreign-demo</code>는 negative control이다. 이때 사용한 과거 원격 실행 후보 commit은 <code>1c75aa04079bcdda36e50bfcc9ce0bf4350f4494</code>, 게시 semantic SHA-256은 <code>1eeb5035d70d5f28035df49d1d32c3689ffe79a4bb28062e5606256802572e0c</code>다. 이 과거 승인은 현재-main 성능 후보에 재사용되지 않는다.</p>
       <table>
         <thead><tr><th>단계</th><th>권위 있는 결과</th></tr></thead>
         <tbody>
@@ -215,7 +216,7 @@
           <tr><td>마지막 publish</td><td>동일 semantic JSON 1,443,553 bytes, 10:04:13 UTC 524. 10:19:53 UTC readback에서 active/release/incomplete <code>0/0/0</code>, presets <code>108/108</code>, eligible <code>510</code>으로 완전 rollback 확정</td></tr>
         </tbody>
       </table>
-      <p class="blocked">세 번째 기존 publisher, workspace adoption, migration repair, staging/pg_cron 우회, GitHub PR/merge와 배포를 모두 금지했다. 새 performance candidate의 exact SHA packet을 승인받기 전에는 원격 작업을 재개하지 않는다.</p>
+      <p class="blocked">세 번째 기존 publisher, workspace adoption, migration repair, staging/pg_cron 우회, GitHub PR/merge와 배포를 모두 금지했다. 새 performance migration과 current-main 최종 호환 migration의 exact SHA packet을 승인받기 전에는 원격 작업을 재개하지 않는다.</p>
 
       <h3>Publisher timeout 원인 조사와 성능 구현</h3>
       <p>두 번째 호출은 동일 semantic JSON을 1,443,553 bytes로 줄였어도 같은 120초 timeout에 도달했다. 정확한 510-order / 108-preset 기준선을 별도 Supabase DB에 복원하고 689-record payload를 실행해 함수별 시간을 수집했다.</p>
@@ -242,11 +243,14 @@
         </tbody>
       </table>
       <p>중앙값은 약 <strong>45.0%</strong> 단축됐고 모든 fingerprint는 <code>8b939f7a0c752bb7b8989aca80380e51c1a720a8b98ccb35d1ceb1408648a0f0</code>였다. persistent publish는 versions/current <code>630/522</code>, manifest 689, review event 1,070, unsafe 0, lineage mismatch 0이었다. 재시도는 무변경이었고 1.5초 강제 timeout 뒤 release/preset/current/manifest 잔여물도 0이었다.</p>
-      <p>최종 rollback-only rehearsal은 DB catalog에서 네 private 함수의 owner=<code>postgres</code>, <code>SECURITY DEFINER</code>, 고정 <code>search_path</code>, PUBLIC/<code>anon</code>/<code>authenticated</code>/<code>service_role</code> execute 회수를 직접 확인했다. fixture 8개 유형과 별도 <code>external_lab</code> case를 합친 9개 임상 유형의 구·신 validator valid/invalid 동등성, clinical-use/status/detail-field negative gate, marker 없음·잘못된 digest fallback, 정확한 digest outer 경로와 모든 rollback residue를 검증했다. 최신 독립 재실행은 첫 publish 3.224초, 같은 release ID 재시도 1.376초, 1.5초 timeout 뒤 residue 0으로 끝났다. 마지막 보강 실행은 정상 publish와 retry 직후 같은 transaction 안에서 marker/adoption/manifest GUC가 비었음을 확인하고 timeout SQLSTATE를 <code>57014</code>로 고정한 뒤 성공했다.</p>
+      <p>최종 rollback-only rehearsal은 DB catalog에서 네 private 함수의 owner=<code>postgres</code>, <code>SECURITY DEFINER</code>, 고정 <code>search_path</code>, PUBLIC/<code>anon</code>/<code>authenticated</code>/<code>service_role</code> execute 회수를 직접 확인했다. fixture 8개 유형과 별도 <code>external_lab</code> case를 합친 9개 임상 유형의 구·신 validator valid/invalid 동등성, clinical-use/status/detail-field negative gate, marker 없음·잘못된 digest fallback, 정확한 digest outer 경로와 모든 rollback residue를 검증했다. 마지막 보강 실행은 정상 publish와 retry 직후 같은 transaction 안에서 marker/adoption/manifest GUC가 비었음을 확인하고 timeout SQLSTATE를 <code>57014</code>로 고정한 뒤 성공했다.</p>
+      <p>후보를 현재 <code>origin/main</code> <code>00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f</code> 위로 재배치하는 과정에서 후속 billing/Realtime migration이 상담 담당자 정규화 wrapper를 덮고, DB writer가 <code>chart:view</code>보다 encounter/catalog를 먼저 읽는 두 경계 문제가 드러났다. 최종 호환 migration <code>20260831120100</code>은 actor·membership·<code>chart:update</code>·<code>chart:view</code>를 모든 임상 조회보다 먼저 검사하고, 담당자 정규화 → billing summary → Realtime broadcast를 한 함수·transaction에 다시 결합하며 base writer ACL을 닫는다.</p>
+      <p>fresh clone에는 billing-summary → PR-022 6개 → realtime → performance → SOAP block → 최종 호환 순으로, incremental clone에는 current-main billing-summary → realtime → SOAP block → PR-022 6개 → performance → 최종 호환 순으로 적용했다. 두 DB는 동일 function MD5 <code>a85f22b4af1e2cb1e5262b3ce0993a30</code>, owner <code>supabase_admin</code>, <code>SECURITY DEFINER</code>, 빈 <code>search_path</code>, authenticated-only public execute와 base writer authenticated execute false로 수렴했다. 두 rollback-only rehearsal 모두 individual/set-child clinician 치환, nullable 주치의 제거, billing summary, Realtime, update-only nonexistent encounter <code>42501</code> 거부를 통과했다.</p>
+      <p>최종 fresh performance rehearsal은 marker 없음 3.581초, 잘못된 digest 2.927초, publish 2.888초, retry 1.296초, timeout <code>57014</code>였고, 최종 <code>510 orders / 108 versions / 108 current</code>와 release/manifest residue 0이었다. 독립 재실행도 publish 2.986초, retry 1.327초, timeout <code>57014</code>와 같은 무잔여 기준선으로 통과했다. owner 미보존 진단 clone은 harness owner 손실로 분리했다. 최종 두 clone은 direct SQL 적용이므로 migration-history만으로 순서를 증명하지 않으며, 실행 명령 기록과 최종 객체·동적 rehearsal을 근거로 삼는다. warm sample은 cold 3-run benchmark나 원격 성공 증거를 대체하지 않는다.</p>
       <p class="warning">이 증거는 로컬 candidate의 진행 가능성을 보여주지만 원격 성공을 보장하지 않는다. 변경 SQL은 exact SHA로 동결해 독립 재심사와 별도 원격 쓰기 승인을 받아야 한다.</p>
 
-      <h3>로컬 성능 candidate exact SHA packet</h3>
-      <p>아래 SHA는 아직 커밋되지 않은 전용 worktree 파일 내용 hash다. Git base는 <code>1c75aa04079bcdda36e50bfcc9ce0bf4350f4494</code>, 현재 <code>origin/main</code>은 <code>00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f</code>이므로 PR/merge candidate SHA나 원격 실행 승인이 아니다.</p>
+      <h3>로컬 최종 candidate exact SHA packet</h3>
+      <p>아래 SHA는 current-main 재배치와 최종 호환 보완 뒤 파일 내용 hash다. 기능 commit은 <code>b465608c</code>, base는 <code>origin/main</code> <code>00d62a6ea34abf2551a4d0fbf8587bbbb40f8e7f</code>이며 최종 closeout commit 뒤 branch는 3 commits ahead / 0 behind다. 최종 branch-head SHA는 문서화를 마친 뒤 Git에서 읽으며, 이 표와 로컬 commit은 원격 실행 승인이 아니다.</p>
       <table>
         <thead><tr><th>파일</th><th>SHA-256</th></tr></thead>
         <tbody>
@@ -254,6 +258,9 @@
           <tr><td>exact payload JSON</td><td><code>834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278</code></td></tr>
           <tr><td>rollback-only rehearsal SQL</td><td><code>746afecaea71f157ecf4f250d9c0b343d7536cf2364c78bf432522d12aacbb03</code></td></tr>
           <tr><td>performance static spec</td><td><code>a21815e3d662b10430432d61f67550d989dd37533046708f467db5b97a2f2427</code></td></tr>
+          <tr><td>최종 호환 migration SQL</td><td><code>6a952519fb7c762d1f5da931b166b7605ddbb54deff58a567ef98091f44f788f</code></td></tr>
+          <tr><td>최종 호환 rollback-only rehearsal SQL</td><td><code>744673aef64ff67dae7239a21fb781f8a487d49dedc0951283e9e66fe2083fb7</code></td></tr>
+          <tr><td>최종 호환 static/rehearsal spec</td><td><code>92e04acdb2f7268654f5df29c680d2bfff92cf98d9fafaadb75717a6d1af6f6e</code></td></tr>
         </tbody>
       </table>
 
@@ -261,7 +268,7 @@
       <table>
         <thead><tr><th>검증</th><th>결과</th></tr></thead>
         <tbody>
-          <tr><td>변경된 전체 spec 정상 서버 실행</td><td class="pass">169 / 172 passed</td></tr>
+          <tr><td>변경된 전체 spec 정상 서버 실행</td><td class="pass">179 / 182 passed</td></tr>
           <tr><td>기능 관련 spec</td><td class="pass">전부 통과</td></tr>
           <tr><td>성능 migration 정적 spec</td><td class="pass">6 / 6 passed</td></tr>
           <tr><td>관련 publisher 회귀 spec</td><td class="pass">24 / 24 passed</td></tr>
@@ -269,22 +276,25 @@
           <tr><td>persistent publish / retry</td><td class="pass">689 / 522, 630/522, manifest 689, retry no delta</td></tr>
           <tr><td>강제 timeout rollback</td><td class="pass">release/preset/current/manifest residue 0</td></tr>
           <tr><td>기존 병원관리 header 기하 spec</td><td>3건 실패: 기대 56px / 현재 44px</td></tr>
-          <tr><td>라우트 실서버 집중 검증</td><td class="pass">3 / 3 passed</td></tr>
+          <tr><td>차트 초안 라우트 실서버 검증</td><td class="pass">20 / 20 passed</td></tr>
+          <tr><td>current-main billing/retry 차트 집중 검증</td><td class="pass">4 / 4 passed</td></tr>
+          <tr><td>최종 호환 migration 정적·rehearsal spec</td><td class="pass">7 / 7 passed</td></tr>
+          <tr><td>독립 resolver·route 재실행</td><td class="pass">27 / 27 passed</td></tr>
           <tr><td>최종 clinical-master/security 집중 검증</td><td class="pass">52 / 52 passed</td></tr>
           <tr><td>TypeScript / ESLint</td><td class="pass">통과 / 통과</td></tr>
           <tr><td>production build</td><td class="pass">통과</td></tr>
           <tr><td>산출물 check mode</td><td class="pass">510 / 12 / 522 통과</td></tr>
-          <tr><td>문서 링크</td><td class="pass">956개 docs/agent Markdown 검사 통과</td></tr>
-          <tr><td>diff / secret scan</td><td class="pass">통과 / 3,928 tracked files 통과</td></tr>
+          <tr><td>문서 링크</td><td class="pass"><code>npm run docs:check</code> 통과</td></tr>
+          <tr><td>diff / secret scan</td><td class="pass">통과 / 통과</td></tr>
         </tbody>
       </table>
-      <p>최신 <code>origin/main</code> 기준 rebase 뒤 변경된 13개 spec을 정상 Next dev server에서 함께 실행한 결과 172건 중 169건이 통과했다. 실패 3건은 이번 diff가 건드리지 않은 기존 main-content header 기대값 56px과 현재 구현 44px의 불일치였다. 프리셋·카탈로그·차트·fulfillment 검증은 모두 통과했고, 서버 없는 정적 설정에서 URL이 없어 실패했던 라우트 3건도 정상 서버 집중 실행에서 3/3 통과했다. 해당 UI 기하나 기존 기대값을 임의 수정하지 않았다.</p>
+      <p>최신 <code>origin/main</code> 기준 rebase와 최종 호환 migration 보완 뒤 변경된 14개 spec을 정상 Next dev server에서 함께 실행한 결과 182건 중 179건이 통과했다. 실패 3건은 이번 diff가 기대값 줄을 건드리지 않은 기존 main-content header 기대값 56px과 현재 구현 44px의 불일치였다. 프리셋·카탈로그·차트·fulfillment 검증은 모두 통과했다. 별도 검증은 차트 초안 라우트 20/20, current-main billing/retry 차트 4/4, 최종 호환 migration 7/7, 독립 resolver·route 27/27로 통과했다. 해당 UI 기하나 기존 기대값을 임의 수정하지 않았다.</p>
       <p class="small">빌드는 성공했지만 기존 <code>next.config.mjs</code> → PRD viewer import trace의 NFT 범위 경고 1건이 남아 있다. 이번 프리셋 변경과 무관한 기존 경고다.</p>
 
       <h3>독립 보안 재심사</h3>
       <p>독립 hard-gate 리뷰는 최초 <strong>MUST-FIX</strong>로 live lineage, required-field completeness, preset identity, DB writer permission·backfill audit, synthetic self-promotion 문제를 지적했다. 이를 수정한 뒤 마지막 master-update resolver 권한 우회까지 추가 발견해 보완했다.</p>
-      <p class="status">기능 후보: APPROVE · P0 0 · P1 0 / 성능 후보: LOCAL APPROVE · High 0 · Medium 0 · Low 0</p>
-      <p class="small">성능 후보의 관련 publisher spec도 독립 재실행 24/24를 통과했다. 이는 exact 격리 로컬 파일만 승인하며, <code>origin/main</code>보다 17개 commit 뒤인 현재 branch를 PR/merge candidate나 원격 실행으로 승인하지 않는다. 원격 판정은 <strong>BLOCKED / NEW REMOTE APPROVAL REQUIRED</strong>다.</p>
+      <p class="status">최종 exact-file 후보: LOCAL APPROVE · High 0 · Medium 0 · Low 0</p>
+      <p class="small">재배치 전 성능 후보는 0/0/0, publisher spec 24/24였다. post-rebase 리뷰는 처음에 상담 writer composition과 permission ordering의 Medium 2건, 문서 상태 Low 1건으로 LOCAL BLOCK을 냈다. 최종 호환 migration과 rehearsal로 모두 닫은 뒤 exact-file 재심사는 0/0/0 LOCAL APPROVE, 독립 resolver·route 27/27, <code>git diff --check</code> PASS였다. 어느 로컬 판정도 원격 실행을 승인하지 않으며 원격 판정은 <strong>BLOCKED / NEW REMOTE APPROVAL REQUIRED</strong>다.</p>
 
       <h2>8. 구현 중 수정한 결함</h2>
       <ol>
@@ -306,18 +316,20 @@
         <li>publish/adopt reapply의 legacy function 중복 rename</li>
         <li>canonical payload의 wrapper/cumulative 이중 정규화</li>
         <li>preset 계약 검증 안에서 같은 detail schema 이중 생성</li>
+        <li>current-main 후속 billing/Realtime migration의 상담 담당자 정규화 wrapper 덮어쓰기</li>
+        <li><code>chart:view</code> 전 encounter/catalog 조회로 존재 여부를 구분할 수 있던 permission ordering</li>
       </ol>
       <p>각 수정에 fail-closed 또는 회귀 테스트를 추가했다.</p>
 
       <h2>9. 변경 범위</h2>
-      <p>기존 기능 범위에 로컬 publisher performance migration 1개와 집중 spec을 추가했다. 기존 확정 기록·fulfillment DML, Airtable, Vercel, dependency version은 변경하지 않았다. 원격 Supabase에는 기존 migration 6개와 publisher 2회만 실행됐고 새 migration과 adoption은 실행하지 않았다.</p>
+      <p>기존 기능 범위에 로컬 publisher performance migration, current-main 상담/billing/Realtime 최종 호환 migration, 두 rollback-only rehearsal과 집중 spec을 추가했다. 기존 확정 기록·fulfillment DML, Airtable, Vercel, dependency version은 변경하지 않았다. 원격 Supabase에는 기존 migration 6개와 publisher 2회만 실행됐고 새 migration과 adoption은 실행하지 않았다.</p>
 
       <h2>10. 현재 차단 조건과 재개 계획</h2>
       <ol>
         <li>기존 publisher를 세 번째로 호출하지 않음</li>
         <li>완료된 로컬 hard-gate 판정과 exact file SHA packet 보존</li>
-        <li>현재 <code>origin/main</code> 위 새 candidate commit에서 SHA를 다시 고정하고 별도 원격 쓰기 승인</li>
-        <li>새 승인 뒤 성능 migration 1개만 적용하고 owner/config/ACL과 108/108 기준선 확인</li>
+        <li>current-main 후보의 최종 branch-head SHA와 exact file SHA 동결 뒤 별도 원격 쓰기 승인</li>
+        <li>새 승인 뒤 performance와 최종 호환 migration 두 개만 적용하고 owner/config/ACL과 108/108 기준선 확인</li>
         <li>한 번 publish하고 689/522, 630/522, manifest 689, mismatch 0, synthetic inactive 522와 불변 gate 확인</li>
         <li>성공 뒤에만 adoption, advisor, 인증 브라우저 smoke 진행</li>
         <li>GitHub PR/merge와 Ready deployment는 별도 전달 범위로 유지</li>
