@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>차트·진단 이력 정보 구조 개선 보고서</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color: #1f2925;
+        background: #f4f6f5;
+      }
+      body {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      main {
+        padding: 36px;
+        border: 1px solid #dbe1de;
+        border-radius: 16px;
+        background: #fff;
+        box-shadow: 0 12px 32px rgb(26 43 36 / 8%);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+      }
+      h2 {
+        margin: 30px 0 10px;
+        font-size: 18px;
+      }
+      p,
+      li {
+        line-height: 1.65;
+      }
+      .meta {
+        color: #65726d;
+      }
+      .result {
+        margin: 24px 0;
+        padding: 18px 20px;
+        border-left: 4px solid #2f745e;
+        background: #eef6f2;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e4e8e6;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        width: 190px;
+        color: #52615b;
+      }
+      .pass {
+        color: #21644f;
+        font-weight: 700;
+      }
+      .note {
+        color: #725b23;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>차트이력과 진단이력의 역할을 분리했다</h1>
+      <p class="meta">2026-08-31 · 진료/차트 · CHART-PR-028</p>
+
+      <div class="result">
+        같은 카드 UI가 서로 다른 업무 목적에 동일한 정보를 보여주던 문제를
+        해결했다. 좌측 차트이력은 <strong>방문 목적</strong>을, 우측 진단이력은
+        <strong>과거 진단</strong>을 우선해 빠르게 구분할 수 있다.
+      </div>
+
+      <h2>변경 내용</h2>
+      <ul>
+        <li>
+          좌측 차트이력: 현재·과거 방문의 시간, 방문 목적, 상태, 담당 수의사 표시
+        </li>
+        <li>
+          우측 진단이력: 현재 진료를 제외하고 시간, 대표 진단과 추가 건수, 담당
+          수의사 표시
+        </li>
+        <li>두 영역에서 E- 일련번호와 중복 전체 날짜·시간 제거</li>
+        <li>여러 진단은 서버 우선순위 첫 진단을 기준으로 “외 N건” 표시</li>
+        <li>진단 검색은 숨겨진 일련번호가 아니라 진단명과 담당 수의사만 검색</li>
+      </ul>
+
+      <h2>업무 안전성</h2>
+      <p>
+        과거 항목을 선택해도 현재 진료 URL과 대기열 선택은 유지되며, 과거 차트는
+        기존과 동일하게 읽기 전용이다. 공유 카드 컴포넌트와 Supabase·API·권한
+        경계는 변경하지 않았다.
+      </p>
+
+      <h2>검증 결과</h2>
+      <table>
+        <tr>
+          <th class="pass">PASS · 브라우저</th>
+          <td>표시 정보, 다중 진단 검색, 현재 진료 제외, 과거 읽기 전용 이동</td>
+        </tr>
+        <tr>
+          <th class="pass">PASS · 서버 5건</th>
+          <td>차트 이력 권한, 워크스페이스 범위, 응답 파싱 계약</td>
+        </tr>
+        <tr>
+          <th class="pass">PASS · 품질 게이트</th>
+          <td>전체 ESLint, TypeScript, 프로덕션 빌드, 문서, 비밀정보, diff</td>
+        </tr>
+      </table>
+
+      <h2>남은 범위</h2>
+      <p class="note">
+        청담 합성 데이터의 숫자형 방문 목적과 일관되지 않은 진료 상태는 UI에서
+        임의로 숨기지 않았다. 원격 데이터 정리는 별도 승인과 데이터 범위 확인 후
+        진행해야 한다. 이번 작업은 로컬 구현이며 커밋·PR·배포는 수행하지 않았다.
+      </p>
+    </main>
+  </body>
+</html>

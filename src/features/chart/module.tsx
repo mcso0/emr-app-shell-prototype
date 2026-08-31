@@ -1962,6 +1962,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
                 <ChartHistoryItem
                   key={row.encounter.id}
                   bundle={bundle}
+                  mode="visit"
                   row={row}
                   selected={row.encounter.id === effectiveSelectedEncounterId}
                   onSelect={() =>
@@ -1994,6 +1995,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
 }
 
 function ChartInlineHistoryPanel({
+  activeEncounterId,
   bundle,
   collapseContentId,
   historyError,
@@ -2004,6 +2006,7 @@ function ChartInlineHistoryPanel({
   onSelectEncounter,
   selectedEncounterId,
 }: {
+  activeEncounterId: string;
   bundle: ChartBundle;
   collapseContentId: string;
   historyError?: string;
@@ -2016,27 +2019,26 @@ function ChartInlineHistoryPanel({
 }) {
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
+  const priorDiagnosisRows = useMemo(
+    () =>
+      historyRows.filter((row) => row.encounter.id !== activeEncounterId),
+    [activeEncounterId, historyRows],
+  );
   const visibleRows = useMemo(
     () =>
       normalizedQuery
-        ? historyRows.filter((row) => {
+        ? priorDiagnosisRows.filter((row) => {
             const diagnosisText = row.diagnoses
               .map((diagnosis) => diagnosis.diagnosisText)
               .join(" ");
-            return [
-              diagnosisText,
-              row.encounter.encounterNo,
-              row.encounter.chiefComplaint,
-              row.encounter.visitPurpose,
-              row.soapNote?.assessment,
-            ]
+            return [diagnosisText, getChartHistoryVeterinarianName(row, bundle)]
               .filter(Boolean)
               .join(" ")
               .toLocaleLowerCase("ko-KR")
               .includes(normalizedQuery);
           })
-        : historyRows,
-    [historyRows, normalizedQuery],
+        : priorDiagnosisRows,
+    [bundle, normalizedQuery, priorDiagnosisRows],
   );
   const historyGroups = useMemo(
     () =>
@@ -2089,7 +2091,7 @@ function ChartInlineHistoryPanel({
               className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
             />
             <Input
-              aria-label="차트 이력 검색"
+              aria-label="진단 이력 검색"
               placeholder="키워드를 입력해주세요"
               value={query}
               className="h-7 rounded-lg bg-card px-2 pr-8 emr-control-text-compact"
@@ -2151,6 +2153,7 @@ function ChartInlineHistoryPanel({
                 <ChartHistoryItem
                   key={row.encounter.id}
                   bundle={bundle}
+                  mode="diagnosis"
                   row={row}
                   selected={row.encounter.id === selectedEncounterId}
                   onSelect={() => onSelectEncounter(row.encounter.id)}
@@ -2163,18 +2166,22 @@ function ChartInlineHistoryPanel({
           historyStatus !== "error" ? (
             <div className="flex min-h-52 flex-1 items-center justify-center">
               <EmrEmptyState
-                kind={historyRows.length ? "no-filter-results" : "no-data"}
-                priority={historyRows.length ? "local-recovery" : "supporting"}
+                kind={
+                  priorDiagnosisRows.length ? "no-filter-results" : "no-data"
+                }
+                priority={
+                  priorDiagnosisRows.length ? "local-recovery" : "supporting"
+                }
                 surface="content"
                 title={
-                  historyRows.length
+                  priorDiagnosisRows.length
                     ? "검색 결과가 없습니다"
-                    : "과거 진료 이력이 없습니다"
+                    : "과거 진단 이력이 없습니다"
                 }
                 description={
-                  historyRows.length
-                    ? "다른 키워드로 차트 이력을 찾아보세요."
-                    : "이 환자의 이전 진료가 기록되면 여기에 표시됩니다."
+                  priorDiagnosisRows.length
+                    ? "다른 키워드로 진단 이력을 찾아보세요."
+                    : "이 환자의 이전 진단이 기록되면 여기에 표시됩니다."
                 }
                 testId="chart-history-empty-state"
               />
@@ -2186,56 +2193,57 @@ function ChartInlineHistoryPanel({
   );
 }
 
+type ChartHistoryItemMode = "diagnosis" | "visit";
+
+function getChartHistoryDiagnosisLabel(row: ChartHistoryRow) {
+  const diagnosisLabels = row.diagnoses
+    .map((diagnosis) => diagnosis.diagnosisText.trim())
+    .filter(Boolean);
+
+  if (!diagnosisLabels.length) return "진단 기록 없음";
+  if (diagnosisLabels.length === 1) return diagnosisLabels[0];
+
+  return `${diagnosisLabels[0]} 외 ${diagnosisLabels.length - 1}건`;
+}
+
 function ChartHistoryItem({
   bundle,
+  mode,
   onSelect,
   row,
   selected,
 }: {
   bundle: ChartBundle;
+  mode: ChartHistoryItemMode;
   onSelect: () => void;
   row: ChartHistoryRow;
   selected: boolean;
 }) {
-  const primaryDiagnosis = row.diagnoses[0]?.diagnosisText;
-  const summary =
-    row.soapNote?.assessment ??
-    primaryDiagnosis ??
-    row.encounter.chiefComplaint ??
-    "진료 기록 없음";
-  const category = row.encounter.visitPurpose ?? "외래";
+  const eventAt = row.encounter.checkedInAt ?? row.encounter.createdAt;
+  const diagnosisLabel = getChartHistoryDiagnosisLabel(row);
+  const visitPurpose = row.encounter.visitPurpose?.trim() || "방문 목적 미입력";
   const statusLabel = getStatusLabel("encounter", row.encounter.status);
+  const isDiagnosisHistory = mode === "diagnosis";
 
   return (
     <EmrContentHistoryItem
       selected={selected}
-      testId={`chart-history-item-${row.encounter.id}`}
-      title={primaryDiagnosis ?? row.encounter.encounterNo}
+      testId={`${isDiagnosisHistory ? "chart-diagnosis-history-item" : "chart-history-item"}-${row.encounter.id}`}
+      title={isDiagnosisHistory ? diagnosisLabel : visitPurpose}
       badge={
-        <Badge
-          variant="outline"
-          className="h-5 shrink-0 rounded-md px-1.5 emr-text-micro"
-        >
-          {statusLabel}
-        </Badge>
+        isDiagnosisHistory ? undefined : (
+          <Badge
+            variant="outline"
+            className="h-5 shrink-0 rounded-md px-1.5 emr-text-micro"
+          >
+            {statusLabel}
+          </Badge>
+        )
       }
-      subtitle={
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="shrink-0">{category}</span>
-          <span className="truncate">{summary}</span>
-        </span>
-      }
+      subtitle={getShortClockTime(eventAt)}
       meta={
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate">
-            담당 {getChartHistoryVeterinarianName(row, bundle)}
-          </span>
-          <span className="truncate">{row.encounter.encounterNo}</span>
-          <span className="shrink-0">
-            {getShortDateTime(
-              row.encounter.checkedInAt ?? row.encounter.createdAt,
-            )}
-          </span>
+        <span className="truncate">
+          담당 {getChartHistoryVeterinarianName(row, bundle)}
         </span>
       }
       onSelect={onSelect}
@@ -12733,6 +12741,9 @@ export function ChartContent({
               }
             >
               <ChartInlineHistoryPanel
+                activeEncounterId={
+                  activeBundle?.encounter.id ?? currentBundle.encounter.id
+                }
                 bundle={currentBundle}
                 collapseContentId="chart-history-panel-content"
                 historyError={chartHistoryError}
