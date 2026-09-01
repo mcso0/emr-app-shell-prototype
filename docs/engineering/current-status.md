@@ -202,21 +202,29 @@ mismatches are zero, and `clair-foreign-demo` catalog/update/lab/notification/
 audit changes are zero. PR #691 merged as
 `f686bb76a48b2948c5c631c261a681814493bc9b`, Release Check `33408313595`
 passed, and production deployment
-`dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw` is Ready. A 2026-09-01 local follow-up now
-shows authored non-dispensing preset details directly in each Hospital Admin
-individual Order table while preserving dispensing, pinned-column, scroll,
-and column-visibility contracts; delivery of that follow-up remains pending.
-The current remote rows still remain `synthetic_unreviewed` with
-`clinicalUseAllowed=false`. A 2026-09-01 beta activation follow-up is now
-implemented locally and passed exact remote rollback/retry rehearsal: it records
-one private immutable offline-validation batch with the representative-
-designated reviewer label `이수지 수의사`, appends 522 reviewed current presets
-plus 108 profile-pinned compatibility presets, refreshes 1,566 workspace copies,
-and converges each target workspace on 414 active plus 108 service-review rows.
-The rehearsal preserved exact workspace name/price fingerprints and left
-`clair-foreign-demo` unchanged. Persistent Supabase execution and application
-delivery remain pending; this boundary is synthetic beta service validation,
-not real-patient or public-launch authorization.
+`dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw` is Ready. The 2026-09-01 follow-up is also
+complete: PR #692 delivered authored preset columns and the exact beta
+activation migration to staging; PR #693 merged the same application tree to
+main at `e985949a125708f96fade0f795bf7260dcea79d0`, and production deployment
+`dpl_DbTYWcrgq2Kw4Wbb5ugGYR6sgF6g` is Ready on the official alias. Remote
+migration history `20260901135451` recorded immutable activation batch
+`2e06c96a-b551-4335-b233-35b04384bdd2` with reviewer label `이수지 수의사`,
+appended 522 reviewed current presets plus 108 pinned compatibility presets,
+and refreshed exactly 1,566 target copies. Each target now has 522 master
+catalog rows, 522 non-empty defaults, 522 reviewed source snapshots, 414 active
+plus 108 profile-backed service-review rows, and 522 chart-search candidates;
+workspace names/prices and `clair-foreign-demo` remain unchanged. Authenticated
+production smoke loaded all three Hospital Admin tables, visibly rendered
+authored preset columns/values, and added a representative CT master Order to a
+veterinarian Plan/Order with `position=환자별 표준 자세` and `viewCount=1`.
+The exact default snapshot persisted; the temporary draft was deleted and the
+prior two-row draft state restored. Five automated retry attempts remain only
+as cancelled revision-0 audit rows with billing not requested; active temporary
+drafts are zero. Patient-specific chart UI continues to
+apply the existing species filter (491 visible candidates for the sampled
+Samoyed), while the chart-search API contains all 522 master candidates. This
+boundary is synthetic beta service validation, not real-patient or public-
+launch authorization.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,

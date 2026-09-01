@@ -3,7 +3,7 @@ id: "CLINICAL-MASTER-PR-022"
 type: "Work Item"
 title: "All-category clinical-master order execution presets"
 description: "Adds a generic, evidence-labeled execution-preset contract for every clinical-master order category and carries editable defaults through workspace adoption into immutable chart snapshots."
-status: "in_progress"
+status: "completed"
 area: "clinical-master"
 priority: "P0"
 tags: ["clinical-master", "order-presets", "workspace-adoption", "chart-orders", "supabase", "synthetic-demo"]
@@ -19,9 +19,9 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-020-workspace-dispensing-preset-management.md"
 dependencies: ["CLINICAL-MASTER-PR-016", "CLINICAL-MASTER-PR-017", "CLINICAL-MASTER-PR-020"]
 updated: "2026-09-01"
-remote_writes: 19
-remote_publish_outcome: "published_release_50_and_workspace_rollout_completed"
-production_release: "pr_691_merge_f686bb76_deployment_dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw"
+remote_writes: 20
+remote_publish_outcome: "published_release_50_workspace_rollout_and_beta_activation_completed"
+production_release: "pr_693_merge_e985949a_deployment_dpl_DbTYWcrgq2Kw4Wbb5ugGYR6sgF6g"
 ---
 
 # Clinical Master PR-022: All-category order execution presets
@@ -371,21 +371,37 @@ Application delivery completed through PR #691, main merge
 `33408313595`, and Ready production deployment
 `dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw`.
 
-The 2026-09-01 local follow-up exposes authored non-dispensing preset details
-directly in each Hospital Admin individual Order table. It preserves the
-existing dispensing columns and shared pinned/scroll/column-visibility
-contracts. Eight-type browser coverage, the existing dispensing regression,
-TypeScript, ESLint, and production build pass. This follow-up is local only and
-has not been delivered or deployed.
+The 2026-09-01 follow-up is complete. PR #692 delivered the Hospital Admin
+preset columns and exact activation migration to `staging`; PR #693 merged the
+same application tree to `main` at
+`e985949a125708f96fade0f795bf7260dcea79d0`. Release Checks
+`33514354195` and `33515586813` passed, and production deployment
+`dpl_DbTYWcrgq2Kw4Wbb5ugGYR6sgF6g` is Ready on the official alias.
 
-Status is **IN PROGRESS / TABLE AND BETA ACTIVATION FOLLOW-UP AWAIT DELIVERY**.
-The current remote 522 presets remain `synthetic_unreviewed` and
-`clinicalUseAllowed=false`. The 2026-09-01 follow-up adds one private immutable
-offline-validation batch, 522 append-only reviewed current revisions, and 108
-reviewed compatibility revisions for the profile-pinned dispensing rows. Its
-exact remote rollback/retry rehearsal passed with 1,566 target workspace copies,
-414 active plus 108 service-review rows in each workspace, unchanged name/price
-fingerprints, and unchanged `clair-foreign-demo`. Persistent Supabase execution,
-PR delivery, and production UI smoke remain. The activation scope is synthetic
-beta service validation only; it does not authorize real-patient or public-
-launch use.
+Remote migration history `20260901135451` recorded immutable activation batch
+`2e06c96a-b551-4335-b233-35b04384bdd2` with reviewer label
+`이수지 수의사`, appended 522 reviewed current revisions and 108 pinned
+compatibility revisions, and refreshed exactly 1,566 target catalog copies.
+Each target now has 522 master catalog rows, 522 non-empty defaults, 522 reviewed
+source snapshots, 414 active rows plus 108 profile-backed service-review rows,
+and 522 chart-search candidates. Workspace-owned names/prices are unchanged;
+`clair-foreign-demo` remains at catalog count 0 with its protected fingerprint
+unchanged.
+
+Authenticated production smoke loaded all three Hospital Admin Order screens.
+The API returned exact master/default counts `522/522` for every target; total
+rows also include existing workspace-owned rows (demo 541, Cheongdam 534, pilot
+522). Cheongdam visibly rendered `CT 영상자료 판독 상담` and its authored
+`환자별 표준 자세` preset in the table. A veterinarian chart session received
+522 master candidates from the chart-search API; the selected Samoyed encounter
+showed 491 patient-species-compatible candidates, added the same CT order with
+`position=환자별 표준 자세` and `viewCount=1`, persisted the exact master
+default snapshot, then deleted the temporary draft and restored the prior two
+draft rows. The five automated retry attempts remain only as expected cancelled
+audit rows (`status/order_confirmation_status=cancelled`, revision 0,
+`billing_candidate_status=not_requested`); active temporary drafts are zero.
+No Order was confirmed and no fulfillment or billing side effect was created.
+
+Status is **COMPLETED / PRODUCTION BETA ACTIVATION VERIFIED**. This remains a
+synthetic beta service-validation boundary and is not authorization for real-
+patient operation or public launch.
