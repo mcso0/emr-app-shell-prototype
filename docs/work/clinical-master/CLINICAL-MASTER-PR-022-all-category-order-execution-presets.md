@@ -18,9 +18,10 @@ source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-017-evidence-grounded-dispensing-order-master.md"
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-020-workspace-dispensing-preset-management.md"
 dependencies: ["CLINICAL-MASTER-PR-016", "CLINICAL-MASTER-PR-017", "CLINICAL-MASTER-PR-020"]
-updated: "2026-08-31"
+updated: "2026-09-01"
 remote_writes: 19
 remote_publish_outcome: "published_release_50_and_workspace_rollout_completed"
+production_release: "pr_691_merge_f686bb76_deployment_dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw"
 ---
 
 # Clinical Master PR-022: All-category order execution presets
@@ -365,7 +366,26 @@ details for every visible row: demo `522/522`, Cheongdam `510/510`, and pilot
 mismatches are all zero. The non-target `clair-foreign-demo` has zero catalog,
 master-update, lab item/link, notification, and audit changes.
 
-Status is **IN PROGRESS / CODE DELIVERY AND AUTHENTICATED UI SMOKE REMAIN**.
-All content remains `synthetic_unreviewed` and
-`clinicalUseAllowed=false`. Clinical validation, dispensing revision-2 profile
-republish, and clinical activation are explicitly deferred.
+Application delivery completed through PR #691, main merge
+`f686bb76a48b2948c5c631c261a681814493bc9b`, successful Release Check
+`33408313595`, and Ready production deployment
+`dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw`.
+
+The 2026-09-01 local follow-up exposes authored non-dispensing preset details
+directly in each Hospital Admin individual Order table. It preserves the
+existing dispensing columns and shared pinned/scroll/column-visibility
+contracts. Eight-type browser coverage, the existing dispensing regression,
+TypeScript, ESLint, and production build pass. This follow-up is local only and
+has not been delivered or deployed.
+
+Status is **IN PROGRESS / TABLE AND BETA ACTIVATION FOLLOW-UP AWAIT DELIVERY**.
+The current remote 522 presets remain `synthetic_unreviewed` and
+`clinicalUseAllowed=false`. The 2026-09-01 follow-up adds one private immutable
+offline-validation batch, 522 append-only reviewed current revisions, and 108
+reviewed compatibility revisions for the profile-pinned dispensing rows. Its
+exact remote rollback/retry rehearsal passed with 1,566 target workspace copies,
+414 active plus 108 service-review rows in each workspace, unchanged name/price
+fingerprints, and unchanged `clair-foreign-demo`. Persistent Supabase execution,
+PR delivery, and production UI smoke remain. The activation scope is synthetic
+beta service validation only; it does not authorize real-patient or public-
+launch use.

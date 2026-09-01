@@ -2,9 +2,11 @@
 title: "CLAiR 전 카테고리 마스터 오더 실행 프리셋 구현 보고서"
 date: "2026-08-31"
 work_item: "CLINICAL-MASTER-PR-022"
-status: "remote_workspace_rollout_complete_delivery_in_progress"
+status: "production_deployed_beta_activation_followup_in_progress"
+last_updated: "2026-09-01"
 remote_writes: 19
 remote_publish_outcome: "published_release_50_and_workspace_rollout_completed"
+production_release: "pr_691_merge_f686bb76_deployment_dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw"
 clinical_use_allowed: false
 ---
 
@@ -12,7 +14,7 @@ clinical_use_allowed: false
 
 ## 1. 최종 판단
 
-요청한 구현과 대상 워크스페이스의 원격 데이터 반영은 완료됐다. 애플리케이션 코드 배포와 인증 UI smoke가 남아 있다.
+요청한 기존 구현, 대상 워크스페이스의 원격 데이터 반영, 애플리케이션 운영 배포와 인증 UI smoke까지 완료됐다. 2026-09-01 후속 범위는 전 카테고리 세부값을 병원관리 개별 Order 표에 직접 노출하고, 대표가 오프라인 검증 완료를 확인한 정확한 522개 합성 베타 프리셋을 append-only 승인 리비전으로 전환해 세 워크스페이스에서 모두 선택 가능하게 만드는 작업이다. 로컬 구현과 exact remote rollback/retry rehearsal까지 통과했고 영속 실행·PR·운영 배포가 남아 있다.
 
 - 기존 510개 마스터 오더와 새로 정의한 12개 계통별 신체검사 오더를 합쳐 **522개 오더 모두에 정확히 하나의 현재 실행 프리셋**이 존재한다.
 - 최종 게시 입력은 **689개 레코드 / 522개 오더**이며, 고정 산출물 SHA-256은 `1eeb5035d70d5f28035df49d1d32c3689ffe79a4bb28062e5606256802572e0c`이다.
@@ -23,6 +25,18 @@ clinical_use_allowed: false
 - 전용 `system_exam` 타입은 차트에서 완료되며 처치·검사·조제 fulfillment queue로 전달되지 않는다.
 
 publisher의 set-based 2단계 성능 보완과 current-main 상담/billing/Realtime 호환을 격리 DB에서 검증하고 독립 재심사한 뒤, 정확한 원격 후보를 적용했다. release no. 50의 689개 레코드·522개 오더 게시가 25.2초에 완료됐고 같은 입력 재호출은 10.85초에 idempotent하게 끝났다. 세 대상 워크스페이스는 모두 522개 프리셋 연결과 빈 기본값 0개를 만족한다. 조제 108개는 기존 병원 프로필이 master revision 1에 묶여 있어 새 revision 2로 강제 변경하지 않고 기존 프로필과 일치하는 프리셋을 보존한 채 검토 유예했으며, 나머지 414개는 현재 release를 채택했다. 외부 통제 워크스페이스의 catalog·update·lab·notification·audit 변화는 모두 0이다. 모든 프리셋은 `synthetic_unreviewed`, `clinicalUseAllowed=false` 계약을 유지하므로 이번 완료는 임상 승인이나 실제 진료 활성화를 의미하지 않는다.
+
+애플리케이션은 PR [#690](https://github.com/mcso0/emr-app-shell-prototype/pull/690)으로 `staging` SHA `577f702d045208f679294eedc9b6a0b6c80017ef`에 통합한 뒤, PR [#691](https://github.com/mcso0/emr-app-shell-prototype/pull/691)로 `main` merge SHA `f686bb76a48b2948c5c631c261a681814493bc9b`에 운영 반영했다. 정확한 staging 후보의 [Release Check](https://github.com/mcso0/emr-app-shell-prototype/actions/runs/33408313595)가 성공했고, Production 배포 `dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw`가 `Ready` 상태로 운영 alias에 연결됐다. 이 운영 전달은 합성/demo transport 완료 증거이며 임상 승인을 뜻하지 않는다.
+
+### 1.1 2026-09-01 표 수용성·합성 베타 활성화 후속
+
+최신 `origin/main`과 원격 상태를 다시 확인한 뒤 병원관리 개별 Order 표의 원인을 좁혔다. API, 카탈로그 mapper, drawer에는 이미 `clinicalOrderType`, `detailFieldSchema`, `defaultDetailInputs`가 있었지만 표 컬럼은 조제 분기만 세부값을 만들고 있었다. 로컬 후속 후보는 기존 표·핀·스크롤·컬럼 선택 계약을 유지하면서 각 leaf에 실제로 저장된 `defaultDetailInputs` 키만 스키마 순서로 노출한다. 런타임 필드, required-manual 필드, 스키마 기본값은 합성하지 않는다. 8개 비조제 타입과 기존 조제 회귀, TypeScript, ESLint, production build를 통과했지만 아직 PR·배포되지 않았으므로 운영 반영으로 기록하지 않는다.
+
+같은 시점의 read-only Supabase 재검증 결과는 release no. 50, current preset 522, 세 target workspace의 catalog/preset/empty-default `522/522/0`, foreign catalog 0을 유지했다. 영속 후속 실행 전 원격 current preset은 계속 `synthetic_unreviewed`, `clinicalUseAllowed=false`다.
+
+후속 migration은 대표가 확인한 오프라인 검증과 지정 reviewer label `이수지 수의사`를 하나의 private immutable activation batch에 기록한다. 기존 522 current preset을 수정하지 않고 같은 내용의 `clinically_reviewed` / `clinicalUseAllowed=true` 새 리비전 522개를 append하며, master revision 1에 고정된 조제 profile 108개에는 해당 리비전용 reviewed compatibility copy를 별도로 append한다. 세 워크스페이스에는 이름·청구명·가격을 유지한 채 실행 프리셋과 default만 동기화한다. 가격이 없는 파일럿 2개는 가격을 만들지 않고 청구 반영을 꺼 active로 전환하며, profile-gated 조제 108개는 기존 service-review 경로를 유지한다.
+
+정확한 원격 transaction rollback rehearsal과 같은 transaction 내 재실행은 모두 통과했다. 리허설 내부 결과는 current reviewed 522, pinned compatibility 108, target copy 1,566, 각 workspace active 414 + service-review pending 108, 빈 default 0이다. workspace별 이름/가격 SHA는 전후 동일하고 `clair-foreign-demo`도 동일하다. 이 활성화는 합성 베타 서비스 사용성 검증 범위이며 실제 환자·병원 운영 또는 public launch 승인이 아니다.
 
 ## 2. 요청을 구현 계약으로 정리한 내용
 
@@ -576,6 +590,12 @@ catalog, master update, lab item/link, notification, audit 변화는 모두 0이
 | TypeScript | `npx tsc --noEmit` 통과 |
 | ESLint | `npm run lint` 통과 |
 | production build | `npm run build` 통과 |
+| 정확한 staging Release Check | SHA `577f702d045208f679294eedc9b6a0b6c80017ef`, run `33408313595` 성공 |
+| production release | PR #691, merge SHA `f686bb76a48b2948c5c631c261a681814493bc9b` |
+| production deployment | `dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw` Ready, 운영 alias 연결 |
+| 2026-09-01 표 후속 후보 | 8개 비조제 타입 작성값·희소 필드·컬럼 선택·leaf 전환과 기존 조제/핀/스크롤 회귀 통과 |
+| 2026-09-01 beta activation migration spec | 6 / 6 passed |
+| 2026-09-01 exact remote rollback/retry rehearsal | current reviewed 522, pinned compatibility 108, target copies 1,566, workspace별 414 active + 108 service-review, foreign/name/price unchanged |
 | 산출물 check mode | 510 / 12 / 522 모두 통과 |
 | 문서 링크 | `npm run docs:check` 통과 |
 | diff whitespace | `git diff --check` 통과 |
@@ -641,16 +661,20 @@ current-main 재배치 뒤 독립 hard gate는 처음에 **High 0 / Medium 2 / L
 
 기존 확정 기록과 fulfillment를 바꾸는 DML, Airtable, dependency version은 변경하지 않았다. 승인된 원격 Supabase에는 PR-022 foundation·performance·compatibility와 최종 set-based migration이 적용됐고, release no. 50 게시와 세 대상 workspace adoption·review resolution까지 완료됐다. 과거 timeout 세 건은 모두 완전 rollback 상태로 남고, 이번 성공 release와 workspace 결과만 영속화됐다. `npm ci --ignore-scripts`는 검증용 로컬 `node_modules`만 준비했으며 package manifest/lockfile은 수정하지 않았다.
 
-## 10. 남은 전달 단계와 임상 경계
+## 10. 전달 결과와 임상 경계
 
-1. 최신 `origin/main`에 후보를 재배치하고 전체 집중 검증을 다시 통과시킨다.
-2. GitHub PR, 고정 staging, production 순서로 애플리케이션 코드를 전달한다.
-3. 배포된 인증 화면에서 병원관리 프리셋 확인·수정·사용 중지와 차트 추가 시 자동입력을 smoke한다.
-4. 조제 108개의 master revision 2 채택은 임상/profile 재검증 뒤 별도 작업으로 진행한다. 현재 정상 rev1 profile-matched 값을 강제로 덮지 않는다.
-5. 모든 합성 프리셋은 계속 `synthetic_unreviewed`, `clinicalUseAllowed=false`로 유지한다. 임상 검증과 true 전환은 이번 범위 밖이다.
+1. 애플리케이션 코드는 PR #690을 통해 고정 staging 후보 `577f702d045208f679294eedc9b6a0b6c80017ef`로 통합됐다.
+2. 동일 후보의 Release Check와 인증 smoke가 통과한 뒤 PR #691을 통해 `main` merge SHA `f686bb76a48b2948c5c631c261a681814493bc9b`로 운영 반영됐다.
+3. Production 배포 `dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw`는 `Ready`이며 운영 alias가 연결돼 있다.
+4. 전 카테고리 세부값을 표에 직접 노출하는 2026-09-01 후속 후보는 로컬 검증까지 통과했으며 별도 PR·배포 전 상태다.
+5. exact 522 current preset에 대한 append-only beta activation migration과 조제 108개 profile-pinned compatibility copy가 구현됐다. 원격 rollback/retry rehearsal은 통과했고 영속 실행 전 상태다.
+6. 영속 실행 후에는 각 target workspace를 414 active + 108 service-review로 수렴시켜 차트에서 522개 모두 선택 가능하게 하고, 이름·가격·foreign-control을 readback한다.
+7. 이 activation batch는 합성 베타 서비스 검증에만 사용하며 실제 환자·병원 운영·public launch 권한으로 사용하지 않는다.
 
 ## 11. 현재 결론
 
 “마스터에 프리셋 세부값이 있고, 워크스페이스로 함께 복사되며, 병원이 수정·사용 중지하고, 차트 추가 시 자동 입력되고, 확정 후에는 불변으로 남는가?”에 대한 구현과 원격 데이터 답은 **예**다.
 
-대상 synthetic/demo 워크스페이스 세 곳은 522개 catalog 모두에 비어 있지 않은 프리셋을 보유하고, 사용 중지 설정을 보존하며, 차트 검색에서 활성 행 전부가 prefilled detail을 반환한다. 외부 통제 워크스페이스는 변하지 않았다. 다만 “실제 병원에서 임상 승인된 값으로 바로 사용 가능한가?”에 대한 답은 **아니오**다. 이번 목표는 기능과 합성 데이터 transport 구현까지이며, 임상 검토·조제 revision 2 재승인·`clinicalUseAllowed=true` 전환은 별도 단계다.
+대상 synthetic/demo 워크스페이스 세 곳은 522개 catalog 모두에 비어 있지 않은 프리셋을 보유한다. 전 카테고리 표 세부값 후보와 append-only beta activation migration은 로컬 검증 및 exact 원격 rollback/retry rehearsal을 통과했다. 영속 실행과 앱 배포가 끝나면 각 workspace의 522개 모두를 차트에서 선택하고 prefilled detail을 확인할 수 있어야 하며, 그 production UI smoke 전에는 후속 작업을 완료로 닫지 않는다.
+
+이 결과의 사용 범위는 **합성 베타 서비스 검증**이다. 실제 환자·고객 데이터, 실제 병원 운영, real-provider side effect, 또는 public launch는 포함하지 않는다.

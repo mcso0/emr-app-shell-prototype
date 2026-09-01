@@ -360,6 +360,125 @@ function HospitalOrderTableCellValue({
     </EmrTableCellText>
   );
 }
+
+type HospitalOrderTableDetailField = {
+  clinicalOrderType: ClinicalOrderType;
+  definition: ClinicalOrderFieldDefinition;
+};
+
+const hospitalOrderTableClinicalTypeOrder: ClinicalOrderType[] = [
+  "consultation",
+  "clinical_lab",
+  "imaging",
+  "external_lab",
+  "treatment",
+  "hospitalization",
+  "system_exam",
+  "other",
+  "dispensing",
+];
+
+function getHospitalOrderTableDetailFields(
+  orders: HospitalOrderCatalogItem[],
+): HospitalOrderTableDetailField[] {
+  const fields = new Map<string, HospitalOrderTableDetailField>();
+
+  orders.forEach((order) => {
+    const contract = getHospitalOrderDetailContract(order);
+    if (!contract || contract.clinicalOrderType === "dispensing") return;
+
+    const authoredValues = order.defaultDetailInputs ?? {};
+    const canonicalSchema =
+      CLINICAL_ORDER_FIELD_SCHEMAS[contract.clinicalOrderType];
+    const definitions =
+      contract.detailFieldSchema.fields.length > 0
+        ? contract.detailFieldSchema.fields
+        : canonicalSchema.fields;
+
+    definitions.forEach((definition) => {
+      if (
+        !Object.prototype.hasOwnProperty.call(authoredValues, definition.key)
+      ) {
+        return;
+      }
+
+      fields.set(`${contract.clinicalOrderType}:${definition.key}`, {
+        clinicalOrderType: contract.clinicalOrderType,
+        definition,
+      });
+    });
+  });
+
+  return [...fields.values()].sort((left, right) => {
+    const typeOrder =
+      hospitalOrderTableClinicalTypeOrder.indexOf(left.clinicalOrderType) -
+      hospitalOrderTableClinicalTypeOrder.indexOf(right.clinicalOrderType);
+
+    return (
+      typeOrder || left.definition.displayOrder - right.definition.displayOrder
+    );
+  });
+}
+
+function formatHospitalOrderTableDetailValue(
+  definition: ClinicalOrderFieldDefinition,
+  value: unknown,
+) {
+  if (value === null || value === undefined || value === "") return "";
+
+  if (Array.isArray(value)) {
+    if (definition.valueType === "attachment_array") {
+      return value.length > 0 ? `${value.length}개` : "";
+    }
+
+    return value
+      .map((item) => formatHospitalOrderDetailOption(String(item)))
+      .join(", ");
+  }
+
+  if (typeof value === "boolean") return value ? "예" : "아니오";
+  if (typeof value === "number") {
+    const formatted = new Intl.NumberFormat("ko-KR", {
+      maximumFractionDigits: 3,
+    }).format(value);
+
+    if (!definition.unit) return formatted;
+    return definition.unit === "view"
+      ? `${formatted} ${definition.unit}`
+      : `${formatted}${definition.unit}`;
+  }
+
+  const formatted = String(value);
+  return definition.control === "select"
+    ? formatHospitalOrderDetailOption(formatted)
+    : formatted;
+}
+
+function getHospitalOrderTableDetailColumnSize(
+  definition: ClinicalOrderFieldDefinition,
+) {
+  if (definition.control === "switch" || definition.control === "number") {
+    return { maxSize: 144, minSize: 88, size: 112 };
+  }
+  if (
+    definition.control === "textarea" ||
+    definition.control === "schedule" ||
+    definition.control === "attachments"
+  ) {
+    return { maxSize: 320, minSize: 160, size: 220 };
+  }
+  return { maxSize: 260, minSize: 120, size: 160 };
+}
+
+function getHospitalOrderTableDetailTextMode(
+  definition: ClinicalOrderFieldDefinition,
+): EmrTableCellTextMode {
+  return definition.control === "textarea" ||
+    definition.control === "schedule" ||
+    definition.control === "attachments"
+    ? "two-line-if-long"
+    : "one-line";
+}
 type OrderMenuChild = {
   label: string;
   categoryId?: HospitalOrderCategoryId;
@@ -1822,6 +1941,10 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   };
 
   const isDispensingOrderTable = selectedCategoryId === "dispensing";
+  const hospitalOrderDetailFields = useMemo(
+    () => getHospitalOrderTableDetailFields(selectedLeafOrders),
+    [selectedLeafOrders],
+  );
   const hospitalOrderColumns = useMemo<
     Array<ColumnDef<HospitalOrderCatalogItem, unknown>>
   >(
@@ -1941,6 +2064,54 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         sortingFn: (left, right, id) =>
           compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
       },
+      ...(isDispensingOrderTable
+        ? []
+        : hospitalOrderDetailFields.map(({ clinicalOrderType, definition }) => {
+            const columnSize =
+              getHospitalOrderTableDetailColumnSize(definition);
+            const textMode = getHospitalOrderTableDetailTextMode(definition);
+
+            return {
+              accessorFn: (row: HospitalOrderCatalogItem) =>
+                row.clinicalOrderType === clinicalOrderType
+                  ? formatHospitalOrderTableDetailValue(
+                      definition,
+                      row.defaultDetailInputs?.[definition.key],
+                    )
+                  : "",
+              id: `detail-${clinicalOrderType}-${definition.key}`,
+              enableSorting: true,
+              ...columnSize,
+              meta: {
+                align:
+                  definition.control === "number"
+                    ? ("right" as const)
+                    : undefined,
+                label: definition.label,
+                resize: "data-column" as const,
+                role: "data" as const,
+                textMode,
+              },
+              cell: ({
+                row,
+              }: {
+                row: { original: HospitalOrderCatalogItem };
+              }) => (
+                <HospitalOrderTableCellValue
+                  mode={textMode}
+                  value={
+                    row.original.clinicalOrderType === clinicalOrderType
+                      ? formatHospitalOrderTableDetailValue(
+                          definition,
+                          row.original.defaultDetailInputs?.[definition.key],
+                        )
+                      : ""
+                  }
+                />
+              ),
+              sortingFn: compareHospitalOrderRows,
+            } satisfies ColumnDef<HospitalOrderCatalogItem, unknown>;
+          })),
       ...(isDispensingOrderTable
         ? [
             {
@@ -2506,7 +2677,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         ),
       },
     ],
-    [duplicateOrder, isDispensingOrderTable, openDrawer],
+    [
+      duplicateOrder,
+      hospitalOrderDetailFields,
+      isDispensingOrderTable,
+      openDrawer,
+    ],
   );
   const orderRowSelection = useMemo<RowSelectionState>(
     () => Object.fromEntries(selectedOrderIds.map((id) => [id, true])),
@@ -3428,20 +3604,33 @@ const hospitalOrderDetailOptionLabels: Record<string, string> = {
   after_meal: "식후",
   any_time: "시간 무관",
   before_meal: "식전",
+  bid: "하루 2회(BID)",
   bilateral: "양측",
   blood: "혈액",
   body_surface_area: "체표면적 기준",
+  custom: "사용자 설정",
+  enhanced: "강화",
   feces: "분변",
+  intensive: "집중",
+  isolation: "격리",
   left: "좌측",
   midline: "정중선",
   not_applicable: "해당 없음",
   now: "즉시",
+  once: "1회",
+  other: "기타",
   plasma: "혈장",
+  prn: "필요 시(PRN)",
+  qid: "하루 4회(QID)",
   refrigerated: "냉장",
   right: "우측",
   room_temp: "실온",
+  scheduled: "예약",
   serum: "혈청",
+  sid: "하루 1회(SID)",
+  standard: "일반",
   swab: "면봉",
+  tid: "하루 3회(TID)",
   tissue: "조직",
   urine: "뇨",
   with_meal: "식사와 함께",
