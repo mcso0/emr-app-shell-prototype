@@ -1,0 +1,1887 @@
+{
+  "schemaVersion": "clinical-master-system-exam-authoring/v1",
+  "artifactRevision": 1,
+  "publishState": "synthetic_unreviewed",
+  "clinicalUseAllowed": false,
+  "orderCount": 12,
+  "stableOrderKeys": [
+    "cm.order.system-exam.general-vitals",
+    "cm.order.system-exam.cardiovascular",
+    "cm.order.system-exam.respiratory",
+    "cm.order.system-exam.digestive-abdominal",
+    "cm.order.system-exam.urogenital",
+    "cm.order.system-exam.neurologic",
+    "cm.order.system-exam.musculoskeletal",
+    "cm.order.system-exam.dermatologic-coat",
+    "cm.order.system-exam.ophthalmic",
+    "cm.order.system-exam.otic",
+    "cm.order.system-exam.oral-dental",
+    "cm.order.system-exam.peripheral-lymphatic"
+  ],
+  "taxonomy": {
+    "newTCategory": {
+      "masterKey": "cm.order-category.t.system-exam",
+      "recordType": "order_category",
+      "categoryCode": "T-SYSTEM-EXAM",
+      "categoryLevel": "T",
+      "parentMasterKey": "cm.order-category.x.clinical"
+    },
+    "reusedXCategory": {
+      "masterKey": "cm.order-category.x.clinical",
+      "recordType": "order_category",
+      "reuse": true
+    },
+    "reusedChartGroup": {
+      "masterKey": "phase1a2.fallback.chart.CG_EXAM",
+      "recordType": "chart_group",
+      "groupCode": "CG_EXAM",
+      "reuse": true
+    },
+    "reusedTaskRoute": {
+      "masterKey": "phase1a2.fallback.route.NT_CHART_ONLY",
+      "recordType": "task_route",
+      "routeCode": "NT_CHART_ONLY",
+      "destinationModule": "chart_only",
+      "taskRequired": false,
+      "runtimeStatus": "active",
+      "reuse": true
+    },
+    "clinicalActionItemType": "misc"
+  },
+  "clinicalActions": [
+    {
+      "masterKey": "cm.action.system-exam.general-vitals",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.cardiovascular",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.respiratory",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.digestive-abdominal",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.urogenital",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.neurologic",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.musculoskeletal",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.dermatologic-coat",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.ophthalmic",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.otic",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.oral-dental",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    },
+    {
+      "masterKey": "cm.action.system-exam.peripheral-lymphatic",
+      "recordType": "clinical_action",
+      "tCategoryKey": "cm.order-category.t.system-exam",
+      "itemType": "misc",
+      "isOtherUnclassified": false
+    }
+  ],
+  "classificationPaths": [
+    {
+      "pathKey": "cm.path.system-exam.general-vitals",
+      "clinicalActionKey": "cm.action.system-exam.general-vitals",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.cardiovascular",
+      "clinicalActionKey": "cm.action.system-exam.cardiovascular",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.respiratory",
+      "clinicalActionKey": "cm.action.system-exam.respiratory",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.digestive-abdominal",
+      "clinicalActionKey": "cm.action.system-exam.digestive-abdominal",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.urogenital",
+      "clinicalActionKey": "cm.action.system-exam.urogenital",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.neurologic",
+      "clinicalActionKey": "cm.action.system-exam.neurologic",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.musculoskeletal",
+      "clinicalActionKey": "cm.action.system-exam.musculoskeletal",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.dermatologic-coat",
+      "clinicalActionKey": "cm.action.system-exam.dermatologic-coat",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.ophthalmic",
+      "clinicalActionKey": "cm.action.system-exam.ophthalmic",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.otic",
+      "clinicalActionKey": "cm.action.system-exam.otic",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.oral-dental",
+      "clinicalActionKey": "cm.action.system-exam.oral-dental",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    },
+    {
+      "pathKey": "cm.path.system-exam.peripheral-lymphatic",
+      "clinicalActionKey": "cm.action.system-exam.peripheral-lymphatic",
+      "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+      "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+    }
+  ],
+  "publisherFragment": {
+    "records": [
+      {
+        "masterKey": "cm.order-category.t.system-exam",
+        "recordType": "order_category",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "categoryCode": "T-SYSTEM-EXAM",
+          "categoryLevel": "T",
+          "parentMasterKey": "cm.order-category.x.clinical",
+          "sortOrder": 9
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.general-vitals",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 전신상태·활력",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.cardiovascular",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 심혈관계",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.respiratory",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 호흡기계",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.digestive-abdominal",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 소화기·복부",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.urogenital",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 비뇨생식기계",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.neurologic",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 신경계",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.musculoskeletal",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 근골격계",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.dermatologic-coat",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 피부·피모",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.ophthalmic",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 안과",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.otic",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 이과",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.oral-dental",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 구강·치과",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      },
+      {
+        "masterKey": "cm.action.system-exam.peripheral-lymphatic",
+        "recordType": "clinical_action",
+        "lifecycleStatus": "published",
+        "safetyStatus": "normal",
+        "safetyReason": null,
+        "names": [
+          {
+            "languageCode": "ko",
+            "nameKind": "preferred",
+            "name": "계통검사 · 말초 림프계",
+            "searchable": true,
+            "sortOrder": 0
+          }
+        ],
+        "source": {
+          "sourceType": "synthetic",
+          "title": "CLAiR system-exam authoring fixture",
+          "referenceUri": null,
+          "sourceVersion": "v1",
+          "accessedAt": "2026-08-31",
+          "licenseNotes": "Synthetic structural data; not for clinical use."
+        },
+        "detail": {
+          "tCategoryKey": "cm.order-category.t.system-exam",
+          "itemType": "misc",
+          "isOtherUnclassified": false
+        }
+      }
+    ],
+    "classificationPaths": [
+      {
+        "pathKey": "cm.path.system-exam.general-vitals",
+        "clinicalActionKey": "cm.action.system-exam.general-vitals",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.cardiovascular",
+        "clinicalActionKey": "cm.action.system-exam.cardiovascular",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.respiratory",
+        "clinicalActionKey": "cm.action.system-exam.respiratory",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.digestive-abdominal",
+        "clinicalActionKey": "cm.action.system-exam.digestive-abdominal",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.urogenital",
+        "clinicalActionKey": "cm.action.system-exam.urogenital",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.neurologic",
+        "clinicalActionKey": "cm.action.system-exam.neurologic",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.musculoskeletal",
+        "clinicalActionKey": "cm.action.system-exam.musculoskeletal",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.dermatologic-coat",
+        "clinicalActionKey": "cm.action.system-exam.dermatologic-coat",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.ophthalmic",
+        "clinicalActionKey": "cm.action.system-exam.ophthalmic",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.otic",
+        "clinicalActionKey": "cm.action.system-exam.otic",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.oral-dental",
+        "clinicalActionKey": "cm.action.system-exam.oral-dental",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      },
+      {
+        "pathKey": "cm.path.system-exam.peripheral-lymphatic",
+        "clinicalActionKey": "cm.action.system-exam.peripheral-lymphatic",
+        "chartGroupKey": "phase1a2.fallback.chart.CG_EXAM",
+        "taskRouteKey": "phase1a2.fallback.route.NT_CHART_ONLY"
+      }
+    ]
+  },
+  "profiles": [
+    {
+      "profileKey": "system_exam.general-vitals.v1",
+      "orderKey": "cm.order.system-exam.general-vitals",
+      "label": "전신상태·활력",
+      "examScope": "전신 상태와 활력 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 1,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.cardiovascular.v1",
+      "orderKey": "cm.order.system-exam.cardiovascular",
+      "label": "심혈관계",
+      "examScope": "심혈관계 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 2,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.respiratory.v1",
+      "orderKey": "cm.order.system-exam.respiratory",
+      "label": "호흡기계",
+      "examScope": "호흡기계 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 3,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.digestive-abdominal.v1",
+      "orderKey": "cm.order.system-exam.digestive-abdominal",
+      "label": "소화기·복부",
+      "examScope": "소화기 및 복부 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 4,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.urogenital.v1",
+      "orderKey": "cm.order.system-exam.urogenital",
+      "label": "비뇨생식기계",
+      "examScope": "비뇨생식기계 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 5,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.neurologic.v1",
+      "orderKey": "cm.order.system-exam.neurologic",
+      "label": "신경계",
+      "examScope": "신경계 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 6,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.musculoskeletal.v1",
+      "orderKey": "cm.order.system-exam.musculoskeletal",
+      "label": "근골격계",
+      "examScope": "근골격계 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 7,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.dermatologic-coat.v1",
+      "orderKey": "cm.order.system-exam.dermatologic-coat",
+      "label": "피부·피모",
+      "examScope": "피부 및 피모 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 8,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.ophthalmic.v1",
+      "orderKey": "cm.order.system-exam.ophthalmic",
+      "label": "안과",
+      "examScope": "안과 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 9,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.otic.v1",
+      "orderKey": "cm.order.system-exam.otic",
+      "label": "이과",
+      "examScope": "이과 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 10,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.oral-dental.v1",
+      "orderKey": "cm.order.system-exam.oral-dental",
+      "label": "구강·치과",
+      "examScope": "구강 및 치과 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 11,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    },
+    {
+      "profileKey": "system_exam.peripheral-lymphatic.v1",
+      "orderKey": "cm.order.system-exam.peripheral-lymphatic",
+      "label": "말초 림프계",
+      "examScope": "말초 림프계 평가",
+      "examMethod": "표준 신체검사",
+      "sortOrder": 12,
+      "findingsEnteredAtRuntime": true,
+      "noNormalFindingDefaults": true
+    }
+  ],
+  "executionPresets": [
+    {
+      "orderKey": "cm.order.system-exam.general-vitals",
+      "actionKey": "cm.action.system-exam.general-vitals",
+      "pathKey": "cm.path.system-exam.general-vitals",
+      "profileKey": "system_exam.general-vitals.v1",
+      "profile": {
+        "label": "전신상태·활력",
+        "examScope": "전신 상태와 활력 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 1,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "ec14870a-e57c-5d8f-b690-c570346b2d80",
+        "presetKey": "preset:execution:cm.order.system-exam.general-vitals",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "전신상태·활력",
+          "examScope": "전신 상태와 활력 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "0b702b3c85a4d966566843abee02360bfdd9e570013243c01fb2b352ef54098e",
+          "sourceRecordFingerprint": "0b702b3c85a4d966566843abee02360bfdd9e570013243c01fb2b352ef54098e",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.general-vitals.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "6589eaf061fbe1d99a8e44f1a7b19531543675a4f80f3a78e22623ba06995a2e"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.cardiovascular",
+      "actionKey": "cm.action.system-exam.cardiovascular",
+      "pathKey": "cm.path.system-exam.cardiovascular",
+      "profileKey": "system_exam.cardiovascular.v1",
+      "profile": {
+        "label": "심혈관계",
+        "examScope": "심혈관계 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 2,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "cb8fcb33-5614-5040-9ef8-57ba81da2656",
+        "presetKey": "preset:execution:cm.order.system-exam.cardiovascular",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "심혈관계",
+          "examScope": "심혈관계 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "08517bcc5b3e4513c41da01cf885c3a8f4b0e544a9e44e89ab18eb77b7dd9ee6",
+          "sourceRecordFingerprint": "08517bcc5b3e4513c41da01cf885c3a8f4b0e544a9e44e89ab18eb77b7dd9ee6",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.cardiovascular.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "b64e860d8989f55fbabac825383f3fc619c48349f9214273ec1b7dec70d5705c"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.respiratory",
+      "actionKey": "cm.action.system-exam.respiratory",
+      "pathKey": "cm.path.system-exam.respiratory",
+      "profileKey": "system_exam.respiratory.v1",
+      "profile": {
+        "label": "호흡기계",
+        "examScope": "호흡기계 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 3,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "4747549e-af52-5018-ad4b-de79a9f7e8b6",
+        "presetKey": "preset:execution:cm.order.system-exam.respiratory",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "호흡기계",
+          "examScope": "호흡기계 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "b28fc553651100fd29757cefe602d81b0c3c7fa6bd5a0f75f897d9a1826cff19",
+          "sourceRecordFingerprint": "b28fc553651100fd29757cefe602d81b0c3c7fa6bd5a0f75f897d9a1826cff19",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.respiratory.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "a3dab8bf592be61fb5d7987f50c494bd9a2b581a24a3a1217dd1ad21b8969ec2"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.digestive-abdominal",
+      "actionKey": "cm.action.system-exam.digestive-abdominal",
+      "pathKey": "cm.path.system-exam.digestive-abdominal",
+      "profileKey": "system_exam.digestive-abdominal.v1",
+      "profile": {
+        "label": "소화기·복부",
+        "examScope": "소화기 및 복부 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 4,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "e9e13e3f-113e-5cdc-9807-88da200fa51f",
+        "presetKey": "preset:execution:cm.order.system-exam.digestive-abdominal",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "소화기·복부",
+          "examScope": "소화기 및 복부 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "e130404af2e62b91ebb4fceada91f12cdb98dc23c2603567c6592b31b14f3da7",
+          "sourceRecordFingerprint": "e130404af2e62b91ebb4fceada91f12cdb98dc23c2603567c6592b31b14f3da7",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.digestive-abdominal.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "cf3d3ca6f7bef3dfc6beee16328818cec6e1a72c23df17483cc5cf4f40b564b0"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.urogenital",
+      "actionKey": "cm.action.system-exam.urogenital",
+      "pathKey": "cm.path.system-exam.urogenital",
+      "profileKey": "system_exam.urogenital.v1",
+      "profile": {
+        "label": "비뇨생식기계",
+        "examScope": "비뇨생식기계 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 5,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "51755fb5-1162-52c3-8010-73fb96129419",
+        "presetKey": "preset:execution:cm.order.system-exam.urogenital",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "비뇨생식기계",
+          "examScope": "비뇨생식기계 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "d9afd005d5ac97c44c140f4121205838213b075cadbef66fba89d8cd59f0994d",
+          "sourceRecordFingerprint": "d9afd005d5ac97c44c140f4121205838213b075cadbef66fba89d8cd59f0994d",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.urogenital.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "766b0d31f95ed90a41bf5fbace9e9f5cff694d9ea5bf29ca404a3f61b6e4d444"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.neurologic",
+      "actionKey": "cm.action.system-exam.neurologic",
+      "pathKey": "cm.path.system-exam.neurologic",
+      "profileKey": "system_exam.neurologic.v1",
+      "profile": {
+        "label": "신경계",
+        "examScope": "신경계 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 6,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "c2eb3dce-6912-5c2c-8365-4720bf516068",
+        "presetKey": "preset:execution:cm.order.system-exam.neurologic",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "신경계",
+          "examScope": "신경계 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "8ea9b4ad263d12034694642704b38ef6b6f4100d69322469740f1d22a8b30764",
+          "sourceRecordFingerprint": "8ea9b4ad263d12034694642704b38ef6b6f4100d69322469740f1d22a8b30764",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.neurologic.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "d55022e22ee489c3a71f7f97e71680ea5e2e2dfe874d2516ea1106d56da7072a"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.musculoskeletal",
+      "actionKey": "cm.action.system-exam.musculoskeletal",
+      "pathKey": "cm.path.system-exam.musculoskeletal",
+      "profileKey": "system_exam.musculoskeletal.v1",
+      "profile": {
+        "label": "근골격계",
+        "examScope": "근골격계 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 7,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "30a4771a-9b4f-57f3-b284-cce9bae78399",
+        "presetKey": "preset:execution:cm.order.system-exam.musculoskeletal",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "근골격계",
+          "examScope": "근골격계 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "fb8a0456b4c0d57dbf65b79929aff2c516906640ef345740c573773b35c4e5b9",
+          "sourceRecordFingerprint": "fb8a0456b4c0d57dbf65b79929aff2c516906640ef345740c573773b35c4e5b9",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.musculoskeletal.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "0116182a2d4c07e7ae6ca5965e734a6cd5ae8b3e2148e555c85e59a5dd255c80"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.dermatologic-coat",
+      "actionKey": "cm.action.system-exam.dermatologic-coat",
+      "pathKey": "cm.path.system-exam.dermatologic-coat",
+      "profileKey": "system_exam.dermatologic-coat.v1",
+      "profile": {
+        "label": "피부·피모",
+        "examScope": "피부 및 피모 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 8,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "30b9f51d-2608-5f8c-abb5-0ade440fe26e",
+        "presetKey": "preset:execution:cm.order.system-exam.dermatologic-coat",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "피부·피모",
+          "examScope": "피부 및 피모 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "ad49c601c893bcc4cb24bbe91f8730a11aee973a4cf8da1ce97ccf828ddeea69",
+          "sourceRecordFingerprint": "ad49c601c893bcc4cb24bbe91f8730a11aee973a4cf8da1ce97ccf828ddeea69",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.dermatologic-coat.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "53a57a7fce27f7fa9b113a15b74357619e010bbbd7791b3dad35dfd5c669411a"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.ophthalmic",
+      "actionKey": "cm.action.system-exam.ophthalmic",
+      "pathKey": "cm.path.system-exam.ophthalmic",
+      "profileKey": "system_exam.ophthalmic.v1",
+      "profile": {
+        "label": "안과",
+        "examScope": "안과 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 9,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "eb73cdd5-e6b4-5aad-95d0-41334595d4e8",
+        "presetKey": "preset:execution:cm.order.system-exam.ophthalmic",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "안과",
+          "examScope": "안과 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "8662280770e541386ac165dd2a982318f65697a07be02b482c87516609b125cc",
+          "sourceRecordFingerprint": "8662280770e541386ac165dd2a982318f65697a07be02b482c87516609b125cc",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.ophthalmic.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "17ce2cac5c98e2655675ad2fb4a060b2df30549d959dca2d69b1292c2cc819b4"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.otic",
+      "actionKey": "cm.action.system-exam.otic",
+      "pathKey": "cm.path.system-exam.otic",
+      "profileKey": "system_exam.otic.v1",
+      "profile": {
+        "label": "이과",
+        "examScope": "이과 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 10,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "f6e06e90-0aa4-5f33-9867-9f2a2c451503",
+        "presetKey": "preset:execution:cm.order.system-exam.otic",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "이과",
+          "examScope": "이과 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "629af7647f2bb5901173b7f7c3bae6977c9419ae6cd0582ee7c67a19724e692e",
+          "sourceRecordFingerprint": "629af7647f2bb5901173b7f7c3bae6977c9419ae6cd0582ee7c67a19724e692e",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.otic.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "9fc5b9b74b3aa386e9533ca5daa0bdeba78a567da3ba5dcfde1119b5f91b93ac"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.oral-dental",
+      "actionKey": "cm.action.system-exam.oral-dental",
+      "pathKey": "cm.path.system-exam.oral-dental",
+      "profileKey": "system_exam.oral-dental.v1",
+      "profile": {
+        "label": "구강·치과",
+        "examScope": "구강 및 치과 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 11,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "b5034001-bb24-59c6-8eca-3fb6877fb436",
+        "presetKey": "preset:execution:cm.order.system-exam.oral-dental",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "구강·치과",
+          "examScope": "구강 및 치과 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "9129e46a3c9f5ce651a95de02cae40d67c21c320916850afa0cf130a48467456",
+          "sourceRecordFingerprint": "9129e46a3c9f5ce651a95de02cae40d67c21c320916850afa0cf130a48467456",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.oral-dental.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "a443a28a583d1d011048112114ee7a0900095a138ce97f49ee7bc8e4e928a5a0"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    },
+    {
+      "orderKey": "cm.order.system-exam.peripheral-lymphatic",
+      "actionKey": "cm.action.system-exam.peripheral-lymphatic",
+      "pathKey": "cm.path.system-exam.peripheral-lymphatic",
+      "profileKey": "system_exam.peripheral-lymphatic.v1",
+      "profile": {
+        "label": "말초 림프계",
+        "examScope": "말초 림프계 평가",
+        "examMethod": "표준 신체검사",
+        "sortOrder": 12,
+        "findingsEnteredAtRuntime": true,
+        "noNormalFindingDefaults": true
+      },
+      "preset": {
+        "presetId": "f78ed85c-5969-5ccc-b0f5-d38bf3d46d03",
+        "presetKey": "preset:execution:cm.order.system-exam.peripheral-lymphatic",
+        "presetRevision": 1,
+        "clinicalOrderType": "system_exam",
+        "destinationModule": null,
+        "executionMode": "immediate_complete",
+        "detailSchemaVersion": 1,
+        "defaultDetailInputs": {
+          "bodySystem": "말초 림프계",
+          "examScope": "말초 림프계 평가",
+          "examMethod": "표준 신체검사"
+        },
+        "fieldPolicies": {
+          "bodySystem": "derived_from_profile",
+          "examScope": "derived_from_profile",
+          "examMethod": "preset_fixed",
+          "findingSummary": "required_manual",
+          "siteLaterality": "required_manual",
+          "abnormalFindings": "required_manual",
+          "attachments": "not_applicable",
+          "exceptions": "not_applicable"
+        },
+        "provenance": {
+          "sourceReleaseKey": null,
+          "sourceReleaseId": null,
+          "sourceFingerprint": "1e70ad51b973d0722d7ce69b97787a474b86a0bf5bf4694db424fd0b02310514",
+          "sourceRecordFingerprint": "1e70ad51b973d0722d7ce69b97787a474b86a0bf5bf4694db424fd0b02310514",
+          "sourceType": "synthetic-system-exam-profile",
+          "generatorProfileKey": "system_exam.peripheral-lymphatic.v1",
+          "sourceNotes": "Synthetic profile. Findings are entered by the clinician at runtime; no normal finding is authored.",
+          "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use."
+        },
+        "presetStatus": "synthetic_unreviewed",
+        "syntheticUnreviewed": true,
+        "clinicalUseAllowed": false,
+        "sourceArtifactSha256": "d23bdf07ca4aebe1efe2f62ca627f0a9ad06f32218b4a783b38bc19e2b0068ab",
+        "contentSha256": "8a92fdeefec0ab5c0724e1ba9e0a13f9e9366110129fc66e2c410626690b2f88"
+      },
+      "provenance": {
+        "sourceType": "synthetic-system-exam-profile",
+        "sourceNotes": "No normal/abnormal finding, patient, price, or assignee is authored."
+      }
+    }
+  ],
+  "records": [
+    {
+      "masterKey": "cm.order.system-exam.general-vitals",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "전신상태·활력",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.general-vitals",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.cardiovascular",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "심혈관계",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.cardiovascular",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.respiratory",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "호흡기계",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.respiratory",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.digestive-abdominal",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "소화기·복부",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.digestive-abdominal",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.urogenital",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "비뇨생식기계",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.urogenital",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.neurologic",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "신경계",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.neurologic",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.musculoskeletal",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "근골격계",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.musculoskeletal",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.dermatologic-coat",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "피부·피모",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.dermatologic-coat",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.ophthalmic",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "안과",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.ophthalmic",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.otic",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "이과",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.otic",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.oral-dental",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "구강·치과",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.oral-dental",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    },
+    {
+      "masterKey": "cm.order.system-exam.peripheral-lymphatic",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "말초 림프계",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR system-exam authoring fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-31",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.system-exam.peripheral-lymphatic",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": false,
+        "defaultQuantity": 1,
+        "species": [
+          "dog",
+          "cat"
+        ]
+      }
+    }
+  ],
+  "stableOrderKeysSha256": "b6cd732044f6ed8c8f72dbee449a385ccec27b056605996fd5766effe9f3ad70",
+  "artifactSha256": "594241e8d753a9117f18ffc392930f51e01976f6ed19f9f36f341d8f456521c6"
+}

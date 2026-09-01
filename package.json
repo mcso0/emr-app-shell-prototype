@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "clinical-master:publisher:benchmark": "node scripts/benchmark-clinical-master-publisher.mjs",
     "demo:seed:avatars": "node scripts/upload-staff-avatars.mjs",
     "demo:seed:check": "node scripts/check-local-supabase-replay.mjs",
     "docs:check": "node scripts/check-doc-links.mjs",

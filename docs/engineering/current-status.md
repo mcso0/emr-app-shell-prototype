@@ -180,6 +180,29 @@ Queue projection, and one Billing candidate. PR #640 merged at
 `clinical_use_allowed = false`; this is not clinical approval or real-hospital
 launch readiness.
 
+CLINICAL-MASTER-PR-022 has completed the implementation and shared
+synthetic/demo Supabase rollout; code delivery and authenticated UI smoke remain
+in progress. The final set-based publisher migrations preserved owner,
+`SECURITY DEFINER`, fixed search path and private ACLs. Exact 1,982,060-byte
+payload SHA `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`
+published release no. 50 (`647629e9-41fe-4d75-a572-99f34bf428ea`) in 25.2s and
+the same-input retry completed in 10.85s with `idempotent=true`. Final remote
+counts are manifest/stage `689/689`, immutable versions 535, review events
+1,070, execution preset version/current `630/522`, and semantic mismatch 0.
+All three allowlisted workspaces now have `522/522/0` catalog/preset-link/empty-
+default counts. The guarded rollout resolved 414 current-scope rows per
+workspace: demo and Cheongdam accepted 414, while pilot accepted 413 and
+auto-resolved 1 already-current row. All three dismissed 108 dispensing updates
+whose workspace profiles remain safely pinned to master order revision 1;
+existing profile-matched presets were preserved.
+Cheongdam's 12 paused rows were also preserved. Chart search returns prefilled
+details for every visible row: demo `522/522`, Cheongdam `510/510`, pilot
+`520/520`. Target current-preset, deferred profile/preset and clinical-gate
+mismatches are zero, and `clair-foreign-demo` catalog/update/lab/notification/
+audit changes are zero. All content remains `synthetic_unreviewed` with
+`clinicalUseAllowed=false`; clinical validation, dispensing revision-2 profile
+republish and clinical activation are deferred.
+
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,
 and diagnosis-to-disease-group link tables with typed guards, RLS/no-policy
