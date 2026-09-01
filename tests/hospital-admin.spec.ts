@@ -115,18 +115,48 @@ function createServiceReviewDispensingMasterItem(index: number) {
 }
 
 function createGenericCatalogItem(
-  clinicalOrderType: "imaging" | "system_exam" | "other",
+  clinicalOrderType: NonNullable<OrderCatalogItem["clinicalOrderType"]>,
   defaultDetailInputs: Record<string, unknown>,
 ) {
   const base = createServiceReviewDispensingMasterItem(0);
-  const categoryGroup =
-    clinicalOrderType === "imaging"
-      ? "imaging"
-      : clinicalOrderType === "other"
-        ? "misc"
-        : "lab";
-  const destinationModule =
-    clinicalOrderType === "imaging" ? "imaging" : "chart_only";
+  const categoryGroup = {
+    clinical_lab: "lab",
+    consultation: "consultation",
+    dispensing: "medication",
+    external_lab: "lab",
+    hospitalization: "hospitalization",
+    imaging: "imaging",
+    other: "misc",
+    system_exam: "lab",
+    treatment: "treatment",
+  }[clinicalOrderType];
+  const categoryLabel = {
+    clinical_lab: "임상병리",
+    consultation: "기본 진료비",
+    dispensing: "처방",
+    external_lab: "의뢰 검사",
+    hospitalization: "입원",
+    imaging: "방사선",
+    other: "기타",
+    system_exam: "계통검사",
+    treatment: "처치",
+  }[clinicalOrderType];
+  const destinationModule = {
+    clinical_lab: "lab",
+    consultation: "chart_only",
+    dispensing: "dispensing",
+    external_lab: "external_lab",
+    hospitalization: "hospitalization",
+    imaging: "imaging",
+    other: "chart_only",
+    system_exam: "chart_only",
+    treatment: "treatment",
+  }[clinicalOrderType];
+  const immediateComplete = [
+    "consultation",
+    "other",
+    "system_exam",
+  ].includes(clinicalOrderType);
 
   return {
     ...base,
@@ -134,18 +164,15 @@ function createGenericCatalogItem(
     aliases: [],
     availabilityStatus: "active",
     categoryGroup,
-    categoryLabel:
-      clinicalOrderType === "imaging"
-        ? "방사선"
-        : clinicalOrderType === "system_exam"
-          ? "계통검사"
-          : "기타",
+    categoryLabel,
     clinicalOrderType,
     defaultDetailInputs,
     defaultDestinationModule: destinationModule,
+    defaultTaskRequired: !immediateComplete,
     destinationModule,
     dispensingLineage: undefined,
     detailSchemaVersion: 1,
+    executionMode: immediateComplete ? "immediate_complete" : "routed",
     medicationMetadata: undefined,
     originType: "clair_master",
     presetMergeStatus: "current",
@@ -423,6 +450,219 @@ test("hospital admin edits schema-backed generic defaults for an existing imagin
       imagingProtocol: "흉부 2-view, 호기말 촬영",
     },
   });
+});
+
+test("hospital admin exposes only authored preset details across non-dispensing Order leaves", async ({
+  page,
+}) => {
+  const items = [
+    createGenericCatalogItem("consultation", {
+      instructionSummary: "초진 기본 평가",
+    }),
+    createGenericCatalogItem("clinical_lab", {
+      specimenType: "blood",
+      testPanel: "CBC 5종",
+      collectionCondition: "EDTA 전혈",
+    }),
+    createGenericCatalogItem("imaging", {
+      bodyRegion: "흉부",
+      position: "우측 측와",
+      viewCount: 2,
+      contrastRequired: false,
+      sedationRequired: false,
+      imagingProtocol: "흉부 2-view, 호기말 촬영",
+    }),
+    createGenericCatalogItem("external_lab", {}),
+    createGenericCatalogItem("treatment", {
+      method: "피하 수액",
+      site: "견갑 사이",
+      frequency: "once",
+      schedule: "내원 중 1회",
+      stagedInstructions: "체온 확인 후 시행",
+    }),
+    createGenericCatalogItem("hospitalization", {
+      durationDays: 3,
+      careLevel: "intensive",
+      monitoringInterval: 30,
+      nursingPlan: "2시간마다 활력 확인",
+    }),
+    createGenericCatalogItem("system_exam", {
+      bodySystem: "호흡기계",
+      examScope: "호흡기계 평가",
+      examMethod: "청진",
+    }),
+    createGenericCatalogItem("other", {
+      structuredValue: "보호자 동의서",
+      description: "시술 전 서명 확인",
+    }),
+  ];
+
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog",
+    async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          items,
+          capabilities: {
+            canManageCatalog: true,
+            canAuthorDispensing: true,
+            canApproveDispensing: false,
+          },
+        }),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/orders?modulePanel=open");
+  const sidePanel = page.getByTestId("hospital-admin-side-panel");
+  const cases = [
+    {
+      label: "기본 진료비",
+      type: "consultation",
+      columns: ["instructionSummary"],
+      values: ["초진 기본 평가"],
+      absent: ["담당자", "횟수", "실행 시점"],
+    },
+    {
+      label: "임상병리 검사",
+      type: "clinical_lab",
+      columns: ["specimenType", "testPanel", "collectionCondition"],
+      values: ["혈액", "CBC 5종", "EDTA 전혈"],
+    },
+    {
+      label: "영상검사",
+      type: "imaging",
+      columns: [
+        "bodyRegion",
+        "position",
+        "viewCount",
+        "contrastRequired",
+        "sedationRequired",
+        "imagingProtocol",
+      ],
+      values: [
+        "흉부",
+        "우측 측와",
+        "2 view",
+        "아니오",
+        "흉부 2-view, 호기말 촬영",
+      ],
+    },
+    {
+      label: "의뢰 검사",
+      type: "external_lab",
+      columns: [],
+      values: [],
+      absent: ["검사 기관"],
+    },
+    {
+      label: "처치",
+      type: "treatment",
+      columns: [
+        "method",
+        "site",
+        "frequency",
+        "schedule",
+        "stagedInstructions",
+      ],
+      values: [
+        "피하 수액",
+        "견갑 사이",
+        "1회",
+        "내원 중 1회",
+        "체온 확인 후 시행",
+      ],
+      absent: ["투여량"],
+    },
+    {
+      label: "입원",
+      type: "hospitalization",
+      columns: [
+        "durationDays",
+        "careLevel",
+        "monitoringInterval",
+        "nursingPlan",
+      ],
+      values: ["3일", "집중", "30분", "2시간마다 활력 확인"],
+      absent: ["병동/케이지"],
+    },
+    {
+      label: "계통 검사",
+      type: "system_exam",
+      columns: ["bodySystem", "examScope", "examMethod"],
+      values: ["호흡기계", "호흡기계 평가", "청진"],
+      absent: ["소견 요약"],
+    },
+    {
+      label: "기타",
+      type: "other",
+      columns: ["structuredValue", "description"],
+      values: ["보호자 동의서", "시술 전 서명 확인"],
+    },
+  ];
+
+  for (const entry of cases) {
+    await sidePanel
+      .getByRole("button", {
+        name: new RegExp(`^${entry.label}(?:\\s+\\d+)?$`),
+      })
+      .click();
+    const table = page.getByTestId("hospital-order-table");
+    await expect(table).toBeVisible();
+
+    for (const key of entry.columns) {
+      await expect(
+        table.locator(
+          `thead [data-column-id="detail-${entry.type}-${key}"]`,
+        ),
+      ).toBeVisible();
+    }
+    for (const value of entry.values) {
+      await expect(table.locator("tbody")).toContainText(value);
+    }
+    for (const absentLabel of entry.absent ?? []) {
+      await expect(
+        table.getByRole("columnheader", { name: absentLabel }),
+      ).toHaveCount(0);
+    }
+    await expect(
+      table.locator('[data-emr-pinned-table-scroll-owner="true"]'),
+    ).toHaveCount(1);
+  }
+
+  await sidePanel.getByRole("button", { name: /^영상검사/ }).click();
+  const imagingTable = page.getByTestId("hospital-order-table");
+  await page
+    .getByTestId("hospital-order-page-header")
+    .getByRole("button", { name: "영상검사 컬럼 표시 설정" })
+    .click();
+  const protocolOption = page.getByRole("menuitemcheckbox", {
+    name: "촬영 프로토콜",
+  });
+  await expect(protocolOption).toBeChecked();
+  await protocolOption.click();
+  await expect(
+    imagingTable.locator(
+      '[data-column-id="detail-imaging-imagingProtocol"]',
+    ),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await sidePanel.getByRole("button", { name: /^임상병리 검사/ }).click();
+  const labTable = page.getByTestId("hospital-order-table");
+  await expect(
+    labTable.locator('[data-column-id="detail-clinical_lab-specimenType"]'),
+  ).not.toHaveCount(0);
+  await expect(
+    labTable.locator('[data-column-id^="detail-imaging-"]'),
+  ).toHaveCount(0);
 });
 
 test("hospital admin order management opens with category and subcategory navigation", async ({

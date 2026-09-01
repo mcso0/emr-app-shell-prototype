@@ -180,9 +180,9 @@ Queue projection, and one Billing candidate. PR #640 merged at
 `clinical_use_allowed = false`; this is not clinical approval or real-hospital
 launch readiness.
 
-CLINICAL-MASTER-PR-022 has completed the implementation and shared
-synthetic/demo Supabase rollout; code delivery and authenticated UI smoke remain
-in progress. The final set-based publisher migrations preserved owner,
+CLINICAL-MASTER-PR-022 has completed the original implementation, shared
+synthetic/demo Supabase rollout, application delivery, and authenticated UI
+smoke. The final set-based publisher migrations preserved owner,
 `SECURITY DEFINER`, fixed search path and private ACLs. Exact 1,982,060-byte
 payload SHA `834812eaea2afb2fafb93ea3b0a23efb5bc7df54ea3ac8977983683523c4e278`
 published release no. 50 (`647629e9-41fe-4d75-a572-99f34bf428ea`) in 25.2s and
@@ -199,9 +199,24 @@ Cheongdam's 12 paused rows were also preserved. Chart search returns prefilled
 details for every visible row: demo `522/522`, Cheongdam `510/510`, pilot
 `520/520`. Target current-preset, deferred profile/preset and clinical-gate
 mismatches are zero, and `clair-foreign-demo` catalog/update/lab/notification/
-audit changes are zero. All content remains `synthetic_unreviewed` with
-`clinicalUseAllowed=false`; clinical validation, dispensing revision-2 profile
-republish and clinical activation are deferred.
+audit changes are zero. PR #691 merged as
+`f686bb76a48b2948c5c631c261a681814493bc9b`, Release Check `33408313595`
+passed, and production deployment
+`dpl_GhYmBSRhX4CerzvJAfaAm7kvHvcw` is Ready. A 2026-09-01 local follow-up now
+shows authored non-dispensing preset details directly in each Hospital Admin
+individual Order table while preserving dispensing, pinned-column, scroll,
+and column-visibility contracts; delivery of that follow-up remains pending.
+The current remote rows still remain `synthetic_unreviewed` with
+`clinicalUseAllowed=false`. A 2026-09-01 beta activation follow-up is now
+implemented locally and passed exact remote rollback/retry rehearsal: it records
+one private immutable offline-validation batch with the representative-
+designated reviewer label `이수지 수의사`, appends 522 reviewed current presets
+plus 108 profile-pinned compatibility presets, refreshes 1,566 workspace copies,
+and converges each target workspace on 414 active plus 108 service-review rows.
+The rehearsal preserved exact workspace name/price fingerprints and left
+`clair-foreign-demo` unchanged. Persistent Supabase execution and application
+delivery remain pending; this boundary is synthetic beta service validation,
+not real-patient or public-launch authorization.
 
 CLINICAL-MASTER-PR-007 is implemented as a schema-only private diagnosis
 foundation reservation: the additive migration adds the category, diagnosis,
