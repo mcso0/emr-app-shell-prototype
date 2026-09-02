@@ -3,7 +3,7 @@ id: "CHART-PR-032"
 type: "Work Item"
 title: "Plan/Order Exact Legacy Columns"
 description: "Replaces the dynamic union matrix with the approved fixed 25-column projection after authoritative lifecycle and billing data are available."
-status: "ready"
+status: "in_progress"
 area: "chart"
 priority: "P0"
 tags: [chart, plan-order, table, legacy-columns]
@@ -15,7 +15,7 @@ dependencies:
   - "CLINICAL-MASTER-PR-023"
   - "CLINICAL-FULFILLMENT-PR-010"
   - "CLINICAL-BILLING-PR-023"
-updated: "2026-09-02"
+updated: "2026-09-03"
 ---
 
 # Plan/Order Exact Legacy Columns
@@ -65,6 +65,19 @@ authoritative work/billing readback.
 - TypeScript, focused lint, production build, docs check, secret scan, and diff
   check.
 - Authenticated preview smoke before production candidate approval.
+
+## Implementation Checkpoint — 2026-09-03
+
+- The fixed 25-column `전체` projection, applicable/blank/historical display
+  states, assignee controls, actual-dispense controls, pre-billing editors, and
+  scoped downstream navigation are implemented on the candidate branch.
+- Focused chart UI regression passed `73/73`; the broader changed/new
+  Plan/Order server, API, domain, fulfillment, billing, and catalog suite passed
+  `238/238`.
+- TypeScript, repository lint, production build, diff check, and the local SQL
+  migration/smoke transaction with unconditional rollback passed.
+- PR creation, authenticated preview smoke, exact-SHA approval, production
+  migration, merge, deployment, and authenticated production smoke remain open.
 
 ## Handoff Notes
 

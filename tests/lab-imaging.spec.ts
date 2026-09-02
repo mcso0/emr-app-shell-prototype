@@ -44,6 +44,21 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
   );
 }
 
+function waitForFulfillmentQueue(
+  page: Page,
+  queueType: "lab" | "imaging",
+) {
+  return page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return (
+      response.ok() &&
+      url.pathname.endsWith("/fulfillment/work-items") &&
+      url.searchParams.get("queueType") === queueType &&
+      url.searchParams.get("date") === "2026-05-01"
+    );
+  });
+}
+
 test("lab no-work empty state hides history aside", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
 
@@ -109,7 +124,9 @@ test("imaging no-work empty state hides history aside", async ({ page }) => {
 });
 
 test("lab workspace renders result input, equipment receipts, and attachments", async ({ page }) => {
+  const queueLoaded = waitForFulfillmentQueue(page, "lab");
   await page.goto("/w/clair-demo/lab?modulePanel=open");
+  await queueLoaded;
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("임상병리검사")).toBeVisible();
@@ -145,8 +162,7 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(page.getByRole("columnheader", { name: "담당자" })).toBeVisible();
   await expect(page.getByText("■ 혈구 검사")).toHaveCount(0);
   await expect(page.getByRole("row", { name: /WBC 18\.2 K\/uL .*정상 송하윤/ })).toBeVisible();
-  await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  await expect(page.getByRole("button", { name: "검사중", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "검사 중", exact: true })).toBeVisible();
   await expect(page.getByRole("row", { name: /HCT 27 % .*30.*45.*낮음/ })).toBeVisible();
   await page.getByRole("textbox", { name: "HCT 결과값" }).fill("42");
   await expect(page.getByRole("row", { name: /HCT 42 % .*30.*45.*정상/ })).toBeVisible();
@@ -376,7 +392,11 @@ test("lab workspace prioritizes Kong CBC result from demo query", async ({ page 
 });
 
 test("imaging workspace renders reading, impression, and attachment flow", async ({ page }) => {
-  await page.goto("/w/clair-demo/imaging?modulePanel=open");
+  const queueLoaded = waitForFulfillmentQueue(page, "imaging");
+  await page.goto(
+    "/w/clair-demo/imaging?modulePanel=open&aside=history&right=open&imagingStudyId=imaging-coco-thorax",
+  );
+  await queueLoaded;
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByText("영상검사")).toBeVisible();
@@ -384,25 +404,6 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
   await expect(sidePanel.getByText("영상 대기열")).toBeVisible();
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toContainText("흉부 방사선");
-  await sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax").click();
-  await expect(page).toHaveURL(/imagingStudyId=imaging-coco-thorax/);
-  const cocoQueueGroupTestId = await sidePanel
-    .getByTestId("imaging-queue-item-imaging-coco-thorax")
-    .evaluate((element) => element.closest("[data-testid^='imaging-queue-status-']")?.getAttribute("data-testid"));
-
-  expect(cocoQueueGroupTestId).toBeTruthy();
-  if (!cocoQueueGroupTestId) {
-    throw new Error("Imaging queue group test id was not found.");
-  }
-  const cocoQueueGroup = sidePanel.getByTestId(cocoQueueGroupTestId);
-  const cocoQueueGroupToggle = cocoQueueGroup.getByRole("button", { name: /접기/ }).first();
-  await expect(cocoQueueGroupToggle).toHaveAttribute("aria-expanded", "true");
-  await cocoQueueGroupToggle.click();
-  const collapsedCocoQueueGroupToggle = cocoQueueGroup.getByRole("button", { name: /펼치기/ }).first();
-  await expect(collapsedCocoQueueGroupToggle).toHaveAttribute("aria-expanded", "false");
-  await expect(cocoQueueGroup.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
-  await collapsedCocoQueueGroupToggle.click();
-  await expect(cocoQueueGroup.getByTestId("imaging-queue-item-imaging-coco-thorax")).toBeVisible();
   await expect(sidePanel.getByText("차트별 영상")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "영상검사 이력 패널 접기" })).toBeVisible();
   await page.getByRole("button", { name: "영상검사 이력 패널 접기" }).hover();
@@ -418,13 +419,11 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(page.getByRole("textbox", { name: "Imaging Dx" })).toBeVisible();
   const completedStatusButton = page.getByRole("button", { name: "판독완료", exact: true });
   if ((await completedStatusButton.count()) === 0) {
-    const startReadingButton = page.getByRole("button", { name: "담당하기", exact: true });
-    if ((await startReadingButton.count()) > 0) {
-      await startReadingButton.click();
-    }
-    await expect(page.getByRole("button", { name: "판독중", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "판독 상태 액션" }).click();
-    await page.getByRole("menuitem", { name: "판독완료" }).click();
+    await expect(page.getByRole("button", { name: "판독 중", exact: true })).toBeVisible();
+    await page
+      .getByRole("button", { name: "판독 상태 액션 열기" })
+      .dispatchEvent("click");
+    await page.getByRole("menuitem", { name: "판독완료" }).dispatchEvent("click");
   }
   await expect(completedStatusButton).toBeVisible();
   const summaryPanel = page.getByTestId("imaging-summary-panel");

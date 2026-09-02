@@ -127,6 +127,46 @@ test("the synthetic fixture normalizes all thirteen types, defaults, and null st
   });
 });
 
+test("Airtable order authority accepts only complete source-authored configuration", () => {
+  const configured = cloneFixture();
+  const order = (configured.records as ExportFixture[]).find(
+    (record) => record.recordType === "order",
+  );
+  if (!order) throw new Error("fixture order missing");
+  const detail = order.detail as ExportFixture;
+  detail.planOrderAuthority = {
+    schemaVersion: 1,
+    calculationMode: "not_applicable",
+    priceBasis: "per_order",
+    billingUnit: "case",
+    taxClass: "taxable",
+  };
+
+  expect(issuesFor(configured)).toEqual([]);
+  expect(
+    normalizeClinicalMasterAirtableAuthoringExport(configured as never).records.find(
+      (record) => record.recordType === "order",
+    )?.detail.planOrderAuthority,
+  ).toEqual(detail.planOrderAuthority);
+
+  const partial = cloneFixture();
+  const partialOrder = (partial.records as ExportFixture[]).find(
+    (record) => record.recordType === "order",
+  );
+  if (!partialOrder) throw new Error("fixture order missing");
+  (partialOrder.detail as ExportFixture).planOrderAuthority = {
+    schemaVersion: 1,
+    calculationMode: "ingredient_based",
+    dispenseUnit: "mL",
+  };
+  expect(issuesFor(partial).map((issue) => issue.code)).toEqual(
+    expect.arrayContaining([
+      "required_for_ingredient_calculation",
+      "required_for_ingredient_calculation",
+    ]),
+  );
+});
+
 test("shuffled input has one canonical serialization", () => {
   const shuffled = cloneFixture();
   const records = shuffled.records as unknown[];

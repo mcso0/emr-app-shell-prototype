@@ -3,7 +3,7 @@ id: "CLINICAL-BILLING-PR-023"
 type: "Work Item"
 title: "Plan/Order Billing Authority And Snapshot"
 description: "Implements versioned pre-billing overrides, returned-state billing gates, row adjustments, tax policy, and set ownership."
-status: "ready"
+status: "in_progress"
 area: "clinical-billing"
 priority: "P0"
 tags: [plan-order, billing, tax, adjustments, snapshots]
@@ -16,7 +16,7 @@ dependencies:
   - "CLINICAL-MASTER-PR-023"
   - "CLINICAL-FULFILLMENT-PR-010"
   - "CLINICAL-BILLING-PR-022"
-updated: "2026-09-02"
+updated: "2026-09-03"
 ---
 
 # Plan/Order Billing Authority And Snapshot
@@ -73,6 +73,17 @@ handoff that blocks returned/cancelled work and prevents set/attempt duplication
 - Invoice candidate/line and checkout regression.
 - TypeScript, focused lint, docs check, secret scan, and diff check.
 - Exact remote rollback rehearsal before persistent migration or billing smoke.
+
+## Implementation Checkpoint — 2026-09-03
+
+- Versioned pre-billing overrides, adjustment derivation, immutable billing
+  snapshots, returned-work review hold, invoice reversal, and checkout/payment
+  fail-closed mappings are implemented locally.
+- Permission, CAS, replay/idempotency, immutable-history, and negative billing
+  cases passed the focused TypeScript/Playwright suite and transactional local
+  SQL smoke.
+- No remote invoice, payment, or billing-policy mutation has been executed.
+  Exact remote rollback rehearsal and production verification remain open.
 
 ## Handoff Notes
 

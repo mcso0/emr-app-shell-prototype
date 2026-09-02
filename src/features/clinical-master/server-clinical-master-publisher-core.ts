@@ -1,3 +1,5 @@
+import { parsePlanOrderAuthority } from "@/features/chart/plan-order-authority-domain";
+
 // Server-only validation and normalization seam.
 // PostgreSQL remains the sole release fingerprint authority.
 
@@ -145,6 +147,7 @@ const detailAllowedKeys: Record<ClinicalMasterRecordType, ReadonlySet<string>> =
     "defaultBillingReflectionEnabled",
     "defaultQuantity",
     "species",
+    "planOrderAuthority",
   ]),
   species: new Set(["speciesCode"]),
   unit: new Set(["unitCode", "symbol", "decimalScale"]),
@@ -392,6 +395,19 @@ function validateRecordDetail(
       break;
     case "order": {
       requireRecordDetailString(detail, "classificationPathKey", path, issues);
+      const planOrderAuthority = parsePlanOrderAuthority(
+        detail.planOrderAuthority,
+      );
+      if (!planOrderAuthority.valid) {
+        for (const issue of planOrderAuthority.issues) {
+          addIssue(
+            issues,
+            issue.path.replace("planOrderAuthority", `${path}.planOrderAuthority`),
+            issue.code,
+            "Plan/Order authority configuration is invalid.",
+          );
+        }
+      }
       validateOptionalString(detail.defaultSalesUnitCode, `${path}.defaultSalesUnitCode`, issues);
       const species = detail.species;
       if (!Array.isArray(species) || species.length === 0) {
@@ -486,6 +502,13 @@ function normalizeDetail(recordType: ClinicalMasterRecordType, detail: Record<st
         defaultBillingReflectionEnabled: trimmed.defaultBillingReflectionEnabled ?? true,
         defaultQuantity: trimmed.defaultQuantity ?? 1,
         species: Array.isArray(trimmed.species) ? trimmed.species : [],
+        ...(trimmed.planOrderAuthority !== undefined
+          ? {
+              planOrderAuthority: normalizedPlanOrderAuthority(
+                trimmed.planOrderAuthority,
+              ),
+            }
+          : {}),
       };
     case "species":
       return { speciesCode: trimNullable(trimmed.speciesCode) };
@@ -513,6 +536,11 @@ function normalizeDetail(recordType: ClinicalMasterRecordType, detail: Record<st
     case "lab_panel":
       return { panelCode: trimNullable(trimmed.panelCode) };
   }
+}
+
+function normalizedPlanOrderAuthority(value: unknown) {
+  const parsed = parsePlanOrderAuthority(value);
+  return parsed.valid ? parsed.value : null;
 }
 
 export function normalizeClinicalMasterPublishPayload(payload: ClinicalMasterPublishPayload): ClinicalMasterPublishPayload {

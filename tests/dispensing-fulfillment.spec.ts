@@ -117,7 +117,9 @@ function createFulfillmentWorkItem(overrides: {
     orderId: overrides.orderId,
     patientId: overrides.patientId,
     queueType: overrides.queueType,
+    requestCycle: 1,
     requestedByUserId: "user-vet-suji",
+    rowRevision: 1,
     sourceSnapshot: {
       ...(overrides.dispensingLineage
         ? { dispensingLineage: overrides.dispensingLineage }
@@ -208,7 +210,9 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     id: "work-cheongdam-dispensing-001",
     orderId: "order-cheongdam-dispensing-001",
     queueType: "dispensing",
+    requestCycle: 1,
     requestedByUserId: "user-vet",
+    rowRevision: 1,
     sourceSnapshot: {
       guardianName: "최보호",
       instruction: "식후 1일 2회",
@@ -221,10 +225,12 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
   };
   let liveStatus: FulfillmentWorkItemStatus = "requested";
+  let liveAssigneeUserId: string | null = null;
+  let liveRevision = 1;
   const patchBodies: Array<{
-    assignedToUserId?: string | null;
+    action?: string;
+    expectedRevision?: number;
     reason?: string;
-    status?: FulfillmentWorkItemStatus;
   }> = [];
 
   await page.route(
@@ -245,8 +251,8 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
               ? [
                   {
                     ...liveWorkItem,
-                    assignedToUserId:
-                      liveStatus === "requested" ? null : "user-tech",
+                    assignedToUserId: liveAssigneeUserId,
+                    rowRevision: liveRevision,
                     status: liveStatus,
                   },
                 ]
@@ -256,20 +262,21 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     },
   );
 
-  const statusUpdates: string[] = [];
+  const lifecycleActions: string[] = [];
   await page.route(
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items/${liveWorkItem.id}`,
     async (route) => {
       const body = JSON.parse(route.request().postData() ?? "{}") as {
-        assignedToUserId?: string | null;
+        action?: string;
+        expectedRevision?: number;
         reason?: string;
-        status?: FulfillmentWorkItemStatus;
       };
       patchBodies.push(body);
-      if (body.status) {
-        liveStatus = body.status;
-        statusUpdates.push(body.status);
-      }
+      if (body.action) lifecycleActions.push(body.action);
+      if (body.action === "claim") liveAssigneeUserId = "user-tech";
+      if (body.action === "unassign") liveAssigneeUserId = null;
+      if (body.action === "start") liveStatus = "in_progress";
+      liveRevision += 1;
 
       await route.fulfill({
         status: 200,
@@ -281,8 +288,8 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
           workItems: [
             {
               ...liveWorkItem,
-              assignedToUserId:
-                liveStatus === "requested" ? null : "user-tech",
+              assignedToUserId: liveAssigneeUserId,
+              rowRevision: liveRevision,
               status: liveStatus,
             },
           ],
@@ -361,35 +368,36 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await expect(historyAside).toContainText("조제 시작 확인");
   await expect(historyAside).toContainText("수행자 user-tech");
   await page.getByRole("button", { name: "담당하기" }).first().click();
-
-  await expect.poll(() => statusUpdates).toEqual(["accepted", "in_progress"]);
-
+  await expect.poll(() => lifecycleActions).toEqual(["claim"]);
   await page
-    .getByRole("button", { name: "조제 오더 상태 액션 열기" })
+    .getByRole("button", { name: "조제 상태 액션 열기" })
     .first()
     .click();
-  await page.getByRole("menuitem", { name: "담당취소" }).click();
-  await expect.poll(() => statusUpdates).toEqual([
-    "accepted",
-    "in_progress",
-    "returned",
-    "requested",
+  await page.getByRole("menuitem", { name: "담당 취소" }).click();
+  await expect.poll(() => lifecycleActions).toEqual(["claim", "unassign"]);
+  await page.getByRole("button", { name: "담당하기" }).first().click();
+  await expect.poll(() => lifecycleActions).toEqual(["claim", "unassign", "claim"]);
+  await page.getByRole("button", { name: "조제 시작" }).click();
+  await expect.poll(() => lifecycleActions).toEqual([
+    "claim",
+    "unassign",
+    "claim",
+    "start",
   ]);
-  expect(patchBodies[2]).toMatchObject({
-    assignedToUserId: null,
-    reason: "담당 취소",
-    status: "returned",
-  });
+  expect(patchBodies[0]).toMatchObject({ action: "claim", expectedRevision: 1 });
+  expect(patchBodies[1]).toMatchObject({ action: "unassign", expectedRevision: 2 });
   await expect(
     page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("서버 상태 요청");
+  ).toContainText("서버 상태 진행중");
 });
 
 test("dispensing treatment workspace shows server readback and refreshes after persisted status mutation", async ({
   page,
 }) => {
   let dispensingStatus: FulfillmentWorkItemStatus = "requested";
-  const patchStatuses: string[] = [];
+  let dispensingAssigneeUserId: string | null = null;
+  let dispensingRevision = 1;
+  const lifecycleActions: string[] = [];
   let dispensingReads = 0;
   let treatmentReads = 0;
 
@@ -404,13 +412,17 @@ test("dispensing treatment workspace shows server readback and refreshes after p
         json: {
           ok: true,
           workItems: [
-            createFulfillmentWorkItem({
+            {
+              ...createFulfillmentWorkItem({
               id: "den456-dispensing",
               orderDisplayName: "DEN-456 항구토제 조제",
               orderId: "order-den456-dispensing",
               queueType: "dispensing",
               status: dispensingStatus,
-            }),
+              }),
+              assignedToUserId: dispensingAssigneeUserId,
+              rowRevision: dispensingRevision,
+            },
           ],
         },
       });
@@ -445,23 +457,27 @@ test("dispensing treatment workspace shows server readback and refreshes after p
     ),
     async (route) => {
       const body = JSON.parse(route.request().postData() ?? "{}") as {
-        status?: FulfillmentWorkItemStatus;
+        action?: string;
       };
-      if (body.status) {
-        dispensingStatus = body.status;
-        patchStatuses.push(body.status);
-      }
+      if (body.action) lifecycleActions.push(body.action);
+      if (body.action === "claim") dispensingAssigneeUserId = "user-tech";
+      if (body.action === "start") dispensingStatus = "in_progress";
+      dispensingRevision += 1;
       await route.fulfill({
         contentType: "application/json",
         json: {
           ok: true,
-          workItem: createFulfillmentWorkItem({
-            id: "den456-dispensing",
-            orderDisplayName: "DEN-456 항구토제 조제",
-            orderId: "order-den456-dispensing",
-            queueType: "dispensing",
-            status: dispensingStatus,
-          }),
+          workItems: [{
+            ...createFulfillmentWorkItem({
+              id: "den456-dispensing",
+              orderDisplayName: "DEN-456 항구토제 조제",
+              orderId: "order-den456-dispensing",
+              queueType: "dispensing",
+              status: dispensingStatus,
+            }),
+            assignedToUserId: dispensingAssigneeUserId,
+            rowRevision: dispensingRevision,
+          }],
         },
       });
     },
@@ -490,15 +506,17 @@ test("dispensing treatment workspace shows server readback and refreshes after p
 
   await page.getByRole("button", { name: "담당하기" }).first().click();
   await expect
-    .poll(() => patchStatuses.join(","), {
-      message: "requested item should be accepted then started",
+    .poll(() => lifecycleActions.join(","), {
+      message: "requested item should be claimed before starting",
     })
-    .toBe("accepted,in_progress");
+    .toBe("claim");
+  await page.getByRole("button", { name: "조제 시작" }).click();
+  await expect.poll(() => lifecycleActions.join(",")).toBe("claim,start");
   await expect(
     page.getByTestId("dispensing-fulfillment-readback"),
   ).toContainText("서버 상태 진행중");
   await expect(
-    page.getByRole("button", { name: /조제중|처치중/ }).first(),
+    page.getByRole("button", { name: /조제 중|처치 중/ }).first(),
   ).toBeVisible();
 });
 

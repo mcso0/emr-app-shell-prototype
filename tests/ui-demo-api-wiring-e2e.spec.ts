@@ -1,10 +1,13 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
+
 const workspaceId = "clair-demo";
 const kongEncounterId = "encounter-kong-260501";
 const apiHeaders = { "x-clair-demo-session-user-id": "user-vet" };
 const frontDeskHeaders = { "x-clair-demo-session-user-id": "user-front-desk" };
 const technicianHeaders = { "x-clair-demo-session-user-id": "user-tech" };
+let fulfillmentCommandSequence = 800;
 const uiApiWbcCatalogItem = {
   categoryId: "den194-labcat-hematology",
   categoryName: "Hematology",
@@ -112,11 +115,24 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     "order-kong-fluid",
     "order-kong-maropitant",
   ];
+  const currentActions = await request.get(
+    `/api/workspaces/${workspaceId}/chart/order-actions?encounterId=${kongEncounterId}`,
+    { headers: apiHeaders },
+  );
+  expect(currentActions.status()).toBe(200);
+  const expectedEtag = currentActions.headers().etag;
+  expect(expectedEtag).toMatch(/^"[0-9a-f]{64}"$/);
   const confirmed = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-actions`,
     {
-      data: { action: "confirm", encounterId: kongEncounterId, orderIds },
-      headers: apiHeaders,
+      data: {
+        action: "confirm",
+        encounterId: kongEncounterId,
+        expectedEtag,
+        idempotencyKey: "ui-demo-outpatient-confirm-0001",
+        orderIds,
+      },
+      headers: { ...apiHeaders, [chartOrderExpectedEtagHeader]: expectedEtag },
     },
   );
   expect(confirmed.status()).toBe(200);
@@ -180,7 +196,12 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     ]),
   );
 
-  await advanceWorkItemToCompleted(request, labWorkItem.id, labWorkItem.status);
+  await advanceWorkItemToCompleted(
+    request,
+    labWorkItem.id,
+    labWorkItem.status,
+    labWorkItem.rowRevision,
+  );
   const imagingWorkItem = await readWorkItem(
     request,
     "imaging",
@@ -190,6 +211,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     request,
     imagingWorkItem.id,
     imagingWorkItem.status,
+    imagingWorkItem.rowRevision,
   );
   const treatmentWorkItem = await readWorkItem(
     request,
@@ -200,6 +222,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     request,
     treatmentWorkItem.id,
     treatmentWorkItem.status,
+    treatmentWorkItem.rowRevision,
   );
   const dispensingWorkItem = await readWorkItem(
     request,
@@ -210,6 +233,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     request,
     dispensingWorkItem.id,
     dispensingWorkItem.status,
+    dispensingWorkItem.rowRevision,
   );
 
   const reviewed = await request.patch(
@@ -1100,7 +1124,12 @@ async function readWorkItem(
   expect(response.status()).toBe(200);
   const body = (await response.json()) as {
     ok: true;
-    workItems: Array<{ id: string; orderId: string; status: string }>;
+    workItems: Array<{
+      id: string;
+      orderId: string;
+      rowRevision: number;
+      status: string;
+    }>;
   };
   const item = body.workItems.find((workItem) => workItem.orderId === orderId);
   expect(item).toBeTruthy();
@@ -1111,23 +1140,39 @@ async function advanceWorkItemToCompleted(
   request: APIRequestContext,
   workItemId: string,
   initialStatus: string,
+  initialRevision = 1,
 ) {
-  const statuses =
+  const actions =
     initialStatus === "requested"
-      ? ["accepted", "in_progress", "completed"]
-      : initialStatus === "accepted"
-        ? ["in_progress", "completed"]
-        : ["completed"];
+      ? ["start", "complete"]
+      : initialStatus === "paused"
+        ? ["resume", "complete"]
+        : initialStatus === "in_progress"
+          ? ["complete"]
+          : [];
+  let expectedRevision = initialRevision;
 
-  for (const status of statuses) {
+  for (const action of actions) {
+    fulfillmentCommandSequence += 1;
     const response = await request.patch(
       `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
       {
-        data: { assignedToUserId: "user-tech", status },
+        data: {
+          action,
+          commandId: `00000000-0000-4000-8000-${String(fulfillmentCommandSequence).padStart(12, "0")}`,
+          expectedRevision,
+        },
         headers: technicianHeaders,
       },
     );
     expect(response.status()).toBe(200);
+    const body = (await response.json()) as {
+      ok: true;
+      workItems: Array<{ id: string; rowRevision: number }>;
+    };
+    const updated = body.workItems.find((item) => item.id === workItemId);
+    expect(updated).toBeTruthy();
+    expectedRevision = updated!.rowRevision;
   }
 }
 

@@ -22,8 +22,8 @@ import { cn } from "@/lib/utils";
 export type ProfileWorkCategory = "lab" | "imaging" | "procedure" | "other";
 export type ProfileFulfillmentStatus =
   | "requested"
-  | "accepted"
   | "in_progress"
+  | "paused"
   | "completed"
   | "cancelled"
   | "returned";
@@ -58,8 +58,8 @@ const categoryTone: Record<ProfileWorkCategory, string> = {
 
 const statusTone: Record<ProfileFulfillmentStatus, string> = {
   requested: "bg-[var(--emr-surface-muted)] text-[var(--emr-text-secondary)]",
-  accepted: "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   in_progress: "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
+  paused: "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]",
   completed: "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
   cancelled: "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   returned: "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",

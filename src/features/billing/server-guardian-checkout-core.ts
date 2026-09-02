@@ -130,7 +130,7 @@ export type BillingInvoiceTransitionPayload = {
 
 export type GuardianCheckoutGatewayResult<T> =
   | ({ ok: true } & T)
-  | { ok: false; status: 409; denialReason: "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type GuardianCheckoutGateway = {
@@ -159,7 +159,7 @@ export type GuardianBillingLedgerResult =
     })
   | { ok: false; status: 400; error: "invalid_input"; fieldErrors: Partial<Record<"guardianId", string>> }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
   | { ok: false; status: 500; error: "db_read_failed" };
 
 export type GuardianCheckoutPrepareResult =
@@ -175,7 +175,7 @@ export type GuardianCheckoutPrepareResult =
       fieldErrors: Partial<Record<"invoiceIds" | "adjustments", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
   | { ok: false; status: 500; error: "db_write_failed" };
 
 export type BillingInvoiceTransitionResult =
@@ -191,7 +191,7 @@ export type BillingInvoiceTransitionResult =
       fieldErrors: Partial<Record<"invoiceId" | "target" | "reason" | "paymentMethod", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "guardian_unavailable" | "invoice_unavailable" }
+  | { ok: false; status: 409; denialReason: "billing_review_required" | "guardian_unavailable" | "invoice_unavailable" }
   | { ok: false; status: 500; error: "db_write_failed" };
 
 const defaultLedgerInput: Required<GuardianBillingLedgerInput> = {
@@ -727,6 +727,7 @@ function mapGuardianCheckoutError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed",
 ): GuardianCheckoutGatewayResult<never> {
+  if (message?.includes("billing_review_required")) return { ok: false, status: 409, denialReason: "billing_review_required" };
   if (message?.includes("guardian_unavailable")) return { ok: false, status: 409, denialReason: "guardian_unavailable" };
   if (message?.includes("invoice_unavailable")) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
   return { ok: false, status: 500, error: fallback };

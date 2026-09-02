@@ -4,6 +4,7 @@ import path from "node:path";
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import { createMockChartOrderBillingSummaryFromMutationRows } from "../src/features/chart/chart-order-billing-summary-contract";
 import {
+  chartOrderExecutionMutationActions,
   createMockChartOrderExecutionMutationGateway,
   createSupabaseChartOrderExecutionMutationGateway,
   mutateChartOrderExecution,
@@ -51,7 +52,29 @@ test("execution mutation validates reason, revision, idempotency, and action pay
   });
 });
 
-test("order mutations require order:update while billing-only correction requires billing:issue", async () => {
+test("re-request rejects a non-positive actual dispense reconfirmation", async () => {
+  const result = await mutateChartOrderExecution({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      action: "re_request",
+      changes: { actualDispenseQuantity: 0 },
+      expectedRevisionNo: 1,
+      idempotencyKey: "phase5-rerequest-actual-invalid-0001",
+      orderId: "order-phase5-1",
+      reason: "실조제량을 다시 확인합니다",
+    },
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    error: "invalid_input",
+    fieldErrors: { changes: "실조제량은 0보다 큰 숫자여야 합니다." },
+  });
+});
+
+test("order mutations require order:update and legacy billing correction is not an execution action", async () => {
   const vetAmend = await mutateChartOrderExecution({
     actorUserId: "user-vet",
     workspaceId,
@@ -59,33 +82,20 @@ test("order mutations require order:update while billing-only correction require
   });
   expect(vetAmend).toMatchObject({ ok: true, status: 200 });
 
-  const vetBilling = await mutateChartOrderExecution({
-    actorUserId: "user-vet",
-    workspaceId,
-    input: {
-      ...validInput,
-      action: "billing_correct",
-      changes: { quantity: 2, unitPrice: 9000 },
-      idempotencyKey: "phase5-billing-test-0001",
-    },
-  });
-  expect(vetBilling).toEqual({
-    ok: false,
-    status: 403,
-    denialReason: "permission_missing",
-  });
-
-  const frontDeskBilling = await mutateChartOrderExecution({
+  expect(chartOrderExecutionMutationActions).not.toContain("billing_correct");
+  const frontDeskAmend = await mutateChartOrderExecution({
     actorUserId: "user-front-desk",
     workspaceId,
     input: {
       ...validInput,
-      action: "billing_correct",
-      changes: { quantity: 2, unitPrice: 9000 },
-      idempotencyKey: "phase5-billing-test-0002",
+      idempotencyKey: "phase5-amend-test-0002",
     },
   });
-  expect(frontDeskBilling).toMatchObject({ ok: true, status: 200 });
+  expect(frontDeskAmend).toEqual({
+    ok: false,
+    status: 403,
+    denialReason: "permission_missing",
+  });
 });
 
 test("execution mutation does not expose billing Summary without chart:view", async () => {
@@ -156,7 +166,7 @@ test("execution mutation route keeps identity and capability enforcement server-
     },
   });
 
-  const deniedBilling = await request.post(route, {
+  const legacyBillingCorrection = await request.post(route, {
     data: {
       ...validInput,
       action: "billing_correct",
@@ -165,10 +175,11 @@ test("execution mutation route keeps identity and capability enforcement server-
     },
     headers: { "x-clair-demo-session-user-id": "user-vet" },
   });
-  expect(deniedBilling.status()).toBe(403);
-  await expect(deniedBilling.json()).resolves.toMatchObject({
+  expect(legacyBillingCorrection.status()).toBe(400);
+  await expect(legacyBillingCorrection.json()).resolves.toMatchObject({
     ok: false,
-    denialReason: "permission_missing",
+    error: "invalid_input",
+    fieldErrors: { action: expect.any(String) },
   });
 });
 
@@ -306,4 +317,24 @@ test("Phase 5 SQL keeps immutable history, linked attempts, scoped RLS, and revi
   expect(route).toContain("loadWorkspacePermissionAdapterFromDb");
   expect(route).toContain("createSupabaseChartOrderExecutionMutationGateway");
   expect(route).toContain("chart_order_execution_mutation");
+});
+
+test("Plan/Order lifecycle SQL reconfirms actual dispense into the linked attempt", async () => {
+  const migration = await readFile(
+    path.join(
+      process.cwd(),
+      "supabase/migrations/20260902150055_plan_order_work_lifecycle_and_rpc_boundary.sql",
+    ),
+    "utf8",
+  );
+
+  for (const contract of [
+    "actualDispenseQuantity",
+    "actual_dispense_reconfirmation_required",
+    "order_actual_dispense_overrides",
+    "sourceSnapshotReconfirmed",
+    "v_order.confirmed_snapshot is not distinct from (v_before -> 'confirmedSnapshot')",
+  ]) {
+    expect(migration).toContain(contract);
+  }
 });

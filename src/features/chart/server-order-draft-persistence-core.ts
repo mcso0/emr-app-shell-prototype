@@ -19,6 +19,7 @@ import {
 import {
   CLINICAL_ORDER_DESTINATION_MODULES,
   isClinicalOrderType,
+  resolveClinicalOrderMasterContract,
   validateClinicalOrderDetailInputs,
 } from "@/features/chart/order-execution-domain";
 import {
@@ -78,7 +79,10 @@ export type ChartOrderRuntimeRow = {
   appliedPriceSnapshot: Record<string, unknown>;
   calculationInputs: Record<string, unknown>;
   calculationOutputs: Record<string, unknown>;
+  billingAdjustmentReasons?: string[];
+  preBillingOverride?: Record<string, unknown>;
   billingReflectionEnabled: boolean;
+  intendedAssigneeUserId?: string | null;
   orderConfirmationStatus?: "draft" | "pending" | "confirmed" | "billed" | "cancelled";
   status?: string;
   updatedAt: string;
@@ -1421,7 +1425,19 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     appliedPriceSnapshot: objectValue("appliedPriceSnapshot"),
     calculationInputs: objectValue("calculationInputs"),
     calculationOutputs: objectValue("calculationOutputs"),
+    billingAdjustmentReasons: Array.isArray(row.billingAdjustmentReasons)
+      ? row.billingAdjustmentReasons.filter(
+          (reason): reason is string => typeof reason === "string" && Boolean(reason.trim()),
+        )
+      : [],
+    preBillingOverride: objectValue("preBillingOverride"),
     billingReflectionEnabled: row.billingReflectionEnabled !== false,
+    intendedAssigneeUserId:
+      row.intendedAssigneeUserId === null
+        ? null
+        : typeof row.intendedAssigneeUserId === "string"
+          ? row.intendedAssigneeUserId
+          : undefined,
     orderConfirmationStatus: typeof row.orderConfirmationStatus === "string" ? row.orderConfirmationStatus as ChartOrderRuntimeRow["orderConfirmationStatus"] : undefined,
     status: typeof row.status === "string" ? row.status : undefined,
     updatedAt: row.updatedAt,
@@ -1611,18 +1627,16 @@ async function buildMockSetRuntimeRows({
         ? itemSnapshot.clinicalOrderType
         : undefined;
       const childCanonical = childClinicalOrderType
-        ? resolveMockDraftCanonicalContract({
-            existing: {
-              clinicalOrderType: childClinicalOrderType,
-              destinationModule:
-                childClinicalOrderType === "consultation"
-                  ? null
-                  : undefined,
-              executionMode:
-                childClinicalOrderType === "consultation"
-                  ? "immediate_complete"
-                  : undefined,
-            },
+        ? resolveClinicalOrderMasterContract({
+            billingEligible: itemSnapshot.billingEligible,
+            billingReflectionEnabled: item.billingReflectionEnabled,
+            categoryGroup: "treatment",
+            clinicalOrderType: childClinicalOrderType,
+            defaultDestinationModule: itemSnapshot.appliedDestinationModule,
+            defaultTaskRequired: itemSnapshot.appliedTaskRequired,
+            destinationModule: itemSnapshot.destinationModule,
+            detailSchemaVersion: itemSnapshot.detailSchemaVersion,
+            executionMode: itemSnapshot.executionMode,
           })
         : resolveMockDraftCanonicalContract({
             categoryGroup:
@@ -1663,11 +1677,15 @@ async function buildMockSetRuntimeRows({
         workspaceId,
         encounterId,
         rowType: "set_child",
-        orderType: mapCatalogCategoryToOrderType(
-          typeof itemSnapshot.categoryGroup === "string"
-            ? itemSnapshot.categoryGroup
-            : undefined,
-        ),
+        orderType:
+          childCanonical.clinicalOrderType === "clinical_lab" ||
+          childCanonical.clinicalOrderType === "external_lab"
+            ? "lab"
+            : childCanonical.clinicalOrderType === "imaging"
+              ? "imaging"
+              : childCanonical.clinicalOrderType === "dispensing"
+                ? "dispensing"
+                : "treatment",
         clinicalOrderType: childCanonical.clinicalOrderType,
         destinationModule: childCanonical.destinationModule,
         executionMode: childCanonical.executionMode,

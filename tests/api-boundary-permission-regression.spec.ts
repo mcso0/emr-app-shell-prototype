@@ -51,7 +51,12 @@ test("lab, billing, and fulfillment API boundaries deny unauthenticated and unau
       path: `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing`,
     },
     {
-      data: { assignedToUserId: "user-front-desk", status: "accepted" },
+      data: {
+        action: "assign",
+        assignedToUserId: "user-front-desk",
+        commandId: "00000000-0000-4000-8000-000000000061",
+        expectedRevision: 1,
+      },
       expectedDenial: "permission_missing",
       expectedStatus: 403,
       headers: frontDeskHeaders,

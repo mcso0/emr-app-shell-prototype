@@ -13,7 +13,7 @@ source_docs:
   - "docs/work/chart/CHART-PR-031-plan-order-legacy-column-validation.md"
 dependencies:
   - "CLINICAL-MASTER-PR-022"
-updated: "2026-09-02"
+updated: "2026-09-03"
 ---
 
 # Plan/Order Authority Enrichment
@@ -63,6 +63,18 @@ unsupported clinical or fee value unconfigured and fail-closed.
 - TypeScript, focused lint, docs check, secret scan, and diff check.
 - Transactional remote rehearsal with unconditional rollback before any
   persistent mutation candidate.
+
+## Implementation Checkpoint — 2026-09-03
+
+- The strict nested `planOrderAuthority` type, Airtable export validation,
+  publisher transport, workspace catalog projection, applied snapshot, and
+  fail-closed runtime parser are implemented locally.
+- Missing authority remains explicitly unconfigured; publisher and runtime
+  code do not generate calculation, preparation, billing, tax, set, or staff
+  policy defaults.
+- Existing Airtable records still do not provide the complete approved values
+  listed in the Phase A validation record. No Airtable or remote Supabase master
+  write has been executed, and persistent authoring/adoption remains open.
 
 ## Handoff Notes
 

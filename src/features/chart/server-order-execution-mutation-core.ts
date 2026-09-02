@@ -15,7 +15,6 @@ export const chartOrderExecutionMutationActions = [
   "amend",
   "cancel",
   "priority_change",
-  "billing_correct",
   "re_request",
 ] as const;
 
@@ -53,6 +52,13 @@ export type ChartOrderExecutionMutationResult = {
 export type ChartOrderExecutionMutationDenialReason =
   | "aggregate_direct_mutation_forbidden"
   | "amendment_requires_pending"
+  | "actual_dispense_out_of_policy"
+  | "actual_dispense_override_disabled"
+  | "actual_dispense_reconfirmation_invalid"
+  | "actual_dispense_reconfirmation_required"
+  | "billing_quantity_calculation_incomplete"
+  | "billing_review_required"
+  | "billing_reversal_required"
   | "billing_candidate_locked"
   | "billing_candidate_unavailable"
   | "idempotency_conflict"
@@ -157,13 +163,10 @@ export async function mutateChartOrderExecution({
     reason: string;
   };
 
-  const requiredPermission = validInput.action === "billing_correct"
-    ? "billing:issue"
-    : "order:update";
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
-    requiredPermission,
+    requiredPermission: "order:update",
   });
   if (!permission.allowed) {
     return {
@@ -297,17 +300,13 @@ export function createMockChartOrderExecutionMutationGateway(
         affectedTasks: [
           {
             attemptNo: input.action === "re_request" ? 2 : 1,
-            effect: input.action === "billing_correct"
-              ? "execution_attempt_not_reopened"
-              : `${input.action}_applied`,
+            effect: `${input.action}_applied`,
             orderId: input.orderId,
             taskId: `mock-task-${input.orderId}`,
           },
         ],
-        billingImpact: input.action === "billing_correct"
-          ? { executionReopened: false }
-          : {},
-        confirmedSnapshotPreserved: true,
+        billingImpact: {},
+        confirmedSnapshotPreserved: input.action !== "re_request",
         order: {
           orderStatus: input.action === "cancel" ? "cancelled" : "confirmed",
           revisionNo: input.expectedRevisionNo + 1,
@@ -425,10 +424,13 @@ function validateActionChanges(
     ? new Set(["detailInputs", "detailSchemaVersion"])
     : action === "priority_change"
       ? new Set(["priority"])
-      : action === "billing_correct"
-        ? new Set(["billingName", "quantity", "unitPrice"])
-        : action === "re_request"
-          ? new Set(["detailInputs", "detailSchemaVersion", "priority"])
+      : action === "re_request"
+          ? new Set([
+              "detailInputs",
+              "detailSchemaVersion",
+              "priority",
+              "actualDispenseQuantity",
+            ])
           : new Set<string>();
   if (keys.some((key) => !allowed.has(key))) {
     fieldErrors.changes = "허용되지 않은 변경 필드가 포함되어 있습니다.";
@@ -443,14 +445,14 @@ function validateActionChanges(
   if (action === "priority_change" && !["normal", "urgent"].includes(String(changes.priority))) {
     fieldErrors.changes = "우선순위는 normal 또는 urgent여야 합니다.";
   }
-  if (action === "billing_correct") {
-    const quantity = changes.quantity;
-    const unitPrice = changes.unitPrice;
-    if (keys.length === 0
-      || (quantity !== undefined && (typeof quantity !== "number" || quantity <= 0))
-      || (unitPrice !== undefined && (typeof unitPrice !== "number" || unitPrice < 0))) {
-      fieldErrors.changes = "유효한 수납 후보 변경 값을 입력해 주세요.";
-    }
+  if (
+    action === "re_request" &&
+    changes.actualDispenseQuantity !== undefined &&
+    (typeof changes.actualDispenseQuantity !== "number" ||
+      !Number.isFinite(changes.actualDispenseQuantity) ||
+      changes.actualDispenseQuantity <= 0)
+  ) {
+    fieldErrors.changes = "실조제량은 0보다 큰 숫자여야 합니다.";
   }
 }
 
@@ -514,6 +516,13 @@ function mapMutationError(message?: string): ChartOrderExecutionMutationGatewayR
   const reasons: ChartOrderExecutionMutationDenialReason[] = [
     "aggregate_direct_mutation_forbidden",
     "amendment_requires_pending",
+    "actual_dispense_out_of_policy",
+    "actual_dispense_override_disabled",
+    "actual_dispense_reconfirmation_invalid",
+    "actual_dispense_reconfirmation_required",
+    "billing_quantity_calculation_incomplete",
+    "billing_review_required",
+    "billing_reversal_required",
     "billing_candidate_locked",
     "billing_candidate_unavailable",
     "idempotency_conflict",

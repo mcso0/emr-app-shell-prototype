@@ -17,7 +17,10 @@ type GatewayError =
   | "idempotency_conflict"
   | "revision_conflict"
   | "unfinished_ack_required"
-  | "no_billable_orders";
+  | "no_billable_orders"
+  | "billing_authority_incomplete"
+  | "vat_calculation_policy_missing"
+  | "returned_work_blocks_billing";
 
 export type ChartOrderBillingSummaryGateway = {
   read(input: { encounterId: string; workspaceId: string }): Promise<
@@ -55,7 +58,16 @@ export type RequestChartOrderBillingResult =
   | DeniedResult
   | { error: "invalid_input"; ok: false; status: 400 }
   | { error: "revision_conflict" | "unfinished_ack_required" | "idempotency_conflict" | "billing_request_in_progress"; ok: false; status: 409 }
-  | { error: "encounter_unavailable" | "no_billable_orders"; ok: false; status: 422 }
+  | {
+      error:
+        | "encounter_unavailable"
+        | "no_billable_orders"
+        | "billing_authority_incomplete"
+        | "vat_calculation_policy_missing"
+        | "returned_work_blocks_billing";
+      ok: false;
+      status: 422;
+    }
   | { error: "db_write_failed"; ok: false; status: 500 };
 
 export async function readChartOrderBillingSummary({
@@ -74,6 +86,13 @@ export async function readChartOrderBillingSummary({
   if (!encounterId?.trim()) return { ok: false, status: 400, error: "invalid_input" };
   const denial = requirePermission(permissionAdapter, actorUserId, workspaceId, "chart:view");
   if (denial) return denial;
+  const billingDenial = requirePermission(
+    permissionAdapter,
+    actorUserId,
+    workspaceId,
+    "billing:view",
+  );
+  if (billingDenial) return billingDenial;
   const result = await gateway.read({ encounterId: encounterId.trim(), workspaceId });
   if (result.ok) return { ok: true, status: 200, enforcedBy: "chart-order-billing-summary", summary: result.summary };
   return result.error === "encounter_unavailable"
@@ -111,6 +130,13 @@ export async function requestChartOrderBilling({
   }
   const denial = requirePermission(permissionAdapter, actorUserId, workspaceId, "chart:update");
   if (denial) return denial;
+  const billingDenial = requirePermission(
+    permissionAdapter,
+    actorUserId,
+    workspaceId,
+    "billing:issue",
+  );
+  if (billingDenial) return billingDenial;
   const result = await gateway.requestBilling({
     acknowledgeUnfinished,
     actorUserId: actorUserId!,
@@ -128,7 +154,13 @@ export async function requestChartOrderBilling({
   ) {
     return { ok: false, status: 409, error: result.error };
   }
-  if (result.error === "encounter_unavailable" || result.error === "no_billable_orders") {
+  if (
+    result.error === "encounter_unavailable" ||
+    result.error === "no_billable_orders" ||
+    result.error === "billing_authority_incomplete" ||
+    result.error === "vat_calculation_policy_missing" ||
+    result.error === "returned_work_blocks_billing"
+  ) {
     return { ok: false, status: 422, error: result.error };
   }
   return { ok: false, status: 500, error: "db_write_failed" };
@@ -238,7 +270,7 @@ function requirePermission(
   adapter: WorkspacePermissionAdapter,
   actorUserId: string | null,
   workspaceId: string,
-  requiredPermission: "chart:view" | "chart:update",
+  requiredPermission: "billing:issue" | "billing:view" | "chart:view" | "chart:update",
 ): DeniedResult | null {
   const permission = resolveWorkspacePermission(adapter, {
     sessionUserId: actorUserId,
@@ -255,6 +287,7 @@ function requirePermission(
 function mapDbError(message: string | undefined, fallback: GatewayError): GatewayError {
   const known: GatewayError[] = [
     "encounter_unavailable", "revision_conflict", "unfinished_ack_required", "no_billable_orders",
+    "billing_authority_incomplete", "vat_calculation_policy_missing", "returned_work_blocks_billing",
     "idempotency_conflict", "billing_request_in_progress",
   ];
   return known.find((error) => message?.includes(error)) ?? fallback;

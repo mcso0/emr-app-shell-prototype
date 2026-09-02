@@ -3,7 +3,7 @@ id: "CLINICAL-FULFILLMENT-PR-010"
 type: "Work Item"
 title: "Plan/Order Work Lifecycle And RPC Boundary"
 description: "Separates assignment from work state and implements the target task lifecycle with DB-enforced permissions."
-status: "ready"
+status: "in_progress"
 area: "clinical-fulfillment"
 priority: "P0"
 tags: [plan-order, fulfillment, rls, rpc, assignment]
@@ -15,7 +15,7 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-09-02"
+updated: "2026-09-03"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
@@ -68,6 +68,17 @@ history, and DB-level capability enforcement.
 - TypeScript, focused lint, docs check, secret scan, and diff check.
 - Remote read-only preflight and transaction rollback rehearsal before an exact
   persistent migration packet.
+
+## Implementation Checkpoint — 2026-09-03
+
+- Assignment is separated from work status; assign/unassign/claim/start/phase/
+  pause/resume/handoff/complete/return, revision CAS, command replay, immutable
+  history, re-request attempts, and queue-specific assignee eligibility are
+  implemented locally.
+- Mock and live RPC boundaries both deny unauthorized assignee discovery, and
+  the changed/new regression suite plus local SQL rollback smoke passed.
+- No persistent remote migration or fulfillment mutation has been executed.
+  Exact remote preflight, rollback rehearsal, and production smoke remain open.
 
 ## Handoff Notes
 
