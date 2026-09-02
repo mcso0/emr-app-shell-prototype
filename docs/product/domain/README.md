@@ -32,4 +32,5 @@ Actual schema, ERD, RLS, indexes, migrations, and persistence details belong in 
 - `emr-domain-entity-map.md`: product-level relationships between workspace, patient, guardian, encounter, order, invoice, payment, and audit.
 - `workspace-order-catalog-platform.md`: workspace-scoped order catalog platform policy for CLAiR presets, hospital customization, chart snapshots, routing, billing gates, and CSV template scope.
 - `order-fulfillment-handoff.md`: chart-confirmed order handoff to lab, imaging, dispensing, treatment, and billing work.
+- `plan-order-all-tab-legacy-column-contract.md`: approved and unresolved product semantics for restoring the legacy Plan/Order `전체` tab column order, labels, calculations, lifecycle, assignment, and billing behavior.
 - `role-permission-source-map.md`: normalized permission role, job position, permission truth sources, and change gates.

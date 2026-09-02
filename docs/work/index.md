@@ -391,6 +391,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-028                | implemented  | chart                | P0       | Browser comments / diagnosis and chart history information hierarchy | `docs/work/chart/CHART-PR-028-history-information-hierarchy.md` |
 | CHART-PR-029                | human_review | chart                | P0       | User-approved BlockNote SOAP editor prototype | `docs/work/chart/CHART-PR-029-blocknote-soap-editor-prototype.md` |
 | CHART-PR-030                | human_review | chart                | P0       | User-approved live BlockNote SOAP editor replacement | `docs/work/chart/CHART-PR-030-blocknote-soap-live-persistence.md` |
+| CHART-PR-031                | human_review | chart                | P0       | User-approved Plan/Order legacy column contract foundation | `docs/work/chart/CHART-PR-031-plan-order-legacy-column-contract-foundation.md` |
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |

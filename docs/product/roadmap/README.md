@@ -7,3 +7,4 @@ PR-sized execution tracking belongs in `docs/work/`; roadmap docs should link to
 Current roadmap sources:
 
 - [Product MVP Scope And Non-Goals](product-mvp-scope.md)
+- [Plan/Order All Tab Legacy Column Delivery Plan](plan-order-all-tab-legacy-column-delivery-plan.md)
