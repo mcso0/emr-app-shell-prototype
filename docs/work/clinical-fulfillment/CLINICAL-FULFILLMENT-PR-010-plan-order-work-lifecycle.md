@@ -7,7 +7,7 @@ status: "in_progress"
 area: "clinical-fulfillment"
 priority: "P0"
 tags: [plan-order, fulfillment, rls, rpc, assignment]
-target_pr: "TBD"
+target_pr: "GitHub PR #698"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
@@ -78,7 +78,8 @@ history, and DB-level capability enforcement.
 - Mock and live RPC boundaries both deny unauthorized assignee discovery, and
   the changed/new regression suite plus local SQL rollback smoke passed.
 - No persistent remote migration or fulfillment mutation has been executed.
-  Exact remote preflight, rollback rehearsal, and production smoke remain open.
+  PR #698 is open; exact remote preflight, rollback rehearsal, and production
+  smoke remain open.
 
 ## Handoff Notes
 

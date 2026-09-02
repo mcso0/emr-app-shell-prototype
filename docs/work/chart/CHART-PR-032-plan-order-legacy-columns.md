@@ -7,7 +7,7 @@ status: "in_progress"
 area: "chart"
 priority: "P0"
 tags: [chart, plan-order, table, legacy-columns]
-target_pr: "TBD"
+target_pr: "GitHub PR #698"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/work/chart/CHART-PR-031-plan-order-legacy-column-validation.md"
@@ -76,7 +76,7 @@ authoritative work/billing readback.
   `238/238`.
 - TypeScript, repository lint, production build, diff check, and the local SQL
   migration/smoke transaction with unconditional rollback passed.
-- PR creation, authenticated preview smoke, exact-SHA approval, production
+- PR #698 is open. Authenticated preview smoke, exact-SHA approval, production
   migration, merge, deployment, and authenticated production smoke remain open.
 
 ## Handoff Notes

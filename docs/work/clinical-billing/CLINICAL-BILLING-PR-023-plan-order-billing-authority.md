@@ -7,7 +7,7 @@ status: "in_progress"
 area: "clinical-billing"
 priority: "P0"
 tags: [plan-order, billing, tax, adjustments, snapshots]
-target_pr: "TBD"
+target_pr: "GitHub PR #698"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/product/domain/order-fulfillment-handoff.md"
@@ -83,7 +83,8 @@ handoff that blocks returned/cancelled work and prevents set/attempt duplication
   cases passed the focused TypeScript/Playwright suite and transactional local
   SQL smoke.
 - No remote invoice, payment, or billing-policy mutation has been executed.
-  Exact remote rollback rehearsal and production verification remain open.
+  PR #698 is open; exact remote rollback rehearsal and production verification
+  remain open.
 
 ## Handoff Notes
 

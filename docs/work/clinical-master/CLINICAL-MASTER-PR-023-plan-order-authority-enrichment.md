@@ -7,7 +7,7 @@ status: "in_progress"
 area: "clinical-master"
 priority: "P0"
 tags: [clinical-master, plan-order, dispensing, billing]
-target_pr: "TBD"
+target_pr: "GitHub PR #698"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/work/chart/CHART-PR-031-plan-order-legacy-column-validation.md"
@@ -74,7 +74,8 @@ unsupported clinical or fee value unconfigured and fail-closed.
   policy defaults.
 - Existing Airtable records still do not provide the complete approved values
   listed in the Phase A validation record. No Airtable or remote Supabase master
-  write has been executed, and persistent authoring/adoption remains open.
+  write has been executed. PR #698 transports only approved values and remains
+  fail-closed; persistent authoring/adoption remains open.
 
 ## Handoff Notes
 
