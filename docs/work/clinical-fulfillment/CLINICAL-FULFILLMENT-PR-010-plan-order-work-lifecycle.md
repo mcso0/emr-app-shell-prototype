@@ -77,9 +77,14 @@ history, and DB-level capability enforcement.
   implemented locally.
 - Mock and live RPC boundaries both deny unauthorized assignee discovery, and
   the changed/new regression suite plus local SQL rollback smoke passed.
-- No persistent remote migration or fulfillment mutation has been executed.
-  PR #698 is open; exact remote preflight, rollback rehearsal, and production
-  smoke remain open.
+- The first exact remote rehearsal found 16 legacy completed Tasks without
+  start metadata plus queue rows without assignment provenance. Deterministic
+  timestamp/actor backfills now repair those existing shapes without display-
+  name inference or history deletion.
+- The corrected staging migration and fulfillment smoke passed in one rolled-
+  back transaction; follow-up readback proved no schema, fixture, or migration-
+  history residue. No persistent remote migration or fulfillment mutation has
+  been executed. PR #698 remains open; production smoke remains open.
 
 ## Handoff Notes
 

@@ -42,6 +42,10 @@ const a3Migration = readFileSync(
   "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
   "utf8",
 );
+const lifecycleMigration = readFileSync(
+  "supabase/migrations/20260902150055_plan_order_work_lifecycle_and_rpc_boundary.sql",
+  "utf8",
+);
 
 let fulfillmentCommandSequence = 1000;
 
@@ -64,6 +68,31 @@ function transitionInput(
 
 test.beforeEach(() => {
   resetMockFulfillmentWorkItemState();
+});
+
+test("lifecycle migration repairs legacy started metadata before validating the stricter status shape", () => {
+  expect(lifecycleMigration).toContain(
+    "Historical completed rows were allowed to omit start metadata",
+  );
+  expect(lifecycleMigration).toContain(
+    "task.status in ('in_progress','paused','partial_complete','complete')",
+  );
+  expect(lifecycleMigration).toContain("task.completed_at,");
+  expect(lifecycleMigration).toContain("and event.event_type = 'started'");
+  expect(lifecycleMigration).toContain("with lifecycle_projection as (");
+  expect(lifecycleMigration).toContain(") is distinct from row(");
+  expect(
+    lifecycleMigration.indexOf(
+      "Existing queue rows already carried the intended assignee",
+    ),
+  ).toBeLessThan(
+    lifecycleMigration.indexOf(
+      "-- Historical completed rows were allowed to omit start metadata",
+    ),
+  );
+  expect(lifecycleMigration.indexOf("update public.order_tasks task\nset\n  started_at = coalesce(")).toBeLessThan(
+    lifecycleMigration.indexOf("validate constraint order_tasks_started_status_check"),
+  );
 });
 
 test("fulfillment history is scoped by workspace permission and preserves actor/reason transitions", async () => {

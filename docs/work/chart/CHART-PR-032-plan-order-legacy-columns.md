@@ -76,8 +76,11 @@ authoritative work/billing readback.
   `238/238`.
 - TypeScript, repository lint, production build, diff check, and the local SQL
   migration/smoke transaction with unconditional rollback passed.
-- PR #698 is open. Authenticated preview smoke, exact-SHA approval, production
-  migration, merge, deployment, and authenticated production smoke remain open.
+- PR #698 is open. The exact staging project replay exposed and repaired two
+  legacy Task metadata shapes, then passed the full migration/smoke transaction
+  with unconditional rollback and zero schema, fixture, or history residue.
+- Authenticated preview smoke, exact-SHA approval, production migration, merge,
+  deployment, and authenticated production smoke remain open.
 
 ## Handoff Notes
 

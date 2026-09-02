@@ -83,8 +83,9 @@ handoff that blocks returned/cancelled work and prevents set/attempt duplication
   cases passed the focused TypeScript/Playwright suite and transactional local
   SQL smoke.
 - No remote invoice, payment, or billing-policy mutation has been executed.
-  PR #698 is open; exact remote rollback rehearsal and production verification
-  remain open.
+  PR #698 is open; its exact staging migration and billing smoke passed inside
+  one rolled-back transaction with no schema, fixture, or migration-history
+  residue. Persistent production application and verification remain open.
 
 ## Handoff Notes
 

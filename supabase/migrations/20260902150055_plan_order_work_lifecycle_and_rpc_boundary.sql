@@ -268,14 +268,55 @@ from accepted_projection
 where item.workspace_id = accepted_projection.workspace_id
   and item.id = accepted_projection.id;
 
+-- Existing queue rows already carried the intended assignee but predated the
+-- assignment provenance columns. Complete that shape before copying it to the
+-- authoritative Task attempt so the new constraint is never observed halfway.
+update public.order_fulfillment_work_items item
+set
+  assigned_by_user_id = case when item.assigned_to_user_id is not null
+    then coalesce(item.assigned_by_user_id, item.requested_by_user_id) else null end,
+  assigned_at = case when item.assigned_to_user_id is not null
+    then coalesce(item.assigned_at, item.created_at) else null end
+where (
+  item.assigned_to_user_id is not null
+  and (item.assigned_by_user_id is null or item.assigned_at is null)
+) or (
+  item.assigned_to_user_id is null
+  and (item.assigned_by_user_id is not null or item.assigned_at is not null)
+);
+
 update public.order_tasks task
 set
   assigned_to_user_id = item.assigned_to_user_id,
   assigned_by_user_id = item.assigned_by_user_id,
   assigned_at = item.assigned_at,
-  started_at = coalesce(task.started_at, item.started_at),
-  started_by_user_id = case when coalesce(task.started_at, item.started_at) is not null
-    then coalesce(task.started_by_user_id, item.started_by_user_id, task.created_by_user_id) else null end,
+  -- Historical completed rows were allowed to omit start metadata. Prefer an
+  -- existing start fact, then the terminal/state timestamps already preserved
+  -- on the same attempt. Never infer an actor from a display name.
+  started_at = case when item.status in ('in_progress','paused','completed')
+    then coalesce(
+      task.started_at,
+      item.started_at,
+      task.completed_at,
+      item.completed_at,
+      task.updated_at,
+      item.updated_at,
+      task.created_at,
+      item.created_at
+    )
+    else coalesce(task.started_at, item.started_at)
+  end,
+  started_by_user_id = case when item.status in ('in_progress','paused','completed')
+    then coalesce(
+      task.started_by_user_id,
+      item.started_by_user_id,
+      task.created_by_user_id,
+      item.requested_by_user_id
+    )
+    when coalesce(task.started_at, item.started_at) is not null
+      then coalesce(task.started_by_user_id, item.started_by_user_id, task.created_by_user_id)
+    else null
+  end,
   status = case item.status
     when 'requested' then 'pending'
     when 'completed' then 'complete'
@@ -291,6 +332,45 @@ where item.workspace_id = task.workspace_id
   and item.task_id = task.id
   and item.task_attempt_no = task.attempt_no;
 
+-- Aggregate tasks and any other legacy attempt without a queue projection need
+-- the same deterministic compatibility repair before the new checks validate.
+-- A real start event wins; otherwise the existing completion/state timestamp is
+-- the narrowest available fact and the task creator remains the actor fallback.
+update public.order_tasks task
+set
+  started_at = coalesce(
+    task.started_at,
+    (
+      select event.created_at
+      from public.order_task_events event
+      where event.workspace_id = task.workspace_id
+        and event.task_id = task.id
+        and event.task_attempt_no = task.attempt_no
+        and event.event_type = 'started'
+      order by event.created_at, event.id
+      limit 1
+    ),
+    task.completed_at,
+    task.updated_at,
+    task.created_at
+  ),
+  started_by_user_id = coalesce(
+    task.started_by_user_id,
+    (
+      select event.actor_user_id
+      from public.order_task_events event
+      where event.workspace_id = task.workspace_id
+        and event.task_id = task.id
+        and event.task_attempt_no = task.attempt_no
+        and event.event_type = 'started'
+      order by event.created_at, event.id
+      limit 1
+    ),
+    task.created_by_user_id
+  )
+where task.status in ('in_progress','paused','partial_complete','complete')
+  and (task.started_at is null or task.started_by_user_id is null);
+
 update public.order_tasks task
 set
   started_by_user_id = case when task.started_at is not null
@@ -299,22 +379,58 @@ set
 where (task.started_at is not null and task.started_by_user_id is null)
    or task.request_cycle is distinct from task.attempt_no;
 
+with lifecycle_projection as (
+  select
+    item.workspace_id,
+    item.id,
+    case when item.assigned_to_user_id is not null
+      then coalesce(item.assigned_by_user_id, item.requested_by_user_id) else null end
+      as assigned_by_user_id,
+    case when item.assigned_to_user_id is not null
+      then coalesce(item.assigned_at, item.created_at) else null end
+      as assigned_at,
+    case when item.status in ('in_progress','paused','completed')
+      then coalesce(item.started_at, task.started_at, item.updated_at) else item.started_at end
+      as started_at,
+    case when item.status in ('in_progress','paused','completed')
+      then coalesce(
+        item.started_by_user_id,
+        task.started_by_user_id,
+        task.created_by_user_id,
+        item.requested_by_user_id
+      )
+      else item.started_by_user_id end as started_by_user_id,
+    coalesce(item.task_attempt_no, 1) as request_cycle
+  from public.order_fulfillment_work_items item
+  join public.order_tasks task
+    on task.workspace_id = item.workspace_id
+   and task.id = item.task_id
+   and task.attempt_no = item.task_attempt_no
+)
 update public.order_fulfillment_work_items item
 set
-  assigned_by_user_id = case when item.assigned_to_user_id is not null
-    then coalesce(item.assigned_by_user_id, item.requested_by_user_id) else null end,
-  assigned_at = case when item.assigned_to_user_id is not null
-    then coalesce(item.assigned_at, item.created_at) else null end,
-  started_at = case when item.status in ('in_progress','paused','completed')
-    then coalesce(item.started_at, task.started_at, item.updated_at) else item.started_at end,
-  started_by_user_id = case when item.status in ('in_progress','paused','completed')
-    then coalesce(item.started_by_user_id, task.started_by_user_id, task.created_by_user_id, item.requested_by_user_id)
-    else item.started_by_user_id end,
-  request_cycle = coalesce(item.task_attempt_no, 1)
-from public.order_tasks task
-where task.workspace_id = item.workspace_id
-  and task.id = item.task_id
-  and task.attempt_no = item.task_attempt_no;
+  assigned_by_user_id = projection.assigned_by_user_id,
+  assigned_at = projection.assigned_at,
+  started_at = projection.started_at,
+  started_by_user_id = projection.started_by_user_id,
+  request_cycle = projection.request_cycle,
+  updated_at = greatest(item.updated_at, now())
+from lifecycle_projection projection
+where item.workspace_id = projection.workspace_id
+  and item.id = projection.id
+  and row(
+    item.assigned_by_user_id,
+    item.assigned_at,
+    item.started_at,
+    item.started_by_user_id,
+    item.request_cycle
+  ) is distinct from row(
+    projection.assigned_by_user_id,
+    projection.assigned_at,
+    projection.started_at,
+    projection.started_by_user_id,
+    projection.request_cycle
+  );
 
 alter table public.order_task_events
   drop constraint if exists order_task_events_event_type_check,
