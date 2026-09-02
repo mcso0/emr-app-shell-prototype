@@ -3,11 +3,15 @@ id: PRODUCT-ROADMAP-PLAN-ORDER-ALL-TAB-LEGACY-COLUMN-DELIVERY
 type: Delivery Plan
 title: Plan/Order All Tab Legacy Column Delivery Plan
 description: Defines the gated path from contract review and current-state validation through implementation, merge, production release, and final evidence for the Plan/Order legacy column restoration.
-status: draft
+status: approved
 area: product
 doc_type: roadmap
 related_work:
   - CHART-PR-031
+  - CLINICAL-MASTER-PR-023
+  - CLINICAL-FULFILLMENT-PR-010
+  - CLINICAL-BILLING-PR-023
+  - CHART-PR-032
 supersedes: []
 superseded_by: []
 tags:
@@ -32,9 +36,13 @@ The [Plan/Order `전체` Tab Legacy Column Contract](../domain/plan-order-all-ta
 
 - The product contract owns column meaning, order, calculation, lifecycle, and accepted product decisions.
 - This plan owns phase order, required outputs, approval gates, and completion evidence.
-- PR-sized execution must be split into linked `docs/work/` items after the feasibility review establishes the actual implementation boundary.
+- PR-sized execution is split into the linked master, fulfillment, billing, and
+  chart work items in dependency order.
 - GitHub PRs and release records own detailed execution and CI history; this document must not become a duplicate step-by-step log.
-- Recording this plan is not authorization to implement, mutate remote data, merge to `main`, or deploy production.
+- The current owner request authorizes the named local and synthetic/demo
+  implementation slices. It does not authorize production mutation, `main`
+  merge, or deployment before the exact-candidate packet is reviewed and
+  explicitly approved.
 
 ## Scope Boundary
 
@@ -184,6 +192,12 @@ Exit condition:
 
 - The approved implementation no longer requires product decisions to be made inside code review.
 
+Current state: the read-only evidence and source-backed decisions are recorded
+in [CHART-PR-031 validation](../../work/chart/CHART-PR-031-plan-order-legacy-column-validation.md).
+The contract candidate resolves implementation semantics while leaving absent
+clinical, pricing, and tax values fail-closed. An independent second review is
+required before the contract status is promoted.
+
 ### Phase B: Technical preparation and approval
 
 #### 8. Technical and migration plan
@@ -229,6 +243,11 @@ Required output:
 Exit condition:
 
 - The exact work to begin, its boundaries, and any approved external mutation are unambiguous.
+
+Current authorization: begin the four linked implementation items in the stated
+dependency order using local and synthetic/demo data. Production Airtable,
+production-bound Supabase migration, `origin/main` merge, and production deploy
+remain exact-candidate approvals rather than implied roadmap approval.
 
 ### Phase C: Implementation and candidate verification
 

@@ -2,12 +2,16 @@
 id: PRODUCT-DOMAIN-PLAN-ORDER-ALL-TAB-LEGACY-COLUMN-CONTRACT
 type: Domain Contract
 title: Plan/Order All Tab Legacy Column Contract
-description: Defines the agreed and unresolved product semantics for restoring the legacy CLAiR column set in the Plan/Order `전체` tab.
-status: draft
+description: Defines the approved target semantics and fail-closed implementation boundaries for the Plan/Order `전체` legacy column set.
+status: approved
 area: product
 doc_type: domain
 related_work:
   - CHART-PR-031
+  - CLINICAL-MASTER-PR-023
+  - CLINICAL-FULFILLMENT-PR-010
+  - CLINICAL-BILLING-PR-023
+  - CHART-PR-032
 supersedes: []
 superseded_by: []
 tags:
@@ -21,11 +25,39 @@ last_updated: 2026-09-02
 
 # Plan/Order `전체` Tab Legacy Column Contract
 
-This document records the product decisions made while comparing the legacy CLAiR chart Order table with the currently deployed Plan/Order `전체` tab. It is the draft source for a later implementation plan; it does not authorize implementation by itself.
+This document records the target product decisions made while comparing the
+legacy CLAiR chart Order table with the currently deployed Plan/Order `전체` tab.
+The current owner-approved delivery goal authorizes the named local and
+synthetic/demo implementation slices. Production database mutation and
+production merge/deployment remain subject to their exact-candidate gates.
 
 ## Goal
 
 Replace only the column composition of the current Plan/Order `전체` tab with the legacy CLAiR column order and approved labels, including the explicit `직원` to `담당자` replacement, while preserving the current UI system unless a later decision explicitly changes it.
+
+## Contract Precedence And State Objects
+
+For the Plan/Order flow covered here, this later owner-approved contract takes
+precedence over older sections that require `accepted`, allow billing of a
+returned attempt after acknowledgement, or describe checkbox-selected
+`Order 청구`. The unaffected parts of those source documents remain valid.
+
+Keep these authorities separate:
+
+| Authority | Owner | Meaning |
+| --- | --- | --- |
+| Order confirmation | Chart order | Draft, confirmed, billed, or cancelled authoring boundary |
+| Order lineage projection | Chart order | Current summary across immutable work attempts |
+| Work attempt state | Universal task | `requested`, `in_progress`, `paused`, `completed`, `returned`, or `cancelled` |
+| Work detailed phase | Owning work module | Type-specific phase such as `입력중`, `판독중`, or `조제중` |
+| Billing state | Billing candidate/invoice | Pre-billing candidate, invoice-linked line, correction, or cancellation |
+
+`Order 확정` freezes the clinical/master/calculation snapshot, including unit
+price, price basis, billing unit, tax class, and set billing ownership/amount
+strategy. Billing name, reflection, billing quantity override, and row
+adjustment belong to a separate versioned pre-billing override state. `Order
+청구` freezes the final billing snapshot and invoice-line inputs. A work attempt
+never owns billing identity.
 
 ## Scope Boundary
 
@@ -35,14 +67,18 @@ Replace only the column composition of the current Plan/Order `전체` tab with 
 - The row data contract required by the target columns.
 - Column-specific calculation, editability, validation, persistence, and lifecycle rules.
 - The exact target column names and order recorded below.
+- The authoritative lifecycle, DB/RPC, RLS, master-data, billing, and downstream
+  prerequisites required for those cells to be truthful and durable.
 
 ### Out of scope
 
 - Visual redesign, styling, spacing, density, table chrome, or interaction redesign.
 - Toolbar, category tabs, footer, dialogs, or surrounding chart layout changes.
-- Immediate source-code or remote-service changes.
 - `Task`, `메모`, and `청구서` columns, plus the legacy `직원` label that is replaced by `담당자`.
-- Final database schema, migration, RLS, and API design until the product contract is complete.
+- Invented clinical values, fee policy, tax-law determination, or assignee
+  eligibility that lacks an approved source.
+- Production database/Airtable mutation or production merge/deployment before
+  the separately reviewed exact candidate.
 
 ## End-to-End Requirement and Pre-Implementation Validation Scope
 
@@ -58,7 +94,9 @@ The future visible UI change remains limited to the Plan/Order `전체` table co
 → Order 청구
 ```
 
-This validation scope does not authorize implementation outside the approved table-column change. Any missing lifecycle capability must be recorded as an implementation prerequisite or proposed as separately scoped work before code or remote data is changed.
+The current owner-approved goal authorizes the local and scoped synthetic/demo
+implementation prerequisites recorded in the delivery plan. Missing source
+values remain fail-closed; this authorization does not permit fabricating them.
 
 ### 1. Draft order authoring before confirmation
 
@@ -124,16 +162,24 @@ Record one evidence-backed result for every validation item and relevant order t
 
 ### Legacy CLAiR reference
 
-The attached legacy chart Order table is the target reference for column naming and order.
+The owner-provided legacy chart Order table is the target reference for column
+naming and order. The exact 25-name sequence is versioned below; implementation
+does not depend on an untracked image after this contract is approved.
 
 ### Current deployed service
 
-The authenticated remote treatment screen was inspected on 2026-09-02 with the `전체` tab selected.
+The authenticated production treatment screen was inspected on 2026-09-02 KST
+with the `전체` tab selected. GitHub's current Production deployment record
+pointed to source `7b0cb0a3` and reported success.
 
 - The current table is a dynamic union field matrix across multiple order types.
-- It exposes 49 user-facing columns: one selection column and 48 labeled columns.
+- It exposes 50 total columns: one selection control, 48 labeled columns, and
+  one trailing action control.
 - Restoring the legacy fixed header is structurally possible.
 - Full functional parity requires explicit field mapping and lifecycle rules; changing header labels alone is insufficient.
+- Detailed repository, remote database, Airtable, and authenticated browser
+  evidence is recorded in
+  `docs/work/chart/CHART-PR-031-plan-order-legacy-column-validation.md`.
 
 ## Target Column Order
 
@@ -142,23 +188,23 @@ The selection checkbox remains as the first unlabeled control column. The follow
 | Position | Display label | Decision status |
 | ---: | --- | --- |
 | control | selection checkbox | Retain; unlabeled |
-| 1 | `분류` | Mapping pending |
+| 1 | `분류` | Source and fallback mapped |
 | 2 | `상태` | Downstream work-progress and order/billing lifecycle agreed; detailed persistence gap remains |
 | 3 | `Order 명` | Retain |
 | 4 | `청구서명` | Definition and billing-lock lifecycle agreed |
 | 5 | `청구반영` | Billing-inclusion contract agreed |
-| 6 | `일수` | Mapping pending |
+| 6 | `일수` | Conditional source mapped |
 | 7 | `횟수` | Frequency-rule contract agreed |
 | 8 | `총횟수` | Derived/manual scheduling contract agreed |
-| 9 | `head/kg당` | Dose-basis semantics agreed; source mapping pending |
-| 10 | `1회당` | Dose-input relationship agreed; dedicated contract pending |
+| 9 | `head/kg당` | Dose-basis semantics and source mapping agreed |
+| 10 | `1회당` | Per-administration dose input contract agreed |
 | 11 | `성분량` | Product-strength contract agreed |
 | 12 | `조제량` | Definition and calculation contract agreed |
 | 13 | `실조제량` | Definition and edit lifecycle agreed |
-| 14 | `보관` | Mapping pending |
+| 14 | `보관` | Conditional dispensing source mapped |
 | 15 | `투여/복약` | Combined route/instruction contract agreed |
 | 16 | `담당자` | Current downstream-work assignee contract agreed |
-| 17 | `단가` | Order-master price-basis ownership agreed; current mapping pending |
+| 17 | `단가` | Order-master price-basis ownership and compatibility mapping agreed |
 | 18 | `수량` | Billing-quantity contract agreed; separate from `실조제량` |
 | 19 | `합계` | Pre-adjustment amount contract agreed |
 | 20 | `할인할증(금액)` | Row-level adjustment and whole-KRW rounding contract agreed |
@@ -166,7 +212,7 @@ The selection checkbox remains as the first unlabeled control column. The follow
 | 22 | `청구금액` | Final billing-amount contract agreed |
 | 23 | `사유` | Billing-adjustment reason contract agreed |
 | 24 | `과세` | Order-master tax-classification contract agreed |
-| 25 | `수의사` | Order owner/requesting vet mapping pending |
+| 25 | `수의사` | Requesting/confirming veterinarian source mapped |
 
 ### Explicitly removed from the legacy reference
 
@@ -204,6 +250,9 @@ The order, downstream work, and billing lifecycle must follow this sequence:
 - A confirmed order that does not create downstream work can be billed immediately when its billing data is valid.
 - A downstream work item starts recording operational state only after confirmation creates the request.
 - Operational work completion is not a universal prerequisite for billing; the billing gate depends on the current work state as defined below.
+- `Order 청구` is encounter-scoped. One idempotent request links every currently
+  eligible, billing-reflected, not-yet-linked order in the encounter. Table-row
+  selection remains an authoring control and does not narrow billing scope.
 
 | Work state | Billing behavior |
 | --- | --- |
@@ -349,6 +398,34 @@ in_progress + current phase -> paused -> in_progress + resumed phase
 - Increase `requestCycle` for each new attempt. A waiting first attempt displays `대기`; a waiting attempt with `requestCycle > 1` displays `재요청` while its common state remains `requested`.
 - Distinguish at least an operator-returned retry from a veterinarian result-review repeat in the re-request reason or source metadata.
 
+### Billing identity across attempts
+
+- Billing identity belongs to the confirmed order lineage, not a work attempt.
+- A returned or completed attempt and its re-request never create another
+  billing candidate for the same order lineage.
+- `returned` blocks the existing candidate until correction and reconfirmation.
+- A same-condition veterinarian re-request preserves the existing billing
+  candidate; when its new attempt is waiting or active, billing uses the normal
+  unfinished-work warning.
+- A changed item, parameter, instruction, billing owner, or clinical quantity
+  requires an explicit order revision and reconfirmation. The server reconciles
+  that revision to one current candidate without erasing prior snapshots.
+
+### Confirmed cancellation
+
+| Current boundary | Chart cancellation behavior |
+| --- | --- |
+| Draft/unconfirmed | Remove through the existing draft-removal CAS path; create no downstream or billing residue. |
+| Confirmed + requested | Require `chart:update` and a reason; cancel the active attempt and unlinked candidate. |
+| Confirmed + in progress/paused | Require `chart:update` and a reason; cancel the active attempt and preserve all work events/results already recorded. |
+| Confirmed + returned | Require `chart:update` and a reason; cancel the returned lineage instead of creating another attempt. |
+| Confirmed + completed | Preserve the completed attempt/result; cancel only when no invoice line is linked and retain immutable history. |
+| Invoice linked or paid | Block chart cancellation. Use the billing correction/reversal flow with its own authority and audit history. |
+
+Downstream workers return invalid work; they do not own clinical order
+cancellation. Repeating the same cancellation command is idempotent and cannot
+regenerate tasks, queue rows, or billing candidates.
+
 ### Type-specific completion boundaries
 
 #### Laboratory and system tests
@@ -405,15 +482,17 @@ Use the following display precedence for mixed child states:
 1. If any child is `returned`, display `반려`.
 2. Otherwise, if any child is actively `in_progress`, display `진행중`.
 3. Otherwise, if any child is `paused`, display `일시중지`.
-4. Otherwise, if some children are `completed` while others remain `requested`, display `부분완`.
-5. If every child is `requested`, display `대기`; display `재요청` when a re-request cycle is present.
-6. If every child is `completed`, display `완료`.
-7. If every child is `cancelled`, display `취소`.
+4. Otherwise, if any child is `completed` while any other child is nonterminal, display `부분완`.
+5. If every child is `cancelled`, display `취소`.
+6. If at least one non-cancelled child exists and every non-cancelled child is
+   `requested`, display `대기`; display `재요청` when a re-request cycle is
+   present.
+7. If every child is `completed`, display `완료`.
 8. If only `completed` and `cancelled` children remain, display `부분완`.
 
 This is a display-only aggregation rule. Each child keeps its own authoritative state and history.
 
-### Implementation gap
+### Implementation requirement
 
 After removing `accepted` and adding `paused`, the target common model can support `대기`, `진행중`, `일시중지`, `완료`, `취소`, and `반려`-level presentation. It still cannot by itself persist all type-specific detailed progress states.
 
@@ -426,12 +505,18 @@ The following require an additional type-specific substate or an equivalent exis
 
 Do not infer these detailed states only from elapsed time, screen location, or order type. The `상태` column must read an authoritative work-state value.
 
-### Open status decisions
+### Status implementation mapping
 
-1. Final schema and API representation for common state, type-specific phase, request cycle, and event history.
-2. Exact migration mechanism and authoritative start-evidence predicate for existing persisted `accepted` items.
-3. Final detailed-phase keys for every supported work type.
-4. Server permission keys for pause, resume, return, re-request, assignment, claim, and handoff actions.
+1. Persist common state, validated detailed phase, request cycle, assignment,
+   and events as separate fields/records; expose them through minimal read DTOs.
+2. Historical `accepted` with an authoritative `started_at` or `started` task
+   event maps to `in_progress`; without either it maps to `requested`. Preserve a
+   legacy migration event in both cases. Never use names or UI labels as evidence.
+3. Use type-owned allowlists for detailed phases. A routed type without an
+   approved phase uses its common-state label and cannot accept arbitrary text.
+4. Route-specific existing completion capability owns assign, claim, start,
+   phase, pause, resume, return, and handoff. `chart:update` owns correction,
+   reconfirmation, re-request, and clinical cancellation.
 
 ## Confirmed Contract: `담당자`
 
@@ -457,6 +542,14 @@ Do not infer these detailed states only from elapsed time, screen location, or o
 - Reflect that current assignee back in the chart. The column must show the person who currently owns the work, not the person originally selected in the draft.
 - `시작하기` changes the work state to `in_progress`; it is separate from `담당하기`.
 - Starting an unassigned item can assign the starting user and transition the work atomically.
+- An eligible assignee is an active workspace member who currently holds the
+  route-specific completion capability for the owning work module. Job-title
+  text, a historical membership, or possession of `chart:update` alone is not
+  sufficient evidence of eligibility.
+- The chart read DTO exposes only the assignee identifier needed for commands
+  and the compact avatar/name projection needed for display. Never render a raw
+  UUID as a user-facing fallback; unresolved historical identities display
+  `미기록`.
 
 ### Reassignment and history
 
@@ -498,6 +591,11 @@ Do not infer these detailed states only from elapsed time, screen location, or o
 - Keep automatically derived values read-only and recalculate them when the underlying schedule changes.
 - Allow direct entry only when the schedule cannot determine a count, such as the PRN maximum.
 - Require a valid `총횟수` before confirmation when the order depends on it.
+- Generate interval and custom occurrences in the encounter workspace's
+  persisted timezone and freeze the occurrence list plus timezone at
+  confirmation. A missing timezone or an interval/custom rule that cannot
+  produce a concrete occurrence list blocks confirmation; the client must not
+  estimate the count.
 
 The full-course operational product requirement remains:
 
@@ -562,8 +660,26 @@ The full-course operational product requirement remains:
 - Allow an authorized user to adjust the billing quantity before `Order 청구` without changing the clinical prescription quantity.
 - A manual difference records billing-adjustment history and reason.
 - Exclude the value from billing calculations when `청구반영` is disabled.
-- Freeze the quantity and price basis at `Order 청구`.
+- Freeze the price basis, unit price, and billing unit at `Order 확정`; freeze
+  the latest authorized billing-quantity override at `Order 청구`.
 - If a billing-reflected order has no valid price basis, block `Order 청구` until the owning order configuration is corrected.
+
+### `단가`
+
+`단가` is the source-approved unit price copied from the applied order master
+into the confirmation snapshot under the snapshotted price basis and billing
+unit.
+
+- A draft may refresh to a newer master revision only through its normal CAS
+  update before confirmation.
+- After confirmation, a master price change does not silently refresh the row
+  or its candidate. Changing price, price basis, billing unit, tax class, or set
+  pricing requires an explicit chart correction, new order revision, and
+  reconfirmation by a user with `chart:update`.
+- Preserve actor, timestamp, previous snapshot identity, new snapshot identity,
+  and reason in revision history. A stale draft or stale revision is rejected.
+- `Order 청구` copies the already confirmed value into the immutable billing
+  snapshot; it is not a second price-selection moment.
 
 ### `합계` and `청구금액`
 
@@ -601,8 +717,12 @@ The full-course operational product requirement remains:
 - Keep it read-only in the chart table.
 - Do not infer a missing classification from order type or clinical meaning.
 - Show `미설정` when missing and block `Order 청구` for a billing-reflected row until corrected in the owning configuration.
-- Freeze the tax classification in the billing snapshot at `Order 청구`.
-- A later master change does not retroactively change an existing billing line.
+- Freeze the tax classification at `Order 확정`, then copy it unchanged into
+  the billing snapshot at `Order 청구`.
+- A later master change does not change a confirmed order, billing candidate,
+  or existing billing line. A pre-invoice correction requires a new order
+  revision and reconfirmation; after invoice linkage, use billing correction or
+  reversal.
 - VAT-included or VAT-added arithmetic belongs to an explicit hospital billing policy, not to this classification cell.
 - Do not infer a missing VAT arithmetic policy. A billing-reflected taxable row remains blocked until the owning hospital configuration defines whether VAT is included or added.
 
@@ -624,13 +744,77 @@ Each set-order master selects exactly one billing owner mode:
 
 `청구서` is no longer part of the target table header. Invoice-line identity, billing candidate linkage, cancellation state, and navigation remain underlying billing data or billing-workspace behavior and must not be deleted merely because the column is hidden.
 
-### Open billing implementation decisions
+### Billing implementation mapping
 
-1. Exact internal price-basis keys and mapping of existing catalog orders.
-2. Exact configurable hospital billing-adjustment reason vocabulary; `기타` with required free text is already fixed.
-3. Migration mapping for existing set prices into parent-billing or child-billing ownership.
-4. Exact tax-classification vocabulary and the hospital's configured VAT-included or VAT-added choice; this contract does not make a tax-law determination.
-5. Server permission keys for applied billing-name, reflection, quantity, and adjustment edits.
+The canonical price-basis keys are:
+
+| Canonical key | Meaning | Existing-source compatibility |
+| --- | --- | --- |
+| `per_order` | One price per confirmed order | Existing unit price with order count as quantity |
+| `per_day` | One price per treatment day | Existing per-day source when explicitly configured |
+| `per_administration` | One price per scheduled administration | Existing `per_frequency` source |
+| `per_product_unit` | One price per billable mL, tablet, capsule, vial, or other explicit product unit | Existing `per_each` or `per_ml` source only when its billing unit is preserved |
+| `per_kg` | One price per confirmed kg snapshot | Existing per-kg source |
+| `fixed_set` | One fixed price for the set parent | Existing `set_fixed_price` source |
+
+`included_order_sum` and `range_price` are set amount strategies, not price
+bases. Preserve them in a separate `setAmountStrategy` snapshot and require an
+exclusive parent/child billing owner. An existing source that cannot be mapped
+without guessing remains unmapped and blocks billing.
+
+The current legacy `tax_included` boolean is interpreted only as its deployed
+tax-classification behavior: `true` maps to `taxable` and `false` maps to
+`non_taxable`. It is not evidence that VAT is already included in the price.
+Persist tax class and the workspace VAT arithmetic policy separately. A taxable
+row requires an explicit workspace policy of `vat_included` or `vat_added`;
+missing policy blocks billing. This contract does not choose a tax-law result.
+
+Billing-adjustment reason options come from workspace billing configuration.
+An empty configured list is valid; the UI still provides built-in `기타`, which
+requires detail. Order-row adjustments are stored on the versioned pre-billing
+override and frozen in the billing snapshot. Checkout- or invoice-level
+adjustments are separate records and never rewrite an order-row adjustment.
+
+`chart:update` owns applied billing-name, reflection, quantity, and row-
+adjustment edits before billing. Billing candidate creation additionally
+requires the existing billing-create capability. The server enforces both
+workspace membership and capability; UI gating is not an authorization check.
+
+### Snapshot layers and edit lock
+
+1. The mutable draft stores current authoring inputs and optional intended
+   assignee.
+2. `Order 확정` creates an immutable clinical/master/calculation snapshot and a
+   numbered order revision. Unit price, price basis, billing unit, tax class,
+   and set billing owner/amount strategy are part of this layer.
+3. Billing-only fields remain in a versioned pre-billing override linked to that
+   revision; each change records actor, timestamp, previous value, new value,
+   and reason where required.
+4. `Order 청구` validates the latest confirmed revision plus latest pre-billing
+   override and freezes one immutable billing snapshot.
+5. After invoice linkage, neither snapshot is overwritten. Clinical correction
+   creates a new revision; billing correction/reversal creates separate billing
+   history.
+
+### Already-billed unfinished work that is later returned
+
+Operational safety takes precedence over billing convenience. A route-eligible
+worker may return requested, active, or paused work with a reason even when its
+candidate or invoice line already exists; the return never edits billing data
+silently.
+
+| Billing boundary at return | Required behavior |
+| --- | --- |
+| Candidate exists but is not invoice-linked | Mark the candidate `billing_review_required` and block linking/payment until correction and reconfirmation or explicit clinical cancellation reconciles the lineage. |
+| Invoice-linked and unpaid | Preserve the line, place the invoice/line on billing-review hold, and block checkout. Billing staff must reverse/correct the line before a changed clinical revision can be reconfirmed or paid. |
+| Paid or partially paid | Preserve payment and line history, create a billing-review hold, and require the authorized reversal/refund/correction flow before a changed clinical revision can be billed. |
+
+The return itself remains recorded immediately and does not wait for billing
+staff. A same-condition re-request after review may reuse the confirmed order
+revision only after the billing hold is explicitly resolved. A changed item,
+instruction, clinical quantity, price, price basis, tax class, or set ownership
+requires a new order revision; reconfirmation is blocked while an affected
+invoice line lacks the required correction/reversal record.
 
 ## Confirmed Contract: `조제량`
 
@@ -709,11 +893,14 @@ The same ingredient-based formula applies across formulations; the product stren
 
 ### Weight source and lifecycle
 
-- A kg-based calculation uses the latest confirmed weight available in the current encounter.
+- A kg-based calculation uses the latest confirmed weight in the same encounter
+  whose measurement timestamp is at or before confirmation.
 - Preserve the exact weight value and measurement timestamp used by the calculation in the applied order snapshot.
 - If that weight changes before `Order 확정`, recalculate `조제량` automatically.
 - A manually overridden `실조제량` then becomes `재확인 필요` under its own confirmed lifecycle rule.
 - If no valid current weight exists, a kg-based `조제량` is `계산 불가`.
+- Do not fall back to a weight from another encounter, even when it is the most
+  recent patient weight overall.
 - A weight recorded after `Order 확정` must not silently change the confirmed order. A correction requires the order return and reconfirmation flow.
 
 ### Combination products
@@ -780,19 +967,31 @@ Do not use zero as a substitute for either blank or `계산 불가`. Do not allo
 - At `Order 확정`, freeze the calculation inputs, calculation mode, formula result, and source timestamps in the applied order snapshot.
 - Do not silently recalculate an already confirmed order from later catalog, patient, or encounter changes.
 
-## Open Decisions for `조제량`
+## `조제량` Implementation Mapping and Data Gates
 
-The following implementation details remain unresolved:
+The versioned snapshot uses explicit structured fields rather than a rendered
+formula string: `calculationMode`, `doseBasis`, `dosePerAdministration`,
+`doseUnit`, `referenceIngredientId`, product-strength numerator and denominator
+values/units, explicit unit-conversion inputs, `weightSnapshot`,
+`theoreticalDispenseQuantity`, `dispenseUnit`, and calculation source metadata.
+Exact storage column names may follow repository conventions, but the API must
+preserve these meanings one-to-one.
 
-1. Final field names and API/schema representation for calculation mode, inputs, result, and source metadata.
-2. Supported unit compatibility and explicit conversion-factor catalog.
-3. Maximum visible precision per order unit without reducing stored calculation precision.
-4. Exact interaction for opening the calculation explanation.
-5. Catalog representation of the reference ingredient for combination products.
-6. Owning fields and display location for diluent amount and final administration volume.
-7. Configuration ownership and validation for fixed product quantities.
-8. Exact rule for deciding whether an encounter weight is current and valid.
-9. Historical representation for confirmed orders that lack a calculation snapshot.
+- Supported conversions are the dimensionally compatible conversions explicitly
+  authored in the order master. An empty conversion table is valid but causes an
+  otherwise applicable row to remain `계산 불가`; implementation does not invent
+  factors.
+- Stored calculation precision remains lossless numeric data. Display precision
+  comes from the order-unit configuration; missing display precision uses the
+  lossless value without adding a clinical rounding rule.
+- Combination products require an authored reference ingredient. Diluent and
+  final administration volume remain separate optional fulfillment fields.
+- Fixed-product quantity belongs to the order master and is validated for the
+  selected head/kg basis. Missing configuration blocks confirmation.
+- Historical confirmed orders without this snapshot display `미기록`; they are
+  not backfilled from current master data.
+- The calculation explanation is row detail/popover behavior and does not alter
+  the persistence contract.
 
 ## Confirmed Contract: `실조제량`
 
@@ -864,6 +1063,10 @@ mode: nearest increment
 
 - The chart user cannot change the applied preparation policy from the table; the user can edit only the proposed `실조제량` under the confirmed constraints.
 - When no preparation rule exists, copy the exact `조제량` as the proposed value without applying an implicit rounding mode.
+- When no increment exists, the copied lossless value is display-only and manual
+  divergence is disabled because the server has no authoritative input step. A
+  user must correct the master preparation policy before entering a different
+  value.
 - Clinical values for increments, ranges, and tolerances must come from approved hospital configuration. Do not invent them during implementation.
 
 ### Calculation chain
@@ -905,8 +1108,8 @@ The examples explain the field relationship and configured policy behavior only.
 
 | Field | Product meaning | Edit policy |
 | --- | --- | --- |
-| `1회당` | Prescribed active dose for one administration | Upstream order input; exact contract pending |
-| `성분량` | Product strength or concentration used to convert dose into a measurable product amount | Normally sourced from the applied catalog snapshot; exact unit contract pending |
+| `1회당` | Prescribed active dose for one administration | Upstream numeric dose plus snapshotted dose unit under the selected head/kg basis |
+| `성분량` | Product strength or concentration used to convert dose into a measurable product amount | Snapshotted reference-ingredient numerator/denominator value and units |
 | `조제량` | Theoretical product quantity required for one administration | Formula-derived and read-only |
 | `실조제량` | Practically measurable product quantity for one administration | System-proposed, editable before confirmation under the rules below |
 | `총 필요 조제량` | Full-course operational amount derived from `실조제량 × 총횟수` | Derived value; not currently a target header |
@@ -1013,34 +1216,65 @@ The implementation will need to preserve at least:
 - previous confirmed values and the latest active confirmed value;
 - a separate downstream execution result when actual fulfillment must be recorded.
 
-The existing synthetic chart-order draft uses `actualDispenseQuantity`, `actualDispenseQuantitySource`, and `dispenseRoundingPolicy` as related concepts. These names are useful implementation inputs but are not yet approved as the final schema contract.
+The existing synthetic chart-order draft uses `actualDispenseQuantity`,
+`actualDispenseQuantitySource`, and `dispenseRoundingPolicy` as compatibility
+concepts. The implementation may preserve those wire keys where changing them
+would add migration risk, provided their meaning matches the structured mapping
+above and no data is collapsed into a rendered string.
 
-## Open Decisions for `실조제량`
+## `실조제량` Implementation Mapping and Data Gates
 
-The following must be resolved before implementation:
+Preserve `dispenseApplicability`, `preparationPolicy`,
+`actualDispenseQuantity`, `actualDispenseUnit`, `actualDispenseSource`, optional
+`actualDispenseOverride`, and `requiresReconfirmation` as structured snapshot
+data. The preparation policy preserves optional increment, rounding mode,
+minimum, maximum, no-reason tolerance, and display precision. Override history
+is append-only and never embedded as one mutable reason string.
 
-1. Final internal field name and API/schema representation.
-2. Dimensional-conversion rules within the existing order units for liquid, tablet, capsule, powder, and other formulations.
-3. Exact internal representation and validation for the confirmed per-order increment, adjustment mode, range, and no-reason tolerance settings.
-4. Approved clinical configuration values for each medication; the contract defines ownership and behavior, not clinical values.
-5. Exact server permission key that represents chart-order edit authority.
-6. Technical state names and API behavior for return, correction, reconfirmation, and affected fulfillment or billing records.
-7. Exact applicability predicate for medication subtypes that do not expose calculable dispensing attributes.
-8. Migration representation for historical `미기록` values; product behavior is already defined as no inferred backfill.
-9. Whether and where `총 필요 조제량` is displayed even though it is not a target column.
+- Applicability comes from the authored clinical calculation mode and dispensing
+  attributes, not from a UI category guess. Missing applicability configuration
+  is fail-closed for medication rows and non-applicable for known non-dispensing
+  rows.
+- The same configured product-unit conversion contract used by `조제량` owns
+  dimensional validation; no extra UI conversion is permitted.
+- `chart:update` is the edit authority. Return uses the route-specific work
+  completion capability; correction, reconfirmation, re-request, and clinical
+  cancellation use `chart:update`.
+- Current technical common states are the confirmed target states in this
+  document. Each retry creates a numbered attempt; an order correction creates a
+  numbered revision. They are not the same sequence.
+- Historical missing data remains null and displays `미기록`. `총 필요 조제량`
+  is included in downstream and calculation-detail DTOs but not added as a
+  visible table column.
+- Approved medication-specific values remain a master-data dependency. Until
+  authored and published, affected rows are visibly blocked; no default
+  increment, tolerance, range, or conversion is synthesized.
 
-## Remaining Column Decisions
+## Final Direct-Column Source Mapping
 
-The identified high-risk product semantics are now recorded. The remaining work is primarily implementation mapping:
+| Column | Authoritative source |
+| --- | --- |
+| `분류` | Applied order's snapshotted clinical order type/category group |
+| `Order 명` | Applied clinical display name from the confirmed master snapshot |
+| `일수` | Applied duration days when the schedule uses duration; otherwise blank |
+| `head/kg당` | Snapshotted `doseBasis` (`head` or `kg`) |
+| `1회당` | Snapshotted prescribed dose per administration and dose unit |
+| `보관` | Applied storage instruction from the master snapshot |
+| `단가` | Confirmation-frozen unit price, copied unchanged into the immutable billing snapshot |
+| `수의사` | Immutable requesting user; legacy fallback is confirming user, otherwise `미기록` |
 
-1. Translate the confirmed common-state, detailed-phase, assignment, and request-cycle behavior into final schema and API keys.
-2. Map direct existing fields for `분류`, `Order 명`, `일수`, `head/kg당`, `1회당`, `보관`, `단가`, and `수의사`.
-3. Resolve the open `조제량`, `실조제량`, and billing implementation details without changing their confirmed product meaning.
-4. Verify every mapping and existing `accepted` record shape against the current remote data contract before implementation.
+`수의사` never falls back to the current viewer, current assignee, or a guessed
+job-title member. Each cell's applicable blank, `미기록`, `미설정`, or `계산
+불가` state follows the contracts above.
 
 ## Implementation Gate
 
-Do not implement the column replacement until:
+The read-only validation gate is complete and the owner has approved the named
+implementation scope. Implementation now proceeds only in dependency order:
+master authority and fail-closed defaults, work lifecycle and permission
+boundary, billing authority, then the chart projection and target columns.
+
+Before any production mutation, merge, or deployment, require:
 
 - the current repository, deployed authenticated UI, remote database, and Airtable order master have been cross-checked against this contract;
 - every applicable end-to-end validation item has an evidence-backed `정상`, `부분 구현`, `미구현`, `충돌`, or `추가 정책 필요` result;
@@ -1048,9 +1282,17 @@ Do not implement the column replacement until:
 - every target column has an approved source, calculation, editability, empty-state, persistence, and lifecycle rule where applicable;
 - cross-order-type applicability is defined;
 - billing and confirmation interactions are consistent with the existing order and billing domain contracts;
-- 승욱 explicitly approves implementation scope.
+- an independent contract and security review of the exact candidate;
+- exact candidate SHA, focused test evidence, migration dry-run/rollback proof,
+  deployment destination, and remote smoke plan;
+- explicit production approval for that exact packet.
 
 ## Decision Ledger
+
+The normative rule lives in the linked section above. This ledger records owner
+agreement and provenance only; when a summary phrase is less specific than the
+body, the body governs. Implementation evidence and current-state
+classifications live in `CHART-PR-031-VALIDATION`, not in this ledger.
 
 | Date | Decision | Status |
 | --- | --- | --- |
