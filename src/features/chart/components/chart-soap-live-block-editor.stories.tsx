@@ -8,9 +8,10 @@ import {
   CdsNavigationChevronLeftIcon,
   CdsNavigationMaximize2Icon,
 } from "@/components/cds-icons/navigation";
+import { defaultSoapWritingPrompts } from "@/features/chart/chart-soap-document";
 
 import {
-  createDefaultSoapBasicBlockTemplateBlocks,
+  createDefaultSoapTemplateBlocks,
   type ChartSoapBlock,
   type ChartSoapPartialBlock,
 } from "./chart-soap-block-schema";
@@ -331,6 +332,16 @@ export const EmptyBlock: Story = {};
 
 export const IndentedBlock: Story = {
   args: { initialContent: indentedBlock },
+  play: async ({ canvasElement }) => {
+    const nestedBlock = canvasElement.querySelector<HTMLElement>(
+      ".bn-block-group .bn-block-group > .bn-block-outer",
+    );
+    if (!nestedBlock) throw new Error("중첩 블록 가이드 검증 대상을 찾지 못했습니다.");
+
+    await expect(
+      getComputedStyle(nestedBlock, "::before").borderLeftWidth,
+    ).toBe("1px");
+  },
 };
 
 export const PlusMenuOpen: Story = {
@@ -364,7 +375,7 @@ export const PlusMenuOpen: Story = {
     await waitFor(() => expect(grabButton).toBeVisible());
     await expect(addButton.getBoundingClientRect().width).toBe(24);
     await expect(addButton.getBoundingClientRect().height).toBe(24);
-    await expect(grabButton.getBoundingClientRect().width).toBe(16);
+    await expect(grabButton.getBoundingClientRect().width).toBe(24);
     await expect(grabButton.getBoundingClientRect().height).toBe(24);
     const grabIcon = grabButton.querySelector<SVGSVGElement>(
       '[data-test="soap-block-grab"]',
@@ -1472,7 +1483,7 @@ export const ResponsiveWide720: Story = { args: { width: 720 } };
 export const RepresentativeReview: Story = {
   args: {
     width: 566.5,
-    initialContent: createDefaultSoapBasicBlockTemplateBlocks(true),
+    initialContent: createDefaultSoapTemplateBlocks(),
     interactiveWidth: true,
   },
   play: async ({ canvasElement }) => {
@@ -1481,6 +1492,9 @@ export const RepresentativeReview: Story = {
     await expect(canvas.getByTestId("soap-story-frame")).toBeVisible();
     await expect(canvas.getByRole("textbox")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "320px" })).toBeVisible();
+    for (const prompt of Object.values(defaultSoapWritingPrompts)) {
+      await expect(canvas.getByText(prompt)).toBeVisible();
+    }
 
     const firstParagraph = canvasElement.querySelector<HTMLElement>(
       '.bn-block-content[data-content-type="paragraph"]',
@@ -1508,23 +1522,53 @@ export const RepresentativeReview: Story = {
     if (!sideMenu) throw new Error("SOAP 블록 사이드 메뉴를 찾지 못했습니다.");
 
     const sideMenuRect = sideMenu.getBoundingClientRect();
-    const paragraphCenter = paragraphRect.top + paragraphRect.height / 2;
+    const paragraphFirstLineCenter = paragraphRect.top + 12;
     const sideMenuCenter = sideMenuRect.top + sideMenuRect.height / 2;
-    await expect(Math.abs(paragraphCenter - sideMenuCenter)).toBeLessThanOrEqual(1);
+    await expect(
+      Math.abs(paragraphFirstLineCenter - sideMenuCenter),
+    ).toBeLessThanOrEqual(1);
     await expect(
       Math.abs(paragraphRect.left - sideMenuRect.right - 8),
     ).toBeLessThanOrEqual(1);
     await expect(addButton.getBoundingClientRect().width).toBe(24);
-    await expect(grabButton.getBoundingClientRect().width).toBe(16);
+    await expect(grabButton.getBoundingClientRect().width).toBe(24);
+    const paragraphOuter = firstParagraph.closest<HTMLElement>(".bn-block-outer");
+    if (!paragraphOuter) {
+      throw new Error("SOAP 기본 문단의 블록 외곽을 찾지 못했습니다.");
+    }
+    await expect(
+      getComputedStyle(paragraphOuter, "::before").borderLeftWidth,
+    ).toBe("0px");
     await expect(
       canvasElement.querySelector(
         '.bn-block-content[data-content-type="soapSection"]',
       ),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
     await expect(
       canvasElement.querySelectorAll(
         '.bn-editor > .bn-block-group > .bn-block-outer',
       ),
-    ).toHaveLength(8);
+    ).toHaveLength(4);
+
+    const editor = canvas.getByRole("textbox");
+    for (const width of [320, 420, 566.5, 720]) {
+      await userEvent.click(canvas.getByRole("button", { name: `${width}px` }));
+      await waitFor(() => {
+        expect(
+          Math.abs(
+            canvas.getByTestId("soap-story-frame").getBoundingClientRect().width -
+              width,
+          ),
+        ).toBeLessThanOrEqual(1);
+        expect(editor.scrollWidth).toBeLessThanOrEqual(editor.clientWidth + 1);
+      });
+    }
+
+    const subjectivePrompt = canvas.getByText(defaultSoapWritingPrompts.subjective);
+    placeCaretAtEnd(subjectivePrompt);
+    await userEvent.keyboard(" 수정 가능");
+    await expect(subjectivePrompt).toHaveTextContent(
+      `${defaultSoapWritingPrompts.subjective} 수정 가능`,
+    );
   },
 };

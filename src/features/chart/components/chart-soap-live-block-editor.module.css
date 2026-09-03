@@ -232,6 +232,11 @@
   margin-left: 26px;
 }
 
+.editor
+  :global(.bn-block:has(> .bn-react-node-view-renderer .chart-soap-section-marker) > .bn-block-group > .bn-block-outer::before) {
+  border-left: 0;
+}
+
 .editor :global([data-file-block] .bn-add-file-button) {
   border: 1px solid var(--emr-border-default);
   background: var(--emr-surface-muted);
@@ -273,14 +278,14 @@
 }
 
 .sideMenu {
-  width: 42px;
+  width: 50px;
   height: 24px;
   transform: translateX(-8px);
 }
 
 .sideMenuControls {
   display: flex;
-  width: 42px;
+  width: 50px;
   height: 24px;
   align-items: center;
   gap: 2px;
@@ -306,7 +311,7 @@
 }
 
 .grabButton {
-  width: 16px !important;
+  width: 24px !important;
   cursor: grab;
 }
 

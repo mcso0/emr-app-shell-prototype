@@ -24,6 +24,17 @@ export type SoapDocumentFieldKind = (typeof soapDocumentFieldKinds)[number];
 
 export type SoapDocumentProjection = Record<SoapDocumentFieldKind, string>;
 
+export const defaultSoapWritingPrompts: SoapDocumentProjection = {
+  subjective:
+    "[주호소와 시작 시점] [빈도·지속시간·악화/호전 요인] [식욕·음수·배뇨·배변·활력 변화] [보호자가 오늘 확인하고 싶은 점]",
+  objective:
+    "[체중·체온·심박·호흡·BCS] [이상 소견] [관련 정상 소견] [검사·영상 결과 또는 결과 대기]",
+  assessment:
+    "[문제명과 상태] — [가장 가능성 높은 판단과 근거]. DDx: [핵심 감별 1–3개]. [추가 확인이 필요한 점]",
+  plan:
+    "[검사와 이유] [치료·처방] [보호자 설명 및 동의·보류] [결과 연락·재진 시점·즉시 내원 기준]",
+};
+
 export type SoapDocumentValidationError =
   | "invalid_document"
   | "unsupported_schema_version"
@@ -344,22 +355,22 @@ export function createLegacySoapDocumentInput(
     {
       kind: "subjective",
       label: "주관적 · 보호자 진술",
-      value: soapNote?.subjective ?? "보호자 진술:",
+      value: soapNote?.subjective ?? defaultSoapWritingPrompts.subjective,
     },
     {
       kind: "objective",
       label: "객관적 · 신체검사 소견",
-      value: soapNote?.objective ?? "신체검사 소견:",
+      value: soapNote?.objective ?? defaultSoapWritingPrompts.objective,
     },
     {
       kind: "assessment",
       label: "평가 · 임상 판단",
-      value: soapNote?.assessment ?? "평가:",
+      value: soapNote?.assessment ?? defaultSoapWritingPrompts.assessment,
     },
     {
       kind: "plan",
       label: "계획 · 치료 및 추적",
-      value: soapNote?.plan ?? "계획:",
+      value: soapNote?.plan ?? defaultSoapWritingPrompts.plan,
     },
   ];
 

@@ -1,7 +1,10 @@
 import { BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
 
-import { createLegacySoapDocumentInput } from "@/features/chart/chart-soap-document";
+import {
+  createLegacySoapDocumentInput,
+  defaultSoapWritingPrompts,
+} from "@/features/chart/chart-soap-document";
 import type { SoapNote } from "@/types/emr-domain";
 
 export const soapSectionKinds = [
@@ -158,7 +161,7 @@ export function createDefaultSoapTemplateBlocks(
     createSectionBlock({
       content: withSampleContent
         ? "어제 저녁부터 오른쪽 앞다리를 들고 걸어요. 식욕은 평소와 같아요."
-        : "",
+        : defaultSoapWritingPrompts.subjective,
       kind: "subjective",
       label: "주관적 · 보호자 진술",
       systemLabel: "기본 SOAP",
@@ -167,7 +170,7 @@ export function createDefaultSoapTemplateBlocks(
     createSectionBlock({
       content: withSampleContent
         ? "우측 전지 촉진 시 경미한 통증 반응. 체온 38.6°C, 체중 4.2kg."
-        : "",
+        : defaultSoapWritingPrompts.objective,
       kind: "objective",
       label: "객관적 · 신체검사 소견",
       systemLabel: "기본 SOAP",
@@ -176,7 +179,7 @@ export function createDefaultSoapTemplateBlocks(
     createSectionBlock({
       content: withSampleContent
         ? "연부조직 손상 의심. 골절 가능성은 낮으나 영상검사로 배제 필요."
-        : "",
+        : defaultSoapWritingPrompts.assessment,
       kind: "assessment",
       label: "평가 · 임상 판단",
       systemLabel: "기본 SOAP",
@@ -185,7 +188,7 @@ export function createDefaultSoapTemplateBlocks(
     createSectionBlock({
       content: withSampleContent
         ? "통증 조절 후 3일간 활동 제한. 증상 지속 시 방사선 검사 진행."
-        : "",
+        : defaultSoapWritingPrompts.plan,
       kind: "plan",
       label: "계획 · 치료 및 추적",
       systemLabel: "기본 SOAP",
@@ -236,7 +239,7 @@ export function createDefaultSoapBasicBlockTemplateBlocks(
     ...createBasicSectionBlocks({
       content: withSampleContent
         ? "어제 저녁부터 오른쪽 앞다리를 들고 걸어요. 식욕은 평소와 같아요."
-        : "",
+        : defaultSoapWritingPrompts.subjective,
       kind: "subjective",
       label: "주관적 · 보호자 진술",
       systemLabel: "기본 SOAP",
@@ -244,7 +247,7 @@ export function createDefaultSoapBasicBlockTemplateBlocks(
     ...createBasicSectionBlocks({
       content: withSampleContent
         ? "우측 전지 촉진 시 경미한 통증 반응. 체온 38.6°C, 체중 4.2kg."
-        : "",
+        : defaultSoapWritingPrompts.objective,
       kind: "objective",
       label: "객관적 · 신체검사 소견",
       systemLabel: "기본 SOAP",
@@ -252,7 +255,7 @@ export function createDefaultSoapBasicBlockTemplateBlocks(
     ...createBasicSectionBlocks({
       content: withSampleContent
         ? "연부조직 손상 의심. 골절 가능성은 낮으나 영상검사로 배제 필요."
-        : "",
+        : defaultSoapWritingPrompts.assessment,
       kind: "assessment",
       label: "평가 · 임상 판단",
       systemLabel: "기본 SOAP",
@@ -260,7 +263,7 @@ export function createDefaultSoapBasicBlockTemplateBlocks(
     ...createBasicSectionBlocks({
       content: withSampleContent
         ? "통증 조절 후 3일간 활동 제한. 증상 지속 시 방사선 검사 진행."
-        : "",
+        : defaultSoapWritingPrompts.plan,
       kind: "plan",
       label: "계획 · 치료 및 추적",
       systemLabel: "기본 SOAP",
