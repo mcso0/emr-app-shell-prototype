@@ -1,6 +1,6 @@
 ---
 id: "RELEASE-OPS-PR-002"
-status: "human_review"
+status: "superseded"
 area: "agent-orchestration"
 priority: "P0"
 target_pr: "User request / fixed staging queue controls and alias automation"
@@ -12,7 +12,7 @@ source_docs:
   - "docs/engineering/operations/release-environment-policy.md"
   - "docs/engineering/operations/hobby-free-staging-branch-release-plan.md"
   - "docs/engineering/operations/fixed-staging-alias-automation.md"
-updated: "2026-06-16"
+updated: "2026-09-03"
 ---
 
 # Fixed Staging Queue Controls And Alias Automation
@@ -59,6 +59,8 @@ Restore the compact shared queue header controls on fixed staging and automate t
 ## Handoff Notes
 
 Keep production blocked. The fixed staging alias workflow is allowed only for successful `staging` branch deployments or a separately approved integration branch.
+
+2026-09-03 status: the queue UI work remains historical implementation evidence, while the fixed staging alias workflow is superseded by `RELEASE-OPS-PR-004` and is no longer an active operating path.
 
 2026-06-25 browser review correction: the treatment/chart queue header should not keep the visible `요청순` or `M`/`S` compact value labels. The accepted visible header pattern is now three icon-only controls matching the lab queue: sort, filter, and search.
 

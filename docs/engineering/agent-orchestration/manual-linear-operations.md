@@ -121,7 +121,7 @@ They must not silently work on the same issue or same files.
 - whether the bundle uses one branch/PR or separate branches/PRs;
 - the deployment boundary for review.
 
-Work bundle sessions may share one branch/PR when the issues are tightly related and the representative has approved the grouping. They must not change fixed staging, production, or Vercel aliases as part of ordinary implementation work.
+Work bundle sessions may share one branch/PR when the issues are tightly related and the representative has approved the grouping. They must stop at PR Preview and must not merge to `main`, change Production, or change Vercel aliases as part of ordinary implementation work without exact-candidate approval.
 
 Release/deployment requests must route to `release-deployment-ops` and `docs/engineering/operations/release-environment-policy.md`.
 
@@ -302,13 +302,12 @@ Do not combine:
 
 ## Release And Deployment Handoff Rules
 
-Individual issue or work-bundle sessions should normally stop at PR preview. They may create, push, and prepare a PR when asked, but they must not attach fixed staging aliases or promote production.
+Individual issue or work-bundle sessions should normally stop at PR Preview. They may create, push, and prepare a PR when asked, but they must not merge to `main` or release Production until 승욱 approves the exact candidate.
 
 Use `docs/engineering/operations/release-environment-policy.md` and the `$release-deployment-ops` skill when the representative asks for:
 
-- fixed staging deployment or alias changes;
-- Vercel alias inspection or correction;
-- PR preview/main staging automation;
+- Vercel deployment or alias inspection and correction;
+- PR Preview or `main`/Production automation;
 - production deploy or production promote;
 - env/secret deployment safety checks;
 - rollback or release closeout.
@@ -320,7 +319,7 @@ Release handoff comments should include:
 - verification already run;
 - preview URL;
 - known blockers or residual risks;
-- whether fixed staging or production was intentionally not touched.
+- whether `main`, Production, or Vercel settings were intentionally not touched.
 
 ## Reporting Depth Rules
 

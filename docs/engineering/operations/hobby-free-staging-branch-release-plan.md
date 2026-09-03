@@ -1,17 +1,20 @@
 ---
 id: ENGINEERING-OPERATIONS-HOBBY-FREE-STAGING-BRANCH-RELEASE-PLAN
-status: approved
+status: superseded
 area: engineering
 doc_type: operating-plan
 related_work:
   - DEN-445
 supersedes:
   - ENGINEERING-OPERATIONS-FIXED-STAGING-MAIN-ONLY-EXECUTION-PLAN
-superseded_by: []
-last_updated: 2026-06-09
+superseded_by:
+  - ENGINEERING-OPERATIONS-RELEASE-ENVIRONMENT-POLICY
+last_updated: 2026-09-03
 ---
 
 # Hobby/free Staging Branch Release Plan
+
+> Superseded on 2026-09-03. This document preserves the previous staging model and its setup evidence. It is not active release guidance. Use [Release Environment Policy](release-environment-policy.md).
 
 This is the target release model for the current GitHub/Vercel Hobby/free setup.
 

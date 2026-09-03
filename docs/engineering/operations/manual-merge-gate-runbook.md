@@ -6,57 +6,49 @@ doc_type: runbook
 related_work:
   - DEN-450
   - RELEASE-OPS-PR-003
+  - RELEASE-OPS-PR-004
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-18
+last_updated: 2026-09-03
 ---
 
 # Manual Merge Gate Runbook
 
-This runbook defines the manual checks required while the CLAiR EMR working repository remains private on the current GitHub free/Hobby setup.
+This runbook defines the manual checks required while the private CLAiR EMR repository cannot enforce required checks under the current GitHub plan.
 
-GitHub Actions provides one manually dispatched `Release Check` that combines secret scanning, docs, lint, typecheck, and build. The current plan cannot enforce it for this private repository, so merge discipline remains an explicit human and Codex responsibility.
-
-## Environment Model
+## Active Model
 
 ```text
 work branch / PR = Vercel Preview
-staging branch = fixed staging
-main branch = Vercel Production
+main = source of truth and Vercel Production
 ```
 
-Key rule:
-
-- Merge to `staging` means fixed staging review.
-- Merge to `main` means production release.
-- Do not merge to `main` as a routine integration step.
+There is no active staging integration step. Every `main` merge is a Production release.
 
 ## Roles
 
 | Role | Responsibility |
 | --- | --- |
-| Work thread | Implements scoped issue/work bundle, opens PR, verifies PR preview, and stops before fixed staging or production. |
-| Release thread | Reviews included PRs/issues, checks merge gates, updates `staging` or prepares production release only after explicit approval. |
-| 승욱 | Reviews fixed staging or production approval packet and gives explicit approval when needed. |
+| Work task | Implements scoped work, opens a PR to `main`, verifies the exact candidate and Preview, and prepares a Production approval packet. |
+| 승욱 | Reviews the exact candidate packet and explicitly approves or rejects the `main`/Production merge. |
+| Release task | Reconfirms the approved SHA, merges with exact-head protection, and verifies `origin/main` and Production. |
 
-## Gate 1: Work PR Before Merge To `staging`
-
-Use this gate when a work branch or PR is ready to enter the fixed staging review line.
+## Gate 1: Exact PR Candidate
 
 Required evidence:
 
 | Check | Required result |
 | --- | --- |
-| PR target | Targets `staging` unless 승욱 explicitly approves another integration branch. |
-| Included work | Linear issue(s), work item(s), and report are listed. |
-| `Release Check` | The workflow was manually dispatched for the exact candidate commit and succeeded, or the local equivalent is reported when GitHub Actions is unavailable. |
-| Local secret gate | `npm run security:secrets` passed for the exact candidate commit. |
-| Vercel Preview | Preview deployment is Ready and linked in the PR/review note. |
-| Scope check | PR does not change fixed staging alias, production alias, Vercel production settings, or secrets. |
-| Product check | The changed workflow was smoke-tested in preview or locally with the active issue's focused verification. |
-| Dirty-worktree check | Release thread confirms it is not accidentally merging unrelated local files. |
+| PR target | `main`. |
+| Candidate | PR number, source branch, and full head SHA are recorded. |
+| Scope | Changed files and included work are reviewable and intentional. |
+| Release Check | Manually dispatched for the exact head SHA and successful. |
+| Local secret gate | `npm run security:secrets` passed for the same candidate. |
+| Preview | Vercel Preview is Ready and linked. |
+| Focused verification | Checks appropriate to the changed behavior passed. |
+| Worktree safety | No unrelated local or user-owned files are included. |
 
-Minimum local commands for a release thread before integrating to `staging`:
+Minimum local commands:
 
 ```bash
 npm run security:secrets
@@ -64,7 +56,7 @@ npm run docs:check
 git diff --check
 ```
 
-Add app verification when the PR changes application behavior:
+For application behavior changes, also run:
 
 ```bash
 npm run lint
@@ -72,133 +64,64 @@ npx tsc --noEmit
 npm run build
 ```
 
-Stop before merge when:
+## Gate 2: Production Approval Packet
 
-- `Release Check`, preview readiness, or required local verification is failing or unknown;
-- the PR contains secret/env values or `.env*` files;
-- the PR changes production settings, production aliases, Vercel project settings, or fixed staging alias;
-- the PR mixes unrelated work that cannot be reviewed as one change;
-- the source branch is stale in a way that changes the review result.
-
-## Gate 2: `staging` Before Fixed Staging URL Update
-
-Use this gate when `staging` has changed and the fixed staging URL should show the latest integrated state.
-
-Required evidence:
-
-| Check | Required result |
-| --- | --- |
-| Source branch | `staging` or 승욱-approved integration branch only. |
-| Source commit | Exact commit SHA is recorded. |
-| Included work | Included PRs/issues are listed. |
-| Secret gate | `npm run security:secrets` passed. |
-| Docs gate | `npm run docs:check` and `git diff --check` passed. |
-| App gate | Relevant `lint`, `tsc`, `build`, and focused tests passed when app code changed. |
-| Deployment target | Vercel deployment is Preview, Ready, and tied to the intended source. |
-| Alias target | Fixed staging URL points to the intended deployment after update. |
-| Production non-change | Production URL and production aliases are inspected and not changed. |
-
-If Vercel does not automatically create a branch preview for `staging`, the approved fallback is:
-
-1. deploy a clean `staging` worktree as a Vercel Preview;
-2. attach the fixed staging URL to that Preview deployment;
-3. inspect the fixed staging alias;
-4. inspect production aliases for non-change.
-
-The fixed staging report must include:
-
-- fixed staging URL;
-- deployment URL and deployment id;
-- source branch and commit SHA;
-- included PRs/issues;
-- verification commands and result;
-- production non-change evidence;
-- rollback candidate or stop condition.
-
-## Gate 3: `staging` Before Merge To `main`
-
-Use this gate only for production release preparation. Merging to `main` is production exposure because Vercel production branch is `main`.
-
-Required approval from 승욱 must name:
-
-- target environment: production;
-- source branch and commit SHA;
-- included PRs/issues;
-- env/secret source without values;
-- preflight commands;
-- smoke path;
-- rollback candidate;
-- stop condition.
-
-Minimum preflight:
-
-```bash
-npm run security:secrets
-npm run docs:check
-git diff --check
-npm run lint
-npx tsc --noEmit
-npm run build
-```
-
-Production release packet must include:
+Before the merge, show 승욱:
 
 | Field | Required content |
 | --- | --- |
-| Source | `staging` commit SHA and comparison target. |
-| Work included | PRs/issues/reports included in the release. |
-| Verification | Commands, the manual GitHub `Release Check`, preview/fixed staging smoke, and result. |
-| Secret/env safety | Confirmation that no secret values were exposed and no production env values are printed. |
-| Production action | Exact merge/promote/deploy operation to run after approval. |
-| Smoke plan | Production URL and path(s) to verify after release. |
-| Rollback | Previous production deployment id or revert candidate. |
-| Stop condition | Clear condition that cancels the release. |
+| Target | Production / `main`. |
+| Exact source | PR, branch, and full head SHA. |
+| Compare target | Current `origin/main` SHA and current Production deployment. |
+| Included work | Issues, work items, and reports included in the candidate. |
+| Verification | Exact Release Check, local gates, Preview, and focused test results. |
+| Production action | Exact merge operation protected by the expected head SHA. |
+| Smoke | Production URL and paths to verify. |
+| Rollback | Previous Production deployment or merge-revert candidate. |
+| Stop condition | Any condition that cancels the merge or pauses the release. |
 
-Stop before production when:
+Approval is invalidated if the PR head SHA changes.
 
-- 승욱 has not explicitly approved production;
-- source commit is not named;
-- included PRs/issues are unclear;
-- fixed staging was not reviewed;
-- secret scan or app verification failed;
-- rollback candidate is missing;
-- production smoke path is missing;
-- remote Supabase, real data, provider, email, payment, or RLS operations are implied but not separately approved.
-
-## Codex Request Templates
-
-For work threads:
+Acceptable approval shape:
 
 ```text
-이 작업 묶음을 구현해줘.
-PR preview까지만 공유하고, fixed staging alias와 production은 건드리지 마.
+승인: PR #<number>의 exact candidate <SHA>를 main/Production에 병합해줘.
+검사 결과와 rollback 후보를 유지하고 병합 후 Production smoke를 확인해줘.
 ```
 
-For fixed staging integration:
+## Gate 3: Merge And Production Proof
 
-```text
-릴리즈 통합 작업을 진행해줘.
-대상 PR/이슈 목록을 확인하고 staging 브랜치 기준 fixed staging에만 반영해줘.
-main/production은 건드리지 마.
-```
+After approval:
 
-For production release:
+1. Re-read the PR and confirm it is open, mergeable, targets `main`, and still has the approved head SHA.
+2. Merge with exact-head protection.
+3. Fetch `origin/main` and record the merge SHA.
+4. Confirm the candidate content is included in `origin/main`.
+5. Confirm the Vercel Production deployment is Ready and tied to the merge SHA.
+6. If a docs-only build is intentionally skipped, prove the latest Ready deployment's source SHA is an ancestor of `origin/main` and say that no new application deployment occurred.
+7. Probe `/login` and run the approved scoped smoke.
+8. Report rollback evidence and residual risk.
 
-```text
-승인: staging commit <SHA>를 production release로 main에 반영해줘.
-포함 PR/이슈는 <list>이고, production smoke와 rollback 후보를 보고해줘.
-```
+## Stop Conditions
 
-## Linear And Report Handoff
+Stop before merge when:
 
-For every meaningful merge-gate operation, record in Linear:
+- 승욱 has not approved the exact candidate;
+- the PR head SHA changed;
+- included work is unclear;
+- Release Check, secret gate, Preview, or required focused verification failed or is unknown;
+- rollback or smoke evidence is missing;
+- the PR exposes secrets or includes unrelated work;
+- remote Supabase, migration, real data, RLS, email, payment, or provider work is implied without separate approval.
 
-- target branch/environment;
-- source branch and commit SHA;
-- included issues/PRs;
-- verification results;
-- fixed staging or production URL;
-- deployment id or URL;
-- stop condition or rollback candidate.
+Stop after merge when Production is not Ready, `/login` fails, the deployment source is unexpected, or the scoped smoke fails. Report the failure before any rollback or forward-fix action not already approved.
 
-Move the issue to `Human Review` after evidence is recorded. Move to `Done` only when 승욱 explicitly accepts or asks.
+## Evidence To Record
+
+- PR and exact candidate SHA;
+- merge SHA and live `origin/main` SHA;
+- Release Check URL and result;
+- Preview and Production deployment URL or id;
+- `/login` and scoped smoke result;
+- rollback candidate;
+- checks intentionally not run.
