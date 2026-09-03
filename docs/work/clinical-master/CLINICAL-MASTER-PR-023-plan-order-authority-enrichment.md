@@ -76,8 +76,9 @@ unsupported clinical or fee value unconfigured and fail-closed.
   listed in the Phase A validation record. No Airtable or remote Supabase master
   data write has been executed. The approved Supabase schema/RPC migration
   `20260903003949_plan_order_work_lifecycle_and_rpc_boundary` is applied, while
-  PR #698 transports only approved values and remains fail-closed; persistent
-  authority authoring/adoption remains open.
+  PR #698, merged as `f86ff1c31c6c288b5ba9697e5ad3902bd17f48ee`,
+  transports only approved values and remains fail-closed; persistent authority
+  authoring/adoption remains open.
 
 ## Handoff Notes
 

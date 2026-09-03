@@ -3,7 +3,7 @@ id: "CLINICAL-FULFILLMENT-PR-010"
 type: "Work Item"
 title: "Plan/Order Work Lifecycle And RPC Boundary"
 description: "Separates assignment from work state and implements the target task lifecycle with DB-enforced permissions."
-status: "in_progress"
+status: "completed"
 area: "clinical-fulfillment"
 priority: "P0"
 tags: [plan-order, fulfillment, rls, rpc, assignment]
@@ -88,8 +88,11 @@ history, and DB-level capability enforcement.
   `20260903003949_plan_order_work_lifecycle_and_rpc_boundary`. Post-apply
   readback found zero started/assignment/cycle/returned shape violations across
   the existing task/queue rows. No remote fulfillment business-row mutation was
-  executed. PR #698 remains open; application merge and production smoke remain
-  open.
+  executed.
+- PR #698 merged as `f86ff1c31c6c288b5ba9697e5ad3902bd17f48ee`;
+  production deployment `dpl_BekLknn1zHvZexMs2eniy4aSz5fG` is `Ready`.
+  Authenticated production Plan/Order readback completed without raw lifecycle
+  enum exposure or browser errors.
 
 ## Handoff Notes
 

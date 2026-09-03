@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan/Order Legacy 25컬럼 전체 흐름 운영 배포 보고서</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}*{box-sizing:border-box}body{margin:0;line-height:1.65}main{max-width:1040px;margin:0 auto;padding:32px 20px 72px}.hero,article{background:#fff;border:1px solid #dce4ef;border-radius:18px;box-shadow:0 14px 36px rgba(26,42,72,.07)}.hero{padding:28px;margin-bottom:18px}.eyebrow{margin:0 0 8px;color:#5c687d;font-size:13px;font-weight:700}.hero h1{margin:0;font-size:clamp(30px,5vw,44px);line-height:1.18;letter-spacing:-.035em}.status{margin:18px 0 0;padding:14px 16px;border:1px solid #9dd7bb;border-radius:11px;background:#effaf5;color:#09653e;font-weight:750}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}.metric{padding:14px;border:1px solid #dde5f0;border-radius:11px;background:#f8faff}.metric strong{display:block;font-size:23px}.metric span{display:block;margin-top:4px;color:#667189;font-size:12px}article{padding:clamp(22px,5vw,48px)}h2{margin:42px 0 14px;padding-top:8px;border-top:1px solid #e4e9f1;font-size:25px}h3{margin:28px 0 10px;font-size:18px}p,li{color:#334057}code{padding:2px 5px;border-radius:5px;background:#edf2f8;overflow-wrap:anywhere}table{width:100%;margin:16px 0 24px;border-collapse:collapse;font-size:14px}th,td{padding:10px 9px;border-bottom:1px solid #e3e8f0;text-align:left;vertical-align:top}th{background:#f7f9fc;color:#45516a}a{color:#225ad6}@media(max-width:760px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body><main>
+<section class="hero">
+<p class="eyebrow">CHART-PR-032 · 2026-09-03 · Production 검증 완료</p>
+<h1>Plan/Order Legacy 25컬럼<br>전체 흐름 운영 배포 보고서</h1>
+<p class="status">승인된 Legacy 컬럼 계약과 작성·확정·업무·청구 경계를 구현하고, PR 병합·DB 마이그레이션·운영 배포·인증 UI 확인까지 완료했다.</p>
+<div class="metrics">
+<div class="metric"><strong>25</strong><span>고정 업무 컬럼</span></div>
+<div class="metric"><strong>238/238</strong><span>변경 범위 회귀 통과</span></div>
+<div class="metric"><strong>14/14</strong><span>DB 제약 검증</span></div>
+<div class="metric"><strong>0</strong><span>운영 UI 오류 신호</span></div>
+</div>
+</section>
+<article>
+<h2>1. 최종 판단</h2>
+<p>Plan/Order <code>전체</code> 탭은 동적 합집합 컬럼 대신 승인된 25개 업무 컬럼을 고정 순서로 표시한다. 오더 초안·확정·수정·재확정·취소, 대상 담당자, 실제 조제량, fulfillment 업무 상태와 담당, 반려·재요청, 선청구 조정과 청구 검토 경계는 서버·DB 권한과 불변 이력 아래 연결됐다.</p>
+<p><a href="https://github.com/mcso0/emr-app-shell-prototype/pull/698">PR #698</a>은 후보 <code>2870d30594c8d367f1bffed2c29826042768b3a3</code>에서 모든 필수 체크를 통과한 뒤 merge SHA <code>f86ff1c31c6c288b5ba9697e5ad3902bd17f48ee</code>로 <code>origin/main</code>에 반영됐다. Vercel 운영 배포 <code>dpl_BekLknn1zHvZexMs2eniy4aSz5fG</code>는 해당 merge SHA를 빌드해 <code>Ready</code>가 되었고 운영 별칭에 연결됐다.</p>
+
+<h2>2. 구현 내용</h2>
+<ul>
+<li><strong>화면 계약:</strong> 분류부터 수의사까지 정확한 25개 컬럼, 비적용 빈칸, 과거 미기록, 한국어 상태값, 담당자 표시를 기존 표 구조 안에 구현했다.</li>
+<li><strong>작성·확정:</strong> 초안 저장, 계산 설명, 실제 조제량 override/reset, intended assignee, 수정·재확정·취소를 revision CAS와 idempotency key로 보호했다.</li>
+<li><strong>업무 전달:</strong> 배정과 상태를 분리하고 requested/in-progress/paused/completed/returned/cancelled 시도 이력, handoff, 재요청을 서버 권한과 DB 제약으로 보장했다.</li>
+<li><strong>청구:</strong> 임상 확정 snapshot과 청구 전용 override를 분리하고, 반려·취소·미완료·중복·음수 금액을 fail-closed 처리했다.</li>
+<li><strong>권한·격리:</strong> workspace 범위, RLS, authenticated-only RPC 실행, 서버 산술, 감사 이벤트와 immutable history를 적용했다.</li>
+<li><strong>마스터 transport:</strong> 승인된 값만 이동하며, Airtable에 없는 계산·조제·가격·과세·담당 정책은 생성하지 않고 null/unconfigured로 남긴다.</li>
+</ul>
+
+<h2>3. 배포와 데이터 검증</h2>
+<table>
+<thead><tr><th>구분</th><th>결과</th></tr></thead>
+<tbody>
+<tr><td>Supabase migration</td><td><code>20260903003949_plan_order_work_lifecycle_and_rpc_boundary</code> 적용 완료</td></tr>
+<tr><td>SQL SHA-256</td><td><code>59f5572b04c3e175bee5907735b6a3709d8a5882fae790abfe9d51ca516fe42b</code></td></tr>
+<tr><td>기존 lifecycle 행</td><td>started/assignment/cycle/returned shape 위반 0</td></tr>
+<tr><td>DB 제약</td><td>대상 14개 모두 validated, 미검증 0</td></tr>
+<tr><td>RLS</td><td>새 authority 테이블 4개 모두 활성화</td></tr>
+<tr><td>RPC 권한</td><td>대상 5개 <code>SECURITY DEFINER</code> 함수는 <code>authenticated</code>만 실행 가능</td></tr>
+<tr><td>롤백 리허설</td><td>동일 SQL과 합성 workflow를 한 transaction에서 실행 후 ROLLBACK, schema/fixture/history 잔여 0</td></tr>
+</tbody>
+</table>
+
+<h2>4. 검증 결과</h2>
+<ul>
+<li>변경·신규 Plan/Order 회귀 <strong>238/238</strong>, chart UI <strong>73/73</strong>, migration 참조 재검증 <strong>61/61</strong> 통과.</li>
+<li>TypeScript, 전체 ESLint, production build, 문서 링크 967개, tracked secret scan 4,002개, diff check 통과.</li>
+<li>비로그인 운영 HTTP: <code>/login</code> 200, treatment route 200, intended-assignee API 401.</li>
+<li>기존 로그인 세션의 운영 차트에서 선택 열 외 정확한 25개 헤더 순서 확인. 원시 UUID/영문 enum 노출 0, Next 오류 overlay 0, console error 0.</li>
+</ul>
+<p>전체 workflow의 쓰기·권한·중복방지·rollback은 자동화 및 transaction SQL로 검증했고, 운영 브라우저 smoke는 실제 업무 행을 변경하지 않는 읽기 전용으로 제한했다. 넓은 전체 저장소 테스트 실행에서 이 변경과 무관한 기존 실패 9건이 관찰되어 “전체 저장소 모든 테스트 통과”로 주장하지 않는다.</p>
+
+<h2>5. 변경 영역</h2>
+<p>차트 Plan/Order UI·도메인·서버 API, fulfillment 작업 모델과 RPC, billing override/review, clinical-master transport와 catalog projection, Supabase migration, 관련 테스트, 제품·엔지니어링·작업 문서를 함께 갱신했다. 상세 파일 목록은 PR #698 diff가 기준이다.</p>
+
+<h2>6. 남은 범위와 권고</h2>
+<ul>
+<li><strong>별도 미완료:</strong> Airtable 원천 레코드에 없는 임상·가격·과세·조제 authority 값의 작성, 검토, publish/adoption은 <code>CLINICAL-MASTER-PR-023</code>에 남아 있다.</li>
+<li>값이 비어 있는 동안 시스템은 추정값을 만들지 않고 기능을 비활성/미기록 상태로 보여준다.</li>
+<li>운영 롤백은 직전 Vercel 배포로 애플리케이션을 되돌릴 수 있다. DB 변경은 additive·backward-compatible이므로 파괴적 down migration 대신 필요 시 보상 migration을 사용한다.</li>
+<li>기존 Turbopack NFT trace 경고는 이번 변경 전부터 존재하며 빌드 성공을 막지 않았다.</li>
+</ul>
+</article>
+</main></body>
+</html>

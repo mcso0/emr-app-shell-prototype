@@ -3,7 +3,7 @@ id: "CLINICAL-BILLING-PR-023"
 type: "Work Item"
 title: "Plan/Order Billing Authority And Snapshot"
 description: "Implements versioned pre-billing overrides, returned-state billing gates, row adjustments, tax policy, and set ownership."
-status: "in_progress"
+status: "completed"
 area: "clinical-billing"
 priority: "P0"
 tags: [plan-order, billing, tax, adjustments, snapshots]
@@ -83,14 +83,17 @@ handoff that blocks returned/cancelled work and prevents set/attempt duplication
   cases passed the focused TypeScript/Playwright suite and transactional local
   SQL smoke.
 - No remote invoice, payment, or billing-policy data mutation has been
-  executed. PR #698 is open; its exact staging migration and billing smoke
+  executed. PR #698's exact staging migration and billing smoke
   passed inside one rolled-back transaction with no schema, fixture, or
   migration-history residue.
 - 승욱 approved and Supabase applied persistent schema/RPC migration
   `20260903003949_plan_order_work_lifecycle_and_rpc_boundary`. Post-apply
   readback verified validated constraints, RLS, and authenticated-only execute
-  grants for the target billing RPCs. Application merge, production deployment,
-  and authenticated production verification remain open.
+  grants for the target billing RPCs.
+- PR #698 merged as `f86ff1c31c6c288b5ba9697e5ad3902bd17f48ee`;
+  production deployment `dpl_BekLknn1zHvZexMs2eniy4aSz5fG` is `Ready`.
+  Authenticated production smoke rendered the billing columns and `Order 청구`
+  boundary without raw identifier/enum leakage or browser errors.
 
 ## Handoff Notes
 
