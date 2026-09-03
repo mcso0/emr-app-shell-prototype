@@ -37,6 +37,68 @@ async function expectEmptyStateCentered(title: Locator) {
   expect(Math.abs(offsets.y)).toBeLessThanOrEqual(1);
 }
 
+async function expectLoadingStateCentered(loadingState: Locator) {
+  await expect(loadingState).toBeVisible();
+
+  const offsets = await loadingState.evaluate((element) => {
+    const childRects = Array.from(element.children).map((child) =>
+      child.getBoundingClientRect(),
+    );
+    if (!childRects.length) {
+      throw new Error("classification loading body is missing");
+    }
+
+    const bodyRect = element.getBoundingClientRect();
+    const left = Math.min(...childRects.map((rect) => rect.left));
+    const right = Math.max(...childRects.map((rect) => rect.right));
+    const top = Math.min(...childRects.map((rect) => rect.top));
+    const bottom = Math.max(...childRects.map((rect) => rect.bottom));
+
+    return {
+      x: (left + right) / 2 - (bodyRect.left + bodyRect.right) / 2,
+      y: (top + bottom) / 2 - (bodyRect.top + bodyRect.bottom) / 2,
+    };
+  });
+
+  expect(Math.abs(offsets.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(offsets.y)).toBeLessThanOrEqual(1);
+}
+
+test("classification dialog centers initial loading feedback", async ({ page }) => {
+  let releaseCatalog!: () => void;
+  const catalogGate = new Promise<void>((resolve) => {
+    releaseCatalog = resolve;
+  });
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
+    await catalogGate;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        systems: [],
+        diseaseGroups: [],
+        diagnoses: [],
+        nextCursor: null,
+      }),
+    });
+  });
+  await page.goto(chartUrl);
+
+  const panel = page.getByLabel("진단명 관리");
+  await panel.getByRole("button", { name: "분류 검색" }).click();
+  const dialog = page.getByRole("dialog", { name: "분류검색" });
+  const diagnosisColumn = dialog.getByRole("region", { name: "진단명" });
+  const loadingState = diagnosisColumn.locator(
+    '[data-slot="classification-explorer-loading-state"]',
+  );
+  await expect(loadingState).toContainText("진단명을 불러오는 중입니다");
+  await expectLoadingStateCentered(loadingState);
+
+  releaseCatalog();
+  await expect(loadingState).toBeHidden();
+});
+
 test("classification dialog explores, reviews, and commits catalog diagnoses", async ({
   page,
 }) => {

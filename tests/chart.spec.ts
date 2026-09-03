@@ -6711,6 +6711,8 @@ async function verifyChartConfirmationRetry(page: Page) {
 test("chart order catalog shows a visible loading state and count skeletons before rows arrive", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 2207, height: 1264 });
+
   let releaseCatalog!: () => void;
   const catalogGate = new Promise<void>((resolve) => {
     releaseCatalog = resolve;
@@ -6734,9 +6736,37 @@ test("chart order catalog shows a visible loading state and count skeletons befo
   await expect(
     dialog.getByText("오더를 불러오는 중입니다", { exact: true }),
   ).toBeVisible();
+  const loadingState = dialog.locator(
+    '[data-slot="classification-explorer-loading-state"]',
+  );
+  await expect(loadingState).toBeVisible();
   await expect(
-    dialog.getByTestId("classification-explorer-skeleton-list"),
+    loadingState.locator(
+      '[data-slot="classification-explorer-loading-icon"]',
+    ),
   ).toBeVisible();
+  const loadingOffsets = await loadingState.evaluate((element) => {
+    const body = element.parentElement;
+    const childRects = Array.from(element.children).map((child) =>
+      child.getBoundingClientRect(),
+    );
+    if (!body || !childRects.length) {
+      throw new Error("order catalog loading body is missing");
+    }
+
+    const bodyRect = body.getBoundingClientRect();
+    const left = Math.min(...childRects.map((rect) => rect.left));
+    const right = Math.max(...childRects.map((rect) => rect.right));
+    const top = Math.min(...childRects.map((rect) => rect.top));
+    const bottom = Math.max(...childRects.map((rect) => rect.bottom));
+
+    return {
+      x: (left + right) / 2 - (bodyRect.left + bodyRect.right) / 2,
+      y: (top + bottom) / 2 - (bodyRect.top + bodyRect.bottom) / 2,
+    };
+  });
+  expect(Math.abs(loadingOffsets.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(loadingOffsets.y)).toBeLessThanOrEqual(1);
   await expect(
     dialog.getByTestId("classification-explorer-option-count-skeleton"),
   ).toHaveCount(9);

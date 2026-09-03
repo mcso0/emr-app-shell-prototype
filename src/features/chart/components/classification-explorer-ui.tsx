@@ -18,6 +18,7 @@ import {
   CdsActionsTrashIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -446,32 +447,25 @@ export function ClassificationExplorerSortableRow({
 export function ClassificationExplorerLoadingState({
   label,
   message,
-  rows = 0,
 }: {
   label: string;
   message?: string;
-  rows?: number;
 }) {
   return (
-    <div className={styles.loadingState} role="status" aria-live="polite">
-      <div className={styles.loadingMessage}>
-        <span className={styles.spinner} aria-hidden="true" />
-        <strong>{message ?? `${label}을 불러오는 중입니다`}</strong>
-      </div>
-      {rows ? (
-        <div
-          aria-hidden="true"
-          className={styles.skeletonList}
-          data-testid="classification-explorer-skeleton-list"
-        >
-          {Array.from({ length: rows }, (_, index) => (
-            <span key={index}>
-              <i />
-              <em />
-            </span>
-          ))}
-        </div>
-      ) : null}
+    <div
+      className={styles.loadingState}
+      data-slot="classification-explorer-loading-state"
+      role="status"
+      aria-live="polite"
+    >
+      <span
+        aria-hidden="true"
+        className={styles.loadingIconSurface}
+        data-slot="classification-explorer-loading-icon"
+      >
+        <CdsAlertsLoaderIcon className={styles.spinner} />
+      </span>
+      <strong>{message ?? `${label}을 불러오는 중입니다`}</strong>
     </div>
   );
 }
