@@ -1,17 +1,20 @@
 ---
 id: ENGINEERING-OPERATIONS-GITHUB-VERCEL-RELEASE-AUTOMATION-PLAN
-status: approved
+status: superseded
 area: engineering
 doc_type: implementation-plan
 related_work:
   - DEN-445
   - RELEASE-OPS-PR-003
 supersedes: []
-superseded_by: []
-last_updated: 2026-07-18
+superseded_by:
+  - ENGINEERING-OPERATIONS-RELEASE-ENVIRONMENT-POLICY
+last_updated: 2026-09-03
 ---
 
 # GitHub And Vercel Release Automation Plan
+
+> Superseded on 2026-09-03. The staging-specific target model below is preserved for history. Current releases use PR Preview, an exact-candidate manual Release Check, explicit Production approval, and merge to `main` under [Release Environment Policy](release-environment-policy.md).
 
 This plan turns the release environment policy into an executable GitHub/Vercel configuration sequence. It does not change any remote setting by itself.
 

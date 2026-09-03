@@ -1,15 +1,19 @@
 ---
 id: ENGINEERING-OPERATIONS-FIXED-STAGING-ALIAS-AUTOMATION
-status: approved
+status: superseded
 area: engineering
 doc_type: operating-runbook
 related_work:
   - RELEASE-OPS-PR-002
   - RELEASE-OPS-PR-003
-last_updated: 2026-08-30
+superseded_by:
+  - ENGINEERING-OPERATIONS-RELEASE-ENVIRONMENT-POLICY
+last_updated: 2026-09-03
 ---
 
 # Fixed Staging Alias Automation
+
+> Superseded on 2026-09-03. The workflow, helper script, package command, fixed alias, and remote `staging` branch are retired from the active release model. This page remains as historical evidence only.
 
 This runbook defines the repo-owned manual workflow that points the fixed staging URL at an approved `staging` branch Vercel deployment without spending Actions minutes on every Preview status event.
 

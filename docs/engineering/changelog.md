@@ -2,6 +2,11 @@
 
 Use this file for small engineering-planning changes that do not need a standalone ADR or decision record.
 
+## 2026-09-03
+
+- `changed`: Retired the long-lived Git `staging` and fixed Vercel staging alias model. The active path is now PR Preview, an exact-candidate manual `Release Check`, explicit Production approval, and merge to `main` followed by Production verification.
+- `removed`: Removed the fixed-staging alias GitHub workflow, helper script, and package command; historical plans remain marked `superseded` so prior release evidence stays traceable.
+
 ## 2026-06-16
 
 - `added`: Added fixed staging alias automation and smoke-check runbook so successful `staging` branch Vercel deployments can update `emr-app-shell-prototype-staging-mcso0s-projects.vercel.app` without committing secrets or touching production.
