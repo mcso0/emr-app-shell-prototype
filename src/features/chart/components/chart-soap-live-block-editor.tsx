@@ -135,6 +135,7 @@ function ChartSoapSlashQuerySurface({
 }
 
 export function ChartSoapLiveBlockEditor({
+  allowSoapTemplateCommands = true,
   disabled = false,
   initialContent,
   onDocumentChange,
@@ -142,6 +143,7 @@ export function ChartSoapLiveBlockEditor({
   onReady,
   templateStructure = "sectioned",
 }: {
+  allowSoapTemplateCommands?: boolean;
   disabled?: boolean;
   initialContent: ChartSoapPartialBlock[];
   onDocumentChange: (blocks: readonly ChartSoapBlock[]) => void;
@@ -207,8 +209,14 @@ export function ChartSoapLiveBlockEditor({
     [uploadLocalMediaFile],
   );
   const suggestionItems = useMemo(
-    () => buildSoapCommandItems({ editor, onNotice, templateStructure }),
-    [editor, onNotice, templateStructure],
+    () =>
+      buildSoapCommandItems({
+        editor,
+        includeSoapTemplates: allowSoapTemplateCommands,
+        onNotice,
+        templateStructure,
+      }),
+    [allowSoapTemplateCommands, editor, onNotice, templateStructure],
   );
   const openPlusMenu = useCallback((request: ChartSoapPlusMenuRequest) => {
     setPlusMenuRequest((current) => {

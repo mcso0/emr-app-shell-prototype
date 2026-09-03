@@ -233,14 +233,23 @@ import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-bill
 import { useChartBillingSummaryRealtime } from "@/features/chart/chart-order-billing-summary-realtime";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import { ChartSoapLiveBlockEditor } from "@/features/chart/components/chart-soap-live-block-editor";
-import { createLegacySoapTemplateBlocks } from "@/features/chart/components/chart-soap-block-schema";
+import {
+  createLegacySoapTemplateBlocks,
+  createSystemSoapTemplateBlocks,
+} from "@/features/chart/components/chart-soap-block-schema";
 import type {
   ChartSoapBlock,
   ChartSoapPartialBlock,
 } from "@/features/chart/components/chart-soap-block-schema";
 import {
-  SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION,
+  SOAP_DEFAULT_SCOPE_KEY,
   areSoapBlockDocumentsEqual,
+  buildLegacySoapSystemId,
+  buildSystemSoapScopeKey,
+  createSoapBlockDocumentV2,
+  getSoapDocumentScope,
+  hasMeaningfulSoapScopeContent,
+  replaceSoapDocumentScope,
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
@@ -330,6 +339,7 @@ import type {
   ServiceItemType,
   SoapNote,
   SoapBlockDocument,
+  SoapBlockDocumentV2,
   WaitingQueueEntry,
 } from "@/types/emr-domain";
 
@@ -862,8 +872,6 @@ const getSoapSystemLabel = (diagnosis: Diagnosis) =>
     : getDiagnosisSystemLabel(diagnosis);
 
 const SOAP_VISIBLE_SYSTEM_TAB_COUNT = 3;
-
-const buildSystemSoapId = (systemLabel: string) => `system-${systemLabel}`;
 
 type DiagnosisCatalogItem = AssessmentClassificationCatalogItem;
 
@@ -2348,23 +2356,30 @@ const hasSavedSoapContent = (soapNote?: SoapNote | null) =>
     ].some((value) => Boolean(value?.trim())),
   );
 
-function getSoapInitialBlockContent(
-  soapNote?: SoapNote,
-): ChartSoapPartialBlock[] {
-  if (soapNote?.blockDocument?.blocks.length) {
-    return soapNote.blockDocument.blocks as ChartSoapPartialBlock[];
+function getSoapSystemIdentities(diagnoses: Diagnosis[]) {
+  const identities = new Map<string, { systemId: string; systemLabel: string }>();
+  for (const diagnosis of diagnoses) {
+    const systemLabel = getSoapSystemLabel(diagnosis);
+    if (!systemLabel) continue;
+    const systemId = diagnosis.systemId ?? buildLegacySoapSystemId(systemLabel);
+    identities.set(systemId, { systemId, systemLabel });
   }
-
-  return createLegacySoapTemplateBlocks(soapNote);
+  return Array.from(identities.values());
 }
 
-function snapshotSoapBlockDocument(
-  blocks: readonly ChartSoapBlock[],
-): SoapBlockDocument {
-  return {
-    schemaVersion: SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION,
-    blocks: JSON.parse(JSON.stringify(blocks)) as unknown[],
-  };
+function getSoapInitialDocument(
+  soapNote: SoapNote | undefined,
+  diagnoses: Diagnosis[],
+): SoapBlockDocumentV2 {
+  return createSoapBlockDocumentV2({
+    defaultBlocks: createLegacySoapTemplateBlocks(soapNote),
+    document: soapNote?.blockDocument,
+    systemIdentities: getSoapSystemIdentities(diagnoses),
+  });
+}
+
+function snapshotSoapBlocks(blocks: readonly ChartSoapBlock[]) {
+  return JSON.parse(JSON.stringify(blocks)) as unknown[];
 }
 
 function getDemoActorHeader(session: AuthSession | null) {
@@ -3544,11 +3559,14 @@ function SoapPanel({
   writeDisabled: boolean;
   workspaceId: string;
 }) {
-  const [editorContent, setEditorContent] = useState<ChartSoapPartialBlock[]>(
-    () => getSoapInitialBlockContent(soapNote),
+  const [soapDocument, setSoapDocument] = useState<SoapBlockDocumentV2>(() =>
+    getSoapInitialDocument(soapNote, diagnoses),
   );
+  const soapDocumentRef = useRef(soapDocument);
   const [editorVersion, setEditorVersion] = useState(0);
-  const [activeSoapId, setActiveSoapId] = useState("default");
+  const [activeSoapId, setActiveSoapId] = useState<string>(
+    SOAP_DEFAULT_SCOPE_KEY,
+  );
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
@@ -3558,16 +3576,35 @@ function SoapPanel({
   const lastHydratedUpdatedAtRef = useRef<string | null>(
     soapNote?.updatedAt ?? null,
   );
-  const diagnosisSystemTabs = useMemo(
-    () =>
-      Array.from(
-        new Set(diagnoses.map(getSoapSystemLabel).filter(Boolean)),
-      ).map((label) => ({
-        id: buildSystemSoapId(label),
-        label,
-      })),
+  const diagnosisSystemIdentities = useMemo(
+    () => getSoapSystemIdentities(diagnoses),
     [diagnoses],
   );
+  const diagnosisSystemTabs = useMemo(() => {
+    const tabs = new Map<
+      string,
+      { id: string; label: string; systemId: string }
+    >();
+    for (const identity of diagnosisSystemIdentities) {
+      const id = buildSystemSoapScopeKey(identity.systemId);
+      tabs.set(id, { id, label: identity.systemLabel, systemId: identity.systemId });
+    }
+    for (const scope of soapDocument.scopes) {
+      if (
+        scope.scope !== "system" ||
+        !scope.systemId ||
+        !hasMeaningfulSoapScopeContent(scope)
+      ) {
+        continue;
+      }
+      tabs.set(scope.scopeKey, {
+        id: scope.scopeKey,
+        label: scope.systemLabel,
+        systemId: scope.systemId,
+      });
+    }
+    return Array.from(tabs.values());
+  }, [diagnosisSystemIdentities, soapDocument.scopes]);
   const visibleSystemTabs = diagnosisSystemTabs.slice(
     0,
     SOAP_VISIBLE_SYSTEM_TAB_COUNT,
@@ -3576,20 +3613,28 @@ function SoapPanel({
     SOAP_VISIBLE_SYSTEM_TAB_COUNT,
   );
   const resolvedActiveSoapId =
-    activeSoapId === "default" ||
+    activeSoapId === SOAP_DEFAULT_SCOPE_KEY ||
     diagnosisSystemTabs.some((tab) => tab.id === activeSoapId)
       ? activeSoapId
-      : "default";
+      : SOAP_DEFAULT_SCOPE_KEY;
   const activeInOverflow = overflowSystemTabs.some(
     (tab) => tab.id === resolvedActiveSoapId,
   );
   const soapTabItems = [
-    { value: "default", label: "기본 S/O" },
+    { value: SOAP_DEFAULT_SCOPE_KEY, label: "기본 S/O" },
     ...visibleSystemTabs.map((tab) => ({
       value: tab.id,
       label: tab.label,
     })),
   ];
+  const activeSystemTab = diagnosisSystemTabs.find(
+    (tab) => tab.id === resolvedActiveSoapId,
+  );
+  const activeScope = getSoapDocumentScope(soapDocument, resolvedActiveSoapId);
+  const editorContent = (activeScope?.blocks ??
+    (activeSystemTab
+      ? createSystemSoapTemplateBlocks(activeSystemTab.label)
+      : createLegacySoapTemplateBlocks(soapNote))) as ChartSoapPartialBlock[];
 
   const coordinator = useMemo(
     () =>
@@ -3680,40 +3725,82 @@ function SoapPanel({
     }
 
     lastHydratedUpdatedAtRef.current = soapNote.updatedAt;
-    setEditorContent(getSoapInitialBlockContent(soapNote));
+    const nextDocument = getSoapInitialDocument(soapNote, diagnoses);
+    soapDocumentRef.current = nextDocument;
+    setSoapDocument(nextDocument);
     setEditorVersion((current) => current + 1);
-  }, [coordinator, soapNote]);
+  }, [coordinator, diagnoses, soapNote]);
+
+  useEffect(() => {
+    const reconciled = createSoapBlockDocumentV2({
+      defaultBlocks: createLegacySoapTemplateBlocks(soapNote),
+      document: soapDocumentRef.current,
+      systemIdentities: diagnosisSystemIdentities,
+    });
+    if (areSoapBlockDocumentsEqual(reconciled, soapDocumentRef.current)) return;
+    soapDocumentRef.current = reconciled;
+    setSoapDocument(reconciled);
+    setEditorVersion((current) => current + 1);
+  }, [diagnosisSystemIdentities, soapNote]);
+
+  const mergeActiveScope = useCallback(
+    (blocks: readonly ChartSoapBlock[]) => {
+      const nextDocument = replaceSoapDocumentScope({
+        blocks: snapshotSoapBlocks(blocks),
+        document: soapDocumentRef.current,
+        scopeKey: resolvedActiveSoapId,
+        systemId: activeSystemTab?.systemId,
+        systemLabel: activeSystemTab?.label ?? "기본 SOAP",
+      });
+      soapDocumentRef.current = nextDocument;
+      setSoapDocument(nextDocument);
+      return nextDocument;
+    },
+    [activeSystemTab?.label, activeSystemTab?.systemId, resolvedActiveSoapId],
+  );
 
   const handleEditorReady = useCallback(
     (blocks: readonly ChartSoapBlock[]) => {
-      const document = snapshotSoapBlockDocument(blocks);
       if (saveAfterEditorReadyRef.current) {
         saveAfterEditorReadyRef.current = false;
         locallyEditedRef.current = true;
-        coordinator.change(document);
+        coordinator.change(mergeActiveScope(blocks));
       } else {
-        coordinator.hydrate(document);
+        coordinator.hydrate(soapDocumentRef.current);
       }
     },
-    [coordinator],
+    [coordinator, mergeActiveScope],
   );
 
   const handleDocumentChange = useCallback(
     (blocks: readonly ChartSoapBlock[]) => {
       if (writeDisabled) return;
       locallyEditedRef.current = true;
-      coordinator.change(snapshotSoapBlockDocument(blocks));
+      coordinator.change(mergeActiveScope(blocks));
     },
-    [coordinator, writeDisabled],
+    [coordinator, mergeActiveScope, writeDisabled],
   );
 
   const confirmReset = () => {
     if (writeDisabled) return;
+    const resetBlocks = activeSystemTab
+      ? createSystemSoapTemplateBlocks(activeSystemTab.label)
+      : createLegacySoapTemplateBlocks(null);
+    const nextDocument = replaceSoapDocumentScope({
+      blocks: resetBlocks,
+      document: soapDocumentRef.current,
+      scopeKey: resolvedActiveSoapId,
+      systemId: activeSystemTab?.systemId,
+      systemLabel: activeSystemTab?.label ?? "기본 SOAP",
+    });
+    soapDocumentRef.current = nextDocument;
+    setSoapDocument(nextDocument);
     saveAfterEditorReadyRef.current = true;
-    setEditorContent(createLegacySoapTemplateBlocks(null));
     setEditorVersion((current) => current + 1);
     setResetDialogOpen(false);
-    toast.success("기본 SOAP 템플릿으로 초기화했습니다.");
+    toast.success(
+      `${activeSystemTab?.label ?? "기본 SOAP"} 템플릿으로 초기화했습니다.`,
+    );
   };
 
   const activeStatusText = loading
@@ -3914,7 +4001,8 @@ function SoapPanel({
           {activeStatusText}
         </span>
         <ChartSoapLiveBlockEditor
-          key={`${encounterId}-${editorVersion}`}
+          key={`${encounterId}-${resolvedActiveSoapId}-${editorVersion}`}
+          allowSoapTemplateCommands={false}
           disabled={writeDisabled}
           initialContent={editorContent}
           onDocumentChange={handleDocumentChange}
@@ -3925,8 +4013,8 @@ function SoapPanel({
 
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <EmrConfirmDialogContent
-          title="SOAP 기본 템플릿으로 초기화"
-          description="현재 블록 문서를 주관적, 객관적, 평가, 계획 기본 템플릿으로 바꾸고 자동저장합니다."
+          title={`${activeSystemTab?.label ?? "기본 SOAP"} 템플릿으로 초기화`}
+          description="현재 탭의 주관적, 객관적, 평가, 계획 내용을 빈 템플릿으로 바꾸고 자동저장합니다. 다른 탭의 내용은 유지됩니다."
           cancelLabel="취소"
           confirmLabel="초기화"
           confirmDisabled={writeDisabled}

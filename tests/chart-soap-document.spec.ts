@@ -3,7 +3,12 @@ import { expect, test } from "@playwright/test";
 import {
   SOAP_BLOCK_DOCUMENT_MAX_BLOCKS,
   areSoapBlockDocumentsEqual,
+  buildSystemSoapScopeKey,
+  createSoapBlockDocumentV2,
   createLegacySoapDocumentInput,
+  getSoapDocumentScope,
+  hasMeaningfulSoapScopeContent,
+  replaceSoapDocumentScope,
   validateAndProjectSoapDocument,
 } from "../src/features/chart/chart-soap-document";
 
@@ -126,7 +131,7 @@ test("SOAP V1 preserves visible link text but rejects unsafe link protocols", ()
 
 test("SOAP V1 rejects unsupported versions, blocks, duplicate IDs, and duplicate default sections", () => {
   expect(
-    validateAndProjectSoapDocument({ ...validDocument(), schemaVersion: 2 }),
+    validateAndProjectSoapDocument({ ...validDocument(), schemaVersion: 3 }),
   ).toEqual({ ok: false, error: "unsupported_schema_version" });
 
   const unsupported = validDocument();
@@ -155,6 +160,93 @@ test("SOAP V1 rejects unsupported versions, blocks, duplicate IDs, and duplicate
     error: "duplicate_default_section",
     field: "subjective",
   });
+});
+
+test("SOAP V2 validates isolated default and diagnosis-system scopes while projecting only default", () => {
+  const systemId = "c427a4b5-2181-4454-9655-6d2695c6768d";
+  const document = {
+    schemaVersion: 2 as const,
+    scopes: [
+      {
+        scopeKey: "default",
+        scope: "default" as const,
+        systemLabel: "기본 SOAP",
+        blocks: [section("default-s", "subjective", "기본 전용")],
+      },
+      {
+        scopeKey: buildSystemSoapScopeKey(systemId),
+        scope: "system" as const,
+        systemId,
+        systemLabel: "근골격계",
+        blocks: [
+          section("musculoskeletal-s", "subjective", "근골격 전용", "system"),
+        ],
+      },
+    ],
+  };
+
+  expect(validateAndProjectSoapDocument(document)).toMatchObject({
+    ok: true,
+    projection: {
+      subjective: "기본 전용",
+      objective: "",
+      assessment: "",
+      plan: "",
+    },
+    blockCount: 4,
+  });
+
+  const mismatchedMarker = structuredClone(document);
+  mismatchedMarker.scopes[1]!.blocks[0]!.props.systemLabel = "소화기";
+  expect(validateAndProjectSoapDocument(mismatchedMarker)).toEqual({
+    ok: false,
+    error: "invalid_block",
+  });
+});
+
+test("SOAP V1 upgrade keeps unscoped legacy blocks in default and resolves system identity by ID", () => {
+  const unscoped = textBlock("legacy-unscoped", "기존 자유 입력");
+  const legacy = validDocument();
+  legacy.blocks.push(unscoped);
+  const systemId = "c427a4b5-2181-4454-9655-6d2695c6768d";
+  const upgraded = createSoapBlockDocumentV2({
+    defaultBlocks: [],
+    document: legacy,
+    systemIdentities: [{ systemId, systemLabel: "근골격계" }],
+  });
+
+  expect(upgraded.schemaVersion).toBe(2);
+  expect(getSoapDocumentScope(upgraded, "default")?.blocks).toContainEqual(unscoped);
+  expect(
+    getSoapDocumentScope(upgraded, buildSystemSoapScopeKey(systemId))?.blocks,
+  ).toHaveLength(1);
+  expect(
+    getSoapDocumentScope(upgraded, buildSystemSoapScopeKey(systemId))?.blocks,
+  ).not.toContainEqual(unscoped);
+});
+
+test("SOAP V2 replaces one scope without changing another and detects meaningful content", () => {
+  const systemId = "c427a4b5-2181-4454-9655-6d2695c6768d";
+  const initial = createSoapBlockDocumentV2({
+    defaultBlocks: [section("default-s", "subjective", "기본 전용")],
+  });
+  const next = replaceSoapDocumentScope({
+    blocks: [section("system-s", "subjective", "근골격 전용", "system")],
+    document: initial,
+    scopeKey: buildSystemSoapScopeKey(systemId),
+    systemId,
+    systemLabel: "근골격계",
+  });
+
+  expect(getSoapDocumentScope(next, "default")?.blocks).toEqual(
+    getSoapDocumentScope(initial, "default")?.blocks,
+  );
+  const systemScope = getSoapDocumentScope(
+    next,
+    buildSystemSoapScopeKey(systemId),
+  );
+  expect(systemScope).toBeTruthy();
+  expect(hasMeaningfulSoapScopeContent(systemScope!)).toBe(true);
 });
 
 test("SOAP V1 rejects excessive block count, nesting depth, and projected field length", () => {
