@@ -5,6 +5,10 @@ const migration = readFileSync(
   "supabase/migrations/20260825241000_chart_order_atomic_confirmation_contract.sql",
   "utf8",
 );
+const lifecycleMigration = readFileSync(
+  "supabase/migrations/20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql",
+  "utf8",
+);
 const sqlFixture = readFileSync(
   "tests/sql/chart_order_atomic_confirmation_contract.sql",
   "utf8",
@@ -79,11 +83,33 @@ test("Phase 4 fixture proves partial set expansion, projections, retry, and roll
 test("chart confirmation sends a stable idempotency key to the atomic RPC", () => {
   expect(core).toContain('"clair_confirm_chart_order_candidates"');
   expect(core).toContain("p_idempotency_key: idempotencyKey ?? \"\"");
-  expect(core).toContain("if (!result.serverAtomic)");
+  expect(core).toContain("if (!result.serverAtomic || !result.billingSummary)");
   expect(chartModule).toContain("pendingConfirmationRef");
   expect(chartModule).toContain("createChartOrderConfirmationIdempotencyKey");
   expect(chartModule).toContain(
     "idempotencyKey: pendingConfirmation.idempotencyKey",
   );
   expect(chartModule).not.toContain("const actionReadback = await loadChartOrderActions");
+});
+
+test("Plan/Order confirmation authorizes before reads and returns completed retries without projection writes", () => {
+  const wrapperStart = lifecycleMigration.indexOf(
+    "create function public.clair_confirm_chart_order_candidates(",
+  );
+  const wrapperEnd = lifecycleMigration.indexOf(
+    "revoke all on function public.clair_confirm_chart_order_candidates(",
+    wrapperStart,
+  );
+  const wrapper = lifecycleMigration.slice(wrapperStart, wrapperEnd);
+
+  expect(wrapperStart).toBeGreaterThanOrEqual(0);
+  expect(wrapper).toContain("p_actor_user_id is distinct from auth.uid()");
+  expect(wrapper).toContain("private.clair_is_active_workspace_member(p_workspace_id)");
+  expect(wrapper).toContain("'chart:update'");
+  expect(wrapper).toContain("pg_advisory_xact_lock");
+  expect(wrapper).toContain("command.idempotency_key = v_idempotency_key");
+  expect(wrapper.indexOf("p_actor_user_id is distinct from auth.uid()"))
+    .toBeLessThan(wrapper.indexOf("if exists ("));
+  expect(wrapper.indexOf("return public.clair_confirm_chart_order_candidates_plan_order_base("))
+    .toBeLessThan(wrapper.indexOf("orders.calculation_outputs"));
 });

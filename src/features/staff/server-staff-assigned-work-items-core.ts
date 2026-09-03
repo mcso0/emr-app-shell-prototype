@@ -352,8 +352,8 @@ function isFulfillmentStatus(
 ): value is FulfillmentWorkItemStatus {
   return (
     value === "requested" ||
-    value === "accepted" ||
     value === "in_progress" ||
+    value === "paused" ||
     value === "completed" ||
     value === "cancelled" ||
     value === "returned"
@@ -387,8 +387,8 @@ function mapCategory(queueType: FulfillmentQueueType): Pick<
 
 const statusLabels: Record<FulfillmentWorkItemStatus, string> = {
   requested: "요청",
-  accepted: "접수",
   in_progress: "진행 중",
+  paused: "일시중지",
   completed: "완료",
   cancelled: "취소",
   returned: "반려",

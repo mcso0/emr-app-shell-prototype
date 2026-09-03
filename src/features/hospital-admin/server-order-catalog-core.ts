@@ -21,6 +21,10 @@ import {
   resolveClinicalOrderMasterContract,
   type ClinicalOrderFieldSchema,
 } from "@/features/chart/order-execution-domain";
+import {
+  parsePlanOrderAuthority,
+  type PlanOrderAuthorityConfig,
+} from "@/features/chart/plan-order-authority-domain";
 
 export type OrderCatalogAvailability =
   | "pending_activation"
@@ -118,6 +122,7 @@ export type OrderCatalogItem = {
   linkedLabCategoryIds: string[];
   defaultDetailInputs?: Record<string, unknown>;
   defaultDetailInputPolicies?: Record<string, unknown>;
+  planOrderAuthority?: PlanOrderAuthorityConfig | null;
   executionPresetLineage?: ExecutionPresetLineageSnapshot;
   medicationMetadata?: MedicationOrderMetadata;
   vaccineMetadata?: VaccineOrderMetadata;
@@ -171,6 +176,7 @@ export type SystemOrderPreset = {
   linkedLabItemIds: string[];
   linkedLabCategoryIds: string[];
   defaultDetailInputs?: Record<string, unknown>;
+  planOrderAuthority?: PlanOrderAuthorityConfig | null;
   medicationMetadata?: MedicationOrderMetadata;
   vaccineMetadata?: VaccineOrderMetadata;
   pricingRule: OrderPricingRule;
@@ -675,6 +681,7 @@ export type AppliedOrderSnapshot = {
   billingEligible?: boolean;
   defaultDetailInputs?: Record<string, unknown>;
   defaultDetailInputPolicies?: Record<string, unknown>;
+  planOrderAuthority?: PlanOrderAuthorityConfig | null;
   executionPresetLineage?: ExecutionPresetLineageSnapshot;
   medicationMetadata?: MedicationOrderMetadata;
   dispensingLineage?: DispensingOrderLineageSnapshot;
@@ -1369,6 +1376,7 @@ export function createOrderPricingSnapshot(
     executionMode: item.executionMode,
     isExternalLab: item.isExternalLab,
   });
+  const planOrderAuthority = resolvePlanOrderAuthority(item);
   return {
     sourcePresetId: item.standardOrderId,
     sourcePresetVersion: item.sourcePresetVersion,
@@ -1395,6 +1403,9 @@ export function createOrderPricingSnapshot(
     defaultDetailInputPolicies: item.defaultDetailInputPolicies
       ? structuredClone(item.defaultDetailInputPolicies)
       : undefined,
+    planOrderAuthority: planOrderAuthority
+      ? structuredClone(planOrderAuthority)
+      : null,
     executionPresetLineage: item.executionPresetLineage
       ? { ...item.executionPresetLineage }
       : undefined,
@@ -3153,6 +3164,12 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
   }
 
   const pricingRule = mapOrderPricingRule(row);
+  const planOrderAuthority = parsePlanOrderAuthority(
+    isRecord(row.default_detail_inputs)
+      ? row.default_detail_inputs.planOrderAuthority
+      : undefined,
+  );
+  if (!planOrderAuthority.valid) return null;
   const executionContract = resolveClinicalOrderMasterContract({
     categoryGroup: row.category_group as ServiceItemType,
     clinicalOrderType: row.clinical_order_type,
@@ -3248,6 +3265,7 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     defaultDetailInputPolicies: isRecord(row.default_detail_input_policies)
       ? structuredClone(row.default_detail_input_policies)
       : undefined,
+    planOrderAuthority: planOrderAuthority.value,
     executionPresetLineage: mapExecutionPresetLineage({
       sourceExecutionPresetId: row.source_execution_preset_id,
       sourceExecutionPresetRevision: row.source_execution_preset_revision,
@@ -3335,11 +3353,28 @@ function resolveDefaultDetailInputs(
   item: Pick<OrderCatalogItem, "defaultDetailInputs" | "medicationMetadata">,
 ) {
   if (hasObjectKeys(item.defaultDetailInputs)) {
-    return structuredClone(item.defaultDetailInputs);
+    const direct = detailInputsWithoutPlanAuthority(item.defaultDetailInputs);
+    if (direct) return direct;
   }
   return hasObjectKeys(item.medicationMetadata?.defaultDetailInputs)
-    ? structuredClone(item.medicationMetadata.defaultDetailInputs)
+    ? detailInputsWithoutPlanAuthority(
+        item.medicationMetadata.defaultDetailInputs,
+      )
     : undefined;
+}
+
+function resolvePlanOrderAuthority(
+  item: Pick<OrderCatalogItem, "defaultDetailInputs" | "planOrderAuthority">,
+) {
+  const source =
+    item.planOrderAuthority !== undefined
+      ? item.planOrderAuthority
+      : isRecord(item.defaultDetailInputs)
+        ? item.defaultDetailInputs.planOrderAuthority
+        : undefined;
+  const parsed = parsePlanOrderAuthority(source);
+  if (!parsed.valid) throw new Error("plan_order_authority_invalid");
+  return parsed.value;
 }
 
 function isCustomizationState(
@@ -3592,6 +3627,10 @@ function copyPresetFields(
       preset.defaultDetailInputs !== undefined
         ? structuredClone(preset.defaultDetailInputs)
         : undefined,
+    planOrderAuthority:
+      preset.planOrderAuthority !== undefined
+        ? structuredClone(preset.planOrderAuthority)
+        : undefined,
     medicationMetadata: preset.medicationMetadata
       ? { ...preset.medicationMetadata }
       : undefined,
@@ -3673,6 +3712,10 @@ function cloneItem(item: OrderCatalogItem): OrderCatalogItem {
     defaultDetailInputPolicies: item.defaultDetailInputPolicies
       ? structuredClone(item.defaultDetailInputPolicies)
       : undefined,
+    planOrderAuthority:
+      item.planOrderAuthority !== undefined
+        ? structuredClone(item.planOrderAuthority)
+        : undefined,
     executionPresetLineage: item.executionPresetLineage
       ? { ...item.executionPresetLineage }
       : undefined,
@@ -4094,6 +4137,13 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   const parsedMedicationMetadata = isRecord(medicationMetadata)
     ? (structuredClone(medicationMetadata) as MedicationOrderMetadata)
     : undefined;
+  const parsedPlanOrderAuthority = parsePlanOrderAuthority(
+    row.planOrderAuthority ??
+      row.plan_order_authority ??
+      (isRecord(defaultDetailInputs)
+        ? defaultDetailInputs.planOrderAuthority
+        : undefined),
+  );
   if (
     !sourcePresetId ||
     !sourcePresetVersion ||
@@ -4103,7 +4153,8 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     !appliedSalesUnit ||
     typeof appliedTaxIncluded !== "boolean" ||
     !appliedAmountBasis ||
-    typeof billingReflectionEnabled !== "boolean"
+    typeof billingReflectionEnabled !== "boolean" ||
+    !parsedPlanOrderAuthority.valid
   ) {
     return null;
   }
@@ -4160,13 +4211,16 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
       row.billingEligible ?? row.billing_eligible,
     ),
     defaultDetailInputs: hasObjectKeys(defaultDetailInputs)
-      ? structuredClone(defaultDetailInputs)
+      ? detailInputsWithoutPlanAuthority(defaultDetailInputs)
       : hasObjectKeys(parsedMedicationMetadata?.defaultDetailInputs)
-        ? structuredClone(parsedMedicationMetadata.defaultDetailInputs)
+        ? detailInputsWithoutPlanAuthority(
+            parsedMedicationMetadata.defaultDetailInputs,
+          )
         : undefined,
     defaultDetailInputPolicies: isRecord(defaultDetailInputPolicies)
       ? structuredClone(defaultDetailInputPolicies)
       : undefined,
+    planOrderAuthority: parsedPlanOrderAuthority.value,
     executionPresetLineage: mapExecutionPresetLineage(executionPresetLineage),
     medicationMetadata: parsedMedicationMetadata,
     dispensingLineage: mapDispensingOrderLineageSnapshot(
@@ -4204,6 +4258,14 @@ function mapExecutionPresetLineage(
     sourceExecutionPresetRevision,
     sourceExecutionPresetSha256,
   };
+}
+
+function detailInputsWithoutPlanAuthority(
+  value: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+  const result = structuredClone(value);
+  delete result.planOrderAuthority;
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function mapWorkspaceDispensingReviewValue(

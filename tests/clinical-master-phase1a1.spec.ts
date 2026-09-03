@@ -124,6 +124,33 @@ test("synthetic fixture structurally covers X/T/A, Other, CG/NT, dog/cat, and at
   });
 });
 
+test("publisher transports Plan/Order authority but never fills missing values", () => {
+  const configured = cloneFixture();
+  const order = configured.records.find((record) => record.recordType === "order");
+  if (!order) throw new Error("fixture order missing");
+  order.detail.planOrderAuthority = {
+    schemaVersion: 1,
+    calculationMode: "fixed_product",
+    dispenseUnit: "vial",
+    fixedProductQuantity: 1,
+    fixedProductQuantityBasis: "head",
+    priceBasis: "per_order",
+    billingUnit: "case",
+    taxClass: "non_taxable",
+  };
+  expect(validateClinicalMasterPublishPayload(configured)).toEqual([]);
+  expect(
+    normalizeClinicalMasterPublishPayload(configured).records.find(
+      (record) => record.recordType === "order",
+    )?.detail.planOrderAuthority,
+  ).toEqual(order.detail.planOrderAuthority);
+
+  const missing = normalizeClinicalMasterPublishPayload(fixture);
+  expect(
+    missing.records.find((record) => record.recordType === "order")?.detail,
+  ).not.toHaveProperty("planOrderAuthority");
+});
+
 test("normalization is deterministic while PostgreSQL remains fingerprint authority", () => {
   const reordered = cloneFixture();
   reordered.records.reverse();

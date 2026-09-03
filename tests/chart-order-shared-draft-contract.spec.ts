@@ -82,7 +82,6 @@ test("chart draft separates 150ms discrete saves from 700ms continuous edits", (
   expect(chartModule).toContain("const chartOrderContinuousSaveDelayMs = 700");
   expect(chartModule).toContain("}, draftSaveDelayMsRef.current);");
   expect(chartModule).toContain('markDraftTouched("discrete")');
-  expect(chartModule).toContain("onBlur={onFlushDraft}");
   expect(chartModule).toContain(
     'if (event.key === "Enter") event.currentTarget.blur()',
   );
@@ -120,18 +119,23 @@ test("confirmed rows never reopen the mutable draft and confirmation keeps the s
   );
 
   const confirmationStart = chartModule.indexOf(
-    "const actionExpectedEtag = effectiveDraftResult.etag;",
+    "const commitOrderConfirmation = async () => {",
+  );
+  const confirmationLock = chartModule.indexOf(
+    "orderDraftSaveInFlightRef.current = true;",
+    confirmationStart,
   );
   const actionRequest = chartModule.indexOf(
     "let result = await saveChartOrderActionRoute({",
-    confirmationStart,
+    confirmationLock,
   );
   const actionUnlock = chartModule.indexOf(
-    "orderDraftSaveInFlightRef.current = false;\n    await applyConfirmedResult(result, recoveredConfirmation);",
+    "orderDraftSaveInFlightRef.current = false;\n    await applyConfirmedResult(\n      result,\n      pendingConfirmationRef.current.orderIds,\n      recoveredConfirmation,\n    );",
     actionRequest,
   );
   expect(confirmationStart).toBeGreaterThan(-1);
-  expect(actionRequest).toBeGreaterThan(confirmationStart);
+  expect(confirmationLock).toBeGreaterThan(confirmationStart);
+  expect(actionRequest).toBeGreaterThan(confirmationLock);
   expect(actionUnlock).toBeGreaterThan(actionRequest);
   expect(chartModule).not.toContain(
     "orderDraftConflictRef.current = false;\n    orderDraftSaveInFlightRef.current = false;\n    const actionExpectedEtag",

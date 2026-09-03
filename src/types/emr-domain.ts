@@ -126,18 +126,24 @@ export type UniversalOrderTaskStatus =
   | "paused"
   | "partial_complete"
   | "complete"
+  | "returned"
   | "cancelled";
 export type UniversalOrderTaskRole = "execution" | "aggregate";
 export type UniversalOrderTaskEventType =
   | "created"
+  | "assigned"
   | "started"
+  | "phase_changed"
   | "paused"
   | "resumed"
+  | "handed_off"
   | "completed"
+  | "returned"
   | "cancelled"
   | "amended"
   | "re_requested"
-  | "priority_changed";
+  | "priority_changed"
+  | "legacy_accepted_migrated";
 export type EmrOrderStatus = "requested" | "re_requested" | "in_progress" | "confirmed" | "completed" | "cancelled";
 export type EmrOrderWorkStatus = "pending" | "completed";
 export type OrderAssignmentStatus = "active" | "cancelled" | "completed";

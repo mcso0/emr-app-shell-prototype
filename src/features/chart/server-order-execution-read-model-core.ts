@@ -11,18 +11,28 @@ import type {
 } from "@/types/emr-domain";
 
 export type ChartOrderExecutionTask = {
+  assignedAt?: string | null;
+  assignedByUserId?: string | null;
+  assignedToDisplayName?: string | null;
+  assignedToUserId?: string | null;
   attemptNo: number;
   cancelledAt: string | null;
   clinicalOrderType: ClinicalOrderType;
   completedAt: string | null;
   createdAt: string;
   destinationModule: ClinicalOrderDestinationModule | null;
+  detailedPhase?: string | null;
   effectiveSnapshot: Record<string, unknown>;
   orderId: string;
   parentTaskId: string | null;
   priority: "normal" | "urgent";
+  requestCycle?: number;
   reRequestedFromTaskId: string | null;
   resultSnapshot: Record<string, unknown> | null;
+  returnedAt?: string | null;
+  rowRevision?: number;
+  pausedFromPhase?: string | null;
+  startedByUserId?: string | null;
   startedAt: string | null;
   status: UniversalOrderTaskStatus;
   taskId: string;
@@ -35,18 +45,24 @@ export type ChartOrderExecutionTaskEvent = {
   afterValues: Record<string, unknown>;
   beforeValues: Record<string, unknown>;
   commandId: string | null;
+  lifecycleCommandId?: string | null;
   createdAt: string;
   eventId: string;
   eventType:
     | "created"
+    | "assigned"
     | "started"
+    | "phase_changed"
     | "paused"
     | "resumed"
+    | "handed_off"
     | "completed"
+    | "returned"
     | "cancelled"
     | "amended"
     | "re_requested"
-    | "priority_changed";
+    | "priority_changed"
+    | "legacy_accepted_migrated";
   orderId: string;
   reason: string | null;
   taskAttemptNo: number;
@@ -75,10 +91,14 @@ export type ChartOrderExecutionRevision = {
 };
 
 export type ChartOrderQueueProjection = {
+  assignedToUserId?: string | null;
+  detailedPhase?: string | null;
   destinationModule: ClinicalOrderDestinationModule;
   orderId: string;
   queueStatus: string;
   queueType: string;
+  requestCycle?: number;
+  rowRevision?: number;
   taskAttemptNo: number;
   taskId: string;
   updatedAt: string;
@@ -90,7 +110,11 @@ export type ChartOrderBillingCandidateLink = {
   billingCandidateId: string;
   invoiceLineId: string | null;
   orderId: string;
-  status: "candidate_created" | "invoice_linked" | "cancelled";
+  status:
+    | "candidate_created"
+    | "billing_review_required"
+    | "invoice_linked"
+    | "cancelled";
   taskAttemptNo: number;
   taskId: string;
   updatedAt: string;
@@ -310,6 +334,7 @@ const taskStatuses = new Set<UniversalOrderTaskStatus>([
   "paused",
   "partial_complete",
   "complete",
+  "returned",
   "cancelled",
 ]);
 const clinicalOrderTypes = new Set<ClinicalOrderType>([
@@ -342,7 +367,10 @@ function mapTask(value: unknown): ChartOrderExecutionTask | null {
     !clinicalOrderTypes.has(row.clinicalOrderType as ClinicalOrderType) ||
     !taskStatuses.has(row.status as UniversalOrderTaskStatus) ||
     (row.priority !== "normal" && row.priority !== "urgent") ||
-    !isPositiveInteger(row.attemptNo) || typeof row.createdAt !== "string" ||
+    !isPositiveInteger(row.attemptNo) ||
+    (row.requestCycle !== undefined && !isPositiveInteger(row.requestCycle)) ||
+    (row.rowRevision !== undefined && !isPositiveInteger(row.rowRevision)) ||
+    typeof row.createdAt !== "string" ||
     typeof row.updatedAt !== "string" || !asRecord(row.effectiveSnapshot)
   ) return null;
   const destination = row.destinationModule;
@@ -359,13 +387,23 @@ function mapTask(value: unknown): ChartOrderExecutionTask | null {
     clinicalOrderType: row.clinicalOrderType as ClinicalOrderType,
     destinationModule: destination as ClinicalOrderDestinationModule | null,
     status: row.status as UniversalOrderTaskStatus,
+    assignedToUserId: nullableString(row.assignedToUserId),
+    assignedToDisplayName: nullableString(row.assignedToDisplayName),
+    assignedByUserId: nullableString(row.assignedByUserId),
+    assignedAt: nullableString(row.assignedAt),
     priority: row.priority,
     attemptNo: row.attemptNo,
+    requestCycle: isPositiveInteger(row.requestCycle) ? row.requestCycle : row.attemptNo,
     reRequestedFromTaskId: nullableString(row.reRequestedFromTaskId),
     effectiveSnapshot: asRecord(row.effectiveSnapshot) ?? {},
     resultSnapshot: row.resultSnapshot === null ? null : asRecord(row.resultSnapshot),
+    detailedPhase: nullableString(row.detailedPhase),
+    pausedFromPhase: nullableString(row.pausedFromPhase),
+    rowRevision: isPositiveInteger(row.rowRevision) ? row.rowRevision : 1,
+    startedByUserId: nullableString(row.startedByUserId),
     startedAt: nullableString(row.startedAt),
     completedAt: nullableString(row.completedAt),
+    returnedAt: nullableString(row.returnedAt),
     cancelledAt: nullableString(row.cancelledAt),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -375,8 +413,9 @@ function mapTask(value: unknown): ChartOrderExecutionTask | null {
 function mapEvent(value: unknown): ChartOrderExecutionTaskEvent | null {
   const row = asRecord(value);
   const eventTypes = new Set([
-    "created", "started", "paused", "resumed", "completed", "cancelled",
-    "amended", "re_requested", "priority_changed",
+    "created", "assigned", "started", "phase_changed", "paused", "resumed",
+    "handed_off", "completed", "returned", "cancelled", "amended",
+    "re_requested", "priority_changed", "legacy_accepted_migrated",
   ]);
   if (!row || typeof row.eventId !== "string" || typeof row.taskId !== "string" ||
       typeof row.orderId !== "string" || !isPositiveInteger(row.taskAttemptNo) ||
@@ -394,6 +433,7 @@ function mapEvent(value: unknown): ChartOrderExecutionTaskEvent | null {
     beforeValues: asRecord(row.beforeValues) ?? {},
     afterValues: asRecord(row.afterValues) ?? {},
     commandId: nullableString(row.commandId),
+    lifecycleCommandId: nullableString(row.lifecycleCommandId),
     createdAt: row.createdAt,
   };
 }
@@ -431,15 +471,28 @@ function mapQueue(value: unknown): ChartOrderQueueProjection | null {
       typeof row.taskId !== "string" || !isPositiveInteger(row.taskAttemptNo) ||
       !destinations.has(row.destinationModule as ClinicalOrderDestinationModule) ||
       typeof row.queueType !== "string" || typeof row.queueStatus !== "string" ||
+      (row.requestCycle !== undefined && !isPositiveInteger(row.requestCycle)) ||
+      (row.rowRevision !== undefined && !isPositiveInteger(row.rowRevision)) ||
       typeof row.updatedAt !== "string") return null;
-  return row as ChartOrderQueueProjection;
+  return {
+    ...(row as ChartOrderQueueProjection),
+    assignedToUserId: nullableString(row.assignedToUserId),
+    detailedPhase: nullableString(row.detailedPhase),
+    requestCycle: isPositiveInteger(row.requestCycle) ? row.requestCycle : row.taskAttemptNo,
+    rowRevision: isPositiveInteger(row.rowRevision) ? row.rowRevision : 1,
+  };
 }
 
 function mapBillingCandidate(value: unknown): ChartOrderBillingCandidateLink | null {
   const row = asRecord(value);
   if (!row || typeof row.billingCandidateId !== "string" || typeof row.orderId !== "string" ||
       typeof row.taskId !== "string" || !isPositiveInteger(row.taskAttemptNo) ||
-      !["candidate_created", "invoice_linked", "cancelled"].includes(String(row.status)) ||
+      ![
+        "candidate_created",
+        "billing_review_required",
+        "invoice_linked",
+        "cancelled",
+      ].includes(String(row.status)) ||
       typeof row.amount !== "number" || typeof row.updatedAt !== "string") return null;
   return {
     billingCandidateId: row.billingCandidateId,

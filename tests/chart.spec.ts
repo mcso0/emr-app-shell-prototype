@@ -27,6 +27,14 @@ const chartFigmaVisualFixture = {
   viewport: { height: 1088, width: 1624 },
 } as const;
 const kongEncounterId = "encounter-kong-260501";
+const kongSoapFields = {
+  subjective:
+    "보호자 진술상 전날 밤부터 구토 3회, 아침 식욕 없음. 물 섭취 후 재구토.",
+  objective: "체온 39.1C, 복부 촉진 시 경미한 불편감. 탈수 경도 의심.",
+  assessment:
+    "급성 위장관염 의심. 이물 가능성 배제를 위해 검사/영상 확인 필요.",
+  plan: "CBC, 혈청화학, 복부 영상 확인. 피하 수액과 항구토제 처방 후 수납 안내.",
+} as const;
 const kongDefaultOrderDraftRows = [
   {
     rowType: "individual" as const,
@@ -130,13 +138,53 @@ async function dismissChartOrderActionMenu(page: Page) {
   await expect(menu).toBeHidden();
 }
 
-async function selectChartOrderField(
-  page: Page,
-  label: string,
-  option: string,
-) {
-  await page.getByLabel(label, { exact: true }).click();
-  await page.getByRole("option", { name: option, exact: true }).click();
+async function openChartOrderDetail(page: Page, orderName: string) {
+  const row = page
+    .getByRole("row")
+    .filter({ has: page.getByText(orderName, { exact: true }) })
+    .first();
+  await row.hover();
+  await row.getByRole("button", { name: `${orderName} 상세` }).click();
+  const detail = page.getByRole("dialog", { name: `${orderName} 상세` });
+  await expect(detail).toBeVisible();
+  return detail;
+}
+
+async function routePristineKongSoap(page: Page) {
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/soap-notes?*",
+    async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+      const encounterId = new URL(route.request().url()).searchParams.get(
+        "encounterId",
+      );
+      if (encounterId !== kongEncounterId) {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-soap-note-persistence",
+          soapNote: {
+            id: "soap-kong-260501",
+            encounterId: kongEncounterId,
+            authorUserId: "user-vet-suji",
+            ...kongSoapFields,
+            status: "autosaved",
+            createdAt: "2026-05-01T09:40:00+09:00",
+            updatedAt: "2026-05-01T10:16:00+09:00",
+          },
+        },
+      });
+    },
+  );
 }
 
 async function grantCheongdamWorkspaceAccess(page: Page) {
@@ -849,14 +897,13 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
           chartFigmaVisualFixture.expectedPanelWidths[2],
     ),
   ).toBeLessThanOrEqual(0.01);
-  await expect(page.getByText("항구토제 세트")).toBeVisible();
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
   const diagnosisPanel = page.getByLabel("진단명 관리");
   await expect(
     diagnosisPanel.getByRole("row", { name: /급성 위장관염 의심/ }),
   ).toBeVisible();
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
-  await expect(orderTable.locator('th:has-text("Order명")')).toHaveAttribute(
+  await expect(orderTable.locator('th:has-text("Order 명")')).toHaveAttribute(
     "data-emr-header-interaction",
     "sortable",
   );
@@ -875,10 +922,16 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   ).toContainText("Maropitant 16mg T");
   await expect(
     orderTable.getByText("0.5T x 3일, 보호자 복약 안내 포함"),
-  ).toBeVisible();
-  await expect(
-    orderTable.getByText("항구토제 세트", { exact: true }).first(),
-  ).toBeVisible();
+  ).toHaveCount(0);
+  const maropitantDetail = await openChartOrderDetail(
+    page,
+    "Maropitant 16mg T",
+  );
+  await expect(maropitantDetail).toContainText("항구토제 세트");
+  await expect(maropitantDetail).toContainText(
+    "0.5T x 3일, 보호자 복약 안내 포함",
+  );
+  await maropitantDetail.getByRole("button", { name: "Close" }).click();
   await expect(
     page.getByRole("checkbox", { name: "오더 전체 선택" }),
   ).not.toBeChecked();
@@ -1223,8 +1276,11 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Plan/Order" })).toBeVisible();
   await expect(
-    page.getByRole("textbox", { name: "피하 수액 처치 방법" }),
-  ).toHaveValue("피하 수액");
+    page.getByTestId("chart-order-row-order-kong-fluid"),
+  ).toContainText("피하 수액 처치");
+  const orderFooter = page.getByTestId("chart-order-footer");
+  await expect(orderFooter).toContainText("변경 없음");
+  await expect(orderFooter).toContainText("청구 예상 총액");
   await expect(content).toHaveScreenshot(
     "chart-contents-v2-reference-1540x968.png",
     {
@@ -1294,8 +1350,8 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
     );
   expect(pinnedColumnIds).toEqual([
     "select",
-    "status",
     "orderType",
+    "status",
     "displayName",
   ]);
 
@@ -1321,7 +1377,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
       (selectionCheckboxBox!.x + selectionCheckboxBox!.width),
   ).toBeGreaterThanOrEqual(4);
 
-  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(selectionActions).toBeVisible();
   await expect(selectionActions).toContainText("확정 전 후보");
@@ -1458,7 +1514,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
   }
 });
 
-test("chart Order table renders the eight-type union matrix without action or destination columns", async ({
+test("chart Order all tab renders the exact approved 25-column legacy contract", async ({
   page,
 }) => {
   await page.goto(chartFigmaVisualFixture.route);
@@ -1481,24 +1537,38 @@ test("chart Order table renders the eight-type union matrix without action or de
     ).toBeVisible();
   }
 
-  for (const header of [
-    "상태",
+  const namedHeaders = await table.locator("thead th").evaluateAll((headers) =>
+    headers
+      .map((header) => header.textContent?.trim() ?? "")
+      .filter(Boolean),
+  );
+  expect(namedHeaders).toEqual([
     "분류",
-    "Order명",
-    "긴급",
-    "용량 기준",
-    "검체",
-    "조영",
+    "상태",
+    "Order 명",
     "청구서명",
-  ]) {
-    await expect(
-      table
-        .getByRole("columnheader", {
-          name: new RegExp(`^${header.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
-        })
-        .first(),
-    ).toBeAttached();
-  }
+    "청구반영",
+    "일수",
+    "횟수",
+    "총횟수",
+    "head/kg당",
+    "1회당",
+    "성분량",
+    "조제량",
+    "실조제량",
+    "보관",
+    "투여/복약",
+    "담당자",
+    "단가",
+    "수량",
+    "합계",
+    "할인할증(금액)",
+    "(%)",
+    "청구금액",
+    "사유",
+    "과세",
+    "수의사",
+  ]);
   await expect(
     table.getByRole("columnheader", { name: "작업", exact: true }),
   ).toHaveCount(0);
@@ -1511,7 +1581,7 @@ test("chart Order table renders the eight-type union matrix without action or de
   );
   await expect(
     maropitantRow.locator('[data-column-id="detail-bodyRegion"]'),
-  ).toHaveText("—");
+  ).toHaveCount(0);
   const scrollOwner = table.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
   );
@@ -1536,6 +1606,207 @@ test("chart Order table renders the eight-type union matrix without action or de
       overlayBox!.x + overlayBox!.width - (ownerBox!.x + ownerBox!.width),
     ),
   ).toBeLessThanOrEqual(2);
+});
+
+test("chart saves a constrained actual dispense override with an anchored reason", async ({
+  page,
+}) => {
+  const orderId = "order-kong-maropitant";
+  const firstUpdatedAt = "2026-09-02T09:00:00.000Z";
+  const savedUpdatedAt = "2026-09-02T09:01:00.000Z";
+  const detailInputs = {
+    doseBasis: "patient",
+    dose: 16,
+    doseUnit: "mg",
+    route: "PO",
+    frequency: "once",
+    durationDays: 1,
+    totalQuantity: 1,
+  };
+  const authority = {
+    schemaVersion: 1,
+    calculationMode: "ingredient_based",
+    dispenseUnit: "mL",
+    referenceIngredientId: "ingredient-maropitant",
+    productStrength: {
+      numeratorValue: 16,
+      numeratorUnit: "mg",
+      denominatorValue: 1,
+      denominatorUnit: "mL",
+    },
+    preparationPolicy: {
+      increment: 0.1,
+      roundingMode: "nearest",
+      displayPrecision: 1,
+      noReasonTolerance: 0.1,
+    },
+    priceBasis: "per_product_unit",
+    billingUnit: "mL",
+    taxClass: "taxable",
+  };
+  let currentRow = {
+    orderId,
+    workspaceId: "clair-demo",
+    encounterId: kongEncounterId,
+    rowType: "individual",
+    orderType: "dispensing",
+    clinicalOrderType: "dispensing",
+    destinationModule: "dispensing",
+    executionMode: "routed",
+    detailInputs,
+    detailSchemaVersion: 1,
+    priority: "normal",
+    billingEligible: true,
+    revisionNo: 0,
+    parentOrderId: null,
+    sourceSetId: null,
+    sourceSetRevisionId: null,
+    sourceSetRevisionNo: null,
+    sourceSetVersion: null,
+    sourceSetRevisionItemId: null,
+    workspaceCatalogItemId: "svc-med-maropitant",
+    workspaceCatalogRevision: 1,
+    dispensingLineage: null,
+    quantity: 1,
+    quantitySource: "manual",
+    unitPriceSnapshot: 4500,
+    lineTotalSnapshot: 4500,
+    snapshotSchemaVersion: 0,
+    snapshotHash: null,
+    appliedSnapshot: {
+      billingName: "Maropitant 16mg T",
+      billingReflectionEnabled: true,
+      categoryGroup: "medication",
+      clinicalOrderType: "dispensing",
+      destinationModule: "dispensing",
+      detailInputs,
+      detailSchemaVersion: 1,
+      executionMode: "routed",
+      inHospitalOrderName: "Maropitant 16mg T",
+      lineTotalSnapshot: 4500,
+      orderType: "dispensing",
+      planOrderAuthority: authority,
+      priceKrw: 4500,
+      quantity: 1,
+      rowType: "individual",
+      standardOrderName: "Maropitant 16mg T",
+      workspaceCatalogItemId: "svc-med-maropitant",
+      workspaceCatalogRevision: 1,
+    },
+    appliedPriceSnapshot: {},
+    calculationInputs: {},
+    calculationOutputs: {
+      actualDispenseOverride: null as Record<string, unknown> | null,
+      actualDispenseQuantity: 1,
+      actualDispenseSource: "preparation_policy",
+      actualDispenseUnit: "mL",
+      calculatedDispenseQuantity: 1,
+      calculationStatus: "ready",
+      dispenseApplicability: true,
+      inputFingerprint: "a".repeat(64),
+      preparationPolicy: authority.preparationPolicy,
+      proposedActualDispenseQuantity: 1,
+      requiresReconfirmation: false,
+      theoreticalDispenseQuantity: 1,
+      totalOccurrences: 1,
+      totalRequiredDispenseQuantity: 1,
+    },
+    billingReflectionEnabled: true,
+    orderConfirmationStatus: "draft",
+    status: "requested",
+    updatedAt: firstUpdatedAt,
+  };
+  const patchBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        contentType: "application/json",
+        headers: { ETag: `"${"a".repeat(64)}"` },
+        status: 200,
+        json: {
+          etag: `"${"a".repeat(64)}"`,
+          ok: true,
+          rows: [currentRow],
+          status: 200,
+        },
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/clair-demo/chart/orders/${orderId}/actual-dispense`,
+    async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      patchBodies.push(body);
+      const actualQuantity = Number(body.actualQuantity);
+      currentRow = {
+        ...currentRow,
+        calculationOutputs: {
+          ...currentRow.calculationOutputs,
+          actualDispenseOverride: {
+            reason: body.reason,
+            reasonRequired: true,
+            versionNo: 1,
+          },
+          actualDispenseQuantity: actualQuantity,
+          actualDispenseSource: "manual_override",
+          totalRequiredDispenseQuantity: actualQuantity,
+        },
+        updatedAt: savedUpdatedAt,
+      };
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        json: {
+          enforcedBy: "order-actual-dispense",
+          ok: true,
+          state: {
+            actualDispenseOverride:
+              currentRow.calculationOutputs.actualDispenseOverride,
+            actualDispenseQuantity: actualQuantity,
+            actualDispenseSource: "manual_override",
+            actualDispenseUnit: "mL",
+            orderId,
+            overrideId: "override-smoke-1",
+            requiresReconfirmation: false,
+            updatedAt: savedUpdatedAt,
+            versionNo: 1,
+          },
+          status: 200,
+        },
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  const input = page.getByRole("spinbutton", {
+    name: "Maropitant 16mg T 실조제량",
+  });
+  await expect(input).toHaveValue("1");
+  await input.fill("1.2");
+  await page
+    .getByRole("button", { name: "Maropitant 16mg T 실조제량 저장" })
+    .click();
+  const reasonPopover = page.getByText("실조제량 변경 사유가 필요해요");
+  await expect(reasonPopover).toBeVisible();
+  await page.getByRole("button", { name: "계량 단위 보정" }).click();
+
+  await expect.poll(() => patchBodies.length).toBe(1);
+  expect(patchBodies[0]).toMatchObject({
+    actualQuantity: 1.2,
+    expectedOrderUpdatedAt: firstUpdatedAt,
+    reason: "계량 단위 보정",
+  });
+  await expect(input).toHaveValue("1.2");
+  await expect(
+    page.getByRole("button", {
+      name: "Maropitant 16mg T 실조제량 변경 사유",
+    }),
+  ).toBeVisible();
 });
 
 test("chart Order draft autosaves Field Matrix values and enables explicit confirmation", async ({
@@ -1592,14 +1863,19 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
     });
   });
 
-  await selectChartOrderField(page, "[CBC 검사] #BASO 검체", "혈액");
-  await page
+  const detail = await openChartOrderDetail(page, "[CBC 검사] #BASO");
+  await detail.getByLabel("[CBC 검사] #BASO 검체", { exact: true }).click();
+  await page.getByRole("option", { name: "혈액", exact: true }).click();
+  await detail
     .getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true })
     .fill("CBC differential BASO");
-  await page
+  await detail
     .getByLabel("[CBC 검사] #BASO 채취 조건", { exact: true })
     .fill("EDTA 전혈, 채취 즉시 혼합");
-  await page.getByRole("switch", { name: "[CBC 검사] #BASO 긴급" }).check();
+  await detail
+    .getByRole("switch", { name: "[CBC 검사] #BASO 긴급" })
+    .check();
+  await detail.getByRole("button", { name: "저장하고 닫기" }).click();
 
   await expect
     .poll(
@@ -1640,11 +1916,15 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   await confirmDialog.getByRole("button", { name: "다시 확인" }).click();
 
   await page.reload();
+  const reloadedDetail = await openChartOrderDetail(
+    page,
+    "[CBC 검사] #BASO",
+  );
   await expect(
-    page.getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true }),
+    reloadedDetail.getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true }),
   ).toHaveValue("CBC differential BASO");
   await expect(
-    page.getByRole("switch", { name: "[CBC 검사] #BASO 긴급" }),
+    reloadedDetail.getByRole("switch", { name: "[CBC 검사] #BASO 긴급" }),
   ).toBeChecked();
 });
 
@@ -4344,6 +4624,7 @@ test("chart SOAP reconciles a committed response-loss retry without a false conf
 test("chart SOAP slash command opens BlockNote suggestions instead of a separate modal", async ({
   page,
 }) => {
+  await routePristineKongSoap(page);
   await page.goto(kongScenarioUrl);
   const soapDocument = page.getByLabel("SOAP 블록 문서");
   const lastParagraph = soapDocument
@@ -4358,7 +4639,7 @@ test("chart SOAP slash command opens BlockNote suggestions instead of a separate
   const suggestionMenu = page.getByRole("listbox");
   await expect(suggestionMenu).toBeVisible();
   await expect(
-    suggestionMenu.getByRole("option", { name: /근골격계 SOAP 템플릿/ }),
+    suggestionMenu.getByRole("option", { name: /진단계통 SOAP 템플릿/ }),
   ).toBeVisible();
   await expect(
     page.getByRole("dialog", { name: "SOAP 진단계통 선택" }),
@@ -4368,6 +4649,7 @@ test("chart SOAP slash command opens BlockNote suggestions instead of a separate
 test("chart SOAP slash template inserts a system block group and prevents duplicate insertion", async ({
   page,
 }) => {
+  await routePristineKongSoap(page);
   await page.goto(kongScenarioUrl);
   const soapDocument = page.getByLabel("SOAP 블록 문서");
   const openMusculoskeletalMenu = async () => {
@@ -4380,7 +4662,7 @@ test("chart SOAP slash template inserts a system block group and prevents duplic
     await page.keyboard.type("/근골격");
     const option = page
       .getByRole("listbox")
-      .getByRole("option", { name: /근골격계 SOAP 템플릿/ });
+      .getByRole("option", { name: /진단계통 SOAP 템플릿/ });
     await expect(option).toBeVisible();
     await option.click();
   };
@@ -5061,7 +5343,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(chartCompleteDialog.getByText(/\d+건 \/ 4건/)).toBeVisible();
   await chartCompleteDialog.getByRole("button", { name: "계속 작성" }).click();
 
-  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(
     selectionActions.getByRole("button", { name: "선택 확정" }),
@@ -5076,7 +5358,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
     orderConfirmDialog.getByText("차트번호: E-260501-0003"),
   ).toBeVisible();
   await expect(
-    orderConfirmDialog.getByText("선택 오더: 1건 · 선택 금액 4,500"),
+    orderConfirmDialog.getByText("선택 오더: 1건 · 선택 금액 35,000"),
   ).toBeVisible();
   await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
 });
@@ -5730,6 +6012,7 @@ test("chart continuously edits a 20-row mixed draft with keyboard focus preserve
 test("chart opens the Kong scenario as one SOAP, assessment, and order flow", async ({
   page,
 }) => {
+  await routePristineKongSoap(page);
   await page.goto(kongScenarioUrl);
 
   const patientContext = page.getByLabel("환자 컨텍스트 정보");
@@ -5785,9 +6068,11 @@ test("chart opens the Kong scenario as one SOAP, assessment, and order flow", as
   await expect(
     page.getByText("피하 수액과 항구토제 처방 후 수납 안내").first(),
   ).toBeVisible();
-  await expect(page.getByText("구토 완화 처방")).toBeVisible();
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
   await expect(page.getByText("복부 초음파").first()).toBeVisible();
+  const orderDetail = await openChartOrderDetail(page, "Maropitant 16mg T");
+  await expect(orderDetail).toContainText("구토 완화 처방");
+  await orderDetail.getByRole("button", { name: "저장하고 닫기" }).click();
   await expect(
     page.getByRole("tab", { name: "전체오더 4", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
@@ -6388,8 +6673,10 @@ async function verifyChartConfirmationRetry(page: Page) {
     },
   );
 
-  await page.getByRole("switch", { name: "Maropitant 16mg T 긴급" }).check();
-  await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
+  const detail = await openChartOrderDetail(page, "CBC 검사");
+  await detail.getByRole("switch", { name: "CBC 검사 긴급" }).check();
+  await detail.getByRole("button", { name: "저장하고 닫기" }).click();
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   await getChartSelectedOrderConfirmAction(page).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   const confirmButton = confirmDialog.getByRole("button", {
@@ -6930,16 +7217,26 @@ test("chart dispensing catalog prefills master prescription values and preserves
     )
     .toBe(true);
 
-  const addedDose = page
-    .getByLabel("Maropitant 16mg T 용량", { exact: true })
+  const addedBillingName = page
+    .getByLabel("Maropitant 16mg T 청구서명 수정")
     .nth(1);
-  const addedDays = page
-    .getByLabel("Maropitant 16mg T 일수", { exact: true })
-    .nth(1);
-  const addedFrequency = page
-    .getByLabel("Maropitant 16mg T 빈도", { exact: true })
-    .nth(1);
-  const addedRow = addedDose.locator("xpath=ancestor::tr");
+  const addedRow = addedBillingName.locator("xpath=ancestor::tr");
+  await addedRow.hover();
+  await addedRow
+    .getByRole("button", { name: "Maropitant 16mg T 상세" })
+    .click();
+  const detail = page.getByRole("dialog", {
+    name: "Maropitant 16mg T 상세",
+  });
+  const addedDose = detail.getByLabel("Maropitant 16mg T 용량", {
+    exact: true,
+  });
+  const addedDays = detail.getByLabel("Maropitant 16mg T 일수", {
+    exact: true,
+  });
+  const addedFrequency = detail.getByLabel("Maropitant 16mg T 빈도", {
+    exact: true,
+  });
   const addedQuantity = addedRow.getByLabel(/수량 수정/);
   await expect(addedDose).toHaveValue("0.5");
   await expect(addedDays).toHaveValue("7");
@@ -6951,6 +7248,7 @@ test("chart dispensing catalog prefills master prescription values and preserves
   await addedDose.fill("0.75");
   await addedFrequency.click();
   await page.getByRole("option", { name: "TID", exact: true }).click();
+  await detail.getByRole("button", { name: "저장하고 닫기" }).click();
 
   await expect
     .poll(() =>
@@ -7146,13 +7444,22 @@ test("chart order add searches active workspace catalog and adds a draft row", a
     page.getByRole("tab", { name: /전체오더 \d+/, exact: true }),
   ).toBeVisible();
 
-  await selectChartOrderField(page, "[CBC 검사] #BASO 검체", "혈액");
-  await page
+  await addedRow.hover();
+  await addedRow
+    .getByRole("button", { name: "[CBC 검사] #BASO 상세" })
+    .click();
+  const detail = page.getByRole("dialog", {
+    name: "[CBC 검사] #BASO 상세",
+  });
+  await detail.getByLabel("[CBC 검사] #BASO 검체", { exact: true }).click();
+  await page.getByRole("option", { name: "혈액", exact: true }).click();
+  await detail
     .getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true })
     .fill("CBC differential BASO");
-  await page
+  await detail
     .getByLabel("[CBC 검사] #BASO 채취 조건", { exact: true })
     .fill("EDTA 전혈, 채취 즉시 혼합");
+  await detail.getByRole("button", { name: "저장하고 닫기" }).click();
 
   await addedRow
     .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
@@ -7160,13 +7467,6 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await getChartSelectedOrderConfirmAction(page).click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   await expect(confirmDialog).toBeVisible();
-  const draftSaveResponse = page.waitForResponse(
-    (response) =>
-      response
-        .url()
-        .includes("/api/workspaces/clair-demo/chart/order-drafts") &&
-      response.request().method() === "PATCH",
-  );
   const orderActionResponse = page.waitForResponse(
     (response) =>
       response
@@ -7175,8 +7475,6 @@ test("chart order add searches active workspace catalog and adds a draft row", a
       response.request().method() === "PATCH",
   );
   await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
-  const draftResponse = await draftSaveResponse;
-  expect(draftResponse.ok()).toBe(true);
   const actionResponse = await orderActionResponse;
   expect(actionResponse.ok()).toBe(true);
   const actionBody = (await actionResponse.json()) as {
@@ -7218,7 +7516,11 @@ test("chart order add searches active workspace catalog and adds a draft row", a
         }),
     ),
   ).toBe(true);
-  await expect(addedRow).toContainText(/확정|수납 후보|청구됨/);
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expect(addedRow).toHaveAttribute(
+    "data-emr-data-table-row-state",
+    "confirmed",
+  );
 
   await page.reload();
   const restoredRow = page
@@ -7228,7 +7530,10 @@ test("chart order add searches active workspace catalog and adds a draft row", a
     })
     .first();
   await expect(restoredRow).toContainText("[CBC 검사] #BASO");
-  await expect(restoredRow).toContainText("확정");
+  await expect(restoredRow).toHaveAttribute(
+    "data-emr-data-table-row-state",
+    "confirmed",
+  );
   await expect(
     page.getByLabel("[CBC 검사] #BASO 패널/항목", { exact: true }),
   ).toHaveCount(0);
@@ -7253,7 +7558,9 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await confirmedActions
     .getByRole("button", { name: "[CBC 검사] #BASO 더보기" })
     .click();
-  await expect(page.getByRole("menuitem", { name: "재요청" })).toBeDisabled();
+  await expect(
+    page.getByRole("menuitem", { name: "수정·재확정" }),
+  ).toBeDisabled();
   await page.keyboard.press("Escape");
 
   executionTaskStatus = "complete";
@@ -7275,9 +7582,9 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await confirmedActions
     .getByRole("button", { name: "[CBC 검사] #BASO 더보기" })
     .click();
-  await page.getByRole("menuitem", { name: "재요청" }).click();
+  await page.getByRole("menuitem", { name: "수정·재확정" }).click();
   const reRequestDialog = page.getByRole("dialog", {
-    name: "[CBC 검사] #BASO · 오더 재요청",
+    name: "[CBC 검사] #BASO · 오더 수정·재확정",
   });
   await expect(reRequestDialog).toContainText("새 attempt 긴급");
   await reRequestDialog.getByRole("button", { name: "취소" }).click();
@@ -7334,7 +7641,34 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await fixedLeaf.uncheck();
   const editableLeaf = setDialog.getByLabel(/Maropitant.*구성 수량/);
   await editableLeaf.fill("5");
+  const setDraftSaveResponse = page.waitForResponse((response) => {
+    if (
+      response.request().method() !== "PATCH" ||
+      !response.url().includes("/chart/order-drafts")
+    ) {
+      return false;
+    }
+    try {
+      const body = response.request().postDataJSON() as Record<
+        string,
+        unknown
+      >;
+      return (
+        Array.isArray(body.rows) &&
+        body.rows.some(
+          (row) =>
+            Boolean(row) &&
+            typeof row === "object" &&
+            (row as Record<string, unknown>).rowType === "set",
+        )
+      );
+    } catch {
+      return false;
+    }
+  });
   await setDialog.getByRole("button", { name: "구성 적용" }).click();
+  const setDraftResponse = await setDraftSaveResponse;
+  expect(setDraftResponse.status(), await setDraftResponse.text()).toBe(200);
 
   const setParentRow = page
     .getByRole("row")
@@ -7398,17 +7732,25 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
     },
   });
 
+  await expect(page.getByTestId("chart-order-footer")).toContainText(
+    "저장됨",
+    { timeout: 10_000 },
+  );
+
   await page.reload();
   const reloadedParent = page
     .getByRole("row")
     .filter({ hasText: "구토 기본 세트" })
     .first();
   await expect(reloadedParent).toContainText("Order 세트");
-  const reloadedLeaf = page
-    .getByRole("row")
-    .filter({ hasText: "Order 세트 구성" })
-    .filter({ hasText: "Maropitant" })
-    .first();
+  const reloadedSetToggle = page.getByRole("button", {
+    name: /Maropitant.*세트 제외/,
+  });
+  const reloadedLeafId = await reloadedSetToggle
+    .locator("xpath=ancestor::tr")
+    .getAttribute("data-testid");
+  expect(reloadedLeafId).toBeTruthy();
+  const reloadedLeaf = page.getByTestId(reloadedLeafId!);
   await expect(
     reloadedLeaf.getByRole("checkbox", { name: /Maropitant.*선택/ }),
   ).toBeDisabled();
@@ -7547,10 +7889,34 @@ test("chart confirmation continues after an ambiguous draft response only when r
       taskRequired: true,
       taxIncluded: true,
       workspaceCatalogItemId: "svc-med-maropitant",
+      planOrderAuthority: {
+        schemaVersion: 1,
+        calculationMode: "fixed_product",
+        dispenseUnit: "tablet",
+        fixedProductQuantity: 1,
+        fixedProductQuantityBasis: "head",
+        preparationPolicy: {
+          increment: 1,
+          roundingMode: "nearest",
+          displayPrecision: 0,
+        },
+        priceBasis: "per_product_unit",
+        billingUnit: "tablet",
+        taxClass: "taxable",
+      },
     },
     appliedPriceSnapshot: {},
     calculationInputs: {},
-    calculationOutputs: {},
+    calculationOutputs: {
+      dispenseApplicability: true,
+      calculationStatus: "ready",
+      theoreticalDispenseQuantity: 1,
+      calculatedDispenseQuantity: 1,
+      actualDispenseQuantity: 1,
+      actualDispenseUnit: "tablet",
+      actualDispenseSource: "system",
+      requiresReconfirmation: false,
+    },
     billingReflectionEnabled: true,
     orderConfirmationStatus: "draft",
     status: "requested",

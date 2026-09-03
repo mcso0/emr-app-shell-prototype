@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -68,6 +69,15 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OrderWorkTable } from "@/features/dispensing/components/order-work-table";
 import {
+  FulfillmentWorkLifecycleAction,
+  type FulfillmentTransitionOptions,
+} from "@/features/fulfillment/components/work-lifecycle-action";
+import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
+import type {
+  FulfillmentWorkItemAction,
+  FulfillmentWorkItemStatus,
+} from "@/features/fulfillment/server-fulfillment-work-item-core";
+import {
   isLegacySalesDemoWorkspace,
   resolveWorkspacePathname,
 } from "@/lib/emr-domain/demo-workspaces";
@@ -104,13 +114,9 @@ import type { EmrTableDensity } from "@/components/emr/table-density";
 
 type OrderGroupFilter = "all" | "oral" | "other";
 type FulfillmentQueueType = "dispensing" | "treatment";
-type FulfillmentWorkItemStatus =
-  | "requested"
-  | "accepted"
-  | "in_progress"
-  | "completed"
-  | "cancelled"
-  | "returned";
+type FulfillmentTransitionCommand =
+  | FulfillmentWorkItemAction
+  | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
 type FulfillmentWorkItem = {
   assignedToUserId?: string | null;
   completedAt?: string | null;
@@ -121,6 +127,8 @@ type FulfillmentWorkItem = {
   patientId?: string | null;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
+  requestCycle: number;
+  rowRevision: number;
   sourceSnapshot?: {
     dispensingLineage?: {
       clinicalUseAllowed: boolean;
@@ -216,6 +224,27 @@ type DispensingContentBodyProps = Pick<
   queueItemCount: number;
   selectedQueueItem: OrderQueueItem | null;
 };
+
+async function loadFulfillmentEligibleAssigneesRoute({
+  workItemId,
+  workspaceId,
+}: {
+  workItemId: string;
+  workspaceId: string;
+}): Promise<FulfillmentEligibleAssignee[]> {
+  const response = await fetch(
+    `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/assignees`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+  );
+  const body = (await response.json()) as {
+    assignees?: FulfillmentEligibleAssignee[];
+    ok?: boolean;
+  };
+  if (!response.ok || !body.ok || !Array.isArray(body.assignees)) {
+    throw new Error("eligible_assignees_unavailable");
+  }
+  return body.assignees;
+}
 
 export function DispensingSlotAvailabilityProvider({
   children,
@@ -435,11 +464,16 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   }, [cacheKey]);
 
   const updateStatus = useCallback(
-    async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
+    async (workItemId: string, transitions: FulfillmentTransitionCommand[]) => {
       let allTransitionsSucceeded = true;
+      let expectedRevision = snapshot.workItems.find(
+        (item) => item.id === workItemId,
+      )?.rowRevision;
+      if (!expectedRevision) return false;
 
-      for (const status of statuses) {
-        const isAssignmentCancellation = status === "returned";
+      for (const transition of transitions) {
+        const command =
+          typeof transition === "string" ? { action: transition } : transition;
         const response = await fetch(
           `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
           {
@@ -449,9 +483,9 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
               "x-clair-demo-session-user-id": "user-tech",
             },
             body: JSON.stringify({
-              status,
-              assignedToUserId: isAssignmentCancellation ? null : "user-tech",
-              reason: isAssignmentCancellation ? "담당 취소" : undefined,
+              ...command,
+              commandId: crypto.randomUUID(),
+              expectedRevision,
             }),
           },
         );
@@ -459,11 +493,17 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
           allTransitionsSucceeded = false;
           break;
         }
+        const body = (await response.json()) as {
+          workItems?: FulfillmentWorkItem[];
+        };
+        expectedRevision =
+          body.workItems?.find((item) => item.id === workItemId)?.rowRevision ??
+          expectedRevision + 1;
       }
       await refresh();
       return allTransitionsSucceeded;
     },
-    [refresh, workspaceId],
+    [refresh, snapshot.workItems, workspaceId],
   );
 
   return {
@@ -758,7 +798,7 @@ function mapFulfillmentToQueueStatusId(
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
-  if (status === "in_progress" || status === "accepted") return "inProgress";
+  if (status === "in_progress" || status === "paused") return "inProgress";
   if (status === "requested") return "waiting";
   return fallback;
 }
@@ -767,7 +807,8 @@ function mapFulfillmentToOrderGroupWorkStatus(
   status: FulfillmentWorkItemStatus,
 ) {
   if (status === "completed") return "완료";
-  if (status === "accepted" || status === "in_progress") return "진행중";
+  if (status === "in_progress") return "진행중";
+  if (status === "paused") return "일시중지";
   return "요청";
 }
 
@@ -779,30 +820,24 @@ function mapFulfillmentToOrderRowWorkStatus(status: FulfillmentWorkItemStatus) {
 function getFulfillmentTransitionPath(
   current: FulfillmentWorkItemStatus,
   target: "in_progress" | "completed" | "requested",
-): FulfillmentWorkItemStatus[] | null {
+): FulfillmentWorkItemAction[] | null {
   if (target === "in_progress") {
-    if (current === "requested") return ["accepted", "in_progress"];
-    if (current === "accepted") return ["in_progress"];
-    if (current === "returned") return ["requested", "accepted", "in_progress"];
+    if (current === "requested") return ["start"];
+    if (current === "paused") return ["resume"];
     if (current === "in_progress") return [];
     return null;
   }
 
   if (target === "completed") {
     if (current === "requested")
-      return ["accepted", "in_progress", "completed"];
-    if (current === "accepted") return ["in_progress", "completed"];
-    if (current === "in_progress") return ["completed"];
-    if (current === "returned")
-      return ["requested", "accepted", "in_progress", "completed"];
+      return ["start", "complete"];
+    if (current === "in_progress") return ["complete"];
+    if (current === "paused") return ["resume", "complete"];
     if (current === "completed") return [];
     return null;
   }
 
-  if (current === "requested") return [];
-  if (current === "accepted" || current === "in_progress")
-    return ["returned", "requested"];
-  if (current === "returned") return ["requested"];
+  if (current === "requested") return ["unassign"];
   return null;
 }
 
@@ -1569,8 +1604,8 @@ function getFulfillmentHistoryStatusLabel(
   status: FulfillmentWorkItemStatus,
 ) {
   if (status === "requested") return "요청";
-  if (status === "accepted") return "담당 접수";
   if (status === "in_progress") return `${instructionType} 시작`;
+  if (status === "paused") return "일시중지";
   if (status === "completed") return `${instructionType} 완료`;
   if (status === "cancelled") return "취소";
   return "재요청 필요";
@@ -1849,8 +1884,8 @@ function getFulfillmentQueueTypeLabel(queueType?: FulfillmentQueueType) {
 
 function getFulfillmentStatusLabel(status?: FulfillmentWorkItemStatus) {
   if (status === "requested") return "요청";
-  if (status === "accepted") return "접수";
   if (status === "in_progress") return "진행중";
+  if (status === "paused") return "일시중지";
   if (status === "completed") return "완료";
   if (status === "cancelled") return "취소";
   if (status === "returned") return "재요청";
@@ -2024,7 +2059,7 @@ function DispensingContentBody({
   const dispensingQuantityFacts = getDispensingQuantityFacts(
     selectedFulfillmentWorkItem,
   );
-  const [tableGroups, setTableGroups] = useState<OrderTableGroup[]>(() =>
+  const initialTableGroups = useMemo(() =>
     selectedFulfillmentWorkItem
       ? createLiveOrderTableGroups(
           selectedQueueItem,
@@ -2036,6 +2071,38 @@ function DispensingContentBody({
             selectedQueueItem,
             selectedFulfillmentWorkItem,
           ),
+    [
+      allowLegacyFixtureFallback,
+      selectedFulfillmentWorkItem,
+      selectedQueueItem,
+      selectedQueueItemId,
+    ],
+  );
+  const tableGroupsSource = selectedFulfillmentWorkItem
+    ? `${selectedFulfillmentWorkItem.id}:${selectedFulfillmentWorkItem.rowRevision}`
+    : `fixture:${selectedQueueItemId ?? "none"}`;
+  const [tableGroupsState, setTableGroupsState] = useState<{
+    groups: OrderTableGroup[];
+    source: string;
+  }>(() => ({ groups: initialTableGroups, source: tableGroupsSource }));
+  const tableGroups =
+    tableGroupsState.source === tableGroupsSource
+      ? tableGroupsState.groups
+      : initialTableGroups;
+  const setTableGroups = useCallback(
+    (updater: SetStateAction<OrderTableGroup[]>) => {
+      setTableGroupsState((current) => {
+        const currentGroups =
+          current.source === tableGroupsSource
+            ? current.groups
+            : initialTableGroups;
+        const groups =
+          typeof updater === "function" ? updater(currentGroups) : updater;
+
+        return { groups, source: tableGroupsSource };
+      });
+    },
+    [initialTableGroups, tableGroupsSource],
   );
   const selectedQueueStatusLabel = getQueueStatusLabel(
     moduleId,
@@ -2240,6 +2307,26 @@ function DispensingContentBody({
     setMutationState("idle");
     return true;
   };
+  const transitionSelectedFulfillment = async (
+    action: FulfillmentWorkItemAction,
+    options?: FulfillmentTransitionOptions,
+  ) => {
+    if (!selectedFulfillmentWorkItem) return false;
+    setMutationState("saving");
+    const updated = await fulfillmentQueue.updateStatus(
+      selectedFulfillmentWorkItem.id,
+      [{ action, ...options }],
+    );
+    setMutationState(updated ? "idle" : "error");
+    return updated;
+  };
+  const loadSelectedEligibleAssignees = () =>
+    selectedFulfillmentWorkItem
+      ? loadFulfillmentEligibleAssigneesRoute({
+          workItemId: selectedFulfillmentWorkItem.id,
+          workspaceId: selectedFulfillmentWorkItem.workspaceId,
+        })
+      : Promise.resolve([]);
   const startGroup = async (groupId: string) => {
     if (selectedFulfillmentWorkItem) {
       const updated = await updateSelectedFulfillmentStatus("in_progress");
@@ -2328,7 +2415,25 @@ function DispensingContentBody({
                   <PrinterIcon data-icon="inline-start" />
                   출력하기
                 </Button>
-                {primaryGroup ? (
+                {selectedFulfillmentWorkItem ? (
+                  <FulfillmentWorkLifecycleAction
+                    activityLabel={instructionType}
+                    assignedToUserId={
+                      selectedFulfillmentWorkItem.assignedToUserId
+                    }
+                    busy={mutationState === "saving"}
+                    completeLabel={completeLabel}
+                    loadEligibleAssignees={loadSelectedEligibleAssignees}
+                    onTransition={transitionSelectedFulfillment}
+                    size="sm"
+                    startPhase={
+                      selectedFulfillmentWorkItem.queueType === "treatment"
+                        ? "treatment"
+                        : "dispensing"
+                    }
+                    status={selectedFulfillmentWorkItem.status}
+                  />
+                ) : primaryGroup ? (
                   <GroupStatusAction
                     group={primaryGroup}
                     statusLabel={statusLabel}
@@ -2545,14 +2650,18 @@ function DispensingContentBody({
                         {getAssigneeSummary(group.assigneeIds)}
                       </span>
                     </Button>
-                    <GroupStatusAction
-                      group={group}
-                      statusLabel={statusLabel}
-                      completeLabel={completeLabel}
-                      onStart={() => startGroup(group.id)}
-                      onComplete={() => completeGroup(group.id)}
-                      onCancelAssignment={() => cancelGroupAssignment(group.id)}
-                    />
+                    {!selectedFulfillmentWorkItem ? (
+                      <GroupStatusAction
+                        group={group}
+                        statusLabel={statusLabel}
+                        completeLabel={completeLabel}
+                        onStart={() => startGroup(group.id)}
+                        onComplete={() => completeGroup(group.id)}
+                        onCancelAssignment={() =>
+                          cancelGroupAssignment(group.id)
+                        }
+                      />
+                    ) : null}
                   </>
                 }
                 onToggle={() => toggleOrderGroup(group.id)}

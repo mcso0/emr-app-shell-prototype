@@ -20,6 +20,11 @@ Product docs explain what CLAiR EMR should do, who it serves, and which product 
 - Role and permission source map: `docs/product/domain/role-permission-source-map.md`
 - Decision log index: `docs/product/decisions/decision-log-index.md`
 
+## Active Product Planning
+
+- Plan/Order `전체` tab legacy column contract: `docs/product/domain/plan-order-all-tab-legacy-column-contract.md`
+- Plan/Order `전체` tab legacy column delivery plan: `docs/product/roadmap/plan-order-all-tab-legacy-column-delivery-plan.md`
+
 ## Reader Surface
 
 The repo `docs/product/` tree is the source of truth. The internal `/prd` app route is a read-only viewer over a curated subset of these Markdown files.

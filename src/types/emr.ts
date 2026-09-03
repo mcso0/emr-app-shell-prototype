@@ -58,7 +58,7 @@ export type OrderStatus = "재요청" | "요청" | "조제중" | "완료" | "취
 
 export type OrderWorkStatus = "대기" | "완료";
 
-export type OrderGroupWorkStatus = "요청" | "진행중" | "완료";
+export type OrderGroupWorkStatus = "요청" | "진행중" | "일시중지" | "완료";
 
 export type OrderQueueType = "dispensing" | "treatment";
 

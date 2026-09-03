@@ -175,6 +175,45 @@ test("generic execution defaults copy through workspace merge and immutable snap
   });
 });
 
+test("Plan/Order authority is snapshotted separately from editable detail inputs", () => {
+  const medication = initializeWorkspaceOrderCatalogFromPresets({
+    now: "2026-09-03T00:00:00.000Z",
+    presets: defaultSystemOrderPresets,
+    workspaceId: "clair-demo",
+  }).items.find((item) => item.id === "ord-med-maropitant");
+  if (!medication) throw new Error("medication fixture missing");
+
+  const planOrderAuthority = {
+    schemaVersion: 1 as const,
+    calculationMode: "fixed_product" as const,
+    dispenseUnit: "tablet",
+    fixedProductQuantity: 1,
+    fixedProductQuantityBasis: "head" as const,
+    preparationPolicy: {
+      increment: 0.5,
+      roundingMode: "nearest" as const,
+      displayPrecision: 1,
+    },
+    priceBasis: "per_product_unit" as const,
+    billingUnit: "tablet",
+    taxClass: "taxable" as const,
+  };
+  const snapshot = createOrderPricingSnapshot({
+    ...medication,
+    planOrderAuthority,
+    defaultDetailInputs: {
+      ...(medication.defaultDetailInputs ?? {}),
+      planOrderAuthority,
+    },
+  });
+
+  expect(snapshot.planOrderAuthority).toEqual(planOrderAuthority);
+  expect(snapshot.defaultDetailInputs).not.toHaveProperty(
+    "planOrderAuthority",
+  );
+  expect(snapshot.planOrderAuthority).not.toBe(planOrderAuthority);
+});
+
 test("dispensing snapshots fall back to medication defaults unless a generic preset is present", async () => {
   const gateway = createMockOrderCatalogGateway();
   const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });

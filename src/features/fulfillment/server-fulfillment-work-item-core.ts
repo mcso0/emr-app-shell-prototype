@@ -58,11 +58,23 @@ import type {
 export type FulfillmentQueueType = EmrOrderType;
 export type FulfillmentWorkItemStatus =
   | "requested"
-  | "accepted"
   | "in_progress"
+  | "paused"
   | "completed"
   | "cancelled"
   | "returned";
+
+export type FulfillmentWorkItemAction =
+  | "assign"
+  | "unassign"
+  | "claim"
+  | "start"
+  | "phase"
+  | "pause"
+  | "resume"
+  | "handoff"
+  | "complete"
+  | "return";
 
 export type FulfillmentSourceSnapshot = {
   billingReflectionEnabled: boolean;
@@ -128,12 +140,15 @@ export type FulfillmentOrderSnapshotInput = {
 };
 
 export type FulfillmentWorkItem = {
+  assignedAt?: string | null;
+  assignedByUserId?: string | null;
   assignedToUserId?: string | null;
   cancelledAt?: string | null;
   clinicalOrderType?: ClinicalOrderType | null;
   completedAt?: string | null;
   createdAt: string;
   dueAt?: string | null;
+  detailedPhase?: string | null;
   destinationModule?: ClinicalOrderDestinationModule | null;
   encounterId: string;
   id: string;
@@ -144,9 +159,14 @@ export type FulfillmentWorkItem = {
   queueType: FulfillmentQueueType;
   reason?: string | null;
   requestedByUserId: string;
+  requestCycle: number;
   returnedAt?: string | null;
+  rowRevision: number;
   sourceSnapshot: FulfillmentSourceSnapshot;
   status: FulfillmentWorkItemStatus;
+  startedAt?: string | null;
+  startedByUserId?: string | null;
+  pausedFromPhase?: string | null;
   taskAttemptNo?: number | null;
   taskId?: string | null;
   taskStatus?: UniversalOrderTaskStatus | null;
@@ -160,7 +180,7 @@ export type FulfillmentWorkItemHistoryEvent = {
   id: string;
   nextStatus: FulfillmentWorkItemStatus;
   orderId: string;
-  previousStatus: FulfillmentWorkItemStatus | null;
+  previousStatus: FulfillmentWorkItemStatus | "accepted" | null;
   reason: string | null;
   source: "work_item_created" | "order_event";
   workItemId: string;
@@ -207,9 +227,12 @@ export type FulfillmentSyncInput = {
 };
 
 export type FulfillmentWorkItemUpdateInput = {
+  action?: FulfillmentWorkItemAction;
   assignedToUserId?: string | null;
+  commandId?: string;
+  detailedPhase?: string | null;
+  expectedRevision?: number;
   reason?: string | null;
-  status?: FulfillmentWorkItemStatus;
 };
 
 export type FulfillmentVetReviewBillingInput = {
@@ -284,10 +307,13 @@ export type FulfillmentWorkItemGateway = {
     workspaceId: string;
   }): Promise<FulfillmentGatewayResult>;
   updateWorkItem(input: {
+    action: FulfillmentWorkItemAction;
     actorUserId: string;
     assignedToUserId?: string | null;
+    commandId: string;
+    detailedPhase?: string | null;
+    expectedRevision: number;
     reason?: string | null;
-    status: FulfillmentWorkItemStatus;
     workItemId: string;
     workspaceId: string;
   }): Promise<FulfillmentGatewayResult>;
@@ -366,7 +392,17 @@ export type FulfillmentWorkItemUpdateResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"reason" | "status" | "workItemId", string>>;
+      fieldErrors: Partial<
+        Record<
+          | "action"
+          | "commandId"
+          | "detailedPhase"
+          | "expectedRevision"
+          | "reason"
+          | "workItemId",
+          string
+        >
+      >;
     }
   | {
       ok: false;
@@ -417,10 +453,15 @@ const fulfillmentMockHistoryStore = new Map<
   FulfillmentWorkItemHistoryEvent[]
 >();
 
+export function resetMockFulfillmentWorkItemState() {
+  fulfillmentMockStore.clear();
+  fulfillmentMockHistoryStore.clear();
+}
+
 const fulfillmentStatuses: FulfillmentWorkItemStatus[] = [
   "requested",
-  "accepted",
   "in_progress",
+  "paused",
   "completed",
   "cancelled",
   "returned",
@@ -733,63 +774,27 @@ export async function updateFulfillmentWorkItem({
   });
   if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
 
-  const assignmentUnchanged =
-    normalized.assignedToUserId === undefined ||
-    normalized.assignedToUserId ===
-      (workItem.workItem.assignedToUserId ?? undefined);
-  const reasonUnchanged =
-    normalized.reason === undefined ||
-    normalized.reason === (workItem.workItem.reason ?? undefined);
-  if (
-    normalized.status === workItem.workItem.status &&
-    assignmentUnchanged &&
-    reasonUnchanged
-  ) {
-    if (normalized.status === "completed") {
-      const downstreamSync = await syncDownstreamFromFulfillmentUpdate({
-        actorUserId,
-        auditGateway,
-        auditNow,
-        auditRequestId,
-        emitBillingReadyNotifications,
-        invoiceCandidateGateway,
-        lifecycleGateway,
-        notificationEventStore,
-        notificationEventScopeId,
-        notificationPersistenceGateway,
-        notificationStateStore,
-        requestedStatus: normalized.status,
-        updatedWorkItem: workItem.workItem,
-        workspaceId,
-      });
-      if (!downstreamSync.ok) return downstreamSync;
-      return {
-        ok: true,
-        status: 200,
-        enforcedBy: "fulfillment-work-item-persistence",
-        downstreamSync: downstreamSync.summary,
-        workItems: [workItem.workItem],
-      };
-    }
-    return {
-      ok: true,
-      status: 200,
-      enforcedBy: "fulfillment-work-item-persistence",
-      workItems: [workItem.workItem],
-    };
-  }
-
   const result = await gateway.updateWorkItem({
+    action: normalized.action as FulfillmentWorkItemAction,
     actorUserId: actorUserId ?? "",
     assignedToUserId: normalized.assignedToUserId,
+    commandId: normalized.commandId,
+    detailedPhase: normalized.detailedPhase,
+    expectedRevision: normalized.expectedRevision as number,
     reason: normalized.reason,
-    status: normalized.status as FulfillmentWorkItemStatus,
     workItemId: normalized.workItemId,
     workspaceId,
   });
 
   if (!result.ok) {
     if (result.status === 409) return result;
+    return { ok: false, status: 500, error: "db_write_failed" };
+  }
+
+  const updatedWorkItem = result.workItems.find(
+    (item) => item.id === normalized.workItemId,
+  );
+  if (!updatedWorkItem) {
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
@@ -805,8 +810,8 @@ export async function updateFulfillmentWorkItem({
     notificationEventScopeId,
     notificationPersistenceGateway,
     notificationStateStore,
-    requestedStatus: normalized.status as FulfillmentWorkItemStatus,
-    updatedWorkItem: result.workItems[0],
+    requestedStatus: updatedWorkItem.status,
+    updatedWorkItem,
     workspaceId,
   });
   if (!downstreamSync.ok) return downstreamSync;
@@ -1185,10 +1190,13 @@ export function createMockFulfillmentWorkItemGateway(
       return { ok: true, workItems: workItems as FulfillmentWorkItem[] };
     },
     async updateWorkItem({
+      action,
       actorUserId,
       assignedToUserId,
+      commandId,
+      detailedPhase,
+      expectedRevision,
       reason,
-      status,
       workItemId,
       workspaceId,
     }) {
@@ -1205,22 +1213,57 @@ export function createMockFulfillmentWorkItemGateway(
           status: 409,
           denialReason: "work_item_unavailable",
         };
-      if (!canTransition(item.status, status)) {
+      if (item.rowRevision !== expectedRevision) {
         return { ok: false, status: 409, denialReason: "invalid_transition" };
       }
 
       const timestamp = now();
+      const transition = applyFulfillmentAction({
+        action,
+        actorUserId,
+        assignedToUserId,
+        current: item,
+        detailedPhase,
+      });
+      if (!transition) {
+        return { ok: false, status: 409, denialReason: "invalid_transition" };
+      }
       const next = {
         ...item,
-        assignedToUserId: assignedToUserId ?? item.assignedToUserId ?? null,
+        ...transition,
+        assignedAt:
+          transition.assignedToUserId !== item.assignedToUserId
+            ? timestamp
+            : item.assignedAt,
+        assignedByUserId:
+          transition.assignedToUserId !== item.assignedToUserId
+            ? transition.assignedToUserId
+              ? actorUserId
+              : null
+            : item.assignedByUserId,
         cancelledAt:
-          status === "cancelled" ? timestamp : (item.cancelledAt ?? null),
+          transition.status === "cancelled"
+            ? timestamp
+            : (item.cancelledAt ?? null),
         completedAt:
-          status === "completed" ? timestamp : (item.completedAt ?? null),
+          transition.status === "completed"
+            ? timestamp
+            : (item.completedAt ?? null),
+        pausedFromPhase:
+          action === "pause"
+            ? item.detailedPhase
+            : action === "resume"
+              ? null
+              : item.pausedFromPhase,
         reason: normalizeOptionalField(reason) ?? item.reason ?? null,
+        rowRevision: item.rowRevision + 1,
         returnedAt:
-          status === "returned" ? timestamp : (item.returnedAt ?? null),
-        status,
+          transition.status === "returned"
+            ? timestamp
+            : (item.returnedAt ?? null),
+        startedAt: action === "start" ? timestamp : item.startedAt,
+        startedByUserId:
+          action === "start" ? actorUserId : item.startedByUserId,
         updatedAt: timestamp,
       } satisfies FulfillmentWorkItem;
       fulfillmentMockStore.set(
@@ -1232,13 +1275,14 @@ export function createMockFulfillmentWorkItemGateway(
         actorUserId: actorUserId || null,
         createdAt: timestamp,
         id: `history-${workItemId}-${history.length + 1}`,
-        nextStatus: status,
+        nextStatus: next.status,
         orderId: item.orderId,
         previousStatus: item.status,
         reason: normalizeOptionalField(reason) ?? null,
         source: "order_event",
         workItemId,
       });
+      void commandId;
       fulfillmentMockHistoryStore.set(
         buildWorkItemKey(workspaceId, item.orderId),
         history,
@@ -1280,13 +1324,16 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_update_fulfillment_work_item",
+    functionName: "clair_transition_fulfillment_work_item",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_work_item_id: string;
-      p_status: FulfillmentWorkItemStatus;
+      p_action: FulfillmentWorkItemAction;
       p_assigned_to_user_id?: string | null;
+      p_command_id: string;
+      p_detailed_phase?: string | null;
+      p_expected_revision: number;
       p_reason?: string | null;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
@@ -1363,22 +1410,29 @@ export function createSupabaseFulfillmentWorkItemGateway(
       return { ok: true, workItems: mapWorkItemRows(data) };
     },
     async updateWorkItem({
+      action,
       actorUserId,
       assignedToUserId,
+      commandId,
+      detailedPhase,
+      expectedRevision,
       reason,
-      status,
       workItemId,
       workspaceId,
     }) {
       const { data, error } = await client.rpc(
-        "clair_update_fulfillment_work_item",
+        "clair_transition_fulfillment_work_item",
         {
           p_workspace_id: workspaceId,
           p_actor_user_id: actorUserId,
           p_work_item_id: normalizeUuidForRpc(workItemId) ?? workItemId,
-          p_status: status,
+          p_action: action as FulfillmentWorkItemAction,
           p_assigned_to_user_id:
             normalizeUuidForRpc(assignedToUserId ?? undefined) ?? null,
+          p_command_id:
+            normalizeUuidForRpc(commandId) ?? commandId ?? "",
+          p_detailed_phase: normalizeOptionalField(detailedPhase) ?? null,
+          p_expected_revision: expectedRevision ?? 0,
           p_reason: normalizeOptionalField(reason) ?? null,
         },
       );
@@ -1641,6 +1695,10 @@ function buildWorkItemFromOrder({
   });
 
   return {
+    assignedAt: order.currentAssigneeUserId ? order.createdAt : null,
+    assignedByUserId: order.currentAssigneeUserId
+      ? actorUserId || order.requestedByUserId
+      : null,
     assignedToUserId: order.currentAssigneeUserId ?? null,
     cancelledAt: null,
     completedAt:
@@ -1657,7 +1715,9 @@ function buildWorkItemFromOrder({
     queueType: order.orderType,
     reason: null,
     requestedByUserId: actorUserId || order.requestedByUserId,
+    requestCycle: 1,
     returnedAt: null,
+    rowRevision: 1,
     sourceSnapshot: {
       billingReflectionEnabled,
       detail: buildSnapshotDetail(order, orderSnapshot, frozenSnapshot),
@@ -2209,7 +2269,7 @@ async function emitFulfillmentDownstreamAuditEvents({
 function mapFulfillmentStatusToLifecycleStatus(
   status: FulfillmentWorkItemStatus,
 ): ChartOrderLifecycleStatus | null {
-  if (status === "accepted" || status === "in_progress") return "in_progress";
+  if (status === "in_progress" || status === "paused") return "in_progress";
   if (status === "completed") return "completed";
   if (status === "cancelled") return "cancelled";
   if (status === "returned") return "re_requested";
@@ -2440,23 +2500,78 @@ function getFulfillmentWorkItemOperatingDate(item: FulfillmentWorkItem) {
   );
 }
 
-function canTransition(
-  current: FulfillmentWorkItemStatus,
-  next: FulfillmentWorkItemStatus,
-) {
-  if (current === next) return true;
-  const allowed: Record<
-    FulfillmentWorkItemStatus,
-    FulfillmentWorkItemStatus[]
-  > = {
-    requested: ["accepted", "cancelled", "returned"],
-    accepted: ["in_progress", "cancelled", "returned"],
-    in_progress: ["completed", "cancelled", "returned"],
-    completed: [],
-    cancelled: [],
-    returned: ["requested", "cancelled"],
-  };
-  return allowed[current].includes(next);
+function applyFulfillmentAction({
+  action,
+  actorUserId,
+  assignedToUserId,
+  current,
+  detailedPhase,
+}: {
+  action: FulfillmentWorkItemAction;
+  actorUserId: string;
+  assignedToUserId?: string | null;
+  current: FulfillmentWorkItem;
+  detailedPhase?: string | null;
+}): Pick<FulfillmentWorkItem, "assignedToUserId" | "detailedPhase" | "status"> | null {
+  if (["completed", "returned", "cancelled"].includes(current.status)) {
+    return null;
+  }
+  if (action === "assign") {
+    return current.status === "requested" && assignedToUserId
+      ? { assignedToUserId, detailedPhase: current.detailedPhase, status: current.status }
+      : null;
+  }
+  if (action === "unassign") {
+    return current.status === "requested"
+      ? { assignedToUserId: null, detailedPhase: current.detailedPhase, status: current.status }
+      : null;
+  }
+  if (action === "claim") {
+    return current.status === "requested"
+      ? { assignedToUserId: actorUserId, detailedPhase: current.detailedPhase, status: current.status }
+      : null;
+  }
+  if (action === "start") {
+    return current.status === "requested"
+      ? {
+          assignedToUserId: current.assignedToUserId ?? actorUserId,
+          detailedPhase: detailedPhase ?? null,
+          status: "in_progress",
+        }
+      : null;
+  }
+  if (action === "phase") {
+    return current.status === "in_progress" && detailedPhase
+      ? { assignedToUserId: current.assignedToUserId, detailedPhase, status: current.status }
+      : null;
+  }
+  if (action === "pause") {
+    return current.status === "in_progress"
+      ? { assignedToUserId: current.assignedToUserId, detailedPhase: current.detailedPhase, status: "paused" }
+      : null;
+  }
+  if (action === "resume") {
+    return current.status === "paused"
+      ? {
+          assignedToUserId: current.assignedToUserId,
+          detailedPhase: detailedPhase ?? current.pausedFromPhase ?? current.detailedPhase,
+          status: "in_progress",
+        }
+      : null;
+  }
+  if (action === "handoff") {
+    return ["in_progress", "paused"].includes(current.status) && assignedToUserId
+      ? { assignedToUserId, detailedPhase: current.detailedPhase, status: current.status }
+      : null;
+  }
+  if (action === "complete") {
+    return current.status === "in_progress"
+      ? { assignedToUserId: current.assignedToUserId, detailedPhase: current.detailedPhase, status: "completed" }
+      : null;
+  }
+  return ["requested", "in_progress", "paused"].includes(current.status)
+    ? { assignedToUserId: current.assignedToUserId, detailedPhase: current.detailedPhase, status: "returned" }
+    : null;
 }
 
 function normalizeFilters(input: FulfillmentWorkItemFilters) {
@@ -2532,18 +2647,35 @@ function normalizeUpdateInput(
   input: FulfillmentWorkItemUpdateInput,
 ) {
   return {
+    action: input.action,
     assignedToUserId: normalizeOptionalField(input.assignedToUserId),
+    commandId: trimToUndefined(input.commandId) ?? "",
+    detailedPhase: normalizeOptionalField(input.detailedPhase),
+    expectedRevision: input.expectedRevision,
     reason: normalizeOptionalField(input.reason),
-    status: input.status,
     workItemId: trimToUndefined(workItemId) ?? "",
   };
 }
 
 function validateUpdateInput(input: ReturnType<typeof normalizeUpdateInput>) {
-  const fieldErrors: Partial<Record<"reason" | "status" | "workItemId", string>> = {};
+  const fieldErrors: Partial<
+    Record<
+      "action" | "commandId" | "detailedPhase" | "expectedRevision" | "reason" | "workItemId",
+      string
+    >
+  > = {};
   if (!input.workItemId) fieldErrors.workItemId = "업무 항목을 선택해 주세요.";
-  if (!input.status || !isFulfillmentStatus(input.status)) {
-    fieldErrors.status = "변경할 상태를 선택해 주세요.";
+  if (!input.action || !isFulfillmentAction(input.action)) {
+    fieldErrors.action = "업무 동작을 선택해 주세요.";
+  }
+  if (!normalizeUuidForRpc(input.commandId)) {
+    fieldErrors.commandId = "업무 명령 식별자를 확인해 주세요.";
+  }
+  if (!Number.isInteger(input.expectedRevision) || (input.expectedRevision ?? 0) < 1) {
+    fieldErrors.expectedRevision = "업무 버전을 확인해 주세요.";
+  }
+  if (["handoff", "return"].includes(input.action ?? "") && !input.reason) {
+    fieldErrors.reason = "변경 사유를 입력해 주세요.";
   }
   if (input.reason && input.reason.length > 500) {
     fieldErrors.reason = "변경 사유는 500자 이하로 입력해 주세요.";
@@ -2551,6 +2683,21 @@ function validateUpdateInput(input: ReturnType<typeof normalizeUpdateInput>) {
   return Object.keys(fieldErrors).length > 0
     ? { valid: false as const, fieldErrors }
     : { valid: true as const, fieldErrors: {} };
+}
+
+function isFulfillmentAction(value: unknown): value is FulfillmentWorkItemAction {
+  return [
+    "assign",
+    "unassign",
+    "claim",
+    "start",
+    "phase",
+    "pause",
+    "resume",
+    "handoff",
+    "complete",
+    "return",
+  ].includes(String(value));
 }
 
 function permissionForQueue(
@@ -2867,6 +3014,7 @@ function mapWorkItemHistoryEvent(
     typeof event.workItemId !== "string" ||
     typeof event.orderId !== "string" ||
     (event.previousStatus !== null &&
+      event.previousStatus !== "accepted" &&
       !isFulfillmentStatus(event.previousStatus)) ||
     !isFulfillmentStatus(event.nextStatus) ||
     (event.actorUserId !== null && typeof event.actorUserId !== "string") ||
@@ -2893,6 +3041,10 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     !isFulfillmentStatus(row.status) ||
     typeof row.priority !== "string" ||
     typeof row.requestedByUserId !== "string" ||
+    !Number.isInteger(row.requestCycle) ||
+    Number(row.requestCycle) < 1 ||
+    !Number.isInteger(row.rowRevision) ||
+    Number(row.rowRevision) < 1 ||
     typeof row.createdAt !== "string" ||
     typeof row.updatedAt !== "string" ||
     !row.sourceSnapshot ||
@@ -2901,6 +3053,13 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     return null;
   }
   if (
+    (row.assignedAt !== undefined && row.assignedAt !== null && typeof row.assignedAt !== "string") ||
+    (row.assignedByUserId !== undefined && row.assignedByUserId !== null && typeof row.assignedByUserId !== "string") ||
+    (row.assignedToUserId !== undefined && row.assignedToUserId !== null && typeof row.assignedToUserId !== "string") ||
+    (row.detailedPhase !== undefined && row.detailedPhase !== null && typeof row.detailedPhase !== "string") ||
+    (row.pausedFromPhase !== undefined && row.pausedFromPhase !== null && typeof row.pausedFromPhase !== "string") ||
+    (row.startedAt !== undefined && row.startedAt !== null && typeof row.startedAt !== "string") ||
+    (row.startedByUserId !== undefined && row.startedByUserId !== null && typeof row.startedByUserId !== "string") ||
     (row.taskId !== undefined &&
       row.taskId !== null &&
       typeof row.taskId !== "string") ||

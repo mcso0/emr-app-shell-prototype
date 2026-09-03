@@ -96,6 +96,15 @@ import {
   type LabWorkItem,
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
+import {
+  FulfillmentWorkLifecycleAction,
+  type FulfillmentTransitionOptions,
+} from "@/features/fulfillment/components/work-lifecycle-action";
+import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
+import type {
+  FulfillmentWorkItemAction,
+  FulfillmentWorkItemStatus,
+} from "@/features/fulfillment/server-fulfillment-work-item-core";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
@@ -364,13 +373,9 @@ const labStatusGroupColorToken: Record<LabResult["status"], string> = {
 type LabResultTab = "all" | "cbc" | "chemistry";
 type ImagingReadingStatus = "requested" | "reading" | "completed";
 type FulfillmentQueueType = "lab" | "imaging";
-type FulfillmentWorkItemStatus =
-  | "requested"
-  | "accepted"
-  | "in_progress"
-  | "completed"
-  | "cancelled"
-  | "returned";
+type FulfillmentTransitionCommand =
+  | FulfillmentWorkItemAction
+  | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
 type FulfillmentWorkItem = {
   assignedToUserId?: string | null;
   completedAt?: string | null;
@@ -380,6 +385,8 @@ type FulfillmentWorkItem = {
   orderId: string;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
+  requestCycle: number;
+  rowRevision: number;
   sourceSnapshot?: {
     detail?: Record<string, unknown>;
     guardianName?: string;
@@ -405,6 +412,27 @@ type FulfillmentQueueSnapshot = {
   workItems: FulfillmentWorkItem[];
 };
 type FulfillmentQueueReadStatus = "loading" | "ready";
+
+async function loadFulfillmentEligibleAssigneesRoute({
+  workItemId,
+  workspaceId,
+}: {
+  workItemId: string;
+  workspaceId: string;
+}): Promise<FulfillmentEligibleAssignee[]> {
+  const response = await fetch(
+    `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/assignees`,
+    { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+  );
+  const body = (await response.json()) as {
+    assignees?: FulfillmentEligibleAssignee[];
+    ok?: boolean;
+  };
+  if (!response.ok || !body.ok || !Array.isArray(body.assignees)) {
+    throw new Error("eligible_assignees_unavailable");
+  }
+  return body.assignees;
+}
 type LabResultSheetCatalogItem = {
   categoryId: string;
   categoryName: string;
@@ -755,10 +783,16 @@ function useFulfillmentQueue(
   }, [cacheKey]);
 
   const updateStatus = useCallback(
-    async (workItemId: string, statuses: FulfillmentWorkItemStatus[]) => {
+    async (workItemId: string, transitions: FulfillmentTransitionCommand[]) => {
       let allTransitionsSucceeded = true;
+      let expectedRevision = snapshot.workItems.find(
+        (item) => item.id === workItemId,
+      )?.rowRevision;
+      if (!expectedRevision) return false;
 
-      for (const status of statuses) {
+      for (const transition of transitions) {
+        const command =
+          typeof transition === "string" ? { action: transition } : transition;
         const response = await fetch(
           `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
           {
@@ -767,18 +801,28 @@ function useFulfillmentQueue(
               "content-type": "application/json",
               "x-clair-demo-session-user-id": "user-tech",
             },
-            body: JSON.stringify({ status, assignedToUserId: "user-tech" }),
+            body: JSON.stringify({
+              ...command,
+              commandId: crypto.randomUUID(),
+              expectedRevision,
+            }),
           },
         );
         if (!response.ok) {
           allTransitionsSucceeded = false;
           break;
         }
+        const body = (await response.json()) as {
+          workItems?: FulfillmentWorkItem[];
+        };
+        expectedRevision =
+          body.workItems?.find((item) => item.id === workItemId)?.rowRevision ??
+          expectedRevision + 1;
       }
       await refresh();
       return allTransitionsSucceeded;
     },
-    [refresh, workspaceId],
+    [refresh, snapshot.workItems, workspaceId],
   );
 
   return {
@@ -1017,30 +1061,24 @@ async function saveLabResultEntry({
 function getFulfillmentTransitionPath(
   current: FulfillmentWorkItemStatus,
   target: "in_progress" | "completed" | "requested",
-): FulfillmentWorkItemStatus[] | null {
+): FulfillmentWorkItemAction[] | null {
   if (target === "in_progress") {
-    if (current === "requested") return ["accepted", "in_progress"];
-    if (current === "accepted") return ["in_progress"];
-    if (current === "returned") return ["requested", "accepted", "in_progress"];
+    if (current === "requested") return ["start"];
+    if (current === "paused") return ["resume"];
     if (current === "in_progress") return [];
     return null;
   }
 
   if (target === "completed") {
     if (current === "requested")
-      return ["accepted", "in_progress", "completed"];
-    if (current === "accepted") return ["in_progress", "completed"];
-    if (current === "in_progress") return ["completed"];
-    if (current === "returned")
-      return ["requested", "accepted", "in_progress", "completed"];
+      return ["start", "complete"];
+    if (current === "in_progress") return ["complete"];
+    if (current === "paused") return ["resume", "complete"];
     if (current === "completed") return [];
     return null;
   }
 
-  if (current === "requested") return [];
-  if (current === "accepted" || current === "in_progress")
-    return ["returned", "requested"];
-  if (current === "returned") return ["requested"];
+  if (current === "requested") return ["unassign"];
   return null;
 }
 
@@ -1278,8 +1316,7 @@ function mapFulfillmentToLabStatus(
   fallback: LabResult["status"],
 ): LabResult["status"] {
   if (status === "completed") return "completed";
-  if (status === "in_progress") return "entered";
-  if (status === "accepted") return "received";
+  if (status === "in_progress" || status === "paused") return "entered";
   if (status === "requested" || status === "returned") return "pending";
   if (status === "cancelled") return fallback;
   return fallback;
@@ -1290,8 +1327,7 @@ function mapFulfillmentToImagingStatus(
   fallback: ImagingStudyStatus,
 ): ImagingStudyStatus {
   if (status === "completed") return "reviewed";
-  if (status === "in_progress") return "reading";
-  if (status === "accepted") return "captured";
+  if (status === "in_progress" || status === "paused") return "reading";
   if (status === "requested" || status === "returned") return "requested";
   if (status === "cancelled") return fallback;
   return fallback;
@@ -3355,6 +3391,22 @@ export function LabContent({
       status: "requested",
     });
   };
+  const transitionFulfillment = (
+    action: FulfillmentWorkItemAction,
+    options?: FulfillmentTransitionOptions,
+  ) =>
+    fulfillmentWorkItem
+      ? fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [
+          { action, ...options },
+        ])
+      : Promise.resolve(false);
+  const loadEligibleAssignees = () =>
+    fulfillmentWorkItem
+      ? loadFulfillmentEligibleAssigneesRoute({
+          workItemId: fulfillmentWorkItem.id,
+          workspaceId: fulfillmentWorkItem.workspaceId,
+        })
+      : Promise.resolve([]);
 
   useEffect(() => {
     if (queryLabResultId && queryLabResultId !== selectedLabResultId) {
@@ -3473,18 +3525,30 @@ export function LabContent({
                     </span>
                   ) : null}
                 </Button>
-                <LabImagingStatusAction
-                  activeLabel="검사중"
-                  activeStatus="in_progress"
-                  completeLabel="검사완료"
-                  completedStatus="completed"
-                  menuAriaLabel="검사 상태 액션"
-                  requestedStatus="requested"
-                  status={assignment.status}
-                  onStart={startAssignment}
-                  onComplete={completeAssignment}
-                  onCancelAssignment={cancelAssignment}
-                />
+                {fulfillmentWorkItem ? (
+                  <FulfillmentWorkLifecycleAction
+                    activityLabel="검사"
+                    assignedToUserId={fulfillmentWorkItem.assignedToUserId}
+                    completeLabel="검사완료"
+                    loadEligibleAssignees={loadEligibleAssignees}
+                    onTransition={transitionFulfillment}
+                    startPhase="inputting"
+                    status={fulfillmentWorkItem.status}
+                  />
+                ) : (
+                  <LabImagingStatusAction
+                    activeLabel="검사중"
+                    activeStatus="in_progress"
+                    completeLabel="검사완료"
+                    completedStatus="completed"
+                    menuAriaLabel="검사 상태 액션"
+                    requestedStatus="requested"
+                    status={assignment.status}
+                    onStart={startAssignment}
+                    onComplete={completeAssignment}
+                    onCancelAssignment={cancelAssignment}
+                  />
+                )}
               </>
             }
           />
@@ -4110,6 +4174,22 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
       studyId: initialAssignment.studyId,
     });
   };
+  const transitionFulfillment = (
+    action: FulfillmentWorkItemAction,
+    options?: FulfillmentTransitionOptions,
+  ) =>
+    fulfillmentWorkItem
+      ? fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [
+          { action, ...options },
+        ])
+      : Promise.resolve(false);
+  const loadEligibleAssignees = () =>
+    fulfillmentWorkItem
+      ? loadFulfillmentEligibleAssigneesRoute({
+          workItemId: fulfillmentWorkItem.id,
+          workspaceId: fulfillmentWorkItem.workspaceId,
+        })
+      : Promise.resolve([]);
   const completeAssignment = async () => {
     if (fulfillmentWorkItem) {
       const transitionPath = getFulfillmentTransitionPath(
@@ -4232,18 +4312,30 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                 <Button variant="outline" size="sm" className="bg-card">
                   PACS
                 </Button>
-                <LabImagingStatusAction
-                  activeLabel="판독중"
-                  activeStatus="reading"
-                  completeLabel="판독완료"
-                  completedStatus="completed"
-                  menuAriaLabel="판독 상태 액션"
-                  requestedStatus="requested"
-                  status={assignment.status}
-                  onStart={startAssignment}
-                  onComplete={completeAssignment}
-                  onCancelAssignment={cancelAssignment}
-                />
+                {fulfillmentWorkItem ? (
+                  <FulfillmentWorkLifecycleAction
+                    activityLabel="판독"
+                    assignedToUserId={fulfillmentWorkItem.assignedToUserId}
+                    completeLabel="판독완료"
+                    loadEligibleAssignees={loadEligibleAssignees}
+                    onTransition={transitionFulfillment}
+                    startPhase="interpretation_in_progress"
+                    status={fulfillmentWorkItem.status}
+                  />
+                ) : (
+                  <LabImagingStatusAction
+                    activeLabel="판독중"
+                    activeStatus="reading"
+                    completeLabel="판독완료"
+                    completedStatus="completed"
+                    menuAriaLabel="판독 상태 액션"
+                    requestedStatus="requested"
+                    status={assignment.status}
+                    onStart={startAssignment}
+                    onComplete={completeAssignment}
+                    onCancelAssignment={cancelAssignment}
+                  />
+                )}
               </>
             }
           />

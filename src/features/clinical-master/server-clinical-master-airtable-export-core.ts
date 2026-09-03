@@ -1,3 +1,5 @@
+import { parsePlanOrderAuthority } from "@/features/chart/plan-order-authority-domain";
+
 // Server-only contract boundary for the reviewed Airtable authoring export.
 //
 // This module deliberately has no Airtable, database, or runtime-publisher
@@ -249,6 +251,7 @@ const detailAllowedKeys: Record<ClinicalMasterAirtableRecordType, ReadonlySet<st
     "defaultBillingReflectionEnabled",
     "defaultQuantity",
     "species",
+    "planOrderAuthority",
   ]),
   species: new Set(["speciesCode"]),
   unit: new Set(["unitCode", "symbol", "decimalScale"]),
@@ -799,6 +802,19 @@ function validateRecordDetail(
     case "order": {
       requireDetail("classificationPathKey");
       optionalDetail("defaultSalesUnitCode");
+      const planOrderAuthority = parsePlanOrderAuthority(
+        detail.planOrderAuthority,
+      );
+      if (!planOrderAuthority.valid) {
+        for (const issue of planOrderAuthority.issues) {
+          addIssue(
+            issues,
+            issue.path.replace("planOrderAuthority", `${path}.planOrderAuthority`),
+            issue.code,
+            "Plan/Order authority configuration is invalid.",
+          );
+        }
+      }
       const species = detail.species;
       if (!Array.isArray(species) || species.length === 0) {
         addIssue(issues, `${path}.species`, "order_species_required", "An order must support at least one species.");
@@ -1466,6 +1482,13 @@ function normalizeDetail(
         species: Array.isArray(detail.species)
           ? detail.species.map((value) => (typeof value === "string" ? value.trim() : value)).sort()
           : [],
+        ...(detail.planOrderAuthority !== undefined
+          ? {
+              planOrderAuthority: normalizedPlanOrderAuthority(
+                detail.planOrderAuthority,
+              ),
+            }
+          : {}),
       };
     case "species":
       return { speciesCode: text("speciesCode") };
@@ -1501,6 +1524,11 @@ function normalizeDetail(
     case "diagnosis":
       return {};
   }
+}
+
+function normalizedPlanOrderAuthority(value: unknown) {
+  const parsed = parsePlanOrderAuthority(value);
+  return parsed.valid ? parsed.value : null;
 }
 
 function normalizeSource(source: Record<string, unknown>): ClinicalMasterAirtableSource {

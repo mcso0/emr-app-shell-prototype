@@ -10,9 +10,12 @@ import {
   createSupabaseFulfillmentWorkItemGateway,
   readFulfillmentWorkItemHistory,
   readFulfillmentWorkItems,
+  resetMockFulfillmentWorkItemState,
   syncVetReviewedBillingCandidates,
   syncFulfillmentWorkItemsFromOrders,
   updateFulfillmentWorkItem,
+  type FulfillmentWorkItemAction,
+  type FulfillmentWorkItemUpdateInput,
 } from "../src/features/fulfillment/server-fulfillment-work-item-core";
 import {
   createDemoLiveNotificationEventStore,
@@ -39,6 +42,58 @@ const a3Migration = readFileSync(
   "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
   "utf8",
 );
+const lifecycleMigration = readFileSync(
+  "supabase/migrations/20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql",
+  "utf8",
+);
+
+let fulfillmentCommandSequence = 1000;
+
+function transitionInput(
+  action: FulfillmentWorkItemAction,
+  expectedRevision: number,
+  extra: Omit<
+    FulfillmentWorkItemUpdateInput,
+    "action" | "commandId" | "expectedRevision"
+  > = {},
+): FulfillmentWorkItemUpdateInput {
+  fulfillmentCommandSequence += 1;
+  return {
+    action,
+    commandId: `00000000-0000-4000-8000-${String(fulfillmentCommandSequence).padStart(12, "0")}`,
+    expectedRevision,
+    ...extra,
+  };
+}
+
+test.beforeEach(() => {
+  resetMockFulfillmentWorkItemState();
+});
+
+test("lifecycle migration repairs legacy started metadata before validating the stricter status shape", () => {
+  expect(lifecycleMigration).toContain(
+    "Historical completed rows were allowed to omit start metadata",
+  );
+  expect(lifecycleMigration).toContain(
+    "task.status in ('in_progress','paused','partial_complete','complete')",
+  );
+  expect(lifecycleMigration).toContain("task.completed_at,");
+  expect(lifecycleMigration).toContain("and event.event_type = 'started'");
+  expect(lifecycleMigration).toContain("with lifecycle_projection as (");
+  expect(lifecycleMigration).toContain(") is distinct from row(");
+  expect(
+    lifecycleMigration.indexOf(
+      "Existing queue rows already carried the intended assignee",
+    ),
+  ).toBeLessThan(
+    lifecycleMigration.indexOf(
+      "-- Historical completed rows were allowed to omit start metadata",
+    ),
+  );
+  expect(lifecycleMigration.indexOf("update public.order_tasks task\nset\n  started_at = coalesce(")).toBeLessThan(
+    lifecycleMigration.indexOf("validate constraint order_tasks_started_status_check"),
+  );
+});
 
 test("fulfillment history is scoped by workspace permission and preserves actor/reason transitions", async () => {
   const gateway = createMockFulfillmentWorkItemGateway();
@@ -54,22 +109,25 @@ test("fulfillment history is scoped by workspace permission and preserves actor/
   expect(workItem).toBeDefined();
   if (!workItem) return;
 
-  const transition =
+  const action =
     workItem.status === "requested"
-      ? "accepted"
-      : workItem.status === "accepted"
-        ? "in_progress"
-        : workItem.status === "in_progress"
-          ? "returned"
-          : "requested";
+      ? "start"
+      : workItem.status === "in_progress"
+        ? "return"
+        : workItem.status === "paused"
+          ? "resume"
+          : "start";
   const updated = await gateway.updateWorkItem({
+    action,
     actorUserId: "user-tech",
+    commandId: "00000000-0000-4000-8000-000000000051",
+    expectedRevision: workItem.rowRevision,
     reason: "history contract verification",
-    status: transition,
     workItemId: workItem.id,
     workspaceId,
   });
   expect(updated.ok).toBe(true);
+  const nextStatus = action === "return" ? "returned" : "in_progress";
 
   const unauthenticated = await readFulfillmentWorkItemHistory({
     actorUserId: null,
@@ -113,7 +171,7 @@ test("fulfillment history is scoped by workspace permission and preserves actor/
         expect.objectContaining({
           actorUserId: "user-tech",
           previousStatus: workItem.status,
-          nextStatus: transition,
+          nextStatus,
           reason: "history contract verification",
           source: "order_event",
         }),
@@ -203,54 +261,6 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   request,
 }) => {
   const clientSessionId = "fulfillment-work-item-route-notification";
-  const statusRank = {
-    requested: 0,
-    accepted: 1,
-    in_progress: 2,
-    completed: 3,
-    cancelled: 3,
-    returned: -1,
-  } as const;
-  async function readCurrentWorkItemStatus() {
-    const response = await request.get(
-      `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing&encounterId=${encounterId}`,
-      { headers: { "x-clair-demo-session-user-id": "user-tech" } },
-    );
-    expect(response.status()).toBe(200);
-    const body = (await response.json()) as {
-      ok: true;
-      workItems: Array<{ id: string; status: keyof typeof statusRank }>;
-    };
-
-    return body.workItems.find((item) => item.id === workItemId)?.status;
-  }
-  async function transitionOrReadCurrent({
-    body,
-    target,
-  }: {
-    body: Record<string, unknown>;
-    target: keyof typeof statusRank;
-  }) {
-    const response = await request.patch(
-      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
-      {
-        data: body,
-        headers: { "x-clair-demo-session-user-id": "user-tech" },
-      },
-    );
-    if (response.status() === 200) return target;
-    if (response.status() === 409) {
-      const currentStatus = await readCurrentWorkItemStatus();
-      expect(currentStatus).toBeDefined();
-      expect(statusRank[currentStatus!]).toBeGreaterThanOrEqual(
-        statusRank[target],
-      );
-      return currentStatus!;
-    }
-
-    expect(response.status()).toBe(200);
-    return target;
-  }
   const unauthenticated = await request.post(
     `/api/workspaces/${workspaceId}/fulfillment/work-items/sync-from-orders`,
     { data: { encounterId, orderIds: [orderId] } },
@@ -276,8 +286,9 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
       id: string;
       orderId: string;
       queueType: string;
+      rowRevision: number;
       sourceSnapshot: { orderDisplayName: string; patientName?: string };
-      status: string;
+      status: "cancelled" | "completed" | "in_progress" | "paused" | "requested" | "returned";
     }>;
   };
   expect(syncedBody.enforcedBy).toBe("fulfillment-work-item-persistence");
@@ -320,7 +331,7 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   expect(readBody.summary.statusCounts).toEqual(
     expect.objectContaining({
       requested: expect.any(Number),
-      accepted: expect.any(Number),
+      paused: expect.any(Number),
       in_progress: expect.any(Number),
       completed: expect.any(Number),
       cancelled: expect.any(Number),
@@ -367,7 +378,9 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   const frontDeskDenied = await request.patch(
     `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
     {
-      data: { status: "accepted" },
+      data: transitionInput("assign", syncedWorkItem?.rowRevision ?? 1, {
+        assignedToUserId: "user-front-desk",
+      }),
       headers: { "x-clair-demo-session-user-id": "user-front-desk" },
     },
   );
@@ -377,31 +390,16 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
     denialReason: "permission_missing",
   });
 
-  let currentWorkItemStatus = syncedWorkItem?.status;
-  if (currentWorkItemStatus === "returned") {
-    const requested = await request.patch(
-      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
-      {
-        data: { status: "requested" },
-        headers: { "x-clair-demo-session-user-id": "user-tech" },
-      },
-    );
-    expect(requested.status()).toBe(200);
-    currentWorkItemStatus = "requested";
+  let currentWorkItem = syncedWorkItem;
+  if (!currentWorkItem || ["cancelled", "completed", "returned"].includes(currentWorkItem.status)) {
+    return;
   }
 
-  if (currentWorkItemStatus === "requested") {
-    currentWorkItemStatus = await transitionOrReadCurrent({
-      body: { status: "accepted", assignedToUserId: "user-tech" },
-      target: "accepted",
-    });
-  }
-
-  if (currentWorkItemStatus === "accepted") {
+  if (currentWorkItem.status === "requested") {
     const invalidCompletion = await request.patch(
       `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
       {
-        data: { status: "completed" },
+        data: transitionInput("complete", currentWorkItem.rowRevision),
         headers: { "x-clair-demo-session-user-id": "user-tech" },
       },
     );
@@ -411,22 +409,56 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
       denialReason: "invalid_transition",
     });
 
-    currentWorkItemStatus = await transitionOrReadCurrent({
-      body: { status: "in_progress" },
-      target: "in_progress",
-    });
+    const assigned = await request.patch(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+      {
+        data: transitionInput("assign", currentWorkItem.rowRevision, {
+          assignedToUserId: "user-tech",
+        }),
+        headers: { "x-clair-demo-session-user-id": "user-tech" },
+      },
+    );
+    expect(assigned.status()).toBe(200);
+    const assignedBody = (await assigned.json()) as {
+      workItems: typeof syncedBody.workItems;
+    };
+    currentWorkItem = assignedBody.workItems.find((item) => item.id === workItemId)!;
+
+    const started = await request.patch(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+      {
+        data: transitionInput("start", currentWorkItem.rowRevision),
+        headers: { "x-clair-demo-session-user-id": "user-tech" },
+      },
+    );
+    expect(started.status()).toBe(200);
+    const startedBody = (await started.json()) as {
+      workItems: typeof syncedBody.workItems;
+    };
+    currentWorkItem = startedBody.workItems.find((item) => item.id === workItemId)!;
   }
 
-  if (currentWorkItemStatus === "completed") {
-    return;
+  if (currentWorkItem.status === "paused") {
+    const resumed = await request.patch(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+      {
+        data: transitionInput("resume", currentWorkItem.rowRevision),
+        headers: { "x-clair-demo-session-user-id": "user-tech" },
+      },
+    );
+    expect(resumed.status()).toBe(200);
+    const resumedBody = (await resumed.json()) as {
+      workItems: typeof syncedBody.workItems;
+    };
+    currentWorkItem = resumedBody.workItems.find((item) => item.id === workItemId)!;
   }
 
-  expect(currentWorkItemStatus).toBe("in_progress");
+  expect(currentWorkItem.status).toBe("in_progress");
 
   const completed = await request.patch(
     `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
     {
-      data: { status: "completed" },
+      data: transitionInput("complete", currentWorkItem.rowRevision),
       headers: {
         "x-clair-demo-client-session-id": clientSessionId,
         "x-clair-demo-session-user-id": "user-tech",
@@ -589,7 +621,9 @@ test("phase-1 treatment fulfillment intentionally shares dispensing permissions"
   const accepted = await updateFulfillmentWorkItem({
     actorUserId: "user-dispensing-only",
     gateway,
-    input: { status: "accepted" },
+    input: transitionInput("assign", 1, {
+      assignedToUserId: "user-dispensing-only",
+    }),
     permissionAdapter,
     workItemId: `fulfill-${treatmentOrderId}`,
     workspaceId,
@@ -598,7 +632,11 @@ test("phase-1 treatment fulfillment intentionally shares dispensing permissions"
     ok: true,
     status: 200,
     workItems: [
-      expect.objectContaining({ queueType: "treatment", status: "accepted" }),
+      expect.objectContaining({
+        assignedToUserId: "user-dispensing-only",
+        queueType: "treatment",
+        status: "requested",
+      }),
     ],
   });
 });
@@ -644,7 +682,7 @@ test("fulfillment read filters work items by selected operating date", async () 
       date: "2026-06-25",
       queueType: "dispensing",
       statusCounts: {
-        accepted: 0,
+        paused: 0,
         cancelled: 0,
         completed: 0,
         in_progress: 0,
@@ -911,21 +949,21 @@ test("fulfillment core blocks terminal-state transitions", async () => {
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "accepted" },
+    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
     gateway,
   });
   await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "in_progress" },
+    input: transitionInput("start", 2),
     gateway,
   });
   await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "completed" },
+    input: transitionInput("complete", 3),
     gateway,
   });
 
@@ -933,7 +971,7 @@ test("fulfillment core blocks terminal-state transitions", async () => {
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "returned" },
+    input: transitionInput("return", 4, { reason: "terminal guard" }),
     gateway,
   });
   expect(reopenDenied).toMatchObject({
@@ -965,7 +1003,7 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "accepted", assignedToUserId: "user-tech" },
+    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -974,7 +1012,7 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "in_progress" },
+    input: transitionInput("start", 2),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -984,7 +1022,7 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "completed" },
+    input: transitionInput("complete", 3),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1045,7 +1083,7 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "accepted", assignedToUserId: "user-tech" },
+    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1054,7 +1092,7 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "in_progress" },
+    input: transitionInput("start", 2),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1064,7 +1102,7 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "completed" },
+    input: transitionInput("complete", 3),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1144,7 +1182,7 @@ test("fulfillment completion persists billing-ready notification through the DB 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "accepted", assignedToUserId: "user-tech" },
+    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1153,7 +1191,7 @@ test("fulfillment completion persists billing-ready notification through the DB 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "in_progress" },
+    input: transitionInput("start", 2),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1163,7 +1201,7 @@ test("fulfillment completion persists billing-ready notification through the DB 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "completed" },
+    input: transitionInput("complete", 3),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1214,7 +1252,7 @@ test("fulfillment completion keeps source mutation successful when DB notificati
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "accepted", assignedToUserId: "user-tech" },
+    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1223,7 +1261,7 @@ test("fulfillment completion keeps source mutation successful when DB notificati
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "in_progress" },
+    input: transitionInput("start", 2),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1233,7 +1271,7 @@ test("fulfillment completion keeps source mutation successful when DB notificati
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: { status: "completed" },
+    input: transitionInput("complete", 3),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1280,7 +1318,7 @@ test("fulfillment completion holds lab and imaging billing until vet review", as
   const completed = await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     gateway,
-    input: { status: "completed" },
+    input: transitionInput("complete", 1),
     invoiceCandidateGateway,
     lifecycleGateway,
     workItemId: `fulfill-${labOrderId}`,
@@ -1402,7 +1440,7 @@ test("vet-reviewed billing sync persists billing-ready notification through the 
   await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     gateway,
-    input: { status: "completed" },
+    input: transitionInput("complete", 1),
     invoiceCandidateGateway,
     lifecycleGateway: createMockChartOrderLifecycleGateway(
       undefined,
@@ -1463,7 +1501,7 @@ test("vet-reviewed billing sync keeps audit and candidate success when DB notifi
   await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     gateway,
-    input: { status: "completed" },
+    input: transitionInput("complete", 1),
     invoiceCandidateGateway,
     lifecycleGateway: createMockChartOrderLifecycleGateway(
       undefined,
@@ -1530,6 +1568,8 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
             status: "requested",
             priority: "normal",
             requestedByUserId: "00000000-0000-4000-8000-000000000002",
+            requestCycle: 1,
+            rowRevision: 1,
             assignedToUserId: null,
             dueAt: null,
             completedAt: null,
@@ -1574,16 +1614,18 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
     ],
   });
   const updated = await gateway.updateWorkItem({
+    action: "assign",
     actorUserId: "00000000-0000-4000-8000-000000000003",
+    commandId: "00000000-0000-4000-8000-000000000902",
+    expectedRevision: 1,
     workspaceId,
     workItemId: "00000000-0000-4000-8000-000000000901",
-    status: "accepted",
     assignedToUserId: "00000000-0000-4000-8000-000000000003",
   });
 
   expect(calls).toEqual([
     `clair_sync_fulfillment_work_items_from_orders:${workspaceId}:00000000-0000-4000-8000-000000000101:00000000-0000-4000-8000-000000000002`,
-    `clair_update_fulfillment_work_item:${workspaceId}:00000000-0000-4000-8000-000000000901:00000000-0000-4000-8000-000000000003`,
+    `clair_transition_fulfillment_work_item:${workspaceId}:00000000-0000-4000-8000-000000000901:00000000-0000-4000-8000-000000000003`,
   ]);
   expect(synced).toMatchObject({
     ok: true,
@@ -1626,6 +1668,8 @@ test("system exam projections fail closed before entering a fulfillment queue", 
             status: "requested",
             priority: "normal",
             requestedByUserId: "00000000-0000-4000-8000-000000000002",
+            requestCycle: 1,
+            rowRevision: 1,
             clinicalOrderType: "system_exam",
             destinationModule: null,
             assignedToUserId: null,
@@ -1671,6 +1715,8 @@ test("fulfillment order sync persists the frozen source snapshot without an enri
             status: "requested",
             priority: "normal",
             requestedByUserId: "00000000-0000-4000-8000-000000000002",
+            requestCycle: 1,
+            rowRevision: 1,
             assignedToUserId: null,
             dueAt: null,
             completedAt: null,
