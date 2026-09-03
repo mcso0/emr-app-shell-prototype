@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SOAP 작성 안내 문구·블록 컨트롤 위치 수정 결과</title>
+<style>
+:root{color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#172033;background:#f3f6fb}*{box-sizing:border-box}body{margin:0;line-height:1.65}main{max-width:960px;margin:0 auto;padding:32px 20px 72px}.hero,article{background:#fff;border:1px solid #dce4ef;border-radius:18px;box-shadow:0 14px 36px rgba(26,42,72,.07)}.hero{padding:28px;margin-bottom:18px}.eyebrow{margin:0 0 8px;color:#5c687d;font-size:13px;font-weight:700}.hero h1{margin:0;font-size:clamp(30px,5vw,42px);line-height:1.18;letter-spacing:-.035em}.status{margin:18px 0 0;padding:14px 16px;border:1px solid #9dd7bb;border-radius:11px;background:#effaf5;color:#09653e;font-weight:750}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px}.metric{padding:14px;border:1px solid #dde5f0;border-radius:11px;background:#f8faff}.metric strong{display:block;font-size:23px}.metric span{display:block;margin-top:4px;color:#667189;font-size:12px}article{padding:clamp(22px,5vw,44px)}h2{margin:38px 0 14px;padding-top:8px;border-top:1px solid #e4e9f1;font-size:24px}p,li{color:#334057}code{padding:2px 5px;border-radius:5px;background:#edf2f8;overflow-wrap:anywhere}table{width:100%;margin:16px 0 24px;border-collapse:collapse;font-size:14px}th,td{padding:10px 9px;border-bottom:1px solid #e3e8f0;text-align:left;vertical-align:top}th{background:#f7f9fc;color:#45516a}a{color:#225ad6}@media(max-width:700px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}table{display:block;overflow-x:auto}}
+</style>
+</head>
+<body><main>
+<section class="hero">
+<p class="eyebrow">CHART-PR-034 · 2026-09-03 · PR #703</p>
+<h1>SOAP를 바로 쓰기 시작하고<br>블록 컨트롤은 겹치지 않게</h1>
+<p class="status">새 UI나 기능을 추가하지 않고, 기존 BlockNote 문단에 편집 가능한 작성 단서를 넣고 플러스·그랩·가이드선의 충돌을 제거했다.</p>
+<div class="metrics">
+<div class="metric"><strong>4</strong><span>S/O/A/P 작성 안내 문단</span></div>
+<div class="metric"><strong>24×24</strong><span>플러스·그랩 타깃</span></div>
+<div class="metric"><strong>8px</strong><span>컨트롤과 본문 간격</span></div>
+<div class="metric"><strong>47/47</strong><span>집중 자동화 통과</span></div>
+</div>
+</section>
+<article>
+<h2>1. 무엇을 바꿨나</h2>
+<ul>
+<li><strong>작성 시작:</strong> 새 차트, SOAP 초기화, 슬래시 메뉴의 <code>기본 SOAP 템플릿</code>이 동일한 S/O/A/P 작성 단서를 실제 paragraph 내용으로 제공한다.</li>
+<li><strong>기존 에디터 유지:</strong> <code>soapSection</code> 4개와 각 섹션의 paragraph 1개, 기존 편집·서식·드래그·자동저장·수동저장 동작을 그대로 사용한다.</li>
+<li><strong>겹침 제거:</strong> SOAP 섹션의 첫 입력 블록에만 생기던 중첩 가이드선을 숨겼다. 사용자가 만든 더 깊은 중첩 블록의 가이드선은 유지한다.</li>
+<li><strong>조작 면적:</strong> 16px이던 그랩 폭을 24px로 넓히고 플러스와 동일한 높이·폭으로 맞췄다. 메뉴의 오른쪽 끝과 본문 사이 8px 간격은 유지했다.</li>
+</ul>
+
+<h2>2. 새 기본 작성 문구</h2>
+<table>
+<thead><tr><th>구역</th><th>실제 편집 가능한 시작 문구</th></tr></thead>
+<tbody>
+<tr><td>S</td><td>[주호소와 시작 시점] [빈도·지속시간·악화/호전 요인] [식욕·음수·배뇨·배변·활력 변화] [보호자가 오늘 확인하고 싶은 점]</td></tr>
+<tr><td>O</td><td>[체중·체온·심박·호흡·BCS] [이상 소견] [관련 정상 소견] [검사·영상 결과 또는 결과 대기]</td></tr>
+<tr><td>A</td><td>[문제명과 상태] — [가장 가능성 높은 판단과 근거]. DDx: [핵심 감별 1–3개]. [추가 확인이 필요한 점]</td></tr>
+<tr><td>P</td><td>[검사와 이유] [치료·처방] [보호자 설명 및 동의·보류] [결과 연락·재진 시점·즉시 내원 기준]</td></tr>
+</tbody>
+</table>
+<p>확인하지 않은 <code>WNL</code>, “이상 없음”, 정상 판단은 미리 넣지 않았다. 이 문구들은 화면에만 보이는 가상 placeholder가 아니라 실제 편집 문단이므로, 수의사가 삭제하거나 진료 내용으로 덮어쓴 뒤 저장하는 형태다. 그대로 둔 채 저장하면 SOAP 내용으로 저장될 수 있다.</p>
+
+<h2>3. 조사 근거</h2>
+<p>수의 진료기록의 S/O/A/P 내용, 문제 목록·감별·진단/치료 계획, 보호자 소통 기록을 빠뜨리지 않도록 짧은 단서로 압축했다.</p>
+<ul>
+<li><a href="https://www.vetmed.wisc.edu/wp-content/uploads/2019/07/soapwriting.pdf">University of Wisconsin Veterinary Medical Teaching Hospital · SOAP Writing Guide</a></li>
+<li><a href="https://open.lib.umn.edu/communicationcurriculumguide/chapter/client-encounters/">University of Minnesota · Client Encounters</a></li>
+<li><a href="https://www.cvo.org/standards/medical-records-guide-to-the-standard">College of Veterinarians of Ontario · Medical Records Guide</a></li>
+<li><a href="https://avas03mstrsg80mprod.dxcloud.episerver.net/siteassets/about-us/programs-and-awards/2019-asav-manual-of-hospital-standards-and-accreditation.pdf">Australian Small Animal Veterinarians · Hospital Standards</a></li>
+</ul>
+
+<h2>4. 검증 결과</h2>
+<ul>
+<li>SOAP 문서 단위 테스트 8/8 통과: 새 문구, 기존 기록 보존, 정상 소견 선입력 금지.</li>
+<li>SOAP 에디터 Storybook 상호작용 35/35 통과: 편집, 플러스·그랩, 메뉴, 드래그, 가이드선, 320/420/566.5/720px.</li>
+<li>실제 차트 SOAP 집중 회귀 4/4 통과: 단일 문서, 선택 툴바, 슬래시 메뉴·템플릿, 긴 내용 레이아웃.</li>
+<li>렌더 좌표 확인: 플러스 24×24px, 그랩 24×24px, 본문 간격 7.75px(서브픽셀 반올림), SOAP 첫 문단 가이드 0px.</li>
+</ul>
+
+<h2>5. 변경 범위와 남은 확인</h2>
+<p>변경 파일은 SOAP 문서 기본값, BlockNote 템플릿 팩토리, 에디터 CSS, Storybook 회귀, 문서 단위 테스트와 작업 기록이다. DB·API·RPC·권한·저장 포맷·감사·진단계통 전용 템플릿은 변경하지 않았다.</p>
+<p>로컬 구현 검증 후 PR #703의 최종 커밋을 대상으로 전체 릴리스 게이트와 프로덕션 smoke를 수행한다. 운영 문제가 생기면 직전 production 배포로 애플리케이션을 되돌리며 DB 롤백은 필요 없다.</p>
+</article>
+</main></body>
+</html>

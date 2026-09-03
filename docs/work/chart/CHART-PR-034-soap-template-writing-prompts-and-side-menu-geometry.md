@@ -1,9 +1,9 @@
 ---
 id: "CHART-PR-034"
-status: "in_progress"
+status: "implemented"
 area: "chart"
 priority: "P1"
-target_pr: "User-approved editable SOAP writing prompts and side-menu geometry fix"
+target_pr: "PR #703"
 source_docs:
   - "docs/work/chart/CHART-PR-030-blocknote-soap-live-persistence.md"
   - "docs/design/system/DESIGN.md"
@@ -56,6 +56,18 @@ Make the existing BlockNote SOAP editor easier to start and safer to operate wit
 - Focused Storybook browser tests for direct-child guide suppression, deeper guide preservation, 24px controls, editable content, and responsive widths.
 - Existing SOAP Storybook interaction suite and relevant chart regression tests.
 - Standard production preflight and exact-candidate manual Release Check.
+
+## Verification Evidence
+
+- `npx playwright test tests/chart-soap-document.spec.ts`: 8 passed.
+- Focused `tests/chart.spec.ts` SOAP editor, slash menu/template, and growing-content checks: 4 passed.
+- `npx vitest --project=storybook --run src/features/chart/components/chart-soap-live-block-editor.stories.tsx`: 35 passed.
+- Focused ESLint and `npx tsc --noEmit`: passed before the final release preflight.
+- Final production preflight, exact-candidate `Release Check`, PR merge, deployment readiness, and production smoke are recorded on PR #703 and in the final release result.
+
+## Result Report
+
+- `docs/completed/chart/2026-09-03-chart-soap-writing-prompts-geometry-report.html`
 
 ## Rollback
 
