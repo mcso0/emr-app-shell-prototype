@@ -34,7 +34,10 @@
 .candidateBody {
   min-height: 0;
   flex: 1 1 auto;
-  overflow-y: auto;
+}
+
+.candidateBody > [data-slot="scroll-area-scrollbar"] {
+  right: -13px !important;
 }
 
 .candidateList {

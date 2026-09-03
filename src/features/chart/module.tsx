@@ -9422,9 +9422,10 @@ function ChartOrderCatalogDialog({
             />
           }
         >
-          <div
+          <ScrollArea
             className={orderCatalogDialogStyles.candidateBody}
-            ref={candidateScrollRef}
+            data-testid="chart-order-catalog-scroll"
+            viewportRef={candidateScrollRef}
           >
             {status === "loading" || status === "idle" ? (
               <ClassificationExplorerLoadingState
@@ -9520,7 +9521,7 @@ function ChartOrderCatalogDialog({
                 }
               />
             )}
-          </div>
+          </ScrollArea>
         </ClassificationExplorerColumn>
 
         <ClassificationExplorerColumn
