@@ -160,7 +160,7 @@ test("migration makes unpaid reversal atomic and routes paid invoices to refund 
   const migration = await readFile(
     path.join(
       process.cwd(),
-      "supabase/migrations/20260902150055_plan_order_work_lifecycle_and_rpc_boundary.sql",
+      "supabase/migrations/20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql",
     ),
     "utf8",
   );

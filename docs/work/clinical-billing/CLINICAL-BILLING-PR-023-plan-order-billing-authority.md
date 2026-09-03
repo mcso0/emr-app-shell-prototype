@@ -82,10 +82,15 @@ handoff that blocks returned/cancelled work and prevents set/attempt duplication
 - Permission, CAS, replay/idempotency, immutable-history, and negative billing
   cases passed the focused TypeScript/Playwright suite and transactional local
   SQL smoke.
-- No remote invoice, payment, or billing-policy mutation has been executed.
-  PR #698 is open; its exact staging migration and billing smoke passed inside
-  one rolled-back transaction with no schema, fixture, or migration-history
-  residue. Persistent production application and verification remain open.
+- No remote invoice, payment, or billing-policy data mutation has been
+  executed. PR #698 is open; its exact staging migration and billing smoke
+  passed inside one rolled-back transaction with no schema, fixture, or
+  migration-history residue.
+- 승욱 approved and Supabase applied persistent schema/RPC migration
+  `20260903003949_plan_order_work_lifecycle_and_rpc_boundary`. Post-apply
+  readback verified validated constraints, RLS, and authenticated-only execute
+  grants for the target billing RPCs. Application merge, production deployment,
+  and authenticated production verification remain open.
 
 ## Handoff Notes
 

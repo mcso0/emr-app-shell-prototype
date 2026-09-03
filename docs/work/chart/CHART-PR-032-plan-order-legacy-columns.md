@@ -79,8 +79,14 @@ authoritative work/billing readback.
 - PR #698 is open. The exact staging project replay exposed and repaired two
   legacy Task metadata shapes, then passed the full migration/smoke transaction
   with unconditional rollback and zero schema, fixture, or history residue.
-- Authenticated preview smoke, exact-SHA approval, production migration, merge,
-  deployment, and authenticated production smoke remain open.
+- 승욱 approved the exact candidate and persistent migration. Supabase applied
+  migration `20260903003949_plan_order_work_lifecycle_and_rpc_boundary`; the
+  post-apply readback found zero lifecycle-shape violations, all 14 target
+  constraints validated, RLS enabled on all four new authority tables, and the
+  five target `SECURITY DEFINER` RPCs restricted to `authenticated` callers.
+- The migration filename now matches the history version assigned by Supabase;
+  its SQL SHA-256 remains unchanged. Merge, production deployment, and
+  authenticated production smoke remain open.
 
 ## Handoff Notes
 

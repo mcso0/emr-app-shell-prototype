@@ -83,8 +83,13 @@ history, and DB-level capability enforcement.
   name inference or history deletion.
 - The corrected staging migration and fulfillment smoke passed in one rolled-
   back transaction; follow-up readback proved no schema, fixture, or migration-
-  history residue. No persistent remote migration or fulfillment mutation has
-  been executed. PR #698 remains open; production smoke remains open.
+  history residue.
+- 승욱 approved and Supabase applied persistent schema/RPC migration
+  `20260903003949_plan_order_work_lifecycle_and_rpc_boundary`. Post-apply
+  readback found zero started/assignment/cycle/returned shape violations across
+  the existing task/queue rows. No remote fulfillment business-row mutation was
+  executed. PR #698 remains open; application merge and production smoke remain
+  open.
 
 ## Handoff Notes
 
