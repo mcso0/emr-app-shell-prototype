@@ -4621,7 +4621,7 @@ test("chart SOAP reconciles a committed response-loss retry without a false conf
   expect(readCount).toBeGreaterThanOrEqual(2);
 });
 
-test("chart SOAP slash command opens BlockNote suggestions instead of a separate modal", async ({
+test("chart SOAP slash command keeps content commands but omits nested SOAP templates", async ({
   page,
 }) => {
   await routePristineKongSoap(page);
@@ -4634,56 +4634,109 @@ test("chart SOAP slash command opens BlockNote suggestions instead of a separate
   await lastParagraph.click();
   await page.keyboard.press("End");
   await page.keyboard.press("Enter");
-  await page.keyboard.type("/근골격");
+  await page.keyboard.type("/");
 
   const suggestionMenu = page.getByRole("listbox");
   await expect(suggestionMenu).toBeVisible();
   await expect(
-    suggestionMenu.getByRole("option", { name: /진단계통 SOAP 템플릿/ }),
+    suggestionMenu.getByRole("option", { name: /텍스트/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole("dialog", { name: "SOAP 진단계통 선택" }),
+    suggestionMenu.getByRole("option", { name: /SOAP 템플릿/ }),
   ).toHaveCount(0);
 });
 
-test("chart SOAP slash template inserts a system block group and prevents duplicate insertion", async ({
+test("chart SOAP keeps default and diagnosis-system input isolated across save and reload", async ({
   page,
 }) => {
-  await routePristineKongSoap(page);
+  test.setTimeout(60_000);
+  let storedBlockDocument: unknown;
+  let revision = 0;
+  const buildSoapNote = () => ({
+    id: "soap-kong-260501",
+    encounterId: kongEncounterId,
+    authorUserId: "user-vet-suji",
+    ...kongSoapFields,
+    blockDocument: storedBlockDocument,
+    status: "autosaved",
+    autosavedAt: `2026-09-03T10:00:0${revision}.000Z`,
+    createdAt: "2026-05-01T09:40:00+09:00",
+    updatedAt: `2026-09-03T10:00:0${revision}.000Z`,
+  });
+
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/soap-notes**",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          json: {
+            ok: true,
+            status: 200,
+            enforcedBy: "chart-soap-note-persistence",
+            soapNote: buildSoapNote(),
+          },
+        });
+        return;
+      }
+
+      const input = request.postDataJSON() as { blockDocument: unknown };
+      storedBlockDocument = input.blockDocument;
+      revision += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        json: {
+          ok: true,
+          status: 200,
+          auditRecorded: true,
+          enforcedBy: "chart-soap-note-persistence",
+          soapNote: buildSoapNote(),
+        },
+      });
+    },
+  );
+
   await page.goto(kongScenarioUrl);
-  const soapDocument = page.getByLabel("SOAP 블록 문서");
-  const openMusculoskeletalMenu = async () => {
-    const lastParagraph = soapDocument
+  const defaultText = `default-scope-${Date.now()}`;
+  const systemText = `digestive-scope-${Date.now()}`;
+  const getFirstParagraph = () =>
+    page
+      .getByLabel("SOAP 블록 문서")
       .locator('.bn-block-content[data-content-type="paragraph"]')
-      .last();
-    await lastParagraph.click();
+      .first();
+  const typeAndWaitForAutosave = async (text: string) => {
+    const autosave = page.waitForResponse(
+      (response) =>
+        response.request().method() === "PATCH" &&
+        response.url().includes("/chart/soap-notes") &&
+        response.request().postDataJSON()?.mode === "autosave",
+    );
+    await getFirstParagraph().click();
     await page.keyboard.press("End");
-    await page.keyboard.press("Enter");
-    await page.keyboard.type("/근골격");
-    const option = page
-      .getByRole("listbox")
-      .getByRole("option", { name: /진단계통 SOAP 템플릿/ });
-    await expect(option).toBeVisible();
-    await option.click();
+    await page.keyboard.insertText(` ${text}`);
+    expect((await autosave).ok()).toBe(true);
   };
 
-  await openMusculoskeletalMenu();
-  const musculoskeletalSubjective = soapDocument.getByText(
-    "주관적 · 파행 문진",
-    { exact: true },
-  );
-  await expect(musculoskeletalSubjective).toHaveCount(1);
+  await typeAndWaitForAutosave(defaultText);
+  await page.getByRole("tab", { name: "소화기", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).not.toContainText(defaultText);
   await expect(
-    page.getByText("근골격계 템플릿을 추가했습니다.", { exact: true }),
+    page.getByText("주관적 · 보호자 진술", { exact: true }),
   ).toBeVisible();
 
-  await openMusculoskeletalMenu();
-  await expect(
-    page.getByText("근골격계 템플릿이 이미 문서에 있습니다.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(musculoskeletalSubjective).toHaveCount(1);
+  await typeAndWaitForAutosave(systemText);
+  await page.getByRole("tab", { name: "기본 S/O", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(defaultText);
+  await expect(page.getByLabel("SOAP 블록 문서")).not.toContainText(systemText);
+
+  await page.reload();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(defaultText);
+  await page.getByRole("tab", { name: "소화기", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(systemText);
+  await expect(page.getByLabel("SOAP 블록 문서")).not.toContainText(defaultText);
 });
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({
   page,

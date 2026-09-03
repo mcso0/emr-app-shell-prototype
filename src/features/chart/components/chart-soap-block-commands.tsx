@@ -164,10 +164,12 @@ function insertSoapTemplate(
 
 export function buildSoapCommandItems({
   editor,
+  includeSoapTemplates = true,
   onNotice,
   templateStructure = "sectioned",
 }: {
   editor: ChartSoapBlockEditorInstance;
+  includeSoapTemplates?: boolean;
   onNotice: (message: string) => void;
   templateStructure?: ChartSoapTemplateStructure;
 }): ChartSoapCommandItem[] {
@@ -268,7 +270,11 @@ export function buildSoapCommandItems({
     ];
   });
 
-  return [...templateItems, ...defaultItems, ...mediaItems];
+  return [
+    ...(includeSoapTemplates ? templateItems : []),
+    ...defaultItems,
+    ...mediaItems,
+  ];
 }
 
 export const soapDisabledCommandItems: ChartSoapDisabledCommandItem[] = [

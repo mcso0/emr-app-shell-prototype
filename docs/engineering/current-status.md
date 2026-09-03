@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-08-27
+Updated: 2026-09-03
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Detailed historical updates are preserved in [MVP Current Status History](current-status-history.md).
 
@@ -42,6 +42,16 @@ The app currently has usable prototype screens for:
 | Hospital admin            | Order catalog persistence foundation, server-backed membership/invitation directory, archived membership lifecycle, permission-role and job-position definition lifecycle, audit-atomic mutation RPCs, grouped settings-hub UI, and a Flex-inspired session-only `근무표`. HOSPITAL-ADMIN-LIVE-PR-012 persists operating hours, date exceptions, timezone, and holiday policy behind member-read/admin-write API/RLS/RPC boundaries; settings updates emit central audit events and block future appointment conflicts. HOSPITAL-ADMIN-LIVE-PR-018 adds workspace-wide curated vital presets, admin-managed order/visibility/units, canonical measurement conversion, and shared reception/chart/current-summary consumption. PR #479 released the feature to production, and remote migration `20260722112553` passed catalog, permission, authenticated rollback-only writer/readback, and persisted-default checks. HOSPITAL-ADMIN-LIVE-PR-019 makes weight/temperature catalog-required while keeping measurements optional, adds reversible optional-preset removal, and preserves historical measurements. Its remote migration `20260722130209` passed catalog, required-writer rejection, optional removal/re-add, front-desk denial, rollback, and unchanged-measurement checks; PR #483 carries the application release. HOSPITAL-ADMIN-LIVE-PR-020 locally implements workspace category/space CRUD with archive-safe Supabase schema, permission-checked command RPCs, audit events, and the approved two-level `공간 관리` UI; remote migration and release are not claimed. HOSPITAL-ADMIN-PR-007 splits hospital identity, contact/channel, and operating-time management into independent URL-backed screens while preserving live space/vital screens. HOSPITAL-ADMIN-LIVE-PR-021/022 locally implement workspace-scoped profile/contact/change requests and private hospital-logo Storage with API/RPC/RLS/audit boundaries; remote migration, Storage provisioning, and production readback remain release-gated. HOSPITAL-ADMIN-LIVE-PR-023 links that stored private-logo pointer to the workspace-list read model and app-shell switcher, preserves one shared fallback mark, and refreshes shell identity after upload or removal; no schema or remote logo asset change is included. |
 | Audit                     | Audit schema, append helper, mutation emission hooks, and hospital-admin review surface                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Auth/workspace            | Mock fallback plus Supabase/server-session boundaries, workspace membership, role management, active-membership App Shell switching with tenant-context-safe navigation, current-user private avatar hydration in the profile menu, and local DB/RLS foundations                                                                                                                                                                                                                                                                                                               |
+
+CHART-PR-033 isolates the default SOAP and diagnosis-system tabs inside one
+versioned SOAP note. V2 stores one required default scope plus system-ID-keyed
+scopes, projects legacy S/O/A/P only from default, keeps unscoped V1 content in
+default during non-destructive upgrade, and preserves one autosave/conflict/audit
+boundary. Remote additive migration `20260903110347` is applied to the shared
+synthetic/demo Supabase target; catalog/grant checks passed and the inspected
+existing SOAP row retained identical document/projection hashes and `updated_at`.
+The application release remains represented by its work item until the exact
+candidate passes Release Check and production smoke.
 
 RECEPTION-LIVE-PR-018 locally repairs the reception encounter-cancel contract:
 the app-facing four-argument RPC now requires actor/session equality, active

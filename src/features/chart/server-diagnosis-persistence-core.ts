@@ -537,6 +537,7 @@ function mapDiagnosisRow(value: unknown): ChartDiagnosisRow | null {
         : undefined,
     diagnosisText: row.diagnosisText,
     diagnosisType: row.diagnosisType as DiagnosisType,
+    systemId: trimToUndefined(row.systemId),
     systemLabel: trimToUndefined(row.systemLabel),
     diseaseGroupLabel: trimToUndefined(row.diseaseGroupLabel),
     closedAt: trimToUndefined(row.closedAt),

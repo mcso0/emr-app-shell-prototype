@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>진단계통별 SOAP 입력 분리 결과 보고서</title>
+    <style>
+      :root { color-scheme: light; font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1f2925; background: #f4f6f5; }
+      body { max-width: 920px; margin: 0 auto; padding: 48px 24px 72px; }
+      main { padding: 36px; border: 1px solid #dbe1de; border-radius: 16px; background: #fff; box-shadow: 0 12px 32px rgb(26 43 36 / 8%); }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin: 30px 0 10px; font-size: 18px; }
+      p, li { line-height: 1.65; }
+      .meta, .caveat { color: #65726d; }
+      .result { margin: 24px 0; padding: 18px 20px; border-left: 4px solid #2f745e; background: #eef6f2; }
+      .gate { margin-top: 14px; padding: 14px 16px; border: 1px solid #e4c98b; border-radius: 10px; background: #fff9e9; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 11px 12px; border-bottom: 1px solid #e4e8e6; text-align: left; vertical-align: top; }
+      th { width: 190px; color: #21644f; }
+      code { border-radius: 4px; padding: 2px 5px; background: #eef1ef; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>기본 SOAP와 진단계통 SOAP의 입력 공간을 분리했다</h1>
+      <p class="meta">2026-09-03 · 진료/차트 · CHART-PR-033</p>
+
+      <div class="result">
+        이제 <strong>기본 S/O</strong>와 <strong>근골격계 같은 진단계통 탭</strong>은
+        서로 다른 내용을 보관한다. 기본 탭의 자유 입력이 계통 탭에 그대로 나타나지 않고,
+        각 계통 탭은 처음 열 때 빈 S/O/A/P 입력 공간을 제공한다.
+      </div>
+
+      <h2>무엇을 바꿨나</h2>
+      <ul>
+        <li>한 진료의 SOAP 한 건은 유지하되, 문서 안을 기본·진단계통별 범위로 나눴다.</li>
+        <li>탭을 바꾸면 해당 범위만 편집하고 저장할 때는 전체 범위를 하나의 문서로 합친다.</li>
+        <li>과거 자유 입력은 기본 탭에만 남기고 계통 탭으로 추측 복사하지 않는다.</li>
+        <li>기존 이력 화면이 읽는 S/O/A/P 텍스트는 계속 기본 탭에서만 만든다.</li>
+        <li>중첩 계통 템플릿을 만들 수 있던 슬래시 명령은 라이브 차트에서 제거했다.</li>
+      </ul>
+
+      <h2>안전장치</h2>
+      <table>
+        <tr><th>식별</th><td>표시 이름이 아니라 진단 마스터의 안정적인 계통 ID로 저장 범위를 구분한다.</td></tr>
+        <tr><th>기존 기록</th><td>V1 기록은 읽을 때만 V2로 올리며, 파괴적인 일괄 변환은 하지 않는다.</td></tr>
+        <tr><th>동시 저장</th><td>기존 단일 자동저장 순서와 <code>updatedAt</code> 충돌 방지를 유지한다.</td></tr>
+        <tr><th>권한·감사</th><td>워크스페이스·진료 상태·<code>chart:update</code>·사용자 일치·트랜잭션 감사 경계를 유지한다.</td></tr>
+        <tr><th>구버전 보호</th><td>V2 기록을 구버전 writer가 V1으로 낮추는 저장은 DB에서 거부한다.</td></tr>
+      </table>
+
+      <h2>검증 결과</h2>
+      <div class="gate">
+        문서·저장·진단 계약 테스트와 브라우저의 탭 분리·자동저장·새로고침 회귀 테스트를 통과했다.
+        PostgreSQL에서는 V3 저장, 기본 탭 전용 투영, 구버전 downgrade 차단, 재수정, 권한을
+        합성 데이터로 실행하고 전체 트랜잭션을 롤백했다. 원격 additive 마이그레이션
+        <strong>20260903110347</strong> 적용 뒤 기존 SOAP 행의 문서·투영 해시와 수정 시각이
+        그대로인 것도 확인했다.
+      </div>
+
+      <h2>범위 밖</h2>
+      <p class="caveat">
+        SOAP 서명·개정 이력, 실시간 공동 편집, AI 생성, 이미지·동영상·장비 연동은 이번 변경에
+        포함하지 않았다. 앱 롤백 시 additive DB 계약은 남겨 V2 기록을 보호한다.
+      </p>
+    </main>
+  </body>
+</html>

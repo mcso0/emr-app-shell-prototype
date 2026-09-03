@@ -339,10 +339,25 @@ export type SoapNote = {
   updatedAt: IsoDateTime;
 };
 
-export type SoapBlockDocument = {
+export type SoapBlockDocumentV1 = {
   schemaVersion: 1;
   blocks: unknown[];
 };
+
+export type SoapBlockDocumentScope = {
+  scopeKey: string;
+  scope: "default" | "system";
+  systemId?: EmrId;
+  systemLabel: string;
+  blocks: unknown[];
+};
+
+export type SoapBlockDocumentV2 = {
+  schemaVersion: 2;
+  scopes: SoapBlockDocumentScope[];
+};
+
+export type SoapBlockDocument = SoapBlockDocumentV1 | SoapBlockDocumentV2;
 
 export type Diagnosis = {
   id: EmrId;
@@ -351,6 +366,7 @@ export type Diagnosis = {
   diagnosisCatalogRevision?: number;
   diagnosisText: string;
   diagnosisType: DiagnosisType;
+  systemId?: EmrId;
   systemLabel?: string;
   diseaseGroupLabel?: string;
   closedAt?: IsoDateTime;

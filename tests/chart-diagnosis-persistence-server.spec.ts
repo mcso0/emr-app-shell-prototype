@@ -260,6 +260,7 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
             diagnosisCatalogId: "dx-acute-gastroenteritis",
             diagnosisText: "급성 위장관염 의심",
             diagnosisType: "confirmed",
+            systemId: "system-digestive",
             closedAt: "2026-05-19T14:00:00.000Z",
             closedByUserId: "00000000-0000-4000-8000-000000000002",
             isPrimary: true,
@@ -297,7 +298,13 @@ test("diagnosis Supabase gateway keeps workspace, encounter, rows, and actor sco
   expect(result).toMatchObject({
     ok: true,
     diagnoses: [
-      { id: "diagnosis-db-den-71", encounterId, isPrimary: true, sortOrder: 0 },
+      {
+        id: "diagnosis-db-den-71",
+        encounterId,
+        isPrimary: true,
+        sortOrder: 0,
+        systemId: "system-digestive",
+      },
     ],
   });
 });

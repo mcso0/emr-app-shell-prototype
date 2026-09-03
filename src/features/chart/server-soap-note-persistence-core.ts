@@ -336,7 +336,7 @@ export type SupabaseChartSoapNoteRpcClient = {
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_save_chart_soap_note_v2",
+    functionName: "clair_save_chart_soap_note_v3",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
@@ -369,7 +369,7 @@ export function createSupabaseChartSoapNoteGateway(
       return { ok: true, soapNote: mapSoapNote(data) };
     },
     async saveSoapNote({ actorUserId, blockDocument, encounterId, expectedUpdatedAt, fields, mode, requestId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_save_chart_soap_note_v2", {
+      const { data, error } = await client.rpc("clair_save_chart_soap_note_v3", {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,

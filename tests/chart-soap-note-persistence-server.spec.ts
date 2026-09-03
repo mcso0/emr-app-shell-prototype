@@ -23,6 +23,11 @@ const blockDocumentMigrationPath =
 const blockDocumentMigration = existsSync(blockDocumentMigrationPath)
   ? readFileSync(blockDocumentMigrationPath, "utf8")
   : "";
+const systemScopeMigrationPath =
+  "supabase/migrations/20260903104212_chart_soap_system_scope_v2.sql";
+const systemScopeMigration = existsSync(systemScopeMigrationPath)
+  ? readFileSync(systemScopeMigrationPath, "utf8")
+  : "";
 
 const validBlockDocument = {
   schemaVersion: 1 as const,
@@ -246,7 +251,7 @@ test("SOAP note core validates canonical JSON and derives legacy projections ins
     workspaceId,
     input: {
       encounterId,
-      blockDocument: { ...validBlockDocument, schemaVersion: 2 },
+      blockDocument: { ...validBlockDocument, schemaVersion: 3 },
     },
   });
   expect(rejected).toMatchObject({
@@ -254,6 +259,79 @@ test("SOAP note core validates canonical JSON and derives legacy projections ins
     status: 400,
     error: "invalid_input",
     fieldErrors: { blockDocument: "지원하지 않는 SOAP 문서 버전입니다." },
+  });
+});
+
+test("SOAP note core accepts V2 scopes and derives projections from default only", async () => {
+  const systemId = "c427a4b5-2181-4454-9655-6d2695c6768d";
+  const v2Document = {
+    schemaVersion: 2 as const,
+    scopes: [
+      {
+        scopeKey: "default",
+        scope: "default" as const,
+        systemLabel: "기본 SOAP",
+        blocks: validBlockDocument.blocks,
+      },
+      {
+        scopeKey: `system:${systemId}`,
+        scope: "system" as const,
+        systemId,
+        systemLabel: "근골격계",
+        blocks: [
+          {
+            ...structuredClone(validBlockDocument.blocks[0]),
+            id: "system-subjective",
+            props: {
+              ...validBlockDocument.blocks[0]!.props,
+              scope: "system",
+              systemLabel: "근골격계",
+            },
+            children: [
+              {
+                ...structuredClone(validBlockDocument.blocks[0]!.children[0]),
+                id: "system-subjective-text",
+                content: [
+                  { type: "text", text: "근골격계에서만 보일 내용", styles: {} },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  let receivedFields: Record<string, string> | undefined;
+  const result = await saveChartSoapNote({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: { encounterId, blockDocument: v2Document },
+    gateway: {
+      async saveSoapNote(input) {
+        receivedFields = input.fields;
+        return {
+          ok: true,
+          soapNote: {
+            id: "soap-v2-scopes",
+            encounterId,
+            authorUserId: "user-vet",
+            ...input.fields,
+            blockDocument: input.blockDocument,
+            status: "autosaved",
+            createdAt: "2026-09-03T00:00:00.000Z",
+            updatedAt: "2026-09-03T00:00:00.000Z",
+          },
+        };
+      },
+    },
+  });
+
+  expect(result).toMatchObject({ ok: true });
+  expect(receivedFields).toEqual({
+    subjective: "블록 보호자 진술",
+    objective: "",
+    assessment: "",
+    plan: "",
   });
 });
 
@@ -553,7 +631,7 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
 
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({
-    functionName: "clair_save_chart_soap_note_v2",
+    functionName: "clair_save_chart_soap_note_v3",
     args: {
       p_workspace_id: workspaceId,
       p_actor_user_id: "00000000-0000-4000-8000-000000000002",
@@ -644,6 +722,21 @@ test("SOAP BlockNote migration keeps canonical JSON and legacy projections insid
     "drop function if exists public.clair_save_chart_soap_note(text, text, uuid, jsonb, timestamptz, text)",
   );
   expect(blockDocumentMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
+});
+
+test("SOAP system-scope migration is additive, dual-version, and keeps guarded RPC boundaries", () => {
+  expect(systemScopeMigration).toContain("block_document_schema_version in (1, 2)");
+  expect(systemScopeMigration).toContain("private.clair_soap_v1_document_is_valid");
+  expect(systemScopeMigration).toContain("p_document->'scopes'");
+  expect(systemScopeMigration).toContain("'systemId'");
+  expect(systemScopeMigration).toContain("'systemId', diagnosis.diagnosis_snapshot->>'systemId'");
+  expect(systemScopeMigration).toContain("clair_save_chart_soap_note_v3");
+  expect(systemScopeMigration).toContain("soap_client_upgrade_required");
+  expect(systemScopeMigration).toContain("set search_path = ''");
+  expect(systemScopeMigration).toContain("grant execute on function public.clair_save_chart_soap_note_v3");
+  expect(systemScopeMigration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
 });
