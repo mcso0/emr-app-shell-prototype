@@ -94,6 +94,14 @@ The persisted `soap_notes.block_document` remains a JSON array: V1 stores the bl
 - Local PostgreSQL transaction replay covers V3 persistence, default-only projection, V1 downgrade rejection, revision, grants, and full rollback.
 - Full lint, build, docs, secret, and Release Check gates are required before merge.
 
+## Remote Database Evidence
+
+- Additive migration `20260903110347` (`chart_soap_system_scope_v2`) is applied to the shared synthetic/demo Supabase target.
+- The validated `soap_notes_block_document_pair_check` accepts only null pairs or array payloads at schema version 1/2 within the existing byte boundary.
+- V2 validation returned true for a synthetic default scope; V3 writer, SOAP reader, and diagnosis reader are authenticated-only, while private document helpers remain non-executable by `authenticated` and `anon`.
+- The representative encounter's existing SOAP row retained the same schema version, document/projection hashes, and `updated_at` before and after migration. No content migration or row update ran.
+- Supabase advisors reported existing project-wide informational/performance findings; this migration added no table, RLS policy, or index surface.
+
 ## Rollback
 
 Ordinary application rollback redeploys the previous application while leaving the additive V2 schema and V3 RPC in place. Existing V2 rows remain readable through default projections and are protected from stale V1 writes. Removing V2 scope data or downgrading stored documents is destructive and is not part of service rollback.
