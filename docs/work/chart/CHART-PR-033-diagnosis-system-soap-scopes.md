@@ -1,6 +1,6 @@
 ---
 id: "CHART-PR-033"
-status: "implemented"
+status: "completed"
 area: "chart"
 priority: "P0"
 target_pr: "Browser comment / diagnosis-system SOAP scope isolation"
@@ -101,6 +101,15 @@ The persisted `soap_notes.block_document` remains a JSON array: V1 stores the bl
 - V2 validation returned true for a synthetic default scope; V3 writer, SOAP reader, and diagnosis reader are authenticated-only, while private document helpers remain non-executable by `authenticated` and `anon`.
 - The representative encounter's existing SOAP row retained the same schema version, document/projection hashes, and `updated_at` before and after migration. No content migration or row update ran.
 - Supabase advisors reported existing project-wide informational/performance findings; this migration added no table, RLS policy, or index surface.
+
+## Production Release Evidence
+
+- PR #702 candidate `82fa904e45e3649871913e8469e91a7a8389e589` passed Release Check `33748012134` and merged to `origin/main` at `ad59cd7f6923be8fca544f698ee25221d977e8e7`.
+- Vercel deployment `dpl_F3BESnEy2Vd6SLqYdHqtmfLP6E7W` is Ready on `https://emr-app-shell-prototype.vercel.app` and GitHub deployment `6242655604` reports success for the merge SHA.
+- Root and the exact Cheongdam treatment route returned final HTTP 200 responses.
+- Authenticated read-only smoke confirmed the existing default free-form text is present only under `기본 S/O`; `근골격계` renders its own blank S/O/A/P scope; switching back restores the default text; browser error logs are empty.
+- A post-smoke read-only fingerprint query confirmed the representative SOAP row's schema version, document/projection hashes, and `updated_at` remain unchanged.
+- The previous rollback baseline is `origin/main` `61655558` with production deployment `dpl_715C9ZyMsFyhdycwa4GJTvR4GwQX`.
 
 ## Rollback
 

@@ -50,8 +50,15 @@ default during non-destructive upgrade, and preserves one autosave/conflict/audi
 boundary. Remote additive migration `20260903110347` is applied to the shared
 synthetic/demo Supabase target; catalog/grant checks passed and the inspected
 existing SOAP row retained identical document/projection hashes and `updated_at`.
-The application release remains represented by its work item until the exact
-candidate passes Release Check and production smoke.
+PR #702 candidate `82fa904e45e3649871913e8469e91a7a8389e589` merged to
+`origin/main` at `ad59cd7f6923be8fca544f698ee25221d977e8e7` after Release
+Check `33748012134` passed. Production deployment
+`dpl_F3BESnEy2Vd6SLqYdHqtmfLP6E7W` is Ready on the official alias. Authenticated
+read-only smoke confirmed the existing default text remains default-only, the
+musculoskeletal tab opens its own blank S/O/A/P scope, switching back restores
+the default content, and browser errors are zero. The inspected SOAP row remained
+unchanged after smoke. Rollback points to prior `origin/main` `61655558` and
+deployment `dpl_715C9ZyMsFyhdycwa4GJTvR4GwQX`.
 
 RECEPTION-LIVE-PR-018 locally repairs the reception encounter-cancel contract:
 the app-facing four-argument RPC now requires actor/session equality, active
