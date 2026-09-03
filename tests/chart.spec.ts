@@ -6915,6 +6915,44 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   expect(
     Math.abs(candidateHeadingBox!.x - firstCandidateCopyBox!.x),
   ).toBeLessThanOrEqual(1);
+  const candidateScroll = candidateColumn.locator(
+    '[data-testid="chart-order-catalog-scroll"]',
+  );
+  const candidateScrollbar = candidateScroll.locator(
+    '[data-slot="scroll-area-scrollbar"]',
+  );
+  const candidateThumb = candidateScrollbar.locator(
+    '[data-slot="scroll-area-thumb"]',
+  );
+  const candidateScrollbarStyle = await candidateScroll.evaluate((element) => {
+    const columnRect = element.parentElement?.getBoundingClientRect();
+    const scrollbar = element.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-scrollbar"]',
+    );
+    const thumb = element.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-thumb"]',
+    );
+    const scrollbarRect = scrollbar?.getBoundingClientRect();
+    return {
+      rightGap:
+        columnRect && scrollbarRect
+          ? columnRect.right - scrollbarRect.right
+          : null,
+      thumbBackground: thumb ? getComputedStyle(thumb).backgroundColor : null,
+      thumbRadius: thumb
+        ? Number.parseFloat(getComputedStyle(thumb).borderRadius)
+        : null,
+    };
+  });
+  const [candidateScrollbarBox, candidateThumbBox] = await Promise.all([
+    candidateScrollbar.boundingBox(),
+    candidateThumb.boundingBox(),
+  ]);
+  expect(candidateScrollbarStyle.rightGap).toBeCloseTo(4, 0);
+  expect(candidateScrollbarBox?.width).toBeCloseTo(10, 0);
+  expect(candidateThumbBox?.width).toBeCloseTo(7, 0);
+  expect(candidateScrollbarStyle.thumbBackground).toBe("rgb(229, 229, 229)");
+  expect(candidateScrollbarStyle.thumbRadius).toBeGreaterThan(1_000);
   const selectedColumn = dialog.locator('section[aria-label="선택한 오더"]');
   const selectedViewport = selectedColumn.locator(
     '[data-slot="scroll-area-viewport"]',
