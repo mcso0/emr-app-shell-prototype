@@ -6815,6 +6815,23 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   });
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
   await expect(dialog.getByText("108개", { exact: true })).toBeVisible();
+  const candidateColumn = dialog.locator('section[aria-label="전체 오더"]');
+  const candidateHeading = candidateColumn.getByText("전체 오더", {
+    exact: true,
+  });
+  const firstCandidateCopy = page
+    .getByTestId("chart-order-catalog-candidate-pr017-dispensing-0001")
+    .locator("span")
+    .first();
+  const [candidateHeadingBox, firstCandidateCopyBox] = await Promise.all([
+    candidateHeading.boundingBox(),
+    firstCandidateCopy.boundingBox(),
+  ]);
+  expect(candidateHeadingBox).not.toBeNull();
+  expect(firstCandidateCopyBox).not.toBeNull();
+  expect(
+    Math.abs(candidateHeadingBox!.x - firstCandidateCopyBox!.x),
+  ).toBeLessThanOrEqual(1);
   const selectedColumn = dialog.locator('section[aria-label="선택한 오더"]');
   const selectedViewport = selectedColumn.locator(
     '[data-slot="scroll-area-viewport"]',
