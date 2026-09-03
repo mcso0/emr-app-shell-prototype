@@ -3,7 +3,7 @@ id: "CHART-PR-032"
 type: "Work Item"
 title: "Plan/Order Exact Legacy Columns"
 description: "Replaces the dynamic union matrix with the approved fixed 25-column projection after authoritative lifecycle and billing data are available."
-status: "in_progress"
+status: "completed"
 area: "chart"
 priority: "P0"
 tags: [chart, plan-order, table, legacy-columns]
@@ -11,6 +11,7 @@ target_pr: "GitHub PR #698"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/work/chart/CHART-PR-031-plan-order-legacy-column-validation.md"
+  - "docs/completed/chart/2026-09-03-plan-order-legacy-workflow-report.html"
 dependencies:
   - "CLINICAL-MASTER-PR-023"
   - "CLINICAL-FULFILLMENT-PR-010"
@@ -66,7 +67,7 @@ authoritative work/billing readback.
   check.
 - Authenticated preview smoke before production candidate approval.
 
-## Implementation Checkpoint — 2026-09-03
+## Delivery Completion — 2026-09-03
 
 - The fixed 25-column `전체` projection, applicable/blank/historical display
   states, assignee controls, actual-dispense controls, pre-billing editors, and
@@ -76,7 +77,7 @@ authoritative work/billing readback.
   `238/238`.
 - TypeScript, repository lint, production build, diff check, and the local SQL
   migration/smoke transaction with unconditional rollback passed.
-- PR #698 is open. The exact staging project replay exposed and repaired two
+- PR #698's exact staging project replay exposed and repaired two
   legacy Task metadata shapes, then passed the full migration/smoke transaction
   with unconditional rollback and zero schema, fixture, or history residue.
 - 승욱 approved the exact candidate and persistent migration. Supabase applied
@@ -84,9 +85,13 @@ authoritative work/billing readback.
   post-apply readback found zero lifecycle-shape violations, all 14 target
   constraints validated, RLS enabled on all four new authority tables, and the
   five target `SECURITY DEFINER` RPCs restricted to `authenticated` callers.
-- The migration filename now matches the history version assigned by Supabase;
-  its SQL SHA-256 remains unchanged. Merge, production deployment, and
-  authenticated production smoke remain open.
+- The migration filename matches the history version assigned by Supabase; its
+  SQL SHA-256 remained unchanged.
+- PR #698 merged as `f86ff1c31c6c288b5ba9697e5ad3902bd17f48ee`.
+  Production deployment `dpl_BekLknn1zHvZexMs2eniy4aSz5fG` is `Ready` and
+  owns the production alias.
+- Authenticated production smoke confirmed the exact 25 business-header order,
+  with zero raw UUID/enum exposure, Next error overlays, or console errors.
 
 ## Handoff Notes
 
