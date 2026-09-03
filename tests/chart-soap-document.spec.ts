@@ -6,6 +6,7 @@ import {
   buildSystemSoapScopeKey,
   createSoapBlockDocumentV2,
   createLegacySoapDocumentInput,
+  defaultSoapWritingPrompts,
   getSoapDocumentScope,
   hasMeaningfulSoapScopeContent,
   replaceSoapDocumentScope,
@@ -366,6 +367,20 @@ test("legacy SOAP fields hydrate into the four default BlockNote sections withou
   ]);
   expect(blocks[0]?.children[0]?.content).toBe("기존 S");
   expect(blocks[0]).not.toHaveProperty("id");
+});
+
+test("new SOAP documents use editable veterinary writing prompts without prefilled normal findings", () => {
+  const blocks = createLegacySoapDocumentInput(null);
+
+  expect(blocks.map((block) => block.children[0]?.content)).toEqual([
+    defaultSoapWritingPrompts.subjective,
+    defaultSoapWritingPrompts.objective,
+    defaultSoapWritingPrompts.assessment,
+    defaultSoapWritingPrompts.plan,
+  ]);
+  expect(Object.values(defaultSoapWritingPrompts).join(" ")).not.toMatch(
+    /WNL|이상 없음|정상입니다/,
+  );
 });
 
 test("SOAP canonical comparison ignores JSON object key order but not content", () => {
