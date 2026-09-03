@@ -323,79 +323,42 @@
 }
 
 .loadingState {
-  display: flex;
+  display: grid;
   min-height: 0;
   flex: 1;
-  flex-direction: column;
+  place-content: center;
+  justify-items: center;
+  gap: 16px;
   overflow: hidden;
-}
-
-.loadingMessage {
-  display: flex;
-  min-height: 56px;
-  flex: 0 0 56px;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border-bottom: 1px solid var(--emr-border-default);
-  background: var(--emr-surface-muted);
+  padding: 24px 10px;
   color: var(--emr-text-secondary);
+  text-align: center;
 }
 
-.loadingMessage > strong {
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 18px;
+.column > .loadingState {
+  height: auto;
+}
+
+.loadingIconSurface {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: var(--clair-color-atomic-black-alpha-4);
+  color: var(--clair-color-atomic-black-alpha-48);
+}
+
+.loadingState > strong {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
 }
 
 .spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--emr-border-default);
-  border-top-color: var(--emr-text-tertiary);
-  border-radius: 999px;
+  width: 24px;
+  height: 24px;
   animation: spin 0.8s linear infinite;
-}
-
-.skeletonList {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-}
-
-.skeletonList > span {
-  display: grid;
-  min-height: 34px;
-  grid-template-columns: minmax(0, 1fr) 72px;
-  align-items: center;
-  gap: 20px;
-  padding: 5px 8px;
-  border-bottom: 1px solid var(--emr-border-subtle);
-  background: var(--emr-surface-panel);
-}
-
-.skeletonList i,
-.skeletonList em {
-  display: block;
-  height: 10px;
-  border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--emr-border-default) 20%,
-    var(--emr-surface-muted) 50%,
-    var(--emr-border-default) 80%
-  );
-  background-size: 220% 100%;
-  animation: shimmer 1.15s ease-in-out infinite;
-}
-
-.skeletonList i {
-  width: min(220px, 72%);
-}
-
-.skeletonList em {
-  width: 64px;
-  justify-self: end;
 }
 
 @keyframes spin {
@@ -416,9 +379,7 @@
 @media (prefers-reduced-motion: reduce) {
   .spinner,
   .countSkeleton,
-  .optionCountSkeleton,
-  .skeletonList i,
-  .skeletonList em {
+  .optionCountSkeleton {
     animation: none;
   }
 }

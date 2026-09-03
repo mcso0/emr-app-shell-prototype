@@ -9342,7 +9342,6 @@ function ChartOrderCatalogDialog({
               <ClassificationExplorerLoadingState
                 label="오더"
                 message="오더를 불러오는 중입니다"
-                rows={8}
               />
             ) : status === "error" || status === "denied" ? (
               <div className={orderCatalogDialogStyles.feedback}>
