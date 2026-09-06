@@ -1,0 +1,2479 @@
+{
+  "generatedAt": "2026-09-06",
+  "revision": "oed-lab-02.v1",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "schemaVersion": "oed-lab-02-profiles/v1",
+  "profiles": [
+    {
+      "profileId": "candidate.profile.procyte-dx.dog.2019.v1",
+      "revision": "oed-lab-02.v1",
+      "species": "dog",
+      "equipment": {
+        "manufacturer": "IDEXX",
+        "model": "ProCyte Dx",
+        "ownedByWorkspace": false
+      },
+      "method": "ProCyte Dx whole-blood CBC; numeric values manually transcribed",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "population": {
+        "lifeStages": "all (as printed)",
+        "breed": null,
+        "sex": null,
+        "clinicalValidation": "not_clinically_validated"
+      },
+      "documentRevision": "06-27445-12 / 2019 / VetLab Station 5.01",
+      "latestInstalledVersionVerified": false,
+      "availability": "active",
+      "provenance": "synthetic_research_informed",
+      "numericProvenance": "transcribed_published_facts",
+      "integrationStatus": "not_integrated",
+      "entryMode": "manual_entry",
+      "rules": [
+        {
+          "code": "RBC",
+          "resultDefinitionId": "cm.lab-test.synthetic-01",
+          "unit": "10*6/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 5.65,
+            "high": 8.87,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog RBC",
+          "displayRange": {
+            "low": 0,
+            "high": 99.99,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "HCT",
+          "resultDefinitionId": "cm.lab-test.cbc-hct",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 37.3,
+            "high": 61.7,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog HCT",
+          "displayRange": {
+            "low": 0,
+            "high": 100,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "HGB",
+          "resultDefinitionId": "cm.lab-test.synthetic-02",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 13.1,
+            "high": 20.5,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog HGB",
+          "displayRange": {
+            "low": 0,
+            "high": 35,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "MCV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 61.6,
+            "high": 73.5,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog MCV",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "MCH",
+          "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 21.2,
+            "high": 25.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog MCH",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "MCHC",
+          "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 32,
+            "high": 37.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog MCHC",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "RDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 13.6,
+            "high": 21.7,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog RDW",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "RETIC_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 10,
+            "high": 110,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog RETIC_ABS",
+          "displayRange": {
+            "low": 0,
+            "high": 9999,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "RETIC_HGB",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 22.3,
+            "high": 29.6,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog RETIC_HGB",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "WBC",
+          "resultDefinitionId": "cm.lab-test.cbc-wbc",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 5.05,
+            "high": 16.76,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog WBC",
+          "displayRange": {
+            "low": 0,
+            "high": 999.99,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "NEU_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.95,
+            "high": 11.64,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog NEU_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "LYM_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 1.05,
+            "high": 5.1,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog LYM_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "MONO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.16,
+            "high": 1.12,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog MONO_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "EOS_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.06,
+            "high": 1.23,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog EOS_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "BASO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 0.1,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog BASO_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "PLT",
+          "resultDefinitionId": "cm.lab-test.cbc-plt",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 148,
+            "high": 484,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog PLT",
+          "displayRange": {
+            "low": 0,
+            "high": 9999,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 0
+        },
+        {
+          "code": "MPV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 8.7,
+            "high": 13.2,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog MPV",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "PDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 9.1,
+            "high": 19.4,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog PDW",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.14,
+            "high": 0.46,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 dog PCT",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "NEU_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "LYM_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "MONO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "EOS_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "BASO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "RETIC_PCT",
+          "resultDefinitionId": "cm.lab-test.synthetic-13",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": {
+            "low": 0,
+            "high": 99.99,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        }
+      ]
+    },
+    {
+      "profileId": "candidate.profile.clair-demo-cbc.dog.v1",
+      "revision": "oed-lab-02.v1",
+      "species": "dog",
+      "equipment": {
+        "manufacturer": "CLAiR",
+        "model": "프로토타입 혈구분석기",
+        "ownedByWorkspace": false
+      },
+      "method": "synthetic functional scenario; manual entry",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "population": {
+        "lifeStages": "prototype_only",
+        "breed": null,
+        "sex": null,
+        "clinicalValidation": "not_clinically_validated"
+      },
+      "availability": "active",
+      "provenance": "synthetic_functional_fixture",
+      "numericProvenance": "explicit_generation_rules",
+      "integrationStatus": "not_integrated",
+      "entryMode": "manual_entry",
+      "rules": [
+        {
+          "code": "RBC",
+          "resultDefinitionId": "cm.lab-test.synthetic-01",
+          "unit": "10*6/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 5.08,
+            "high": 9.76,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "HCT",
+          "resultDefinitionId": "cm.lab-test.cbc-hct",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 33.5,
+            "high": 67.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "HGB",
+          "resultDefinitionId": "cm.lab-test.synthetic-02",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 11.7,
+            "high": 22.6,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MCV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 55.4,
+            "high": 80.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MCH",
+          "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 19,
+            "high": 28.5,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MCHC",
+          "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 28.8,
+            "high": 41.7,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 12.2,
+            "high": 23.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RETIC_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 9,
+            "high": 121.1,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RETIC_HGB",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 20,
+            "high": 32.6,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "WBC",
+          "resultDefinitionId": "cm.lab-test.cbc-wbc",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 4.54,
+            "high": 18.44,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "NEU_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.65,
+            "high": 12.81,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "LYM_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.94,
+            "high": 5.61,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MONO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.14,
+            "high": 1.24,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "EOS_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.05,
+            "high": 1.36,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "BASO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 0.12,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "PLT",
+          "resultDefinitionId": "cm.lab-test.cbc-plt",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 133,
+            "high": 533,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 0,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MPV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 7.8,
+            "high": 14.6,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "PDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 8.1,
+            "high": 21.4,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.12,
+            "high": 0.51,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "NEU_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 40,
+            "high": 75,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "LYM_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 10,
+            "high": 45,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MONO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 12,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "EOS_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 12,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "BASO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 2,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RETIC_PCT",
+          "resultDefinitionId": "cm.lab-test.synthetic-13",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 2,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        }
+      ]
+    },
+    {
+      "profileId": "candidate.profile.procyte-dx.cat.2019.v1",
+      "revision": "oed-lab-02.v1",
+      "species": "cat",
+      "equipment": {
+        "manufacturer": "IDEXX",
+        "model": "ProCyte Dx",
+        "ownedByWorkspace": false
+      },
+      "method": "ProCyte Dx whole-blood CBC; numeric values manually transcribed",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "population": {
+        "lifeStages": "all (as printed)",
+        "breed": null,
+        "sex": null,
+        "clinicalValidation": "not_clinically_validated"
+      },
+      "documentRevision": "06-27445-12 / 2019 / VetLab Station 5.01",
+      "latestInstalledVersionVerified": false,
+      "availability": "active",
+      "provenance": "synthetic_research_informed",
+      "numericProvenance": "transcribed_published_facts",
+      "integrationStatus": "not_integrated",
+      "entryMode": "manual_entry",
+      "rules": [
+        {
+          "code": "RBC",
+          "resultDefinitionId": "cm.lab-test.synthetic-01",
+          "unit": "10*6/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 6.54,
+            "high": 12.2,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat RBC",
+          "displayRange": {
+            "low": 0,
+            "high": 99.99,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "HCT",
+          "resultDefinitionId": "cm.lab-test.cbc-hct",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 30.3,
+            "high": 52.3,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat HCT",
+          "displayRange": {
+            "low": 0,
+            "high": 100,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "HGB",
+          "resultDefinitionId": "cm.lab-test.synthetic-02",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 9.8,
+            "high": 16.2,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat HGB",
+          "displayRange": {
+            "low": 0,
+            "high": 35,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "MCV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 35.9,
+            "high": 53.1,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat MCV",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "MCH",
+          "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 11.8,
+            "high": 17.3,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat MCH",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "MCHC",
+          "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 28.1,
+            "high": 35.8,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat MCHC",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "RDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 15,
+            "high": 27,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat RDW",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "RETIC_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 3,
+            "high": 50,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat RETIC_ABS",
+          "displayRange": {
+            "low": 0,
+            "high": 9999,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "RETIC_HGB",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 13.2,
+            "high": 20.8,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat RETIC_HGB",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "WBC",
+          "resultDefinitionId": "cm.lab-test.cbc-wbc",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.87,
+            "high": 17.02,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat WBC",
+          "displayRange": {
+            "low": 0,
+            "high": 999.99,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "NEU_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.3,
+            "high": 10.29,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat NEU_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "LYM_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.92,
+            "high": 6.88,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat LYM_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "MONO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.05,
+            "high": 0.67,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat MONO_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "EOS_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.17,
+            "high": 1.57,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat EOS_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "BASO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.01,
+            "high": 0.26,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat BASO_ABS",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "PLT",
+          "resultDefinitionId": "cm.lab-test.cbc-plt",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 151,
+            "high": 600,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat PLT",
+          "displayRange": {
+            "low": 0,
+            "high": 9999,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 0
+        },
+        {
+          "code": "MPV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 11.4,
+            "high": 21.6,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat MPV",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "PDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+          "unit": "fL",
+          "resultSupported": false,
+          "referenceInterval": null,
+          "referenceStatus": "result_and_interval_not_reported_NA",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat PDW",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1
+        },
+        {
+          "code": "PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.17,
+            "high": 0.86,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "source_found",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 cat PCT",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "NEU_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "LYM_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "MONO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "EOS_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "BASO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        },
+        {
+          "code": "RETIC_PCT",
+          "resultDefinitionId": "cm.lab-test.synthetic-13",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": null,
+          "referenceStatus": "interval_not_in_pinned_document",
+          "sourceIds": [
+            "IDEXX-RI"
+          ],
+          "sourceLocator": "p1 absence; parameter support: IDEXX-MENU",
+          "displayRange": {
+            "low": 0,
+            "high": 99.99,
+            "sourceId": "IDEXX-GUIDE",
+            "page": 50,
+            "meaning": "display_range_not_analytical_measurement_range"
+          },
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2
+        }
+      ]
+    },
+    {
+      "profileId": "candidate.profile.clair-demo-cbc.cat.v1",
+      "revision": "oed-lab-02.v1",
+      "species": "cat",
+      "equipment": {
+        "manufacturer": "CLAiR",
+        "model": "프로토타입 혈구분석기",
+        "ownedByWorkspace": false
+      },
+      "method": "synthetic functional scenario; manual entry",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "population": {
+        "lifeStages": "prototype_only",
+        "breed": null,
+        "sex": null,
+        "clinicalValidation": "not_clinically_validated"
+      },
+      "availability": "active",
+      "provenance": "synthetic_functional_fixture",
+      "numericProvenance": "explicit_generation_rules",
+      "integrationStatus": "not_integrated",
+      "entryMode": "manual_entry",
+      "rules": [
+        {
+          "code": "RBC",
+          "resultDefinitionId": "cm.lab-test.synthetic-01",
+          "unit": "10*6/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 5.88,
+            "high": 13.42,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "HCT",
+          "resultDefinitionId": "cm.lab-test.cbc-hct",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 27.2,
+            "high": 57.6,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "HGB",
+          "resultDefinitionId": "cm.lab-test.synthetic-02",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 8.8,
+            "high": 17.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MCV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 32.3,
+            "high": 58.5,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MCH",
+          "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 10.6,
+            "high": 19.1,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MCHC",
+          "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+          "unit": "g/dL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 25.2,
+            "high": 39.4,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 13.5,
+            "high": 29.7,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RETIC_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.7,
+            "high": 55.1,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RETIC_HGB",
+          "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+          "unit": "pg",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 11.8,
+            "high": 22.9,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "WBC",
+          "resultDefinitionId": "cm.lab-test.cbc-wbc",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.58,
+            "high": 18.73,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "NEU_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 2.06,
+            "high": 11.32,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "LYM_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.82,
+            "high": 7.57,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MONO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.04,
+            "high": 0.74,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "EOS_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.15,
+            "high": 1.73,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "BASO_ABS",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 0.29,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "PLT",
+          "resultDefinitionId": "cm.lab-test.cbc-plt",
+          "unit": "10*3/uL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 135,
+            "high": 660,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 0,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MPV",
+          "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 10.2,
+            "high": 23.8,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "PDW",
+          "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+          "unit": "fL",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 9,
+            "high": 25,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 1,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_cat_pdw_9_25_fL",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0.15,
+            "high": 0.95,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [
+            "IDEXX-RI"
+          ],
+          "generationRule": "low=floor(public_low*0.9*10^scale)/10^scale; high=ceil(public_high*1.1*10^scale)/10^scale",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "NEU_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 30,
+            "high": 80,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "LYM_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 15,
+            "high": 60,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "MONO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 12,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "EOS_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 15,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "BASO_PCT",
+          "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 3,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        },
+        {
+          "code": "RETIC_PCT",
+          "resultDefinitionId": "cm.lab-test.synthetic-13",
+          "unit": "%",
+          "resultSupported": true,
+          "referenceInterval": {
+            "low": 0,
+            "high": 2,
+            "lowInclusive": true,
+            "highInclusive": true,
+            "boundaryPolicy": "prototype_inclusive_low_high"
+          },
+          "referenceStatus": "synthetic_functional_fixture",
+          "sourceIds": [],
+          "sourceLocator": null,
+          "displayRange": null,
+          "analyticalMeasurementRange": null,
+          "criticalThresholds": null,
+          "decimalScale": 2,
+          "derivationContextSourceIds": [],
+          "generationRule": "explicit_demo_percentage_bounds_v1",
+          "sourceAuthority": "CLAiR synthetic only; not an IDEXX interval"
+        }
+      ]
+    }
+  ],
+  "manualProfile": {
+    "profileId": "candidate.profile.clair-demo-smear.v1",
+    "revision": "oed-lab-02.v1",
+    "species": [
+      "dog",
+      "cat"
+    ],
+    "equipment": {
+      "manufacturer": null,
+      "model": "수기 혈액도말 검토",
+      "ownedByWorkspace": false
+    },
+    "method": "manual_microscopy",
+    "specimenKey": "cm.specimen.edta-whole-blood",
+    "preparation": "blood_smear_slide",
+    "integrationStatus": "not_integrated",
+    "entryMode": "manual_entry",
+    "provenance": "synthetic_functional_fixture",
+    "availability": "active",
+    "clinicalValidation": "not_clinically_validated",
+    "rules": [
+      {
+        "resultDefinitionId": "cm.lab-test.synthetic-14",
+        "resultSupported": true,
+        "unit": null,
+        "referenceInterval": null,
+        "referenceStatus": "not_applicable_narrative",
+        "codeSet": [
+          "unremarkable",
+          "abnormal",
+          "inconclusive",
+          "not_performed"
+        ]
+      }
+    ]
+  }
+}

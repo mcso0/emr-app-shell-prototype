@@ -1,0 +1,210 @@
+{
+  "readOnly": true,
+  "observedAt": "2026-09-06",
+  "records": [
+    {
+      "names": [
+        {
+          "name": "Synthetic Numeric",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "en"
+        },
+        {
+          "name": "합성 숫자",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "inputCode": "OPT_NUMERIC",
+        "valueKind": "numeric",
+        "supportsUnit": true
+      },
+      "source": {
+        "title": "Phase 1 Option B durable synthetic fixture",
+        "accessedAt": null,
+        "sourceType": "synthetic",
+        "licenseNotes": null,
+        "referenceUri": null,
+        "sourceVersion": null
+      },
+      "revision": 1,
+      "masterKey": "phase1.optionb.v1.input.numeric",
+      "recordType": "result_input_type",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published"
+    },
+    {
+      "names": [
+        {
+          "name": "Synthetic Basic Metabolic",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "en"
+        },
+        {
+          "name": "합성 기초 혈액검사",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "panelCode": "OPT_BMP"
+      },
+      "source": {
+        "title": "Phase 1 Option B durable synthetic fixture",
+        "accessedAt": null,
+        "sourceType": "synthetic",
+        "licenseNotes": null,
+        "referenceUri": null,
+        "sourceVersion": null
+      },
+      "revision": 1,
+      "masterKey": "phase1.optionb.v1.panel.metabolic",
+      "recordType": "lab_panel",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "labPanelItems": [
+        {
+          "required": true,
+          "sortOrder": 0,
+          "displayGroup": "chemistry",
+          "testMasterKey": "phase1.optionb.v1.test.glucose",
+          "panelMasterKey": "phase1.optionb.v1.panel.metabolic",
+          "testMasterRecordId": "3a3c7f7d-da44-4318-b30c-f1062f81da71",
+          "testMasterRevision": 1
+        }
+      ],
+      "lifecycleStatus": "published"
+    },
+    {
+      "names": [
+        {
+          "name": "Synthetic Serum",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "en"
+        },
+        {
+          "name": "합성 혈청",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "specimenCode": "OPT_SERUM"
+      },
+      "source": {
+        "title": "Phase 1 Option B durable synthetic fixture",
+        "accessedAt": null,
+        "sourceType": "synthetic",
+        "licenseNotes": null,
+        "referenceUri": null,
+        "sourceVersion": null
+      },
+      "revision": 1,
+      "masterKey": "phase1.optionb.v1.specimen.serum",
+      "recordType": "specimen_type",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published"
+    },
+    {
+      "names": [
+        {
+          "name": "Synthetic Glucose",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "en"
+        },
+        {
+          "name": "합성 혈당",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "testCode": "OPT_GLU",
+        "decimalScale": 1,
+        "canonicalUnitKey": "phase1.optionb.v1.unit.mgdl",
+        "resultInputTypeKey": "phase1.optionb.v1.input.numeric"
+      },
+      "source": {
+        "title": "Phase 1 Option B durable synthetic fixture",
+        "accessedAt": null,
+        "sourceType": "synthetic",
+        "licenseNotes": null,
+        "referenceUri": null,
+        "sourceVersion": null
+      },
+      "revision": 1,
+      "masterKey": "phase1.optionb.v1.test.glucose",
+      "recordType": "lab_test",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labTestVocabulary": {
+        "canonicalUnitKey": "phase1.optionb.v1.unit.mgdl",
+        "canonicalUnitCode": "OPT_MGDL",
+        "resultInputTypeKey": "phase1.optionb.v1.input.numeric",
+        "canonicalUnitRevision": 1,
+        "resultInputTypeRevision": 1,
+        "resultInputTypeValueKind": "numeric",
+        "canonicalUnitMasterRecordId": "35b4c7aa-e6c2-4449-993a-d09c9f68e750",
+        "resultInputTypeSupportsUnit": true,
+        "resultInputTypeMasterRecordId": "76a206ad-2229-4611-b1bd-545e3a2ca614"
+      }
+    },
+    {
+      "names": [
+        {
+          "name": "Synthetic mg/dL",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "en"
+        },
+        {
+          "name": "합성 밀리그램/데시리터",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "symbol": "mg/dL",
+        "unitCode": "OPT_MGDL",
+        "decimalScale": 1
+      },
+      "source": {
+        "title": "Phase 1 Option B durable synthetic fixture",
+        "accessedAt": null,
+        "sourceType": "synthetic",
+        "licenseNotes": null,
+        "referenceUri": null,
+        "sourceVersion": null
+      },
+      "revision": 1,
+      "masterKey": "phase1.optionb.v1.unit.mgdl",
+      "recordType": "unit",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published"
+    }
+  ]
+}

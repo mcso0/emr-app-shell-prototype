@@ -69,9 +69,9 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OrderWorkTable } from "@/features/dispensing/components/order-work-table";
 import {
-  FulfillmentWorkLifecycleAction,
   type FulfillmentTransitionOptions,
 } from "@/features/fulfillment/components/work-lifecycle-action";
+import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
 import type {
   FulfillmentWorkItemAction,
@@ -2416,7 +2416,10 @@ function DispensingContentBody({
                   출력하기
                 </Button>
                 {selectedFulfillmentWorkItem ? (
-                  <FulfillmentWorkLifecycleAction
+                  <FulfillmentExecutionActions
+                    workspaceId={selectedFulfillmentWorkItem.workspaceId}
+                    workItemId={selectedFulfillmentWorkItem.id}
+                    onSaved={fulfillmentQueue.refresh}
                     activityLabel={instructionType}
                     assignedToUserId={
                       selectedFulfillmentWorkItem.assignedToUserId
@@ -2667,6 +2670,7 @@ function DispensingContentBody({
                 onToggle={() => toggleOrderGroup(group.id)}
               >
                 <OrderWorkTable
+                  completionDisabled={Boolean(selectedFulfillmentWorkItem)}
                   density={tableDensity}
                   onDensityChange={setTableDensity}
                   rows={group.rows}

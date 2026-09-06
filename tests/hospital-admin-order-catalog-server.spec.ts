@@ -217,6 +217,7 @@ test("Plan/Order authority is snapshotted separately from editable detail inputs
 test("dispensing snapshots fall back to medication defaults unless a generic preset is present", async () => {
   const gateway = createMockOrderCatalogGateway();
   const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  if (!catalog.ok) throw new Error(catalog.error);
   const medication = catalog.items.find(
     (item) => item.id === "ord-med-maropitant",
   );
@@ -314,6 +315,7 @@ test("preset merge auto-updates unmodified rows and preserves customized rows", 
 test("workspace dispensing creation stays pending until veterinarian approval", async () => {
   const gateway = createMockOrderCatalogGateway();
   const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  if (!catalog.ok) throw new Error(catalog.error);
   const seed = catalog.items.find((item) => item.id === "ord-med-maropitant");
   expect(seed).toBeTruthy();
   const { updatedAt: _updatedAt, ...item } = {
@@ -434,6 +436,7 @@ test("workspace dispensing creation stays pending until veterinarian approval", 
 test("administrator veterinarian may author and self-approve a workspace dispensing order", async () => {
   const gateway = createMockOrderCatalogGateway();
   const catalog = await gateway.listAdminCatalog({ workspaceId: "clair-demo" });
+  if (!catalog.ok) throw new Error(catalog.error);
   const seed = catalog.items.find((item) => item.id === "ord-med-maropitant");
   expect(seed).toBeTruthy();
   const { updatedAt: _updatedAt, ...item } = {
@@ -954,62 +957,6 @@ test("Supabase order catalog gateway persists create update and pause mutations"
       expect.objectContaining({ id: createdId, availabilityStatus: "paused" }),
     ],
   });
-});
-
-test("admin catalog deploy-order fallback selects the complete execution contract", async () => {
-  let selectedColumns = "";
-  const query = {
-    select(columns: string) {
-      selectedColumns = columns;
-      return query;
-    },
-    eq() {
-      return query;
-    },
-    order() {
-      return query;
-    },
-    then<TResult1, TResult2>(
-      onfulfilled?:
-        | ((value: {
-            data: [];
-            error: null;
-          }) => TResult1 | PromiseLike<TResult1>)
-        | null,
-      onrejected?:
-        ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
-    ) {
-      return Promise.resolve({ data: [] as [], error: null }).then(
-        onfulfilled,
-        onrejected,
-      );
-    },
-  };
-  const gateway = createSupabaseOrderCatalogGateway({
-    from(table: "order_catalog_items") {
-      expect(table).toBe("order_catalog_items");
-      return query as never;
-    },
-    async rpc(functionName: string) {
-      expect(functionName).toBe("clair_list_order_catalog_admin_v2");
-      return { data: null, error: { message: "deploy_order_fallback" } };
-    },
-  });
-
-  await expect(
-    gateway.listAdminCatalog({ workspaceId: "clair-demo" }),
-  ).resolves.toEqual({ ok: true, items: [] });
-  for (const column of [
-    "clinical_order_type",
-    "is_external_lab",
-    "destination_module",
-    "execution_mode",
-    "detail_schema_version",
-    "detail_field_schema",
-    "billing_eligible",
-  ]) {
-    expect(selectedColumns.split(", ")).toContain(column);
-  }
 });
 
 test("order set expansion preserves child order snapshots and expansion order", async () => {

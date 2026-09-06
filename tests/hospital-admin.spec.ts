@@ -3591,6 +3591,8 @@ test("hospital admin order table shows skeleton rows while loading catalog", asy
     async (route) => {
       if (route.request().method() === "GET") {
         await new Promise((resolve) => setTimeout(resolve, 500));
+        await route.fulfill({ json: { ok: true, items: [createGenericCatalogItem("clinical_lab", {})] } });
+        return;
       }
       await route.continue();
     },
@@ -3674,7 +3676,7 @@ test("hospital admin Order read error hides seed rows and retries the catalog", 
         return;
       }
 
-      await route.continue();
+      await route.fulfill({ json: { ok: true, items: [createGenericCatalogItem("clinical_lab", {})] } });
     },
   );
 
@@ -3689,7 +3691,7 @@ test("hospital admin Order read error hides seed rows and retries the catalog", 
   await readError.getByRole("button", { name: "다시 시도" }).click();
   await expect(page.getByTestId("hospital-order-table")).toBeVisible();
   await expect(
-    page.getByTestId("hospital-order-row-ord-lab-cbc-baso"),
+    page.getByTestId("hospital-order-row-catalog-clinical_lab"),
   ).toBeVisible();
   expect(readAttempts).toBe(2);
 });

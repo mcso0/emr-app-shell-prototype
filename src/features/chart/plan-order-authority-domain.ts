@@ -18,6 +18,7 @@ export type PlanOrderDoseBasis = "head" | "kg";
 export type PlanOrderCalculationMode =
   | "ingredient_based"
   | "fixed_product"
+  | "product_unit"
   | "not_applicable";
 export type PlanOrderPreparationRoundingMode =
   | "nearest"
@@ -38,6 +39,7 @@ export type PlanOrderProductStrength = {
 };
 
 export type PlanOrderPreparationPolicy = {
+  quantityScope?: "per_administration" | "course_total";
   increment: number;
   roundingMode: PlanOrderPreparationRoundingMode;
   displayPrecision: number;
@@ -47,7 +49,7 @@ export type PlanOrderPreparationPolicy = {
 };
 
 export type PlanOrderAuthorityConfig = {
-  schemaVersion: 1;
+  schemaVersion: 1 | 2;
   calculationMode: PlanOrderCalculationMode;
   dispenseUnit?: string | null;
   referenceIngredientId?: string | null;
@@ -61,6 +63,15 @@ export type PlanOrderAuthorityConfig = {
   taxClass?: PlanOrderTaxClass | null;
   setBillingOwner?: PlanOrderSetBillingOwner | null;
   setAmountStrategy?: PlanOrderSetAmountStrategy | null;
+  productReference?: {
+    referenceKey: string;
+    productName: string;
+    dosageForm: string;
+    strengthDescription: string;
+    sourceUri: string;
+    referenceSpecies: string[];
+    clinicalUseAllowed: false;
+  };
 };
 
 export type PlanOrderAuthorityIssue = {
@@ -87,6 +98,7 @@ const authorityKeys = new Set([
   "taxClass",
   "setBillingOwner",
   "setAmountStrategy",
+  "productReference",
 ]);
 
 const strengthKeys = new Set([
@@ -97,6 +109,7 @@ const strengthKeys = new Set([
 ]);
 const conversionKeys = new Set(["fromUnit", "toUnit", "factor"]);
 const preparationKeys = new Set([
+  "quantityScope",
   "increment",
   "roundingMode",
   "displayPrecision",
@@ -118,7 +131,7 @@ export function parsePlanOrderAuthority(
 
   const issues: PlanOrderAuthorityIssue[] = [];
   rejectUnknownKeys(input, authorityKeys, "planOrderAuthority", issues);
-  if (input.schemaVersion !== 1) {
+  if (input.schemaVersion !== 1 && input.schemaVersion !== 2) {
     issues.push({
       path: "planOrderAuthority.schemaVersion",
       code: "schema_version_invalid",
@@ -158,6 +171,36 @@ export function parsePlanOrderAuthority(
     input.preparationPolicy,
     issues,
   );
+  let productReference: PlanOrderAuthorityConfig["productReference"];
+  if (input.productReference !== undefined) {
+    const ref = input.productReference;
+    if (input.schemaVersion !== 2 || !isRecord(ref) ||
+      Object.keys(ref).some(key => !["referenceKey", "productName", "dosageForm", "strengthDescription", "sourceUri", "referenceSpecies", "clinicalUseAllowed"].includes(key)) ||
+      ["referenceKey", "productName", "dosageForm", "strengthDescription", "sourceUri"].some(key => !nonEmpty(ref[key]) || String(ref[key]).length > 2000) ||
+      !String(ref.sourceUri).startsWith("https://") || ref.clinicalUseAllowed !== false ||
+      !Array.isArray(ref.referenceSpecies) || ref.referenceSpecies.length < 1 ||
+      ref.referenceSpecies.some(value => !["dog", "cat", "horse", "human"].includes(String(value))) ||
+      new Set(ref.referenceSpecies).size !== ref.referenceSpecies.length) {
+      issues.push({ path: "planOrderAuthority.productReference", code: "product_reference_invalid" });
+    } else productReference = structuredClone(ref) as PlanOrderAuthorityConfig["productReference"];
+  }
+  if (input.schemaVersion === 1 &&
+    (input.calculationMode === "product_unit" || preparationPolicy?.quantityScope)) {
+    issues.push({ path: "planOrderAuthority.schemaVersion", code: "requires_version_2" });
+  }
+  if (input.schemaVersion === 2 && input.calculationMode !== "not_applicable" &&
+    !preparationPolicy?.quantityScope) {
+    issues.push({ path: "planOrderAuthority.preparationPolicy.quantityScope", code: "required_for_version_2" });
+  }
+  if (input.schemaVersion === 2 && preparationPolicy && preparationPolicy.displayPrecision > 9) {
+    issues.push({ path: "planOrderAuthority.preparationPolicy.displayPrecision", code: "precision_out_of_range" });
+  }
+  if (input.calculationMode === "product_unit") {
+    if (!dispenseUnit) issues.push({ path: "planOrderAuthority.dispenseUnit", code: "required_for_calculation" });
+    if (fixedProductQuantity || fixedProductQuantityBasis) {
+      issues.push({ path: "planOrderAuthority.fixedProductQuantity", code: "product_unit_uses_order_dose" });
+    }
+  }
   const priceBasis = nullableEnum(
     input.priceBasis,
     PLAN_ORDER_PRICE_BASES,
@@ -258,7 +301,7 @@ export function parsePlanOrderAuthority(
   return {
     valid: true,
     value: {
-      schemaVersion: 1,
+      schemaVersion: input.schemaVersion as 1 | 2,
       calculationMode: input.calculationMode as PlanOrderCalculationMode,
       ...(dispenseUnit ? { dispenseUnit } : {}),
       ...(referenceIngredientId ? { referenceIngredientId } : {}),
@@ -272,6 +315,7 @@ export function parsePlanOrderAuthority(
       ...(taxClass ? { taxClass } : {}),
       ...(setBillingOwner ? { setBillingOwner } : {}),
       ...(setAmountStrategy ? { setAmountStrategy } : {}),
+      ...(productReference ? { productReference } : {}),
     },
   };
 }
@@ -298,7 +342,7 @@ export type PlanOrderDispenseCalculationResult =
       quantity: number;
       unit: string;
       weightSnapshot: PlanOrderWeightSnapshot | null;
-      formula: "ingredient_based" | "fixed_product";
+      formula: "ingredient_based" | "fixed_product" | "product_unit";
     }
   | {
       ok: false;
@@ -332,6 +376,22 @@ export function calculatePlanOrderDispenseQuantity(
   if (!weight.ok) return weight;
   const basisMultiplier =
     input.doseBasis === "kg" && weight.value ? weight.value.valueKg : 1;
+
+  if (config.calculationMode === "product_unit") {
+    if (config.schemaVersion !== 2 || !config.dispenseUnit) {
+      return { ok: false, reason: "configuration_missing" };
+    }
+    if (input.doseUnit !== config.dispenseUnit) {
+      return { ok: false, reason: "unit_conversion_missing" };
+    }
+    return {
+      ok: true,
+      quantity: input.dosePerAdministration * basisMultiplier,
+      unit: config.dispenseUnit,
+      weightSnapshot: weight.value,
+      formula: "product_unit",
+    };
+  }
 
   if (config.calculationMode === "fixed_product") {
     if (
@@ -391,6 +451,48 @@ export function proposePlanOrderActualDispenseQuantity({
   config: PlanOrderAuthorityConfig;
   theoreticalQuantity: number;
 }): PlanOrderPreparedQuantity | null {
+  // Historical V1 API: its input is per administration, never a V2 course total.
+  if (config.schemaVersion !== 1) return null;
+  return roundPlanOrderPreparedQuantity(config, theoreticalQuantity);
+}
+
+export function proposePlanOrderPreparation({
+  config,
+  theoreticalPerAdministration,
+  occurrences,
+}: {
+  config: PlanOrderAuthorityConfig;
+  theoreticalPerAdministration: number;
+  occurrences: PlanOrderOccurrenceRule;
+}): {
+  quantityScope: "per_administration" | "course_total";
+  theoreticalTotal: number;
+  plannedPracticalQuantity: number;
+  plannedPracticalTotal: number;
+  unit: string;
+} | null {
+  const parsed = parsePlanOrderAuthority(config);
+  const count = derivePlanOrderTotalOccurrences(occurrences);
+  if (!parsed.valid || !count || !isPositive(theoreticalPerAdministration)) return null;
+  const quantityScope = config.preparationPolicy?.quantityScope ?? "per_administration";
+  const theoreticalTotal = theoreticalPerAdministration * count;
+  if (!Number.isFinite(theoreticalTotal)) return null;
+  const prepared = roundPlanOrderPreparedQuantity(config,
+    quantityScope === "course_total" ? theoreticalTotal : theoreticalPerAdministration);
+  if (!prepared || !isPositive(prepared.quantity)) return null;
+  return {
+    quantityScope,
+    theoreticalTotal,
+    plannedPracticalQuantity: prepared.quantity,
+    plannedPracticalTotal: quantityScope === "course_total" ? prepared.quantity : prepared.quantity * count,
+    unit: prepared.unit,
+  };
+}
+
+function roundPlanOrderPreparedQuantity(
+  config: PlanOrderAuthorityConfig,
+  theoreticalQuantity: number,
+): PlanOrderPreparedQuantity | null {
   if (
     config.calculationMode === "not_applicable" ||
     !config.dispenseUnit ||
@@ -407,7 +509,13 @@ export function proposePlanOrderActualDispenseQuantity({
       manualOverrideAllowed: false,
     };
   }
-  const scaled = theoreticalQuantity / policy.increment;
+  const rawScaled = theoreticalQuantity / policy.increment;
+  // V2 matches PostgreSQL numeric at representational decimal boundaries. Keep
+  // historical V1 rounding unchanged. This is machine epsilon, not clinical tolerance.
+  const nearestStep = Math.round(rawScaled);
+  const scaled = config.schemaVersion === 2 &&
+    Math.abs(rawScaled - nearestStep) <= Number.EPSILON * Math.max(1, Math.abs(rawScaled)) * 8
+    ? nearestStep : rawScaled;
   const roundedSteps =
     policy.roundingMode === "up"
       ? Math.ceil(scaled)
@@ -675,6 +783,9 @@ function parsePreparationPolicy(
     "planOrderAuthority.preparationPolicy.noReasonTolerance",
     issues,
   );
+  const quantityScope = nullableEnum(input.quantityScope,
+    ["per_administration", "course_total"] as const,
+    "planOrderAuthority.preparationPolicy.quantityScope", issues);
   if (minimum && maximum && minimum > maximum) {
     issues.push({
       path: "planOrderAuthority.preparationPolicy.maximum",
@@ -686,6 +797,7 @@ function parsePreparationPolicy(
     increment,
     roundingMode,
     displayPrecision,
+    ...(quantityScope ? { quantityScope } : {}),
     ...(minimum !== null ? { minimum } : {}),
     ...(maximum !== null ? { maximum } : {}),
     ...(noReasonTolerance !== null ? { noReasonTolerance } : {}),
@@ -832,6 +944,7 @@ function isCalculationMode(value: unknown): value is PlanOrderCalculationMode {
   return (
     value === "ingredient_based" ||
     value === "fixed_product" ||
+    value === "product_unit" ||
     value === "not_applicable"
   );
 }

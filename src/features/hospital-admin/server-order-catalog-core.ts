@@ -1,3 +1,9 @@
+import { readPersistedOrderDefaults, type PersistedOrderDefaultsSource } from "./persisted-order-defaults";
+import { copyOrderTaxonomy, isOrderTaxonomyValid, parseOrderTaxonomyMergeConflict, type OrderTaxonomyFields, type OrderTaxonomyMergeConflict } from "./order-taxonomy";
+import {
+  parseExecutionSourceBaseline, parseExecutionMergeConflicts, parseExecutionCustomizedFields,
+  type ExecutionSourceBaseline, type ExecutionMergeConflicts,
+} from "./order-execution-lineage";
 import {
   createMockWorkspacePermissionAdapter,
   resolveWorkspacePermission,
@@ -85,7 +91,10 @@ export type ExecutionPresetLineageSnapshot = {
   sourceExecutionPresetSha256: string;
 };
 
-export type OrderCatalogItem = {
+export type OrderCatalogItem = OrderTaxonomyFields & {
+  taxonomyMergeConflict?: OrderTaxonomyMergeConflict;
+  executionSourceBaseline?: ExecutionSourceBaseline;
+  executionMergeConflicts?: ExecutionMergeConflicts;
   id: string;
   workspaceId: string;
   standardOrderId: string;
@@ -133,6 +142,12 @@ export type OrderCatalogItem = {
   initialImportedRevision?: number;
   lastAutoMergedRevision?: number;
   classificationPathId?: string;
+  /** Joined from this workspace row's exact persisted path, never authoring fixtures. */
+  classificationPath?: OrderCatalogClassificationPath;
+  /** Mutation committed, but its authoritative catalog readback failed. */
+  classificationPathReadFailed?: boolean;
+  /** Read provenance only; derived execution contracts are not saved taxonomy. */
+  clinicalOrderTypeSource?: "persisted" | "derived";
   catalogRevision?: number;
   sourceProjectionFingerprint?: string;
   dispensingLineage?: DispensingOrderLineageSnapshot;
@@ -456,19 +471,19 @@ export type MedicationOrderMetadata = {
   sourcePrescriptionPresetId?: string;
   sourcePrescriptionPresetRevision?: number;
   defaultDetailInputs?: Record<string, unknown>;
-  autoDispenseQuantityEnabled: boolean;
-  administrationDays: number;
-  dailyFrequencyCode: string;
-  frequencyDailyCount: number;
-  doseBasis:
+  autoDispenseQuantityEnabled?: boolean;
+  administrationDays?: number;
+  dailyFrequencyCode?: string;
+  frequencyDailyCount?: number;
+  doseBasis?:
     | "kg"
     | "head"
     | "ingredient_amount"
     | "total_amount"
     | "prescribed_quantity";
-  doseAmount: number;
-  doseAmountUnit: string;
-  administrationRoute:
+  doseAmount?: number;
+  doseAmountUnit?: string;
+  administrationRoute?:
     | "PO"
     | "IV"
     | "CRI"
@@ -482,8 +497,8 @@ export type MedicationOrderMetadata = {
     | "inhalation"
     | "nasal"
     | "other";
-  dispenseUnit: string;
-  dispenseRoundingRule:
+  dispenseUnit?: string;
+  dispenseRoundingRule?:
     | "as_is"
     | "ceil"
     | "floor"
@@ -492,12 +507,12 @@ export type MedicationOrderMetadata = {
     | "floor_0_25"
     | "ceil_0_5"
     | "floor_0_5";
-  medicationInstruction:
+  medicationInstruction?:
     | "after_meal"
     | "before_meal"
     | "with_meal"
     | "any_time";
-  storageMethod:
+  storageMethod?:
     | "room_temp"
     | "room_temp_light_protected"
     | "refrigerated"
@@ -657,7 +672,14 @@ export type ChartOrderCatalogSearchRow = {
   sourceSetPendingReviewCount?: number | null;
 };
 
-export type AppliedOrderSnapshot = {
+export type AppliedOrderSnapshot = OrderTaxonomyFields & {
+  executionSourceBaseline?: ExecutionSourceBaseline;
+  executionCustomizedFields?: string[];
+  workspaceId?: string;
+  sourceMasterRecordId?: string;
+  sourceMasterRevision?: number;
+  workspaceCatalogRevision?: number;
+  defaultDetailInputsSource?: PersistedOrderDefaultsSource;
   sourcePresetId: string;
   sourcePresetVersion: string;
   workspaceCatalogItemId?: string;
@@ -724,6 +746,9 @@ export type OrderCatalogMutationInput =
       expectedCatalogRevision: number;
       patch: Partial<OrderCatalogItem> & {
         labDefinition?: LabDefinitionMutationInput;
+        resetTaxonomyFields?: Array<"adminSubcategoryCode" | "labFamilyCode">;
+        resetExecutionFields?: string[];
+        keepExecutionFields?: string[];
       };
     }
   | {
@@ -735,13 +760,29 @@ export type OrderCatalogMutationInput =
     }
   | { action: "pause"; itemId: string; expectedCatalogRevision: number };
 
+export type OrderCatalogReadFailure = {
+  ok: false;
+  status: 401 | 403 | 409 | 500 | 503;
+  error:
+    | "catalog_auth_required"
+    | "catalog_permission_denied"
+    | "catalog_revision_conflict"
+    | "catalog_read_failed"
+    | "catalog_response_invalid"
+    | "catalog_gateway_required";
+};
+
 export type OrderCatalogGateway = {
   listAdminCatalog(input: {
     workspaceId: string;
-  }): Promise<{ ok: true; items: OrderCatalogItem[] }>;
+  }): Promise<
+    { ok: true; items: OrderCatalogItem[] } | OrderCatalogReadFailure
+  >;
   listChartSearch(input: {
     workspaceId: string;
-  }): Promise<{ ok: true; rows: ChartOrderCatalogSearchRow[] }>;
+  }): Promise<
+    { ok: true; rows: ChartOrderCatalogSearchRow[] } | OrderCatalogReadFailure
+  >;
   mutateOrder(input: {
     actorUserId: string;
     mutation: OrderCatalogMutationInput;
@@ -895,12 +936,18 @@ export type SupabaseOrderCatalogRpcClient = {
           p_review_id: string;
           p_workspace_id: string;
         },
-  ): Promise<{ data: unknown; error: { message?: string } | null }>;
-  from?: (table: "order_catalog_items") => SupabaseOrderCatalogItemsQueryBuilder;
+  ): Promise<{
+    data: unknown;
+    error: { message?: string; code?: string } | null;
+  }>;
+  from?: (
+    table: "order_catalog_items",
+  ) => SupabaseOrderCatalogItemsQueryBuilder;
 };
 
 export type OrderCatalogResult<T> =
   | ({ ok: true; status: 200; enforcedBy: string } & T)
+  | OrderCatalogReadFailure
   | {
       ok: false;
       status: 401 | 403;
@@ -915,16 +962,14 @@ export type OrderCatalogResult<T> =
       ok: false;
       status: 404;
       denialReason:
-        | "order_not_found"
-        | "order_set_not_found"
-        | "lab_test_item_not_found";
+        "order_not_found" | "order_set_not_found" | "lab_test_item_not_found";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
 
 export async function listOrderCatalogForAdmin({
   actorUserId,
-  gateway = createMockOrderCatalogGateway(),
-  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  gateway,
+  permissionAdapter,
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -937,6 +982,8 @@ export async function listOrderCatalogForAdmin({
     capabilities: OrderCatalogAdminCapabilities;
   }>
 > {
+  if (!gateway || !permissionAdapter)
+    return { ok: false, status: 503, error: "catalog_gateway_required" };
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
@@ -945,6 +992,7 @@ export async function listOrderCatalogForAdmin({
   );
   if (!permission.allowed) return permission.denied;
   const result = await gateway.listAdminCatalog({ workspaceId });
+  if (!result.ok) return result;
   return {
     ok: true,
     status: 200,
@@ -960,8 +1008,8 @@ export async function listOrderCatalogForAdmin({
 
 export async function searchOrderCatalogForChart({
   actorUserId,
-  gateway = createMockOrderCatalogGateway(),
-  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  gateway,
+  permissionAdapter,
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -969,6 +1017,8 @@ export async function searchOrderCatalogForChart({
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<OrderCatalogResult<{ rows: ChartOrderCatalogSearchRow[] }>> {
+  if (!gateway || !permissionAdapter)
+    return { ok: false, status: 503, error: "catalog_gateway_required" };
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
@@ -977,6 +1027,7 @@ export async function searchOrderCatalogForChart({
   );
   if (!permission.allowed) return permission.denied;
   const result = await gateway.listChartSearch({ workspaceId });
+  if (!result.ok) return result;
   return {
     ok: true,
     status: 200,
@@ -990,9 +1041,9 @@ export async function mutateOrderCatalogItem({
   auditGateway,
   auditNow,
   auditRequestId,
-  gateway = createMockOrderCatalogGateway(),
+  gateway,
   input,
-  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  permissionAdapter,
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -1004,6 +1055,8 @@ export async function mutateOrderCatalogItem({
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<OrderCatalogResult<{ item: OrderCatalogItem }>> {
+  if (!gateway || !permissionAdapter)
+    return { ok: false, status: 503, error: "catalog_gateway_required" };
   if (!isValidOrderCatalogMutationInput(input)) {
     return { ok: false, status: 400, error: "invalid_input" };
   }
@@ -1014,11 +1067,13 @@ export async function mutateOrderCatalogItem({
     "service_catalog:view",
   );
   if (!viewPermission.allowed) return viewPermission.denied;
-  const beforeItem = await readCatalogItemBeforeMutation({
+  const beforeRead = await readCatalogItemBeforeMutation({
     gateway,
     input,
     workspaceId,
   });
+  if (!beforeRead.ok) return beforeRead;
+  const beforeItem = beforeRead.item;
   const capabilities = resolveOrderCatalogAdminCapabilities(
     permissionAdapter,
     actorUserId,
@@ -1029,6 +1084,8 @@ export async function mutateOrderCatalogItem({
     input.action === "review"
       ? capabilities.canApproveDispensing &&
         beforeItem?.originType === "workspace_custom"
+      : input.action === "update" && (input.patch.resetExecutionFields || input.patch.keepExecutionFields)
+        ? capabilities.canManageCatalog
       : dispensingMutation
         ? capabilities.canAuthorDispensing
         : capabilities.canManageCatalog;
@@ -1038,6 +1095,14 @@ export async function mutateOrderCatalogItem({
       status: 403,
       denialReason: "permission_missing",
     };
+  }
+  if (input.action === "update" && beforeItem &&
+      (Object.hasOwn(input.patch, "adminSubcategoryCode") || Object.hasOwn(input.patch, "labFamilyCode")) &&
+      !input.patch.resetTaxonomyFields?.length &&
+      !isOrderTaxonomyValid(beforeItem.clinicalOrderType,
+        Object.hasOwn(input.patch, "adminSubcategoryCode") ? input.patch.adminSubcategoryCode : beforeItem.adminSubcategoryCode ?? null,
+        Object.hasOwn(input.patch, "labFamilyCode") ? input.patch.labFamilyCode : beforeItem.labFamilyCode ?? null)) {
+    return { ok: false, status: 400, error: "invalid_input" };
   }
   const result = await gateway.mutateOrder({
     actorUserId: actorUserId ?? "",
@@ -1094,15 +1159,17 @@ export type WorkspaceLabTestItemMutationResult =
   | {
       ok: false;
       status: 409;
-      error: "lab_item_revision_conflict" | "lab_item_local_settings_revision_conflict";
+      error:
+        | "lab_item_revision_conflict"
+        | "lab_item_local_settings_revision_conflict";
     }
   | { ok: false; status: 500; error: "db_write_failed" };
 
 export async function mutateWorkspaceLabTestItem({
   actorUserId,
-  gateway = createMockOrderCatalogGateway(),
+  gateway,
   input,
-  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  permissionAdapter,
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -1110,7 +1177,9 @@ export async function mutateWorkspaceLabTestItem({
   input: WorkspaceLabTestItemMutationInput;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
-}): Promise<WorkspaceLabTestItemMutationResult> {
+}): Promise<WorkspaceLabTestItemMutationResult | OrderCatalogReadFailure> {
+  if (!gateway || !permissionAdapter)
+    return { ok: false, status: 503, error: "catalog_gateway_required" };
   if (!isValidWorkspaceLabTestItemMutationInput(input)) {
     return { ok: false, status: 400, error: "invalid_input" };
   }
@@ -1160,8 +1229,18 @@ function isValidOrderCatalogMutationInput(
   if (!isRecord(input)) return false;
   const validRevision = (value: unknown) =>
     typeof value === "number" && Number.isInteger(value) && value > 0;
-  if (input.action === "create") return isRecord(input.item);
+  if (input.action === "create") return isRecord(input.item) &&
+    isOrderTaxonomyValid(input.item.clinicalOrderType, input.item.adminSubcategoryCode, input.item.labFamilyCode);
   if (input.action === "update") {
+    if (isRecord(input.patch)) {
+      const resolutions = [input.patch.resetExecutionFields, input.patch.keepExecutionFields];
+      for (const fields of resolutions) {
+        if (fields !== undefined && (!Array.isArray(fields) || fields.length === 0 || fields.length > 100 ||
+          fields.some(field => typeof field !== "string" || !/^[A-Za-z][A-Za-z0-9_]{0,99}$/.test(field)) ||
+          new Set(fields).size !== fields.length)) return false;
+      }
+      if (resolutions[0]?.some(field => resolutions[1]?.includes(field))) return false;
+    }
     return typeof input.itemId === "string" && input.itemId.trim().length > 0
       && validRevision(input.expectedCatalogRevision)
       && isRecord(input.patch);
@@ -1192,16 +1271,19 @@ function isValidWorkspaceLabTestItemMutationInput(
   if (!revision(input.expectedWorkspaceResultRevision) || !revision(input.expectedLocalSettingsRevision)) {
     return false;
   }
-  return input.targetLinkIds === undefined ||
-    (Array.isArray(input.targetLinkIds) && input.targetLinkIds.every((id) => typeof id === "string" && id.trim()));
+  return (
+    input.targetLinkIds === undefined ||
+    (Array.isArray(input.targetLinkIds) &&
+      input.targetLinkIds.every((id) => typeof id === "string" && id.trim()))
+  );
 }
 
 export async function expandOrderSetForChart({
   actorUserId,
-  gateway = createMockOrderCatalogGateway(),
+  gateway,
   encounterId,
   orderSetId,
-  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  permissionAdapter,
   revisionId,
   selectionIntent,
   workspaceId,
@@ -1221,6 +1303,8 @@ export async function expandOrderSetForChart({
     preview?: ChartOrderSetPreview;
   }>
 > {
+  if (!gateway || !permissionAdapter)
+    return { ok: false, status: 503, error: "catalog_gateway_required" };
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
@@ -1325,8 +1409,8 @@ function previewItemToExpandedRow(
 
 export async function readLabTestItemDeleteLock({
   actorUserId,
-  gateway = createMockOrderCatalogGateway(),
-  permissionAdapter = createDemoOrderCatalogPermissionAdapter(),
+  gateway,
+  permissionAdapter,
   testItemId,
   workspaceId,
 }: {
@@ -1336,6 +1420,8 @@ export async function readLabTestItemDeleteLock({
   testItemId: string;
   workspaceId: string;
 }): Promise<OrderCatalogResult<{ lock: LabTestItemDeleteLock }>> {
+  if (!gateway || !permissionAdapter)
+    return { ok: false, status: 503, error: "catalog_gateway_required" };
   const permission = requirePermission(
     permissionAdapter,
     actorUserId,
@@ -1378,6 +1464,14 @@ export function createOrderPricingSnapshot(
   });
   const planOrderAuthority = resolvePlanOrderAuthority(item);
   return {
+    ...copyOrderTaxonomy(item),
+    executionSourceBaseline: item.executionSourceBaseline ? structuredClone(item.executionSourceBaseline) : undefined,
+    executionCustomizedFields: item.customizedFields?.filter(field =>
+      field.startsWith("defaultDetailInputs.") || ["*", "defaultDetailInputs", "default_detail_inputs"].includes(field)),
+    workspaceId: item.workspaceId,
+    sourceMasterRecordId: item.sourceMasterRecordId,
+    sourceMasterRevision: item.sourceMasterRevision,
+    workspaceCatalogRevision: item.catalogRevision,
     sourcePresetId: item.standardOrderId,
     sourcePresetVersion: item.sourcePresetVersion,
     workspaceCatalogItemId: item.id,
@@ -1400,6 +1494,7 @@ export function createOrderPricingSnapshot(
     detailSchemaVersion: executionContract.detailSchemaVersion,
     billingEligible: executionContract.billingEligible,
     defaultDetailInputs: resolveDefaultDetailInputs(item),
+    defaultDetailInputsSource: readPersistedOrderDefaults(item).source,
     defaultDetailInputPolicies: item.defaultDetailInputPolicies
       ? structuredClone(item.defaultDetailInputPolicies)
       : undefined,
@@ -2206,7 +2301,25 @@ type SupabaseOrderCatalogItemsQueryBuilder = {
   ): PromiseLike<TResult1 | TResult2>;
 };
 
+export type OrderCatalogClassificationPath = {
+  id: string;
+  key: string;
+  actionCode: string;
+  actionName: string | null;
+  itemType: ServiceItemType;
+  tCategoryCode: string;
+  chartGroupCode: string;
+  taskRouteCode: string;
+  isUnclassified: boolean;
+  retired: boolean;
+};
+
 type OrderCatalogItemDbRow = {
+  execution_source_baseline?: unknown;
+  execution_merge_conflicts?: unknown;
+  taxonomy_merge_conflict?: unknown;
+  admin_subcategory_code?: string | null;
+  lab_family_code?: string | null;
   id: string;
   workspace_id: string;
   standard_order_id: string;
@@ -2224,6 +2337,7 @@ type OrderCatalogItemDbRow = {
   initial_imported_revision?: number | null;
   last_auto_merged_revision?: number | null;
   classification_path_id?: string | null;
+  classification_path?: unknown;
   catalog_revision?: number | null;
   source_projection_snapshot?: Record<string, unknown> | null;
   source_projection_fingerprint?: string | null;
@@ -2285,120 +2399,62 @@ type OrderCatalogItemDbRow = {
   updated_at: string;
 };
 
-const orderCatalogItemSelectColumns = [
-  "id",
-  "workspace_id",
-  "standard_order_id",
-  "source_preset_version",
-  "initial_imported_preset_version",
-  "last_auto_merged_preset_version",
-  "customization_state",
-  "customized_fields",
-  "last_customized_at",
-  "last_customized_by_user_id",
-  "preset_merge_status",
-  "origin_type",
-  "source_master_record_id",
-  "source_master_revision",
-  "initial_imported_revision",
-  "last_auto_merged_revision",
-  "classification_path_id",
-  "catalog_revision",
-  "source_projection_snapshot",
-  "source_projection_fingerprint",
-  "workspace_dispensing_review_status",
-  "workspace_dispensing_review_revision",
-  "workspace_dispensing_authored_by_user_id",
-  "workspace_dispensing_authored_at",
-  "workspace_dispensing_reviewed_by_user_id",
-  "workspace_dispensing_reviewed_at",
-  "workspace_dispensing_review_note",
-  "source_dispensing_profile_id",
-  "source_dispensing_profile_revision",
-  "source_medication_product_id",
-  "source_medication_product_revision",
-  "source_clinical_review_id",
-  "source_evidence_fingerprint",
-  "clinical_use_allowed",
-  "clinical_order_type",
-  "is_external_lab",
-  "destination_module",
-  "execution_mode",
-  "detail_schema_version",
-  "detail_field_schema",
-  "billing_eligible",
-  "dispensing_profile_snapshot",
-  "dispensing_profile_snapshot_sha256",
-  "category_group",
-  "category_label",
-  "t_code",
-  "t_code_label",
-  "standard_order_name",
-  "in_hospital_order_name",
-  "billing_name",
-  "aliases",
-  "availability_status",
-  "price_krw",
-  "sales_unit",
-  "target_species",
-  "default_destination_module",
-  "default_task_required",
-  "billing_reflection_enabled",
-  "care_guide",
-  "care_guide_delivery_enabled",
-  "internal_instruction",
-  "internal_instruction_delivery_enabled",
-  "tax_included",
-  "rounding_rule",
-  "default_detail_inputs",
-  "default_detail_input_policies",
-  "source_execution_preset_id",
-  "source_execution_preset_revision",
-  "source_execution_preset_sha256",
-  "pricing_rule",
-  "medication_metadata",
-  "vaccine_metadata",
-  "created_at",
-  "updated_at",
-].join(", ");
-
 export function createSupabaseOrderCatalogGateway(
   client: SupabaseOrderCatalogRpcClient,
 ): OrderCatalogGateway {
+  async function readBackMutation(data: unknown, workspaceId: string) {
+    const normalized = normalizeCatalogRpcItem(data);
+    if (!normalized.ok) return normalized;
+    if (normalized.item.workspaceId !== workspaceId) {
+      return { ok: false as const, status: 500 as const, error: "db_write_failed" as const };
+    }
+    try {
+      const response = await client.rpc("clair_list_order_catalog_admin_v2", { p_workspace_id: workspaceId });
+      const items = response.error ? null : mapOrderCatalogDbRows(response.data);
+      const item = items?.every((entry) => entry.workspaceId === workspaceId)
+        ? items.find((entry) => entry.id === normalized.item.id &&
+          entry.catalogRevision === normalized.item.catalogRevision &&
+          entry.classificationPathId === normalized.item.classificationPathId &&
+          entry.adminSubcategoryCode === normalized.item.adminSubcategoryCode &&
+          entry.labFamilyCode === normalized.item.labFamilyCode)
+        : undefined;
+      if (item) return { ...normalized, item };
+    } catch {
+      // Do not turn a committed write into a retryable save failure.
+    }
+    return { ...normalized, item: { ...normalized.item, classificationPath: undefined, classificationPathReadFailed: true } };
+  }
   return {
     async listAdminCatalog({ workspaceId }) {
-      const adminRead = await client.rpc("clair_list_order_catalog_admin_v2", {
-        p_workspace_id: workspaceId,
-      });
-      if (!adminRead.error) {
-        return {
-          ok: true,
-          items: mapOrderCatalogDbRows(adminRead.data),
-        };
+      try {
+        const { data, error } = await client.rpc(
+          "clair_list_order_catalog_admin_v2",
+          { p_workspace_id: workspaceId },
+        );
+        if (error) return mapCatalogReadError(error);
+        const items = mapOrderCatalogDbRows(data);
+        if (!items || items.some((item) => item.workspaceId !== workspaceId)) {
+          return { ok: false, status: 500, error: "catalog_response_invalid" };
+        }
+        return { ok: true, items };
+      } catch {
+        return { ok: false, status: 503, error: "catalog_read_failed" };
       }
-
-      // Keep deploy-order compatibility while the migration and app release
-      // cross. The fallback intentionally omits service-review activation.
-      const table = getSupabaseOrderCatalogTable(client);
-      if (!table) return { ok: true, items: [] };
-      const { data, error } = await table
-        .select(orderCatalogItemSelectColumns)
-        .eq("workspace_id", workspaceId)
-        .order("category_group", { ascending: true })
-        .order("standard_order_name", { ascending: true });
-      if (error) return { ok: true, items: [] };
-      return {
-        ok: true,
-        items: mapOrderCatalogDbRows(data),
-      };
     },
     async listChartSearch({ workspaceId }) {
+      try {
       const { data, error } = await client.rpc(
         "clair_list_order_catalog_chart_search_v2",
         { p_workspace_id: workspaceId },
       );
-      if (error) return { ok: true, rows: [] };
-      return { ok: true, rows: mapChartSearchRows(data) };
+        if (error) return mapCatalogReadError(error);
+        const rows = mapChartSearchRows(data, workspaceId);
+        if (!rows)
+          return { ok: false, status: 500, error: "catalog_response_invalid" };
+        return { ok: true, rows };
+      } catch {
+        return { ok: false, status: 503, error: "catalog_read_failed" };
+      }
     },
     async mutateOrder({ actorUserId, mutation, workspaceId }) {
       if (mutation.action === "create") {
@@ -2421,14 +2477,11 @@ export function createSupabaseOrderCatalogGateway(
           actorUserId,
         );
         const { data, error } = await client.rpc(
-          mutation.item.categoryGroup === "medication" &&
-            mutation.item.defaultDestinationModule === "dispensing"
-            ? "clair_create_workspace_dispensing_order"
-            : "clair_create_order_catalog_item",
+          "clair_create_order_catalog_item",
           { p_workspace_id: workspaceId, p_item: orderCatalogItemToRpcInput(next) },
         );
         if (error) return mapCatalogRpcError(error.message);
-        return normalizeCatalogRpcItem(data);
+        return readBackMutation(data, workspaceId);
       }
 
       if (mutation.action === "review") {
@@ -2443,7 +2496,7 @@ export function createSupabaseOrderCatalogGateway(
           },
         );
         if (error) return mapCatalogRpcError(error.message);
-        return normalizeCatalogRpcItem(data);
+        return readBackMutation(data, workspaceId);
       }
 
       const patch = mutation.action === "pause"
@@ -2459,27 +2512,7 @@ export function createSupabaseOrderCatalogGateway(
         },
       );
       if (error) return mapCatalogRpcError(error.message);
-      const normalized = normalizeCatalogRpcItem(data);
-      if (!normalized.ok) return normalized;
-
-      const adminRead = await client.rpc("clair_list_order_catalog_admin_v2", {
-        p_workspace_id: workspaceId,
-      });
-      if (!adminRead.error) {
-        const enriched = mapOrderCatalogDbRows(adminRead.data).find(
-          (item) => item.id === normalized.item.id,
-        );
-        if (enriched) {
-          return {
-            ok: true,
-            item: enriched,
-            ...(normalized.databaseAuditWritten
-              ? { databaseAuditWritten: true as const }
-              : {}),
-          };
-        }
-      }
-      return normalized;
+      return readBackMutation(data, workspaceId);
     },
     async mutateLabTestItem({ actorUserId, input, workspaceId }) {
       const { data, error } = await client.rpc(
@@ -2603,25 +2636,26 @@ export function createSupabaseOrderCatalogGateway(
   };
 }
 
-function getSupabaseOrderCatalogTable(client: SupabaseOrderCatalogRpcClient) {
-  return client.from?.("order_catalog_items");
-}
-
-function mapOrderSetListRpcError(
-  message?: string,
-): { ok: false; status: number; error: OrderSetErrorCode } {
+function mapOrderSetListRpcError(message?: string): {
+  ok: false;
+  status: number;
+  error: OrderSetErrorCode;
+} {
   return { ok: false, ...mapOrderSetRpcError(message) };
 }
 
-function mapOrderSetReadRpcError(
-  message?: string,
-): { ok: false; status: number; error: OrderSetErrorCode } {
+function mapOrderSetReadRpcError(message?: string): {
+  ok: false;
+  status: number;
+  error: OrderSetErrorCode;
+} {
   return { ok: false, ...mapOrderSetRpcError(message) };
 }
 
-function mapOrderSetRpcError(
-  message?: string,
-): { status: number; error: OrderSetErrorCode } {
+function mapOrderSetRpcError(message?: string): {
+  status: number;
+  error: OrderSetErrorCode;
+} {
   const text = message ?? "";
   if (text.includes("authentication_required")) {
     return { status: 401, error: "authentication_required" };
@@ -3088,6 +3122,7 @@ function mapLabTestItemDbRow(value: unknown): LabTestItem | null {
 
 function orderCatalogItemToRpcInput(item: OrderCatalogItem) {
   return {
+    ...copyOrderTaxonomy(item),
     id: item.id,
     standardOrderId: item.standardOrderId,
     sourcePresetVersion: item.sourcePresetVersion,
@@ -3130,16 +3165,54 @@ function orderCatalogPatchToRpcInput(patch: Partial<OrderCatalogItem>) {
   return Object.fromEntries(Object.entries(patch));
 }
 
-function mapOrderCatalogDbRows(value: unknown): OrderCatalogItem[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map(mapOrderCatalogDbRow)
-    .filter((item): item is OrderCatalogItem => Boolean(item));
+function mapOrderCatalogDbRows(value: unknown): OrderCatalogItem[] | null {
+  if (!Array.isArray(value)) return null;
+  const items = value.map(mapOrderCatalogDbRow);
+  if (items.some((item) => item === null)) return null;
+  return items as OrderCatalogItem[];
+}
+
+function parseCatalogClassificationPath(
+  value: unknown, pathId: unknown,
+): OrderCatalogClassificationPath | undefined | null {
+  // Older RPCs omit metadata; a failed join returns null. Neither creates taxonomy.
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value) || typeof pathId !== "string" || value.id !== pathId) return null;
+  const strings = [value.id, value.key, value.actionCode, value.tCategoryCode,
+    value.chartGroupCode, value.taskRouteCode];
+  if (strings.some((entry) => typeof entry !== "string" || !entry.trim())) return null;
+  if (value.actionName !== null && (typeof value.actionName !== "string" || !value.actionName.trim())) return null;
+  if (typeof value.isUnclassified !== "boolean" || typeof value.retired !== "boolean") return null;
+  if (!["consultation", "medication", "treatment", "lab", "imaging", "hospitalization", "misc"].includes(value.itemType as string)) return null;
+  return {
+    id: value.id as string, key: value.key as string,
+    actionCode: value.actionCode as string, actionName: value.actionName as string | null,
+    itemType: value.itemType as ServiceItemType, tCategoryCode: value.tCategoryCode as string,
+    chartGroupCode: value.chartGroupCode as string, taskRouteCode: value.taskRouteCode as string,
+    isUnclassified: value.isUnclassified, retired: value.retired,
+  };
 }
 
 function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Partial<OrderCatalogItemDbRow>;
+  const taxonomyMergeConflict = parseOrderTaxonomyMergeConflict(row.taxonomy_merge_conflict);
+  if (taxonomyMergeConflict === null) return null;
+  const executionSourceBaseline = parseExecutionSourceBaseline(row.execution_source_baseline);
+  const executionMergeConflicts = parseExecutionMergeConflicts(row.execution_merge_conflicts);
+  if (executionSourceBaseline === null || executionMergeConflicts === null) return null;
+  if (!isOrderTaxonomyValid(row.clinical_order_type, row.admin_subcategory_code, row.lab_family_code)) return null;
+  const classificationPath = parseCatalogClassificationPath(row.classification_path, row.classification_path_id);
+  if (classificationPath === null) return null;
+  if (row.clinical_order_type !== null && row.clinical_order_type !== undefined &&
+    !isClinicalOrderType(row.clinical_order_type)) return null;
+  const requiredStrings = [
+    row.id, row.workspace_id, row.standard_order_id, row.source_preset_version,
+    row.category_group, row.category_label, row.standard_order_name,
+    row.in_hospital_order_name, row.billing_name, row.availability_status,
+    row.sales_unit, row.default_destination_module, row.rounding_rule, row.updated_at,
+  ];
+  if (requiredStrings.some((field) => typeof field !== "string" || !field.trim())) return null;
   if (
     !row.id ||
     !row.workspace_id ||
@@ -3151,7 +3224,7 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     !row.in_hospital_order_name ||
     !row.billing_name ||
     !row.availability_status ||
-    (row.price_krw !== null && typeof row.price_krw !== "number") ||
+    (row.price_krw !== null && (typeof row.price_krw !== "number" || !Number.isFinite(row.price_krw))) ||
     !row.sales_unit ||
     !row.default_destination_module ||
     typeof row.default_task_required !== "boolean" ||
@@ -3186,6 +3259,9 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
+    taxonomyMergeConflict,
+    executionSourceBaseline,
+    executionMergeConflicts,
     standardOrderId: row.standard_order_id,
     sourcePresetVersion: row.source_preset_version,
     initialImportedPresetVersion:
@@ -3210,6 +3286,8 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
     initialImportedRevision: row.initial_imported_revision ?? undefined,
     lastAutoMergedRevision: row.last_auto_merged_revision ?? undefined,
     classificationPathId: row.classification_path_id ?? undefined,
+    classificationPath,
+    clinicalOrderTypeSource: row.clinical_order_type ? "persisted" : "derived",
     catalogRevision: row.catalog_revision ?? 1,
     sourceProjectionFingerprint: row.source_projection_fingerprint ?? undefined,
     dispensingLineage: mapDispensingOrderLineageSnapshot({
@@ -3226,6 +3304,7 @@ function mapOrderCatalogDbRow(value: unknown): OrderCatalogItem | null {
       dispensingProfileSnapshot: row.dispensing_profile_snapshot,
       dispensingProfileSnapshotSha256: row.dispensing_profile_snapshot_sha256,
     }),
+    ...copyOrderTaxonomy({ adminSubcategoryCode: row.admin_subcategory_code, labFamilyCode: row.lab_family_code }),
     clinicalOrderType: executionContract.clinicalOrderType,
     isExternalLab: executionContract.isExternalLab,
     destinationModule: executionContract.destinationModule,
@@ -3352,15 +3431,7 @@ function hasObjectKeys(value: unknown): value is Record<string, unknown> {
 function resolveDefaultDetailInputs(
   item: Pick<OrderCatalogItem, "defaultDetailInputs" | "medicationMetadata">,
 ) {
-  if (hasObjectKeys(item.defaultDetailInputs)) {
-    const direct = detailInputsWithoutPlanAuthority(item.defaultDetailInputs);
-    if (direct) return direct;
-  }
-  return hasObjectKeys(item.medicationMetadata?.defaultDetailInputs)
-    ? detailInputsWithoutPlanAuthority(
-        item.medicationMetadata.defaultDetailInputs,
-      )
-    : undefined;
+  return readPersistedOrderDefaults(item).values;
 }
 
 function resolvePlanOrderAuthority(
@@ -3495,9 +3566,13 @@ async function readCatalogItemBeforeMutation({
   input: OrderCatalogMutationInput;
   workspaceId: string;
 }) {
-  if (input.action === "create") return null;
+  if (input.action === "create") return { ok: true as const, item: null };
   const current = await gateway.listAdminCatalog({ workspaceId });
-  return current.items.find((item) => item.id === input.itemId) ?? null;
+  if (!current.ok) return current;
+  return {
+    ok: true as const,
+    item: current.items.find((item) => item.id === input.itemId) ?? null,
+  };
 }
 
 function isDispensingCatalogMutation(
@@ -3534,6 +3609,8 @@ function orderCatalogChangedFields(input: OrderCatalogMutationInput) {
 
 function summarizeCatalogAuditItem(item: OrderCatalogItem) {
   return {
+    executionSourceBaseline: item.executionSourceBaseline,
+    executionMergeConflicts: item.executionMergeConflicts,
     id: item.id,
     standardOrderId: item.standardOrderId,
     categoryGroup: item.categoryGroup,
@@ -3701,6 +3778,8 @@ function markCatalogItemCustomized(
 function cloneItem(item: OrderCatalogItem): OrderCatalogItem {
   return {
     ...item,
+    executionSourceBaseline: item.executionSourceBaseline ? structuredClone(item.executionSourceBaseline) : undefined,
+    executionMergeConflicts: item.executionMergeConflicts ? structuredClone(item.executionMergeConflicts) : undefined,
     aliases: [...item.aliases],
     targetSpecies: [...item.targetSpecies],
     linkedLabItemIds: [...item.linkedLabItemIds],
@@ -3787,11 +3866,40 @@ function mockChartOrderFingerprint(value: unknown) {
   return (hash >>> 0).toString(16).padStart(8, "0").repeat(8);
 }
 
-function mapChartSearchRows(value: unknown): ChartOrderCatalogSearchRow[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map(mapChartSearchRow)
-    .filter((row): row is ChartOrderCatalogSearchRow => Boolean(row));
+function mapChartSearchRows(
+  value: unknown,
+  workspaceId: string,
+): ChartOrderCatalogSearchRow[] | null {
+  if (!Array.isArray(value)) return null;
+  const rows = value.map(mapChartSearchRow);
+  if (rows.some((row) => row === null)) return null;
+  const keys = new Set<string>();
+  for (const row of rows) {
+    if (!row || (row.appliedSnapshot.workspaceId !== undefined && row.appliedSnapshot.workspaceId !== workspaceId)) return null;
+    const key = `${row.rowType}:${row.rowType === "individual" ? row.workspaceCatalogItemId : row.sourceSetId}`;
+    if (keys.has(key)) return null;
+    keys.add(key);
+  }
+  return rows as ChartOrderCatalogSearchRow[];
+}
+
+function mapCatalogReadError(error: {
+  message?: string;
+  code?: string;
+}): OrderCatalogReadFailure {
+  if (
+    error.code === "PGRST301" ||
+    error.message === "authentication_required"
+  ) {
+    return { ok: false, status: 401, error: "catalog_auth_required" };
+  }
+  if (error.code === "42501" || error.message === "permission_missing") {
+    return { ok: false, status: 403, error: "catalog_permission_denied" };
+  }
+  if (error.message === "catalog_revision_conflict") {
+    return { ok: false, status: 409, error: "catalog_revision_conflict" };
+  }
+  return { ok: false, status: 503, error: "catalog_read_failed" };
 }
 
 function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
@@ -3805,10 +3913,14 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
   const displayName = readString(row.displayName ?? row.display_name);
   const billingName = readString(row.billingName ?? row.billing_name);
   const categoryGroup = readString(row.categoryGroup ?? row.category_group);
+  const targetSpecies = row.targetSpecies ?? row.target_species;
   if (
     (rowType !== "individual" && rowType !== "set") ||
     !sourcePresetId || !sourcePresetVersion || !displayName ||
-    !billingName || !categoryGroup
+    !billingName || !categoryGroup ||
+    (rowType === "set" ? categoryGroup !== "set" : !["consultation", "medication", "treatment", "lab", "imaging", "hospitalization", "misc"].includes(categoryGroup)) ||
+    !Array.isArray(targetSpecies) || targetSpecies.some(value => typeof value !== "string" || !["dog", "cat", "other"].includes(value)) ||
+    new Set(targetSpecies).size !== targetSpecies.length
   ) {
     return null;
   }
@@ -3819,7 +3931,7 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
     displayName,
     billingName,
     categoryGroup: categoryGroup as ServiceItemType | "set",
-    targetSpecies: readSpeciesList(row.targetSpecies ?? row.target_species),
+    targetSpecies: targetSpecies as Species[],
   } as const;
   if (rowType === "set") {
     const sourceSetId = readString(row.sourceSetId ?? row.source_set_id);
@@ -3909,20 +4021,43 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
   }
   const appliedSnapshot = mapAppliedSnapshot(row.appliedSnapshot ?? row.applied_snapshot);
   if (!appliedSnapshot) return null;
+  const rawSnapshot = (row.appliedSnapshot ?? row.applied_snapshot) as Record<string, unknown>;
+  const snapshotSpecies = rawSnapshot.appliedTargetSpecies ?? rawSnapshot.applied_target_species;
+  if (snapshotSpecies !== undefined && (!Array.isArray(snapshotSpecies) ||
+    snapshotSpecies.length !== targetSpecies.length ||
+    snapshotSpecies.some(value => !targetSpecies.includes(value)) || new Set(snapshotSpecies).size !== snapshotSpecies.length)) return null;
+  for (const [camel, snake] of [["sourceMasterRecordId", "source_master_record_id"], ["sourceMasterRevision", "source_master_revision"], ["workspaceCatalogRevision", "workspace_catalog_revision"]] as const) {
+    const outer = row[camel] ?? row[snake];
+    const inner = rawSnapshot[camel] ?? rawSnapshot[snake];
+    if ((outer != null && inner != null && outer !== inner) ||
+      [outer, inner].some(value => value != null && (camel === "sourceMasterRecordId" ? !readString(value) : typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0))) return null;
+  }
+  const rawCatalogItemId = row.workspaceCatalogItemId ?? row.workspace_catalog_item_id;
+  const rowCatalogItemId = readString(rawCatalogItemId);
+  const workspaceCatalogItemId =
+    rowCatalogItemId ?? appliedSnapshot.workspaceCatalogItemId;
+  if (
+    !workspaceCatalogItemId?.trim() ||
+    (rawCatalogItemId != null && !rowCatalogItemId) ||
+    (rowCatalogItemId !== undefined &&
+      appliedSnapshot.workspaceCatalogItemId !== undefined &&
+      rowCatalogItemId !== appliedSnapshot.workspaceCatalogItemId) ||
+    sourcePresetId !== appliedSnapshot.sourcePresetId ||
+    sourcePresetVersion !== appliedSnapshot.sourcePresetVersion
+  )
+    return null;
   return {
     ...common,
     appliedSnapshot,
-    workspaceCatalogItemId: readString(
-      row.workspaceCatalogItemId ?? row.workspace_catalog_item_id,
-    ) ?? appliedSnapshot.workspaceCatalogItemId,
+    workspaceCatalogItemId,
     sourceMasterRecordId: readString(
-      row.sourceMasterRecordId ?? row.source_master_record_id,
+      row.sourceMasterRecordId ?? row.source_master_record_id ?? appliedSnapshot.sourceMasterRecordId,
     ),
     sourceMasterRevision: readNumber(
-      row.sourceMasterRevision ?? row.source_master_revision,
+      row.sourceMasterRevision ?? row.source_master_revision ?? appliedSnapshot.sourceMasterRevision,
     ),
     workspaceCatalogRevision: readNumber(
-      row.workspaceCatalogRevision ?? row.workspace_catalog_revision,
+      row.workspaceCatalogRevision ?? row.workspace_catalog_revision ?? appliedSnapshot.workspaceCatalogRevision,
     ),
     dispensingLineage: appliedSnapshot.dispensingLineage,
     clinicalOrderType: appliedSnapshot.clinicalOrderType,
@@ -4097,6 +4232,10 @@ function isOrderSetQuantitySource(value: unknown): value is ChartOrderSetPreview
 function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
+  const executionSourceBaseline = parseExecutionSourceBaseline(row.executionSourceBaseline);
+  const executionCustomizedFields = parseExecutionCustomizedFields(row.executionCustomizedFields);
+  if (executionSourceBaseline === null || executionCustomizedFields === null) return null;
+  if (!isOrderTaxonomyValid(row.clinicalOrderType, row.adminSubcategoryCode, row.labFamilyCode)) return null;
   const sourcePresetId = readString(row.sourcePresetId ?? row.source_preset_id);
   const sourcePresetVersion = readString(
     row.sourcePresetVersion ?? row.source_preset_version,
@@ -4137,6 +4276,11 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   const parsedMedicationMetadata = isRecord(medicationMetadata)
     ? (structuredClone(medicationMetadata) as MedicationOrderMetadata)
     : undefined;
+  const parsedDefaults = readPersistedOrderDefaults({
+    defaultDetailInputs,
+    medicationMetadata: parsedMedicationMetadata,
+    defaultDetailInputsSource: row.defaultDetailInputsSource,
+  });
   const parsedPlanOrderAuthority = parsePlanOrderAuthority(
     row.planOrderAuthority ??
       row.plan_order_authority ??
@@ -4161,6 +4305,11 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
   return {
     sourcePresetId,
     sourcePresetVersion,
+    ...copyOrderTaxonomy(row as OrderTaxonomyFields),
+    workspaceId: readString(row.workspaceId ?? row.workspace_id),
+    sourceMasterRecordId: readString(row.sourceMasterRecordId ?? row.source_master_record_id),
+    sourceMasterRevision: readNumber(row.sourceMasterRevision ?? row.source_master_revision),
+    workspaceCatalogRevision: readNumber(row.workspaceCatalogRevision ?? row.workspace_catalog_revision),
     workspaceCatalogItemId: readString(
       row.workspaceCatalogItemId ?? row.workspace_catalog_item_id,
     ),
@@ -4210,18 +4359,17 @@ function mapAppliedSnapshot(value: unknown): AppliedOrderSnapshot | null {
     billingEligible: readBoolean(
       row.billingEligible ?? row.billing_eligible,
     ),
-    defaultDetailInputs: hasObjectKeys(defaultDetailInputs)
-      ? detailInputsWithoutPlanAuthority(defaultDetailInputs)
-      : hasObjectKeys(parsedMedicationMetadata?.defaultDetailInputs)
-        ? detailInputsWithoutPlanAuthority(
-            parsedMedicationMetadata.defaultDetailInputs,
-          )
-        : undefined,
+    defaultDetailInputs: parsedDefaults.values,
+    defaultDetailInputsSource: row.defaultDetailInputsSource === "legacy_medication_metadata"
+      ? "legacy_medication_metadata"
+      : parsedDefaults.source,
     defaultDetailInputPolicies: isRecord(defaultDetailInputPolicies)
       ? structuredClone(defaultDetailInputPolicies)
       : undefined,
     planOrderAuthority: parsedPlanOrderAuthority.value,
     executionPresetLineage: mapExecutionPresetLineage(executionPresetLineage),
+    executionSourceBaseline,
+    executionCustomizedFields,
     medicationMetadata: parsedMedicationMetadata,
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? row.dispensing_lineage,
@@ -4258,14 +4406,6 @@ function mapExecutionPresetLineage(
     sourceExecutionPresetRevision,
     sourceExecutionPresetSha256,
   };
-}
-
-function detailInputsWithoutPlanAuthority(
-  value: Record<string, unknown>,
-): Record<string, unknown> | undefined {
-  const result = structuredClone(value);
-  delete result.planOrderAuthority;
-  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function mapWorkspaceDispensingReviewValue(

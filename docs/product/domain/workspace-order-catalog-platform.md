@@ -31,7 +31,7 @@ related_work:
   - CLINICAL-MASTER-PR-020
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-29
+last_updated: 2026-09-04
 ---
 
 # Workspace Order Catalog Platform
@@ -104,6 +104,21 @@ Dispensing presets have a narrower clinical lifecycle:
   eligibility; client-only controls are never the permission boundary.
 
 ### 3. System Preset Auto-Merge
+
+OED Slice 03 extension (2026-09-06, locally implemented, not deployed): persist browsing
+classification independently from execution type/routing, copy it to each workspace,
+and preserve authorized local changes during source updates. Null stays missing;
+there is no runtime master/name fallback. See the
+[fine-classification design](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-design.md).
+The 522-row vocabulary mapping remains non-applied. Local tests cover independent
+taxonomy refresh despite an edited price, local overrides/clears, explicit resets,
+conflict preservation and new chart snapshots. This is only the two-field subset,
+not full execution-default inheritance or full authenticated acceptance.
+Local management controls now edit only the selected classification fields, preserve
+the opening revision for conflict detection, and require explicit confirmation before
+master reset. Read-only users cannot edit/reset; missing fields remain discoverable.
+See the [UI checkpoint](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-ui.md).
+See the [implementation handoff](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-fields-local.md).
 
 System preset updates should merge automatically with workspace catalogs:
 
@@ -263,7 +278,7 @@ CSV import implementation is a later project. It would include upload UI, parsin
 - DEN-309 replaces the auth gate's visible `로그인 확인 중` card with a workspace-shell skeleton while preserving unauthenticated and unauthorized redirects. Production/staging login surfaces must not expose mock development controls or the invite support side panel; invite context that is needed for the actual form stays in the primary login form and redirect parameters.
 - DEN-335 separates order work status from billing candidate state. Chart `Order 청구` is the canonical chart action for moving selected billable lab, imaging, dispensing, and treatment orders to billing candidates; it must not mark unfinished work as completed.
 - DEN-298 separates the public billing candidate sync input from trusted server-owned snapshot sync. Public `PATCH /billing/invoice-candidates` reads only `encounterId` and `orderIds`; client-submitted `orderSnapshots`, `priceKrw`, `lineTotalSnapshot`, and `billingName` are not authority for candidate creation. Chart confirmation and fulfillment completion remain the trusted server-owned paths that may pass applied/source snapshots to the invoice candidate gateway.
-- DEN-299 wires Supabase-session chart confirmation to live workspace catalog and billing candidate gateways. Live chart confirmation must resolve catalog snapshots through `clair_list_order_catalog_chart_search` and create billing-only candidates through `clair_sync_billing_invoice_candidates`; mock catalog/billing fallback remains limited to demo/session-only paths.
+- DEN-299 wires Supabase-session chart confirmation to live workspace catalog and billing candidate gateways. Live chart confirmation must resolve catalog snapshots through `clair_list_order_catalog_chart_search` and create billing-only candidates through `clair_sync_billing_invoice_candidates`. The later CLINICAL-MASTER-OED-WP-01B contract supersedes runtime order-catalog fallback: even a demo/session hospital workspace must read persisted workspace catalog rows or expose the true empty/error state.
 - DEN-300 adds audit events for workspace catalog create, update, and use-stop mutations. Audit payloads include actor, workspace, request id, target catalog item id, changed fields, and minimal before/after catalog snapshots; they must not include raw SOAP, provider payloads, tokens, secrets, or unrelated clinical text.
 - DEN-301 confirms phase-1 fulfillment permissions: treatment and dispensing queues intentionally share `dispensing:view` and `dispensing:complete`. 마약류 are excluded from this shared boundary and remain a separate future security/permission scope.
 - DEN-289 security review found that public API input and trusted server-owned snapshot input must remain separate. Public billing candidate routes must not accept client-submitted amount/name snapshots as authority. Supabase chart confirmation routes also need live catalog and live billing gateways before live closeout can claim end-to-end catalog/billing correctness.
@@ -280,7 +295,7 @@ CSV import implementation is a later project. It would include upload UI, parsin
   - repo migration file authoring when needed
   - local migration/static tests
 - Do not run remote Supabase migration push, RLS replay, production deploy, or real data import without explicit approval.
-- Keep Sales Demo and mock fallback paths working unless a scoped issue explicitly removes them.
+- CLINICAL-MASTER-OED-WP-01B removes Sales Demo and mock order-catalog fallback from runtime hospital workspace responses. Deterministic fixtures remain allowed only in explicitly isolated tests, stories, or development harnesses and must be injected directly by those harnesses.
 - Do not trust client-submitted billing amounts.
 - Keep source snapshots minimal. Do not include raw SOAP text, secrets, external provider payloads, tokens, or unnecessary personal data.
 - Treat UI permission hiding as convenience only. Server/API/DB boundaries remain the security boundary.

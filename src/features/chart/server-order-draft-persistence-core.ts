@@ -1,3 +1,4 @@
+import { readPersistedOrderDefaults } from "@/features/hospital-admin/persisted-order-defaults";
 import {
   createMockWorkspacePermissionAdapter,
   resolveWorkspacePermission,
@@ -840,23 +841,7 @@ function mergeConsultationResponsibleClinician({
 function readMockCatalogDefaultDetailInputs(
   appliedSnapshot: Record<string, unknown> | undefined,
 ): Record<string, unknown> {
-  const direct = appliedSnapshot?.defaultDetailInputs;
-  if (direct && typeof direct === "object" && !Array.isArray(direct)) {
-    return structuredClone(direct as Record<string, unknown>);
-  }
-  const medicationMetadata = appliedSnapshot?.medicationMetadata;
-  if (
-    medicationMetadata &&
-    typeof medicationMetadata === "object" &&
-    !Array.isArray(medicationMetadata)
-  ) {
-    const nested = (medicationMetadata as Record<string, unknown>)
-      .defaultDetailInputs;
-    if (nested && typeof nested === "object" && !Array.isArray(nested)) {
-      return structuredClone(nested as Record<string, unknown>);
-    }
-  }
-  return {};
+  return readPersistedOrderDefaults(appliedSnapshot ?? {}).values ?? {};
 }
 
 function getStoredOrSeedOrderDrafts({

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-09-06",
+  "environment": "clair-emr-staging",
+  "operation": "read_only_exact_master_keys",
+  "remoteMutationPerformed": false,
+  "orderMasterKey": "phase1.optionb.v1.order.metabolic",
+  "panelMasterKey": "phase1.optionb.v1.panel.metabolic",
+  "specimenMasterKey": "phase1.optionb.v1.specimen.serum",
+  "members": [
+    {
+      "testMasterKey": "phase1.optionb.v1.test.glucose",
+      "testRevision": 1,
+      "sortOrder": 0,
+      "required": true,
+      "displayGroup": "chemistry",
+      "testCode": "OPT_GLU",
+      "resultInputTypeKey": "phase1.optionb.v1.input.numeric",
+      "canonicalUnitKey": "phase1.optionb.v1.unit.mgdl",
+      "unitCode": "OPT_MGDL",
+      "unitSymbol": "mg/dL",
+      "decimalScale": 1
+    }
+  ],
+  "boundary": "This verifies source membership only, not application of the new result-profile or composition migrations."
+}

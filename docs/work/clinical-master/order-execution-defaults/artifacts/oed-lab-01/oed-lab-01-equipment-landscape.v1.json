@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "oed-lab-01-equipment-landscape/v1",
+  "generatedAt": "2026-09-06",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "selectionRule": "대표 모델은 검사군 조사용 후보이며 모든 하위 검사 지원을 뜻하지 않는다. 검사법별 호환성을 별도 확인해야 하며 워크스페이스 보유·연동 장비라는 뜻도 아니다.",
+  "profiles": [
+    {
+      "equipmentClass": "hematology_analyzer",
+      "representativeModels": [
+        "IDEXX ProCyte Dx",
+        "Zoetis VETSCAN HM5"
+      ],
+      "families": [
+        "hematology_cbc",
+        "reticulocyte"
+      ],
+      "sourceIds": [
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "reference_hematology_analyzer",
+      "representativeModels": [
+        "Siemens ADVIA 2120"
+      ],
+      "families": [
+        "hematology_cbc",
+        "reticulocyte"
+      ],
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY-RI"
+      ],
+      "currentIntegrationStatus": "external_reference_only"
+    },
+    {
+      "equipmentClass": "chemistry_analyzer",
+      "representativeModels": [
+        "IDEXX Catalyst One",
+        "Zoetis VETSCAN VS2"
+      ],
+      "families": [
+        "clinical_chemistry",
+        "electrolytes",
+        "pancreatic",
+        "inflammation",
+        "thyroid",
+        "adrenal"
+      ],
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "coagulation_analyzer",
+      "representativeModels": [
+        "IDEXX Coag Dx"
+      ],
+      "families": [
+        "coagulation"
+      ],
+      "sourceIds": [
+        "IDEXX-COAG-DX"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "urine_strip_analyzer",
+      "representativeModels": [
+        "IDEXX VetLab UA"
+      ],
+      "families": [
+        "urinalysis"
+      ],
+      "sourceIds": [
+        "IDEXX-VETLAB-UA"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "urine_sediment_analyzer",
+      "representativeModels": [
+        "IDEXX SediVue Dx"
+      ],
+      "families": [
+        "urinalysis"
+      ],
+      "sourceIds": [
+        "IDEXX-SEDIVUE"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "cellular_analyzer",
+      "representativeModels": [
+        "IDEXX inVue Dx"
+      ],
+      "families": [
+        "blood_smear",
+        "cytology"
+      ],
+      "sourceIds": [
+        "IDEXX-INVUE"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "rapid_immunoassay",
+      "representativeModels": [
+        "IDEXX SNAP kits",
+        "IDEXX SNAP Pro"
+      ],
+      "families": [
+        "fecal_parasitology",
+        "infectious_disease"
+      ],
+      "sourceIds": [
+        "IDEXX-SNAP-GIARDIA",
+        "IDEXX-SNAP-INFECTIOUS"
+      ],
+      "currentIntegrationStatus": "not_integrated"
+    },
+    {
+      "equipmentClass": "manual_lab_equipment",
+      "representativeModels": [
+        "microscope",
+        "centrifuge",
+        "refractometer"
+      ],
+      "families": [
+        "urinalysis",
+        "fecal_parasitology",
+        "blood_smear",
+        "cytology"
+      ],
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "CORNELL-PARASITOLOGY",
+        "CORNELL-CYTOLOGY"
+      ],
+      "currentIntegrationStatus": "manual"
+    },
+    {
+      "equipmentClass": "external_laboratory",
+      "representativeModels": [
+        "university or commercial reference laboratory"
+      ],
+      "families": [
+        "hematology_cbc",
+        "clinical_chemistry",
+        "electrolytes",
+        "coagulation",
+        "urinalysis",
+        "fecal_parasitology",
+        "infectious_disease",
+        "blood_typing",
+        "reticulocyte",
+        "blood_smear",
+        "cytology",
+        "thyroid",
+        "adrenal",
+        "inflammation",
+        "pancreatic",
+        "organ_or_metabolic_panel",
+        "composite_diagnostic_plan"
+      ],
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "UC-DAVIS-PCR",
+        "UC-DAVIS-ENDOCRINOLOGY"
+      ],
+      "currentIntegrationStatus": "manual_result_entry_or_attachment"
+    }
+  ]
+}

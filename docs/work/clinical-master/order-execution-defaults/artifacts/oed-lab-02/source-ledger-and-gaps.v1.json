@@ -1,0 +1,211 @@
+{
+  "generatedAt": "2026-09-06",
+  "revision": "oed-lab-02.v1",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "schemaVersion": "oed-lab-02-evidence/v1",
+  "sources": [
+    {
+      "sourceId": "IDEXX-RI",
+      "publisher": "IDEXX",
+      "title": "ProCyte Dx reference intervals",
+      "url": "https://www.idexx.com/files/procyte-dx-reference-ranges-en.pdf",
+      "documentVersion": "2019; 06-27445-12; VetLab Station 5.01",
+      "accessedAt": "2026-09-06",
+      "accessNotes": "p1 dog/cat columns visually checked; 19 parameters, cat PDW N/A; no percentage intervals",
+      "nativeReference": "turn148view0"
+    },
+    {
+      "sourceId": "IDEXX-GUIDE",
+      "publisher": "IDEXX",
+      "title": "ProCyte Dx Operator’s Guide",
+      "url": "https://www.idexx.com/files/procyte-dx-operators-guide-en.pdf",
+      "documentVersion": "2021; 06-0002359-01",
+      "accessedAt": "2026-09-06",
+      "accessNotes": "pp16,32–33,46,50–51: parameters, specimen, flags, display/linearity distinction; microtube volume conflict retained",
+      "nativeReference": "turn153view0"
+    },
+    {
+      "sourceId": "IDEXX-MENU",
+      "publisher": "IDEXX",
+      "title": "ProCyte Dx product parameters",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/hematology/procyte-dx-analyzer/",
+      "documentVersion": null,
+      "accessedAt": "2026-09-06",
+      "accessNotes": "25 numeric outputs plus nRBC/BAND suspicion indicators; species may differ",
+      "nativeReference": "turn149view0"
+    },
+    {
+      "sourceId": "CORNELL-CBC",
+      "publisher": "Cornell University AHDC",
+      "title": "Hematology",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/hematology",
+      "documentVersion": null,
+      "accessedAt": "2026-09-06",
+      "accessNotes": "Automated vs smear-inclusive CBC; optional reticulocytes; independent tests; no Cornell numeric ranges transferred",
+      "nativeReference": "turn152view0"
+    },
+    {
+      "sourceId": "CORNELL-INDICES",
+      "publisher": "Cornell University eClinpath",
+      "title": "MCHC/CHCM",
+      "url": "https://eclinpath.com/hematology/tests/mchc/",
+      "documentVersion": null,
+      "accessedAt": "2026-09-06",
+      "accessNotes": "MCH and MCHC calculation context; not ProCyte internal implementation",
+      "nativeReference": "turn156view0"
+    },
+    {
+      "sourceId": "UCUM",
+      "publisher": "UCUM",
+      "title": "UCUM specification",
+      "url": "https://ucum.org/ucum",
+      "documentVersion": null,
+      "accessedAt": "2026-09-06",
+      "accessNotes": "case-sensitive unit syntax; 10*3/uL, 10*6/uL mappings are this candidate's explicit normalization",
+      "nativeReference": "turn156view1"
+    },
+    {
+      "sourceId": "FHIR-REQUEST",
+      "publisher": "HL7",
+      "title": "FHIR R4 ServiceRequest",
+      "url": "https://hl7.org/fhir/R4/servicerequest.html",
+      "documentVersion": "4.0.1",
+      "accessedAt": "2026-09-06",
+      "accessNotes": "Request identity and references; retest policy is a CLAiR decision, not replaces mapping",
+      "nativeReference": "turn152view1"
+    },
+    {
+      "sourceId": "FHIR-RESULT",
+      "publisher": "HL7",
+      "title": "FHIR R4 Observation",
+      "url": "https://hl7.org/fhir/R4/observation.html",
+      "documentVersion": "4.0.1",
+      "accessedAt": "2026-09-06",
+      "accessNotes": "Result type, absent data, specimen, device, reference range; no FHIR conformance claim",
+      "nativeReference": "turn156view3"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "RI-REVISION",
+      "status": "bounded",
+      "finding": "2019 public ranges are pinned, not verified latest installed device settings.",
+      "action": "keep revision; real deployment needs local profile verification",
+      "sourceIds": [
+        "IDEXX-RI"
+      ]
+    },
+    {
+      "id": "PERCENT-RI",
+      "status": "bounded",
+      "finding": "Six percentage intervals absent from pinned table; result support exists.",
+      "action": "commercial profile records no-interval; demo has explicit synthetic bounds",
+      "sourceIds": [
+        "IDEXX-RI",
+        "IDEXX-MENU"
+      ]
+    },
+    {
+      "id": "CAT-PDW",
+      "status": "resolved",
+      "finding": "Cat PDW is N/A, including the result, not merely the interval.",
+      "action": "commercial profile unsupported; demo PDW is a different explicit profile",
+      "sourceIds": [
+        "IDEXX-RI"
+      ]
+    },
+    {
+      "id": "MICROTUBE-VOLUME",
+      "status": "bounded",
+      "finding": "Guide p32 says 200 µL for microtainers; p51 says minimum 90 µL dependent on manufacturer.",
+      "action": "do not set a universal microtube default; standard tube minimum 500 µL is not a target draw volume",
+      "sourceIds": [
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "id": "PRECISION-LINEARITY",
+      "status": "bounded",
+      "finding": "Display range is not analytical range; UI decimals are prototype policy.",
+      "action": "preserve raw input and source qualification; critical limits not invented",
+      "sourceIds": [
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "id": "MEASUREMENT-ORDER",
+      "status": "resolved",
+      "finding": "Independent requested output does not imply independent physical measurement.",
+      "action": "keep supporting measurements on execution attempt; do not silently order/charge them",
+      "sourceIds": [
+        "CORNELL-CBC"
+      ]
+    },
+    {
+      "id": "BILLING-DEPLOYMENT",
+      "status": "deferred",
+      "finding": "No live-schema audit or price policy implemented.",
+      "action": "LAB-03 audits required fields; later explicit workspace prices, no automatic retest charge",
+      "sourceIds": []
+    }
+  ],
+  "researchPlan": {
+    "audience": "승욱 and implementation agents",
+    "scope": "dog/cat CBC, one commercial model plus explicit demo profiles",
+    "queries": [
+      "IDEXX ProCyte Dx reference intervals PDF",
+      "ProCyte Dx operator guide EDTA and parameters",
+      "Cornell CBC individual tests and morphology",
+      "Cornell MCH MCHC calculations",
+      "UCUM syntax",
+      "FHIR R4 request and observation"
+    ],
+    "stopReason": "Chosen-model facts and exceptions bounded; other devices and exact patient-specific clinical suitability out of scope.",
+    "noNewBroadResearchNeeded": true
+  },
+  "claimMap": [
+    {
+      "claimId": "CBC-CONTENTS",
+      "sourceIds": [
+        "IDEXX-MENU",
+        "CORNELL-CBC"
+      ],
+      "confidence": "high_for_list_not_mandatory_clinical_panel",
+      "decision": "20 core, 5 optional, 1 manual are CLAiR prototype grouping"
+    },
+    {
+      "claimId": "REFERENCE-VALUES",
+      "sourceIds": [
+        "IDEXX-RI"
+      ],
+      "confidence": "high_for_transcription",
+      "decision": "37 numeric species/parameter intervals; no cross-device mixing"
+    },
+    {
+      "claimId": "SPECIMEN-FLAGS",
+      "sourceIds": [
+        "IDEXX-GUIDE"
+      ],
+      "confidence": "high_with_volume_exception",
+      "decision": "EDTA whole blood; preserve flags/no-result distinct from low/high"
+    },
+    {
+      "claimId": "UNITS",
+      "sourceIds": [
+        "UCUM"
+      ],
+      "confidence": "normalized_mapping",
+      "decision": "K/µL to 10*3/uL; M/µL to 10*6/uL; factor1"
+    },
+    {
+      "claimId": "IDENTITY-RETEST",
+      "sourceIds": [
+        "FHIR-REQUEST",
+        "FHIR-RESULT"
+      ],
+      "confidence": "design_inference",
+      "decision": "request/result separation; CLAiR previousRequestId is not FHIR replaces"
+    }
+  ]
+}

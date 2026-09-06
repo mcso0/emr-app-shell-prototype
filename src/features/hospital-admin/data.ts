@@ -1,6 +1,9 @@
 "use client";
 
 import type { ClinicalOrderType, ServiceItemType } from "@/types/emr-domain";
+import { readPersistedOrderDefaults, type PersistedOrderDefaultsSource } from "./persisted-order-defaults";
+import { isOrderTaxonomyValid, orderTaxonomySubcategories } from "./order-taxonomy";
+import { parsePlanOrderAuthority, proposePlanOrderPreparation } from "@/features/chart/plan-order-authority-domain";
 import type {
   OrderCatalogItem,
   OrderCatalogMutationInput,
@@ -12,6 +15,7 @@ import {
 } from "@/features/chart/order-execution-domain";
 
 export type HospitalOrderCategoryId =
+  | "unclassified"
   | "consultation"
   | "prevention"
   | "lab"
@@ -23,7 +27,8 @@ export type HospitalOrderCategoryId =
   | "dispensing"
   | "medical-supply"
   | "misc";
-export type HospitalOrderSubcategoryId =
+export type HospitalOrderSubcategoryId = import("./order-taxonomy").OrderAdminSubcategoryCode
+  | "unclassified"
   | "basic-consultation"
   | "other-consultation"
   | "prevention"
@@ -55,21 +60,22 @@ export type HospitalDispensingReviewStatus =
   | "rejected";
 export type HospitalDispensingPreset = {
   ingredientName: string;
-  dose: number;
+  doseBasis?: string;
+  dose: number | undefined;
   doseUnit: string;
   route: string;
   frequency: string;
-  durationDays: number;
-  totalQuantity: number;
+  durationDays: number | undefined;
+  totalQuantity: number | undefined;
   totalQuantityUnit: string;
   medicationInstruction: string;
   storageMethod: string;
   compoundNote: string;
   guardianNote: string;
-  autoDispenseQuantityEnabled: boolean;
+  autoDispenseQuantityEnabled: boolean | undefined;
   manualQuantityReason: string;
 };
-export type ClinicalPathologyCategoryId =
+export type ClinicalPathologyCategoryId = import("./order-taxonomy").OrderLabFamilyCode
   | "in-house-blood"
   | "microbiology"
   | "electrolyte-abg"
@@ -95,6 +101,18 @@ export const clinicalPathologyCategoryOptions: Array<{
   { label: "체액 검사", value: "fluid" },
   { label: "요검사", value: "urinalysis" },
   { label: "기타 병리 검사", value: "etc" },
+  { label: "분변·기생충", value: "fecal-parasitology" },
+  { label: "응고", value: "coagulation" },
+  { label: "장기·대사 평가", value: "organ-metabolic" },
+  { label: "혈액형", value: "blood-typing" },
+  { label: "망상적혈구", value: "reticulocyte" },
+  { label: "혈액도말", value: "blood-smear" },
+  { label: "췌장", value: "pancreatic" },
+  { label: "염증", value: "inflammation" },
+  { label: "갑상샘", value: "thyroid" },
+  { label: "부신", value: "adrenal" },
+  { label: "감염병", value: "infectious-disease" },
+  { label: "복합 검사 평가", value: "composite-assessment" },
 ];
 
 export type HospitalOrderCategory = {
@@ -124,8 +142,10 @@ export type HospitalOrderCatalogItem = {
   billingName: string;
   careGuide: string;
   categoryId: HospitalOrderCategoryId;
+  classificationStatus?: "resolved" | "subcategory_missing" | "taxonomy_unavailable" | "type_missing" | "taxonomy_unclassified" | "taxonomy_conflict" | "taxonomy_retired";
   /** Effective master/workspace execution defaults (never schema defaults). */
   defaultDetailInputs?: Record<string, unknown>;
+  defaultDetailInputsSource?: PersistedOrderDefaultsSource;
   clinicalOrderType?: ClinicalOrderType;
   detailSchemaVersion?: number;
   clinicalPathologyCategoryId?: ClinicalPathologyCategoryId;
@@ -163,6 +183,7 @@ export type HospitalOrderDraft = Omit<HospitalOrderCatalogItem, "id"> & {
 };
 
 export const hospitalOrderCategories: HospitalOrderCategory[] = [
+  { id: "unclassified", label: "분류 미설정", description: "저장된 분류를 확인할 수 없는 오더", sortOrder: 100 },
   {
     id: "consultation",
     label: "진료",
@@ -232,6 +253,7 @@ export const hospitalOrderCategories: HospitalOrderCategory[] = [
 ];
 
 export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
+  { id: "unclassified", categoryId: "unclassified", label: "미설정", description: "세부 분류가 확인되지 않음", sortOrder: 100 },
   {
     id: "basic-consultation",
     categoryId: "consultation",
@@ -359,6 +381,20 @@ export const hospitalOrderSubcategories: HospitalOrderSubcategory[] = [
     sortOrder: 10,
   },
 ];
+
+// New vocabulary labels only; this adds no catalog rows or default values.
+hospitalOrderSubcategories.push(
+  { id: "image-interpretation", categoryId: "imaging", label: "영상 판독 상담", description: "영상 판독 상담", sortOrder: 50 },
+  { id: "dental-care", categoryId: "treatment", label: "치과 진료·처치", description: "치과 진료·처치", sortOrder: 50 },
+  { id: "document-service", categoryId: "misc", label: "서류 발급·기록 사본", description: "서류 발급·기록 사본", sortOrder: 50 },
+  { id: "emergency-service", categoryId: "misc", label: "응급 서비스", description: "응급 서비스", sortOrder: 50 },
+  { id: "topical", categoryId: "dispensing", label: "피부 외용", description: "피부 외용", sortOrder: 50 },
+  { id: "ophthalmic", categoryId: "dispensing", label: "점안", description: "점안", sortOrder: 50 },
+  { id: "otic", categoryId: "dispensing", label: "점이", description: "점이", sortOrder: 50 },
+  { id: "transdermal", categoryId: "dispensing", label: "경피", description: "경피", sortOrder: 50 },
+  { id: "oromucosal", categoryId: "dispensing", label: "구강점막", description: "구강점막", sortOrder: 50 },
+  { id: "dispensing-packaging", categoryId: "dispensing", label: "조제 포장", description: "조제 포장", sortOrder: 50 },
+);
 
 export const hospitalOrderSeedItems: HospitalOrderCatalogItem[] = [
   {
@@ -703,13 +739,15 @@ export function createEmptyHospitalOrderDraft(
 function getHospitalOrderServiceItemType(
   categoryId: HospitalOrderCategoryId,
 ): ServiceItemType {
-  if (categoryId === "dispensing" || categoryId === "medical-supply") {
+  if (categoryId === "dispensing") {
     return "medication";
   }
   if (categoryId === "lab") return "lab";
   if (categoryId === "imaging") return "imaging";
   if (categoryId === "hospitalization") return "hospitalization";
   if (categoryId === "misc") return "misc";
+  if (categoryId === "medical-supply") return "misc";
+  if (categoryId === "prevention") return "consultation";
   if (categoryId === "consultation") return "consultation";
   return "treatment";
 }
@@ -718,14 +756,17 @@ function getHospitalOrderClinicalOrderType(
   categoryId: HospitalOrderCategoryId,
   subcategoryId: HospitalOrderSubcategoryId,
 ): ClinicalOrderType {
+  if (Object.hasOwn(orderTaxonomySubcategories, subcategoryId)) {
+    return orderTaxonomySubcategories[subcategoryId as keyof typeof orderTaxonomySubcategories].clinicalType;
+  }
   if (subcategoryId === "system-exam") return "system_exam";
   if (subcategoryId === "external-lab") return "external_lab";
-  if (categoryId === "consultation") return "consultation";
+  if (categoryId === "consultation" || categoryId === "prevention") return "consultation";
   if (categoryId === "lab") return "clinical_lab";
   if (categoryId === "imaging") return "imaging";
   if (categoryId === "hospitalization") return "hospitalization";
-  if (categoryId === "misc") return "other";
-  if (categoryId === "dispensing" || categoryId === "medical-supply") {
+  if (categoryId === "misc" || categoryId === "medical-supply") return "other";
+  if (categoryId === "dispensing") {
     return "dispensing";
   }
   return "treatment";
@@ -734,18 +775,19 @@ function getHospitalOrderClinicalOrderType(
 function createEmptyHospitalDispensingPreset(): HospitalDispensingPreset {
   return {
     ingredientName: "",
-    dose: 1,
-    doseUnit: "tablet",
-    route: "PO",
-    frequency: "bid",
-    durationDays: 5,
-    totalQuantity: 10,
-    totalQuantityUnit: "tablet",
-    medicationInstruction: "after_meal",
-    storageMethod: "room_temp",
+    doseBasis: "",
+    dose: undefined,
+    doseUnit: "",
+    route: "",
+    frequency: "",
+    durationDays: undefined,
+    totalQuantity: undefined,
+    totalQuantityUnit: "",
+    medicationInstruction: "",
+    storageMethod: "",
     compoundNote: "",
-    guardianNote: "식후 1회 1정씩 하루 2회, 5일간 투여하세요.",
-    autoDispenseQuantityEnabled: true,
+    guardianNote: "",
+    autoDispenseQuantityEnabled: undefined,
     manualQuantityReason: "",
   };
 }
@@ -765,13 +807,7 @@ export function formatHospitalOrderAmount(amount: number) {
 export function getEffectiveHospitalOrderDefaultDetailInputs(
   item: Pick<OrderCatalogItem, "defaultDetailInputs" | "medicationMetadata">,
 ): Record<string, unknown> | undefined {
-  if (hasNonEmptyDetailInputs(item.defaultDetailInputs)) {
-    return structuredClone(item.defaultDetailInputs);
-  }
-  if (hasNonEmptyDetailInputs(item.medicationMetadata?.defaultDetailInputs)) {
-    return structuredClone(item.medicationMetadata.defaultDetailInputs);
-  }
-  return undefined;
+  return readPersistedOrderDefaults(item).storedValues;
 }
 
 export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): HospitalOrderCatalogItem {
@@ -798,13 +834,12 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     billingName: item.billingName,
     careGuide: item.careGuide ?? "",
     categoryId: placement.categoryId,
-    clinicalOrderType: executionContract.clinicalOrderType,
-    clinicalPathologyCategoryId:
-      placement.subcategoryId === "clinical-pathology"
-        ? resolveClinicalPathologyCategoryId(item.categoryLabel)
-        : undefined,
+    clinicalOrderType: item.clinicalOrderTypeSource === "derived" ? undefined : item.clinicalOrderType,
+    classificationStatus: placement.classificationStatus,
+    // A persisted taxonomy UUID cannot establish a pathology family by itself.
     delivery: item.defaultTaskRequired ? "deliver" : "do-not-deliver",
     defaultDetailInputs: getEffectiveHospitalOrderDefaultDetailInputs(item),
+    defaultDetailInputsSource: readPersistedOrderDefaults(item).source,
     detailSchemaVersion: executionContract.detailSchemaVersion,
     hospitalInstruction: item.internalInstruction ?? "",
     inHospitalName:
@@ -853,6 +888,8 @@ export function mapWorkspaceCatalogItemToHospitalOrder(item: OrderCatalogItem): 
     standardName:
       dispensingProfile.english ?? item.standardOrderName,
     subcategoryId: placement.subcategoryId,
+    clinicalPathologyCategoryId: placement.classificationStatus === "resolved" && item.labFamilyCode
+      ? item.labFamilyCode as ClinicalPathologyCategoryId : undefined,
     target: mapTargetSpecies(item.targetSpecies),
     updatedAtLabel: formatCatalogUpdatedAt(item.updatedAt),
     updatedBy: item.lastCustomizedByUserId ?? "CLAiR preset",
@@ -869,87 +906,44 @@ function readHospitalDispensingPreset(
     return undefined;
   }
   const metadata = item.medicationMetadata;
+  const authority = item.planOrderAuthority;
   const detail =
     getEffectiveHospitalOrderDefaultDetailInputs(item) ?? {};
   const readString = (key: string, fallback = "") =>
     typeof detail[key] === "string" && detail[key].trim()
       ? detail[key].trim()
       : fallback;
-  const readNumber = (key: string, fallback: number) =>
+  const readNumber = (key: string) =>
     typeof detail[key] === "number" && Number.isFinite(detail[key])
       ? detail[key]
-      : fallback;
+      : undefined;
   return {
     ingredientName:
+      authority?.schemaVersion === 2 && authority.productReference
+        ? authority.productReference.productName :
       metadata?.ingredientKoreanName ??
       metadata?.ingredientEnglishName ??
       "",
-    dose: readNumber("dose", metadata?.doseAmount ?? 1),
-    doseUnit: readString(
-      "doseUnit",
-      metadata?.doseAmountUnit?.toLowerCase() ?? "tablet",
-    ),
-    route: readString("route", metadata?.administrationRoute ?? "PO"),
-    frequency: readString(
-      "frequency",
-      metadata?.dailyFrequencyCode ?? "sid",
-    ),
-    durationDays: readNumber(
-      "durationDays",
-      metadata?.administrationDays ?? 1,
-    ),
-    totalQuantity: readNumber("totalQuantity", metadata?.doseAmount ?? 1),
-    totalQuantityUnit: readString(
-      "totalQuantityUnit",
-      metadata?.dispenseUnit?.toLowerCase() ?? "tablet",
-    ),
-    medicationInstruction: readString(
-      "medicationInstruction",
-      metadata?.medicationInstruction ?? "any_time",
-    ),
-    storageMethod: readString(
-      "storageMethod",
-      metadata?.storageMethod ?? "room_temp",
-    ),
+    dose: readNumber("dose"),
+    doseBasis: readString("doseBasis"),
+    doseUnit: readString("doseUnit"),
+    route: readString("route"),
+    frequency: readString("frequency"),
+    durationDays: readNumber("durationDays"),
+    totalQuantity: readNumber("totalQuantity"),
+    totalQuantityUnit: readString("totalQuantityUnit"),
+    medicationInstruction: readString("medicationInstruction"),
+    storageMethod: readString("storageMethod"),
     compoundNote: readString("compoundNote"),
     guardianNote: readString("guardianNote"),
-    autoDispenseQuantityEnabled:
-      metadata?.autoDispenseQuantityEnabled ?? true,
+    // Explicit persisted editor policy, not a clinical detail or a default literal.
+    autoDispenseQuantityEnabled: authority?.schemaVersion === 2 && authority.preparationPolicy
+      ? true : typeof metadata?.autoDispenseQuantityEnabled === "boolean"
+      ? metadata.autoDispenseQuantityEnabled : undefined,
     manualQuantityReason: readString("manualQuantityReason"),
   };
 }
 
-function hasNonEmptyDetailInputs(
-  value: unknown,
-): value is Record<string, unknown> {
-  return Boolean(
-    value &&
-      typeof value === "object" &&
-      !Array.isArray(value) &&
-      Object.keys(value).length > 0,
-  );
-}
-
-function resolveClinicalPathologyCategoryId(
-  categoryLabel: string,
-): ClinicalPathologyCategoryId {
-  const normalizedLabel = categoryLabel.replaceAll(" ", "").replace("/", "");
-  const categoryByLabel: Record<string, ClinicalPathologyCategoryId> = {
-    CBC검사: "cbc",
-    CSF검사: "csf",
-    기타병리검사: "etc",
-    세포검사: "cell",
-    요검사: "urinalysis",
-    원내혈액검사: "in-house-blood",
-    임상미생물검사: "microbiology",
-    전해질검사동맥혈: "electrolyte-abg",
-    전해질검사동맥혈검사: "electrolyte-abg",
-    체액검사: "fluid",
-    혈액화학검사: "chemistry",
-  };
-
-  return categoryByLabel[normalizedLabel] ?? "etc";
-}
 
 export function mapWorkspaceCatalogItemsToHospitalOrders(items: OrderCatalogItem[]) {
   return items.map(mapWorkspaceCatalogItemToHospitalOrder);
@@ -965,11 +959,15 @@ export function buildWorkspaceCatalogMutationFromHospitalOrder({
   workspaceId: string;
 }): OrderCatalogMutationInput {
   if (source) {
+    const baseline = draft.sourceCatalogItem ?? source;
+    if (baseline.id !== source.id || baseline.workspaceId !== workspaceId) {
+      throw new Error("catalog_draft_source_mismatch");
+    }
     return {
       action: "update",
-      itemId: source.id,
-      expectedCatalogRevision: source.catalogRevision ?? 1,
-      patch: buildWorkspaceCatalogPatchFromHospitalOrder(draft, source),
+      itemId: baseline.id,
+      expectedCatalogRevision: baseline.catalogRevision ?? 1,
+      patch: buildWorkspaceCatalogPatchFromHospitalOrder(draft, baseline),
     };
   }
 
@@ -984,6 +982,29 @@ export function buildWorkspaceCatalogPauseMutation(
   expectedCatalogRevision: number,
 ): OrderCatalogMutationInput {
   return { action: "pause", itemId: orderId, expectedCatalogRevision };
+}
+
+export function getHospitalOrderTaxonomyFields(draft: HospitalOrderDraft) {
+  return {
+    adminSubcategoryCode: draft.subcategoryId === "unclassified" ? null
+      : draft.subcategoryId === "blood-chemistry" ? "clinical-pathology" : draft.subcategoryId,
+    labFamilyCode: draft.subcategoryId === "blood-chemistry" ? "chemistry"
+      : draft.subcategoryId === "clinical-pathology" ? draft.clinicalPathologyCategoryId ?? null : null,
+  };
+}
+
+export function isHospitalOrderTaxonomyChanged(draft: HospitalOrderDraft, source: OrderCatalogItem) {
+  const previous = mapWorkspaceCatalogItemToHospitalOrder(source);
+  return draft.subcategoryId !== previous.subcategoryId ||
+    draft.clinicalPathologyCategoryId !== previous.clinicalPathologyCategoryId;
+}
+
+export function isHospitalOrderTaxonomyOnlyChange(draft: HospitalOrderDraft, source: OrderCatalogItem) {
+  const previous = mapWorkspaceCatalogItemToHospitalOrder(source);
+  return isHospitalOrderTaxonomyChanged(draft, source) &&
+    (Object.keys(previous) as Array<keyof HospitalOrderCatalogItem>)
+      .filter(key => !["id", "categoryId", "subcategoryId", "clinicalPathologyCategoryId", "classificationStatus"].includes(key))
+      .every(key => JSON.stringify(draft[key]) === JSON.stringify(previous[key]));
 }
 
 function buildWorkspaceCatalogPatchFromHospitalOrder(
@@ -1012,7 +1033,14 @@ function buildWorkspaceCatalogPatchFromHospitalOrder(
       ? medicationMetadata?.defaultDetailInputs
       : draft.defaultDetailInputs;
 
+  const taxonomyChanged = isHospitalOrderTaxonomyChanged(draft, source);
+  const taxonomyPatch = taxonomyChanged ? getHospitalOrderTaxonomyFields(draft) : {};
+  // Do not resend unchanged clinical fields: the dispensing writer correctly
+  // treats explicit clinical edits as substantive, even when values look equal.
+  if (isHospitalOrderTaxonomyOnlyChange(draft, source)) return taxonomyPatch;
+
   return {
+    ...taxonomyPatch,
     aliases: splitAliases(draft.aliases),
     availabilityStatus:
       source.dispensingLineage?.serviceReviewOnly === true
@@ -1069,6 +1097,7 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
     customizedFields: ["*"],
     presetMergeStatus: "detached",
     originType: "workspace_custom",
+    ...getHospitalOrderTaxonomyFields(draft),
     categoryGroup: catalogDefaults.categoryGroup,
     ...(draft.clinicalOrderType
       ? { clinicalOrderType: draft.clinicalOrderType }
@@ -1100,6 +1129,11 @@ function buildWorkspaceCatalogCreateInputFromHospitalOrder(
     linkedLabItemIds: [],
     linkedLabCategoryIds: [],
     medicationMetadata: buildMedicationMetadataFromHospitalOrder(draft),
+    defaultDetailInputs: structuredClone(
+      draft.dispensingPreset
+        ? buildMedicationMetadataFromHospitalOrder(draft)?.defaultDetailInputs
+        : draft.defaultDetailInputs,
+    ),
     pricingRule: {
       priceBasis,
       priceKrw: draft.price,
@@ -1135,47 +1169,43 @@ function buildMedicationMetadataFromHospitalOrder(
   const frequencyDailyCount = getHospitalFrequencyDailyCount(
     preset.frequency,
   );
+  const defaultDetailInputs = structuredClone(draft.defaultDetailInputs ?? {});
+  // Overlay the editor on the selected persisted object; clearing a field must
+  // remove it from both representations, never revive the old nested value.
+  const { ingredientName: _ingredient, autoDispenseQuantityEnabled: _auto, manualQuantityReason: _reason, ...editedDetails } = preset;
+  void _ingredient;
+  void _auto;
+  void _reason;
+  delete defaultDetailInputs.autoDispenseQuantityEnabled;
+  if (preset.manualQuantityReason) defaultDetailInputs.manualQuantityReason = preset.manualQuantityReason;
+  else delete defaultDetailInputs.manualQuantityReason;
+  for (const [key, value] of Object.entries(editedDetails)) {
+    if (value === undefined || value === "") delete defaultDetailInputs[key];
+    else defaultDetailInputs[key] = value;
+  }
   return {
     ...source,
     schemaVersion: 2,
     presetOrigin:
       draft.sourceKind === "clair_master" ? "clair_master" : "workspace",
-    presetStatus: source?.presetStatus ?? "synthetic_unreviewed",
-    defaultDetailInputs: {
-      ...(source?.defaultDetailInputs ?? {}),
-      doseBasis: "patient",
-      dose: preset.dose,
-      doseUnit: preset.doseUnit,
-      route: preset.route,
-      frequency: preset.frequency,
-      durationDays: preset.durationDays,
-      totalQuantity: preset.totalQuantity,
-      totalQuantityUnit: preset.totalQuantityUnit,
-      medicationInstruction: preset.medicationInstruction,
-      storageMethod: preset.storageMethod,
-      compoundNote: preset.compoundNote,
-      guardianNote: preset.guardianNote,
-      manualQuantityReason: preset.manualQuantityReason,
-    },
+    defaultDetailInputs,
     autoDispenseQuantityEnabled: preset.autoDispenseQuantityEnabled,
     administrationDays: preset.durationDays,
-    dailyFrequencyCode: preset.frequency,
+    dailyFrequencyCode: preset.frequency || undefined,
     frequencyDailyCount,
-    doseBasis: "prescribed_quantity",
     doseAmount: preset.dose,
-    doseAmountUnit: preset.doseUnit,
+    doseAmountUnit: preset.doseUnit || undefined,
     administrationRoute:
-      preset.route as NonNullable<
+      (preset.route || undefined) as NonNullable<
         OrderCatalogItem["medicationMetadata"]
       >["administrationRoute"],
-    dispenseUnit: preset.totalQuantityUnit,
-    dispenseRoundingRule: source?.dispenseRoundingRule ?? "ceil_0_5",
+    dispenseUnit: preset.totalQuantityUnit || undefined,
     medicationInstruction:
-      preset.medicationInstruction as NonNullable<
+      (preset.medicationInstruction || undefined) as NonNullable<
         OrderCatalogItem["medicationMetadata"]
       >["medicationInstruction"],
     storageMethod:
-      preset.storageMethod as NonNullable<
+      (preset.storageMethod || undefined) as NonNullable<
         OrderCatalogItem["medicationMetadata"]
       >["storageMethod"],
     ingredientKoreanName: preset.ingredientName,
@@ -1189,82 +1219,110 @@ export function getHospitalFrequencyDailyCount(frequency: string) {
   if (frequency === "qid") return 4;
   if (frequency === "qod") return 0.5;
   if (frequency === "once") return 1;
-  return 1;
+  if (frequency === "sid") return 1;
+  return undefined;
 }
 
 export function calculateHospitalDispenseQuantity(
   preset: HospitalDispensingPreset,
+  storedAuthority?: unknown,
 ) {
-  return (
-    preset.dose *
-    getHospitalFrequencyDailyCount(preset.frequency) *
-    preset.durationDays
-  );
+  const frequency = getHospitalFrequencyDailyCount(preset.frequency);
+  // A per-patient same-unit quantity is the only conversion this editor owns.
+  // Weight/BSA, strength and cross-unit conversions require explicit inputs.
+  if (preset.doseBasis !== "patient" || !preset.doseUnit ||
+    preset.doseUnit !== preset.totalQuantityUnit ||
+    typeof preset.dose !== "number" || !Number.isFinite(preset.dose) ||
+    typeof preset.durationDays !== "number" || !Number.isFinite(preset.durationDays) ||
+    frequency === undefined) return undefined;
+  if (storedAuthority !== undefined && storedAuthority !== null) {
+    const parsed = parsePlanOrderAuthority(storedAuthority);
+    if (!parsed.valid) return undefined;
+    if (parsed.value?.schemaVersion === 2) {
+      if (parsed.value.calculationMode !== "product_unit" || parsed.value.dispenseUnit !== preset.doseUnit) return undefined;
+      return proposePlanOrderPreparation({ config: parsed.value, theoreticalPerAdministration: preset.dose,
+        occurrences: { kind: "daily", durationDays: preset.durationDays, dailyCount: frequency } })?.plannedPracticalTotal;
+    }
+  }
+  const quantity = preset.dose * frequency * preset.durationDays;
+  return Number.isFinite(quantity) ? quantity : undefined;
 }
 
-function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
+export function resolveHospitalOrderPlacement(item: OrderCatalogItem): {
   categoryId: HospitalOrderCategoryId;
   subcategoryId: HospitalOrderSubcategoryId;
+  classificationStatus: NonNullable<HospitalOrderCatalogItem["classificationStatus"]>;
 } {
-  const label = item.categoryLabel;
-
-  // The explicit contract wins over legacy labels. In particular, system
-  // examinations used to be presented as blood chemistry because both rows
-  // lived under the lab category.
-  if (item.clinicalOrderType === "system_exam") {
-    return { categoryId: "lab", subcategoryId: "system-exam" };
+  // Clinical type is authoritative even for system_exam stored under misc.
+  // Labels, names, provenance and opaque UUIDs cannot establish a subtype.
+  const type = item.clinicalOrderTypeSource === "derived" ? undefined : item.clinicalOrderType;
+  const categories: Partial<Record<ClinicalOrderType, HospitalOrderCategoryId>> = {
+    consultation: "consultation", clinical_lab: "lab", system_exam: "lab",
+    external_lab: "lab", imaging: "imaging", dispensing: "dispensing",
+    treatment: "treatment", hospitalization: "hospitalization", other: "misc",
+  };
+  const groups: Partial<Record<ServiceItemType, HospitalOrderCategoryId>> = {
+    consultation: "consultation", lab: "lab", imaging: "imaging",
+    medication: "dispensing", treatment: "treatment", hospitalization: "hospitalization", misc: "misc",
+  };
+  const categoryId = type
+    ? Object.hasOwn(categories, type) ? categories[type]! : "unclassified"
+    : Object.hasOwn(groups, item.categoryGroup) ? groups[item.categoryGroup]! : "unclassified";
+  const subcategories: Partial<Record<ClinicalOrderType, HospitalOrderSubcategoryId>> = {
+    system_exam: "system-exam", external_lab: "external-lab",
+    hospitalization: "hospitalization", other: "other",
+  };
+  const subcategoryId = type && Object.hasOwn(subcategories, type) ? subcategories[type]! : "unclassified";
+  if (item.classificationPathReadFailed) {
+    return { categoryId, subcategoryId: "unclassified", classificationStatus: "taxonomy_unavailable" };
   }
-  if (item.clinicalOrderType === "external_lab") {
-    return { categoryId: "lab", subcategoryId: "external-lab" };
+  const path = item.classificationPath;
+  if (path && (path.id !== item.classificationPathId || path.itemType !== item.categoryGroup)) {
+    return { categoryId, subcategoryId: "unclassified", classificationStatus: "taxonomy_conflict" };
   }
-  if (item.clinicalOrderType === "other" || item.categoryGroup === "misc") {
-    return { categoryId: "misc", subcategoryId: "other" };
+  if (path?.retired || path?.isUnclassified) {
+    return { categoryId, subcategoryId: "unclassified", classificationStatus: path.retired ? "taxonomy_retired" : "taxonomy_unclassified" };
   }
-
-  if (item.categoryGroup === "consultation") {
-    return {
-      categoryId: "consultation",
-      subcategoryId: label.includes("기타") ? "other-consultation" : "basic-consultation",
-    };
-  }
-
-  if (item.categoryGroup === "lab") {
-    if (label.includes("화학")) return { categoryId: "lab", subcategoryId: "blood-chemistry" };
-    if (label.includes("의뢰")) return { categoryId: "lab", subcategoryId: "external-lab" };
-    return { categoryId: "lab", subcategoryId: "clinical-pathology" };
-  }
-
-  if (item.categoryGroup === "imaging") {
-    return {
-      categoryId: "imaging",
-      subcategoryId: label.includes("초음파") ? "ultrasound" : "radiography",
-    };
-  }
-
-  if (item.categoryGroup === "hospitalization") {
-    return { categoryId: "hospitalization", subcategoryId: "hospitalization" };
-  }
-
-  if (item.categoryGroup === "medication") {
-    if (item.dispensingLineage) {
-      return { categoryId: "dispensing", subcategoryId: "injection" };
+  if (item.adminSubcategoryCode !== undefined || item.labFamilyCode !== undefined) {
+    if (!isOrderTaxonomyValid(type, item.adminSubcategoryCode, item.labFamilyCode)) {
+      return { categoryId, subcategoryId: "unclassified", classificationStatus: "taxonomy_conflict" };
     }
-    if (label.includes("주사")) return { categoryId: "dispensing", subcategoryId: "injection" };
-    if (label.includes("물품")) return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
-    return { categoryId: "dispensing", subcategoryId: "oral-medication" };
-  }
-
-  if (item.categoryGroup === "treatment") {
-    if (item.vaccineMetadata || label.includes("예방") || label.includes("백신")) {
-      return { categoryId: "prevention", subcategoryId: "prevention" };
+    if (item.adminSubcategoryCode === null) {
+      return { categoryId, subcategoryId: "unclassified", classificationStatus: "subcategory_missing" };
     }
-    if (label.includes("마취")) return { categoryId: "surgery", subcategoryId: "anesthesia" };
-    if (label.includes("수술")) return { categoryId: "surgery", subcategoryId: "surgery" };
-    if (label.includes("치료")) return { categoryId: "therapy", subcategoryId: "therapy" };
-    return { categoryId: "treatment", subcategoryId: "basic-treatment" };
+    const stored = orderTaxonomySubcategories[item.adminSubcategoryCode as keyof typeof orderTaxonomySubcategories];
+    return { categoryId: stored.parent, subcategoryId: item.adminSubcategoryCode as HospitalOrderSubcategoryId, classificationStatus: "resolved" };
   }
+  return { categoryId, subcategoryId, classificationStatus: !type || categoryId === "unclassified"
+    ? "type_missing" : subcategoryId === "unclassified"
+      ? item.classificationPathId && !path ? "taxonomy_unavailable" : "subcategory_missing"
+      : "resolved" };
+}
 
-  return { categoryId: "medical-supply", subcategoryId: "medical-supply" };
+/** Category-wide views retain rows without a fine classification. */
+export function isHospitalOrderInCategory(
+  order: HospitalOrderCatalogItem, categoryId: string, subcategoryId: string,
+) {
+  if (categoryId === "unclassified") return order.classificationStatus !== "resolved" || Boolean(order.sourceCatalogItem?.taxonomyMergeConflict);
+  return order.categoryId === categoryId &&
+    (subcategoryId === "unclassified" || order.subcategoryId === subcategoryId);
+}
+
+export function formatHospitalOrderClassification(order: HospitalOrderDraft) {
+  const category = getHospitalOrderCategory(order.categoryId)?.label ?? "미설정";
+  const statusLabels = {
+    taxonomy_unavailable: "저장 분류 조회 불가",
+    taxonomy_unclassified: "미분류 경로 사용 중",
+    taxonomy_conflict: "저장 분류 불일치",
+    taxonomy_retired: "종료된 분류 경로",
+  };
+  const status = order.classificationStatus;
+  const subcategory = status && Object.hasOwn(statusLabels, status)
+    ? statusLabels[status as keyof typeof statusLabels]
+    : order.sourceCatalogItem?.classificationPath && order.subcategoryId === "unclassified"
+      ? "세부 분류 미설정" : getHospitalOrderSubcategory(order.subcategoryId)?.label ?? "미설정";
+  const label = order.categoryId === "unclassified" ? "분류 미설정" : category + " / " + subcategory;
+  return order.sourceCatalogItem?.taxonomyMergeConflict ? label + " · 갱신 충돌" : label;
 }
 
 function formatDispensingStrengthSnapshot(value: unknown) {
@@ -1373,7 +1431,7 @@ function resolveCatalogDefaultsFromHospitalOrder(draft: HospitalOrderDraft): {
   categoryLabel: string;
   defaultDestinationModule: OrderCatalogItem["defaultDestinationModule"];
 } {
-  if (draft.categoryId === "consultation") {
+  if (draft.categoryId === "consultation" || draft.categoryId === "prevention") {
     return {
       categoryGroup: "consultation",
       categoryLabel: "진료",
@@ -1397,7 +1455,7 @@ function resolveCatalogDefaultsFromHospitalOrder(draft: HospitalOrderDraft): {
     };
   }
 
-  if (draft.categoryId === "dispensing" || draft.categoryId === "medical-supply") {
+  if (draft.categoryId === "dispensing") {
     return {
       categoryGroup: "medication",
       categoryLabel: getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? "처방/조제",
@@ -1413,7 +1471,7 @@ function resolveCatalogDefaultsFromHospitalOrder(draft: HospitalOrderDraft): {
     };
   }
 
-  if (draft.categoryId === "misc") {
+  if (draft.categoryId === "misc" || draft.categoryId === "medical-supply") {
     return {
       categoryGroup: "misc",
       categoryLabel: "기타",

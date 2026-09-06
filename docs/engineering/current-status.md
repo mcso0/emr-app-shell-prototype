@@ -62,6 +62,22 @@ Do not claim these as done without a scoped work item and verification evidence:
 
 ## Current Verification Baseline
 
+WP-01B–09 integration is locally verified: persisted Admin/chart scope, field
+merge and all-category actual/history. Original522 reconcile to524 candidates
+(51 explicit replacements,53 additions). Lab86 resolve to90 atomic orders,
+35 compositions and24 profiles; no real device integration or clinical approval.
+The three-workspace operator harness passes all18 new migrations plus one existing
+prerequisite, full rollback/late-failure/retry, existing prices/history/foreign
+preservation, and524 selectable/51 paused/53 new prices per workspace.
+Targets, synthetic-selectable108 dispensing profiles, manual profiles, parent-only
+billing, existing pilot nonbillable exceptions and differentiated new-item demo
+prices are approved. Fresh delivery checks include203 contracts,93 artifact tests,
+docs/secrets/typecheck/build; publisher35 and mocked browser evidence are recorded
+separately. [WP09](../work/clinical-master/order-execution-defaults/WP-09-complete-candidate-and-rollout.md)
+owns exact hashes and remaining gates. Remote DB apply, authenticated smoke,
+exact PR Preview/Release Check and Production approval/delivery remain.
+The full objective stays active; local rollback is not remote completion.
+
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 
 * `npm run docs:check` for docs path/reference changes

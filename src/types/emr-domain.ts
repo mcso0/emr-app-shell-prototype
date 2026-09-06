@@ -169,7 +169,7 @@ export type CsHistoryDirection = "inbound" | "outbound";
 export type LatestWorkType = "chart" | "lab" | "imaging" | "dispensing" | "billing";
 
 export type LabResultStatus = "pending" | "received" | "entered" | "completed" | "reviewed";
-export type LabResultJudgment = "low" | "normal" | "high" | "critical" | "not_judged";
+export type LabResultJudgment = "low" | "normal" | "high" | "critical" | "abnormal" | "not_judged";
 export type EquipmentReceiptStatus = "received" | "matched" | "unmatched" | "ignored";
 export type ImagingStudyStatus = "requested" | "captured" | "reading" | "read" | "reviewed";
 
@@ -613,6 +613,12 @@ export type LabResultRow = {
   decimalScale?: number;
   rowDefinitionOrigin?: "clair_master" | "workspace_custom" | "legacy" | "quarantined";
   workspaceResultRevision?: number;
+  interpretationRule?: import("@/features/lab-imaging/result-profile-contract").LabProfileRule;
+  resultState?: import("@/features/lab-imaging/result-profile-contract").LabProfileResultState;
+  resultPresence?: "value" | "instrument_no_result";
+  qualifier?: "exact" | "less_than" | "greater_than";
+  deviceFlag?: string;
+  required?: boolean;
 };
 
 export type LabResult = {
@@ -627,6 +633,7 @@ export type LabResult = {
   entryWriteRevision?: number;
   resultDefinitionOrigin?: "canonical" | "legacy" | "quarantined";
   resultDefinitionSnapshotSha256?: string;
+  resultProfileLabel?: string;
   collectedAt?: IsoDateTime;
   receivedAt?: IsoDateTime;
   enteredAt?: IsoDateTime;

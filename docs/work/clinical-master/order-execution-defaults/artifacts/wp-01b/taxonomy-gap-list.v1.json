@@ -1,0 +1,625 @@
+{
+  "schemaVersion": "wp01b-taxonomy-gap-list/v1",
+  "applicationAllowed": false,
+  "runtimeImportAllowed": false,
+  "unresolvedTaxonomyDecisions": [],
+  "vocabularyAdditions": [
+    {
+      "kind": "subcategory",
+      "code": "image-interpretation",
+      "parentCode": "imaging",
+      "label": "영상 판독 상담",
+      "allowedClinicalTypes": [
+        "imaging"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "dental-care",
+      "parentCode": "treatment",
+      "label": "치과 진료·처치",
+      "allowedClinicalTypes": [
+        "treatment"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "document-service",
+      "parentCode": "misc",
+      "label": "서류 발급·기록 사본",
+      "allowedClinicalTypes": [
+        "other"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "emergency-service",
+      "parentCode": "misc",
+      "label": "응급 서비스",
+      "allowedClinicalTypes": [
+        "other"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "topical",
+      "parentCode": "dispensing",
+      "label": "피부 외용",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "ophthalmic",
+      "parentCode": "dispensing",
+      "label": "점안",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "otic",
+      "parentCode": "dispensing",
+      "label": "점이",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "transdermal",
+      "parentCode": "dispensing",
+      "label": "경피",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "oromucosal",
+      "parentCode": "dispensing",
+      "label": "구강점막",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "subcategory",
+      "code": "dispensing-packaging",
+      "parentCode": "dispensing",
+      "label": "조제 포장",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "fecal-parasitology",
+      "label": "분변·기생충",
+      "researchFamilyId": "fecal_parasitology",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "coagulation",
+      "label": "응고",
+      "researchFamilyId": "coagulation",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "organ-metabolic",
+      "label": "장기·대사 평가",
+      "researchFamilyId": "organ_or_metabolic_panel",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "blood-typing",
+      "label": "혈액형",
+      "researchFamilyId": "blood_typing",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "reticulocyte",
+      "label": "망상적혈구",
+      "researchFamilyId": "reticulocyte",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "blood-smear",
+      "label": "혈액도말",
+      "researchFamilyId": "blood_smear",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "pancreatic",
+      "label": "췌장",
+      "researchFamilyId": "pancreatic",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "inflammation",
+      "label": "염증",
+      "researchFamilyId": "inflammation",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "thyroid",
+      "label": "갑상샘",
+      "researchFamilyId": "thyroid",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "adrenal",
+      "label": "부신",
+      "researchFamilyId": "adrenal",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "infectious-disease",
+      "label": "감염병",
+      "researchFamilyId": "infectious_disease",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "kind": "labFamily",
+      "code": "composite-assessment",
+      "label": "복합 검사 평가",
+      "researchFamilyId": "composite_diagnostic_plan",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    }
+  ],
+  "observedPathDifferences": [
+    {
+      "orderId": "cm.order.system-exam.cardiovascular",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.cardiovascular"
+    },
+    {
+      "orderId": "cm.order.system-exam.dermatologic-coat",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.dermatologic-coat"
+    },
+    {
+      "orderId": "cm.order.system-exam.digestive-abdominal",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.digestive-abdominal"
+    },
+    {
+      "orderId": "cm.order.system-exam.general-vitals",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.general-vitals"
+    },
+    {
+      "orderId": "cm.order.system-exam.musculoskeletal",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.musculoskeletal"
+    },
+    {
+      "orderId": "cm.order.system-exam.neurologic",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.neurologic"
+    },
+    {
+      "orderId": "cm.order.system-exam.ophthalmic",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.ophthalmic"
+    },
+    {
+      "orderId": "cm.order.system-exam.oral-dental",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.oral-dental"
+    },
+    {
+      "orderId": "cm.order.system-exam.otic",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.otic"
+    },
+    {
+      "orderId": "cm.order.system-exam.peripheral-lymphatic",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.peripheral-lymphatic"
+    },
+    {
+      "orderId": "cm.order.system-exam.respiratory",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.respiratory"
+    },
+    {
+      "orderId": "cm.order.system-exam.urogenital",
+      "frozen": "cm.path.system-exam.proposed",
+      "observed": "cm.path.system-exam.urogenital"
+    }
+  ],
+  "semanticCautions": [
+    {
+      "orderId": "cm.order.consult.initial",
+      "notes": [
+        "Frozen display name is Initial Consultation Changed; do not silently rename or reconcile by name."
+      ]
+    },
+    {
+      "orderId": "cm.order.dispensing.topical",
+      "notes": [
+        "Explicit synthetic browsing decision; product, administration route, dose and quantity remain unchanged."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.dispensing-07",
+      "notes": [
+        "Explicit synthetic browsing decision; product, administration route, dose and quantity remain unchanged."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.dispensing-11",
+      "notes": [
+        "Explicit synthetic browsing decision; product, administration route, dose and quantity remain unchanged."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.dispensing-12",
+      "notes": [
+        "Explicit synthetic browsing decision; product, administration route, dose and quantity remain unchanged."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.emergency-01",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.emergency-02",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.emergency-03",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-01",
+      "notes": [
+        "Existing electrolyte-abg browsing label does not assert arterial blood gas members."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-03",
+      "notes": [
+        "Preserve organ-metabolic research purpose; existing panel has eight chemistry members, no nested-set inference."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.preventive-01",
+      "notes": [
+        "Vaccine-named service retains consultation type; browsing assignment does not authorize administration or repair routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.preventive-02",
+      "notes": [
+        "Vaccine-named service retains consultation type; browsing assignment does not authorize administration or repair routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.preventive-03",
+      "notes": [
+        "Vaccine-named service retains consultation type; browsing assignment does not authorize administration or repair routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.preventive-04",
+      "notes": [
+        "Vaccine-named service retains consultation type; browsing assignment does not authorize administration or repair routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.preventive-05",
+      "notes": [
+        "Vaccine-named service retains consultation type; browsing assignment does not authorize administration or repair routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.cardiovascular",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.dermatologic-coat",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.digestive-abdominal",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.general-vitals",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.musculoskeletal",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.neurologic",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.ophthalmic",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.oral-dental",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.otic",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.peripheral-lymphatic",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.respiratory",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.system-exam.urogenital",
+      "notes": [
+        "Fresh observed path differs from frozen source path; both retained. Re-read type, revision, path and field fingerprint before any write."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.dental.03",
+      "notes": [
+        "Dental radiography currently has treatment type; classification does not repair execution routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.dental.04",
+      "notes": [
+        "Dental radiography currently has treatment type; classification does not repair execution routing."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.01",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.02",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.03",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.04",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.05",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.06",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.07",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.08",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.09",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.10",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.11",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.12",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.13",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.14",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.15",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.16",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.17",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.18",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.19",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.20",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.emergency.21",
+      "notes": [
+        "Existing other type does not prove emergency fulfillment; resolve execution semantics separately."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.imaging.18",
+      "notes": [
+        "Interpretation only; no CT acquisition/device implied."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "notes": [
+        "Composite service intent; currently bound chemistry panel is not a complete composite set."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.pu-pd",
+      "notes": [
+        "Shares urine-protein panel with renal; primary service family differs, membership unchanged."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.renal",
+      "notes": [
+        "Shares urine-protein panel with pu-pd; primary service family differs, membership unchanged."
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.32",
+      "notes": [
+        "Feline panleukopenia antigen belongs to infectious disease, not CBC."
+      ]
+    },
+    {
+      "orderId": "phase1.optionb.v1.order.metabolic",
+      "notes": [
+        "Unbound broad synthetic blood-test workflow; no CBC, chemistry, specimen or panel composition inferred."
+      ]
+    }
+  ],
+  "remainingWork": [
+    "Additive storage/publisher/projection/API validation and two-field inheritance are not implemented by this artifact.",
+    "Re-read live clinical type, revision, path, source projection and customization before any write; snapshot only verified identity/revision/path.",
+    "Known clinical-default incompleteness remains separate from taxonomy readiness.",
+    "Nested sets, independent analytes, device profiles and reference ranges remain OED-LAB-04.",
+    "Reconcile 13 workspace-only legacy rows separately; one already has a master link, twelve do not. Never attach by name or delete by default."
+  ],
+  "legacySource": {
+    "path": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01b/taxonomy-workspace-reconciliation.non-applied.v1.json",
+    "sha256": "fc325f890cd2255f387bbb627aaca9b307b610b720a4b1985a406993e272eaf2"
+  }
+}

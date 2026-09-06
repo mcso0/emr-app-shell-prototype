@@ -1,0 +1,448 @@
+{
+  "schemaVersion": "oed-lab-01-source-ledger/v1",
+  "generatedAt": "2026-09-06",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "sourcePolicy": {
+    "perOrderMethodVerificationComplete": false,
+    "sourceAccessDatesPreservedFromOriginalResearch": true,
+    "preferred": [
+      "standards_body",
+      "professional_guideline",
+      "university_diagnostic_laboratory",
+      "manufacturer_manual",
+      "manufacturer_test_menu"
+    ],
+    "excludedAsSoleEvidence": [
+      "search_snippet",
+      "general_blog",
+      "reseller_page"
+    ],
+    "numericValuesCopiedIntoMaster": false
+  },
+  "sources": [
+    {
+      "sourceId": "ASVCP-QALS",
+      "organization": "American Society for Veterinary Clinical Pathology",
+      "title": "Quality Assurance and Laboratory Standards Guidelines",
+      "url": "https://www.asvcp.org/page/QALS_Guidelines",
+      "sourceClass": "professional_guideline",
+      "supports": [
+        "quality_governance",
+        "reference_interval_governance",
+        "cytology_reporting"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "ASVCP-RI-GUIDELINE",
+      "organization": "ASVCP QALS",
+      "title": "Reference interval guidelines",
+      "url": "https://onlinelibrary.wiley.com/doi/full/10.1111/vcp.12006",
+      "sourceClass": "professional_guideline",
+      "supports": [
+        "reference_interval_dimensions",
+        "method_device_dependence",
+        "interval_transference"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "ASVCP-RI-TRANSFER",
+      "organization": "ASVCP QALS",
+      "title": "Reference Interval Transference Verification Checklist",
+      "url": "https://www.asvcp.org/resource/resmgr/qals/ref_interval_transference/transferenceverification-upd.pdf",
+      "sourceClass": "professional_guideline",
+      "supports": [
+        "reference_interval_verification",
+        "local_validation_required"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-HEMATOLOGY",
+      "organization": "Cornell University AHDC",
+      "title": "Hematology testing protocols and interpretations",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/hematology",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "cbc_children",
+        "reticulocyte",
+        "blood_smear",
+        "fecal_occult_blood"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-HEMATOLOGY-RI",
+      "organization": "Cornell University AHDC",
+      "title": "Hematology reference intervals - ADVIA 2120",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/laboratories/clinical-pathology/reference-intervals/hematology-advia-2120",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "cbc_units",
+        "species_reference_intervals",
+        "device_specific_profile"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-PROCYTE-RI",
+      "organization": "IDEXX Laboratories",
+      "title": "ProCyte Dx reference intervals",
+      "url": "https://www.idexx.com/files/procyte-dx-reference-ranges-en.pdf",
+      "sourceClass": "manufacturer_manual",
+      "supports": [
+        "cbc_device_profile",
+        "species_reference_intervals",
+        "cbc_units"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "ZOETIS-HM5-MANUAL",
+      "organization": "Zoetis Diagnostics",
+      "title": "VETSCAN HM5 Operator's Manual",
+      "url": "https://www.zoetisdiagnostics.com/assets/Resources/PDF/VETSCAN-HM5-Blue-Version-Operators-Manual.pdf",
+      "sourceClass": "manufacturer_manual",
+      "supports": [
+        "cbc_device_parameters",
+        "hematology_equipment_class"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-CHEMISTRY",
+      "organization": "Cornell University AHDC",
+      "title": "Clinical Chemistry",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/veterinary-resources/testing-guidelines/clinical-chemistry",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "chemistry_panels",
+        "electrolytes",
+        "organ_panels",
+        "specimens"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-CHEMISTRY-RI",
+      "organization": "Cornell University AHDC",
+      "title": "Chemistry reference intervals - Cobas",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/laboratories/clinical-pathology/reference-intervals/chemistry-cobas",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "chemistry_units",
+        "species_reference_intervals",
+        "method_device_dependence"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-CATALYST-MENU",
+      "organization": "IDEXX Laboratories",
+      "title": "Catalyst One test menu",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/catalyst-one-chemistry-analyzer/test-menu/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "chemistry_device_menu",
+        "single_analyte_recheck",
+        "upc",
+        "endocrine_poc"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "ZOETIS-VS2-PROFILES",
+      "organization": "Zoetis Diagnostics",
+      "title": "VETSCAN VS2 testing profiles",
+      "url": "https://www.zoetisdiagnostics.com/IE/assets/pdf/Zoetis-Vetscan-VS2-Testing-Profiles-VTS-01169A-NOV2123.pdf",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "chemistry_device_menu",
+        "panel_composition",
+        "species_scope"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-COAG-DX",
+      "organization": "IDEXX Laboratories",
+      "title": "Coag Dx Analyzer",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/coag-dx-analyzer/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "pt",
+        "aptt",
+        "coagulation_equipment",
+        "species_scope"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-COAG-PANEL",
+      "organization": "Cornell University AHDC",
+      "title": "Canine diagnostic plans and coagulation panels",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/diagnostic-services/diagnostic-plans-and-panels/canine-diagnostic-plans-and-panels",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "coagulation_panel",
+        "panel_of_panels",
+        "specimens"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-URINALYSIS",
+      "organization": "Cornell University AHDC",
+      "title": "Urinalysis",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/urinalysis",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "urinalysis_children",
+        "upc",
+        "urine_specimen"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-VETLAB-UA",
+      "organization": "IDEXX Laboratories",
+      "title": "VetLab UA Analyzer",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/vetlab-ua-analyzer/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "urine_strip_device",
+        "semiquantitative_results",
+        "species_scope"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-SEDIVUE",
+      "organization": "IDEXX Laboratories",
+      "title": "SediVue Dx Urine Sediment Analyzer",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/sedivue-dx-analyzer/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "urine_sediment_children",
+        "images",
+        "sediment_device"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-PARASITOLOGY",
+      "organization": "Cornell University AHDC",
+      "title": "Parasitology",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/parasitology",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "fecal_flotation",
+        "organism_observations",
+        "qualitative_quantitative_results"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-SNAP-GIARDIA",
+      "organization": "IDEXX Laboratories",
+      "title": "SNAP Giardia Test",
+      "url": "https://www.idexx.com/en/veterinary/snap-tests/snap-giardia-test/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "giardia_antigen",
+        "point_of_care_rapid_test",
+        "qualitative_result"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-SNAP-INFECTIOUS",
+      "organization": "IDEXX Laboratories",
+      "title": "SNAP rapid assay product inserts",
+      "url": "https://www.idexx.com/en/veterinary/support/rapid-assay-snap-product-inserts/",
+      "sourceClass": "manufacturer_manual_index",
+      "supports": [
+        "parvo_antigen",
+        "heartworm_antigen",
+        "felv_antigen",
+        "fiv_antibody",
+        "panel_status"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "UC-DAVIS-PCR",
+      "organization": "UC Davis Veterinary Genetics and Molecular Diagnostics",
+      "title": "Veterinary PCR tests and panels",
+      "url": "https://pcrlab.vetmed.ucdavis.edu/veterinary-diagnostics/veterinary-submission-formsdiagnostic-tests-and-panels",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "infectious_pcr",
+        "babesia",
+        "species_specific_panels",
+        "external_lab_route"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-PCR-INTERPRETATION",
+      "organization": "Cornell University AHDC",
+      "title": "Interpretation of PCR results",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/testing-laboratories/molecular-diagnostics/interpretation-pcr-results",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "pcr_result_shape",
+        "assay_specific_interpretation",
+        "inconclusive_results"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-BLOOD-TYPE",
+      "organization": "Cornell University AHDC",
+      "title": "Canine and Feline Blood Typing",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/laboratories/comparative-coagulation/clinical-topics/canine-feline-blood-typing",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "blood_type",
+        "species_specific_codes",
+        "edta_specimen"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "CORNELL-CYTOLOGY",
+      "organization": "Cornell University AHDC",
+      "title": "Cytology - fluid samples",
+      "url": "https://www.vet.cornell.edu/animal-health-diagnostic-center/veterinary-resources/testing-guidelines/cytology-fluid-samples-only",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "joint_fluid",
+        "cytology_specimen",
+        "manual_external_route"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-INVUE",
+      "organization": "IDEXX Laboratories",
+      "title": "inVue Dx Cellular Analyzer",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/invue-dx-analyzer/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "ear_cytology",
+        "blood_morphology",
+        "images",
+        "semiquantitative_results"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "UC-DAVIS-ENDOCRINOLOGY",
+      "organization": "UC Davis Veterinary Medical Teaching Hospital",
+      "title": "Clinical chemistry and endocrinology services",
+      "url": "https://www.vetmed.ucdavis.edu/hospital/support-services/lab-services/clinical-laboratory-services/clinical-chemistry",
+      "sourceClass": "university_diagnostic_laboratory",
+      "supports": [
+        "thyroid_tests",
+        "cortisol",
+        "crp",
+        "endocrine_equipment"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "IDEXX-CORTISOL",
+      "organization": "IDEXX Laboratories",
+      "title": "Catalyst Cortisol Test",
+      "url": "https://www.idexx.com/en/veterinary/analyzers/catalyst-one-chemistry-analyzer/test-menu/cortisol/",
+      "sourceClass": "manufacturer_test_menu",
+      "supports": [
+        "cortisol_protocol",
+        "timed_results",
+        "canine_device_profile"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "LOINC-PANELS",
+      "organization": "Regenstrief Institute",
+      "title": "LOINC Panels (Batteries)",
+      "url": "https://loinc.org/kb/users-guide/panels",
+      "sourceClass": "standards_body",
+      "supports": [
+        "panel_children",
+        "nested_panels",
+        "conditionality"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "LOINC-RESULT-TYPES",
+      "organization": "Regenstrief Institute",
+      "title": "Types of results found in panels",
+      "url": "https://loinc.org/kb/users-guide/panels/types-of-results",
+      "sourceClass": "standards_body",
+      "supports": [
+        "primary_observation",
+        "derived_observation",
+        "panel_interpretation"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "UCUM-2.2",
+      "organization": "UCUM Organization",
+      "title": "Unified Code for Units of Measure v2.2",
+      "url": "https://ucum.org/ucum",
+      "sourceClass": "standards_body",
+      "supports": [
+        "machine_readable_units"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "FHIR-SERVICE-REQUEST",
+      "organization": "HL7 International",
+      "title": "FHIR R5 ServiceRequest",
+      "url": "https://hl7.org/fhir/servicerequest.html",
+      "sourceClass": "standards_body",
+      "supports": [
+        "order_instance",
+        "panel_request",
+        "requisition"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "FHIR-OBSERVATION",
+      "organization": "HL7 International",
+      "title": "FHIR R5 Observation",
+      "url": "https://hl7.org/fhir/observation.html",
+      "sourceClass": "standards_body",
+      "supports": [
+        "atomic_result",
+        "has_member",
+        "value_types",
+        "reference_range"
+      ],
+      "accessedAt": "2026-09-04"
+    },
+    {
+      "sourceId": "FHIR-DIAGNOSTIC-REPORT",
+      "organization": "HL7 International",
+      "title": "FHIR R5 DiagnosticReport",
+      "url": "https://hl7.org/fhir/diagnosticreport.html",
+      "sourceClass": "standards_body",
+      "supports": [
+        "report_grouping",
+        "atomic_results",
+        "images",
+        "interpretation"
+      ],
+      "accessedAt": "2026-09-04"
+    }
+  ]
+}

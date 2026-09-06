@@ -927,6 +927,7 @@ test("denied or cross-workspace draft saves cannot read runtime context before c
 test("set draft keeps explicit leaf intent and runtime identity across reload and CAS retry", async () => {
   const catalog = createMockOrderCatalogGateway();
   const catalogResult = await catalog.listChartSearch({ workspaceId });
+  if (!catalogResult.ok) throw new Error(`catalog read failed: ${catalogResult.error}`);
   const setRow = catalogResult.rows.find(
     (row) => row.rowType === "set" && row.sourceSetId === "set-vomit-basic",
   );
@@ -1103,6 +1104,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
 test("new Order Set child draft inputs preserve applied catalog defaults", async () => {
   const catalog = createMockOrderCatalogGateway();
   const catalogResult = await catalog.listChartSearch({ workspaceId });
+  if (!catalogResult.ok) throw new Error(`catalog read failed: ${catalogResult.error}`);
   const setRow = catalogResult.rows.find(
     (row) => row.rowType === "set" && row.sourceSetId === "set-vomit-basic",
   );
@@ -1162,6 +1164,7 @@ test("new Order Set child draft inputs preserve applied catalog defaults", async
 test("new chart orders start with workspace presets across every non-dispensing category", async () => {
   const seedGateway = createMockOrderCatalogGateway();
   const seedCatalog = await seedGateway.listAdminCatalog({ workspaceId });
+  if (!seedCatalog.ok) throw new Error(`catalog read failed: ${seedCatalog.error}`);
   const base = seedCatalog.items.find((item) => item.id === "ord-lab-cbc-baso");
   expect(base).toBeTruthy();
   if (!base) return;
@@ -1529,7 +1532,9 @@ test("consultation draft remains incomplete when encounter has no primary veteri
 
 test("Order Set consultation child resolves responsible clinician from encounter primary veterinarian", async () => {
   const catalog = createMockOrderCatalogGateway();
-  const setRow = (await catalog.listChartSearch({ workspaceId })).rows.find(
+  const catalogResult = await catalog.listChartSearch({ workspaceId });
+  if (!catalogResult.ok) throw new Error(`catalog read failed: ${catalogResult.error}`);
+  const setRow = catalogResult.rows.find(
     (row) => row.rowType === "set" && row.sourceSetId === "set-vomit-basic",
   );
   expect(setRow).toBeTruthy();

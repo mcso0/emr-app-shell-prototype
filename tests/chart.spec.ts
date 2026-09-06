@@ -1555,7 +1555,7 @@ test("chart Order all tab renders the exact approved 25-column legacy contract",
     "1회당",
     "성분량",
     "조제량",
-    "실조제량",
+    "준비 예정량",
     "보관",
     "투여/복약",
     "담당자",
@@ -1784,14 +1784,14 @@ test("chart saves a constrained actual dispense override with an anchored reason
 
   await page.goto(kongScenarioUrl);
   const input = page.getByRole("spinbutton", {
-    name: "Maropitant 16mg T 실조제량",
+    name: "Maropitant 16mg T 준비 예정량",
   });
   await expect(input).toHaveValue("1");
   await input.fill("1.2");
   await page
-    .getByRole("button", { name: "Maropitant 16mg T 실조제량 저장" })
+    .getByRole("button", { name: "Maropitant 16mg T 준비 예정량 저장" })
     .click();
-  const reasonPopover = page.getByText("실조제량 변경 사유가 필요해요");
+  const reasonPopover = page.getByText("준비 예정량 변경 사유가 필요해요");
   await expect(reasonPopover).toBeVisible();
   await page.getByRole("button", { name: "계량 단위 보정" }).click();
 
@@ -1804,7 +1804,7 @@ test("chart saves a constrained actual dispense override with an anchored reason
   await expect(input).toHaveValue("1.2");
   await expect(
     page.getByRole("button", {
-      name: "Maropitant 16mg T 실조제량 변경 사유",
+      name: "Maropitant 16mg T 준비 예정량 변경 사유",
     }),
   ).toBeVisible();
 });

@@ -1,5 +1,7 @@
 "use client";
 
+import { LabResultProfileSelection } from "@/features/lab-imaging/components/result-profile-selection";
+
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -124,6 +126,11 @@ import {
   calculateHospitalDispenseQuantity,
   clinicalPathologyCategoryOptions,
   getHospitalOrderCategory,
+  formatHospitalOrderClassification,
+  isHospitalOrderInCategory,
+  getHospitalOrderTaxonomyFields,
+  isHospitalOrderTaxonomyChanged,
+  isHospitalOrderTaxonomyOnlyChange,
   getHospitalOrderSubcategory,
   mapWorkspaceCatalogItemToHospitalOrder,
   mapWorkspaceCatalogItemsToHospitalOrders,
@@ -136,14 +143,17 @@ import {
   type HospitalOrderDraft,
   type HospitalOrderSubcategoryId,
 } from "@/features/hospital-admin/data";
+import { getHospitalOrderCoreDetails, getHospitalOrderCoreStatus } from "@/features/hospital-admin/order-core-details";
+import { isOrderTaxonomyValid, orderTaxonomySubcategories, orderTaxonomyLabFamilies } from "@/features/hospital-admin/order-taxonomy";
 import {
-  CLINICAL_ORDER_FIELD_SCHEMAS,
+  getClinicalOrderFieldSchema,
   resolveClinicalOrderMasterContract,
   validateClinicalOrderDetailInputs,
   type ClinicalOrderFieldDefinition,
   type ClinicalOrderMasterContract,
 } from "@/features/chart/order-execution-domain";
 import type { ClinicalOrderType } from "@/types/emr-domain";
+import { parsePlanOrderAuthority, type PlanOrderPreparationPolicy, type PlanOrderAuthorityConfig } from "@/features/chart/plan-order-authority-domain";
 import { WorkspaceMembershipManagement } from "@/features/auth/workspace-membership-management";
 import { HospitalBasicSettingsScreen } from "@/features/hospital-admin/settings/hospital-basic-settings-screen";
 import { HospitalContactSettingsScreen } from "@/features/hospital-admin/settings/hospital-contact-settings-screen";
@@ -156,6 +166,8 @@ import { RolePermissionManagementScreen } from "@/features/hospital-admin/role-p
 import { OrderSetsPanel } from "@/features/hospital-admin/order-sets-panel";
 import {
   useHospitalAdminStore,
+  emptyHospitalOrders,
+  deniedCatalogCapabilities,
   type HospitalAdminSection,
 } from "@/features/hospital-admin/store";
 import { cn } from "@/lib/utils";
@@ -261,19 +273,21 @@ const hospitalDispensingReviewLabels = {
 } as const;
 type HospitalDispensingReviewKey = keyof typeof hospitalDispensingReviewLabels;
 
-function formatHospitalDispensingNumber(value: number) {
+function formatHospitalDispensingNumber(value: number | undefined) {
+  if (value === undefined || !Number.isFinite(value)) return "미설정";
   return Number.isInteger(value)
     ? String(value)
     : String(Number(value.toFixed(3)));
 }
 
-function formatHospitalDispensingAmount(value: number, unit: string) {
+function formatHospitalDispensingAmount(value: number | undefined, unit: string) {
+  if (value === undefined || !Number.isFinite(value) || !unit) return "미설정";
   const unitLabel = hospitalDispensingDoseUnitLabels[unit] ?? unit;
   return `${formatHospitalDispensingNumber(value)}${unitLabel}`;
 }
 
 function getHospitalDispensingReviewKey(
-  order: HospitalOrderCatalogItem,
+  order: HospitalOrderDraft,
 ): HospitalDispensingReviewKey {
   if (order.sourceKind === "clair_master") {
     const source = order.sourceCatalogItem;
@@ -289,7 +303,7 @@ function getHospitalDispensingReviewKey(
   return "not_required";
 }
 
-function getHospitalDispensingTableDetails(order: HospitalOrderCatalogItem) {
+function getHospitalDispensingTableDetails(order: HospitalOrderDraft) {
   const preset = order.dispensingPreset;
   const ingredient = preset?.ingredientName.trim() ?? "";
   const ingredientStrength = [ingredient, order.dispensingStrength]
@@ -304,7 +318,7 @@ function getHospitalDispensingTableDetails(order: HospitalOrderCatalogItem) {
       ? formatHospitalDispensingAmount(preset.dose, preset.doseUnit)
       : "",
     durationDays: preset?.durationDays,
-    durationLabel: preset
+    durationLabel: preset?.durationDays !== undefined
       ? `${formatHospitalDispensingNumber(preset.durationDays)}일`
       : "",
     frequency: preset?.frequency ?? "",
@@ -384,28 +398,9 @@ function getHospitalOrderTableDetailFields(
   const fields = new Map<string, HospitalOrderTableDetailField>();
 
   orders.forEach((order) => {
-    const contract = getHospitalOrderDetailContract(order);
-    if (!contract || contract.clinicalOrderType === "dispensing") return;
-
-    const authoredValues = order.defaultDetailInputs ?? {};
-    const canonicalSchema =
-      CLINICAL_ORDER_FIELD_SCHEMAS[contract.clinicalOrderType];
-    const definitions =
-      contract.detailFieldSchema.fields.length > 0
-        ? contract.detailFieldSchema.fields
-        : canonicalSchema.fields;
-
-    definitions.forEach((definition) => {
-      if (
-        !Object.prototype.hasOwnProperty.call(authoredValues, definition.key)
-      ) {
-        return;
-      }
-
-      fields.set(`${contract.clinicalOrderType}:${definition.key}`, {
-        clinicalOrderType: contract.clinicalOrderType,
-        definition,
-      });
+    getHospitalOrderCoreDetails(order).forEach(({ clinicalOrderType, definition }) => {
+      if (clinicalOrderType === "dispensing") return;
+      fields.set(clinicalOrderType + ":" + definition.key, { clinicalOrderType, definition });
     });
   });
 
@@ -575,7 +570,7 @@ const orderMenuGroups: OrderMenuGroup[] = [
   {
     id: "general",
     label: "전체",
-    children: [{ label: "전체", disabled: true }],
+    children: [{ label: "분류 확인 필요", categoryId: "unclassified", subcategoryId: "unclassified" }],
   },
   {
     id: "care",
@@ -715,6 +710,14 @@ const orderMenuGroups: OrderMenuGroup[] = [
   },
 ];
 
+// Extend navigation with the explicit vocabulary, not with order names or data.
+for (const [code, definition] of Object.entries(orderTaxonomySubcategories)) {
+  const group = orderMenuGroups.find(group => group.children.some(child => child.categoryId === definition.parent));
+  if (group && !group.children.some(child => child.subcategoryId === code)) {
+    group.children.push({ label: definition.label, categoryId: definition.parent, subcategoryId: code as HospitalOrderSubcategoryId });
+  }
+}
+
 const auditEventFilterItems = [
   { label: "전체", value: "all" },
   { label: "구성원 역할 변경", value: "workspace.membership_roles_changed" },
@@ -755,8 +758,6 @@ type AuditReviewEventRow = {
   metadata?: Record<string, unknown>;
 };
 
-type OrderCatalogReadStatus = "idle" | "loading" | "ready" | "denied" | "error";
-
 type OrderCatalogAdminReadResponse =
   | {
       ok: true;
@@ -789,6 +790,7 @@ async function mutateHospitalAdminOrderCatalog({
   session: AuthSession;
   workspaceId: string;
 }): Promise<OrderCatalogAdminMutationResponse> {
+  try {
   const response = await fetch(
     `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-catalog`,
     {
@@ -810,13 +812,28 @@ async function mutateHospitalAdminOrderCatalog({
     };
   }
 
+  if (body.item.workspaceId !== workspaceId || (input.action !== "create" && "itemId" in input && body.item.id !== input.itemId)) {
+    return { ok: false, error: "catalog_response_invalid" };
+  }
   return body;
+  } catch {
+    return { ok: false, error: "request_failed" };
+  }
 }
 
 function validateHospitalOrderDraft(
   draft: HospitalOrderDraft,
   options: { creating: boolean } = { creating: false },
 ) {
+  const source = draft.sourceCatalogItem;
+  if (options.creating || (source && isHospitalOrderTaxonomyChanged(draft, source))) {
+    const taxonomy = getHospitalOrderTaxonomyFields(draft);
+    if (!isOrderTaxonomyValid(draft.clinicalOrderType, taxonomy.adminSubcategoryCode, taxonomy.labFamilyCode)) {
+      return "업무유형에 맞는 세부 분류와 검사 계열을 선택해 주세요.";
+    }
+    // A classification repair must not require unrelated missing clinical values.
+    if (source && isHospitalOrderTaxonomyOnlyChange(draft, source)) return null;
+  }
   if (!draft.standardName.trim()) return "표준 Order명을 입력해 주세요.";
   if (!draft.inHospitalName.trim()) return "원내 Order명을 입력해 주세요.";
   if (!draft.billingName.trim()) return "청구서명을 입력해 주세요.";
@@ -830,25 +847,31 @@ function validateHospitalOrderDraft(
     return "판매금액은 0원 이상이어야 합니다.";
 
   if (draft.categoryId === "dispensing") {
+    if (!parsePlanOrderAuthority(draft.defaultDetailInputs?.planOrderAuthority).valid) return "준비량 계산 규칙의 계량 단위·표시 자릿수를 확인해 주세요.";
     const preset = draft.dispensingPreset;
     if (!preset) return "조제 기본값을 입력해 주세요.";
     if (!preset.ingredientName.trim())
       return "성분 또는 조제 내용을 입력해 주세요.";
-    if (!Number.isFinite(preset.dose) || preset.dose <= 0)
+    if (typeof preset.dose !== "number" || !Number.isFinite(preset.dose) || preset.dose <= 0)
       return "1회 용량은 0보다 커야 합니다.";
     if (!preset.doseUnit.trim()) return "용량 단위를 입력해 주세요.";
     if (!preset.route.trim()) return "투여 경로를 선택해 주세요.";
     if (!preset.frequency.trim()) return "투여 빈도를 선택해 주세요.";
-    if (!Number.isFinite(preset.durationDays) || preset.durationDays <= 0)
+    if (typeof preset.durationDays !== "number" || !Number.isFinite(preset.durationDays) || preset.durationDays <= 0)
       return "투여 일수는 0보다 커야 합니다.";
-    if (!Number.isFinite(preset.totalQuantity) || preset.totalQuantity <= 0)
+    if (typeof preset.totalQuantity !== "number" || !Number.isFinite(preset.totalQuantity) || preset.totalQuantity <= 0)
       return "처방 총량은 0보다 커야 합니다.";
     if (!preset.totalQuantityUnit.trim())
       return "총량 단위를 입력해 주세요.";
+    if (typeof preset.autoDispenseQuantityEnabled !== "boolean") return "총량 계산 방식을 선택해 주세요.";
+    const calculatedQuantity = calculateHospitalDispenseQuantity(preset, draft.defaultDetailInputs?.planOrderAuthority);
+    if (preset.autoDispenseQuantityEnabled && calculatedQuantity === undefined) {
+      return "자동 계산에 필요한 용량 기준·단위·빈도를 확인해 주세요.";
+    }
     if (
-      preset.autoDispenseQuantityEnabled &&
+      preset.autoDispenseQuantityEnabled && calculatedQuantity !== undefined &&
       Math.abs(
-        preset.totalQuantity - calculateHospitalDispenseQuantity(preset),
+        preset.totalQuantity - calculatedQuantity,
       ) > 0.001
     ) {
       return "자동 계산 총량과 처방 총량이 일치하지 않습니다.";
@@ -882,7 +905,7 @@ function getHospitalOrderDetailContract(
   draft: HospitalOrderDraft,
 ): ClinicalOrderMasterContract | null {
   const source = draft.sourceCatalogItem;
-  if (!source) return null;
+  if (!source || !draft.clinicalOrderType) return null;
 
   try {
     return resolveClinicalOrderMasterContract({
@@ -945,8 +968,7 @@ function getVisibleOrders(
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
   return orders
-    .filter((order) => order.categoryId === selectedCategoryId)
-    .filter((order) => order.subcategoryId === selectedSubcategoryId)
+    .filter((order) => isHospitalOrderInCategory(order, selectedCategoryId, selectedSubcategoryId))
     .filter((order) => {
       if (!normalizedQuery) return true;
       const dispensingDetails = getHospitalDispensingTableDetails(order);
@@ -1151,8 +1173,9 @@ function getHospitalOrderTableFilterFields(
 function getSubcategoryCount(
   orders: HospitalOrderCatalogItem[],
   subcategoryId: string,
+  categoryId: string,
 ) {
-  return orders.filter((order) => order.subcategoryId === subcategoryId).length;
+  return orders.filter((order) => isHospitalOrderInCategory(order, categoryId, subcategoryId)).length;
 }
 
 type HospitalAdminConceptSection = "vitals";
@@ -1479,7 +1502,7 @@ export function HospitalAdminConceptScreen({
   );
 }
 
-export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
+export function HospitalAdminSidePanel({ moduleLabel, workspaceId }: ShellComponentProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1490,7 +1513,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
   const confirmPendingSectionChange = useHospitalAdminStore(
     (state) => state.confirmPendingSectionChange,
   );
-  const orders = useHospitalAdminStore((state) => state.orders);
+  const orders = useHospitalAdminStore((state) => state.catalogWorkspaceId === workspaceId && state.catalogReadStatus === "ready" ? state.orders : emptyHospitalOrders);
   const pendingSection = useHospitalAdminStore((state) => state.pendingSection);
   const requestSectionChange = useHospitalAdminStore(
     (state) => state.requestSectionChange,
@@ -1565,7 +1588,11 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
         id: `${group.id}-label`,
         label: group.label,
       },
-      ...group.children
+      ...[
+        ...[...new Set(group.children.map(item => item.categoryId).filter((id): id is HospitalOrderCategoryId => Boolean(id) && id !== "unclassified"))]
+          .map<OrderMenuChild>(categoryId => ({ label: `${getHospitalOrderCategory(categoryId)?.label} 전체`, categoryId, subcategoryId: "unclassified" })),
+        ...group.children,
+      ]
         .filter((item) => item.categoryId && item.subcategoryId)
         .map((item) => {
           const active =
@@ -1579,7 +1606,7 @@ export function HospitalAdminSidePanel({ moduleLabel }: ShellComponentProps) {
             active,
             count: item.subcategoryId ? (
               <EmrModuleListSidePanelBadge>
-                {getSubcategoryCount(orders, item.subcategoryId)}
+                {getSubcategoryCount(orders, item.subcategoryId, item.categoryId!)}
               </EmrModuleListSidePanelBadge>
             ) : undefined,
             disabled: item.disabled,
@@ -1738,11 +1765,11 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     (state) => state.clearSelectedOrders,
   );
   const catalogCapabilities = useHospitalAdminStore(
-    (state) => state.catalogCapabilities,
+    (state) => state.catalogWorkspaceId === workspaceId && state.catalogReadStatus === "ready" ? state.catalogCapabilities : deniedCatalogCapabilities,
   );
   const createOrder = useHospitalAdminStore((state) => state.createOrder);
   const duplicateOrder = useHospitalAdminStore((state) => state.duplicateOrder);
-  const orders = useHospitalAdminStore((state) => state.orders);
+  const orders = useHospitalAdminStore((state) => state.catalogWorkspaceId === workspaceId && state.catalogReadStatus === "ready" ? state.orders : emptyHospitalOrders);
   const searchQuery = useHospitalAdminStore((state) => state.searchQuery);
   const selectedCategoryId = useHospitalAdminStore(
     (state) => state.selectedCategoryId,
@@ -1764,16 +1791,13 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const setFocusedOrderId = useHospitalAdminStore(
     (state) => state.setFocusedOrderId,
   );
-  const setOrders = useHospitalAdminStore((state) => state.setOrders);
-  const setCatalogCapabilities = useHospitalAdminStore(
-    (state) => state.setCatalogCapabilities,
-  );
+  const beginCatalogLoad = useHospitalAdminStore(state => state.beginCatalogLoad);
+  const finishCatalogLoad = useHospitalAdminStore(state => state.finishCatalogLoad);
   const setSearchQuery = useHospitalAdminStore((state) => state.setSearchQuery);
   const toggleOrderSelection = useHospitalAdminStore(
     (state) => state.toggleOrderSelection,
   );
-  const [catalogReadStatus, setCatalogReadStatus] =
-    useState<OrderCatalogReadStatus>("idle");
+  const catalogReadStatus = useHospitalAdminStore(state => state.catalogWorkspaceId === workspaceId ? state.catalogReadStatus : "idle");
   const [catalogRetryKey, setCatalogRetryKey] = useState(0);
   const [tableDensity, setTableDensity] = useState<EmrTableDensity>("standard");
   const [orderFilterOpen, setOrderFilterOpen] = useState(false);
@@ -1794,6 +1818,9 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     selectedSubcategoryId,
   );
   const selectedLeafLabel =
+    selectedSubcategoryId === "unclassified"
+      ? selectedCategoryId === "unclassified" ? "분류 확인 필요" : `${getHospitalOrderCategory(selectedCategoryId)?.label} 전체`
+      :
     orderMenuGroups
       .flatMap((group) => group.children)
       .find(
@@ -1837,8 +1864,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     () =>
       orders.filter(
         (order) =>
-          order.categoryId === selectedCategoryId &&
-          order.subcategoryId === selectedSubcategoryId,
+          isHospitalOrderInCategory(order, selectedCategoryId, selectedSubcategoryId),
       ),
     [orders, selectedCategoryId, selectedSubcategoryId],
   );
@@ -2041,6 +2067,26 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             },
           ]),
       {
+        id: "classification",
+        accessorFn: formatHospitalOrderClassification,
+        meta: { label: "분류", role: "data", textMode: "one-line" },
+        size: 180,
+        cell: ({ row }) => <HospitalOrderTableCellValue value={formatHospitalOrderClassification(row.original)} />,
+      },
+      {
+        id: "coreStatus",
+        accessorFn: getHospitalOrderCoreStatus,
+        meta: { label: "핵심 값", role: "data", textMode: "one-line" },
+        size: 160,
+        cell: ({ row }) => <HospitalOrderTableCellValue value={getHospitalOrderCoreStatus(row.original)} />,
+      },
+      ...(selectedCategoryId === "unclassified" ? [{
+        id: "coreSummary",
+        meta: { label: "핵심 세부 내용", role: "data" as const, textMode: "two-line-if-long" as const },
+        size: 320,
+        cell: ({ row }: { row: { original: HospitalOrderCatalogItem } }) => <HospitalOrderTableCellValue mode="two-line-if-long" value={getHospitalOrderCoreDetails(row.original).map(({definition, value}) => `${definition.label}: ${formatHospitalOrderTableDetailValue(definition, value) || "미설정"}`).join(" · ")} />,
+      }] : []),
+      {
         accessorKey: "inHospitalName",
         id: "inHospitalName",
         enableSorting: true,
@@ -2064,7 +2110,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         sortingFn: (left, right, id) =>
           compareHospitalOrderValues(left.getValue(id), right.getValue(id)),
       },
-      ...(isDispensingOrderTable
+      ...(isDispensingOrderTable || selectedCategoryId === "unclassified"
         ? []
         : hospitalOrderDetailFields.map(({ clinicalOrderType, definition }) => {
             const columnSize =
@@ -2078,7 +2124,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                       definition,
                       row.defaultDetailInputs?.[definition.key],
                     )
-                  : "",
+                  : "해당 없음",
               id: `detail-${clinicalOrderType}-${definition.key}`,
               enableSorting: true,
               ...columnSize,
@@ -2105,7 +2151,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                           definition,
                           row.original.defaultDetailInputs?.[definition.key],
                         )
-                      : ""
+                      : "해당 없음"
                   }
                 />
               ),
@@ -2114,6 +2160,13 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
           })),
       ...(isDispensingOrderTable
         ? [
+            {
+              id: "dispensingDoseBasis",
+              accessorFn: (row: HospitalOrderCatalogItem) => row.dispensingPreset?.doseBasis,
+              meta: { label: "용량 기준", role: "data" as const, textMode: "one-line" as const },
+              size: 120,
+              cell: ({ row }: { row: { original: HospitalOrderCatalogItem } }) => <HospitalOrderTableCellValue value={formatHospitalOrderDetailOption(row.original.dispensingPreset?.doseBasis ?? "")} />,
+            },
             {
               accessorFn: (row: HospitalOrderCatalogItem) =>
                 getHospitalDispensingTableDetails(row).ingredientStrength,
@@ -2310,61 +2363,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             },
             {
               accessorFn: (row: HospitalOrderCatalogItem) =>
-                getHospitalDispensingTableDetails(row)
-                  .medicationInstructionLabel,
-              id: "dispensingMedicationInstruction",
-              enableSorting: false,
-              maxSize: 144,
-              meta: {
-                label: "복용 시점",
-                resize: "data-column" as const,
-                role: "data" as const,
-                textMode: "one-line" as const,
-              },
-              minSize: 96,
-              size: 112,
-              cell: ({
-                row,
-              }: {
-                row: { original: HospitalOrderCatalogItem };
-              }) => (
-                <HospitalOrderTableCellValue
-                  value={
-                    getHospitalDispensingTableDetails(row.original)
-                      .medicationInstructionLabel
-                  }
-                />
-              ),
-            },
-            {
-              accessorFn: (row: HospitalOrderCatalogItem) =>
-                getHospitalDispensingTableDetails(row).storageMethodLabel,
-              id: "dispensingStorage",
-              enableSorting: false,
-              maxSize: 160,
-              meta: {
-                label: "보관 방법",
-                resize: "data-column" as const,
-                role: "data" as const,
-                textMode: "one-line" as const,
-              },
-              minSize: 104,
-              size: 120,
-              cell: ({
-                row,
-              }: {
-                row: { original: HospitalOrderCatalogItem };
-              }) => (
-                <HospitalOrderTableCellValue
-                  value={
-                    getHospitalDispensingTableDetails(row.original)
-                      .storageMethodLabel
-                  }
-                />
-              ),
-            },
-            {
-              accessorFn: (row: HospitalOrderCatalogItem) =>
                 targetLabels[row.target],
               id: "target",
               enableSorting: false,
@@ -2386,44 +2384,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
                   value={targetLabels[row.original.target]}
                 />
               ),
-            },
-            {
-              accessorFn: (row: HospitalOrderCatalogItem) =>
-                getHospitalDispensingTableDetails(row).reviewKey,
-              id: "dispensingReview",
-              enableSorting: false,
-              maxSize: 176,
-              meta: {
-                label: "검토 상태",
-                resize: "data-column" as const,
-                role: "data" as const,
-                textMode: "one-line" as const,
-              },
-              minSize: 120,
-              size: 136,
-              cell: ({
-                row,
-              }: {
-                row: { original: HospitalOrderCatalogItem };
-              }) => {
-                const detail = getHospitalDispensingTableDetails(row.original);
-                return (
-                  <HospitalOrderTableCellValue
-                    className={cn(
-                      "font-semibold",
-                      (detail.reviewKey === "clinical_unreviewed" ||
-                        detail.reviewKey === "pending") &&
-                        "text-[var(--emr-status-warning-text)]",
-                      (detail.reviewKey === "approved" ||
-                        detail.reviewKey === "clinical_reviewed") &&
-                        "text-[var(--emr-status-success-text)]",
-                      detail.reviewKey === "rejected" &&
-                        "text-[var(--emr-status-danger-text)]",
-                    )}
-                    value={detail.reviewLabel}
-                  />
-                );
-              },
             },
           ]
         : []),
@@ -2682,6 +2642,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       hospitalOrderDetailFields,
       isDispensingOrderTable,
       openDrawer,
+      selectedCategoryId,
     ],
   );
   const orderRowSelection = useMemo<RowSelectionState>(
@@ -2766,13 +2727,12 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     const loadCatalog = async () => {
       await Promise.resolve();
       if (canceled) return;
+      const generation = beginCatalogLoad(workspaceId);
 
       if (!session) {
-        setCatalogReadStatus("denied");
+        finishCatalogLoad(workspaceId, generation, { status: "denied" });
         return;
       }
-
-      setCatalogReadStatus("loading");
 
       try {
         const response = await fetch(
@@ -2786,26 +2746,21 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         if (canceled) return;
 
         if (!response.ok || !body.ok) {
-          setCatalogReadStatus(
+          finishCatalogLoad(workspaceId, generation, { status:
             response.status === 401 || response.status === 403
               ? "denied"
               : "error",
-          );
+          });
           return;
         }
 
-        setOrders(mapWorkspaceCatalogItemsToHospitalOrders(body.items));
-        setCatalogCapabilities(
-          body.capabilities ?? {
-            canManageCatalog: false,
-            canAuthorDispensing: false,
-            canApproveDispensing: false,
-          },
-        );
-        setCatalogReadStatus("ready");
+        finishCatalogLoad(workspaceId, generation, { status: "ready",
+          orders: mapWorkspaceCatalogItemsToHospitalOrders(body.items),
+          capabilities: body.capabilities ?? deniedCatalogCapabilities,
+        });
       } catch (error: unknown) {
-        if ((error as { name?: string }).name === "AbortError") return;
-        setCatalogReadStatus("error");
+        if (canceled || (error as { name?: string }).name === "AbortError") return;
+        finishCatalogLoad(workspaceId, generation, { status: "error" });
       }
     };
 
@@ -2819,8 +2774,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
     catalogRetryKey,
     hydrated,
     session,
-    setCatalogCapabilities,
-    setOrders,
+    beginCatalogLoad,
+    finishCatalogLoad,
     workspaceId,
   ]);
 
@@ -2961,6 +2916,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
             size="sm"
             className="h-8 min-h-8"
             onClick={handleCreateOrder}
+            disabled={selectedCategoryId === "unclassified"}
           >
             + Order
           </Button>
@@ -3577,8 +3533,8 @@ function DrawerSelect({
       }}
     >
       <SelectTrigger aria-label={ariaLabel} className="h-9 w-full bg-card">
-        <SelectValue>
-          {items.find((item) => item.value === value)?.label ?? value}
+        <SelectValue placeholder="미설정">
+          {items.find((item) => item.value === value)?.label ?? (value || "미설정")}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
@@ -3601,6 +3557,8 @@ const hospitalRuntimeDetailFieldKeys = new Set([
 ]);
 
 const hospitalOrderDetailOptionLabels: Record<string, string> = {
+  patient: "환자당",
+  kg: "체중 기준",
   after_meal: "식후",
   any_time: "시간 무관",
   before_meal: "식전",
@@ -3658,7 +3616,7 @@ function HospitalOrderDefaultDetailFields({
   onChange: (key: string, value: unknown) => void;
   values: Record<string, unknown>;
 }) {
-  const canonicalSchema = CLINICAL_ORDER_FIELD_SCHEMAS[contract.clinicalOrderType];
+  const canonicalSchema = getClinicalOrderFieldSchema(contract.clinicalOrderType, contract.detailSchemaVersion)!;
   const fields = (contract.detailFieldSchema.fields.length > 0
     ? contract.detailFieldSchema.fields
     : canonicalSchema.fields
@@ -3678,12 +3636,9 @@ function HospitalOrderDefaultDetailFields({
           const runtimeResolved = hospitalRuntimeDetailFieldKeys.has(
             definition.key,
           );
-          const schemaDefault = definition.defaultValue;
           const hint = runtimeResolved
             ? "진료/워크스페이스에서 결정됩니다. 마스터 기본값은 입력하지 않습니다."
-            : schemaDefault !== null && schemaDefault !== undefined
-              ? `미설정 시 차트 스키마 기본값: ${formatHospitalOrderDetailDefault(schemaDefault)}`
-              : undefined;
+            : "저장된 값이 없으면 미설정으로 표시됩니다. 스키마 기본값으로 채우지 않습니다.";
 
           if (runtimeResolved) {
             return (
@@ -3757,6 +3712,12 @@ function HospitalOrderDefaultDetailControl({
   };
 
   if (definition.control === "switch") {
+    if (typeof value !== "boolean") return (
+      <Select disabled={disabled} value={null} onValueChange={(next) => onChange(next === null ? undefined : next === "true")}>
+        <SelectTrigger aria-label={ariaLabel}><SelectValue placeholder="미설정" /></SelectTrigger>
+        <SelectContent><SelectItem value="true">사용</SelectItem><SelectItem value="false">미사용</SelectItem></SelectContent>
+      </Select>
+    );
     return (
       <label className="flex min-h-9 items-center gap-2 emr-text-body">
         <Switch
@@ -3873,9 +3834,9 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const clearSelectedOrders = useHospitalAdminStore(
     (state) => state.clearSelectedOrders,
   );
-  const orders = useHospitalAdminStore((state) => state.orders);
+  const orders = useHospitalAdminStore((state) => state.catalogWorkspaceId === workspaceId && state.catalogReadStatus === "ready" ? state.orders : emptyHospitalOrders);
   const catalogCapabilities = useHospitalAdminStore(
-    (state) => state.catalogCapabilities,
+    (state) => state.catalogWorkspaceId === workspaceId && state.catalogReadStatus === "ready" ? state.catalogCapabilities : deniedCatalogCapabilities,
   );
   const setFocusedOrderId = useHospitalAdminStore(
     (state) => state.setFocusedOrderId,
@@ -3883,6 +3844,11 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const updateOrder = useHospitalAdminStore((state) => state.updateOrder);
   const order = orders.find((item) => item.id === activeDrawer?.id);
   const drawerRef = useRef<HTMLDivElement>(null);
+  const responseScope = useRef<object | null>(null);
+  useEffect(() => {
+    responseScope.current = {};
+    return () => { responseScope.current = null; };
+  }, [workspaceId, activeDrawer?.id, activeDrawer?.type, session]);
   const [draftState, setDraftState] = useState<{
     draft: HospitalOrderDraft | null;
     orderId: string | null;
@@ -3892,6 +3858,8 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   });
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
+  const [confirmTaxonomyResetOpen, setConfirmTaxonomyResetOpen] = useState(false);
+  const [executionResolution, setExecutionResolution] = useState<{ field: string; action: "reset" | "keep" } | null>(null);
   const [confirmReviewOpen, setConfirmReviewOpen] = useState(false);
   const [reviewDecision, setReviewDecision] = useState<
     "approve" | "reject"
@@ -3928,6 +3896,8 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     const resetId = window.setTimeout(() => {
       setMutationStatus("idle");
       setMutationMessage(null);
+      setConfirmTaxonomyResetOpen(false);
+      setExecutionResolution(null);
     }, 0);
 
     return () => window.clearTimeout(resetId);
@@ -3943,7 +3913,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       if (target.closest('[data-testid^="hospital-order-row-"]')) return;
       if (
         target.closest(
-          '[data-slot="dialog-content"], [data-slot="dialog-overlay"], [data-slot="popover-content"], [role="menu"]',
+          '[data-slot="dialog-content"], [data-slot="dialog-overlay"], [data-slot="popover-content"], [data-slot="select-content"], [role="listbox"], [role="menu"]',
         )
       ) {
         return;
@@ -3968,10 +3938,24 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
 
   const updateDraft = (nextDraft: Partial<HospitalOrderDraft>) =>
     setDraft((current) => (current ? { ...current, ...nextDraft } : current));
-  const category = getHospitalOrderCategory(draft.categoryId);
-  const subcategory = getHospitalOrderSubcategory(draft.subcategoryId);
+  const captureResponseScope = () => {
+    const scope = responseScope.current;
+    const generation = useHospitalAdminStore.getState().catalogGeneration;
+    return () => {
+      const state = useHospitalAdminStore.getState();
+      const drawer = useLayoutStore.getState().activeDrawer;
+      return scope !== null && responseScope.current === scope &&
+        state.catalogWorkspaceId === workspaceId && state.catalogGeneration === generation &&
+        state.catalogReadStatus === "ready" && drawer?.type === "hospital-order" && drawer.id === order.id;
+    };
+  };
   const creatingNewOrder = !order.sourceCatalogItem;
   const dispensingOrder = draft.categoryId === "dispensing";
+  // The loaded source was validated. Keep editing an invalid numeric draft
+  // visible so it can be corrected; save validation remains strict above.
+  const rawPreparationAuthority = draft.defaultDetailInputs?.planOrderAuthority as PlanOrderAuthorityConfig | undefined;
+  const preparationAuthority = rawPreparationAuthority?.schemaVersion === 2
+    ? rawPreparationAuthority : null;
   const detailContract = getHospitalOrderDetailContract(draft);
   const generalDefaultDetailEditorVisible = Boolean(
     !creatingNewOrder &&
@@ -3986,13 +3970,32 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   const canEdit = dispensingOrder
     ? catalogCapabilities.canAuthorDispensing
     : catalogCapabilities.canManageCatalog;
+  // Preserve the baseline the user actually edited. A same-ID refresh must
+  // never silently adopt a newer CAS revision for an older draft.
+  const source = draft.sourceCatalogItem;
+  const taxonomyChanged = Boolean(source && isHospitalOrderTaxonomyChanged(draft, source));
+  const taxonomyOnly = Boolean(source && isHospitalOrderTaxonomyOnlyChange(draft, source));
+  const taxonomyTransportReady = !source || (source.adminSubcategoryCode !== undefined && source.labFamilyCode !== undefined);
+  const canEditTaxonomy = taxonomyTransportReady && (creatingNewOrder ? canEdit : catalogCapabilities.canManageCatalog);
+  const taxonomyOptions = Object.entries(orderTaxonomySubcategories)
+    .filter(([, definition]) => definition.clinicalType === draft.clinicalOrderType)
+    .map(([value, definition]) => ({ value, label: definition.label }));
+  const canResetTaxonomy = source?.originType === "clair_master" && Boolean(source.sourceMasterRecordId) &&
+    source.customizationState !== "detached" && !source.customizedFields?.includes("*") &&
+    canEditTaxonomy;
+  const canResolveExecution = catalogCapabilities.canManageCatalog && source?.originType === "clair_master" &&
+    source.customizationState !== "detached" &&
+    !source.customizedFields?.some(field => ["*", "defaultDetailInputs", "default_detail_inputs"].includes(field));
   const saveValidationMessage = validateHospitalOrderDraft(draft, {
     creating: creatingNewOrder,
   });
   const saveDisabled =
-    mutationInFlight || !canEdit || Boolean(saveValidationMessage);
+    mutationInFlight || !(taxonomyOnly ? canEditTaxonomy : canEdit) ||
+    (taxonomyChanged && !canEditTaxonomy) || Boolean(saveValidationMessage);
   const drawerTitle = creatingNewOrder
-    ? getNewOrderDrawerTitle(subcategory?.label)
+    ? getNewOrderDrawerTitle(draft.subcategoryId === "unclassified"
+        ? getHospitalOrderCategory(draft.categoryId)?.label
+        : getHospitalOrderSubcategory(draft.subcategoryId)?.label)
     : draft.standardName || "오더 상세";
   const duplicateDispensingOrders = hospitalCreatedDispensing
     ? orders
@@ -4024,13 +4027,14 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     if (
       next.autoDispenseQuantityEnabled &&
       ("dose" in patch ||
+        "doseBasis" in patch || "doseUnit" in patch || "totalQuantityUnit" in patch ||
         "frequency" in patch ||
         "durationDays" in patch ||
         "autoDispenseQuantityEnabled" in patch)
     ) {
       next = {
         ...next,
-        totalQuantity: calculateHospitalDispenseQuantity(next),
+        totalQuantity: calculateHospitalDispenseQuantity(next, draft.defaultDetailInputs?.planOrderAuthority),
         manualQuantityReason: "",
       };
     }
@@ -4052,7 +4056,21 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     updateDraft({ defaultDetailInputs: nextDefaults });
   };
 
+  const updatePreparationPolicy = (patch: Partial<PlanOrderPreparationPolicy>) => {
+    if (!preparationAuthority?.preparationPolicy) return;
+    const authority = { ...preparationAuthority, preparationPolicy: { ...preparationAuthority.preparationPolicy, ...patch } };
+    updateDraft({ defaultDetailInputs: { ...draft.defaultDetailInputs, planOrderAuthority: authority },
+      ...(draft.dispensingPreset ? { dispensingPreset: { ...draft.dispensingPreset,
+        totalQuantity: calculateHospitalDispenseQuantity(draft.dispensingPreset, authority), autoDispenseQuantityEnabled: true } } : {}) });
+  };
+
   const handleSave = async () => {
+    const responseIsCurrent = captureResponseScope();
+    if (source && source.workspaceId !== workspaceId) {
+      setMutationStatus("error");
+      setMutationMessage("워크스페이스가 변경되었습니다. 목록에서 오더를 다시 열어 주세요.");
+      return;
+    }
     const validationMessage = validateHospitalOrderDraft(draft, {
       creating: creatingNewOrder,
     });
@@ -4075,7 +4093,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
 
     const input = buildWorkspaceCatalogMutationFromHospitalOrder({
       draft,
-      source: order.sourceCatalogItem,
+      source,
       workspaceId,
     });
     const result = await mutateHospitalAdminOrderCatalog({
@@ -4085,6 +4103,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       workspaceId,
     });
 
+    if (!responseIsCurrent()) return;
     if (!result.ok) {
       setMutationStatus(
         result.denialReason === "permission_missing" ? "denied" : "error",
@@ -4114,7 +4133,59 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
     );
   };
 
+  const handleTaxonomyReset = async () => {
+    const responseIsCurrent = captureResponseScope();
+    setConfirmTaxonomyResetOpen(false);
+    if (!source || source.workspaceId !== workspaceId || !canResetTaxonomy || mutationInFlight || !hydrated || !session) return;
+    setMutationStatus("saving");
+    setMutationMessage("마스터 분류를 확인하고 있습니다.");
+    const result = await mutateHospitalAdminOrderCatalog({
+      input: { action: "update", itemId: source.id, expectedCatalogRevision: source.catalogRevision ?? 1,
+        patch: { resetTaxonomyFields: ["adminSubcategoryCode", "labFamilyCode"] } },
+      method: "PATCH", session, workspaceId,
+    });
+    if (!responseIsCurrent()) return;
+    if (!result.ok) {
+      setMutationStatus("error");
+      setMutationMessage(result.error === "invalid_input"
+        ? "마스터 분류 또는 초기화 조건을 확인해 주세요. 저장값은 변경하지 않았습니다."
+        : getOrderCatalogMutationFailureMessage(result));
+      return;
+    }
+    const nextOrder = mapWorkspaceCatalogItemToHospitalOrder(result.item);
+    updateOrder(order.id, nextOrder);
+    setDraft(nextOrder);
+    setMutationStatus("saved");
+    setMutationMessage("마스터 분류로 초기화했습니다.");
+  };
+
+  const handleExecutionResolution = async () => {
+    const responseIsCurrent = captureResponseScope();
+    const resolution = executionResolution;
+    setExecutionResolution(null);
+    if (!resolution || !source || source.workspaceId !== workspaceId || !canResolveExecution || mutationInFlight || !hydrated || !session) return;
+    setMutationStatus("saving");
+    setMutationMessage("기본값의 원본 버전과 병원 수정값을 확인하고 있습니다.");
+    const result = await mutateHospitalAdminOrderCatalog({
+      input: { action: "update", itemId: source.id, expectedCatalogRevision: source.catalogRevision ?? 1,
+        patch: resolution.action === "reset" ? { resetExecutionFields: [resolution.field] } : { keepExecutionFields: [resolution.field] } },
+      method: "PATCH", session, workspaceId,
+    });
+    if (!responseIsCurrent()) return;
+    if (!result.ok) {
+      setMutationStatus("error");
+      setMutationMessage(getOrderCatalogMutationFailureMessage(result));
+      return;
+    }
+    const nextOrder = mapWorkspaceCatalogItemToHospitalOrder(result.item);
+    updateOrder(order.id, nextOrder);
+    setDraft(nextOrder);
+    setMutationStatus("saved");
+    setMutationMessage(resolution.action === "reset" ? "선택한 필드에 마스터 값을 적용했습니다." : "선택한 필드의 병원 값을 유지했습니다.");
+  };
+
   const handleDelete = async () => {
+    const responseIsCurrent = captureResponseScope();
     if (!hydrated || !session) {
       setMutationStatus("denied");
       setMutationMessage(
@@ -4146,6 +4217,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       workspaceId,
     });
 
+    if (!responseIsCurrent()) return;
     if (!result.ok) {
       setMutationStatus(
         result.denialReason === "permission_missing" ? "denied" : "error",
@@ -4164,6 +4236,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
   };
 
   const handleReview = async (decision: "approve" | "reject") => {
+    const responseIsCurrent = captureResponseScope();
     if (!hydrated || !session || !order.sourceCatalogItem) {
       setMutationStatus("denied");
       setMutationMessage("로그인된 수의사 세션을 확인해 주세요.");
@@ -4183,6 +4256,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
       session,
       workspaceId,
     });
+    if (!responseIsCurrent()) return;
     setConfirmReviewOpen(false);
     if (!result.ok) {
       setMutationStatus(
@@ -4267,9 +4341,105 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
         <FieldGroup className="px-8 py-6">
           <DrawerField label="분류">
             <div className="flex h-9 items-center rounded-lg border bg-[var(--emr-surface-muted)] px-3 emr-text-dense font-semibold">
-              {category?.label} / {subcategory?.label}
+              {formatHospitalOrderClassification(draft)}
             </div>
+            <div className="mt-3 grid gap-3" data-testid="hospital-order-taxonomy-editor">
+              <label className="grid gap-1 emr-text-metadata">
+                세부 분류
+                <DrawerSelect ariaLabel="오더 세부 분류" disabled={mutationInFlight || !canEditTaxonomy}
+                  value={draft.subcategoryId}
+                  items={[{ value: "unclassified", label: "미설정" }, ...taxonomyOptions,
+                    ...(!taxonomyOptions.some(item => item.value === draft.subcategoryId) && draft.subcategoryId !== "unclassified"
+                      ? [{ value: draft.subcategoryId, label: `${getHospitalOrderSubcategory(draft.subcategoryId)?.label ?? draft.subcategoryId} · 기존 분류` }] : [])]}
+                  onValueChange={value => updateDraft({
+                    subcategoryId: value as HospitalOrderSubcategoryId,
+                    clinicalPathologyCategoryId: value === "clinical-pathology" ? draft.clinicalPathologyCategoryId : undefined,
+                    classificationStatus: value === "unclassified" ? "subcategory_missing" : "resolved",
+                  })} />
+              </label>
+              {draft.subcategoryId === "clinical-pathology" ? (
+                <label className="grid gap-1 emr-text-metadata">
+                  검사 계열
+                  <DrawerSelect ariaLabel="오더 검사 계열" disabled={mutationInFlight || !canEditTaxonomy}
+                    value={draft.clinicalPathologyCategoryId ?? "unset"}
+                    items={[{ value: "unset", label: "미설정" }, ...Object.entries(orderTaxonomyLabFamilies).map(([value, label]) => ({ value, label }))]}
+                    onValueChange={value => updateDraft({ clinicalPathologyCategoryId: value === "unset" ? undefined : value as HospitalOrderDraft["clinicalPathologyCategoryId"] })} />
+                </label>
+              ) : null}
+              <p className="emr-text-metadata text-muted-foreground">
+                {taxonomyTransportReady ? "업무유형과 임상 기본값은 바꾸지 않습니다. 변경한 분류는 저장 후 반영됩니다." : "분류 저장 정보가 아직 제공되지 않아 편집할 수 없습니다."}
+              </p>
+              {source?.taxonomyMergeConflict ? (
+                <div role="status" className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-surface)] p-3 emr-text-metadata">
+                  <strong>마스터 분류 갱신 충돌 · 원본 버전 {source.taxonomyMergeConflict.revision}</strong>
+                  <p>병원에 저장된 분류를 유지했습니다. 분류 조합을 직접 수정하거나 마스터 분류로 초기화해 주세요.</p>
+                </div>
+              ) : null}
+              {source?.originType === "clair_master" ? (
+                <Dialog open={confirmTaxonomyResetOpen} onOpenChange={setConfirmTaxonomyResetOpen}>
+                  <Button variant="outline" size="sm" disabled={mutationInFlight || !canResetTaxonomy}
+                    onClick={() => setConfirmTaxonomyResetOpen(true)}>마스터 분류로 초기화</Button>
+                  {source.customizedFields?.includes("*") ? <p className="emr-text-metadata text-muted-foreground">전체 수정 표시가 있어 분류만 초기화할 수 없습니다.</p> : null}
+                  {confirmTaxonomyResetOpen ? <EmrConfirmDialogContent
+                    title="마스터 분류로 초기화할까요?"
+                    description="세부 분류와 검사 계열만 현재 마스터 값으로 저장합니다. 임상 기본값은 유지되며, 이 창의 미저장 변경사항은 취소됩니다."
+                    cancelLabel="취소" confirmLabel="분류 초기화" closeAriaLabel="분류 초기화 확인 닫기"
+                    onCancel={() => setConfirmTaxonomyResetOpen(false)} onConfirm={() => void handleTaxonomyReset()} /> : null}
+                </Dialog>
+              ) : null}
+            </div>
+            {draft.sourceCatalogItem?.classificationPath && (
+              <p className="mt-2 break-words emr-text-metadata text-muted-foreground">
+                저장 분류: {draft.sourceCatalogItem.classificationPath.actionName ?? "명칭 미설정"}
+                {" · "}{draft.sourceCatalogItem.classificationPath.key}
+                {" · "}{draft.sourceCatalogItem.classificationPath.actionCode}
+              </p>
+            )}
           </DrawerField>
+          {source && ["clinical_lab", "external_lab"].includes(draft.clinicalOrderType ?? "") ? <LabResultProfileSelection
+            workspaceId={workspaceId} catalogItemId={source.id} disabled={mutationInFlight} /> : null}
+          <DrawerField label="핵심 세부 값" hint="값의 입력 여부이며 임상 검수나 차트 확정 가능 여부를 뜻하지 않습니다.">
+            <p className="emr-text-metadata text-muted-foreground">{getHospitalOrderCoreStatus(draft)}</p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-2 emr-text-metadata">
+              {getHospitalOrderCoreDetails(draft).map(({ definition, value }) => (
+                <div key={definition.key}><dt className="text-muted-foreground">{definition.label}</dt><dd>{formatHospitalOrderTableDetailValue(definition, value) || "미설정"}</dd></div>
+              ))}
+            </dl>
+          </DrawerField>
+          {source?.executionSourceBaseline && Object.keys(source.executionSourceBaseline).length > 0 ? (
+            <DrawerField label="기본값 출처와 갱신" hint="병원에서 수정한 필드는 마스터 갱신 때 유지됩니다. 마스터 적용은 선택한 필드만 저장하며, 이 창의 미저장 변경사항은 취소됩니다.">
+              <div className="grid gap-2" data-testid="hospital-order-execution-lineage">
+                {Object.entries(source.executionSourceBaseline).map(([key, lineage]) => {
+                  const overridden = source.customizedFields?.some(field =>
+                    field === `defaultDetailInputs.${key}` || ["*", "defaultDetailInputs", "default_detail_inputs"].includes(field));
+                  const conflict = source.executionMergeConflicts?.[key];
+                  const fieldLabel = detailContract?.detailFieldSchema.fields.find(field => field.key === key)?.label ?? key;
+                  const masterValue = !lineage.cell.present ? "값 없음 · 입력 정책만 저장됨" : lineage.cell.value === null ? "명시적으로 비움" :
+                    typeof lineage.cell.value === "string" ? lineage.cell.value || "빈 문자열" : JSON.stringify(lineage.cell.value);
+                  return <div key={key} className="rounded-lg border p-3 emr-text-metadata" data-testid={`execution-lineage-${key}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2"><strong>{fieldLabel}</strong><span className="text-muted-foreground">{overridden ? "병원 수정" : "마스터 상속"} · 마스터 {lineage.masterRevision} / 기본값 {lineage.presetRevision}</span></div>
+                    <p className="mt-1 break-words text-muted-foreground">마스터 값: {masterValue}</p>
+                    {conflict ? <p role="status" className="mt-1">병원과 마스터에서 모두 변경했습니다. 병원 저장값을 유지하고 있습니다.</p> : null}
+                    {(overridden || conflict) ? <div className="mt-2 flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" disabled={mutationInFlight || !canResolveExecution} onClick={() => setExecutionResolution({ field: key, action: "reset" })}>마스터 값 적용</Button>
+                      {conflict ? <Button variant="outline" size="sm" disabled={mutationInFlight || !canResolveExecution} onClick={() => setExecutionResolution({ field: key, action: "keep" })}>병원 값 유지</Button> : null}
+                    </div> : null}
+                  </div>;
+                })}
+                {source.executionMergeConflicts?.$schema || source.executionMergeConflicts?.$contract ?
+                  <p role="alert" className="emr-text-metadata">업무 스키마 또는 필드 조합이 맞지 않아 자동 갱신을 적용하지 않았습니다. 병원 저장값을 확인해 주세요.</p> : null}
+                {!canResolveExecution && source.customizedFields?.some(field => ["*", "defaultDetailInputs", "default_detail_inputs"].includes(field)) ?
+                  <p className="emr-text-metadata text-muted-foreground">기존 전체 수정 표시가 있어 필드별 초기화를 할 수 없습니다. 전체 원본 비교·적용으로 먼저 정리해 주세요.</p> : null}
+              </div>
+              <Dialog open={executionResolution !== null} onOpenChange={open => { if (!open) setExecutionResolution(null); }}>
+                {executionResolution ? <EmrConfirmDialogContent
+                  title={executionResolution.action === "reset" ? "이 필드에 마스터 값을 적용할까요?" : "이 필드의 병원 값을 유지할까요?"}
+                  description="선택한 필드의 갱신 결정을 저장합니다. 다른 저장값은 유지되고 이 창의 미저장 변경사항은 취소됩니다."
+                  cancelLabel="취소" confirmLabel={executionResolution.action === "reset" ? "마스터 값 적용" : "병원 값 유지"}
+                  closeAriaLabel="기본값 갱신 확인 닫기" onCancel={() => setExecutionResolution(null)} onConfirm={() => void handleExecutionResolution()} /> : null}
+              </Dialog>
+            </DrawerField>
+          ) : null}
           {dispensingOrder ? (
             <DrawerField
               label="출처 / 검토"
@@ -4300,7 +4470,7 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                       ? "반려"
                       : draft.dispensingReviewStatus === "pending"
                         ? "검토 대기"
-                        : "마스터 검토 상태 별도"}
+                        : getHospitalDispensingTableDetails(draft).reviewLabel}
                 </Badge>
                 {draft.dispensingReviewRevision ? (
                   <span className="text-muted-foreground">
@@ -4431,14 +4601,20 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                 />
               </DrawerField>
               <DrawerField label="1회 용량" required>
+                <DrawerSelect
+                  ariaLabel="용량 기준"
+                  value={draft.dispensingPreset.doseBasis ?? ""}
+                  items={[{ label: "환자당", value: "patient" }, { label: "체중당", value: "kg" }, { label: "체표면적당", value: "body_surface_area" }]}
+                  onValueChange={(value) => updateDispensingPreset({ doseBasis: value })}
+                />
                 <div className="grid grid-cols-[minmax(0,1fr)_140px] gap-2">
                   <Input
                     aria-label="1회 용량"
                     inputMode="decimal"
-                    value={draft.dispensingPreset.dose}
+                    value={draft.dispensingPreset.dose ?? ""}
                     onChange={(event) =>
                       updateDispensingPreset({
-                        dose: Number(event.target.value),
+                        dose: event.target.value.trim() === "" ? undefined : Number(event.target.value),
                       })
                     }
                   />
@@ -4501,10 +4677,10 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                   <Input
                     aria-label="투여 일수"
                     inputMode="decimal"
-                    value={draft.dispensingPreset.durationDays}
+                    value={draft.dispensingPreset.durationDays ?? ""}
                     onChange={(event) =>
                       updateDispensingPreset({
-                        durationDays: Number(event.target.value),
+                        durationDays: event.target.value.trim() === "" ? undefined : Number(event.target.value),
                       })
                     }
                   />
@@ -4514,10 +4690,10 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                       draft.dispensingPreset.autoDispenseQuantityEnabled
                     }
                     inputMode="decimal"
-                    value={draft.dispensingPreset.totalQuantity}
+                    value={draft.dispensingPreset.totalQuantity ?? ""}
                     onChange={(event) =>
                       updateDispensingPreset({
-                        totalQuantity: Number(event.target.value),
+                        totalQuantity: event.target.value.trim() === "" ? undefined : Number(event.target.value),
                       })
                     }
                   />
@@ -4531,9 +4707,18 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                     }
                   />
                 </div>
-                <label className="mt-2 flex items-center gap-2 emr-text-metadata">
+                <div className="mt-2 flex items-center gap-2 emr-text-metadata">
+                  {typeof draft.dispensingPreset.autoDispenseQuantityEnabled !== "boolean" ? (
+                    <DrawerSelect
+                      ariaLabel="총량 자동 계산"
+                      value=""
+                      items={[{ label: "자동 계산", value: "true" }, { label: "수동 입력", value: "false" }]}
+                      onValueChange={(value) => updateDispensingPreset({ autoDispenseQuantityEnabled: value === "true" })}
+                    />
+                  ) : (
                   <Switch
                     aria-label="총량 자동 계산"
+                    disabled={Boolean(preparationAuthority)}
                     checked={
                       draft.dispensingPreset.autoDispenseQuantityEnabled
                     }
@@ -4543,16 +4728,45 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
                       })
                     }
                   />
+                  )}
                   총량 자동 계산
                   <span className="text-muted-foreground">
-                    {draft.dispensingPreset.dose} × 빈도 × {draft.dispensingPreset.durationDays}일
-                    = {calculateHospitalDispenseQuantity(
-                      draft.dispensingPreset,
-                    )}
-                    {draft.dispensingPreset.totalQuantityUnit}
+                    {calculateHospitalDispenseQuantity(draft.dispensingPreset, draft.defaultDetailInputs?.planOrderAuthority) === undefined
+                      ? "계산에 필요한 값 미설정 또는 변환 조건 미충족"
+                      : `용량 × 빈도 × 일수${draft.defaultDetailInputs?.planOrderAuthority ? " · 저장된 준비 규칙 적용" : ""} = ${calculateHospitalDispenseQuantity(draft.dispensingPreset, draft.defaultDetailInputs?.planOrderAuthority)}${draft.dispensingPreset.totalQuantityUnit}`}
                   </span>
-                </label>
-                {!draft.dispensingPreset.autoDispenseQuantityEnabled ? (
+                </div>
+                {preparationAuthority?.preparationPolicy ? (
+                  <div className="mt-3 grid gap-3 rounded-lg border p-3" data-testid="hospital-preparation-authority">
+                    <p className="emr-text-metadata font-semibold">준비 예정량 규칙 · 실제 수행 기록과 별도</p>
+                    {preparationAuthority.productReference ? <p className="emr-text-metadata text-muted-foreground">
+                      {preparationAuthority.productReference.productName} · {preparationAuthority.productReference.strengthDescription}
+                      <br />합성 데모 전용 · 임상 검증 안 됨
+                    </p> : null}
+                    <label className="grid gap-1 emr-text-metadata">계량 단위
+                      <Input aria-label="준비 계량 단위" type="number" min="0.000000001" step="any"
+                        value={preparationAuthority.preparationPolicy.increment}
+                        onChange={event => updatePreparationPolicy({ increment: Number(event.target.value) })} />
+                    </label>
+                    <label className="grid gap-1 emr-text-metadata">반올림 적용 범위
+                      <DrawerSelect ariaLabel="준비 반올림 범위" value={preparationAuthority.preparationPolicy.quantityScope ?? ""}
+                        items={[{ value: "course_total", label: "처방 전체" }, { value: "per_administration", label: "매회" }]}
+                        onValueChange={value => updatePreparationPolicy({ quantityScope: value as PlanOrderPreparationPolicy["quantityScope"] })} />
+                    </label>
+                    <label className="grid gap-1 emr-text-metadata">계량 방식
+                      <DrawerSelect ariaLabel="준비 계량 방식" value={preparationAuthority.preparationPolicy.roundingMode}
+                        items={[{ value: "up", label: "올림" }, { value: "nearest", label: "반올림" }, { value: "down", label: "내림" }]}
+                        onValueChange={value => updatePreparationPolicy({ roundingMode: value as PlanOrderPreparationPolicy["roundingMode"] })} />
+                    </label>
+                    <label className="grid gap-1 emr-text-metadata">표시 소수 자릿수
+                      <Input aria-label="준비 표시 소수 자릿수" type="number" min="0" max="9" step="1"
+                        value={preparationAuthority.preparationPolicy.displayPrecision}
+                        onChange={event => updatePreparationPolicy({ displayPrecision: Number(event.target.value) })} />
+                    </label>
+                    <p className="emr-text-metadata text-muted-foreground">이 규칙은 저장 후 새 오더에 적용됩니다. 환자별 준비량 조정과 실제 조제 결과는 차트·수행 화면에서 따로 기록해 주세요.</p>
+                  </div>
+                ) : null}
+                {draft.dispensingPreset.autoDispenseQuantityEnabled === false ? (
                   <Input
                     aria-label="수동 총량 보정 사유"
                     className="mt-2"
@@ -4736,7 +4950,9 @@ export function HospitalAdminDrawer({ workspaceId }: ShellComponentProps) {
             {dispensingOrder && draft.dispensingPreset ? (
               <p className="mt-2 emr-text-metadata text-muted-foreground">
                 {draft.priceMode === "per_quantity"
-                  ? `차트 확정 총량 ${draft.dispensingPreset.totalQuantity}${draft.dispensingPreset.totalQuantityUnit} × ${draft.price.toLocaleString()}원 = ${(draft.dispensingPreset.totalQuantity * draft.price).toLocaleString()}원`
+                  ? draft.dispensingPreset.totalQuantity === undefined
+                    ? "처방 총량 미설정 — 금액 계산 불가"
+                    : `차트 확정 총량 ${draft.dispensingPreset.totalQuantity}${draft.dispensingPreset.totalQuantityUnit} × ${draft.price.toLocaleString()}원 = ${(draft.dispensingPreset.totalQuantity * draft.price).toLocaleString()}원`
                   : `차트 확정 시 수량과 관계없이 처방 1건당 ${draft.price.toLocaleString()}원`}
                 으로 스냅샷을 고정합니다.
               </p>

@@ -883,6 +883,7 @@ test("order catalog Supabase gateway reads workspace chart-search rows from RPC"
   });
 
   const result = await gateway.listChartSearch({ workspaceId });
+  if (!result.ok) throw new Error(`catalog read failed: ${result.error}`);
 
   expect(calls).toEqual([
     `clair_list_order_catalog_chart_search_v2:${workspaceId}`,

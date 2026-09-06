@@ -1,0 +1,877 @@
+{
+  "schemaVersion": "clinical-master-order-field-ownership/v1",
+  "contractRevision": 1,
+  "baselineCommit": "f564a493b52be6f5592bda6484dd0bcf9a8a2c4b",
+  "fixturePath": "tests/fixtures/clinical-master-order-execution-presets-v1.json",
+  "expectedFixtureSha256": "e7e2b3320aedc16ebc0bc4b923b595f16d97e5debdb29d2c6e6ccb9939eef503",
+  "schemaSourcePath": "src/features/chart/order-execution-domain.ts",
+  "expectedSchemaSourceSha256": "559384cb5143a9f322a6546c3df3fbbf45966eb57614e3e834d12001b1a130eb",
+  "generatorSourcePath": "scripts/generate-clinical-master-order-execution-presets-v1.mjs",
+  "expectedGeneratorSourceSha256": "2ba257bbac689b58822a0d2a7944ade0e88254f82ca725e182b48573a7c40717",
+  "expectedOrderCount": 522,
+  "statusContract": {
+    "availability": "active",
+    "provenance": "synthetic_research_informed",
+    "clinicalValidation": "not_clinically_validated",
+    "prohibitedLifecycleStates": [
+      "synthetic_unreviewed",
+      "pending_review",
+      "review_pending",
+      "review_complete"
+    ],
+    "runtimeFallbackAllowed": false
+  },
+  "resolverProofs": {
+    "consultation.responsibleClinicianId": {
+      "implemented": true,
+      "source": "supabase/migrations/20260831120100_clinical_master_consultation_runtime_billing_realtime_compatibility.sql",
+      "test": "tests/clinical-master-consultation-runtime-resolver-migration.spec.ts",
+      "failureMode": "fail_closed"
+    },
+    "hospitalization.wardOrCage": {
+      "implemented": false,
+      "source": null,
+      "test": null,
+      "failureMode": "unverified"
+    },
+    "external_lab.providerId": {
+      "implemented": false,
+      "source": null,
+      "test": null,
+      "failureMode": "unverified"
+    }
+  },
+  "fieldContracts": {
+    "consultation": [
+      {
+        "key": "responsibleClinicianId",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "runtime_resolver",
+        "acceptedPolicies": ["runtime_resolved"],
+        "resolverProof": "consultation.responsibleClinicianId",
+        "researchRequired": false,
+        "targetWorkPackage": "WP-01B"
+      },
+      {
+        "key": "occurrenceCount",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "schema_default",
+        "acceptedPolicies": ["schema_default"],
+        "minimum": 1,
+        "integer": true,
+        "researchRequired": false,
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "timing",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "schema_default",
+        "acceptedPolicies": ["schema_default"],
+        "allowedValues": ["now", "scheduled"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "instructionSummary",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "What reusable visit scope, standard instruction, and required output belong to this consultation subtype?",
+        "sourceClasses": ["veterinary_guideline", "government_record_rule"],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "consultationNote",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "attachments",
+        "required": false,
+        "valueType": "attachment_array",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-07"
+      }
+    ],
+    "clinical_lab": [
+      {
+        "key": "specimenType",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which specimen types are accepted for this exact test or panel?",
+        "sourceClasses": [
+          "university_lab_manual",
+          "first_party_lab_documentation"
+        ],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "testPanel",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Is this a panel or atomic test, and which analytes or result components belong to its version?",
+        "sourceClasses": [
+          "university_lab_manual",
+          "first_party_lab_documentation",
+          "veterinary_standard"
+        ],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "collectionCondition",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "What container, quantity, collection, handling, storage, transport, and timing rules apply?",
+        "sourceClasses": [
+          "university_lab_manual",
+          "first_party_lab_documentation"
+        ],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "pretreatment",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Does this test require fasting, timing, medication withholding, preparation, or another precondition?",
+        "sourceClasses": [
+          "university_lab_manual",
+          "first_party_lab_documentation"
+        ],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "clinicalContext",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-05"
+      }
+    ],
+    "imaging": [
+      {
+        "key": "bodyRegion",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which canonical veterinary anatomy region does this imaging order request?",
+        "sourceClasses": ["dicom_standard", "veterinary_radiology_consensus"],
+        "targetWorkPackage": "WP-06"
+      },
+      {
+        "key": "position",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which standard views or positions apply to this modality, region, and indication?",
+        "sourceClasses": [
+          "veterinary_radiology_consensus",
+          "university_imaging_protocol"
+        ],
+        "targetWorkPackage": "WP-06"
+      },
+      {
+        "key": "viewCount",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "minimum": 1,
+        "integer": true,
+        "researchRequired": true,
+        "researchQuestion": "How many standard views are expected for this exact imaging protocol, and when are exceptions allowed?",
+        "sourceClasses": [
+          "veterinary_radiology_consensus",
+          "university_imaging_protocol"
+        ],
+        "targetWorkPackage": "WP-06"
+      },
+      {
+        "key": "contrastRequired",
+        "required": true,
+        "valueType": "boolean",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Is contrast normally required, optional, or patient-decided for this exact protocol?",
+        "sourceClasses": [
+          "veterinary_radiology_consensus",
+          "university_imaging_protocol"
+        ],
+        "targetWorkPackage": "WP-06"
+      },
+      {
+        "key": "sedationRequired",
+        "required": true,
+        "valueType": "boolean",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Is sedation or anesthesia usually required, optional, or patient-decided for this modality and protocol?",
+        "sourceClasses": [
+          "veterinary_anesthesia_guideline",
+          "university_imaging_protocol"
+        ],
+        "targetWorkPackage": "WP-06"
+      },
+      {
+        "key": "imagingProtocol",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "What preparation, acquisition, quality, and output steps belong to this protocol?",
+        "sourceClasses": ["veterinary_radiology_consensus", "dicom_standard"],
+        "targetWorkPackage": "WP-06"
+      },
+      {
+        "key": "exceptions",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-06"
+      }
+    ],
+    "external_lab": [
+      {
+        "key": "providerId",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "workspace_resolver",
+        "acceptedPolicies": ["workspace_resolved"],
+        "resolverProof": "external_lab.providerId",
+        "researchRequired": false,
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "specimenType",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which specimen is required by the selected external test?",
+        "sourceClasses": ["first_party_lab_documentation"],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "testItem",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which exact provider test code and version does this order request?",
+        "sourceClasses": ["first_party_lab_documentation"],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "shippingCondition",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "What packaging, temperature, stability, and dispatch window apply?",
+        "sourceClasses": ["first_party_lab_documentation"],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "providerForm",
+        "required": false,
+        "valueType": "attachment_array",
+        "targetOwner": "workspace_override",
+        "acceptedPolicies": [
+          "workspace_resolved",
+          "required_manual",
+          "not_applicable"
+        ],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "packaging",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Which packaging instructions are stable for the selected provider test?",
+        "sourceClasses": ["first_party_lab_documentation"],
+        "targetWorkPackage": "WP-05"
+      },
+      {
+        "key": "tracking",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "actual_result",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-08"
+      }
+    ],
+    "dispensing": [
+      {
+        "key": "doseBasis",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "allowedValues": ["patient", "kg", "body_surface_area"],
+        "researchRequired": true,
+        "researchQuestion": "Which dose basis is supported for the exact product, formulation, species, and indication?",
+        "sourceClasses": ["official_product_label", "government_regulation"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "dose",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "minimumExclusive": 0,
+        "researchRequired": true,
+        "researchQuestion": "Which reusable dose coefficient or fixed-dose rule is supported for the exact product, species, and indication?",
+        "sourceClasses": ["official_product_label"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "doseUnit",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which unambiguous dose unit and unit dimension apply?",
+        "sourceClasses": ["official_product_label", "unit_standard"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "route",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which route is authorized for the exact product and formulation?",
+        "sourceClasses": ["official_product_label"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "frequency",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which frequency or interval rule is supported for the exact product, species, and indication?",
+        "sourceClasses": ["official_product_label"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "durationDays",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "minimum": 1,
+        "integer": true,
+        "researchRequired": true,
+        "researchQuestion": "Which duration rule is supported, including any indication-specific or maximum-duration constraint?",
+        "sourceClasses": ["official_product_label", "government_regulation"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "totalQuantity",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "minimumExclusive": 0,
+        "researchRequired": true,
+        "researchQuestion": "Which theoretical-total formula, preparation increment, rounding rule, and adjustment reason produce the planned dispense quantity?",
+        "sourceClasses": [
+          "official_product_label",
+          "government_regulation",
+          "veterinary_medication_safety_guidance"
+        ],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "totalQuantityUnit",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which dispensing unit, concentration, formulation, and preparation increment apply?",
+        "sourceClasses": ["official_product_label", "unit_standard"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "medicationInstruction",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Which administration timing and food relationship instructions are supported?",
+        "sourceClasses": ["official_product_label"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "storageMethod",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which storage, light-protection, expiry, and after-opening conditions apply to the exact product?",
+        "sourceClasses": ["official_product_label"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "taperSchedule",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable",
+          "required_manual"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Does the product or indication require a staged, taper, loading, maintenance, PRN, or custom schedule?",
+        "sourceClasses": ["official_product_label"],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "compoundNote",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Which preparation, counting, concentration, formulation, and checking steps are reusable?",
+        "sourceClasses": [
+          "official_product_label",
+          "veterinary_compounding_guidance"
+        ],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "guardianNote",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Which administration and safety instructions can be rendered without ambiguous abbreviations?",
+        "sourceClasses": [
+          "official_product_label",
+          "veterinary_medication_safety_guidance"
+        ],
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "extraLabelSpeciesConfirmed",
+        "required": false,
+        "valueType": "boolean",
+        "targetOwner": "schema_default",
+        "acceptedPolicies": ["schema_default", "preset_fixed"],
+        "expectedValue": false,
+        "researchRequired": false,
+        "targetWorkPackage": "WP-03"
+      },
+      {
+        "key": "extraLabelSpeciesReason",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-03"
+      }
+    ],
+    "treatment": [
+      {
+        "key": "method",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which reusable method and preparation steps define this treatment subtype?",
+        "sourceClasses": ["veterinary_guideline", "procedure_standard"],
+        "targetWorkPackage": "WP-04"
+      },
+      {
+        "key": "site",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which default site or site-selection policy belongs to this treatment subtype?",
+        "sourceClasses": ["veterinary_guideline", "procedure_standard"],
+        "targetWorkPackage": "WP-04"
+      },
+      {
+        "key": "administeredAmount",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "actual_result",
+        "acceptedPolicies": [],
+        "researchRequired": true,
+        "researchQuestion": "Which planned amount/range/unit/input rule is required, and which separate result field records the actual amount?",
+        "sourceClasses": [
+          "veterinary_guideline",
+          "healthcare_interoperability_standard"
+        ],
+        "targetWorkPackage": "WP-04"
+      },
+      {
+        "key": "frequency",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which default frequency or repeat policy applies to this treatment subtype?",
+        "sourceClasses": ["veterinary_guideline", "procedure_standard"],
+        "targetWorkPackage": "WP-04"
+      },
+      {
+        "key": "schedule",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which scheduling pattern and reassessment rule apply?",
+        "sourceClasses": ["veterinary_guideline", "procedure_standard"],
+        "targetWorkPackage": "WP-04"
+      },
+      {
+        "key": "stagedInstructions",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Which preparation, execution, monitoring, and stop/escalation steps are reusable?",
+        "sourceClasses": ["veterinary_guideline", "procedure_standard"],
+        "targetWorkPackage": "WP-04"
+      },
+      {
+        "key": "exceptions",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-04"
+      }
+    ],
+    "hospitalization": [
+      {
+        "key": "durationDays",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "minimum": 1,
+        "integer": true,
+        "researchRequired": true,
+        "researchQuestion": "Which default duration or reassessment period applies to this hospitalization subtype?",
+        "sourceClasses": [
+          "veterinary_facility_standard",
+          "veterinary_guideline"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "wardOrCage",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "workspace_resolver",
+        "acceptedPolicies": ["workspace_resolved"],
+        "resolverProof": "hospitalization.wardOrCage",
+        "researchRequired": false,
+        "targetWorkPackage": "WP-02"
+      },
+      {
+        "key": "careLevel",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which care-level template and escalation triggers define this subtype?",
+        "sourceClasses": [
+          "veterinary_facility_standard",
+          "veterinary_guideline"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "monitoringInterval",
+        "required": true,
+        "valueType": "number",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "minimum": 1,
+        "integer": true,
+        "researchRequired": true,
+        "researchQuestion": "Which monitoring cadence is a reusable starting rule and which changes require patient-specific reassessment?",
+        "sourceClasses": [
+          "veterinary_facility_standard",
+          "veterinary_guideline"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "nursingPlan",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which handover, observation, medication, special-care, and escalation steps form the reusable nursing template?",
+        "sourceClasses": [
+          "veterinary_facility_standard",
+          "veterinary_guideline"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "dietPlan",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "Which nutrition assessment and feeding-order fields belong to the reusable template?",
+        "sourceClasses": ["veterinary_nutrition_guideline"],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "isolationPlan",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": [
+          "preset_fixed",
+          "derived_from_profile",
+          "not_applicable"
+        ],
+        "researchRequired": true,
+        "researchQuestion": "For isolation subtypes, which access, PPE, barrier-care, equipment, cleaning, and release rules belong to the workspace template?",
+        "sourceClasses": [
+          "veterinary_facility_standard",
+          "government_biosecurity_guidance"
+        ],
+        "targetWorkPackage": "WP-07"
+      }
+    ],
+    "system_exam": [
+      {
+        "key": "bodySystem",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which canonical body system and scope does this examination template represent?",
+        "sourceClasses": [
+          "veterinary_guideline",
+          "veterinary_terminology_standard"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "examScope",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which observations and required result structure belong to this examination scope?",
+        "sourceClasses": ["veterinary_guideline"],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "examMethod",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which examination methods are reusable for this body system and scope?",
+        "sourceClasses": ["veterinary_guideline"],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "findingSummary",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "actual_result",
+        "acceptedPolicies": [],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-08"
+      },
+      {
+        "key": "siteLaterality",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": true,
+        "researchQuestion": "For which lateralizable sites should left, right, or bilateral selection be enabled?",
+        "sourceClasses": ["veterinary_terminology_standard"],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "abnormalFindings",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "actual_result",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-08"
+      },
+      {
+        "key": "attachments",
+        "required": false,
+        "valueType": "attachment_array",
+        "targetOwner": "actual_result",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-08"
+      },
+      {
+        "key": "exceptions",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-07"
+      }
+    ],
+    "other": [
+      {
+        "key": "structuredValue",
+        "required": true,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which explicit subtype, workflow, and required output does this other order represent?",
+        "sourceClasses": [
+          "government_record_rule",
+          "veterinary_guideline",
+          "first_party_form_instruction"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "description",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "master_default",
+        "acceptedPolicies": ["preset_fixed", "derived_from_profile"],
+        "researchRequired": true,
+        "researchQuestion": "Which reusable steps, responsible role, destination, and completion criteria belong to the subtype?",
+        "sourceClasses": [
+          "government_record_rule",
+          "veterinary_guideline",
+          "first_party_form_instruction"
+        ],
+        "targetWorkPackage": "WP-07"
+      },
+      {
+        "key": "attachments",
+        "required": false,
+        "valueType": "attachment_array",
+        "targetOwner": "actual_result",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-08"
+      },
+      {
+        "key": "exceptions",
+        "required": false,
+        "valueType": "string",
+        "targetOwner": "encounter_input",
+        "acceptedPolicies": ["required_manual", "not_applicable"],
+        "researchRequired": false,
+        "targetWorkPackage": "WP-07"
+      }
+    ]
+  }
+}

@@ -104,6 +104,7 @@ test("chart search includes approved and explicitly scoped service-review dispen
   });
 
   const result = await gateway.listChartSearch({ workspaceId: "clair-demo" });
+  if (!result.ok) throw new Error(`catalog read failed: ${result.error}`);
   const individualRows = result.rows.filter((row) => row.rowType === "individual");
   expect(individualRows.map((row) => row.workspaceCatalogItemId)).toEqual([
     approved.id,
@@ -132,6 +133,7 @@ test("chart search retains 108 unique reviewed dispensing rows at target scale",
   });
 
   const result = await gateway.listChartSearch({ workspaceId });
+  if (!result.ok) throw new Error(`catalog read failed: ${result.error}`);
   const ids = result.rows.map((row) => row.workspaceCatalogItemId);
   expect(ids).toHaveLength(108);
   expect(new Set(ids).size).toBe(108);
