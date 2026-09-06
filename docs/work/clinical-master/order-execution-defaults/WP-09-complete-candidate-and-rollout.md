@@ -216,5 +216,24 @@ implementation; default WP00 worktree audit still detects drift. Historical repl
 requires the pinned f564a493 commit locally (no network fetch or live-source fallback).
 Taxonomy provenance-only regeneration changes source hashes/displayed fingerprint,
 not any of522 proposed classifications; combined/remote/configuration are unchanged.
-Migrations/data, authenticated remote smoke and the exact PR Preview/Release
-Check/Production gate remain unperformed.
+Clean delivery reran the full operator harness successfully with the same reviewed
+helper/configuration and final outer rollback. The14 Admin/chart/imaging browser
+cases and2 CBC true-empty/actual cases passed against explicit mock API contracts.
+The Admin test now supplies workspace/session API fixtures instead of a hardcoded
+port-specific401 console-error exemption. Application auth behavior is unchanged.
+
+Delivery PR: [#711](https://github.com/mcso0/emr-app-shell-prototype/pull/711),
+branch `codex/clinical-master-oed-complete-delivery`, target `main`. Exact final
+head, Release Check and Ready Preview are recorded on the PR approval packet after
+the fixture-only follow-up commit. Remote migrations/data and authenticated smoke
+remain unperformed. The Production gate remains open, not implicitly approved.
+
+Cutover must coordinate the app and DB: new actual-value triggers are incompatible
+with the old writer, so do not apply them early while presenting the old app as
+usable. Re-read and freeze live fingerprints immediately before the scoped remote
+rehearsal/application; stop on drift or failed evidence. Keep affected workflows
+out of use until the compatible app/DB pair passes the three-workspace smoke.
+The existing Ready Production deployment is an app-only rollback candidate, not a
+complete DB rollback. After persistent adoption, preserve immutable history and
+use the reviewed narrow binding restore/forward-fix path above; never blindly
+promote the old writer against the new DB contract.

@@ -3,6 +3,20 @@ import type { OrderCatalogItem } from "../src/features/hospital-admin/server-ord
 import { readFileSync } from "node:fs";
 test.use({ viewport: { width: 1440, height: 1000 } });
 test.beforeEach(async ({ page }) => {
+  // Mock the unrelated shell contract explicitly, independent of host/port or env.
+  await page.route("**/api/workspaces", async route => {
+    if (route.request().method() !== "GET") throw Error("Unexpected workspace mutation");
+    await route.fulfill({ json: { ok: true, workspaces: [{ id: "clair-demo", displayName: "합성 테스트 병원",
+      membershipId: "taxonomy-ui-membership", roles: ["hospital_admin"], status: "active" }],
+      enforcedBy: "workspace-membership-reader" } });
+  });
+  let tabsPayload: unknown = null;
+  await page.route("**/api/workspaces/clair-demo/app-shell/workspace-tabs", async route => {
+    const method = route.request().method();
+    if (method === "PUT") tabsPayload = route.request().postDataJSON();
+    else if (method !== "GET") throw Error("Unexpected workspace tabs mutation");
+    await route.fulfill({ json: { ok: true, status: 200, payload: tabsPayload, enforcedBy: "workspace-tabs-session" } });
+  });
   // A persisted empty configuration is distinct from an unauthenticated API.
   // Profile-specific tests register a later route with their exact fixture.
   await page.route("**/api/workspaces/clair-demo/lab-imaging/result-profiles**", async route => {
@@ -167,16 +181,9 @@ test("V2 preparation rule editing persists rounded planned total and recovers in
 test("taxonomy UI saves only classification, survives reload and explicitly resets", async ({ page }) => {
   const errors: string[] = [];
   const consoleErrors: string[] = [];
-  // Mock auth does not grant a server session for the unrelated shell APIs.
-  // Keep this exact allowlist; catalog errors and all runtime errors still fail.
-  const mockSessionDenials = new Set([
-    "http://127.0.0.1:3000/api/workspaces",
-    "http://127.0.0.1:3000/api/workspaces/clair-demo/app-shell/workspace-tabs",
-  ]);
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => {
     if (message.type() !== "error") return;
-    if (mockSessionDenials.has(message.location().url) && message.text() === "Failed to load resource: the server responded with a status of 401 (Unauthorized)") return;
     consoleErrors.push(`${message.location().url}: ${message.text()}`);
   });
   const { writes, current, drawer } = await catalog(page, { conflict: true });
