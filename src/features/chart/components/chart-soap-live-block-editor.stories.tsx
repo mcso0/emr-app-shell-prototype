@@ -375,7 +375,7 @@ export const PlusMenuOpen: Story = {
     await waitFor(() => expect(grabButton).toBeVisible());
     await expect(addButton.getBoundingClientRect().width).toBe(24);
     await expect(addButton.getBoundingClientRect().height).toBe(24);
-    await expect(grabButton.getBoundingClientRect().width).toBe(24);
+    await expect(grabButton.getBoundingClientRect().width).toBe(18);
     await expect(grabButton.getBoundingClientRect().height).toBe(24);
     const grabIcon = grabButton.querySelector<SVGSVGElement>(
       '[data-test="soap-block-grab"]',
@@ -383,6 +383,17 @@ export const PlusMenuOpen: Story = {
     await expect(grabIcon).toBeInTheDocument();
     await expect(grabIcon?.getBoundingClientRect().width).toBe(14);
     await expect(grabIcon?.getBoundingClientRect().height).toBe(14);
+    const boundary = canvasElement.querySelector<HTMLElement>(
+      "[data-soap-editor-boundary]",
+    );
+    if (!boundary) throw new Error("SOAP 에디터 경계를 찾지 못했습니다.");
+    await expect(
+      Math.abs(
+        addButton.getBoundingClientRect().left -
+          boundary.getBoundingClientRect().left -
+          8,
+      ),
+    ).toBeLessThanOrEqual(1);
     fireEvent.pointerDown(addButton);
     fireEvent.click(addButton);
     await expect(
@@ -1528,10 +1539,10 @@ export const RepresentativeReview: Story = {
       Math.abs(paragraphFirstLineCenter - sideMenuCenter),
     ).toBeLessThanOrEqual(1);
     await expect(
-      Math.abs(paragraphRect.left - sideMenuRect.right - 8),
+      Math.abs(paragraphRect.left - sideMenuRect.right - 4),
     ).toBeLessThanOrEqual(1);
     await expect(addButton.getBoundingClientRect().width).toBe(24);
-    await expect(grabButton.getBoundingClientRect().width).toBe(24);
+    await expect(grabButton.getBoundingClientRect().width).toBe(18);
     const paragraphOuter = firstParagraph.closest<HTMLElement>(".bn-block-outer");
     if (!paragraphOuter) {
       throw new Error("SOAP 기본 문단의 블록 외곽을 찾지 못했습니다.");
@@ -1561,6 +1572,39 @@ export const RepresentativeReview: Story = {
           ),
         ).toBeLessThanOrEqual(1);
         expect(editor.scrollWidth).toBeLessThanOrEqual(editor.clientWidth + 1);
+      });
+      const section = canvasElement.querySelector<HTMLElement>(
+        '.bn-block-content[data-content-type="soapSection"]',
+      );
+      const boundary = canvasElement.querySelector<HTMLElement>(
+        "[data-soap-editor-boundary]",
+      );
+      if (!section || !boundary) {
+        throw new Error("SOAP 섹션 경계를 찾지 못했습니다.");
+      }
+      const sectionRect = section.getBoundingClientRect();
+      section.dispatchEvent(
+        new MouseEvent("mousemove", {
+          bubbles: true,
+          clientX: sectionRect.left + 20,
+          clientY: sectionRect.top + 12,
+        }),
+      );
+      await waitFor(() => {
+        const sectionAdd = documentBody.getByRole("button", { name: "블록 추가" });
+        const sectionGrab = documentBody.getByRole("button", {
+          name: "블록 메뉴 열기",
+        });
+        expect(
+          Math.abs(
+            sectionAdd.getBoundingClientRect().left -
+              boundary.getBoundingClientRect().left -
+              8,
+          ),
+        ).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(sectionRect.left - sectionGrab.getBoundingClientRect().right - 4),
+        ).toBeLessThanOrEqual(1);
       });
     }
 
