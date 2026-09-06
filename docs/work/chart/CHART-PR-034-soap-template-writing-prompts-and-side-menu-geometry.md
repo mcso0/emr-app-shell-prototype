@@ -73,3 +73,14 @@ Make the existing BlockNote SOAP editor easier to start and safer to operate wit
 
 - Revert the application commit and redeploy the previous production deployment.
 - No database or persisted schema rollback is required.
+
+## Follow-up: Compact Grab Control (2026-09-06)
+
+User-approved geometry supersedes the original 24px grab width and 8px writing-block gap above:
+
+- Add control remains 24x24px; grab control becomes 18x24px with the existing 14x14px icon and vertical alignment.
+- Controls retain their 2px gap, for a total menu width of 44px.
+- Menu-to-block clearance becomes 4px for both SOAP sections and ordinary blocks.
+- Editable left padding becomes 56px: 8px outer clearance + 44px controls + 4px block gap.
+- Existing Storybook geometry checks cover the revised width, outer clearance, and paragraph gap, including SOAP sections at 320, 420, 566.5, and 720px.
+- Focused SOAP Storybook suite: 35 passed. Local secret scan, docs links, lint, typecheck, and production build passed. Release evidence belongs in the follow-up PR.
