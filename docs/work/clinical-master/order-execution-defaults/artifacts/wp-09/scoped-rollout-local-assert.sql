@@ -27,6 +27,37 @@ begin
     if not private.clair_is_active_workspace_member(w) or not private.clair_current_user_has_workspace_permission(w,'service_catalog:manage') then
       raise exception 'test active admin membership missing:%',w; end if;
   end loop;
+  -- Reproduce the verified remote history in chronological order: project the
+  -- existing immutable revision-1 lab owners before a later order-only release
+  -- advances orders. Never forge old link owners after publishing revision 2.
+  create temp table wp09_pre_history_catalog_ids as select workspace_id,id from public.order_catalog_items where workspace_id=any(targets);
+  foreach w in array targets loop
+    -- The legacy fixture adopter establishes pre-preset history; the modern
+    -- adopter requires presets introduced by the following seed release.
+    perform private.clair_adopt_master_release_to_workspace_a2_cumulative(w,(select id from master.master_releases
+      where status='published' order by release_no desc limit 1));
+    perform private.clair_adopt_lab_master_projection_to_workspace(w,null);
+  end loop;
+  -- The legacy adopter is cumulative. Discard ONLY its newly created nonlab
+  -- fixture rows and their review notifications before the baseline seed; the
+  -- historical-gap scenario must not invent unrelated dispensing history.
+  create temp table wp09_discard_nonlab_fixture as select i.workspace_id,i.id from public.order_catalog_items i
+    where i.workspace_id=any(targets) and i.category_group<>'lab'
+      and not exists(select 1 from wp09_pre_history_catalog_ids prior_ids where prior_ids.workspace_id=i.workspace_id and prior_ids.id=i.id);
+  delete from public.notification_events n using public.workspace_master_updates u,wp09_discard_nonlab_fixture f
+    where u.workspace_id=f.workspace_id and u.order_catalog_item_id=f.id and n.workspace_id=u.workspace_id
+      and n.notification_id='notif-clinical-master-'||u.id::text;
+  delete from public.workspace_master_updates u using wp09_discard_nonlab_fixture f
+    where u.workspace_id=f.workspace_id and u.order_catalog_item_id=f.id;
+  delete from public.order_catalog_items i using wp09_discard_nonlab_fixture f where i.workspace_id=f.workspace_id and i.id=f.id;
+  create temp table wp09_historical_wbc_links as
+    select l.workspace_id,l.id,to_jsonb(l) as original_row
+    from public.order_catalog_lab_test_item_links l join master.master_records m on m.id=l.source_master_test_record_id
+    where l.workspace_id=any(targets) and m.master_key='cm.lab-test.cbc-wbc';
+  if (select count(distinct workspace_id) from wp09_historical_wbc_links)<>3
+    or exists(select 1 from wp09_historical_wbc_links where (original_row->>'source_master_order_revision')::integer<>1
+      or (original_row->>'owner_pinned_source_test_revision')::integer<>1 or (original_row->>'pinned_workspace_result_revision')::integer<>1) then
+    raise exception 'test historical WBC owner1 fixture absent'; end if;
   result:=private.publish_clinical_master_release(jsonb_set((select seed from wp09_scoped_input),'{releaseKey}','"wp09.scoped-rollout.local-baseline"'));
   foreach w in array targets loop
     perform private.clair_adopt_master_release_to_workspace(w,(result->>'releaseId')::uuid);
@@ -67,6 +98,13 @@ begin
     if (select count(*) from public.order_catalog_items where workspace_id=w and source_dispensing_profile_id is not null)<>108 then raise exception 'test linked108 fixture missing:%',w; end if;
     if (select count(*) from public.lab_test_items where workspace_id=w and source_master_record_id is not null and customization_state='unmodified')<>69 then raise exception 'test pinned lab69 fixture missing:%',w; end if;
   end loop;
+  if exists(select 1 from wp09_historical_wbc_links b join public.order_catalog_lab_test_item_links l on l.workspace_id=b.workspace_id and l.id=b.id
+    join master.master_records m on m.id=l.source_master_order_record_id
+    join master.master_record_versions old_owner on old_owner.master_record_id=m.id and old_owner.revision=1
+    join master.master_record_versions new_owner on new_owner.master_record_id=m.id and new_owner.revision=2
+    where m.current_revision<>2 or l.source_master_order_revision<>1
+      or old_owner.snapshot->'labOrderProfiles' is distinct from new_owner.snapshot->'labOrderProfiles') then
+    raise exception 'test historical WBC owner1 current2 immutable profile drift'; end if;
   update public.order_catalog_items i set price_krw=null,billing_eligible=false,billing_reflection_enabled=false,
     pricing_rule=(pricing_rule-'priceKrw')||'{"billingReflectionEnabled":false}'::jsonb
     from master.master_records m where m.id=i.source_master_record_id and i.workspace_id='workspace-clinical-master-pilot-v1'
@@ -108,6 +146,24 @@ begin
   raise notice 'PASS WP09 local baseline: original522, linked108, lab69 per workspace; existing price override; packet frozen324/207';
 end $fixture$;
 
+create temp table wp09_catalog_cascade_observations(update_id uuid primary key,links_before jsonb,accepted boolean default false);
+create function pg_temp.wp09_observe_catalog_cascade() returns trigger language plpgsql as $fn$
+declare links_now jsonb; frozen jsonb;
+begin
+  select coalesce(jsonb_agg(to_jsonb(l) order by l.id),'[]') into links_now
+    from public.order_catalog_lab_test_item_links l where l.workspace_id=new.workspace_id and l.order_catalog_item_id=new.order_catalog_item_id;
+  if tg_op='INSERT' then
+    insert into wp09_catalog_cascade_observations values(new.id,links_now,false);
+  elsif new.status='accepted' and old.status='pending' then
+    select links_before into strict frozen from wp09_catalog_cascade_observations where update_id=new.id;
+    if links_now is distinct from frozen then raise exception 'test catalog-only resolver changed link bytes'; end if;
+    update wp09_catalog_cascade_observations set accepted=true where update_id=new.id;
+  end if;
+  return new;
+end $fn$;
+create trigger wp09_observe_catalog_cascade after insert or update on public.workspace_lab_catalog_updates
+  for each row execute function pg_temp.wp09_observe_catalog_cascade();
+
 create temp table wp09_direct_mutations(kind text,before_row jsonb,after_row jsonb);
 create function pg_temp.wp09_capture_direct_mutation() returns trigger language plpgsql as $fn$
 begin
@@ -122,11 +178,75 @@ end $fn$;
 create trigger wp09_capture_direct_mutation after update on public.order_catalog_items for each row execute function pg_temp.wp09_capture_direct_mutation();
 create function pg_temp.wp09_fail_at_receipt() returns trigger language plpgsql as $fn$
 begin raise exception 'wp09_test_late_failure'; end $fn$;
+
+-- Each structural drift is independently schema-valid and fully rolled back.
+-- Refreshing only the packet fingerprint proves the semantic guard rejects it,
+-- rather than merely exercising the unrelated stale-preflight check.
+create function pg_temp.wp09_reject_structural_drift(kind text) returns void language plpgsql as $fn$
+declare p jsonb:=(select packet from wp09_scoped_input); before_full jsonb:=pg_temp.wp09_full_fingerprint();
+  target public.order_catalog_lab_test_item_links; extra public.lab_test_items; mutated_id text; err text;
+begin
+  select l.* into strict target from public.order_catalog_lab_test_item_links l
+    join master.master_records o on o.id=l.source_master_order_record_id
+    join master.master_records t on t.id=l.source_master_test_record_id
+    where l.workspace_id='clair-demo' and o.master_key='cm.order.lab.panel.cbc-basic' and t.master_key='cm.lab-test.cbc-wbc';
+  begin
+    mutated_id:=target.id;
+    case kind
+      when 'workspace_custom' then update public.order_catalog_lab_test_item_links set link_origin='workspace_custom',
+        source_master_test_record_id=null,owner_pinned_source_test_revision=null,source_ordinal=null where workspace_id=target.workspace_id and id=target.id;
+      when 'missing' then delete from public.order_catalog_lab_test_item_links where workspace_id=target.workspace_id and id=target.id;
+      when 'ordinal' then update public.order_catalog_lab_test_item_links set source_ordinal=source_ordinal+1000,
+        effective_sort_order=effective_sort_order+1000,sort_order=sort_order+1000 where workspace_id=target.workspace_id and id=target.id;
+      when 'required' then update public.order_catalog_lab_test_item_links set required=not required where workspace_id=target.workspace_id and id=target.id;
+      when 'group' then update public.order_catalog_lab_test_item_links set display_group='wp09-negative-group' where workspace_id=target.workspace_id and id=target.id;
+      when 'profile' then update public.order_catalog_lab_test_item_links set profile_kind='standalone_test',
+        source_master_panel_record_id=null,source_master_panel_revision=null,source_ordinal=null where workspace_id=target.workspace_id and id=target.id;
+      when 'extra' then
+        select i.* into strict extra from public.lab_test_items i where i.workspace_id=target.workspace_id and i.source_master_record_id is not null
+          and not exists(select 1 from public.order_catalog_lab_test_item_links l where l.workspace_id=i.workspace_id
+            and l.order_catalog_item_id=target.order_catalog_item_id and l.lab_test_item_id=i.id) order by i.id limit 1;
+        mutated_id:='wp09-negative-extra';
+        insert into public.order_catalog_lab_test_item_links select (jsonb_populate_record(null::public.order_catalog_lab_test_item_links,
+          to_jsonb(target)||jsonb_build_object('id',mutated_id,'lab_test_item_id',extra.id,'source_master_test_record_id',extra.source_master_record_id,
+            'owner_pinned_source_test_revision',extra.source_master_revision,'pinned_workspace_result_revision',extra.workspace_result_revision,
+            'source_ordinal',1000,'effective_sort_order',1000,'sort_order',1000))).*;
+      else raise exception 'test unknown structural drift:%',kind;
+    end case;
+    update public.order_catalog_lab_test_item_links l set snapshot_metadata=l.snapshot_metadata||jsonb_build_object(
+      'linkOrigin',l.link_origin,'profileKind',l.profile_kind,'masterPanelRecordId',l.source_master_panel_record_id,
+      'masterPanelRevision',l.source_master_panel_revision,'masterTestRecordId',l.source_master_test_record_id,
+      'ownerPinnedSourceTestRevision',l.owner_pinned_source_test_revision,'labTestItemId',l.lab_test_item_id,
+      'pinnedWorkspaceResultRevision',l.pinned_workspace_result_revision,'sourceOrdinal',l.source_ordinal,
+      'effectiveSortOrder',l.effective_sort_order,'required',l.required,'displayGroup',l.display_group)
+      where l.workspace_id=target.workspace_id and l.id=mutated_id;
+    update public.order_catalog_lab_test_item_links l set snapshot_metadata_sha256=private.clinical_master_sha256(l.snapshot_metadata)
+      where l.workspace_id=target.workspace_id and l.id=mutated_id;
+    p:=jsonb_set(p,'{preflight,fingerprints}',private.clair_oed_20260906_fingerprints());
+    perform private.clair_apply_oed_20260906_candidate(p,private.clinical_master_sha256(p),false);
+    raise exception 'test structural drift accepted:%',kind;
+  exception when others then
+    get stacked diagnostics err=message_text;
+    if (err not like 'oed_lab_catalog_cascade_structural_drift%' and err not like 'oed_lab_catalog_cascade_not_eligible%')
+      or right(err,length(target.workspace_id||':'||target.order_catalog_item_id))<>(target.workspace_id||':'||target.order_catalog_item_id) then raise; end if;
+  end;
+  if pg_temp.wp09_full_fingerprint() is distinct from before_full then raise exception 'test structural drift rollback left residue:%',kind; end if;
+  raise notice 'PASS WP09 structural drift rejected and rolled back: % (%)',kind,err;
+end $fn$;
+select pg_temp.wp09_reject_structural_drift('workspace_custom') where current_setting('wp09.positive_only',true)<>'true';
+select pg_temp.wp09_reject_structural_drift('extra') where current_setting('wp09.positive_only',true)<>'true';
+select pg_temp.wp09_reject_structural_drift('missing') where current_setting('wp09.positive_only',true)<>'true';
+select pg_temp.wp09_reject_structural_drift('ordinal') where current_setting('wp09.positive_only',true)<>'true';
+select pg_temp.wp09_reject_structural_drift('required') where current_setting('wp09.positive_only',true)<>'true';
+select pg_temp.wp09_reject_structural_drift('group') where current_setting('wp09.positive_only',true)<>'true';
+select pg_temp.wp09_reject_structural_drift('profile') where current_setting('wp09.positive_only',true)<>'true';
+
 do $assert$
 declare p jsonb:=(select packet from wp09_scoped_input); sha text; bad jsonb; before_full jsonb; after_full jsonb;
   result jsonb; retry jsonb; w text; n integer; err text;
 begin
   sha:=private.clinical_master_sha256(p); before_full:=pg_temp.wp09_full_fingerprint();
+  if current_setting('wp09.positive_only',true)<>'true' then
   foreach w in array array['anon','authenticated','service_role'] loop
     if has_function_privilege(w,'private.clair_apply_oed_20260906_candidate(jsonb,text,boolean)','EXECUTE')
       or has_function_privilege(w,'private.clair_oed_20260906_fingerprints()','EXECUTE') then raise exception 'test operator helper exposed:%',w; end if;
@@ -180,8 +300,37 @@ begin
   drop trigger wp09_fail_at_receipt on private.oed_20260906_rollout_receipt;
   if pg_temp.wp09_full_fingerprint() is distinct from before_full or exists(select 1 from wp09_direct_mutations) then raise exception 'test late failure left residue'; end if;
   raise notice 'PASS WP09 ACL denial anon/authenticated/service_role, nonmanager/inactive actor denial, receipt-stage failure fully rolled back';
+  end if;
   result:=private.clair_apply_oed_20260906_candidate(p,sha,true);
   if result->'applied'<>'true'::jsonb or result->'rehearsal'<>'false'::jsonb then raise exception 'test apply result missing'; end if;
+  if coalesce(jsonb_array_length(result->'labOwnerRefreshEvidence'),0)=0
+    or exists(select 1 from jsonb_array_elements(result->'labOwnerRefreshEvidence') e
+      where e->>'writer'<>'clair_update_order_catalog_item_lab_definition' or e->'workspaceResultPinsPreserved'<>'true'::jsonb
+        or e->>'beforeLinksSha256'=e->>'afterLinksSha256'
+        or not exists(select 1 from public.audit_events a where a.workspace_id=e->>'workspaceId' and a.target_id=e->>'catalogId'
+          and a.metadata->>'action' like 'oed_immutable_lab_owner_refresh:%')) then
+    raise exception 'test immutable lab owner refresh evidence or audit absent'; end if;
+  -- The result creator validates owner pins for every sibling, including tests
+  -- whose definition did not change. Current lab-item revisions alone are not
+  -- sufficient evidence that a catalog can produce a new result.
+  select jsonb_agg(to_jsonb(mismatch) order by mismatch.workspace_id,mismatch.master_key,mismatch.link_order_revision) into bad from (
+    select i.workspace_id,m.master_key,i.source_master_revision as catalog_order_revision,l.source_master_order_revision as link_order_revision,
+      l.source_master_panel_revision as link_panel_revision,(profile.value->>'labPanelMasterRevision')::integer as immutable_panel_revision,
+      jsonb_agg(t.master_key order by t.master_key) as member_keys
+    from public.order_catalog_items i join master.master_records m on m.id=i.source_master_record_id
+    join master.master_record_versions v on v.master_record_id=m.id and v.revision=i.source_master_revision
+    join public.order_catalog_lab_test_item_links l on l.workspace_id=i.workspace_id and l.order_catalog_item_id=i.id
+    left join master.master_records t on t.id=l.source_master_test_record_id
+    left join lateral jsonb_array_elements(coalesce(v.snapshot->'labOrderProfiles','[]')) profile(value) on profile.value->>'orderMasterKey'=m.master_key
+    where i.workspace_id in(select jsonb_array_elements_text(p#>'{configuration,workspaceAllowlist}'))
+      and m.master_key in(select r->>'masterKey' from jsonb_array_elements(p#>'{payload,records}') r where r->>'recordType'='order')
+      and i.category_group='lab' and l.link_origin in ('clair_master','workspace_custom')
+      and (l.source_master_order_record_id is distinct from i.source_master_record_id or l.source_master_order_revision is distinct from i.source_master_revision
+        or l.source_master_panel_record_id is distinct from (profile.value->>'labPanelMasterRecordId')::uuid
+        or l.source_master_panel_revision is distinct from (profile.value->>'labPanelMasterRevision')::integer)
+    group by i.workspace_id,m.master_key,i.source_master_revision,l.source_master_order_revision,l.source_master_panel_revision,profile.value->>'labPanelMasterRevision'
+  ) mismatch;
+  if bad is not null then raise exception 'test current lab creator owner mismatch:%',bad; end if;
   for w in select jsonb_array_elements_text(p#>'{configuration,workspaceAllowlist}') loop
     select count(*) into n from public.order_catalog_items i join master.master_records m on m.id=i.source_master_record_id
       where i.workspace_id=w and m.master_key in(select r->>'masterKey' from jsonb_array_elements(p#>'{payload,records}') r where r->>'recordType'='order')
@@ -236,5 +385,6 @@ begin
   retry:=private.clair_apply_oed_20260906_candidate(p,sha,true);
   if retry-'retry' is distinct from result or retry->'retry'<>'true'::jsonb then raise exception 'test exact retry outcome changed'; end if;
   if pg_temp.wp09_full_fingerprint() is distinct from after_full then raise exception 'test exact retry changed permanent state'; end if;
+  if not exists(select 1 from wp09_catalog_cascade_observations where accepted) then raise exception 'test historical catalog-only cascade not exercised'; end if;
   raise notice 'PASS WP09 true inside outer rollback: selectable524/paused51/new prices53 per workspace; devices9/bindings519/compositions90; exact retry stable';
 end $assert$;

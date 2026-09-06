@@ -3,6 +3,8 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+if (process.argv.slice(2).some(arg => arg !== "--positive-only")) throw Error("wp09_unknown_local_test_option");
+const positiveOnly = process.argv.includes("--positive-only");
 const folder = "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/";
 const combined = JSON.parse(readFileSync(`${folder}combined-release.non-applied.v1.json`, "utf8"));
 const configuration = JSON.parse(readFileSync(`${folder}workspace-configuration.non-applied.v1.json`, "utf8"));
@@ -16,14 +18,16 @@ if (migrations.length < 17 || new Set(migrations).size !== migrations.length
   || migrations.at(-1) !== "supabase/migrations/20260906135526_clinical_master_synthetic_dispensing_rebind.sql") throw Error("wp09_local_migration_baseline_drift");
 migrations.splice(1, 0, "supabase/migrations/20260906070813_clinical_master_admin_classification_read.sql");
 migrations.push("supabase/migrations/20260906141337_clinical_master_oed_scoped_rollout.sql");
+migrations.push("supabase/migrations/20260906161551_clinical_master_oed_lab_owner_cascade.sql");
 const migrationSources = migrations.map(file => readFileSync(file, "utf8"));
-console.log(JSON.stringify({ localOnly: true, outerRollback: true, migrations: migrations.length, migrationSha256: createHash("sha256").update(migrationSources.at(-1)).digest("hex"),
+console.log(JSON.stringify({ localOnly: true, outerRollback: true, positiveOnly, migrations: migrations.length, migrationSha256: createHash("sha256").update(migrationSources.at(-1)).digest("hex"),
   configurationSha256: configuration.artifactSha256 }));
 const literal = value => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 const sql = ["BEGIN; SET LOCAL statement_timeout='180s';", ...migrationSources,
   // Some included migrations set their own timeout. Reapply a bounded budget
   // for the three complete rollback/apply scenarios in the assertion DO block.
   "SET LOCAL statement_timeout='300s';",
+  `SET LOCAL wp09.positive_only='${positiveOnly}';`,
   "SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000001',true);",
   `CREATE TEMP TABLE wp09_scoped_input(packet jsonb,seed jsonb); INSERT INTO wp09_scoped_input VALUES (${literal(packet)},${literal(seed)});`,
   readFileSync(`${folder}scoped-rollout-local-assert.sql`, "utf8"), "ROLLBACK;"].join("\n");

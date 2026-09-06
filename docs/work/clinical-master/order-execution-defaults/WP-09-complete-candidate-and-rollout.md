@@ -225,8 +225,9 @@ port-specific401 console-error exemption. Application auth behavior is unchanged
 Delivery PR: [#711](https://github.com/mcso0/emr-app-shell-prototype/pull/711),
 branch `codex/clinical-master-oed-complete-delivery`, target `main`. Exact final
 head, Release Check and Ready Preview are recorded on the PR approval packet after
-the fixture-only follow-up commit. Remote migrations/data and authenticated smoke
-remain unperformed. The Production gate remains open, not implicitly approved.
+the fixture-only follow-up commit. The representative subsequently approved
+proceeding with the proposed choices; the live cutover checkpoint below supersedes
+the earlier pre-approval status. The full objective remains active.
 
 Cutover must coordinate the app and DB: new actual-value triggers are incompatible
 with the old writer, so do not apply them early while presenting the old app as
@@ -237,3 +238,63 @@ The existing Ready Production deployment is an app-only rollback candidate, not 
 complete DB rollback. After persistent adoption, preserve immutable history and
 use the reviewed narrow binding restore/forward-fix path above; never blindly
 promote the old writer against the new DB contract.
+
+### Live cutover checkpoint — 2026-09-07 KST
+
+Approved candidate `75f475caeba68c8d4182a461512d01390bfdd226` passed Release Check
+`34043336698`; exact Preview `dpl_AJSCbL2FopToSLYaEpgtTUwiQYyj` was Ready.
+The authenticated Vercel transport returned login HTTP200, not an authenticated
+application smoke. PR711 has not merged at this checkpoint.
+
+The18 new SQL files were applied in one atomic Management API migration,
+`20260906160743_clinical_master_oed_complete_pr711_18_migration_bundle`, with
+transport SHA-256 `9fcd9bfa18d138b80535c474a09a4517b83720a1b0e722a13f239ee539fd2e31`.
+The already-installed prerequisite was excluded. The API assigns one ledger
+version for the bundle; it does not preserve the18 original filename versions.
+Do not blindly replay those files or run `db push`: reconcile the ledger mapping
+as a separate reviewed operation. The ordered original-file hashes are retained
+in the restricted operator evidence manifest; no migration-history rows were forged.
+
+Before application, all1597 catalog rows and binding baselines were backed up.
+Raw PostgreSQL JSON-text page hashes and whole-workspace hashes matched exactly;
+numeric-normalized client JSON is not the exact restore source. All101 previously
+existing workspace-scoped public tables in the foreign control were unchanged
+after DDL. Existing master522 source projections and latest revisions had no drift.
+
+The first remote candidate rehearsal stopped at
+`oed_lab_owner_cascade_incomplete` for the WBC item. No persistent candidate apply
+was attempted. Immediate residue checks proved all44 master tables and all116
+workspace/table fingerprints unchanged, with zero candidate release/receipt rows.
+DDL remains installed; the old app is not a compatible completion writer during
+the coordinated cutover. Sequences were not claimed unchanged.
+
+The failure was reproduced locally from chronological immutable adoption: links
+still legitimately pin owner revision1, while the latest prior master owner is2
+with an identical lab-order profile. The protected item resolver requires the
+latest prior owner or an accepted same-release catalog target. The append-only
+operator repair uses the existing catalog-first pure-cascade acceptance path,
+only after actual links match the stored workspace projection and immutable
+old/new profiles and panel membership differ solely in revision pins. It does not
+weaken the resolver or directly write links. Structural/custom drift must stop;
+link bytes and every unrelated catalog field must survive catalog-only acceptance.
+Unchanged sibling tests have no item CAS, and payload adoption does not update
+existing links. After canonical core source acceptance, a separate immutable-owner
+repair therefore uses the existing `labDefinition` catalog API with the complete
+locked link set and every link/item revision. Old/new immutable profiles and panel
+structure must match; all item/result pins and non-owner fields must remain exact.
+Only order/panel owner revisions and matching metadata/hash may change. Existing
+writer semantics preserve link/catalog revisions for this owner-only update.
+The operator records an explicit audit plus receipt before/after link hashes;
+the API itself is not claimed to emit that audit. Every candidate lab link must
+finally match the catalog's immutable owner before any rollout can commit.
+The focused positive run passed with an explicit outer rollback at helper SHA-256
+`29195a90ce5b486e206e93d150dbdb79f435320d47fa37644bb9068ac24c49c1`:
+normal-API owner repair and audits were non-vacuously exercised, every candidate
+lab link passed owner readiness, existing values/versions survived, and exact
+retry was stable across all permanent tables. The unchanged metabolic panel is
+resolved through the approved order's exact immutable dependency pin; it is not
+republished merely because its record is absent from this payload.
+The default full historical-gap/structural-rejection/ACL/rollback harness and the
+new exact-head Release Check/Preview must also pass before remote continuation.
+Latest completion evidence is recorded in the PR packet rather than inferred
+from this intermediate cutover checkpoint.
