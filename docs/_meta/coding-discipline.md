@@ -4,12 +4,12 @@ Use this file for non-trivial implementation work. Keep `AGENTS.md` compact and 
 
 ## Think Before Coding
 
-Do not assume. Surface assumptions and tradeoffs before implementation when they materially affect the result.
+Use existing project conventions for routine choices. Surface assumptions and tradeoffs when they materially affect the result.
 
 - State material assumptions when the request is ambiguous.
-- If multiple interpretations lead to different code, present them instead of silently choosing one.
+- If interpretations materially change scope, behavior, data access, cost, or safety, present them before dependent implementation.
 - If a simpler approach solves the same problem, say so and prefer it.
-- If an unclear point would change the implementation, ask before coding.
+- Ask only about material ambiguity; continue independent, already-authorized work while awaiting an answer.
 
 ## Simplicity First
 
@@ -46,3 +46,5 @@ Define success criteria and verify with the narrowest useful command first.
 - For validation changes, include invalid-input coverage when practical.
 - Broaden verification when the blast radius requires it.
 - Report what passed, what failed, and what could not be verified.
+- After required checks pass, finish the task. Repeat or broaden checks only for new changes, failures, or unresolved risks.
+- Do not add tests that merely mirror reversible, low-impact changes. Preserve required boundary, data-integrity, accessibility, and release checks.

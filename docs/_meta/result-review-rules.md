@@ -34,6 +34,8 @@ If the user asks about a term or concept, explain it in a learning-friendly way 
 
 For meaningful project work, especially Linear issue work, create a Korean HTML report for the representative/CEO audience and place it under `docs/completed/<area>/YYYY-MM-DD-<issue-or-slug>-report.html`.
 
+For read-only consultation, exploration, or review, report in chat unless the user asks for a durable artifact or the active work item requires one. Do not create files just to satisfy a reporting template during a read-only request.
+
 The report should be concise and decision-oriented:
 
 - what was requested
@@ -44,7 +46,7 @@ The report should be concise and decision-oriented:
 - risks, caveats, or out-of-scope items
 - recommended next step
 
-After creating the report, add its path to the relevant Linear issue as a comment when a Linear issue exists.
+After creating the report, add its path to the relevant Linear issue only when the user has authorized that external update. Otherwise include the local link in the final review.
 
 ## Good Review
 

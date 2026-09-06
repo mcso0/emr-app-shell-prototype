@@ -1,7 +1,7 @@
 # Owner Safety OS
 
 Status: approved
-Updated: 2026-05-31
+Updated: 2026-09-06
 
 Owner Safety OS is the operating layer that lets 승욱 ask for safety review without remembering skill names, checklists, or agent-specific commands.
 
@@ -18,6 +18,8 @@ When 승욱 says `안전 점검 게이트 열어줘`, 루멘 should:
 This is not a full review by default. It is an intake gate before review.
 
 Legacy alias: `작업 점검 하자` should still trigger the same intake gate, but new docs and examples should use `안전 점검 게이트 열어줘`.
+
+Ordinary requests such as `PR 전 점검해줘`, `수정하지 말고 리뷰해줘`, and `코드 확인해줘` authorize scoped read-only review directly. Do not turn them into a separate approval gate. Explicit intake requests retain the propose-and-wait behavior above. Prior approval remains valid for the same scope.
 
 ## Source Standards
 
@@ -96,13 +98,15 @@ Use this exact shape unless the user asks otherwise:
 
 Stop and ask 승욱 before:
 
-- remote Supabase staging/live validation
-- migration push or remote RLS work
-- production deployment
+- meaningful cost, secret/security exposure, or private asset publication
+- destructive or hard-to-rollback remote operations
+- production release outside the already-approved target, source, and scope
 - real customer, patient, guardian, identity, billing, or payment data
 - real email, KakaoTalk, PACS, device, payment, or provider integration
 - role/permission policy changes
 - broad UI direction changes outside the active scope
+
+Scoped synthetic/demo work follows [current project guardrails](../engineering/current-status.md#guardrails); use the release runbook for production. Finish authorized preparation before requesting a remaining approval.
 
 If a gated action is required for correctness, do not work around it with a weaker path. Explain the gate and wait.
 

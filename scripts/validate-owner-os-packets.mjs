@@ -63,7 +63,7 @@ const requiredPaths = [
   "parent_model.policy",
   "parent_model.selected_tier",
   "parent_model.low_cost_allowed",
-  "parent_model.escalate_to_5_5_when",
+  "parent_model.deep_review_when",
   "parent_model.escalation_decision",
   "subagent_policy",
   "subagent_policy.default",
@@ -93,7 +93,7 @@ const requiredListPaths = new Set([
   "trace_requirements.record",
   "retry_policy.retry_allowed_for",
   "retry_policy.retry_forbidden_for",
-  "parent_model.escalate_to_5_5_when",
+  "parent_model.deep_review_when",
   "subagent_policy.allowed_agents",
   "result_review.include",
 ]);
@@ -153,6 +153,10 @@ function validateCase(testCase) {
   }
 
   const parsed = parseKeyPaths(block);
+  // Read compatibility only; historical packets are not rewritten or executed.
+  for (const set of [parsed.paths, parsed.listPaths]) {
+    if (set.has("parent_model.escalate_to_5_5_when")) set.add("parent_model.deep_review_when");
+  }
   const missing = requiredPaths.filter((requiredPath) => !parsed.paths.has(requiredPath));
   const missingLists = [...requiredListPaths].filter(
     (requiredPath) => !parsed.listPaths.has(requiredPath)

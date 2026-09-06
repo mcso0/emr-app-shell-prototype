@@ -77,11 +77,11 @@ Linear creation/update, GitHub write actions, scoped synthetic/demo remote servi
 
 ## Parent Model And Subagent Cost Policy
 
-Use a tiered parent-model policy.
+Keep the user-selected parent model. Project defaults are `gpt-6-astra` / `high`, with Plan mode `xhigh`. Do not downgrade or claim to switch the parent through prose. `flagship` describes a tier; record the actual model ID and reasoning effort separately when confirmed by the runtime.
 
-- Lower-cost parent models may handle L0 direct answers, L1 status/intake, and obvious small local edits with narrow verification.
-- Escalate the parent to 5.5 when ambiguity can change output, safety, cost, data access, or review status.
-- Use 5.5 for auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, production, broad product decisions, multi-file implementation, failed verification, or approval-gated scope.
+- Use deeper review and focused evidence for ambiguity, security/data boundaries, broad decisions, or failed verification. Preserve the current effort unless the user or an explicit supported runtime selection changes it.
+- Keep `spark-explorer` on Spark / `low`, `test-triage` on GPT-5.6 Luna / `medium`, and `security-boundary-reviewer` on Astra / `high` where those roles are supported.
+- Follow `subagent-decision`: independent read-only delegation is authorized, at most four open spawned agents concurrently across the whole task tree, excluding the parent. Parallel implementation requires an explicit user request and ownership boundaries.
 
 Use the active runtime's native multi-agent dispatch only when a bounded subagent is likely to reduce parent-model cost, verification churn, or safety risk:
 
@@ -167,10 +167,13 @@ eval_contract:
   pass_threshold: ""
 trace_requirements: []
 subagent_policy:
-  parent_model_policy: "tiered_by_depth_and_risk"
+  parent_model_policy: "astra_parent_with_specialists"
+  model_id: "gpt-6-astra"
+  reasoning_effort: "high"
   low_cost_parent_allowed_for: []
-  escalate_parent_to_5_5_when: []
+  deep_review_when: []
   default: "none"
+  max_concurrent_agents: 4
   allowed_agents: []
   trigger: ""
   cost_rationale: ""

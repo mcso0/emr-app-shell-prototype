@@ -1,6 +1,6 @@
 ---
 name: emr-owner-safety-os
-description: Use for CLAiR EMR Owner Safety OS requests, especially when the user says "안전 점검 게이트", "안전 점검 게이트 열어줘", "작업 점검", "안전운영체계", "Safety OS", "PR 전 점검", "수정하지 말고 리뷰", "Safe fixes만", "비개발자 안전검토", or asks to review code/security/DB/testing/design/documentation risk before or after Codex work. This skill starts with a lightweight intake gate and waits for explicit user approval before any full review or safe-fix execution.
+description: Use for CLAiR EMR Owner Safety OS requests, especially when the user says "안전 점검 게이트", "안전 점검 게이트 열어줘", "작업 점검", "안전운영체계", "Safety OS", "PR 전 점검", "수정하지 말고 리뷰", "Safe fixes만", "비개발자 안전검토", or asks to review code/security/DB/testing/design/documentation risk before or after Codex work. Explicit Safety OS gate requests start with intake and approval; ordinary review requests directly authorize read-only inspection. Fixes require an explicit in-scope change request.
 ---
 
 # EMR Owner Safety OS
@@ -9,7 +9,7 @@ Use this skill to help 승욱 run a token-efficient safety gate around Codex wor
 
 ## Core Rule
 
-When the user says `안전 점검 게이트 열어줘`, `안전 점검 게이트`, `작업 점검 하자`, `안전운영체계`, `Safety OS`, or a similar safety-review request:
+When the user says `안전 점검 게이트 열어줘`, `안전 점검 게이트`, `작업 점검 하자`, `안전운영체계`, `Safety OS`, or explicitly asks for a Safety OS intake:
 
 1. Do a lightweight intake first.
 2. Do not modify files.
@@ -19,6 +19,8 @@ When the user says `안전 점검 게이트 열어줘`, `안전 점검 게이트
 6. Wait for explicit approval before running the selected review.
 
 Approval can be broad (`승인`, `진행해`) or scoped (`디자인 패턴만`, `DB/Supabase 제외`, `Safe fixes만`).
+
+Ordinary requests such as `PR 전 점검해줘`, `수정하지 말고 리뷰해줘`, or `코드 확인해줘` authorize scoped read-only review immediately. Load only relevant references and report findings; do not add an intake approval round. A gate request with no selected scope still follows the intake flow above. Prior approval for the same review scope remains valid.
 
 ## Lightweight Intake
 
@@ -55,7 +57,7 @@ Use this concise Korean format:
 진행할까?
 ```
 
-## After Approval
+## After Review Authorization
 
 Load only the references needed for the approved scope:
 
@@ -76,13 +78,15 @@ If the request involves docs sync or GitBook-facing docs updates, also use `$emr
 
 Stop and ask for explicit approval before:
 
-- remote Supabase staging/live validation
-- migration push or remote RLS work
-- production deploy
+- meaningful cost, secret/security exposure, or private asset publication
+- real-data access or destructive/hard-to-rollback remote operations
+- production release outside the already-approved target, source, and scope
 - real email, KakaoTalk, PACS, device, payment, or provider integration
 - real hospital, patient, guardian, payment, or identity data
 - role/permission policy changes
 - broad UI direction changes beyond the active scope
+
+Follow `AGENTS.md` and `docs/engineering/current-status.md` for scoped synthetic/demo Supabase, migration, and RLS work. Their authorization does not extend to real data or destructive operations. Production release follows the release runbook. Complete authorized preparation before a remaining gate; do not repeat unchanged approvals.
 
 Do not route around a gated action with a weaker workaround if the gated action is required for correctness. Explain the gate and wait.
 

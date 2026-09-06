@@ -26,6 +26,8 @@ Read first:
 - Run `npm run security:secrets` locally before an approved production release even when the remote `Release Check` passes.
 - Report branch, exact commit SHA, included issues/PRs, deployment URL or id, verification, smoke result, and rollback candidate.
 
+Prior approval remains valid for the same target, source commit, included scope, and operation. Prepare candidate/checks/smoke/rollback evidence before asking about a remaining gate. Ask again only if approval is missing or that scope changes; never weaken required release checks.
+
 ## Environment Decisions
 
 The active environments are:
