@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CLAiR 로그인 로딩 · 최종 구현 결과</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#f7f8fa;color:#252b32;font:15px/1.7 system-ui,-apple-system,sans-serif}main{max-width:900px;margin:auto;padding:44px 24px 72px}h1{font-size:28px;line-height:1.4;margin:8px 0 16px}h2{font-size:19px;margin:0 0 16px}p{margin:8px 0 16px}.eyebrow{font-size:13px;color:#637081}.summary{font-size:18px}.section{background:white;border:1px solid #e2e6eb;border-radius:12px;padding:24px;margin-top:20px}.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0}.step{padding:8px 12px;background:#f1f3f5;border-radius:6px}table{width:100%;border-collapse:collapse}td,th{padding:10px 8px;text-align:left;vertical-align:top;border-bottom:1px solid #edf0f3}th{font-weight:600;color:#485362}td:first-child{width:28%}code{font-size:12px;overflow-wrap:anywhere}a{color:#245a91;overflow-wrap:anywhere}.note{color:#616b78;font-size:13px}li{margin:8px 0}ul{padding-left:20px}@media(max-width:600px){main{padding:24px 16px}.section{padding:18px}h1{font-size:24px}table{font-size:13px}}
+  </style>
+</head>
+<body><main>
+  <div class="eyebrow">DESIGN-SYSTEM-PR-090 · 2026-09-06</div>
+  <h1>로그인 로딩 최종 시안과 구현</h1>
+  <p class="summary">진한 회색 로고가 먼저 모이고, 잠깐 멈춘 뒤 위에서 내려온 빛이 닿는 부분만 밝아집니다.</p>
+  <p>최종 시안의 움직임을 기존 로그인 전용 컴포넌트에 구현했습니다. 승인된 범위의 배포 후보를 분리했고, 로그인·세션·권한 구조를 유지했습니다.</p>
+
+  <section class="section">
+    <h2>확정한 움직임</h2>
+    <div class="flow"><span class="step">0→1로 나타나며 모임</span><span>→</span><span class="step">빛 없는 로고 유지</span><span>→</span><span class="step">바깥 위에서 빛 진입</span></div>
+    <table><tbody>
+      <tr><th>로고</th><td>기존 두 조각, 104px 슬롯, 원래 회색 #C7CCD1</td></tr>
+      <tr><th>조립</th><td>각 조각 10px 이동 · 640ms 감속 · 투명도 0→1은 320ms</td></tr>
+      <tr><th>조립 뒤</th><td>220ms 동안 빛 없이 유지</td></tr>
+      <tr><th>빛</th><td>25도 사선 · 2600ms 반복 · 첫 진입은 900ms에 걸쳐 서서히 표시. 로고 바깥에서 시작하고 끝나므로 반복 경계가 보이지 않습니다.</td></tr>
+      <tr><th>안내 문구</th><td>2초 이상 기다릴 때 “진료 공간을 준비하고 있어요” 표시. 기존 Pretendard Variable / 12px / 행간 약 16px / 굵기 500 / 자간 0.3px.</td></tr>
+      <tr><th>완료</th><td>화면 준비가 끝나면 현재 프레임에서 180ms로 종료합니다. 동작 줄이기 설정에서는 정지된 로고를 표시하고 즉시 종료합니다.</td></tr>
+    </tbody></table>
+  </section>
+
+  <section class="section">
+    <h2>확인한 결과</h2>
+    <ul>
+      <li>Storybook 상호작용 테스트 <strong>3/3 통과</strong>: 대기 중 글꼴, 조립 중 완료, 빛 이동 중 완료, 재시작.</li>
+      <li>Playwright 모션·인증 테스트 <strong>4/4 통과</strong>: 기존 로그인 범위 유지와 합성 계정의 로그인 후 로딩 종료.</li>
+      <li>조립 중과 정지 구간에 빛이 없고, 조립 완료 후에만 빛이 시작되는 것을 브라우저에서 확인했습니다.</li>
+      <li>픽셀 확인: 빛이 없을 때 두 조각 모두 RGB(199, 204, 209). 빛이 지나갈 때 윗부분부터 밝아집니다.</li>
+      <li>동작 줄이기 설정, 데스크톱 1440px, 모바일 360px을 확인했습니다. 브라우저 오류와 가로 넘침은 없었습니다.</li>
+      <li>깨끗한 배포 후보에서 전체 타입 검사와 ESLint를 통과했습니다.</li>
+    </ul>
+  </section>
+
+  <section class="section">
+    <h2>배포 후보 검증</h2>
+    <p>다른 진행 중 작업은 원래 작업 공간에 보존하고, 최신 main에서 로딩 화면 변경만 분리했습니다. 앞서 보였던 다른 작업의 타입 오류는 배포 후보에 포함되지 않습니다.</p>
+    <p>비밀정보·문서·UX 문구·타입·린트·빌드 검사와 정확한 후보 커밋의 GitHub Release Check를 통과한 뒤 머지합니다. 실제 PR, 머지, 배포 결과는 작업 기록과 최종 전달 내용에서 확인할 수 있습니다.</p>
+    <p class="note">기존 패키지는 잠금파일의 정확한 버전으로 설치했습니다. package.json과 package-lock.json은 변경하지 않았습니다.</p>
+  </section>
+
+  <section class="section">
+    <h2>변경 파일과 현재 상태</h2>
+    <ul>
+      <li><a href="../../../src/components/emr/workspace-entry-loading-screen.tsx">로딩 화면 컴포넌트</a> — 조립·빛·안내 문구와 종료 처리</li>
+      <li><a href="../../../src/components/emr/workspace-entry-loading-screen-motion.ts">모션 설정</a> — 시간, 감속, 빛의 경로</li>
+      <li><a href="../../../src/components/emr/workspace-entry-loading-screen.stories.tsx">Storybook 시나리오 및 테스트</a></li>
+      <li><a href="../../../tests/workspace-entry-splash.spec.ts">빛이 로고 바깥에서 시작하고 끝나는지 검사</a></li>
+      <li><a href="../../work/design-system/DESIGN-SYSTEM-PR-090-workspace-entry-splash-motion.md">작업 기록과 상세 검증 결과</a></li>
+    </ul>
+    <p>기존 로그인, 세션·권한 확인, 준비 완료 신호와 화면 입력 차단 구조를 유지했습니다. 다른 진행 중 작업도 보존했습니다.</p>
+    <p><strong>승인 범위:</strong> 이 로딩 화면 변경의 커밋·푸시·PR·main 머지·배포. 문제가 있으면 검사를 중단하고 이전 배포 또는 머지 되돌리기를 사용합니다.</p>
+  </section>
+</main></body></html>

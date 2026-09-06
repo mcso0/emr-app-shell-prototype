@@ -1,9 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { motion, useAnimationControls, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { WorkspaceLogoMarkIcon } from "@/components/icons";
-import { WORKSPACE_ENTRY_SPLASH_MOTION } from "@/components/emr/workspace-entry-loading-screen-motion";
+import {
+  WORKSPACE_ENTRY_SPLASH_LIGHT,
+  WORKSPACE_ENTRY_SPLASH_MOTION
+} from "@/components/emr/workspace-entry-loading-screen-motion";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceEntryLoadingScreenProps = {
@@ -19,21 +22,20 @@ export function WorkspaceEntryLoadingScreen({
   "data-testid": dataTestId = "workspace-entry-loading-screen",
   onExitComplete
 }: WorkspaceEntryLoadingScreenProps) {
-  const logoControls = useAnimationControls();
-  const overlayControls = useAnimationControls();
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const logoRef = useRef<SVGSVGElement>(null);
+  const lightMaskRef = useRef<HTMLDivElement>(null);
+  const lightRef = useRef<HTMLDivElement>(null);
+  const messageRef = useRef<HTMLParagraphElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const readyRef = useRef(ready);
-  const readyResolverRef = useRef<(() => void) | null>(null);
+  const exitRef = useRef<(() => void) | null>(null);
   const onExitCompleteRef = useRef(onExitComplete);
   const exitCompletedRef = useRef(false);
 
   useEffect(() => {
     readyRef.current = ready;
-
-    if (ready) {
-      readyResolverRef.current?.();
-      readyResolverRef.current = null;
-    }
+    if (ready) exitRef.current?.();
   }, [ready]);
 
   useEffect(() => {
@@ -41,73 +43,102 @@ export function WorkspaceEntryLoadingScreen({
   }, [onExitComplete]);
 
   useEffect(() => {
+    const overlay = overlayRef.current;
+    const logo = logoRef.current;
+    const lightMask = lightMaskRef.current;
+    const light = lightRef.current;
+    const message = messageRef.current;
+    if (!overlay || !logo || !lightMask || !light || !message) return;
+    if (exitCompletedRef.current) return;
+
     let active = true;
+    let exiting = false;
+    const animations: Animation[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const motion = WORKSPACE_ENTRY_SPLASH_MOTION;
 
-    async function waitUntilReady() {
-      if (readyRef.current) return;
-
-      await new Promise<void>((resolve) => {
-        readyResolverRef.current = resolve;
-      });
+    function animate(element: Element, frames: Keyframe[], options: KeyframeAnimationOptions) {
+      const animation = element.animate(frames, { fill: "both", ...options });
+      animations.push(animation);
+      return animation;
     }
 
-    async function runSequence() {
-      overlayControls.set({ opacity: 1 });
-
-      if (prefersReducedMotion) {
-        logoControls.set(WORKSPACE_ENTRY_SPLASH_MOTION.full);
-        await waitUntilReady();
-      } else {
-        logoControls.set(WORKSPACE_ENTRY_SPLASH_MOTION.initial);
-        await logoControls.start({
-          ...WORKSPACE_ENTRY_SPLASH_MOTION.full,
-          transition: WORKSPACE_ENTRY_SPLASH_MOTION.enter
-        });
-
-        while (active && !readyRef.current) {
-          await logoControls.start({
-            ...WORKSPACE_ENTRY_SPLASH_MOTION.low,
-            transition: WORKSPACE_ENTRY_SPLASH_MOTION.pulseLeg
-          });
-          if (!active) return;
-
-          await logoControls.start({
-            ...WORKSPACE_ENTRY_SPLASH_MOTION.full,
-            transition: WORKSPACE_ENTRY_SPLASH_MOTION.pulseLeg
-          });
-        }
-      }
-
-      if (!active) return;
-
-      await overlayControls.start({
-        opacity: 0,
-        transition: prefersReducedMotion
-          ? WORKSPACE_ENTRY_SPLASH_MOTION.reduced
-          : WORKSPACE_ENTRY_SPLASH_MOTION.exit,
-        transitionEnd: { display: "none" }
-      });
-
-      if (!active || exitCompletedRef.current) return;
-
-      exitCompletedRef.current = true;
-      onExitCompleteRef.current?.();
+    function later(callback: () => void, delay: number) {
+      timers.push(setTimeout(() => {
+        if (active && !exiting) callback();
+      }, delay));
     }
 
-    void runSequence();
+    function exit() {
+      if (!active || exiting || exitCompletedRef.current) return;
+      exiting = true;
+      timers.forEach(clearTimeout);
+      // Freeze the current frame; readiness never waits for an assembly or light loop.
+      animations.forEach((animation) => animation.pause());
+      const fade = animate(overlay!, [{ opacity: 1 }, { opacity: 0 }],
+        prefersReducedMotion ? motion.reduced : motion.exit);
+      void fade.finished.then(() => {
+        if (!active || exitCompletedRef.current) return;
+        exitCompletedRef.current = true;
+        overlay!.style.display = "none";
+        onExitCompleteRef.current?.();
+      }).catch(() => {});
+    }
+
+    exitRef.current = exit;
+    overlay.style.display = "";
+    lightMask.style.opacity = "0";
+    message.style.opacity = "0";
+
+    // Derive the mask from the shared icon, so both paths stay owned by that icon.
+    const mask = logo.cloneNode(true) as SVGSVGElement;
+    mask.removeAttribute("style");
+    lightMask.style.maskImage = `url("data:image/svg+xml,${encodeURIComponent(
+      new XMLSerializer().serializeToString(mask)
+    )}")`;
+
+    if (!prefersReducedMotion) {
+      // SVG path transforms use viewBox units rather than rendered CSS pixels.
+      const offset = (motion.pieceOffset * 16) / motion.logoSize;
+      const arrivals = [...logo.querySelectorAll("path")].flatMap((piece, index) => [
+        animate(piece, [
+          { transform: `translateY(${index === 0 ? -offset : offset}px)` },
+          { transform: "translateY(0)" }
+        ], motion.assemble),
+        animate(piece, [{ opacity: 0 }, { opacity: 1 }], motion.appear)
+      ]);
+
+      void Promise.all(arrivals.map((animation) => animation.finished)).then(() => {
+        if (!active || exiting) return;
+        later(() => {
+          animate(light, [
+            { transform: WORKSPACE_ENTRY_SPLASH_LIGHT.from },
+            { transform: WORKSPACE_ENTRY_SPLASH_LIGHT.to }
+          ], { ...motion.light, iterations: Infinity });
+          animate(lightMask, [{ opacity: 0 }, { opacity: 1 }], motion.lightAppear);
+        }, motion.settledHold);
+      }).catch(() => {});
+    }
+    logo.style.opacity = "1";
+
+    later(() => {
+      animate(message, [{ opacity: 0 }, { opacity: 1 }],
+        prefersReducedMotion ? motion.reduced : motion.exit);
+    }, motion.messageDelay);
+
+    if (readyRef.current) exit();
 
     return () => {
       active = false;
-      readyResolverRef.current?.();
-      readyResolverRef.current = null;
-      logoControls.stop();
-      overlayControls.stop();
+      exitRef.current = null;
+      timers.forEach(clearTimeout);
+      animations.forEach((animation) => animation.cancel());
     };
-  }, [logoControls, overlayControls, prefersReducedMotion]);
+  }, [prefersReducedMotion]);
 
   return (
-    <motion.div
-      animate={overlayControls}
+    <div
+      ref={overlayRef}
       aria-busy="true"
       aria-label="워크스페이스를 불러오는 중"
       className={cn(
@@ -115,24 +146,43 @@ export function WorkspaceEntryLoadingScreen({
         className
       )}
       data-testid={dataTestId}
-      initial={{ opacity: 1 }}
       role="status"
       style={{ zIndex: "calc(var(--clair-z-index-tooltip) + 1)" }}
     >
-      <div className="flex size-[104px] items-center justify-center">
-        <motion.div
-          animate={logoControls}
-          data-splash-logo="true"
-          initial={WORKSPACE_ENTRY_SPLASH_MOTION.initial}
-          style={{ transformOrigin: "center center" }}
+      <div className="relative size-[104px]" data-splash-logo="true">
+        <WorkspaceLogoMarkIcon
+          ref={logoRef}
+          aria-hidden="true"
+          className="block size-[104px] text-[#C7CCD1]"
+          size={104}
+          style={{ opacity: 0 }}
+        />
+        <div
+          ref={lightMaskRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden opacity-0"
+          data-splash-light-mask="true"
+          style={{ maskSize: "100% 100%", maskRepeat: "no-repeat" }}
         >
-          <WorkspaceLogoMarkIcon
-            aria-hidden="true"
-            className="block size-[104px] text-[#C7CCD1]"
-            size={104}
+          <div
+            ref={lightRef}
+            className="absolute -top-[150%] -left-[150%] size-[400%]"
+            data-splash-light="true"
+            style={{
+              background: WORKSPACE_ENTRY_SPLASH_LIGHT.background,
+              transform: WORKSPACE_ENTRY_SPLASH_LIGHT.from
+            }}
           />
-        </motion.div>
+        </div>
       </div>
-    </motion.div>
+      <p
+        ref={messageRef}
+        aria-hidden="true"
+        className="emr-text-metadata absolute top-[calc(50%+66px)] w-full px-4 text-center font-medium text-[var(--emr-text-tertiary)] opacity-0"
+        data-splash-message="true"
+      >
+        진료 공간을 준비하고 있어요
+      </p>
+    </div>
   );
 }

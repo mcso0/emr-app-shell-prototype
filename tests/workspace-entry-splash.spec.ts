@@ -1,39 +1,22 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { WORKSPACE_ENTRY_SPLASH_MOTION } from "../src/components/emr/workspace-entry-loading-screen-motion";
+import {
+  WORKSPACE_ENTRY_SPLASH_LIGHT,
+  WORKSPACE_ENTRY_SPLASH_MOTION
+} from "../src/components/emr/workspace-entry-loading-screen-motion";
 
-test("workspace entry splash keeps the approved motion contract", () => {
-  expect(WORKSPACE_ENTRY_SPLASH_MOTION).toEqual({
-    initial: { opacity: 0, scale: 0.85 },
-    full: { opacity: 1, scale: 1 },
-    low: { opacity: 0.5, scale: 0.92 },
-    enter: { duration: 0.6, ease: "easeOut" },
-    pulseLeg: { duration: 0.8, ease: "easeInOut" },
-    exit: { duration: 0.18, ease: "easeOut" },
-    reduced: { duration: 0 }
-  });
-});
+test("the light band starts and resets entirely outside the logo slot", () => {
+  const [dx, dy] = WORKSPACE_ENTRY_SPLASH_LIGHT.to.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+  const distance = Math.hypot(dx, dy);
+  const slotProjection = WORKSPACE_ENTRY_SPLASH_MOTION.logoSize * (dx + dy) / distance;
+  const stops = [...WORKSPACE_ENTRY_SPLASH_LIGHT.background.matchAll(/calc\(50% \+ (-?[\d.]+)px\)/g)]
+    .map((match) => Number(match[1]));
+  const bandHalfWidth = Math.max(...stops.map(Math.abs));
 
-test("workspace entry splash checks readiness only after returning to full state", () => {
-  const source = readFileSync("src/components/emr/workspace-entry-loading-screen.tsx", "utf8");
-
-  const readinessLoopIndex = source.indexOf("while (active && !readyRef.current)");
-  const lowStateIndex = source.indexOf("...WORKSPACE_ENTRY_SPLASH_MOTION.low");
-  const fullStateIndex = source.indexOf("...WORKSPACE_ENTRY_SPLASH_MOTION.full", lowStateIndex);
-  const overlayExitIndex = source.indexOf("await overlayControls.start", fullStateIndex);
-
-  expect(readinessLoopIndex).toBeGreaterThan(-1);
-  expect(lowStateIndex).toBeGreaterThan(readinessLoopIndex);
-  expect(fullStateIndex).toBeGreaterThan(lowStateIndex);
-  expect(overlayExitIndex).toBeGreaterThan(fullStateIndex);
-  expect(source).not.toContain("repeat: Infinity");
-  expect(source).toContain('transformOrigin: "center center"');
-});
-
-test("reduced motion keeps the logo static and exits instantly", () => {
-  const source = readFileSync("src/components/emr/workspace-entry-loading-screen.tsx", "utf8");
-
-  expect(source).toContain("if (prefersReducedMotion)");
-  expect(source).toContain("logoControls.set(WORKSPACE_ENTRY_SPLASH_MOTION.full)");
-  expect(WORKSPACE_ENTRY_SPLASH_MOTION.reduced).toEqual({ duration: 0 });
+  // Even the full square (larger than the visible mark) must be clear of the band.
+  expect(distance - bandHalfWidth).toBeGreaterThan(slotProjection / 2);
+  const [startX, startY] = WORKSPACE_ENTRY_SPLASH_LIGHT.from.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+  expect(startX).toBe(-dx);
+  expect(startY).toBe(-dy);
+  expect(dx).toBeGreaterThan(0);
+  expect(dy).toBeGreaterThan(dx);
 });
