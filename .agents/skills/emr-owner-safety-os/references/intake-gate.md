@@ -1,6 +1,6 @@
 # Safety OS Intake Gate
 
-Use this reference after the skill triggers and before any full review.
+Use this reference for an explicit Safety OS intake request. Ordinary requested read-only review skips the intake approval round.
 
 ## Purpose
 
@@ -49,4 +49,4 @@ Classify the work into one or more buckets:
 - Scoped approval: run only the named bucket.
 - Exclusions such as `DB 제외`, `Supabase 제외`, or `디자인만`: honor exactly.
 
-If approval would enter a repo-level approval gate, ask again with the gated operation named.
+A review approval does not authorize a separate gated mutation. Ask only for a remaining operation, target, or scope that has not already been approved; continue authorized preparation.

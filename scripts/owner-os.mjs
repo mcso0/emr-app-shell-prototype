@@ -3,6 +3,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const root = process.cwd();
 const outputDir = path.join(root, "output", "owner-os");
@@ -23,8 +25,11 @@ function main() {
       return writeTextOrStdout(buildPacket(args), args.out ?? defaultOutputPath("packet", "md"));
     case "review":
       return writeTextOrStdout(buildReview(), args.out ?? defaultOutputPath("review", "md"));
-    case "eval":
-      return writeJsonOrStdout(runEval(), args.out ?? defaultOutputPath("eval-report", "json"));
+    case "eval": {
+      const report = runEval();
+      if (report.status !== "passed") process.exitCode = 1;
+      return writeJsonOrStdout(report, args.out ?? defaultOutputPath("eval-report", "json"));
+    }
     case "dashboard":
       return writeTextOrStdout(buildDashboard(), args.out ?? path.join(outputDir, "owner-os-dashboard.html"));
     case "trace":
@@ -35,27 +40,81 @@ function main() {
   }
 }
 
-function buildIntake(request) {
-  const gated = /(supabase|production|deploy|rls|payment|email|provider|실데이터|배포|결제|권한)/i.test(request);
+// Advisory routing only: this helper cannot verify live scope or grant tool permissions.
+export function buildIntake(request) {
+  const safetyIntake = /(안전 점검 게이트|작업 점검 하자|안전운영체계|safety os)/i.test(request);
+  const readOnly = /(리뷰|review|PR 전 점검|코드 확인|상태|알려줘|골라줘|설명|뭐야)/i.test(request);
+  const prepare = /(준비|prepare)/i.test(request);
+  const boundary = /(supabase|production|deploy|rls|payment|email|provider|workspace|실데이터|배포|결제|권한)/i.test(request);
   const test = /(test|lint|build|ci|검증|테스트|실패|로그)/i.test(request);
-  const linear = /(linear|리니어|issue|project|이슈|프로젝트)/i.test(request);
+  const linear = /(linear|리니어|이슈)/i.test(request);
   const broad = /(조사|넓게|관련 파일|mapping|분석)/i.test(request);
-  const simple = request.length < 80 && !gated && !test && !linear && !broad;
+  const review = /(리뷰|review|PR 전 점검|코드 확인)/i.test(request);
+  const status = /(상태|status)/i.test(request);
+  const unspecified = /^(이거|저거|이것|저것)\s*(바로\s*)?(구현|수정|고쳐)/.test(request.trim());
+  const change = /(구현|수정|고쳐|반영|implement|fix)/i.test(request);
+  const explicitReadOnly = /(수정하지 말|변경하지 말|읽기 전용|read.only|do not (edit|modify)|원인만|분석만)/i.test(request);
+  // Read-only intent cannot authorize a contradictory remote mutation in the same request.
+  const remoteMutation = /(deploy\s*(해|하|까지|now|it)|deploy[.!]*$|배포\s*(해|하|까지)|migration push|마이그레이션.*적용해|데이터.*삭제해|send.*email|이메일.*보내)/i.test(request);
+  let taskType = "answer", depth = status ? "L1" : "L0", autonomy = "answer_only";
+  let gate = "none", output = status ? "status brief" : "short Korean answer";
+  let subagents = [];
 
+  if (safetyIntake) {
+    taskType = "safety"; depth = "L1"; autonomy = "propose_only";
+    gate = "safety review scope approval"; output = "Owner Safety OS intake";
+  } else if (unspecified) {
+    taskType = "planning"; depth = "L2"; autonomy = "propose_only";
+    gate = "scope_clarification"; output = "work packet draft or clarification";
+  } else if (boundary && prepare) {
+    taskType = "planning"; depth = "L2"; autonomy = "propose_only";
+    output = "prepare reviewable evidence; gated execution remains separate";
+  } else if (boundary && (!readOnly || remoteMutation)) {
+    taskType = "safety"; depth = "L4"; autonomy = "propose_only";
+    gate = /production|deploy|배포/i.test(request) ? "production release scope verification" : "boundary scope verification";
+    output = "prepare scope and evidence; verify existing authorization before a gated operation";
+  } else if (explicitReadOnly && !remoteMutation) {
+    taskType = review ? "review" : "answer"; depth = boundary ? "L4" : "L2";
+    output = review ? "scoped read-only findings" : "read-only explanation or analysis";
+    subagents = boundary ? ["security-boundary-reviewer"] : [];
+  } else if (review) {
+    taskType = "review"; depth = boundary ? "L4" : "L2";
+    output = "scoped read-only findings";
+    subagents = boundary ? ["security-boundary-reviewer"] : [];
+  } else if (test) {
+    taskType = "qa"; depth = "L2"; autonomy = readOnly ? "answer_only" : "verify_local";
+    subagents = ["test-triage"]; output = "narrow next command";
+  } else if (status) {
+    // Status questions do not become Linear mutation requests merely by naming a project.
+  } else if (linear) {
+    taskType = "linear"; depth = "L2"; autonomy = "propose_only";
+    gate = "Linear project placement confirmation"; output = "project or issue plan before mutation";
+  } else if (broad) {
+    taskType = "planning"; depth = "L2"; autonomy = "propose_only";
+    subagents = ["spark-explorer"]; output = "read-only mapping summary";
+  } else if (change && !readOnly) {
+    taskType = "code"; depth = "L3"; autonomy = "local_edit";
+    output = "scoped local change and focused verification";
+  }
   return {
     request,
-    task_type: gated ? "safety" : test ? "qa" : linear ? "linear" : broad ? "planning" : "answer",
-    depth_level: gated ? "L4" : test || broad || linear ? "L2" : simple ? "L0" : "L1",
-    autonomy_level: gated || linear ? "external_action_gated" : test ? "verify_local" : "answer_only",
-    parent_model_tier: gated ? "5.5" : simple ? "low_cost" : "standard",
-    escalate_to_5_5: gated,
-    subagents: gated ? ["security-boundary-reviewer"] : test ? ["test-triage"] : broad ? ["spark-explorer"] : [],
-    approval_gate: gated ? "approval required before gated operation" : linear ? "Linear mutation approval" : "none",
-    next_action: gated ? "ask for explicit approval" : "proceed within packet scope",
+    task_type: taskType,
+    depth_level: depth,
+    autonomy_level: autonomy,
+    parent_model_tier: "flagship",
+    model_id: "gpt-6-astra",
+    reasoning_effort: "high",
+    requires_deep_review: boundary || unspecified,
+    subagents,
+    max_concurrent_agents: 4,
+    approval_gate: gate,
+    output,
+    next_action: gate === "none" ? "proceed within requested scope" : "prepare authorized work and verify remaining scope",
+    advisory_only: true,
   };
 }
 
-function buildPacket(options) {
+export function buildPacket(options) {
   const request = options.request ?? "Owner OS packet request";
   const title = options.title ?? "Owner OS packet draft";
   const intake = buildIntake(request);
@@ -73,8 +132,8 @@ function buildPacket(options) {
       .replace('intent: "One-sentence target"', `intent: "${escapeDouble(request)}"`)
       .replace('task_type: "answer | planning | docs | code | review | qa | linear | safety"', `task_type: "${intake.task_type}"`)
       .replace('autonomy_level: "answer_only | propose_only | local_edit | verify_local | external_action_gated"', `autonomy_level: "${intake.autonomy_level}"`)
-      .replace('  selected_tier: "low_cost | standard | 5.5"', `  selected_tier: "${intake.parent_model_tier}"`)
-      .replace('  escalation_decision: "not_needed | required | blocked_for_approval"', `  escalation_decision: "${intake.escalate_to_5_5 ? "required" : "not_needed"}"`),
+      .replace('  selected_tier: "flagship"', `  selected_tier: "${intake.parent_model_tier}"`)
+      .replace('  escalation_decision: "not_needed | required | blocked_for_approval"', `  escalation_decision: "${intake.requires_deep_review ? "required" : "not_needed"}"`),
     "```",
   ].join("\n");
 }
@@ -100,50 +159,39 @@ function buildReview() {
   ].join("\n");
 }
 
-function runEval() {
-  const dataset = JSON.parse(readFileSync(scenarioPath, "utf8"));
+export function runEval(dataset = JSON.parse(readFileSync(scenarioPath, "utf8"))) {
+  const fields = ["task_type", "depth_level", "autonomy_level", "parent_model_tier", "model_id", "reasoning_effort", "requires_deep_review", "subagents", "approval_gate", "output"];
   const results = dataset.scenarios.map((scenario) => {
-    const missing = [];
     const expected = scenario.expected ?? {};
-    for (const field of [
-      "task_type",
-      "depth_level",
-      "autonomy_level",
-      "parent_model_tier",
-      "escalate_to_5_5",
-      "subagents",
-      "approval_gate",
-      "output",
-    ]) {
-      if (!(field in expected)) missing.push(field);
-    }
-
+    const missing = fields.filter((field) => !(field in expected));
+    const actual = buildIntake(scenario.request);
+    const mismatches = fields.filter((field) => field in expected && !isDeepStrictEqual(actual[field], expected[field]));
     return {
       id: scenario.id,
       type: scenario.type,
-      passed: missing.length === 0,
-      failure_class: missing.length === 0 ? "none" : "missing_expected_field",
+      passed: missing.length === 0 && mismatches.length === 0,
+      failure_class: missing.length > 0 ? "missing_expected_field" : mismatches.length > 0 ? "routing_mismatch" : "none",
       missing,
+      mismatches,
     };
   });
-
   const passed = results.filter((result) => result.passed).length;
   const total = results.length;
-
   return {
     id: "OWNER_OS_EVAL_REPORT",
+    evaluation_scope: "local routing helper; not live-model behavior or authorization proof",
     generated_at: new Date().toISOString(),
     dataset: dataset.id,
     pass_threshold: dataset.pass_threshold,
     passed,
     total,
     pass_rate: total === 0 ? 0 : passed / total,
-    status: passed === total ? "passed" : "failed",
+    status: total > 0 && passed === total ? "passed" : "failed",
     results,
   };
 }
 
-function buildTraceExample(options) {
+export function buildTraceExample(options) {
   const request = options.request ?? "Create Owner OS packet template";
   const intake = buildIntake(request);
   return {
@@ -167,11 +215,16 @@ function buildTraceExample(options) {
     },
     model: {
       parent_model_tier: intake.parent_model_tier,
-      escalate_to_5_5: intake.escalate_to_5_5,
-      escalation_reason: intake.escalate_to_5_5 ? intake.approval_gate : "none",
+      configured_model_id: intake.model_id,
+      configured_reasoning_effort: intake.reasoning_effort,
+      runtime_selection_verified: false,
+      requires_deep_review: intake.requires_deep_review,
+      escalation_reason: intake.requires_deep_review ? intake.approval_gate : "none",
     },
     subagents: {
-      used: intake.subagents,
+      used: [],
+      recommended: intake.subagents,
+      max_concurrent_agents: intake.max_concurrent_agents,
       trigger: intake.subagents.length > 0 ? "cost_or_risk_reduction" : "none",
       cost_rationale:
         intake.subagents.length > 0
@@ -234,8 +287,8 @@ function buildDashboard() {
       <p class="muted">Read-only local dashboard. No Linear, Supabase, production, or provider writes.</p>
       <section class="grid" aria-label="Owner OS metrics">
         <div class="card"><div>Project Issues</div><div class="metric">10</div><div class="muted">DEN-420 through DEN-429</div></div>
-        <div class="card"><div>Eval Pass Rate</div><div class="metric">${Math.round(report.pass_rate * 100)}%</div><div class="muted">${report.passed}/${report.total} deterministic scenarios</div></div>
-        <div class="card"><div>Approval Gates</div><div class="metric">Active</div><div class="muted">Remote/live actions remain stopped</div></div>
+        <div class="card"><div>Eval Pass Rate</div><div class="metric">${Math.round(report.pass_rate * 100)}%</div><div class="muted">${report.passed}/${report.total} local routing scenarios; no live-model eval</div></div>
+        <div class="card"><div>Approval Gates</div><div class="metric">Active</div><div class="muted">Verify operation-specific scope</div></div>
         <div class="card"><div>Next Review</div><div class="metric">Human</div><div class="muted">Representative review before Done</div></div>
       </section>
       <h2>Scenario Health</h2>
@@ -329,4 +382,4 @@ function printHelp() {
   npm run owner-os -- dashboard`);
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main();

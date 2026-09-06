@@ -1,17 +1,19 @@
 # Security And DB Checklist
 
-Use after approval for auth, permission, Supabase, DB, migration, RLS, API route, secret, or data-integrity review.
+Use for an explicitly requested read-only review, or after scope selection in an explicit Safety OS intake.
 
 ## Approval Gates
 
 Stop before:
 
-- remote Supabase staging/live validation
-- migration push or remote RLS work
-- production deploy
+- meaningful cost, secret/security exposure, or private asset publication
+- destructive or hard-to-rollback remote operations
+- production release outside the already-approved target, source, and scope
 - real email, payment, provider, device, PACS, or KakaoTalk integration
 - real hospital, patient, guardian, identity, billing, or payment data
 - role/permission policy changes
+
+Scoped synthetic/demo Supabase, migration, and RLS work follows `AGENTS.md` and current-status.md. Routine read-only code review needs no extra approval. Keep production release gates and do not infer authorization for real data from synthetic scope.
 
 ## Security Checks
 

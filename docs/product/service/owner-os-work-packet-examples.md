@@ -74,7 +74,7 @@ trace_requirements:
     - "sources selected"
     - "approval gate decision"
     - "parent model tier"
-    - "5.5 escalation decision"
+    - "deep-review decision"
     - "subagent trigger and cost rationale"
     - "tool calls or commands"
     - "verification results"
@@ -89,16 +89,21 @@ token_budget:
   depth_level: "L3"
   max_context_sources: 3
 parent_model:
-  policy: "tiered_by_depth_and_risk"
-  selected_tier: "standard"
-  low_cost_allowed: true
-  escalate_to_5_5_when:
+  policy: "astra_parent_with_specialists"
+  selected_tier: "flagship"
+  model_id: "gpt-6-astra"
+  reasoning_effort: "high"
+  plan_reasoning_effort: "xhigh"
+  low_cost_allowed: false
+  deep_review_when:
     - "scope ambiguity can change output, safety, cost, data access, or review status"
     - "auth, workspace, Supabase, RLS, audit, billing integrity, real data, production, or approval-gated work is involved"
     - "multi-file implementation or broad product decision is involved"
     - "verification fails or parent cannot explain the safe next step"
   escalation_decision: "not_needed"
 subagent_policy:
+  max_concurrent_agents: 4
+  implementation: "explicit_user_request_only"
   default: "none"
   allowed_agents:
     - "spark-explorer"

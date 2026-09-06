@@ -56,7 +56,7 @@ Planning consequence:
 | Goal | Target outcome |
 | --- | --- |
 | Reduce owner operating time | 승욱 spends time on approvals and product decisions, not repeated context reconstruction. |
-| Reduce token and model-cost waste | The system uses a tiered parent-model policy: low-cost parent models may handle simple low-risk work, while 5.5 is reserved for ambiguous, risky, broad, or final high-stakes decisions. |
+| Reduce token and model-cost waste | The parent stays on Astra high; bounded exploration and test-triage specialists reduce duplicated work. Deep review follows risk rather than an automatic model switch. |
 | Improve work quality | Codex starts from a clear packet with scope, source docs, out-of-scope items, verification, and result format. |
 | Preserve safety boundaries | Approval-gated work stops before execution unless 승욱 explicitly approves the named environment and operation. |
 | Improve handoff continuity | Each meaningful result leaves a compact summary that future work can reuse. |
@@ -114,7 +114,7 @@ flowchart TD
 | Intake Router | Classify the request as answer, planning, docs, code, review, Linear, safety gate, or status. | Use repo rules and current thread; no broad docs load. |
 | Scope Judge | Decide current MVP, deferred roadmap, or approval-gated scope. | Read current status, MVP scope, operating map only when needed. |
 | Context Router | Choose source docs and files. | Use `docs/_meta/agent-rag-map.md`; default to 1-3 docs after startup. |
-| Cost Controller | Set depth, token budget, parent model tier, subagent policy, and escalation triggers. | Use lower-cost parent models for L0/L1 and obvious small edits; escalate to 5.5 when ambiguity, risk, broad scope, or failed verification appears. |
+| Cost Controller | Set depth, token budget, parent model tier, subagent policy, and escalation triggers. | Preserve the selected Astra parent; limit context and delegation, and require deeper review for material risk. |
 | Work Packet Builder | Convert request into an executable handoff. | Emit a Markdown packet with scope, sources, gates, checks, and done criteria. |
 | Execution Orchestrator | Decide direct work, single Codex handoff, or limited specialist delegation. | Default to one owner and one issue; use native multi-agent dispatch only when bounded delegation is expected to reduce parent-model cost or catch boundary risk. |
 | Verification Gate | Run or request focused checks. | Prefer docs check, lint, typecheck, build, and focused tests by risk. |
@@ -142,7 +142,7 @@ Before Owner OS creates or executes a work packet, it must resolve these fields.
 | Success criteria | Concrete pass conditions, including required fields and behavior. |
 | Failure criteria | What counts as wrong, unsafe, incomplete, too broad, or too expensive. |
 | Eval method | Deterministic check, human review, LLM-as-judge, trace grading, or mixed. |
-| Model and subagent policy | Which parent model tier should run the task, when to escalate to 5.5, and whether the current runtime should delegate bounded mapping, boundary review, or test triage. |
+| Model and subagent policy | Which parent model tier should run the task, when to require deeper review, and whether the current runtime should delegate bounded mapping, boundary review, or test triage. |
 | Sample count | One-off review, N-run scenario set, or regression suite size. |
 | Pass threshold | Required pass rate or score before the workflow is trusted. |
 | Escalation trigger | When Owner OS must ask 승욱 instead of continuing. |
@@ -226,12 +226,12 @@ token_budget:
   depth_level: "L0 | L1 | L2 | L3 | L4"
   max_context_sources: 3
 subagent_policy:
-  parent_model_policy: "tiered_by_depth_and_risk"
-  low_cost_parent_allowed_for:
-    - "L0 direct answer"
-    - "L1 status or intake"
-    - "obvious small local edit with narrow verification"
-  escalate_parent_to_5_5_when:
+  parent_model_policy: "astra_parent_with_specialists"
+  model_id: "gpt-6-astra"
+  reasoning_effort: "high"
+  low_cost_parent_allowed_for: []
+  max_concurrent_agents: 4
+  deep_review_when:
     - "scope ambiguity can change output, safety, cost, data access, or review status"
     - "auth, workspace, Supabase, RLS, audit, billing integrity, real data, production, or approval-gated work is involved"
     - "multi-file implementation or broad product decision is involved"
@@ -243,7 +243,7 @@ subagent_policy:
     - "test-triage"
   trigger: "Use only when read-heavy mapping, boundary review, or test triage should reduce parent-model cost or risk."
   cost_rationale: "Why the model tier or subagent is expected to reduce total tokens, verification churn, or safety risk."
-  parent_decision: "Parent Codex remains final implementer, synthesizer, and verifier; escalate that parent to 5.5 when the escalation triggers fire."
+  parent_decision: "Parent Codex remains final implementer, synthesizer, and verifier; use deeper review for the named risk triggers."
 result_review:
   language: "Korean"
   include:
@@ -316,24 +316,26 @@ Owner OS should reduce tokens through progressive disclosure.
 
 ### Parent Model And Subagent Cost Policy
 
-Owner OS uses a tiered parent-model policy. Simple, low-risk, and clearly bounded work can be handled by a lower-cost parent model. 5.5 is the escalation model for ambiguity, risk, broad synthesis, failed verification, and high-stakes final decisions.
+Owner OS preserves the selected parent. Project defaults are Astra high, Plan xhigh, and Astra high for security review; Spark low and GPT-5.6 Luna medium remain bounded specialist roles. A tier is a workload description, not proof that a model was selected. Record model ID and effort separately when runtime-confirmed.
 
 | Situation | Default route | Cost rule |
 | --- | --- | --- |
-| Simple answer, status, or obvious small edit | Lower-cost parent model | Do not spawn subagents; escalate to 5.5 only if ambiguity, risk, or failed verification appears. |
+| Simple answer, status, or obvious small edit | Selected Astra parent | No subagents; use bounded context and narrow verification. |
 | Broad file or document mapping | Native task-scoped exploration agent, then parent synthesis at the needed tier | Use bounded exploration to shrink the search space before the parent spends tokens on implementation. |
-| Auth, workspace, Supabase, RLS, audit, billing integrity, real data, or production boundary | 5.5 parent plus an independent boundary-review agent when material | Use high-reasoning review where a wrong decision is expensive or unsafe; do not route around approval gates. |
-| Failing logs, CI, regression choice, flaky behavior | Native test-triage agent, then parent decision at the needed tier | Use focused triage before rerunning broad suites or guessing; escalate to 5.5 when the failure affects safety, data boundaries, or broad architecture. |
+| Auth, workspace, Supabase, RLS, audit, billing integrity, real data, or production boundary | Astra parent plus an independent Astra boundary reviewer when material | Use high-reasoning review where a wrong decision is expensive or unsafe; do not route around approval gates. |
+| Failing logs, CI, regression choice, flaky behavior | Native test-triage agent, then parent decision at the needed tier | Use focused triage before rerunning broad suites or guessing; require deeper review when the failure affects safety, data boundaries, or broad architecture. |
 | Pre-Human-Review QA for a broad or risky change | Independent boundary-review and test-triage agents when justified | Use specialist review as evidence; parent remains accountable for final handoff. |
 
-Subagent outputs are evidence, not authority. The parent Codex must synthesize the summaries, make the final implementation decision, and record which parent model tier was used, whether 5.5 escalation was required, and why any specialist agent was or was not used. A model, profile, or read-only sandbox must not be claimed unless the active dispatch interface confirms that control.
+Independent read-only delegation is authorized when useful. Use at most four open spawned agents concurrently across the entire task tree, excluding the parent; this is an operating limit, not a target. Parallel implementation requires an explicit user request and disjoint ownership.
+
+Subagent outputs are evidence, not authority. The parent Codex must synthesize the summaries, make the final implementation decision, and record which parent model tier was used, whether deep-review was required, and why any specialist agent was or was not used. A model, profile, or read-only sandbox must not be claimed unless the active dispatch interface confirms that control.
 
 Token anti-patterns:
 
 - reading all docs, archive, completed, and history by default
 - starting multiple agents before a work packet exists
-- using 5.5 for simple L0/L1 work where a lower-cost parent model is sufficient
-- failing to escalate to 5.5 when ambiguity, safety, data boundaries, or failed verification require it
+- spawning specialists for a simple task with no independent useful work
+- skipping deeper review when ambiguity, safety, data boundaries, or failed verification require it
 - spawning subagents without a written cost or risk rationale
 - letting every review load every checklist
 - generating long Korean reports for tiny work
@@ -492,7 +494,7 @@ Owner OS MVP is useful when:
 - approval-gated operations stop before execution
 - Codex handoffs include done criteria and verification
 - AI workflows include eval method, pass threshold, trace evidence, and failure taxonomy when behavior is non-deterministic
-- simple low-risk work can use a lower-cost parent model while ambiguous, risky, broad, or failed-verification work escalates to 5.5
+- the selected Astra parent is preserved; ambiguity, risk, broad scope, or failed verification triggers deeper review rather than a model switch
 - approval-gated, ambiguous, and adversarial requests are covered by scenario tests
 - final reviews are short, Korean, and decision-oriented
 - future sessions can resume from packet summaries instead of full chat history
@@ -504,7 +506,7 @@ Owner OS MVP is useful when:
 | Standalone app vs Codex skill first | Start as Codex skill and Markdown packet workflow. |
 | Memory store location | Start with repo-local summaries; avoid hidden state as the only source. |
 | Linear write access | Draft first; mutate only after explicit user action. |
-| Multi-agent dispatch | Default off for implementation; allow read-only specialist routing only when the packet records parent model tier, 5.5 escalation decision, trigger, cost rationale, summaries, and parent decision. |
+| Multi-agent dispatch | Default off for implementation; allow read-only specialist routing only when the packet records parent model tier, deep-review decision, trigger, cost rationale, summaries, and parent decision. |
 | Dashboard scope | Read-only first. |
 | OpenAI API integration timing | Defer until prompt/skill workflow proves ROI. |
 | Judge model and thresholds | Start with documented rubrics and local dry-runs; pick model/API only after scenario examples are approved. |

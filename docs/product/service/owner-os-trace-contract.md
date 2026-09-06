@@ -32,12 +32,17 @@ Owner OS traces are compact evidence records for debugging agent behavior. They 
     "max_context_sources": 3
   },
   "model": {
-    "parent_model_tier": "low_cost | standard | 5.5",
-    "escalate_to_5_5": false,
+    "parent_model_tier": "flagship",
+    "configured_model_id": "gpt-6-astra",
+    "configured_reasoning_effort": "high",
+    "runtime_selection_verified": false,
+    "requires_deep_review": false,
     "escalation_reason": "none"
   },
   "subagents": {
     "used": [],
+    "recommended": [],
+    "max_concurrent_agents": 4,
     "trigger": "none",
     "cost_rationale": "none",
     "summaries_used": []
@@ -79,7 +84,11 @@ The eval runner may grade traces on:
 - correct classification
 - context minimality
 - approval gate stop
-- parent model tier and 5.5 escalation decision
+- parent model tier and deep-review decision
 - subagent trigger and cost rationale
 - verification evidence
 - result review completeness
+
+## Migration And Evidence
+
+New artifacts use `requires_deep_review` rather than the model-specific `escalate_to_5_5`. Historical traces remain unchanged and are not fresh runtime evidence. Configured model/effort fields describe defaults; set `runtime_selection_verified` only from actual dispatch evidence. A CLI draft lists recommended agents separately and leaves `used` empty until an agent really runs.

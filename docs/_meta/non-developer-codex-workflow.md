@@ -1,9 +1,11 @@
 # Non-Developer Codex Workflow
 
 Status: approved
-Updated: 2026-05-31
+Updated: 2026-09-06
 
 This is 승욱's short usage guide for Owner Safety OS. 승욱 should not need to remember skill names.
+
+Ordinary requests such as `PR 전 점검해줘` or `수정하지 말고 리뷰해줘` authorize read-only review immediately. The separate intake-and-wait flow below applies to an explicit Safety OS gate request. Existing approval remains valid for the same operation, target, and scope.
 
 ## Start A Safety Intake
 
@@ -83,7 +85,7 @@ Use:
 - broad UI direction changes
 - clinical/billing workflow behavior changes
 
-without a new explicit approval.
+unless that additional scope is already explicitly authorized. Approval for Safe fixes alone does not authorize these actions; scoped synthetic/demo work follows current project guardrails.
 
 ## DB, Supabase, Security, Or Deployment
 

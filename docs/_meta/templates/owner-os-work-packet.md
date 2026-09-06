@@ -9,7 +9,7 @@ doc_type: "template"
 
 Use this template when Owner OS turns a broad request into an executable Codex handoff.
 
-The packet is intentionally stricter than a normal work item. It must state scope, side effects, approval gates, verification, eval, trace evidence, parent model tier, 5.5 escalation posture, and subagent cost policy before implementation starts.
+The packet is intentionally stricter than a normal work item. It must state scope, side effects, approval gates, verification, eval, trace evidence, parent model tier, deep-review posture, and subagent cost policy before implementation starts.
 
 ```owner_os_work_packet
 id: "OWNER-OS-PACKET-YYYYMMDD-N"
@@ -64,7 +64,7 @@ trace_requirements:
     - "sources selected"
     - "approval gate decision"
     - "parent model tier"
-    - "5.5 escalation decision"
+    - "deep-review decision"
     - "subagent trigger and cost rationale"
     - "tool calls or commands"
     - "verification results"
@@ -79,16 +79,21 @@ token_budget:
   depth_level: "L0 | L1 | L2 | L3 | L4"
   max_context_sources: 3
 parent_model:
-  policy: "tiered_by_depth_and_risk"
-  selected_tier: "low_cost | standard | 5.5"
-  low_cost_allowed: true
-  escalate_to_5_5_when:
+  policy: "astra_parent_with_specialists"
+  selected_tier: "flagship"
+  model_id: "gpt-6-astra"
+  reasoning_effort: "high"
+  plan_reasoning_effort: "xhigh"
+  low_cost_allowed: false
+  deep_review_when:
     - "scope ambiguity can change output, safety, cost, data access, or review status"
     - "auth, workspace, Supabase, RLS, audit, billing integrity, real data, production, or approval-gated work is involved"
     - "multi-file implementation or broad product decision is involved"
     - "verification fails or parent cannot explain the safe next step"
   escalation_decision: "not_needed | required | blocked_for_approval"
 subagent_policy:
+  max_concurrent_agents: 4
+  implementation: "explicit_user_request_only"
   default: "none"
   allowed_agents:
     - "spark-explorer"
@@ -117,3 +122,5 @@ npm run owner-os:packet:check
 ```
 
 The validator checks this template and the approved example packet. It also checks that the intentionally bad example fails, so missing required fields are caught.
+
+New packets use `deep_review_when`. The validator accepts historical `escalate_to_5_5_when` as a read-only compatibility alias; do not rewrite old approved packets or treat their model policy as current. `model_id` and effort fields are configured defaults, not proof of runtime selection. `escalation_decision` now records review-depth need, not a model switch.

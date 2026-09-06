@@ -17,6 +17,7 @@ Centralize final design decisions, integration, and high-risk implementation.
 ## Project Defaults
 
 - Keep one parent/main agent responsible for final decisions, integration, verification, and the final user summary.
+- The user has authorized bounded independent read-only delegation. Use the smallest useful number, up to four open spawned agents concurrently across the whole task tree, excluding the parent. This is an initial operating cap, not a target or benchmark. Child agents must coordinate capacity with the parent and must not create their own untracked fan-out.
 - After this skill recommends delegation, use the active runtime's native agent-dispatch tool directly.
 - Prefer read-only subagents for broad search, logs, code-path mapping, risk review, security review, and test triage.
 - Keep implementation in the parent thread unless file/module ownership boundaries are clear and the user explicitly wants parallel implementation.
@@ -130,7 +131,7 @@ Use only when all required conditions hold:
 - final integration can be handled by one main agent
 - tests can run after integration
 - the task is large enough that parallelism saves meaningful time
-- the user explicitly wants parallel implementation or delegation
+- the user explicitly requests parallel implementation; general permission for read-only delegation is insufficient
 
 Each implementation subagent must report scope, changed files, tests run, results, assumptions, and unresolved risks. The main agent must review all diffs, resolve conflicts, normalize style, run final tests, and summarize the integrated result.
 
@@ -152,7 +153,7 @@ Use this priority order:
 1. If requirements are unclear, choose `CLARIFY_OR_PLAN_FIRST`.
 2. If the task is small and linear, choose `DO_NOT_USE_SUBAGENTS`.
 3. If the work is separate features or competing directions, choose `SPLIT_INTO_WORKTREES_OR_THREADS_INSTEAD`.
-4. If `Parallelism Score >= 4` and `Conflict Risk Score <= 2`, choose `USE_SUBAGENTS_FOR_PARALLEL_IMPLEMENTATION`.
+4. If the user explicitly requested parallel implementation, `Parallelism Score >= 4`, and `Conflict Risk Score <= 2`, choose `USE_SUBAGENTS_FOR_PARALLEL_IMPLEMENTATION`.
 5. If `Noise Reduction Score >= 3`, choose `USE_SUBAGENTS_FOR_EXPLORATION`.
 6. If the work is high-risk or boundary-sensitive, choose `USE_SUBAGENTS_FOR_REVIEW_ONLY`.
 7. Otherwise choose main agent only, with optional final review if risk increases.
