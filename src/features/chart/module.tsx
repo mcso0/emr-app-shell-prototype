@@ -10417,10 +10417,18 @@ function OrderArea({
     const results = quickAddResultsRef.current;
     const active = document.getElementById(`${quickAddListId}-${quickAddActive}`);
     if (!quickAddOpen || !results || !active) return;
-    const viewport = results.getBoundingClientRect();
-    const option = active.getBoundingClientRect();
-    if (option.top < viewport.top) results.scrollTop -= viewport.top - option.top;
-    else if (option.bottom > viewport.bottom) results.scrollTop += option.bottom - viewport.bottom;
+    const revealActive = () => {
+      const viewport = results.getBoundingClientRect();
+      const option = active.getBoundingClientRect();
+      // Popover opening scales visual pixels; scrollTop uses layout pixels.
+      const scaleY = viewport.height / results.offsetHeight || 1;
+      if (option.top < viewport.top) results.scrollTop -= (viewport.top - option.top) / scaleY;
+      else if (option.bottom > viewport.bottom) results.scrollTop += (option.bottom - viewport.bottom) / scaleY;
+    };
+    revealActive();
+    const observer = new ResizeObserver(revealActive);
+    observer.observe(results);
+    return () => observer.disconnect();
   }, [quickAddActive, quickAddListId, quickAddOpen, quickAddQuery]);
   useEffect(() => {
     if (!quickAddHighlightedKey) return;

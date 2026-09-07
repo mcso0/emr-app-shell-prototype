@@ -127,3 +127,14 @@ retaining its original 1px containment threshold. No product tolerance changed.
 
 Before opening the PR, rebased over home-only PR #715 (`a6441c75`). The chart
 slice has no overlap; exact-candidate release checks run after that rebase.
+
+### Final quick-add integration fix
+
+A further exact-candidate run passed 12/13 scenarios but exposed intermittent
+keyboard selection clipping in the existing quick-add popup during its opening
+scale animation. A settled-position assertion alone was insufficient. The
+existing local scroll effect now converts visual distances to layout pixels and
+rechecks visibility on list resize; it does not scroll the page or change popup
+layout, query, selection or mutation behavior. The same original 1px containment
+check passed 3/3 consecutive runs after this correction. The superseded remote
+Release Check was cancelled; the final updated head gets its own required run.
