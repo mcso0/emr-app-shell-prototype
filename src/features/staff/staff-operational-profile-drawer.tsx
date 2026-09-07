@@ -22,7 +22,7 @@ import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tab, TabGroup, TabPanel, TabsList } from "@/components/ui/tabs";
-import { PERSONAL_PROFILE_STORAGE_EVENT } from "@/features/auth/personal-profile-session";
+import { PERSONAL_PROFILE_STORAGE_EVENT, PERSONAL_PROFILE_CHANGED_KEY, notifyPersonalProfileChanged } from "@/features/auth/personal-profile-session";
 import {
   EditableProfileAvatar,
   PresenceBadge,
@@ -138,6 +138,34 @@ export function StaffOperationalProfilePanel({
     () => setRetryNonce((value) => value + 1),
     [],
   );
+  useEffect(() => {
+    let pendingRefresh = false;
+    let frame = 0;
+    function refreshWhenIdle() {
+      const focused = document.activeElement;
+      if (focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement || (focused instanceof HTMLElement && focused.isContentEditable)) {
+        pendingRefresh = true;
+        return;
+      }
+      pendingRefresh = false;
+      loadProfile();
+    }
+    function storageChanged(event: StorageEvent) {
+      if (event.key === PERSONAL_PROFILE_CHANGED_KEY) refreshWhenIdle();
+    }
+    function finishEditing() {
+      if (pendingRefresh) frame = window.requestAnimationFrame(refreshWhenIdle);
+    }
+    window.addEventListener(PERSONAL_PROFILE_STORAGE_EVENT, refreshWhenIdle);
+    window.addEventListener("storage", storageChanged);
+    window.addEventListener("focusout", finishEditing);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(PERSONAL_PROFILE_STORAGE_EVENT, refreshWhenIdle);
+      window.removeEventListener("storage", storageChanged);
+      window.removeEventListener("focusout", finishEditing);
+    };
+  }, [loadProfile]);
   const requestKey = `${workspaceId}:${userId}:${date}:${retryNonce}`;
   const requestState =
     loadResult?.key === requestKey
@@ -370,7 +398,7 @@ export function StaffOperationalProfilePanel({
             },
           };
         });
-        window.dispatchEvent(new Event(PERSONAL_PROFILE_STORAGE_EVENT));
+        notifyPersonalProfileChanged();
         uploadId = null;
       } catch (error) {
         if (uploadId) {
@@ -403,7 +431,7 @@ export function StaffOperationalProfilePanel({
         },
       };
     });
-    window.dispatchEvent(new Event(PERSONAL_PROFILE_STORAGE_EVENT));
+    notifyPersonalProfileChanged();
   }, [actorUserId, requestKey, response, workspaceId]);
 
   return (

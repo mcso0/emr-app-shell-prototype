@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import {
@@ -147,6 +148,13 @@ function getSafeNextHref(value: string | null) {
 }
 
 function getAuthSessionNotice(reason: string | null) {
+  if (reason === "password_changed") {
+    return {
+      title: "비밀번호를 변경했습니다.",
+      description: "새 비밀번호로 다시 로그인해 주세요.",
+      tone: "warning",
+    } as const;
+  }
   if (reason === "session_required") {
     return {
       title: "로그인이 필요하거나 세션이 만료되었습니다.",
@@ -732,13 +740,12 @@ export function LoginForm() {
                         <FieldLabel htmlFor="mock-password" className="emr-text-body font-semibold">
                           비밀번호
                         </FieldLabel>
-                        <span
-                          aria-disabled="true"
-                          title="비밀번호 찾기는 준비 중입니다."
-                          className="emr-text-body font-medium text-muted-foreground"
+                        <Link
+                          href="/reset-password"
+                          className="emr-text-body font-medium text-muted-foreground hover:underline focus-visible:underline"
                         >
                           비밀번호 찾기
-                        </span>
+                        </Link>
                       </div>
                       <div className="relative">
                         <Input

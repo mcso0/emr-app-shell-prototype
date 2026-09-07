@@ -91,3 +91,13 @@ Remaining gaps before a real pilot/live rollout:
 - `npm run build` passed.
 - `npm run security:secrets` passed.
 - `git diff --check` passed.
+
+## AUTH-PR-036 personal settings additions
+
+| Route | Method | Server boundary | Denial and verification |
+| --- | --- | --- | --- |
+| `/api/users/me/password` | POST | Server getUser, same-origin JSON, isolated current-password verification with identical actor, original-session update | 401 missing identity, 403 cross-origin, 400 invalid/current password/provider error, 429 rate limit |
+| `/api/users/me/password/recovery` | GET / POST | Server getUser plus verified matching-subject recent recovery AMR; same-origin JSON on mutation | 403 ordinary/expired recovery session or cross-origin; 400 invalid/provider failure; 429 rate limit |
+| `/api/workspaces/[workspaceId]/members/me/notification-preferences` | GET / PATCH | Active app user and membership; derived owner; table self-owned active-member RLS | 403 inactive/non-member; strict body rejects authority fields; read errors do not synthesize defaults |
+
+These routes have no demo actor-header fallback. Synthetic live-mode HTTP regression is in `tests/integration/personal-settings-live.pw.ts`; actual local PostgreSQL RLS checks are in `tests/sql/personal-settings-notification-preferences.sql`. See [personal settings contract](personal-settings-contract.md) for remote verification limits.

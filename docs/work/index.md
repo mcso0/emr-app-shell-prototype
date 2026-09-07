@@ -232,6 +232,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | AUTH-PR-033                 | human_review | auth                 | P0       | PR 33                | `docs/work/auth/AUTH-PR-033-workspace-role-status-db-persistence.md`                                   |
 | AUTH-PR-034                 | human_review | auth                 | P0       | PR 34                | `docs/work/auth/AUTH-PR-034-workspace-role-management-regression-coverage.md`                          |
 | AUTH-PR-035                 | human_review | auth                 | P0       | PR 35                | `docs/work/auth/AUTH-PR-035-personal-profile-live-persistence.md`                                      |
+| AUTH-PR-036 | in_progress | auth | P0 | User approved personal settings implementation and delivery | `docs/work/auth/AUTH-PR-036-personal-settings.md` |
 | AUTH-PR-036                 | human_review | auth                 | P0       | PR 36                | `docs/work/auth/AUTH-PR-036-live-persistence-secret-scanning-gate.md`                                  |
 | AUTH-PR-037                 | human_review | auth                 | P0       | PR 37                | `docs/work/auth/AUTH-PR-037-api-error-telemetry-contract.md`                                           |
 | AUTH-PR-038                 | human_review | auth                 | P0       | PR 38                | `docs/work/auth/AUTH-PR-038-workspace-live-api-rate-limiting.md`                                       |

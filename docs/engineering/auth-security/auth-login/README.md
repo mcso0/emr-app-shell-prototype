@@ -12,6 +12,7 @@
 
 | 필요 | 시작 문서 |
 |---|---|
+| 개인 설정 저장, 비밀번호, 알림 계약 | [Personal settings](personal-settings-contract.md) |
 | 현재 auth/login 진행 상태 | `status.md` |
 | 완료된 auth/login closeout 요약 | `completed-summary.md` |
 | 작업자용 실행 브리핑 | `agent-briefing.md` |

@@ -111,7 +111,7 @@ export function AuthProfileMenu({
           className="relative flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
         >
           <UserIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-          개인 프로필 설정
+          개인 설정
         </a>
         <DropdownMenuItem className="h-8 cursor-pointer gap-2" onClick={() => void onLogout()}>
           <CdsNavigationLogOutIcon className="size-4 text-muted-foreground" aria-hidden="true" />

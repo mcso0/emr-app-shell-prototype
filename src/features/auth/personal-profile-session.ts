@@ -46,6 +46,18 @@ type StorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
 
 export const PERSONAL_PROFILE_STORAGE_KEY = "clair.personalProfiles.v1";
 export const PERSONAL_PROFILE_STORAGE_EVENT = "clair.personalProfiles.v1";
+export const PERSONAL_PROFILE_CHANGED_KEY = "clair.personalProfiles.changed";
+
+export function notifyPersonalProfileChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(PERSONAL_PROFILE_STORAGE_EVENT));
+  try {
+    window.localStorage.setItem(PERSONAL_PROFILE_CHANGED_KEY, `${Date.now()}:${Math.random()}`);
+  } catch {
+    // Cross-tab refresh is best effort; the confirmed server save still succeeded.
+  }
+}
+
 
 const defaultMockProfiles: Record<MockAuthRole, Pick<SessionPersonalProfile, "displayName" | "initials">> = {
   billing_admin: { displayName: "정하린", initials: "HR" },
