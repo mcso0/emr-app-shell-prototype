@@ -162,6 +162,7 @@ test("home paginates beyond one page and separates current patient counts from s
     encounters: [
       { id: "one", patient_id: "patient-a", status: "waiting", checked_in_at: "2026-01-01T09:00:00+09:00" },
       { id: "two", patient_id: "patient-a", status: "in_consultation", checked_in_at: "2026-01-01T09:00:00+09:00" },
+      { id: "billing-first", patient_id: "patient-b", status: "ready_for_billing", checked_in_at: "2026-01-01T09:00:00+09:00" },
       { id: "three", patient_id: "patient-b", status: "waiting", checked_in_at: "2026-01-01T09:00:00+09:00" },
       { id: "four", patient_id: "patient-c", status: "completed", checked_in_at: "2026-01-01T09:00:00+09:00" },
     ],

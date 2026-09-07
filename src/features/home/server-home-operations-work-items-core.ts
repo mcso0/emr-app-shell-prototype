@@ -671,7 +671,10 @@ async function listCalendarItemsFromTables(
     const status = getString(encounter.status);
     const checkedInAt = getString(encounter.checkedInAt);
     if (!patientId || !checkedInAt || Date.parse(checkedInAt) > Date.now() || !status || !["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(status)) continue;
-    if (!present.has(patientId) || status === "in_consultation" || status === "ordered") present.set(patientId, status);
+    const currentStatus = present.get(patientId);
+    if (!currentStatus || status === "in_consultation" || status === "ordered" || (status === "waiting" && currentStatus === "ready_for_billing")) {
+      present.set(patientId, status);
+    }
   }
   const inProgress = [...present.values()].filter((status) => status === "in_consultation" || status === "ordered").length;
   const waiting = [...present.values()].filter((status) => status === "waiting").length;
