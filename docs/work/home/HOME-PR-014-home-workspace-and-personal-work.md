@@ -20,7 +20,7 @@ Implement the approved Home prototype using existing EMR components: hospital bo
 
 ## Approval And Boundaries
 
-승욱 approved implementation, commit, push, PR, merge to origin/main and deployment on 2026-09-07 in this task. Scope is this Home work bundle, existing synthetic/demo source integration, scoped shared-component extension and destination selection. Preserve server permissions and workspace isolation. No real data, source business writes, new reviewer/approval workflow, fixed staging alias/settings changes, external messages or production DB changes are implied. Follow release preflight and exact-candidate gates; this record does not independently grant permission.
+승욱 approved implementation, commit, push, PR, merge to origin/main and deployment on 2026-09-07 in this task. Scope is this Home work bundle, existing synthetic/demo source integration, scoped shared-component extension and destination selection. Preserve server permissions and workspace isolation. No real data, source business writes, new reviewer/approval workflow, fixed staging alias/settings changes or external messages are implied. On 2026-09-08 승욱 additionally approved the Home read-only RPC migration on the existing demo Supabase target after authenticated Preview exposed revoked source-table SELECT grants. Follow release preflight and exact-candidate gates; this record does not independently grant permission.
 
 Base: origin/main d6ad0664; isolated codex/home-workspace-delivery checkout. Primary checkout and its unrelated WIP are preserved.
 
@@ -51,8 +51,8 @@ Home business actions, inbox/messages, SLA policy, real external integrations/da
 
 - Uses shared header/sidebar, queue cards, multiselect controls and table action overlay. Shared card selection is optional; existing selected/unselected consumers retain behavior. Disabled sidebar labels can show 예정.
 - Hospital board/list and independent assigned/requested lists use per-user/workspace display preferences and per-session queries; sign-out clears transient Home state.
-- Server computes per-source permissions before reads and rechecks source/workspace before counts. Existing guarded fulfillment/calendar readers and paginated scoped tables replace the application's legacy aggregate call.
-- Reception is projected from the authoritative encounter when its queue already points to consultation. Operational staff assignments remain separate from the primary veterinarian; multiple assignees are supported. Missing assignment readback is labeled unknown.
+- Server computes per-source permissions before reads and rechecks source/workspace before counts. The new permission-gated, paginated Home source snapshot and existing guarded fulfillment reader replace the application's legacy aggregate call.
+- Reception is projected from the authoritative encounter when its queue already points to consultation. Operational staff assignments remain separate from the primary veterinarian; multiple assignees are supported. The snapshot includes authoritative assignment arrays, including cancelled sources.
 - Scheduled/requested dates remain distinct. Carry-over links use the work's own effective date and exact source ID. Billing requires a real billing candidate anchor.
 - Current patient statistics are distinct current encounters, independent of selected work date. No inpatient persistence is invented.
 
@@ -70,4 +70,16 @@ Implementation and local checks are complete. PR Preview, exact Release Check, P
 
 The historical `clair_list_home_operations_work_items` SECURITY DEFINER RPC still exists remotely and has a previously identified membership-only permission boundary. Home no longer invokes it. Revocation/replacement requires separate scoped DB authorization; this change does not claim to remediate that remote function.
 
-No remote database writes, migrations, business mutations, external messages, real data use or private asset publication were performed for this implementation. Primary checkout WIP remains preserved.
+The additive read-only RPC migration is now explicitly authorized and prepared; remote installation and readback are recorded below. No business mutations, external messages, real data use or private asset publication were performed. Primary checkout WIP remains preserved.
+
+## Authenticated Preview Correction And Demo DB Readback — 2026-09-08
+
+Authenticated Preview revealed that source-table SELECT is revoked for authenticated users. Replaced those reads with `20260907152249_home_source_rows_permission_reader.sql`, applied to the existing demo Supabase after explicit user approval. No table privileges or business rows changed. The public invoker wrapper calls a private permission-checked implementation; operational assignment arrays are now part of the source snapshot, removing calendar fan-out.
+
+- Authorized authenticated RPC read succeeded; anonymous execution is revoked and a nonmember invocation failed with `home_permission_denied`.
+- All eight original source tables still deny authenticated SELECT. Before/after counts and semantic hashes match for all eleven checked demo source/assignment tables.
+- SQL source predicates with chart/billing permission false return no consultation, invoice, invoice-line or order rows. Existing active demo members all have these view permissions, so a real restricted-member session was not available for this branch of the check; no permission policy was altered to manufacture one.
+- Security advisor returned no finding naming the new reader. Project-wide existing advisories remain outside this scope; this is not a clean-project security certification.
+- Ten focused server tests pass, adding missing fulfillment names, incomplete-RPC fail-closed behavior and invoice-only guardian fallback. Original UI/navigation/creation parity checks remain applicable.
+- Paging is complete for static source data; source changes between offset pages are reflected on refresh. No artificial date cutoff is used for earlier unfinished work.
+- Rollback: restore the previous application deployment. The additive read-only RPC can remain unused without affecting the previous app; no source-data rollback is needed.

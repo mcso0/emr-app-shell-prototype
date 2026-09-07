@@ -107,23 +107,20 @@ function sourceClient(rows: Record<string, unknown[]> = {}, fulfillment: unknown
     calls,
     async rpc(name: string, args: Record<string, unknown>) {
       calls.push(`${name}:${args.p_queue_type}`);
-      if (name === "clair_list_reception_day_calendar") return { error: null, data: { records: [
-        ...(rows.appointments ?? []).map((row) => ({ appointment: { id: (row as { id: string }).id, assignedStaffUserIds: [actorUserId] } })),
-        ...(rows.encounters ?? []).map((row) => ({ encounter: { id: (row as { id: string }).id, assignedStaffUserIds: [actorUserId] } })),
-      ], operatingSchedule: {} } };
+      if (name === "clair_get_home_operations_source_snapshot") {
+        expect(args.p_workspace_id).toBe(workspaceId);
+        const offset = Number(args.p_offset);
+        const data = Object.fromEntries(["appointments", "encounters", "waiting_queue_entries", "patients", "guardians", "invoices", "invoice_lines", "orders", "user_memberships"].map((table) => {
+          calls.push(`${table}:${offset}`);
+          return [table, (rows[table] ?? []).slice(offset, offset + Number(args.p_limit)).map((value) => ({ workspace_id: workspaceId, assigned_staff_user_ids: [actorUserId], ...value as object }))];
+        }));
+        return { error: null, data };
+      }
       expect(name).toBe("clair_list_fulfillment_work_items");
       expect(args.p_workspace_id).toBe(workspaceId);
       return { error: null, data: fulfillment };
     },
-    from(table: string) {
-      return { select() { return { eq(column: string, value: string) {
-        expect(column).toBe("workspace_id"); expect(value).toBe(workspaceId);
-        return { order(column: string) { expect(column).toBe("id"); return { async range(from: number, to: number) {
-          calls.push(`${table}:${from}`);
-          return { error: null, data: (rows[table] ?? []).slice(from, to + 1) };
-        } }; } };
-      } }; } };
-    },
+
   };
 }
 const gatewayInput = { actorUserId, includeCancelled: false, includeCompleted: false, operatingDate, scope: "all" as const, workspaceId, allowedSourceTypes: ["reception", "appointment", "consultation", "lab", "billing"] as HomeOperationsWorkItem["sourceType"][] };
@@ -154,6 +151,28 @@ test("home reads authorized sources, scheduled dates, identities, names and exac
   expect(appointment.requestedAt).toBe("2026-06-20T09:00:00+09:00");
   expect(appointment.attentionSignals).not.toContain("long_stay");
   expect(client.calls.filter((name) => name.startsWith("clair_list_fulfillment"))).toEqual(["clair_list_fulfillment_work_items:lab"]);
+});
+
+test("home enriches fulfillment context without snapshot names and fails closed on an incomplete reader response", async () => {
+  const client = sourceClient({
+    encounters: [{ id: "encounter", patient_id: "patient", guardian_id: "guardian", status: "completed", checked_in_at: "2026-01-01T09:00:00+09:00" }],
+    patients: [{ id: "patient", name: "나나" }], guardians: [{ id: "guardian", name: "김보호" }],
+  }, [{ id: "work", workspaceId, encounterId: "encounter", queueType: "lab", status: "requested", createdAt: `${operatingDate}T09:00:00+09:00`, sourceSnapshot: { orderDisplayName: "CBC" } }]);
+  const result = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems(gatewayInput);
+  expect(result.ok && result.items[0]).toMatchObject({ patientId: "patient", patientName: "나나", guardianName: "김보호" });
+  const unavailable = await createSupabaseHomeOperationsWorkItemGateway({ async rpc() { return { data: {}, error: null }; } }).listHomeOperationsWorkItems(gatewayInput);
+  expect(unavailable).toEqual({ ok: false, error: "db_read_failed", retryable: true });
+});
+
+test("billing uses invoice guardian context when encounter guardian is absent", async () => {
+  const client = sourceClient({
+    encounters: [{ id: "encounter", patient_id: "patient", status: "completed", checked_in_at: "2026-01-01T09:00:00+09:00" }],
+    patients: [{ id: "patient", name: "나나" }], guardians: [{ id: "invoice-guardian", name: "김보호" }],
+    invoices: [{ id: "invoice", encounter_id: "encounter", guardian_id: "invoice-guardian", status: "draft", billing_requested_at: `${operatingDate}T09:00:00+09:00`, created_at: `${operatingDate}T09:00:00+09:00` }],
+    invoice_lines: [{ id: "line", invoice_id: "invoice", billing_candidate_id: "candidate", created_at: `${operatingDate}T09:00:00+09:00` }],
+  });
+  const result = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems(gatewayInput);
+  expect(result.ok && result.items.find((item) => item.sourceType === "billing")).toMatchObject({ patientName: "나나", guardianName: "김보호" });
 });
 
 test("home paginates beyond one page and separates current patient counts from selected work date", async () => {

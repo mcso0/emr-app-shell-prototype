@@ -239,7 +239,7 @@ export async function readHomeOperationsWorkItems({
   };
 }
 
-async function listBillingFallbackItemsFromTables(
+async function listBillingFallbackItemsFromSnapshot(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
   input: {
     includeCancelled: boolean;
@@ -249,42 +249,22 @@ async function listBillingFallbackItemsFromTables(
   },
 ): Promise<{ ok: true; items: HomeOperationsWorkItem[] } | { ok: false }> {
   const [invoices, invoiceLines, encounters, patients, guardians, orders] = await Promise.all([
-    listWorkspaceRows(
+    listSnapshotRows(
       client,
-      "invoices",
-      "id, workspace_id, encounter_id, guardian_id, invoice_no, status, subtotal_amount, discount_amount, tax_amount, total_amount, issued_at, paid_at, payment_state, billing_requested_at, created_at",
-      input.workspaceId,
-      200,
-    ),
-    listWorkspaceRows(
+      "invoices", input.workspaceId),
+    listSnapshotRows(
       client,
-      "invoice_lines",
-      "id, workspace_id, invoice_id, order_id, description, quantity, unit_price, line_total, billing_candidate_id, created_at, updated_at",
-      input.workspaceId,
-      500,
-    ),
-    listWorkspaceRows(
+      "invoice_lines", input.workspaceId),
+    listSnapshotRows(
       client,
-      "encounters",
-      "id, workspace_id, patient_id, guardian_id, appointment_id, reception_type",
-      input.workspaceId,
-      300,
-    ),
-    listWorkspaceRows(
+      "encounters", input.workspaceId),
+    listSnapshotRows(
       client,
-      "patients",
-      "id, workspace_id, name",
-      input.workspaceId,
-      300,
-    ),
-    listWorkspaceRows(
+      "patients", input.workspaceId),
+    listSnapshotRows(
       client,
-      "guardians",
-      "id, workspace_id, name",
-      input.workspaceId,
-      300,
-    ),
-    listWorkspaceRows(client, "orders", "id,workspace_id,billing_candidate_id", input.workspaceId, 500),
+      "guardians", input.workspaceId),
+    listSnapshotRows(client, "orders", input.workspaceId),
   ]);
 
   if (!invoices.ok || !invoiceLines.ok || !encounters.ok || !patients.ok || !guardians.ok || !orders.ok) {
@@ -305,24 +285,13 @@ async function listBillingFallbackItemsFromTables(
   };
 }
 
-async function listWorkspaceRows(
+async function listSnapshotRows(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
   tableName: string,
-  columns: string,
   workspaceId: string,
-  limit: number,
 ): Promise<{ ok: true; rows: unknown[] } | { ok: false }> {
-  if (!client.from) return { ok: false };
-
-  const rows: unknown[] = [];
-  const pageSize = Math.min(limit, 500);
-  for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await client.from(tableName).select(columns)
-      .eq("workspace_id", workspaceId).order("id").range(offset, offset + pageSize - 1);
-    if (error) return { ok: false };
-    rows.push(...(data ?? []));
-    if (!data || data.length < pageSize) return { ok: true, rows };
-  }
+  const rows = client.sourceRows?.[tableName];
+  return rows ? { ok: true, rows: rows.filter((value) => getString(getRecord(value)?.workspace_id) === workspaceId) } : { ok: false };
 }
 
 function mapBillingFallbackItemsFromRows({
@@ -463,15 +432,7 @@ export type SupabaseHomeOperationsWorkItemsRpcClient = {
     functionName: string,
     args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
-  from?(tableName: string): {
-    select(columns: string): {
-      eq(column: string, value: string): {
-        order(column: string): {
-          range(from: number, to: number): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
-        };
-      };
-    };
-  };
+  sourceRows?: Record<string, unknown[]>;
 };
 
 export function createSupabaseHomeOperationsWorkItemGateway(
@@ -582,16 +543,16 @@ export function createDemoHomeOperationsWorkItemGateway(): HomeOperationsWorkIte
   };
 }
 
-async function listCalendarItemsFromTables(
+async function listCalendarItemsFromSnapshot(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
   input: Parameters<HomeOperationsWorkItemGateway["listHomeOperationsWorkItems"]>[0],
 ): Promise<{ ok: true; items: HomeOperationsWorkItem[]; currentPatients: { present: number; waiting: number; inProgress: number }; assignmentReadFailed: boolean } | { ok: false }> {
   const [appointments, encounters, queues, patients, guardians] = await Promise.all([
-    listWorkspaceRows(client, "appointments", "id,workspace_id,patient_id,guardian_id,assigned_veterinarian_id,scheduled_start_at,visit_purpose,symptom_note,status,created_by_user_id,created_at,updated_at", input.workspaceId, 500),
-    listWorkspaceRows(client, "encounters", "id,workspace_id,patient_id,guardian_id,appointment_id,primary_veterinarian_id,reception_type,chief_complaint,visit_purpose,status,checked_in_at,checked_in_by_user_id", input.workspaceId, 500),
-    listWorkspaceRows(client, "waiting_queue_entries", "id,workspace_id,encounter_id,queue_type,status,priority,entered_at,called_at,finished_at", input.workspaceId, 500),
-    listWorkspaceRows(client, "patients", "id,workspace_id,name", input.workspaceId, 500),
-    listWorkspaceRows(client, "guardians", "id,workspace_id,name", input.workspaceId, 500),
+    listSnapshotRows(client, "appointments", input.workspaceId),
+    listSnapshotRows(client, "encounters", input.workspaceId),
+    listSnapshotRows(client, "waiting_queue_entries", input.workspaceId),
+    listSnapshotRows(client, "patients", input.workspaceId),
+    listSnapshotRows(client, "guardians", input.workspaceId),
   ]);
   if (!appointments.ok || !encounters.ok || !queues.ok || !patients.ok || !guardians.ok) return { ok: false };
   const camel = (value: unknown) => Object.fromEntries(Object.entries(getRecord(value) ?? {}).map(([key, field]) => [key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()), field]));
@@ -628,43 +589,7 @@ async function listCalendarItemsFromTables(
       } });
     }
   }
-  const relevant = records.filter((record) => {
-    const appointment = getRecord(record.appointment);
-    const queue = getRecord(record.queueEntry);
-    const at = getString(appointment?.scheduledStartAt) ?? getString(queue?.enteredAt);
-    return at && toSeoulDate(at) <= input.operatingDate && mapCalendarFallbackItems([record], input).length > 0;
-  });
-  const days = [...new Set(relevant.map((record) => {
-    const appointment = getRecord(record.appointment);
-    const encounter = getRecord(record.encounter);
-    return toSeoulDate(getString(appointment?.scheduledStartAt) ?? getString(encounter?.checkedInAt) ?? input.operatingDate);
-  }))];
-  const assignments = new Map<string, string[]>();
-  let assignmentReadFailed = false;
-  for (let offset = 0; offset < days.length; offset += 4) {
-    const results = await Promise.all(days.slice(offset, offset + 4).map((day) => client.rpc("clair_list_reception_day_calendar", { p_workspace_id: input.workspaceId, p_day: day })));
-    for (const result of results) {
-      const calendarRecords = Array.isArray(result.data) ? result.data : getRecord(result.data)?.records;
-      if (result.error || !Array.isArray(calendarRecords)) { assignmentReadFailed = true; continue; }
-      for (const value of calendarRecords) {
-        const record = getRecord(value);
-        for (const type of ["appointment", "encounter"] as const) {
-          const source = getRecord(record?.[type]);
-          const id = getString(source?.id);
-          if (id && Array.isArray(source?.assignedStaffUserIds)) assignments.set(`${type}:${id}`, source.assignedStaffUserIds.filter((value): value is string => typeof value === "string"));
-        }
-      }
-    }
-  }
-  for (const record of records) {
-    for (const type of ["appointment", "encounter"] as const) {
-      const source = getRecord(record[type]);
-      if (source) {
-        source.assignedStaffUserIds = assignments.get(`${type}:${source.id}`);
-        source.assignmentUnknown = !assignments.has(`${type}:${source.id}`);
-      }
-    }
-  }
+  const assignmentReadFailed = false;
   const present = new Map<string, string>();
   for (const encounter of encounterRows) {
     const patientId = getString(encounter.patientId);
@@ -697,7 +622,23 @@ async function listHomeOperationsWorkItemsFromExistingSources(
   const accessIssues: HomeOperationsAccessIssue[] = [];
   const items: HomeOperationsWorkItem[] = [];
 
-  const calendar = await listCalendarItemsFromTables(client, input);
+  const sourceRows: Record<string, unknown[]> = {};
+  for (let offset = 0; ; offset += 500) {
+    const snapshot = await client.rpc("clair_get_home_operations_source_snapshot", {
+      p_workspace_id: input.workspaceId, p_offset: offset, p_limit: 500,
+    });
+    const page = getRecord(snapshot.data);
+    const tables = ["appointments", "encounters", "waiting_queue_entries", "patients", "guardians", "invoices", "invoice_lines", "orders", "user_memberships"];
+    if (snapshot.error || !page || tables.some((table) => !Array.isArray(page[table]))) {
+      return { ok: false, error: "db_read_failed", retryable: true };
+    }
+    for (const table of tables) (sourceRows[table] ??= []).push(...page[table] as unknown[]);
+    if (tables.every((table) => (page[table] as unknown[]).length < 500)) break;
+  }
+  const sourceClient: SupabaseHomeOperationsWorkItemsRpcClient = {
+    rpc: (name, args) => client.rpc(name, args), sourceRows,
+  };
+  const calendar = await listCalendarItemsFromSnapshot(sourceClient, input);
   if (!calendar.ok) {
     accessIssues.push({ code: "reception_calendar_read_failed", message: "접수/예약 업무를 불러오지 못했습니다.", sourceType: "reception" });
   } else {
@@ -718,12 +659,21 @@ async function listHomeOperationsWorkItemsFromExistingSources(
     }
   }
   if (input.allowedSourceTypes.includes("billing")) {
-    const billing = await listBillingFallbackItemsFromTables(client, input);
+    const billing = await listBillingFallbackItemsFromSnapshot(sourceClient, input);
     if (!billing.ok) accessIssues.push({ code: "billing_read_failed", message: "수납 업무를 불러오지 못했습니다.", sourceType: "billing" });
     else items.push(...billing.items);
   }
 
-  const memberNames = await listWorkspaceRows(client, "user_memberships", "id,workspace_id,user_id,users!user_memberships_user_id_fkey(display_name)", input.workspaceId, 500);
+  const patientsById = new Map(recordsById(sourceRows.patients).filter((row) => row.workspace_id === input.workspaceId).map((row) => [getString(row.id), row]));
+  const guardiansById = new Map(recordsById(sourceRows.guardians).filter((row) => row.workspace_id === input.workspaceId).map((row) => [getString(row.id), row]));
+  const encountersById = new Map(recordsById(sourceRows.encounters).filter((row) => row.workspace_id === input.workspaceId).map((row) => [getString(row.id), row]));
+  for (const item of items) {
+    const encounter = encountersById.get(item.encounterId);
+    item.patientId ??= getString(encounter?.patient_id);
+    item.patientName ??= getString(patientsById.get(item.patientId)?.name);
+    item.guardianName ??= getString(guardiansById.get(getString(encounter?.guardian_id))?.name);
+  }
+  const memberNames = await listSnapshotRows(sourceClient, "user_memberships", input.workspaceId);
   if (memberNames.ok) {
     const names = new Map(recordsById(memberNames.rows).map((row) => [getString(row.user_id), getString(getRecord(row.users)?.display_name)]));
     for (const item of items) {
