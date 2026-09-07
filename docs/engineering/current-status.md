@@ -2,9 +2,13 @@
 
 Updated: 2026-09-07
 
-Latest WP09 checkpoint: ecfd4059 Preview and Release Check passed. One remaining
-clair-demo lab result-loading condition is corrected locally;248 contracts and
-full type/lint/build pass. Final authenticated acceptance and Production remain open.
+Latest WP09 checkpoint: application1dd8965 passed248 contracts, full type/lint/build,
+Release Check34103715994 and Ready Preview. Three-workspace Admin and authenticated
+consultation/lab/imaging acceptance now pass, including actual v1/v2 and separate
+no-charge retests. Approved Pilot setup adds only synthetic vet002 and a Sep7
+09:00–23:59 one-day operating exception; one synthetic encounter was used.
+Production/main is still unchanged. The final documentation-only candidate and
+exact Production approval remain; see WP09 and the PR711 approval packet.
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Module and release evidence is preserved in [MVP Status Detail Snapshot](current-status-details.md). Older history remains in [MVP Current Status History](current-status-history.md). Read details only for the active task.
 

@@ -598,3 +598,48 @@ now owns fallback, result loading, effective rows, retry and save-refresh consis
 This changes no API, DB, permission or fixture data. Its focused live/mock regression
 and248 combined contracts, full typecheck/lint/build pass. Preview verification of
 this last correction remains; no broader cleanup is included.
+
+## Three-workspace authenticated acceptance complete (2026-09-07)
+
+Application1dd8965cabfeb3d7f2e6aaf79955715441f7262c passes248 contracts,
+typecheck/lint/build/docs/secrets/UX-copy, exact Release Check34103715994 and
+Ready Preview dpl_7Y7h2LnY6SxhyZQ7hDFxwmN3oKcm. No further app changes.
+Clair-demo lab persisted loading and first-entry live empty-chart boundaries pass.
+Nabi original WBC4b9cbfc8-8336-4e43-969c-06804d4a698f=10.2 and separate retest
+0d3ecd98-8b75-4704-8c2d-746b4e59e533=10.4 both complete at entry revision1;
+the retest is no_charge with zero billing candidates. CT38c50fd1-89a9-4f15-b1e2-be06a0f47918
+has actual v1/v2. Existing synthetic May19 encounter26000000-0000-4000-8000-000000000001
+has assigned vet002; new consultation8781e684-44dd-4f6b-ad00-3b38b2829695 passes
+confirmation/actual v1/v2. Each actual plan equals its unchanged Task plan. Both
+encounters'11 old orders retain exact whole-row fingerprints. Nabi's unassigned-vet
+consultation remains draft; its old encounter and clinician contract were not changed.
+
+승욱 explicitly approved Pilot existing synthetic vet002 membership, Sep7
+09:00–23:59 one-day operating exception and one synthetic encounter. A bounded
+transaction inserted membership94526b25-a20e-4892-9819-3ea90b1de350 and
+exception1d9433e0-86aa-42fd-b50b-0be127f56b47; normal role/position/schedule-profile
+triggers remain enabled. All existing memberships and operating exceptions matched
+their pre-write fingerprints. Two audit events identify approved database-fixture
+execution with null application actor, not an impersonated user. No Auth account,
+invitation, email, existing admin role, other workspace or weekly schedule was changed.
+
+Pilot patient98812500-1da2-4d2b-9f6d-b9d6608bde88 was received through UI exactly
+once as encounterff40b595-301c-482e-b7c7-5cc96154cc24, assigned actual vet002.
+The existing room selection starts consultation without creating room configuration.
+New consultation748bcdd4-cc9f-4050-9eda-4abcc2046957 and
+CTff18eac0-8c35-451e-b581-8c54bacaaa32 both complete with actual v1/v2; each has
+one unchanged plan hash and every version matches its Task effective_snapshot.
+WBC6509c648-5734-404a-a569-0c7b41573120=9.8 and separate no-charge retest
+7a09c7ee-e78b-4a67-ae49-50055d5ea035=10.0 both complete at entry revision1.
+The retest has zero billing candidates. Final Pilot encounter count1 and existing
+admin roles[hospital_admin]/active are confirmed. All writes are synthetic QA;
+no actual clinical care, specimen, imaging, device or payment side effect occurred.
+
+Known nonblocking UI limitations are recorded without widening scope: cross-date
+retest links require selecting the actual encounter date, and the confirmation
+dialog shows catalog amount for a no-charge retest despite persisted no-charge
+policy and zero billing candidates. Existing historic tasks/charges remain untouched.
+Production remains maina50f4fe1a9f551dfb27424c54340689fd6cba7ca and Ready
+dpl_5yD97zja82WtWqFp1fBAtJ2UMafq, not this delivery. Old-app promotion alone is
+not DB rollback. Final exact approval packet must preserve this limitation and stop
+for reviewed recovery/forward-fix if scoped Production smoke fails. No merge yet.
