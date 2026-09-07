@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import type { AuthSession } from "@/features/auth/auth-client";
 import {
   PERSONAL_PROFILE_STORAGE_EVENT,
+  PERSONAL_PROFILE_CHANGED_KEY,
+  PERSONAL_PROFILE_STORAGE_KEY,
   createPersonalProfileSession,
   getDefaultSessionPersonalProfile,
   getSessionPersonalProfile,
@@ -92,6 +94,10 @@ export function useCurrentPersonalProfile({
       void loadProfile();
     }
 
+    function handleStorage(event: StorageEvent) {
+      if (event.key === PERSONAL_PROFILE_CHANGED_KEY || event.key === PERSONAL_PROFILE_STORAGE_KEY) handleProfileChange();
+    }
+    window.addEventListener("storage", handleStorage);
     void loadProfile();
     const refreshInterval =
       currentSession.role === "supabase"
@@ -103,6 +109,7 @@ export function useCurrentPersonalProfile({
       requestVersion += 1;
       if (refreshInterval) window.clearInterval(refreshInterval);
       window.removeEventListener(PERSONAL_PROFILE_STORAGE_EVENT, handleProfileChange);
+      window.removeEventListener("storage", handleStorage);
     };
   }, [hydrated, session]);
 

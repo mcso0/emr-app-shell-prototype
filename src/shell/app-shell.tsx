@@ -18,6 +18,7 @@ import {
 import { useWorkspaceEntrySplash } from "@/features/auth/workspace-entry-splash-provider";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
+import { LiveNotificationDelivery } from "@/features/notifications/live-notification-delivery";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
 import {
   type GlobalNotification,
@@ -140,6 +141,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const { completeWorkspaceEntrySplash } = useWorkspaceEntrySplash();
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
+  const [notificationSnapshotScope, setNotificationSnapshotScope] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<GlobalNotification[]>(emptyGlobalNotifications);
   const [notificationCounts, setNotificationCounts] =
     useState<LiveNotificationCounts>(emptyLiveNotificationCounts);
@@ -206,6 +208,14 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }, [hydrateAuth]);
 
   useEffect(() => {
+    if (!authHydrated || authSession?.role !== "supabase") return;
+    const refresh = () => { if (document.visibilityState === "visible") setNotificationReloadKey(key => key + 1); };
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, [authHydrated, authSession?.role, workspaceId]);
+
+  useEffect(() => {
     if (!authHydrated) return;
 
     const controller = new AbortController();
@@ -225,6 +235,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       if (cancelled) return;
 
       if (result.ok) {
+        setNotificationSnapshotScope(`${workspaceId}:${authSession?.id ?? ""}`);
         setNotifications(result.notifications);
         setNotificationCounts(result.counts);
         setNotificationErrorMessage(null);
@@ -246,7 +257,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       cancelled = true;
       controller.abort();
     };
-  }, [actorHeaders, authHydrated, notificationReloadKey, workspaceId]);
+  }, [actorHeaders, authHydrated, authSession?.id, notificationReloadKey, workspaceId]);
 
   useEffect(() => {
     if (tabsInitializedRef.current === workspaceId) return;
@@ -668,6 +679,15 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onNavigateModule={handleNavigateModule}
         onSelectWorkspace={handleSelectWorkspace}
       />
+      {authSession?.role === "supabase" ? <LiveNotificationDelivery
+        key={`${workspaceId}:${authSession.userId}`}
+        workspaceId={workspaceId}
+        userId={authSession.userId}
+        notifications={notifications}
+        ready={notificationRequestState === "ready" && notificationSnapshotScope === `${workspaceId}:${authSession.id}`}
+        currentRoute={currentRoute}
+        onOpenSource={handleOpenNotificationSource}
+      /> : null}
       <GlobalNotificationDrawer
         badgeCount={notificationBadgeCount}
         errorMessage={notificationErrorMessage}

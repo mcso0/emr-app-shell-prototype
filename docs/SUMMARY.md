@@ -62,6 +62,7 @@
 * [DB Structure Spec KO](engineering/data-model/emr-saas-db-structure-spec.ko.md)
 * [Order Fulfillment Handoff Contract](engineering/data-model/order-fulfillment-handoff-contract.md)
 * [Auth Security](engineering/auth-security/auth-login/README.md)
+  * [Personal settings contract](engineering/auth-security/auth-login/personal-settings-contract.md)
 * [MVP Auth Transition Roadmap](engineering/auth-security/mvp-auth-transition-roadmap.md)
 * [Application Security Review Checklist](engineering/auth-security/application-security-review-checklist.md)
 * [Application Security Review 2026-07-07](engineering/auth-security/application-security-review-2026-07-07.md)

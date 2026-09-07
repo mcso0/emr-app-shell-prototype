@@ -1435,10 +1435,10 @@ test("profile menu opens personal profile settings with personal-only fields", a
   await expect(page.getByTestId("top-menu-mock-user")).toBeVisible();
   await expect(page.getByTestId("top-menu-profile-avatar-fallback").first()).toHaveText("M");
   await page.getByTestId("top-menu-mock-user").click();
-  await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
+  await page.getByRole("menuitem", { name: "개인 설정" }).click();
 
   await expect(page).toHaveURL(/\/profile/);
-  await expect(page.getByRole("heading", { name: "개인 프로필" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "프로필", exact: true })).toBeVisible();
   await expect(page.getByLabel("이름")).toHaveValue("송민재");
   await expect(page.getByLabel("연락처")).toHaveValue("");
   await expect(page.getByLabel("이니셜")).toHaveCount(0);
@@ -1465,10 +1465,10 @@ test("personal profile settings validate editable fields and save session-only d
   }, storageKey);
   await page.goto("/w/clair-demo/reception?modulePanel=open&aside=closed");
   await page.getByTestId("top-menu-mock-user").click();
-  await page.getByRole("menuitem", { name: "개인 프로필 설정" }).click();
+  await page.getByRole("menuitem", { name: "개인 설정" }).click();
 
   await page.getByLabel("이름").fill("");
-  await page.getByRole("button", { name: "저장하기" }).click();
+  await page.getByRole("button", { name: "저장", exact: true }).click();
 
   await expect(page.getByText("이름을 입력하세요.")).toBeVisible();
 
@@ -1479,10 +1479,10 @@ test("personal profile settings validate editable fields and save session-only d
       response.url().includes("/api/users/me/profile") &&
       response.request().method() === "PATCH"
   );
-  await page.getByRole("button", { name: "저장하기" }).click();
+  await page.getByRole("button", { name: "저장", exact: true }).click();
   await expect((await profileSaveResponse).status()).toBe(200);
 
-  await expect(page.getByText("프로필이 저장되었습니다.")).toBeVisible();
+  await expect(page.getByText("변경사항을 저장했습니다.")).toBeVisible();
 
   const stored = await page.evaluate((key) => {
     const value = window.localStorage.getItem(key);
@@ -1498,7 +1498,7 @@ test("personal profile settings validate editable fields and save session-only d
   expect(stored.profiles[0]).not.toHaveProperty("roles");
   expect(stored.profiles[0]).not.toHaveProperty("roleLabel");
 
-  await page.getByRole("link", { name: /VIP 동물의료센터 청담점/ }).click();
+  await page.getByRole("button", { name: /VIP 동물의료센터 청담점/ }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/reception/);
   await page.getByTestId("top-menu-mock-user").click();
   await expect(page.getByTestId("top-menu-profile-avatar-fallback").first()).toHaveText("김");

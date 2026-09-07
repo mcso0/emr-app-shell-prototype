@@ -147,6 +147,13 @@ function getSafeNextHref(value: string | null) {
 }
 
 function getAuthSessionNotice(reason: string | null) {
+  if (reason === "password_changed") {
+    return {
+      title: "비밀번호를 변경했습니다.",
+      description: "새 비밀번호로 다시 로그인해 주세요.",
+      tone: "warning",
+    } as const;
+  }
   if (reason === "session_required") {
     return {
       title: "로그인이 필요하거나 세션이 만료되었습니다.",
