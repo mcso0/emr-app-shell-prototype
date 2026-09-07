@@ -28,7 +28,7 @@ Every `main` merge is a Production-release action. The repository does not use a
 
 ## Production Approval Packet
 
-Before any merge, show the packet and stop.
+Before a merge, prepare the exact candidate packet. Reuse existing explicit approval for the same target, source SHA, included scope, and operation; otherwise show the packet and request the missing approval after authorized preparation is complete.
 
 | Field | Required content |
 | --- | --- |

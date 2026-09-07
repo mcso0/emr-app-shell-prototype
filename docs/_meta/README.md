@@ -2,19 +2,9 @@
 
 This folder defines how humans and agents operate `docs/` as the repo-native knowledge, routing, and work-management system.
 
-## Read First
+## Choose A Rule When Needed
 
-- Taxonomy: `docs/_meta/taxonomy.md`
-- Lifecycle: `docs/_meta/lifecycle.md`
-- Intake rules: `docs/_meta/intake-rules.md`
-- Documentation depth rules: `docs/_meta/documentation-depth-rules.md`
-- Agent RAG map: `docs/_meta/agent-rag-map.md`
-- Owner Safety OS: `docs/_meta/owner-safety-os.md`
-- Non-developer Codex workflow: `docs/_meta/non-developer-codex-workflow.md`
-- Legacy GitBook structure rules: `docs/_meta/gitbook-structure-rules.md`
-- Legacy GitBook private operations checklist: `docs/_meta/gitbook-private-operations-checklist.md`
-- Legacy GitBook docs site creation plan: `docs/_meta/gitbook-docs-site-creation-plan.md`
-- Result review rules: `docs/_meta/result-review-rules.md`
+Use intake/depth rules for documentation changes, the RAG map when an owner is unclear, and result-review rules for completion/report depth. Use taxonomy or lifecycle only when placement or status semantics are involved. The list below is a reference directory, not required startup reading. GitBook rules apply only if 승욱 explicitly revives GitBook.
 
 ## Operating Rule Docs
 

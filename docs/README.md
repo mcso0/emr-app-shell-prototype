@@ -4,14 +4,9 @@ This page is the human-facing entry point for the CLAiR EMR documentation portal
 
 ## Start Here
 
-Read these first for most work:
+Use [Agent Start Here](agent-start-here.md) when selecting a reading path. Read [MVP Current Status](engineering/current-status.md) when scope, mock/live state, or readiness affects the task. For PR-sized work, search the [Work Index](work/index.md) and use the relevant issue; simple questions and isolated fixes can start at their owning file.
 
-1. [Agent Start Here](agent-start-here.md)
-2. [MVP Current Status](engineering/current-status.md)
-3. [Work Index](work/index.md)
-4. The active Linear issue or linked `docs/work/` item
-
-Use detailed history, completed reports, and archived plans only when the active task needs them.
+Detailed history, completed reports, and archived plans are optional evidence sources for tasks that need them.
 
 ## Current Operating Model
 
@@ -22,7 +17,7 @@ Use detailed history, completed reports, and archived plans only when the active
 | `/prd` app route  | Legacy-compatible product-doc viewer path retained for existing links                                         |
 | GitBook           | Inactive/deprecated reader path preserved for history; do not treat it as active navigation or editing source |
 | Linear            | Work start point, status board, Human Review handoff, and PR-sized issue tracking                             |
-| Codex             | Reads only startup docs plus task-specific source docs to avoid token waste                                   |
+| Codex             | Selects only the owning docs and relevant evidence for the current task                                   |
 
 ## Core Sources
 

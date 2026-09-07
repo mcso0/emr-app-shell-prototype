@@ -1,6 +1,6 @@
 ---
 name: emr-owner-safety-os
-description: Use for CLAiR EMR Owner Safety OS requests, especially when the user says "안전 점검 게이트", "안전 점검 게이트 열어줘", "작업 점검", "안전운영체계", "Safety OS", "PR 전 점검", "수정하지 말고 리뷰", "Safe fixes만", "비개발자 안전검토", or asks to review code/security/DB/testing/design/documentation risk before or after Codex work. Explicit Safety OS gate requests start with intake and approval; ordinary review requests directly authorize read-only inspection. Fixes require an explicit in-scope change request.
+description: Run explicit Safety OS intake or a requested CLAiR safety review; ordinary reviews proceed read-only.
 ---
 
 # EMR Owner Safety OS
@@ -30,7 +30,7 @@ Read only enough to classify the work:
 - `git status --short`.
 - `git diff --stat` when local changes matter.
 - Active Linear issue or `docs/work/` item when known.
-- `docs/agent-start-here.md` and `docs/engineering/current-status.md` if not already read in the current session.
+- Relevant `docs/engineering/current-status.md` sections only when product scope, mock/live, data, permissions, or release readiness affects the review. Use the startup map only if the reading path is unclear.
 
 Do not read checklist references during intake unless the user already approved a specific review.
 

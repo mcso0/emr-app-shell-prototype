@@ -1,6 +1,6 @@
 ---
 name: context-hub-docs-router
-description: Use when coding against external APIs, SDKs, libraries, or rapidly changing platform docs, especially when the user mentions Context Hub, chub, latest API docs, hallucination prevention, Stripe, Supabase, Playwright, React, Vercel, or other third-party integration docs. This repo skill treats chub as an optional agent documentation tool, not an app dependency.
+description: Look up version-matched API or library documentation for implementation; Context Hub is optional.
 ---
 
 # Context Hub Docs Router
@@ -16,7 +16,7 @@ Use this skill to reduce API/library hallucinations while preserving CLAiR EMR's
 Choose the smallest reliable source for the task:
 
 1. Repo-local rules and docs required by `AGENTS.md`.
-2. For Next.js application code, read the relevant guide under `node_modules/next/dist/docs/` before coding.
+2. For changes depending on Next.js APIs, configuration, or framework behavior, read the relevant installed guide under `node_modules/next/dist/docs/`.
 3. For OpenAI, Codex, or OpenAI API questions, use official OpenAI docs or the configured Docs MCP first and cite sources when answering.
 4. For installed libraries, check the project version in `package.json` or lockfile before relying on external docs.
 5. Use `chub` as a supplemental external-docs source when official local docs are unavailable, noisy, or when the user explicitly asks for Context Hub/chub.

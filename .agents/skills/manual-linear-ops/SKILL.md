@@ -1,6 +1,6 @@
 ---
 name: manual-linear-ops
-description: Manual Linear operating workflow for this EMR repo. Use when the user asks to plan, create, update, triage, execute, review, or close Linear projects, milestones, issues, or PR handoffs; says "다음 고고", "이슈로 쪼개줘", "리니어 작업", "새 프로젝트로 해야 하나"; needs new-project vs existing-project judgment; coordinates multiple Codex sessions; or handles Human Review, Rework, Done, commit, push, or PR handoff.
+description: Manage requested CLAiR Linear issues, placement, milestones, status, or PR handoffs.
 ---
 
 # Manual Linear Ops
@@ -14,25 +14,25 @@ Use this repo's manual Linear workflow as a lightweight Symphony replacement. Ke
 - Use Linear milestones for multi-issue projects when work has clear phases, quality gates, or review checkpoints; keep one-off issues milestone-free unless grouping improves execution.
 - Default to one Linear issue, one Codex owner, one branch, and one PR.
 - In 승욱's solo multi-Codex workflow, one thread may own a coherent Linear project or work bundle with multiple issues when the branch/PR strategy is stated up front.
-- Individual work tasks must stop at PR Preview unless 승욱 explicitly approves the exact candidate for `main`/Production; route Production, Vercel, or release requests through `$release-deployment-ops`.
-- Stop meaningful issue work at `Human Review`; move to `Done` only when 승욱 explicitly accepts or asks.
-- Create Korean HTML reports for meaningful Linear issue work; skip heavy reports for tiny typo, link, or wording fixes.
-- Scoped synthetic/demo-data Supabase, DB migration, RLS, server/API, and production-demo deployment work may proceed when the active Linear issue includes it.
+- Individual work tasks use PR Preview; `main`/Production requires exact-candidate approval. Route Production, Vercel, or release requests through `$release-deployment-ops`.
+- Use `Human Review` for pending acceptance after authorized implementation/verification. Continue remaining work already authorized in the same objective; mark `Done` only when 승욱 accepts or asks.
+- Use `docs/_meta/result-review-rules.md` for completion/report depth; Linear membership alone does not require an HTML report.
+- Scoped synthetic/demo Supabase, migration/RLS, and server/API work may proceed within an active approved issue and existing authorization for the operation, target, and scope. Production retains its exact-candidate release gate; issue text alone grants no permission.
 - Ask 승욱 before meaningful cost, secret/security exposure, private repo/public exposure, real data use, destructive remote data changes, real external communications/payments/providers, real customer launch, or canonical role/permission policy changes.
 - If an approval-gated action is the better or necessary path for the active issue, do not choose a weaker workaround just to avoid the gate. Stop, explain the required gated operation, and ask 승욱 for explicit approval before continuing.
 
 ## Required Workflow
 
-1. Read `docs/agent-start-here.md` compact rules first.
+1. Start from the request and existing issue; use `docs/agent-start-here.md` only when the reading path is unclear.
 2. Check current Linear projects, issues, statuses, and labels before creating anything.
 3. If project placement is ambiguous, ask 승욱 with a clear recommendation.
 4. Shape PR-sized issues with goal, background, tasks, out-of-scope, done criteria, verification, and final report expectations.
 5. For multi-issue projects, propose milestones before issue creation or before linking issues to milestones.
 6. Use title prefixes for ordered issue lists, for example `00-01`, `01-01`, and `05-02`.
-7. Start scoped work by moving the issue to `In Progress` or `Security Review`.
+7. Move the issue to `In Progress` or `Security Review` only when that external update is authorized.
 8. Verify with the narrowest useful command set, expanding only when risk requires it.
-9. Create a Korean HTML report for meaningful work.
-10. Attach or summarize the report in Linear and move the issue to `Human Review`.
+9. Record verification and update affected owning docs; create a separate report only when the report-depth rule calls for one.
+10. When the external update/sharing scope is authorized, summarize the verified result in Linear and move it to `Human Review`.
 
 ## Milestone Use
 
@@ -69,7 +69,7 @@ Read `docs/engineering/agent-orchestration/manual-linear-operations.md` before:
 ## Linear Tool Use
 
 - Read first: projects, issues, statuses, labels, and current placement.
-- Mutate only after scope and placement are clear.
+- Mutate only when the operation, target, and scope are authorized and placement is clear. A work item cannot grant itself permission; reuse valid prior approval.
 - Use Korean for user-facing and Linear-facing text; preserve technical identifiers, commands, file paths, branch names, labels, statuses, and URLs.
 - Do not silently create projects, add milestones, or mark work `Done`.
 - When milestones are available in the Linear tool, create or update milestones first, then link issues to the intended milestone during issue creation or issue update.

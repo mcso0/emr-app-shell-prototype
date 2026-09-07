@@ -1,6 +1,6 @@
 ---
 name: figma-implementation-report
-description: Create a project-aware, standalone HTML implementation report from a Figma design for the CLAiR EMR Next.js and React repository. Use when the user provides a Figma link or node and asks for a design review, exact UI reproduction plan, componentization, design-system or token mapping, conflict analysis, interactive prototype, motion proposal, or implementation-ready contract. Default to read-only report mode; change application code, shared components, tokens, APIs, or dependencies only after explicit approval.
+description: Create a CLAiR implementation report from Figma references before separately authorized implementation.
 ---
 
 # Figma Implementation Report
