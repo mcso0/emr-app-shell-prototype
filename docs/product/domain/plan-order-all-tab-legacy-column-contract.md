@@ -1375,3 +1375,95 @@ classifications live in `CHART-PR-031-VALIDATION`, not in this ledger.
 - [Order Fulfillment Handoff Engineering Contract](../../engineering/data-model/order-fulfillment-handoff-contract.md)
 - [Workspace Order Catalog Platform](workspace-order-catalog-platform.md)
 - [Chart Editable Order Table](../../work/chart/CHART-PR-007-editable-order-table.md)
+
+## Final UI Implementation Criteria — 2026-09-08
+
+Final owner-approved design target, implemented locally in CHART-PR-036.
+DB schema and production behavior remain unchanged; delivery is not included.
+This section supersedes older header, blank-cell, and visual ordering rules in
+this document; underlying lifecycle, authorization, and billing rules remain.
+
+### Columns And Presentation
+
+| Situation | `오더 확정` | `업무 상태` | Row |
+| --- | --- | --- | --- |
+| Unconfirmed, required input valid | `확정 대기`, neutral badge | Muted `—` | Retained |
+| Unconfirmed, input incomplete/invalid | `입력 필요`, orange badge | Muted `—` | Retained |
+| Confirmed, task exists | `확정`, green badge | Actual task icon + domain label | Retained |
+| Confirmed, no task | `확정`, green badge | `—` | Retained |
+| Cancelled after confirmation, with or without a task | `확정`, green badge | Cancel icon + `취소` | Retained |
+| Unconfirmed candidate removed | Not rendered | Not rendered | Removed from table |
+
+- `오더 확정` expresses the confirmation history boundary. A cancelled confirmed
+  order remains in the confirmed group; its stored cancellation status is not
+  rewritten to `confirmed`. Do not give it a separate cancellation badge or
+  move it to a special last group.
+- Resolve display in this order: unconfirmed candidate → `—`; confirmed order
+  cancelled → `취소`; otherwise actual task state → existing label/icon; otherwise
+  `—`. Order cancellation takes precedence over a preserved completed, returned,
+  re-requested, or absent task. A task cancellation also displays `취소`.
+- Preserve completed results, attempts, events, and audit history. This target
+  requires a display projection, not overwriting terminal task state or creating
+  a task for consultation/no-task orders.
+- Use 22px compact text badges, subtle borders, and existing neutral/warning/
+  success tokens. Row backgrounds remain neutral; preserve hover, selection,
+  focus, and disabled affordances. Scope styling to Plan/Order.
+- Reuse `EmrSidePanelStateIcon` with explicit mappings from task state and detailed
+  phase. Preserve domain labels (`판독완`, `부분완`, `반려`, etc.). Returned work and
+  re-requested work are distinct. Do not infer an icon from an unknown label.
+- For unconfirmed `—`, expose `확정 후 업무 상태가 표시됩니다` on hover and keyboard
+  focus, with an accessible description.
+- Reuse existing confirmation validation. `입력 필요` opens the existing relevant
+  detail editor; permission, save conflict, locking, and server failure remain
+  distinct explanations and must not be relabeled as missing inputs.
+
+### Ordering And Pinned Columns
+
+- Default group order: `확정 대기` → `입력 필요` → `확정`. Keep stable relative order
+  within groups. This is display ordering, not a transition sequence.
+- Keep the edited row in place during input. Reorder after editing ends or
+  confirmation succeeds, not on each keystroke. Failed confirmation must not
+  move a row into the confirmed group.
+- Explicit user-selected column sorting takes precedence over the default.
+- Keep set parents and children together; sort groups by their parent, retaining
+  child order. Excluded children keep existing inclusion semantics and must not
+  become independent confirmation targets or spurious input blockers.
+- Pin `select`, `분류`, `오더 확정`, `Order 명` in that order. `업무 상태` follows
+  `Order 명` and scrolls with subsequent columns.
+
+### Deletion, Cancellation, And Scope
+
+- Unconfirmed candidates may be removed through existing candidate removal.
+  The storage marker `draft_candidate_removed` is not a visible cancelled order.
+- Confirmed orders cannot be removed from the table. Preserve existing selection,
+  history, amendment, re-request, and cancellation actions, including confirmed
+  selection and the prohibition on independent set-child cancellation.
+- Cancellation keeps the row, confirmation history, and previous clinical results.
+  Existing invoice-linked cancellation restrictions and billing correction paths
+  remain unchanged. No permission or DB lifecycle change is authorized here.
+- The standalone prototype illustrates presentation with sample data. Its sample
+  selection/confirmation controls do not replace existing application actions;
+  do not copy its disabled confirmed checkboxes, sample search/filter controls,
+  or simplified validation into production behavior.
+- Keep unrelated WIP and quick-add work intact. Local implementation is recorded
+  in [CHART-PR-036](../../work/chart/CHART-PR-036-plan-order-status-presentation.md);
+  remote mutation, merge, and deployment require applicable delivery authorization.
+
+### Verification And Handoff
+
+Required checks: unconfirmed `—`/tooltip; input correction without premature task
+state; successful/failed confirmation; cancelled completed, re-requested, returned,
+and no-task orders all showing `취소`; row retention after cancellation versus
+candidate removal; confirmed selection/actions; set grouping and excluded children;
+editing stability and explicit sort precedence; pinned-column scrolling; keyboard
+access and local row surfaces without shared-table regressions.
+
+Remote read-only evidence inspected on 2026-09-08: the production alias resolved
+to Ready deployment `dpl_BdNWGxmEMtyDU4hPszoe4ik1mH6V`, GitHub Production deployment
+`6306790982`, SHA `d6ad06646e0a9821e13834bd605d3145185c7111`. The connected remote
+Supabase cancellation function preserved terminal task states while cancelling
+orders; its definition MD5 was `9a9f92f6a4c22b18dad9928c573a7b8b`. Deployed UI source
+read task state without an order-cancellation override. These are inspected
+snapshots, not proof of a new cancellation run or permanent current deployment.
+No cancellation mutation was executed. No confirmed-cancelled example was returned
+by the scoped Cheongdam aggregate query.

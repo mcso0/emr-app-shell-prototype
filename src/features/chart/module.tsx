@@ -24,7 +24,6 @@ import {
 } from "@dnd-kit/sortable";
 import {
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type ColumnOrderState,
@@ -80,6 +79,8 @@ import {
 } from "@/components/emr/content-history-list";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
+import { ChartOrderConfirmationBadge, ChartOrderWorkStatus } from "./components/chart-order-status";
+import { chartOrderConfirmationRank, getChartOrderConfirmationState, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverHeader, EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
@@ -4732,15 +4733,7 @@ function getChartOrderClinicalType(row: ChartOrderDraftRow) {
 }
 
 function isChartOrderConfirmedRow(row: ChartOrderDraftRow) {
-  const confirmationStatus = row.runtimeRow?.orderConfirmationStatus;
-  if (confirmationStatus) return confirmationStatus !== "draft";
-  return [
-    "confirmed",
-    "in_progress",
-    "completed",
-    "cancelled",
-    "re_requested",
-  ].includes(row.order.status);
+  return isChartOrderPresentationConfirmed(row);
 }
 
 function getChartOrderSelectionCohort(
@@ -4794,6 +4787,7 @@ function isChartOrderSetChildIncluded(child: ChartOrderDraftRow) {
 }
 
 type ChartOrderSortKey =
+  | "confirmation"
   | "groupTitle"
   | "orderType"
   | "status"
@@ -4811,6 +4805,7 @@ type ChartOrderSortState = {
 } | null;
 
 const chartOrderSortLabels: Record<ChartOrderSortKey, string> = {
+  confirmation: "오더 확정",
   billingName: "청구서명",
   chargeAmount: "청구금액",
   displayName: "Order 명",
@@ -4819,7 +4814,7 @@ const chartOrderSortLabels: Record<ChartOrderSortKey, string> = {
   orderType: "분류",
   quantity: "수량",
   requestedBy: "수의사",
-  status: "상태",
+  status: "업무 상태",
   unitPrice: "단가",
 };
 
@@ -4836,8 +4831,9 @@ const CHART_ORDER_SCROLL_COLUMN_WIDTH_PX = 137.25;
 const chartOrderColumnOrder: ColumnOrderState = [
   "select",
   "orderType",
-  "status",
+  "confirmation",
   "displayName",
+  "status",
   "billingName",
   "billingReflection",
   "durationDays",
@@ -4862,7 +4858,7 @@ const chartOrderColumnOrder: ColumnOrderState = [
   "requestedBy",
 ];
 const chartOrderColumnPinning: ColumnPinningState = {
-  left: ["select", "orderType", "status", "displayName"],
+  left: ["select", "orderType", "confirmation", "displayName"],
   right: [],
 };
 const chartOrderColumnVisibility = {
@@ -6066,6 +6062,7 @@ function compareChartOrderValues(
   b: ChartOrderDraftRow,
   key: ChartOrderSortKey,
 ) {
+  if (key === "confirmation") return 0; // Validation-aware ordering is owned by ChartOrderTable.
   if (key === "groupTitle") {
     return a.groupTitle.localeCompare(b.groupTitle, "ko-KR", {
       numeric: true,
@@ -6566,6 +6563,7 @@ function ChartOrderActualDispenseCell({
 }
 
 function ChartOrderTable({
+  detailOpen,
   quickAdd,
   revealOrderId,
   highlightedOrderId,
@@ -6610,6 +6608,7 @@ function ChartOrderTable({
   quickAdd?: ReactNode;
   revealOrderId?: string;
   highlightedOrderId?: string;
+  detailOpen: boolean;
   selectionActionsHidden: boolean;
   actualDispenseSavingOrderIds: Set<string>;
   intendedAssigneeLoadingOrderIds: Set<string>;
@@ -6672,11 +6671,31 @@ function ChartOrderTable({
     emrTableDensityOptions.find((option) => option.value === density)
       ?.headerHeight ?? 36;
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
+  const [sortHold, setSortHold] = useState<{ ids: string[]; source: "inline" | "detail" } | null>(null);
+  // Closing the detail editor commits the editing boundary before sorting again.
+  if (sortHold?.source === "detail" && !detailOpen) setSortHold(null);
+  const sortedRows = useMemo(() => sortChartOrderGroups(rows, (a, b) => {
+    if (!sortState || sortState.key === "confirmation") {
+      const difference = chartOrderConfirmationRank[getChartOrderConfirmationState(a, invalidOrderIds)] -
+        chartOrderConfirmationRank[getChartOrderConfirmationState(b, invalidOrderIds)];
+      return sortState?.direction === "desc" ? -difference : difference;
+    }
+    const difference = sortState.key === "status"
+      ? getChartOrderWorkPresentation(a).label.localeCompare(getChartOrderWorkPresentation(b).label, "ko-KR")
+      : compareChartOrderValues(a, b, sortState.key);
+    return sortState.direction === "desc" ? -difference : difference;
+  }, sortHold?.ids), [rows, sortState, invalidOrderIds, sortHold]);
+  const openDetail = (orderId: string) => {
+    setSortHold({ ids: sortedRows.map(row => row.order.id), source: "detail" });
+    onOpenDetail(orderId);
+  };
+
   const quickAddSurfaceRef = useRef<HTMLDivElement>(null);
   const quickAddComposerRef = useRef<HTMLDivElement>(null);
   const revealedOrderIdRef = useRef<string | undefined>(undefined);
   const showQuickAdd = hasAnyRows && !loading && Boolean(quickAdd);
   const editableCallbacksRef = useRef({
+    openDetail,
     onFlushDraft,
     onLoadIntendedAssignees,
     onSaveActualDispense,
@@ -6689,6 +6708,7 @@ function ChartOrderTable({
     onUpdateQuantity,
   });
   editableCallbacksRef.current = {
+    openDetail,
     onFlushDraft,
     onLoadIntendedAssignees,
     onSaveActualDispense,
@@ -6700,6 +6720,8 @@ function ChartOrderTable({
     onUpdatePriority,
     onUpdateQuantity,
   };
+  const invalidOrderIdsRef = useRef(invalidOrderIds);
+  invalidOrderIdsRef.current = invalidOrderIds;
   const pendingRemovalOrderIdsRef = useRef(pendingRemovalOrderIds);
   pendingRemovalOrderIdsRef.current = pendingRemovalOrderIds;
   const latestTaskByOrderId = useMemo(() => {
@@ -6716,7 +6738,7 @@ function ChartOrderTable({
     () =>
       sortState
         ? [{ desc: sortState.direction === "desc", id: sortState.key }]
-        : [],
+        : [{ id: "confirmation", desc: false }],
     [sortState],
   );
   const rowSelection = useMemo<RowSelectionState>(
@@ -6855,8 +6877,25 @@ function ChartOrderTable({
         },
       },
       {
+        id: "confirmation",
+        accessorFn: (row) => getChartOrderConfirmationState(row, invalidOrderIdsRef.current),
+        size: 100,
+        minSize: 100,
+        maxSize: 100,
+        enableResizing: false,
+        header: chartOrderSortLabels.confirmation,
+        cell: ({ row }) => (
+          <ChartOrderConfirmationBadge
+            state={getChartOrderConfirmationState(row.original, invalidOrderIdsRef.current)}
+            disabled={pendingRemovalOrderIdsRef.current.has(row.original.order.id)}
+            onOpenDetail={() => editableCallbacksRef.current.openDetail(row.original.order.id)}
+          />
+        ),
+        meta: { label: chartOrderSortLabels.confirmation, headerInteraction: "sortable", resize: "none" },
+      },
+      {
         id: "status",
-        accessorFn: (row) => row.order.status,
+        accessorFn: (row) => getChartOrderWorkPresentation(row).label,
         size: 84,
         minSize: 84,
         maxSize: 84,
@@ -6868,16 +6907,8 @@ function ChartOrderTable({
           const pendingRemoval = pendingRemovalOrderIdsRef.current.has(
             row.original.order.id,
           );
-          const statusLabel = pendingRemoval
-            ? "삭제 중"
-            : getChartOrderStatusLabel(row.original);
-          if (!statusLabel) return <span aria-hidden="true" />;
-          return (
-            <EmrStatusBadge
-              label={statusLabel}
-              marker={pendingRemoval ? "icon" : "none"}
-            />
-          );
+          if (pendingRemoval) return <EmrStatusBadge label="삭제 중" marker="icon" />;
+          return <ChartOrderWorkStatus row={row.original} />;
         },
         meta: {
           label: chartOrderSortLabels.status,
@@ -7713,7 +7744,7 @@ function ChartOrderTable({
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns,
-    data: rows,
+    data: sortedRows,
     enableColumnPinning: true,
     columnResizeMode: "onChange",
     enableColumnResizing: true,
@@ -7723,7 +7754,7 @@ function ChartOrderTable({
       isChartOrderTopLevelRow(row.original),
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.order.id,
-    getSortedRowModel: getSortedRowModel(),
+    manualSorting: true,
     onColumnSizingChange: setColumnSizing,
     onRowSelectionChange: handleRowSelectionChange,
     onSortingChange: handleSortingChange,
@@ -7793,6 +7824,25 @@ function ChartOrderTable({
   return (
     <div
       data-slot="chart-order-table-surface"
+      onFocusCapture={(event) => {
+        const target = event.target as HTMLElement;
+        if (target.matches('input:not([type="checkbox"]), textarea, select, [contenteditable="true"], [role="combobox"]')) {
+          setSortHold(current => current ?? { ids: sortedRows.map(row => row.order.id), source: "inline" });
+        }
+      }}
+      onClickCapture={(event) => {
+        // Let a clicked row action fire before releasing the edited row position.
+        if ((event.target as HTMLElement).closest('button:not([role="combobox"])')) {
+          setSortHold(current => current?.source === "inline" ? null : current);
+        }
+      }}
+      onBlurCapture={(event) => {
+        const next = event.relatedTarget as HTMLElement | null;
+        if (next?.closest('[role="listbox"], [role="dialog"], [data-slot="popover-content"]')) return;
+        if (next && event.currentTarget.contains(next) && next.closest('button')) return;
+        if (next && event.currentTarget.contains(next) && next.matches('input:not([type="checkbox"]), textarea, select, [contenteditable="true"], [role="combobox"]')) return;
+        setSortHold(current => current?.source === "inline" ? null : current);
+      }}
       className="h-full overflow-hidden bg-[var(--emr-surface-panel)]"
     >
       <div ref={quickAddSurfaceRef} className="relative h-full min-h-0 min-w-0">
@@ -7819,17 +7869,9 @@ function ChartOrderTable({
           skeletonRowCount={5}
           table={table}
           viewportMode="fill"
-          getRowState={(row) => {
-            if (invalidOrderIds.has(row.original.order.id)) return "error";
-            if (
-              writeDisabled ||
-              pendingRemovalOrderIds.has(row.original.order.id)
-            )
-              return "disabled";
-            return isChartOrderConfirmedRow(row.original)
-              ? "confirmed"
-              : "draft";
-          }}
+          getRowState={(row) =>
+            writeDisabled || pendingRemovalOrderIds.has(row.original.order.id) ? "disabled" : "normal"
+          }
           getRowOverlayAriaLabel={(row) =>
             `${row.original.order.displayName} 행 작업`
           }
@@ -7889,7 +7931,7 @@ function ChartOrderTable({
                   <EmrIconButton
                     aria-label={`${order.displayName} 상세`}
                     className={iconClassName}
-                    onClick={() => onOpenDetail(order.id)}
+                    onClick={() => openDetail(order.id)}
                     type="button"
                   >
                     <CdsMedicalFileSearchIcon aria-hidden="true" />
@@ -7922,7 +7964,7 @@ function ChartOrderTable({
                       {
                         key: "detail",
                         label: setParent ? "세트 상세" : "마스터·세부값 보기",
-                        onSelect: () => onOpenDetail(order.id),
+                        onSelect: () => openDetail(order.id),
                       },
                     ]}
                     testId={`chart-order-more-${order.id}`}
@@ -7937,7 +7979,7 @@ function ChartOrderTable({
                 <EmrIconButton
                   aria-label={`${order.displayName} 상세`}
                   className={iconClassName}
-                  onClick={() => onOpenDetail(order.id)}
+                  onClick={() => openDetail(order.id)}
                   type="button"
                 >
                   <CdsMedicalFileSearchIcon aria-hidden="true" />
@@ -8093,6 +8135,7 @@ function ChartOrderTable({
             );
           }}
           getRowProps={(row) => ({
+            "data-order-confirmation": getChartOrderConfirmationState(row.original, invalidOrderIds),
             className: cn("text-[var(--emr-text-secondary)]"),
             style: row.original.order.id === highlightedOrderId && !invalidOrderIds.has(row.original.order.id)
               ? { "--emr-table-row-state-surface": "var(--emr-status-info-bg)" } as CSSProperties
@@ -12979,6 +13022,7 @@ function OrderArea({
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
+            detailOpen={detailOrderId !== null}
             revealOrderId={quickAddedRow?.order.id}
             highlightedOrderId={quickAddedSourceKey === quickAddHighlightedKey ? quickAddedRow?.order.id : undefined}
             quickAdd={

@@ -1292,7 +1292,7 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
   );
 });
 
-test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", async ({
+test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", async ({
   page,
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
@@ -1336,8 +1336,8 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
     };
   });
 
-  expect(referenceMetrics.leftPinnedWidth).toBe(394);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1128);
+  expect(referenceMetrics.leftPinnedWidth).toBe(410);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1112);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
@@ -1352,7 +1352,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
   expect(pinnedColumnIds).toEqual([
     "select",
     "orderType",
-    "status",
+    "confirmation",
     "displayName",
   ]);
 
@@ -1362,7 +1362,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
     name: "오더 전체 선택",
   });
   const statusSortButton = orderTable.getByRole("button", {
-    name: "상태 오름차순 정렬",
+    name: "업무 상태 오름차순 정렬",
   });
 
   await expect(selectionHeader).toHaveCSS("width", "32px");
@@ -1397,7 +1397,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
   ]);
   expect(viewportBox).not.toBeNull();
   expect(scrollbarBox).not.toBeNull();
-  expect(Math.abs(scrollbarBox!.x - viewportBox!.x - 394)).toBeLessThanOrEqual(
+  expect(Math.abs(scrollbarBox!.x - viewportBox!.x - 410)).toBeLessThanOrEqual(
     1,
   );
   expect(
@@ -1518,7 +1518,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
   }
 });
 
-test("chart Order all tab renders the exact approved 25-column legacy contract", async ({
+test("chart Order all tab renders the approved order confirmation and work-state columns", async ({
   page,
 }) => {
   await page.goto(chartFigmaVisualFixture.route);
@@ -1548,8 +1548,9 @@ test("chart Order all tab renders the exact approved 25-column legacy contract",
   );
   expect(namedHeaders).toEqual([
     "분류",
-    "상태",
+    "오더 확정",
     "Order 명",
+    "업무 상태",
     "청구서명",
     "청구반영",
     "일수",
@@ -7660,7 +7661,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   ).toBe(true);
   await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
   await expect(addedRow).toHaveAttribute(
-    "data-emr-data-table-row-state",
+    "data-order-confirmation",
     "confirmed",
   );
 
@@ -7673,7 +7674,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
     .first();
   await expect(restoredRow).toContainText("[CBC 검사] #BASO");
   await expect(restoredRow).toHaveAttribute(
-    "data-emr-data-table-row-state",
+    "data-order-confirmation",
     "confirmed",
   );
   await expect(
@@ -8546,9 +8547,10 @@ test("chart quick-add scrolls only long results and keeps its anchor during hori
   await input.press("ArrowUp");
   await expect(input).toHaveAttribute("aria-activedescendant", await list.getByRole("option").last().getAttribute("id") as string);
   await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  const [listBox, lastBox] = await Promise.all([list.boundingBox(), list.getByRole("option").last().boundingBox()]);
-  expect(lastBox!.y).toBeGreaterThanOrEqual(listBox!.y - 1);
-  expect(lastBox!.y + lastBox!.height).toBeLessThanOrEqual(listBox!.y + listBox!.height + 1);
+  await expect.poll(async () => {
+    const [listBox, lastBox] = await Promise.all([list.boundingBox(), list.getByRole("option").last().boundingBox()]);
+    return Math.max(listBox!.y - lastBox!.y, lastBox!.y + lastBox!.height - listBox!.y - listBox!.height);
+  }).toBeLessThanOrEqual(1);
   expect(await page.evaluate(() => window.scrollY)).toBe(initialWindowScroll);
   await input.press("ArrowDown");
   await expect(input).toHaveAttribute("aria-activedescendant", await list.getByRole("option").first().getAttribute("id") as string);
@@ -8557,4 +8559,41 @@ test("chart quick-add scrolls only long results and keeps its anchor during hori
   await scrollOwner.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
   await expect.poll(async () => Math.abs((await input.boundingBox())!.x - before.x)).toBeLessThan(1);
   await expect(input).toBeFocused();
+});
+
+test("chart status presentation keeps edits in place until blur and hides unconfirmed work", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  // Earlier confirmation scenarios share the mock server; isolate this draft UI case.
+  await page.route("**/api/workspaces/clair-demo/chart/order-drafts*", async route => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = await response.json();
+    body.rows = body.rows.map((row: Record<string, unknown>) => row.orderId === "order-kong-cbc"
+      ? { ...row, orderId: "status-draft-cbc", orderConfirmationStatus: "draft", status: "requested" } : row);
+    await route.fulfill({ response, json: body });
+  });
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const rows = table.locator('tbody tr[data-testid^="chart-order-row-"]');
+  const ids = () => rows.evaluateAll(elements => elements.map(element => element.getAttribute("data-testid")));
+  const initialIds = await ids();
+  const target = page.getByTestId("chart-order-row-status-draft-cbc");
+  await expect(target).toHaveAttribute("data-order-confirmation", "ready");
+  await expect(target.locator('td[data-column-id="status"]')).toHaveText("—");
+  await target.getByLabel("확정 후 업무 상태가 표시됩니다").focus();
+  await expect(page.getByRole("tooltip")).toHaveText("확정 후 업무 상태가 표시됩니다");
+  const quantity = target.getByLabel("status-draft-cbc 수량 수정");
+  await quantity.fill("0");
+  await expect(target).toHaveAttribute("data-order-confirmation", "invalid");
+  expect(await ids()).toEqual(initialIds);
+  await quantity.press("Enter");
+  await expect.poll(ids).not.toEqual(initialIds);
+  const ranks = await rows.evaluateAll(elements => elements.map(element =>
+    ({ ready: 0, invalid: 1, confirmed: 2 })[element.getAttribute("data-order-confirmation") as "ready" | "invalid" | "confirmed"]));
+  expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
+  await expect(target).toHaveAttribute("data-emr-data-table-row-state", "normal");
+  await target.getByRole("button", { name: "입력 필요", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("status-draft-cbc");
 });
