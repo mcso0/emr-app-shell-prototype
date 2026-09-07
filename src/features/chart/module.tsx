@@ -1,5 +1,12 @@
 "use client";
 
+import { readPersistedOrderDefaults } from "@/features/hospital-admin/persisted-order-defaults";
+import { LabResultProfileSelection } from "@/features/lab-imaging/components/result-profile-selection";
+import { isChartActualType, type ChartActualRecords } from "./chart-actual-contract";
+import { buildChartActualRecords, ChartActualConfirmation, type ChartActualDraft, type ChartActualConfirmationRow } from "./chart-actual-confirmation";
+import { ChartActualHistory } from "./chart-actual-history";
+import { ChartRoutedExecutionActions } from "./chart-routed-execution-actions";
+import { InpatientLocationPicker } from "@/features/inpatient/inpatient-location-picker";
 import {
   DndContext,
   KeyboardSensor,
@@ -265,6 +272,7 @@ import {
 } from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
   formatCompactKoreanOperatingDateLabel,
   formatOperatingShortTime,
@@ -296,6 +304,7 @@ import type {
 } from "@/features/chart/server-order-draft-persistence-core";
 import {
   CLINICAL_ORDER_FIELD_SCHEMAS,
+  getClinicalOrderFieldSchema,
   CLINICAL_ORDER_TYPES,
   isClinicalOrderType,
   resolveClinicalOrderMasterContract,
@@ -992,7 +1001,9 @@ function useActiveChartBundle(workspaceId: string) {
     (state) => state.selectedEncounterId,
   );
   const { queueScopeMatches, records } = useScopedChartLiveQueue(workspaceId);
-  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
 
   if (!allowMockFallback && !queueScopeMatches) return null;
 
@@ -1164,7 +1175,9 @@ function useChartLiveQueueCoordinator(workspaceId: string) {
   const selectedEncounterIdRef = useRef(selectedEncounterId);
   const explicitEncounterIdRef = useRef(explicitEncounterId);
   const demoScenarioEncounterIdRef = useRef(demoScenarioEncounterId);
-  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const legacySalesDemo =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const scopeMatches =
     liveQueueScope?.workspaceId === workspaceId &&
     liveQueueScope.date === selectedDate;
@@ -1522,7 +1535,10 @@ function useScenarioEncounterSync(workspaceId: string) {
     queryEncounterId !== null && queryEncounterBundle !== null;
 
   useEffect(() => {
-    if (!isLegacySalesDemoWorkspace(workspaceId)) return;
+    if (
+      !isLegacySalesDemoWorkspace(workspaceId) ||
+      getAuthRuntimeMode().authProvider !== "mock"
+    ) return;
     if (liveQueueStatus === "ready" && liveQueueRecords.length === 0) return;
     if (!queryEncounterId || !hasValidQueryEncounter) return;
     if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
@@ -1573,7 +1589,9 @@ export function ChartSidePanel({
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
   const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
-  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const legacySalesDemo =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const { selectDate, selectedDate, todayDate } =
     useChartOperatingDate(workspaceId);
   const mockItems = useMemo(
@@ -1688,7 +1706,9 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   >(null);
   const { queueScopeMatches, records: liveQueueRecords } =
     useScopedChartLiveQueue(workspaceId);
-  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const activeBundle = getSelectedBundle(
     queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
     liveQueueRecords,
@@ -1932,7 +1952,8 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
     chartHistoryScope.patientId === bundle.patient.id,
   );
   const liveHistoryRows =
-    !isLegacySalesDemoWorkspace(workspaceId) &&
+    (!isLegacySalesDemoWorkspace(workspaceId) ||
+      getAuthRuntimeMode().authProvider === "supabase") &&
     liveHistoryScopeMatches &&
     chartHistoryStatus === "ready"
       ? chartHistoryRecords
@@ -2758,6 +2779,21 @@ async function saveChartOrderDraftRoute({
       // draft inputs would lose the set parent/child discriminator on retry.
       if (row.runtimeRow?.rowType === "set_child") return [];
 
+      // RPC rows are upserts, not a replacement list. Re-submitting an
+      // untouched row would rebase its pinned snapshot (or reject a paused
+      // source). Keep it locally and submit only new/edited roots; a changed
+      // set child still requires its parent and the complete child inputs.
+      if (
+        row.runtimeRow &&
+        !isChartOrderDraftRowDirty(row) &&
+        !rows.some(
+          (child) =>
+            child.runtimeRow?.rowType === "set_child" &&
+            child.runtimeRow.parentOrderId === row.order.id &&
+            isChartOrderDraftRowDirty(child),
+        )
+      ) return [];
+
       const isSet =
         row.runtimeRow?.rowType === "set" ||
         row.catalogSearchRow?.rowType === "set" ||
@@ -3107,6 +3143,7 @@ async function loadChartBillingCandidates({
 }
 
 async function saveChartOrderActionRoute({
+  actualRecords,
   action,
   actorHeaders,
   encounterId,
@@ -3115,6 +3152,7 @@ async function saveChartOrderActionRoute({
   orderIds,
   workspaceId,
 }: {
+  actualRecords?: ChartActualRecords;
   action: ChartOrderActionKind;
   actorHeaders?: Record<string, string>;
   encounterId: string;
@@ -3134,6 +3172,7 @@ async function saveChartOrderActionRoute({
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
+          actualRecords,
           action,
           encounterId,
           expectedEtag: expectedEtag ?? "",
@@ -4590,7 +4629,6 @@ type ChartOrderDraftRow = ChartOrderTableRow & {
 type ChartOrderSelectionCohort = "draft" | "confirmed";
 
 type ChartOrderInlineFieldColumn = {
-  definitions: Partial<Record<ClinicalOrderType, ClinicalOrderFieldDefinition>>;
   displayOrder: number;
   key: string;
   label: string;
@@ -4599,12 +4637,11 @@ type ChartOrderInlineFieldColumn = {
 const chartOrderInlineFieldColumns = (() => {
   const columns = new Map<string, ChartOrderInlineFieldColumn>();
   for (const clinicalOrderType of CLINICAL_ORDER_TYPES) {
-    for (const definition of CLINICAL_ORDER_FIELD_SCHEMAS[clinicalOrderType]
-      .fields) {
+    for (const definition of [...CLINICAL_ORDER_FIELD_SCHEMAS[clinicalOrderType].fields,
+      ...(getClinicalOrderFieldSchema(clinicalOrderType, 2)?.fields ?? [])]) {
       if (definition.placement !== "inline") continue;
       const current = columns.get(definition.key);
       if (current) {
-        current.definitions[clinicalOrderType] = definition;
         current.displayOrder = Math.min(
           current.displayOrder,
           definition.displayOrder,
@@ -4612,7 +4649,6 @@ const chartOrderInlineFieldColumns = (() => {
         continue;
       }
       columns.set(definition.key, {
-        definitions: { [clinicalOrderType]: definition },
         displayOrder: definition.displayOrder,
         key: definition.key,
         label: definition.label,
@@ -4669,6 +4705,19 @@ const chartOrderFieldOptionLabels: Record<string, string> = {
   intensive: "집중",
   isolation: "격리",
   other: "기타",
+  preparation: "준비",
+  procedure: "처치·시술",
+  surgery: "수술",
+  dental: "치과 처치",
+  administration: "투여",
+  device_session: "장비 세션",
+  measurement: "측정",
+  monitoring: "관찰·모니터링",
+  session: "회",
+  load: "적재 회차",
+  not_applicable: "해당 없음",
+  separate_medication_order: "별도 약품 오더 연결",
+  direct_quantity: "재료·용액 사용량 직접 계획",
 };
 
 function getChartOrderClinicalType(row: ChartOrderDraftRow) {
@@ -4704,14 +4753,14 @@ function getChartOrderFieldValue(
   row: ChartOrderDraftRow,
   definition: ClinicalOrderFieldDefinition,
 ) {
-  return row.detailInputs[definition.key] ?? definition.defaultValue;
+  return row.detailInputs[definition.key];
 }
 
 function formatChartOrderFieldValue(
   value: unknown,
   definition: ClinicalOrderFieldDefinition,
 ) {
-  if (value === null || value === undefined || value === "") return "—";
+  if (value === null || value === undefined || value === "") return "미설정";
   if (typeof value === "boolean") return value ? "예" : "아니오";
   if (Array.isArray(value)) return value.length ? `${value.length}개` : "—";
   const formatted = chartOrderFieldOptionLabels[String(value)] ?? String(value);
@@ -5495,7 +5544,8 @@ function getChartOrderCalculatedDispense(row: ChartOrderDraftRow) {
 
 function getChartOrderActualDispense(row: ChartOrderDraftRow) {
   const outputs = row.runtimeRow?.calculationOutputs ?? {};
-  const quantity = outputs.actualDispenseQuantity;
+  const quantity = outputs.preparationSchemaVersion === 2
+    ? outputs.plannedPracticalDispenseQuantity : outputs.actualDispenseQuantity;
   const unit = outputs.actualDispenseUnit;
   const precision = getChartOrderAuthority(row)?.preparationPolicy
     ?.displayPrecision;
@@ -5507,7 +5557,9 @@ function getChartOrderActualDispense(row: ChartOrderDraftRow) {
         typeof precision === "number" ? precision : 0,
       useGrouping: false,
     });
-    return `${formatted}${typeof unit === "string" && unit ? ` ${unit}` : ""}`;
+    const scope = outputs.preparationSchemaVersion === 2
+      ? outputs.preparationQuantityScope === "course_total" ? " (전체)" : " (1회)" : "";
+    return `${formatted}${typeof unit === "string" && unit ? ` ${unit}` : ""}${scope}`;
   }
   if (isChartOrderConfirmedRow(row)) return "미기록";
   if (outputs.dispenseApplicability === false) return "";
@@ -5671,6 +5723,15 @@ function applyChartOrderActualDispense(
           actualDispenseQuantity: state.actualDispenseQuantity,
           actualDispenseSource: state.actualDispenseSource,
           actualDispenseUnit: state.actualDispenseUnit,
+          ...(state.preparationSchemaVersion === 2 ? {
+            preparationSchemaVersion: 2,
+            preparationQuantityScope: state.preparationQuantityScope,
+            plannedPracticalDispenseQuantity: state.plannedPracticalDispenseQuantity,
+            plannedPracticalDispenseUnit: state.actualDispenseUnit,
+            plannedPracticalDispenseSource: state.actualDispenseSource,
+            plannedPracticalTotalQuantity: state.plannedPracticalTotalQuantity,
+            totalRequiredDispenseQuantity: state.plannedPracticalTotalQuantity,
+          } : {}),
           requiresReconfirmation: state.requiresReconfirmation,
         },
         updatedAt: state.updatedAt,
@@ -6077,6 +6138,19 @@ function ChartOrderInlineFieldCell({
     return <span aria-label="해당 없음">—</span>;
   }
   const value = getChartOrderFieldValue(row, definition);
+  if (definition.key === "responsibleClinicianId") {
+    const clinicianId = typeof value === "string" ? value.trim() : "";
+    return (
+      <EmrTableCellText
+        mode="one-line"
+        fullText={clinicianId
+          ? `${clinicianId} · 진료 담당 수의사에서 자동 결정돼요.`
+          : "진료 담당 수의사가 미배정되어 있어요. 접수에서 지정한 뒤 다시 불러와 주세요."}
+      >
+        {clinicianId || "담당 수의사 미배정"}
+      </EmrTableCellText>
+    );
+  }
   const editable =
     !writeDisabled &&
     !isChartOrderConfirmedRow(row) &&
@@ -6094,6 +6168,12 @@ function ChartOrderInlineFieldCell({
   }
 
   if (definition.control === "switch") {
+    if (typeof value !== "boolean") return (
+      <Select value={null} onValueChange={(next) => onUpdateDetailInput(row.order.id, definition.key, next === null ? undefined : next === "true")}>
+        <SelectTrigger aria-label={ariaLabel}><SelectValue placeholder="미설정" /></SelectTrigger>
+        <SelectContent><SelectItem value="true">예</SelectItem><SelectItem value="false">아니오</SelectItem></SelectContent>
+      </Select>
+    );
     return (
       <span
         className="inline-flex min-h-7 items-center gap-2"
@@ -6312,7 +6392,7 @@ function ChartOrderActualDispenseCell({
           <PopoverTrigger
             render={
               <Button
-                aria-label={`${row.order.displayName} 실조제량 변경 사유`}
+                aria-label={`${row.order.displayName} 준비 예정량 변경 사유`}
                 size="tiny"
                 type="button"
                 variant="ghost"
@@ -6322,7 +6402,7 @@ function ChartOrderActualDispenseCell({
             <CdsContentEdit2Icon aria-hidden="true" />
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64">
-            <p className="emr-text-metadata font-semibold">실조제량 변경</p>
+            <p className="emr-text-metadata font-semibold">준비 예정량 변경</p>
             <p className="emr-text-metadata text-[var(--emr-text-secondary)]">
               {reason}
             </p>
@@ -6347,7 +6427,7 @@ function ChartOrderActualDispenseCell({
   return (
     <span className="flex min-w-0 items-center gap-1" data-row-interactive="true">
       <Input
-        aria-label={`${row.order.displayName} 실조제량`}
+        aria-label={`${row.order.displayName} 준비 예정량`}
         aria-invalid={!inputValid}
         className={cn(
           "h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-right emr-text-metadata tabular-nums",
@@ -6360,7 +6440,11 @@ function ChartOrderActualDispenseCell({
         min={policy!.minimum ?? policy!.increment}
         onChange={(event) => setInput(event.target.value)}
         step={policy!.increment}
-        title={validationTitle}
+        title={validationTitle ?? (outputs.preparationSchemaVersion === 2
+          ? outputs.preparationQuantityScope === "course_total"
+            ? "처방 전체의 준비 예정량 · 실제 조제 결과가 아님"
+            : "1회 준비 예정량 · 실제 조제 결과가 아님"
+          : "준비 예정량 · 실제 조제 결과가 아님")}
         type="number"
         value={input}
       />
@@ -6382,7 +6466,7 @@ function ChartOrderActualDispenseCell({
         <PopoverTrigger
           render={
             <Button
-              aria-label={`${row.order.displayName} 실조제량 저장`}
+              aria-label={`${row.order.displayName} 준비 예정량 저장`}
               disabled={!inputValid || !changed || saving}
               size="icon-xs"
               type="button"
@@ -6394,7 +6478,7 @@ function ChartOrderActualDispenseCell({
         </PopoverTrigger>
         <PopoverContent align="end" className="w-72">
           <p className="emr-text-metadata font-semibold">
-            실조제량 변경 사유가 필요해요
+            준비 예정량 변경 사유가 필요해요
           </p>
           <p className="emr-text-micro text-[var(--emr-text-secondary)]">
             기준값 {proposedQuantity!.toFixed(precision)} {authority?.dispenseUnit}
@@ -6417,7 +6501,7 @@ function ChartOrderActualDispenseCell({
             ))}
           </div>
           <Textarea
-            aria-label={`${row.order.displayName} 기타 실조제량 변경 사유`}
+            aria-label={`${row.order.displayName} 기타 준비 예정량 변경 사유`}
             maxLength={500}
             onChange={(event) => setCustomReason(event.target.value)}
             placeholder="기타 사유를 3자 이상 입력해 주세요"
@@ -6441,7 +6525,7 @@ function ChartOrderActualDispenseCell({
           <PopoverTrigger
             render={
               <Button
-                aria-label={`${row.order.displayName} 실조제량 변경 사유`}
+                aria-label={`${row.order.displayName} 준비 예정량 변경 사유`}
                 size="tiny"
                 type="button"
                 variant="ghost"
@@ -6451,7 +6535,7 @@ function ChartOrderActualDispenseCell({
             <CdsContentEdit2Icon aria-hidden="true" />
           </PopoverTrigger>
           <PopoverContent align="end" className="w-64">
-            <p className="emr-text-metadata font-semibold">실조제량 변경</p>
+            <p className="emr-text-metadata font-semibold">준비 예정량 변경</p>
             <p className="emr-text-metadata text-[var(--emr-text-secondary)]">
               {typeof override.reason === "string" && override.reason.trim()
                 ? override.reason
@@ -6478,6 +6562,7 @@ function ChartOrderActualDispenseCell({
 }
 
 function ChartOrderTable({
+  selectionActionsHidden,
   actualDispenseSavingOrderIds,
   intendedAssigneeLoadingOrderIds,
   intendedAssigneeOptionsByOrderId,
@@ -6515,6 +6600,7 @@ function ChartOrderTable({
   sortState,
   writeDisabled,
 }: {
+  selectionActionsHidden: boolean;
   actualDispenseSavingOrderIds: Set<string>;
   intendedAssigneeLoadingOrderIds: Set<string>;
   intendedAssigneeOptionsByOrderId: Record<
@@ -6924,7 +7010,7 @@ function ChartOrderTable({
           id: `detail-${field.key}`,
           accessorFn: (row) => {
             const definition =
-              field.definitions[getChartOrderClinicalType(row)];
+              getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion)?.fields.find(definition => definition.key === field.key);
             return definition ? getChartOrderFieldValue(row, definition) : null;
           },
           size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
@@ -6932,9 +7018,11 @@ function ChartOrderTable({
           enableSorting: false,
           header: field.label,
           cell: ({ row }) => (
-            <ChartOrderInlineFieldCell
+            field.key === "wardOrCage" && getChartOrderClinicalType(row.original) === "hospitalization"
+              ? <Button size="tiny" variant="outline" onClick={() => onOpenDetail(row.original.order.id)}>병동·케이지 선택/보기</Button>
+              : <ChartOrderInlineFieldCell
               definition={
-                field.definitions[getChartOrderClinicalType(row.original)]
+                getClinicalOrderFieldSchema(getChartOrderClinicalType(row.original), row.original.detailSchemaVersion)?.fields.find(definition => definition.key === field.key)
               }
               onFlushDraft={() => editableCallbacksRef.current.onFlushDraft()}
               onUpdateDetailInput={(orderId, fieldKey, value) =>
@@ -6953,7 +7041,7 @@ function ChartOrderTable({
           ),
           meta: {
             align:
-              field.definitions.dispensing?.valueType === "number"
+              CLINICAL_ORDER_FIELD_SCHEMAS.dispensing.fields.find(definition => definition.key === field.key)?.valueType === "number"
                 ? "right"
                 : "left",
             label: field.label,
@@ -7198,7 +7286,7 @@ function ChartOrderTable({
         size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
         enableSorting: false,
-        header: "실조제량",
+        header: "준비 예정량",
         cell: ({ row }) => (
           <ChartOrderActualDispenseCell
             disabled={writeDisabled}
@@ -7217,7 +7305,7 @@ function ChartOrderTable({
         ),
         meta: {
           align: "right",
-          label: "실조제량",
+          label: "준비 예정량",
           resize: "data-column",
           textMode: "one-line",
         },
@@ -7598,6 +7686,7 @@ function ChartOrderTable({
     ],
     [
       actualDispenseSavingOrderIds,
+      onOpenDetail,
       intendedAssigneeLoadingOrderIds,
       intendedAssigneeOptionsByOrderId,
       intendedAssigneeSavingOrderIds,
@@ -7840,6 +7929,7 @@ function ChartOrderTable({
             );
           }}
           renderSelectionActionBar={({ selectedRows: selected }) => {
+            if (selectionActionsHidden) return null;
             const selectedOriginalRows = selected.map((row) => row.original);
             const cohort = getChartOrderSelectionCohort(
               selectedOriginalRows[0]!,
@@ -7990,18 +8080,55 @@ function ChartOrderTable({
 function ChartOrderFieldControl({
   definition,
   disabled,
+  medicationOrders,
   onChange,
   orderName,
   value,
 }: {
   definition: ClinicalOrderFieldDefinition;
   disabled: boolean;
+  medicationOrders?: Array<{ id: string; name: string }>;
   onChange: (value: unknown | undefined) => void;
   orderName: string;
   value: unknown;
 }) {
   const ariaLabel = `${orderName} ${definition.label}`;
+  if (definition.key === "responsibleClinicianId") {
+    const clinicianId = typeof value === "string" ? value.trim() : "";
+    return (
+      <div className="space-y-1">
+        <Input
+          aria-label={ariaLabel}
+          disabled={disabled}
+          readOnly
+          value={clinicianId}
+          placeholder="담당 수의사 미배정"
+        />
+        <p className="emr-text-metadata text-[var(--emr-text-secondary)]">
+          {clinicianId
+            ? "진료 담당 수의사에서 자동 결정돼요."
+            : "진료 담당 수의사가 미배정되어 있어요. 접수에서 지정한 뒤 다시 불러와 주세요."}
+        </p>
+      </div>
+    );
+  }
+  if (definition.key === "linkedMedicationOrderId" && medicationOrders) {
+    const selected = typeof value === "string" && value ? value : null;
+    return <Select disabled={disabled} value={selected} onValueChange={next => onChange(next === "__clear__" ? undefined : next)}>
+      <SelectTrigger aria-label={ariaLabel}><SelectValue placeholder="같은 진료의 약품 오더 선택" /></SelectTrigger>
+      <SelectContent><SelectItem value="__clear__">연결 해제</SelectItem>
+        {selected && !medicationOrders.some(order => order.id === selected) ? <SelectItem value={selected} disabled>현재 선택할 수 없는 오더 · {selected}</SelectItem> : null}
+        {medicationOrders.map(order => <SelectItem key={order.id} value={order.id}>{order.name} · {order.id.slice(-8)}</SelectItem>)}
+      </SelectContent>
+    </Select>;
+  }
   if (definition.control === "switch") {
+    if (typeof value !== "boolean") return (
+      <Select disabled={disabled} value={null} onValueChange={(next) => onChange(next === null ? undefined : next === "true")}>
+        <SelectTrigger aria-label={ariaLabel}><SelectValue placeholder="미설정" /></SelectTrigger>
+        <SelectContent><SelectItem value="true">예</SelectItem><SelectItem value="false">아니오</SelectItem></SelectContent>
+      </Select>
+    );
     return (
       <span className="inline-flex min-h-9 items-center gap-2">
         <Switch
@@ -8106,6 +8233,10 @@ function ChartOrderFieldControl({
 }
 
 function ChartOrderDetailSheet({
+  medicationOrders,
+  workspaceId,
+  onBeforeProfileSelect,
+  onProfileSelected,
   onFlushDraft,
   onOpenChange,
   onUpdateDetailInput,
@@ -8114,6 +8245,10 @@ function ChartOrderDetailSheet({
   row,
   writeDisabled,
 }: {
+  medicationOrders: Array<{ id: string; name: string }>;
+  workspaceId: string;
+  onBeforeProfileSelect: () => Promise<boolean>;
+  onProfileSelected: () => void;
   onFlushDraft: () => void;
   onOpenChange: (open: boolean) => void;
   onUpdateDetailInput: (
@@ -8132,7 +8267,8 @@ function ChartOrderDetailSheet({
   if (!row) return null;
   const confirmed = isChartOrderConfirmedRow(row);
   const clinicalOrderType = getChartOrderClinicalType(row);
-  const contract = CLINICAL_ORDER_FIELD_SCHEMAS[clinicalOrderType];
+  const contract = getClinicalOrderFieldSchema(clinicalOrderType, row.detailSchemaVersion);
+  if (!contract) return null;
   const orderFields = contract.fields;
   const setParent = row.runtimeRow?.rowType === "set";
   const setChild = row.runtimeRow?.rowType === "set_child";
@@ -8206,6 +8342,9 @@ function ChartOrderDetailSheet({
                 />
               </label>
             )}
+            {!setParent && ["clinical_lab", "external_lab"].includes(clinicalOrderType) && row.order.id ? <LabResultProfileSelection
+              workspaceId={workspaceId} orderId={row.order.id} disabled={writeDisabled || confirmed}
+              onBeforeSelect={onBeforeProfileSelect} onSelected={onProfileSelected} /> : null}
             {!setParent && orderFields.length ? (
               orderFields.map((definition) => (
                 <label key={definition.key} className="grid gap-1.5">
@@ -8215,15 +8354,18 @@ function ChartOrderDetailSheet({
                       <span className="text-destructive">*</span>
                     ) : null}
                   </span>
-                  <ChartOrderFieldControl
+                  {clinicalOrderType === "hospitalization" && definition.key === "wardOrCage" ? <InpatientLocationPicker
+                    workspaceId={workspaceId} value={String(getChartOrderFieldValue(row, definition) ?? "")}
+                    disabled={writeDisabled || confirmed} onChange={value => onUpdateDetailInput(row.order.id, definition.key, value)} /> : <ChartOrderFieldControl
                     definition={definition}
                     disabled={writeDisabled || confirmed}
+                    medicationOrders={medicationOrders}
                     onChange={(value) =>
                       onUpdateDetailInput(row.order.id, definition.key, value)
                     }
                     orderName={row.order.displayName}
                     value={getChartOrderFieldValue(row, definition)}
-                  />
+                  />}
                 </label>
               ))
             ) : !setParent ? (
@@ -8250,35 +8392,50 @@ function ChartOrderDetailSheet({
 }
 
 function ChartOrderHistorySheet({
+  workspaceId,
+  onExecutionSaved,
   execution,
   onOpenChange,
   open,
   row,
 }: {
+  workspaceId: string;
+  onExecutionSaved: () => Promise<void>;
   execution?: ChartOrderExecutionReadModel;
   onOpenChange: (open: boolean) => void;
   open: boolean;
   row?: ChartOrderDraftRow;
 }) {
   if (!row) return null;
+  const scopedExecution =
+    execution?.workspaceId === workspaceId &&
+    execution.encounterId === row.order.encounterId
+      ? execution
+      : undefined;
   const tasks =
-    execution?.tasks
+    scopedExecution?.tasks
       .filter((task) => task.orderId === row.order.id)
       .sort((left, right) => right.attemptNo - left.attemptNo) ?? [];
+  const planTask = tasks.find((task) =>
+    task.effectiveSnapshot.snapshotSchemaVersion === 1 &&
+    task.effectiveSnapshot.workspaceId === workspaceId &&
+    task.effectiveSnapshot.encounterId === row.order.encounterId &&
+    task.effectiveSnapshot.orderId === row.order.id,
+  );
   const taskIds = new Set(tasks.map((task) => task.taskId));
   const events =
-    execution?.events
+    scopedExecution?.events
       .filter((event) => taskIds.has(event.taskId))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt)) ??
     [];
   const revisions =
-    execution?.revisions
+    scopedExecution?.revisions
       .filter((revision) => revision.orderId === row.order.id)
       .sort((left, right) => right.revisionNo - left.revisionNo) ?? [];
   const queues =
-    execution?.queues.filter((queue) => taskIds.has(queue.taskId)) ?? [];
+    scopedExecution?.queues.filter((queue) => taskIds.has(queue.taskId)) ?? [];
   const billingCandidates =
-    execution?.billingCandidates.filter(
+    scopedExecution?.billingCandidates.filter(
       (candidate) => candidate.orderId === row.order.id,
     ) ?? [];
   return (
@@ -8287,7 +8444,7 @@ function ChartOrderHistorySheet({
         <SheetHeader className="border-b border-[var(--emr-border-default)] pr-12">
           <SheetTitle>{row.order.displayName} 이력</SheetTitle>
           <SheetDescription>
-            확정 snapshot과 revision/attempt 연결은 원본을 덮어쓰지 않습니다.
+            Task 수행 계획과 revision/attempt 연결은 원본을 덮어쓰지 않습니다.
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-3 overflow-y-auto p-4">
@@ -8301,12 +8458,17 @@ function ChartOrderHistorySheet({
             </p>
           </div>
           <div className="rounded-lg border border-[var(--emr-border-default)] p-3">
-            <strong className="text-sm">확정 snapshot</strong>
+            <strong className="text-sm">수행 계획 snapshot</strong>
             <p className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
-              {row.runtimeRow?.snapshotHash
-                ? `hash ${row.runtimeRow.snapshotHash}`
-                : "확정 전 Draft이거나 legacy snapshot입니다."}
+              {planTask
+                ? `Task 계획 보관됨 · attempt ${planTask.attemptNo}`
+                : "수행 계획 snapshot을 확인하지 못했어요. 확정 전 후보 또는 이전 형식의 이력일 수 있어요."}
             </p>
+            {row.runtimeRow?.snapshotHash ? (
+              <p className="mt-1 break-all emr-text-metadata text-[var(--emr-text-secondary)]">
+                {`세트 적용 hash ${row.runtimeRow.snapshotHash}`}
+              </p>
+            ) : null}
           </div>
           {tasks.length > 0 ? (
             tasks.map((task) => (
@@ -8332,6 +8494,13 @@ function ChartOrderHistorySheet({
                 <p className="mt-1 break-all emr-text-micro text-[var(--emr-text-tertiary)]">
                   Task {task.taskId} · {getShortDateTime(task.updatedAt)}
                 </p>
+                {isRecordValue(task.effectiveSnapshot.inpatientLocation) && typeof task.effectiveSnapshot.inpatientLocation.label === "string"
+                  ? <p className="mt-1 text-sm">확정 입원 위치: {task.effectiveSnapshot.inpatientLocation.label}</p> : null}
+                {open && task.taskRole === "execution" && !task.destinationModule && isChartActualType(task.clinicalOrderType)
+                  ? <ChartActualHistory key={`${workspaceId}:${task.taskId}`} workspaceId={workspaceId} taskId={task.taskId} /> : null}
+                {open && ["hospitalization", "other"].includes(task.clinicalOrderType) && task.destinationModule
+                  ? queues.filter(queue => queue.taskId === task.taskId).map(queue => <ChartRoutedExecutionActions
+                    key={`${workspaceId}:${queue.workItemId}:${task.taskId}`} workspaceId={workspaceId} queue={queue} taskId={task.taskId} onSaved={onExecutionSaved} />) : null}
               </div>
             ))
           ) : (
@@ -8471,19 +8640,22 @@ const chartOrderMutationLabels: Record<
 
 function ChartOrderMutationDialog({
   draft,
+  medicationOrders,
   onChange,
   onConfirm,
   onOpenChange,
   row,
 }: {
   draft: ChartOrderMutationDraft | null;
+  medicationOrders: Array<{ id: string; name: string }>;
   onChange: (draft: ChartOrderMutationDraft) => void;
   onConfirm: () => void;
   onOpenChange: (open: boolean) => void;
   row?: ChartOrderDraftRow;
 }) {
   if (!draft || !row) return null;
-  const contract = CLINICAL_ORDER_FIELD_SCHEMAS[getChartOrderClinicalType(row)];
+  const contract = getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion);
+  if (!contract) return null;
   const editsClinicalSnapshot =
     draft.action === "amend" || draft.action === "re_request";
   const canSubmit = draft.reason.trim().length >= 3 && !draft.saving;
@@ -8529,6 +8701,7 @@ function ChartOrderMutationDialog({
                   <ChartOrderFieldControl
                     definition={definition}
                     disabled={draft.saving}
+                    medicationOrders={medicationOrders}
                     onChange={(value) => {
                       const detailInputs = { ...draft.detailInputs };
                       if (value === undefined || value === "") {
@@ -8540,8 +8713,7 @@ function ChartOrderMutationDialog({
                     }}
                     orderName={row.order.displayName}
                     value={
-                      draft.detailInputs[definition.key] ??
-                      definition.defaultValue
+                      draft.detailInputs[definition.key]
                     }
                   />
                 </label>
@@ -8552,10 +8724,10 @@ function ChartOrderMutationDialog({
                     authority?.preparationPolicy ? (
                       <label className="grid gap-1.5">
                         <span className="text-sm font-medium">
-                          재확정 실조제량
+                          재확정 준비 예정량
                         </span>
                         <Input
-                          aria-label={`${row.order.displayName} 재확정 실조제량`}
+                          aria-label={`${row.order.displayName} 재확정 준비 예정량`}
                           disabled={draft.saving}
                           inputMode="decimal"
                           max={
@@ -8731,12 +8903,14 @@ function ChartUnavailableAlert({
 }
 
 function mapCatalogCategoryToOrderType(
-  category: ChartOrderCatalogSearchRow["categoryGroup"],
+  row: ChartOrderCatalogSearchRow,
 ): EmrOrderType {
-  if (category === "lab") return "lab";
-  if (category === "imaging") return "imaging";
-  if (category === "medication") return "dispensing";
-
+  const type = row.clinicalOrderType ?? row.appliedSnapshot.clinicalOrderType;
+  if (type === "clinical_lab" || type === "external_lab") return "lab";
+  if (type === "imaging") return "imaging";
+  if (type === "dispensing") return "dispensing";
+  // Compatibility bucket only: canonical type/routing remains in appliedSnapshot.
+  // EmrOrderType has four historical values, unlike the nine clinical order types.
   return "treatment";
 }
 
@@ -8744,8 +8918,9 @@ function getCatalogCandidateInstruction(row: ChartOrderCatalogSearchRow) {
   if (row.rowType === "set")
     return "Order 세트 구성은 서버 preview에서 확인합니다.";
 
-  return orderTypeMeta[mapCatalogCategoryToOrderType(row.categoryGroup)]
-    .handoff;
+  const type = row.clinicalOrderType ?? row.appliedSnapshot.clinicalOrderType;
+  if (!type) return "업무유형 미설정";
+  return `${CLINICAL_ORDER_FIELD_SCHEMAS[type].label} · ${row.executionMode === "immediate_complete" ? "차트 기록" : "업무 전달"}`;
 }
 
 function getCatalogCandidatePriceLabel(row: ChartOrderCatalogSearchRow) {
@@ -8770,6 +8945,18 @@ function getCatalogCandidatePriceLabel(row: ChartOrderCatalogSearchRow) {
 
 function getChartOrderPersistenceErrorMessage(error?: string) {
   switch (error) {
+    case "invalid_chart_actual":
+    case "chart_actual_record_required":
+    case "invalid_performed_at":
+      return "차트 내 완료 항목의 실제 수행 시각·본인 확인·결과를 입력해 주세요.";
+    case "chart_actual_finding_mismatch":
+    case "chart_actual_scope_mismatch":
+      return "실제 기록과 확정할 오더가 일치하지 않아요. 최신 후보와 소견을 다시 확인해 주세요.";
+    case "inpatient_location_required":
+    case "inpatient_location_unavailable":
+      return "이 병원에 등록된 사용 가능한 병동·케이지를 선택해 주세요.";
+    case "confirmed_inpatient_location_immutable":
+      return "이미 확정된 입원 위치는 직접 변경할 수 없어요. 재요청 흐름을 이용해 주세요.";
     case "etag_header_body_mismatch":
     case "revision_conflict":
       return "다른 사용자가 오더를 변경했어요. 다시 불러온 뒤 저장해 주세요.";
@@ -8892,7 +9079,7 @@ function buildChartOrderDraftRowFromCatalog({
   setPreview?: ChartOrderSetPreview;
   sortOrder: number;
 }): ChartOrderDraftRow {
-  const orderType = mapCatalogCategoryToOrderType(row.categoryGroup);
+  const orderType = mapCatalogCategoryToOrderType(row);
   const now = new Date().toISOString();
   const order: EmrOrder = {
     id: createChartOrderDraftId(),
@@ -8933,9 +9120,11 @@ function buildChartOrderDraftRowFromCatalog({
     row.appliedSnapshot.appliedAmountBasis === "unit_price" &&
     typeof defaultTotalQuantity === "number" &&
     Number.isFinite(defaultTotalQuantity) &&
-    defaultTotalQuantity > 0
+    defaultTotalQuantity >= 0
       ? String(defaultTotalQuantity)
-      : "1";
+      : row.rowType === "individual" && row.appliedSnapshot.appliedAmountBasis === "unit_price"
+        ? ""
+        : "1"; // One fixed-price/set billing instance, not an invented clinical quantity.
 
   return {
     billingName: row.billingName,
@@ -8964,16 +9153,7 @@ function readCatalogDefaultDetailInputs(
   const snapshot = isRecordValue(row.appliedSnapshot)
     ? row.appliedSnapshot
     : {};
-  const direct = snapshot.defaultDetailInputs;
-  if (isRecordValue(direct) && Object.keys(direct).length > 0) {
-    return structuredClone(direct);
-  }
-  const medicationMetadata = snapshot.medicationMetadata;
-  if (isRecordValue(medicationMetadata)) {
-    const nested = medicationMetadata.defaultDetailInputs;
-    if (isRecordValue(nested)) return structuredClone(nested);
-  }
-  return {};
+  return readPersistedOrderDefaults(snapshot).values ?? {};
 }
 
 function mergeChartOrderRuntimeDetailInputs({
@@ -9915,6 +10095,8 @@ function OrderArea({
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
+  const catalogRequestSequenceRef = useRef(0);
+  useEffect(() => () => { catalogRequestSequenceRef.current += 1; }, []);
   const [catalogRows, setCatalogRows] = useState<ChartOrderCatalogSearchRow[]>(
     [],
   );
@@ -9969,6 +10151,7 @@ function OrderArea({
     orderDraftFailedAutoSaveVersionRef.current = null;
   };
   const pendingConfirmationRef = useRef<{
+    actualRecords: ChartActualRecords;
     expectedEtag: string;
     idempotencyKey: string;
     orderIds: string[];
@@ -10126,6 +10309,15 @@ function OrderArea({
   const selectedOrderRows = draftRows.filter(({ order }) =>
     selectedOrderIds.has(order.id),
   );
+  const [chartActualDrafts, setChartActualDrafts] = useState<Record<string, ChartActualDraft>>({});
+  const chartActualRows: ChartActualConfirmationRow[] = draftRows.flatMap(row => {
+    const type = getChartOrderClinicalType(row);
+    const selected = selectedOrderIds.has(row.order.id) || (row.runtimeRow?.parentOrderId && selectedOrderIds.has(row.runtimeRow.parentOrderId));
+    const destination = row.runtimeRow ? row.runtimeRow.destinationModule : getChartOrderCanonicalDefaults(row.order).destinationModule;
+    return selected && row.runtimeRow?.rowType !== "set" && !isChartOrderConfirmedRow(row) && !destination && isChartActualType(type)
+      ? [{ orderId: row.order.id, name: row.order.displayName, type, findingSummary: typeof row.detailInputs.findingSummary === "string" ? row.detailInputs.findingSummary : undefined }] : [];
+  });
+  const chartActualRecords = buildChartActualRecords(chartActualRows, chartActualDrafts);
   const selectedOrders = selectedOrderRows.map(({ order }) => order);
   const selectedRecheckOrderCount = selectedOrders.filter(
     (order) => order.status === "re_requested",
@@ -10350,11 +10542,14 @@ function OrderArea({
     });
   };
   const loadCatalogRows = async () => {
+    const sequence = ++catalogRequestSequenceRef.current;
+    setCatalogRows([]);
     setCatalogSearchStatus("loading");
     const result = await loadChartOrderCatalog({
       actorHeaders,
       workspaceId: bundle.encounter.workspaceId,
     });
+    if (sequence !== catalogRequestSequenceRef.current) return;
 
     if (!result.ok) {
       setCatalogSearchStatus(
@@ -10370,9 +10565,7 @@ function OrderArea({
     if (writeDisabled) return;
     if (collapsed) onCollapsedChange(false);
     setCatalogDialogOpen(true);
-    if (catalogSearchStatus === "idle" || catalogSearchStatus === "error") {
-      void loadCatalogRows();
-    }
+    void loadCatalogRows();
   };
   const resetSetConfiguration = () => {
     setSetCandidate(null);
@@ -11306,7 +11499,7 @@ function OrderArea({
     const pendingSave = orderDraftSavePromiseRef.current;
     if (pendingSave && !(await pendingSave)) return;
     if (draftTouchedRef.current && !(await commitDraftRows({ silent: true }))) {
-      toast.error("오더를 먼저 저장한 뒤 실조제량을 조정해 주세요.");
+      toast.error("오더를 먼저 저장한 뒤 준비 예정량을 조정해 주세요.");
       return;
     }
     const row = draftRowsRef.current.find(
@@ -11318,7 +11511,7 @@ function OrderArea({
       row.runtimeRow.calculationOutputs.calculationStatus !== "ready" ||
       row.runtimeRow.calculationOutputs.dispenseApplicability !== true
     ) {
-      toast.error("계산이 완료된 확정 전 오더에서만 실조제량을 조정할 수 있어요.");
+      toast.error("계산이 완료된 확정 전 오더에서만 준비 예정량을 조정할 수 있어요.");
       return;
     }
 
@@ -11349,18 +11542,18 @@ function OrderArea({
         conflict
           ? "다른 사용자가 오더를 변경했어요. 서버 값을 다시 불러와 주세요."
           : result.error === "actual_dispense_reason_required"
-            ? "이 변경에는 실조제량 조정 사유가 필요해요."
+            ? "이 변경에는 준비 예정량 조정 사유가 필요해요."
             : result.error === "actual_dispense_out_of_policy"
               ? "이 오더의 계량 단위와 허용 범위에 맞게 입력해 주세요."
               : result.error === "actual_dispense_override_disabled"
                 ? "이 오더는 마스터에 수동 조정 규칙이 없어 계산값을 그대로 사용해야 해요."
                 : result.error === "actual_dispense_calculation_unavailable"
-                  ? "실조제량 계산 입력이 완전하지 않아요. 오더 세부값을 확인해 주세요."
+                  ? "준비 예정량 계산 입력이 완전하지 않아요. 오더 세부값을 확인해 주세요."
                   : result.denialReason === "permission_missing"
-                    ? "이 오더의 실조제량을 조정할 권한이 없습니다."
+                    ? "이 오더의 준비 예정량을 조정할 권한이 없습니다."
                     : result.error === "order_unavailable"
-                      ? "확정되었거나 취소된 오더는 표에서 실조제량을 바꿀 수 없어요."
-                      : "실조제량을 저장하지 못했어요.",
+                      ? "확정되었거나 취소된 오더는 표에서 준비 예정량을 바꿀 수 없어요."
+                      : "준비 예정량을 저장하지 못했어요.",
       );
       return;
     }
@@ -11384,7 +11577,7 @@ function OrderArea({
       orderDraftConflictRef.current = true;
       setOrderDraftSaveState("conflict");
       toast.error(
-        "실조제량은 저장됐지만 최신 오더 버전을 확인하지 못했어요. 서버 값을 다시 불러와 주세요.",
+        "준비 예정량은 저장됐지만 최신 오더 버전을 확인하지 못했어요. 서버 값을 다시 불러와 주세요.",
       );
       return;
     }
@@ -11414,8 +11607,8 @@ function OrderArea({
     setOrderDraftSaveState("saved");
     toast.success(
       result.state.actualDispenseSource === "manual_override"
-        ? "실조제량과 변경 사유를 저장했어요."
-        : "실조제량을 자동 계산값으로 되돌렸어요.",
+        ? "준비 예정량과 변경 사유를 저장했어요."
+        : "준비 예정량을 자동 계산값으로 되돌렸어요.",
     );
   };
   useEffect(() => {
@@ -11512,11 +11705,35 @@ function OrderArea({
         toast.error("확정 결과의 최신 금액을 확인하지 못했어요.");
         return false;
       }
+      // The atomic command can return rows captured before its final revision
+      // update. Refresh only these confirmed roots/children, never other local
+      // drafts. A failed read must not turn a successful command into a retry.
+      let confirmedRows = result.rows ?? [];
+      const readback = await loadChartOrderActions({
+        actorHeaders,
+        encounterId: bundle.encounter.id,
+        workspaceId: bundle.encounter.workspaceId,
+      });
+      if (readback.ok) {
+        const freshById = new Map(
+          (readback.rows ?? [])
+            .filter((row) =>
+              row.workspaceId === bundle.encounter.workspaceId &&
+              row.encounterId === bundle.encounter.id &&
+              (row.orderConfirmationStatus === "confirmed" ||
+                row.orderConfirmationStatus === "billed") &&
+              (confirmedRootOrderIds.includes(row.orderId) ||
+                Boolean(row.parentOrderId && confirmedRootOrderIds.includes(row.parentOrderId))),
+            )
+            .map((row) => [row.orderId, row]),
+        );
+        confirmedRows = confirmedRows.map((row) => freshById.get(row.orderId) ?? row);
+      }
       const applyResult = (currentRows: ChartOrderDraftRow[]) =>
         applyBillingCandidatesToOrderRows(
           applyPersistedOrderActions(
             currentRows,
-            result.rows ?? [],
+            confirmedRows,
             bundle.encounter.workspaceId,
             result.orderActions,
           ),
@@ -11577,6 +11794,7 @@ function OrderArea({
         encounterId: bundle.encounter.id,
         expectedEtag: pendingConfirmation.expectedEtag,
         idempotencyKey: pendingConfirmation.idempotencyKey,
+        actualRecords: pendingConfirmation.actualRecords,
         orderIds: pendingConfirmation.orderIds,
         workspaceId: bundle.encounter.workspaceId,
       });
@@ -11761,7 +11979,14 @@ function OrderArea({
       return;
     }
     const idempotencyKey = createChartOrderConfirmationIdempotencyKey();
+    if (!chartActualRecords) {
+      orderDraftSaveInFlightRef.current = false;
+      setOrderDraftSaveState("error");
+      toast.error("실제 수행 시각·본인 확인·결과를 입력해 주세요.");
+      return;
+    }
     pendingConfirmationRef.current = {
+      actualRecords: chartActualRecords,
       expectedEtag: actionExpectedEtag,
       idempotencyKey,
       orderIds: [...actionOrderIds].sort(),
@@ -11773,6 +11998,7 @@ function OrderArea({
       expectedEtag: actionExpectedEtag,
       idempotencyKey,
       orderIds: pendingConfirmationRef.current.orderIds,
+      actualRecords: pendingConfirmationRef.current.actualRecords,
       workspaceId: bundle.encounter.workspaceId,
     });
     let recoveredConfirmation = false;
@@ -11924,6 +12150,7 @@ function OrderArea({
       return;
     }
     setSelectedOrderIds(new Set([orderId]));
+    setChartActualDrafts({});
     setOrderActionDialog("confirm");
   };
   const confirmSelectedOrders = () => {
@@ -11935,6 +12162,7 @@ function OrderArea({
     ) {
       return;
     }
+    setChartActualDrafts({});
     setOrderActionDialog("confirm");
   };
   const openOrderMutation = (
@@ -12011,7 +12239,7 @@ function OrderArea({
       ) {
         setOrderMutationDraft({
           ...draft,
-          error: "재확정 실조제량은 0보다 큰 숫자여야 해요.",
+          error: "재확정 준비 예정량은 0보다 큰 숫자여야 해요.",
         });
         return;
       }
@@ -12047,13 +12275,13 @@ function OrderArea({
             : result.denialReason === "re_request_transition_invalid"
               ? "현재 Task 상태에서는 재요청할 수 없습니다. 진행 또는 완료 상태를 확인해 주세요."
               : result.denialReason === "actual_dispense_reconfirmation_required"
-                ? "변경된 처방값으로 실조제량을 다시 확인해 주세요."
+                ? "변경된 처방값으로 준비 예정량을 다시 확인해 주세요."
                 : result.denialReason === "actual_dispense_reconfirmation_invalid"
-                  ? "재확정 실조제량과 계산 입력을 확인해 주세요."
+                  ? "재확정 준비 예정량과 계산 입력을 확인해 주세요."
                   : result.denialReason === "actual_dispense_out_of_policy"
-                    ? "재확정 실조제량이 마스터의 계량 단위 또는 허용 범위를 벗어났어요."
+                    ? "재확정 준비 예정량이 마스터의 계량 단위 또는 허용 범위를 벗어났어요."
                     : result.denialReason === "actual_dispense_override_disabled"
-                      ? "이 오더는 수동 실조제량 조정을 허용하지 않아요."
+                      ? "이 오더는 수동 준비 예정량 조정을 허용하지 않아요."
                       : result.denialReason === "billing_quantity_calculation_incomplete"
                         ? "변경된 처방값으로 청구 수량을 계산할 수 없어요."
               : result.denialReason === "billing_review_required"
@@ -12524,6 +12752,7 @@ function OrderArea({
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
+            selectionActionsHidden={orderActionDialog !== null || historyOrderId !== null || detailOrderId !== null}
             actualDispenseSavingOrderIds={actualDispenseSavingOrderIds}
             confirmationDisabled={
               orderDraftSaveState === "conflict" ||
@@ -12584,6 +12813,11 @@ function OrderArea({
           />
         </div>
         <ChartOrderDetailSheet
+          workspaceId={bundle.encounter.workspaceId}
+          onBeforeProfileSelect={() => commitDraftRows({ silent: true })}
+          onProfileSelected={() => setOrderDraftReloadKey(key => key + 1)}
+          medicationOrders={draftRows.filter(row => getChartOrderClinicalType(row) === "dispensing" && row.order.status !== "cancelled")
+            .map(row => ({ id: row.order.id, name: row.order.displayName }))}
           onFlushDraft={() => {
             if (canUpdateOrders) void autoSaveDraftRef.current();
           }}
@@ -12600,12 +12834,16 @@ function OrderArea({
           writeDisabled={writeDisabled}
         />
         <ChartOrderHistorySheet
+          workspaceId={bundle.encounter.workspaceId}
+          onExecutionSaved={async () => { await refreshOrderExecution(); }}
           execution={orderExecution}
           onOpenChange={(open) => !open && setHistoryOrderId(null)}
           open={historyOrderId !== null}
           row={historyOrderRow}
         />
         <ChartOrderMutationDialog
+          medicationOrders={draftRows.filter(row => getChartOrderClinicalType(row) === "dispensing" && row.order.status !== "cancelled")
+            .map(row => ({ id: row.order.id, name: row.order.displayName }))}
           draft={orderMutationDraft}
           onChange={setOrderMutationDraft}
           onConfirm={() => void commitOrderMutation()}
@@ -12692,6 +12930,9 @@ function OrderArea({
                   후보는 공유 Draft에 남고, 비용이 있는 오더의 수납 후보는 같은
                   transaction에서 생성됩니다.
                 </span>
+                <ChartActualConfirmation rows={chartActualRows} drafts={chartActualDrafts}
+                  disabled={writeDisabled || orderDraftSaveState === "saving"}
+                  onChange={(id, value) => setChartActualDrafts(current => ({ ...current, [id]: value }))} />
                 <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
                   <span>
                     환자: {bundle.patient.name} · 보호자 {guardianName}
@@ -12713,6 +12954,7 @@ function OrderArea({
             cancelLabel="다시 확인"
             confirmLabel={orderActionLabel}
             confirmDisabled={
+              chartActualRecords === null ||
               writeDisabled ||
               pendingRemovedRootOrderIds.size > 0 ||
               orderDraftSaveState === "conflict" ||
@@ -13096,7 +13338,10 @@ export function ChartContent({
   const updateLiveQueueRecord = useChartStore(
     (state) => state.updateLiveQueueRecord,
   );
-  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  // A live session must never resolve a sample alias to a real order writer.
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const {
     contentAsideOpen,
     modulePanelOpen,

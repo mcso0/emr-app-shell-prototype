@@ -34,6 +34,7 @@ type OrderWorkTableProps = {
   rows: Order[];
   sectionId: string;
   showDensitySelector?: boolean;
+  completionDisabled?: boolean;
   technicians: TechnicianUser[];
   onCompleteRows: (rowIds: string[]) => void;
   onAssignOrder: (rowId: string, technicianId: string) => void;
@@ -203,9 +204,11 @@ function AssigneeCell({
 function WorkStatusButton({
   order,
   onComplete,
+  disabled = false,
 }: {
   order: Order;
   onComplete: () => void;
+  disabled?: boolean;
 }) {
   const completed = order.workStatus === "완료";
 
@@ -220,7 +223,8 @@ function WorkStatusButton({
         completed &&
           "border-[var(--emr-status-success-border)] text-[var(--emr-status-success-text)]",
       )}
-      disabled={completed || order.status === "취소"}
+      disabled={disabled || completed || order.status === "취소"}
+      title={disabled ? "상단 업무 메뉴에서 실제 수행기록을 저장한 뒤 완료해 주세요." : undefined}
       onClick={(event) => {
         event.stopPropagation();
         onComplete();
@@ -269,6 +273,7 @@ function RowCheckbox({ row }: { row: Row<Order> }) {
 }
 
 export function OrderWorkTable({
+  completionDisabled = false,
   density: densityProp,
   onDensityChange,
   rows,
@@ -590,13 +595,14 @@ export function OrderWorkTable({
         meta: { headerInteraction: "static", resize: "none" },
         cell: ({ row }) => (
           <WorkStatusButton
+            disabled={completionDisabled}
             order={row.original}
             onComplete={() => completeRows([row.original.id])}
           />
         ),
       },
     ],
-    [completeRows, onAssignOrder, technicians],
+    [completeRows, completionDisabled, onAssignOrder, technicians],
   );
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -696,6 +702,8 @@ export function OrderWorkTable({
               type="button"
               size="sm"
               className="h-7"
+              disabled={completionDisabled}
+              title={completionDisabled ? "상단 업무 메뉴에서 실제 수행기록을 저장한 뒤 완료해 주세요." : undefined}
               onClick={(event) => {
                 event.stopPropagation();
                 completeRows(selectedRows.map((row) => row.original.id));

@@ -6,6 +6,10 @@ import {
 } from "@/features/auth/permission-resolver";
 
 export type OrderActualDispenseState = {
+  preparationSchemaVersion?: 2;
+  preparationQuantityScope?: "course_total" | "per_administration";
+  plannedPracticalDispenseQuantity?: number;
+  plannedPracticalTotalQuantity?: number;
   actualDispenseOverride: Record<string, unknown> | null;
   actualDispenseQuantity: number;
   actualDispenseSource: "manual_override" | "preparation_policy";
@@ -262,6 +266,16 @@ function mapState(value: unknown): OrderActualDispenseState | null {
   ) {
     return null;
   }
+  if (value.preparationSchemaVersion !== undefined && (
+    value.preparationSchemaVersion !== 2 ||
+    !["course_total", "per_administration"].includes(String(value.preparationQuantityScope)) ||
+    typeof value.plannedPracticalDispenseQuantity !== "number" ||
+    !Number.isFinite(value.plannedPracticalDispenseQuantity) ||
+    value.plannedPracticalDispenseQuantity !== value.actualDispenseQuantity ||
+    typeof value.plannedPracticalTotalQuantity !== "number" ||
+    !Number.isFinite(value.plannedPracticalTotalQuantity) || value.plannedPracticalTotalQuantity <= 0 ||
+    (value.preparationQuantityScope === "course_total" && value.plannedPracticalTotalQuantity !== value.actualDispenseQuantity)
+  )) return null;
   return value as OrderActualDispenseState;
 }
 

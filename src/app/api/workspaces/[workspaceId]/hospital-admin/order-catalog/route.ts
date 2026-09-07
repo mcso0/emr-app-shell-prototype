@@ -8,7 +8,6 @@ import {
   createSupabaseWorkspacePermissionGateway,
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
-import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import {
   createSupabaseLiveAuditAppendGateway,
   type SupabaseLiveAuditAppendRpcClient,
@@ -16,7 +15,6 @@ import {
 import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import {
   listOrderCatalogForAdmin,
-  getDemoOrderCatalogGateway,
   mutateOrderCatalogItem,
   mutateWorkspaceLabTestItem,
   searchOrderCatalogForChart,
@@ -33,30 +31,45 @@ type RouteContext = {
 };
 
 export async function GET(request: Request, { params }: RouteContext) {
+  try {
+    return await readCatalog(request, { params });
+  } catch {
+    // Do not expose database diagnostics or turn an unavailable read into [] .
+    return Response.json(
+      { ok: false, status: 503, error: "catalog_read_failed" },
+      { status: 503 },
+    );
+  }
+}
+
+async function readCatalog(request: Request, { params }: RouteContext) {
   const { workspaceId } = await params;
   const identity = await resolveIdentity(request);
   if (!identity.ok) return identity.response;
 
   const url = new URL(request.url);
   const mode = url.searchParams.get("mode");
-  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const client = await createClient();
+  if (!client) {
+    return Response.json(
+      { ok: false, status: 503, error: "catalog_gateway_required" },
+      { status: 503 },
+    );
+  }
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
         gateway: createSupabaseWorkspacePermissionGateway(
-          client as unknown as SupabaseWorkspacePermissionClient
+          client as unknown as SupabaseWorkspacePermissionClient,
         ),
         workspaceId,
         sessionUserId: identity.actorUserId,
       })
     : undefined;
-  const gateway =
-    identity.source === "demo_header_mock_mode"
-      ? getDemoOrderCatalogGateway(getDemoClientSessionId(request))
-      : client
-        ? createSupabaseOrderCatalogGateway(
-            client as unknown as SupabaseOrderCatalogRpcClient
-          )
-        : undefined;
+  const gateway = client
+    ? createSupabaseOrderCatalogGateway(
+        client as unknown as SupabaseOrderCatalogRpcClient,
+      )
+    : undefined;
   const result =
     mode === "chart-search"
       ? await searchOrderCatalogForChart({
@@ -97,25 +110,23 @@ async function mutate(request: Request, workspaceId: string) {
   });
   if (rateLimitResponse) return rateLimitResponse;
 
-  const client = identity.source === "supabase_session" ? await createClient() : null;
+  const client =
+    identity.source === "supabase_session" ? await createClient() : null;
   const permissionAdapter = client
     ? await loadWorkspacePermissionAdapterFromDb({
         gateway: createSupabaseWorkspacePermissionGateway(
-          client as unknown as SupabaseWorkspacePermissionClient
+          client as unknown as SupabaseWorkspacePermissionClient,
         ),
         workspaceId,
         sessionUserId: identity.actorUserId,
       })
     : undefined;
 
-  const gateway =
-    identity.source === "demo_header_mock_mode"
-      ? getDemoOrderCatalogGateway(getDemoClientSessionId(request))
-      : client
-        ? createSupabaseOrderCatalogGateway(
-            client as unknown as SupabaseOrderCatalogRpcClient,
-          )
-        : undefined;
+  const gateway = client
+    ? createSupabaseOrderCatalogGateway(
+        client as unknown as SupabaseOrderCatalogRpcClient,
+      )
+    : undefined;
   const input = await readJsonBody(request);
   const result =
     input.action === "updateLabTestItem"
@@ -162,6 +173,18 @@ async function resolveIdentity(request: Request) {
           sessionReason: identity.sessionReason,
         },
         { status: 401 }
+      ),
+    };
+  }
+
+  // Hospital catalogs require a real workspace session. Explicit test fixtures
+  // can inject a gateway in core tests, never through this product route.
+  if (identity.source !== "supabase_session") {
+    return {
+      ok: false as const,
+      response: Response.json(
+        { ok: false, error: "catalog_auth_required" },
+        { status: 401 },
       ),
     };
   }
@@ -219,8 +242,4 @@ async function readJsonBody(
   } catch {
     return { action: "pause", itemId: "", expectedCatalogRevision: 0 };
   }
-}
-
-function getDemoClientSessionId(request: Request) {
-  return request.headers.get(demoClientSessionIdHeader) ?? "shared";
 }

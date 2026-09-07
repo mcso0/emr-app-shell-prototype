@@ -1,0 +1,4773 @@
+{
+  "schemaVersion": "oed-lab-01-order-inventory/v1",
+  "generatedAt": "2026-09-06",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "sourcePaths": [
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-00-frozen-manifest.v1.json",
+    "tests/fixtures/clinical-master-operational-v4-authoring.json",
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01a-order-default-candidates.non-applied.v1.json"
+  ],
+  "sourceFingerprint": "f9d692c38be06b823ccd2bebe4c9ac45e489c90acdc8f8e3a04d7f13c685490f",
+  "sourceFileFingerprints": {
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-00-frozen-manifest.v1.json": "add64d19e9b4e92849bc326c246c1354abc5db500c4a7a18c4fb8cef130e1419",
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01a-order-default-candidates.non-applied.v1.json": "39e288b7ad3cc06fc52d8bcf998872517aef667102af407e017dffec354da16c",
+    "tests/fixtures/clinical-master-operational-v4-authoring.json": "d733beccbec0a384b7098aacf6a40c1979ff4da45357605a47722396bf5e5e6b"
+  },
+  "evidenceScope": "local_frozen_inputs_not_remote_state",
+  "counts": {
+    "clinicalLabOrders": 86,
+    "currentLabTestDefinitions": 72,
+    "currentLabPanelDefinitions": 18,
+    "currentPanelMemberships": 120,
+    "currentOrderProfiles": 85,
+    "directlyOrderableLabTests": 56,
+    "labTestsWithoutDirectOrder": 16,
+    "unboundClinicalLabOrders": 1
+  },
+  "orders": [
+    {
+      "orderId": "cm.order.lab.panel.cbc-basic",
+      "orderCode": "preset:execution:cm.order.lab.panel.cbc-basic",
+      "displayName": "전혈구 기본 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "hematology_cbc",
+      "familyLabel": "혈구검사·CBC",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.cbc-basic",
+        "testKey": null,
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 3,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.cbc-wbc",
+          "displayName": "백혈구 수 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-hct",
+          "displayName": "헤마토크릿 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-plt",
+          "displayName": "혈소판 수 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "전혈구 기본 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.panel.chemistry-basic",
+      "orderCode": "preset:execution:cm.order.lab.panel.chemistry-basic",
+      "displayName": "기본 혈청화학 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.chemistry-basic",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 6,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "기본 혈청화학 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.panel.fecal",
+      "orderCode": "preset:execution:cm.order.lab.panel.fecal",
+      "displayName": "분변 검사 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "fecal_parasitology",
+      "familyLabel": "분변·기생충",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.fecal",
+        "testKey": null,
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 2,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.fecal-microscopy",
+          "displayName": "분변 현미경 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.giardia-antigen",
+          "displayName": "지아르디아 항원 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "feces",
+        "testPanel": "분변 검사 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.panel.urinalysis",
+      "orderCode": "preset:execution:cm.order.lab.panel.urinalysis",
+      "displayName": "요검사 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.urinalysis",
+        "testKey": null,
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 2,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요검사 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-hct",
+      "orderCode": "preset:execution:cm.order.lab.test.cbc-hct",
+      "displayName": "헤마토크릿 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "hematology_cbc",
+      "familyLabel": "혈구검사·CBC",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.cbc-hct",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "헤마토크릿 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-plt",
+      "orderCode": "preset:execution:cm.order.lab.test.cbc-plt",
+      "displayName": "혈소판 수 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "hematology_cbc",
+      "familyLabel": "혈구검사·CBC",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.cbc-plt",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "혈소판 수 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-wbc",
+      "orderCode": "preset:execution:cm.order.lab.test.cbc-wbc",
+      "displayName": "백혈구 수 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "hematology_cbc",
+      "familyLabel": "혈구검사·CBC",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.cbc-wbc",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "백혈구 수 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alp",
+      "orderCode": "preset:execution:cm.order.lab.test.chem-alp",
+      "displayName": "ALP 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.chem-alp",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "ALP 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alt",
+      "orderCode": "preset:execution:cm.order.lab.test.chem-alt",
+      "displayName": "ALT 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.chem-alt",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "ALT 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-bun",
+      "orderCode": "preset:execution:cm.order.lab.test.chem-bun",
+      "displayName": "BUN 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.chem-bun",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "BUN 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-creatinine",
+      "orderCode": "preset:execution:cm.order.lab.test.chem-creatinine",
+      "displayName": "크레아티닌 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.chem-creatinine",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "크레아티닌 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-glucose",
+      "orderCode": "preset:execution:cm.order.lab.test.chem-glucose",
+      "displayName": "혈당 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.chem-glucose",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "혈당 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-total-protein",
+      "orderCode": "preset:execution:cm.order.lab.test.chem-total-protein",
+      "displayName": "총단백 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.chem-total-protein",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "총단백 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.fecal-microscopy",
+      "orderCode": "preset:execution:cm.order.lab.test.fecal-microscopy",
+      "displayName": "분변 현미경 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "fecal_parasitology",
+      "familyLabel": "분변·기생충",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.fecal-microscopy",
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "feces",
+        "testPanel": "분변 현미경 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.giardia-antigen",
+      "orderCode": "preset:execution:cm.order.lab.test.giardia-antigen",
+      "displayName": "지아르디아 항원 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "fecal_parasitology",
+      "familyLabel": "분변·기생충",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.giardia-antigen",
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "지아르디아 항원 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-sediment",
+      "orderCode": "preset:execution:cm.order.lab.test.ua-sediment",
+      "displayName": "요침사 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.ua-sediment",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요침사 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-strip",
+      "orderCode": "preset:execution:cm.order.lab.test.ua-strip",
+      "displayName": "요시험지 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.ua-strip",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요시험지 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-01",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-01",
+      "displayName": "전해질 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "electrolytes",
+      "familyLabel": "전해질",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.synthetic-01",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 7,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-07",
+          "displayName": "혈청화학 인 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "전해질 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-02",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-02",
+      "displayName": "응고 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "coagulation",
+      "familyLabel": "응고",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.synthetic-02",
+        "testKey": null,
+        "specimenKey": "cm.specimen.citrate-plasma"
+      },
+      "currentPanelMemberCount": 2,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.synthetic-11",
+          "displayName": "응고 프로트롬빈시간 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-12",
+          "displayName": "응고 활성화부분트롬보플라스틴시간 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "응고 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-03",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-03",
+      "displayName": "수술 전 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "organ_or_metabolic_panel",
+      "familyLabel": "장기·대사 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.synthetic-03",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 8,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "수술 전 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-04",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-04",
+      "displayName": "간 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "organ_or_metabolic_panel",
+      "familyLabel": "장기·대사 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.synthetic-04",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 8,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "간 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-05",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-05",
+      "displayName": "신장 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "organ_or_metabolic_panel",
+      "familyLabel": "장기·대사 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.synthetic-05",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 8,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-07",
+          "displayName": "혈청화학 인 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "신장 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-06",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-06",
+      "displayName": "당대사 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "organ_or_metabolic_panel",
+      "familyLabel": "장기·대사 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.synthetic-06",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 14,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-07",
+          "displayName": "혈청화학 인 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 12,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 13,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "당대사 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-07",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-07",
+      "displayName": "혈액형 검사 서비스",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "blood_typing",
+      "familyLabel": "혈액형",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-23",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "혈액형 검사 서비스",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-08",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-08",
+      "displayName": "망상적혈구 검사 서비스",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "reticulocyte",
+      "familyLabel": "망상적혈구",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-13",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "망상적혈구 검사 서비스",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-09",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-09",
+      "displayName": "혈액도말 검사 서비스",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "blood_smear",
+      "familyLabel": "혈액도말",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-14",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "혈액도말 검사 서비스",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-10",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-10",
+      "displayName": "피부 세포검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "cytology",
+      "familyLabel": "세포검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-18",
+        "specimenKey": "cm.specimen.cytology-slide"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "swab",
+        "testPanel": "피부 세포검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "collection_vs_preparation_needs_review",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-11",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-11",
+      "displayName": "귀 분비물 세포검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "cytology",
+      "familyLabel": "세포검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-19",
+        "specimenKey": "cm.specimen.swab"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "swab",
+        "testPanel": "귀 분비물 세포검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-12",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-12",
+      "displayName": "종괴 세포검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "cytology",
+      "familyLabel": "세포검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-20",
+        "specimenKey": "cm.specimen.cytology-slide"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "tissue",
+        "testPanel": "종괴 세포검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "collection_vs_preparation_needs_review",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-13",
+      "orderCode": "preset:execution:cm.order.synthetic.lab-13",
+      "displayName": "관절액 세포검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "cytology",
+      "familyLabel": "세포검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.synthetic-21",
+        "specimenKey": "cm.specimen.joint-fluid"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "other",
+        "testPanel": "관절액 세포검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "candidate_underspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.01",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.01",
+      "displayName": "확장 혈청화학 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.expanded-chemistry",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "확장 혈청화학 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.02",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.02",
+      "displayName": "지질 검사 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.lipid",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 4,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.triglyceride",
+          "displayName": "중성지방 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "지질 검사 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.03",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.03",
+      "displayName": "췌장 평가 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "pancreatic",
+      "familyLabel": "췌장 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.pancreatic",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 6,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.amylase",
+          "displayName": "아밀라아제 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.lipase",
+          "displayName": "리파아제 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.triglyceride",
+          "displayName": "중성지방 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "췌장 평가 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.04",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.04",
+      "displayName": "염증 표지 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "inflammation",
+      "familyLabel": "염증 표지",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.inflammatory",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 6,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.crp",
+          "displayName": "C-반응단백 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.saa",
+          "displayName": "혈청 아밀로이드 A 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-wbc",
+          "displayName": "백혈구 수 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-hct",
+          "displayName": "헤마토크릿 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-plt",
+          "displayName": "혈소판 수 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "염증 표지 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.05",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.05",
+      "displayName": "갑상선 검사 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "thyroid",
+      "familyLabel": "갑상선",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.thyroid",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 5,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.total-t4",
+          "displayName": "총 T4 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.free-t4",
+          "displayName": "유리 T4 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.tsh",
+          "displayName": "갑상선자극호르몬 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ck",
+          "displayName": "크레아틴키나아제 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "갑상선 검사 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.06",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.06",
+      "displayName": "부신 검사 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "adrenal",
+      "familyLabel": "부신·코르티솔",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.adrenal",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 5,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.cortisol",
+          "displayName": "코르티솔 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "부신 검사 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.07",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.07",
+      "displayName": "요단백 평가 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.urine-protein",
+        "testKey": null,
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 10,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.urine-creatinine",
+          "displayName": "요 크레아티닌 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.upc-ratio",
+          "displayName": "요단백·크레아티닌 비율 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ph",
+          "displayName": "요 pH 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-glucose",
+          "displayName": "요당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ketone",
+          "displayName": "요케톤 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-bilirubin",
+          "displayName": "요빌리루빈 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-16",
+          "displayName": "요화학 단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-15",
+          "displayName": "요화학 비중 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "요단백 평가 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "conflicting_source_labels",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.08",
+      "orderCode": "preset:execution:cm.order.v4.lab-panel.08",
+      "displayName": "감염성 질환 선별 패널",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.infectious-screen",
+        "testKey": null,
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.fecal-flotation",
+          "displayName": "분변 부유 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.fecal-occult-blood",
+          "displayName": "분변 잠혈 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+          "displayName": "개 파보바이러스 항원 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-distemper-antigen",
+          "displayName": "개 디스템퍼바이러스 항원 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-heartworm-antigen",
+          "displayName": "개 심장사상충 항원 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+          "displayName": "고양이 범백혈구감소증 항원 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-leukemia-antigen",
+          "displayName": "고양이 백혈병바이러스 항원 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+          "displayName": "고양이 면역결핍바이러스 항체 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+          "displayName": "고양이 코로나바이러스 항체 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.babesia-pcr",
+          "displayName": "바베시아 PCR 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.giardia-antigen",
+          "displayName": "지아르디아 항원 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.fecal-microscopy",
+          "displayName": "분변 현미경 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "serum",
+        "testPanel": "감염성 질환 선별 패널",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "conflicting_source_labels",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.basic-checkup",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.basic-checkup",
+      "displayName": "기본 건강검진 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.expanded-chemistry",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "기본 건강검진 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.emergency-initial",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.emergency-initial",
+      "displayName": "응급 초기 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.inflammatory",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 6,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.crp",
+          "displayName": "C-반응단백 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.saa",
+          "displayName": "혈청 아밀로이드 A 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-wbc",
+          "displayName": "백혈구 수 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-hct",
+          "displayName": "헤마토크릿 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-plt",
+          "displayName": "혈소판 수 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "응급 초기 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.hepatobiliary",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.hepatobiliary",
+      "displayName": "간담도 평가 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "organ_or_metabolic_panel",
+      "familyLabel": "장기·대사 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.expanded-chemistry",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "간담도 평가 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.infectious-workup",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.infectious-workup",
+      "displayName": "감염성 질환 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.infectious-screen",
+        "testKey": null,
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.fecal-flotation",
+          "displayName": "분변 부유 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.fecal-occult-blood",
+          "displayName": "분변 잠혈 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+          "displayName": "개 파보바이러스 항원 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-distemper-antigen",
+          "displayName": "개 디스템퍼바이러스 항원 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-heartworm-antigen",
+          "displayName": "개 심장사상충 항원 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+          "displayName": "고양이 범백혈구감소증 항원 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-leukemia-antigen",
+          "displayName": "고양이 백혈병바이러스 항원 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+          "displayName": "고양이 면역결핍바이러스 항체 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+          "displayName": "고양이 코로나바이러스 항체 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.babesia-pcr",
+          "displayName": "바베시아 PCR 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.giardia-antigen",
+          "displayName": "지아르디아 항원 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.fecal-microscopy",
+          "displayName": "분변 현미경 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "감염성 질환 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.preanesthetic-expanded",
+      "displayName": "마취 전 확장 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.expanded-chemistry",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "마취 전 확장 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.pu-pd",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.pu-pd",
+      "displayName": "다뇨·다갈 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.urine-protein",
+        "testKey": null,
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 10,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.urine-creatinine",
+          "displayName": "요 크레아티닌 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.upc-ratio",
+          "displayName": "요단백·크레아티닌 비율 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ph",
+          "displayName": "요 pH 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-glucose",
+          "displayName": "요당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ketone",
+          "displayName": "요케톤 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-bilirubin",
+          "displayName": "요빌리루빈 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-16",
+          "displayName": "요화학 단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-15",
+          "displayName": "요화학 비중 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "다뇨·다갈 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.renal",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.renal",
+      "displayName": "신장 평가 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "organ_or_metabolic_panel",
+      "familyLabel": "장기·대사 평가",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.urine-protein",
+        "testKey": null,
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 10,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.urine-creatinine",
+          "displayName": "요 크레아티닌 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.upc-ratio",
+          "displayName": "요단백·크레아티닌 비율 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ph",
+          "displayName": "요 pH 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-glucose",
+          "displayName": "요당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ketone",
+          "displayName": "요케톤 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-bilirubin",
+          "displayName": "요빌리루빈 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-16",
+          "displayName": "요화학 단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-15",
+          "displayName": "요화학 비중 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "신장 평가 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-cat",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.senior-cat",
+      "displayName": "노령묘 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.thyroid",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 5,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.total-t4",
+          "displayName": "총 T4 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.free-t4",
+          "displayName": "유리 T4 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.tsh",
+          "displayName": "갑상선자극호르몬 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ck",
+          "displayName": "크레아틴키나아제 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "노령묘 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-dog",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.senior-dog",
+      "displayName": "노령견 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.expanded-chemistry",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 12,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "노령견 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.vomiting-diarrhea",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.vomiting-diarrhea",
+      "displayName": "구토·설사 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.pancreatic",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 6,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.amylase",
+          "displayName": "아밀라아제 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.lipase",
+          "displayName": "리파아제 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.triglyceride",
+          "displayName": "중성지방 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "구토·설사 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.weight-loss",
+      "orderCode": "preset:execution:cm.order.v4.lab-service.weight-loss",
+      "displayName": "체중감소 검사 조합",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "composite_diagnostic_plan",
+      "familyLabel": "종합 검사 조합",
+      "currentBinding": {
+        "bindingType": "lab_panel",
+        "panelKey": "cm.lab-panel.v4.thyroid",
+        "testKey": null,
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 5,
+      "currentPanelMembers": [
+        {
+          "testKey": "cm.lab-test.v4.total-t4",
+          "displayName": "총 T4 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.free-t4",
+          "displayName": "유리 T4 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.tsh",
+          "displayName": "갑상선자극호르몬 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ck",
+          "displayName": "크레아틴키나아제 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "testPanel": "체중감소 검사 조합",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "missing_candidate",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.01",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.01",
+      "displayName": "혈청 글로불린 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.globulin",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "혈청 글로불린 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.02",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.02",
+      "displayName": "알부민·글로불린 비율 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.ag-ratio",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "알부민·글로불린 비율 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.03",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.03",
+      "displayName": "직접 빌리루빈 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.direct-bilirubin",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "직접 빌리루빈 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.04",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.04",
+      "displayName": "감마글루타밀전이효소 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.ggt",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "감마글루타밀전이효소 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.05",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.05",
+      "displayName": "젖산탈수소효소 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.ldh",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "젖산탈수소효소 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.06",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.06",
+      "displayName": "크레아틴키나아제 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.ck",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "크레아틴키나아제 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.07",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.07",
+      "displayName": "총콜레스테롤 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.cholesterol",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "총콜레스테롤 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.08",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.08",
+      "displayName": "중성지방 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.triglyceride",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "중성지방 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.09",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.09",
+      "displayName": "아밀라아제 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "pancreatic",
+      "familyLabel": "췌장 평가",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.amylase",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "아밀라아제 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.10",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.10",
+      "displayName": "리파아제 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "pancreatic",
+      "familyLabel": "췌장 평가",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.lipase",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "리파아제 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.11",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.11",
+      "displayName": "SDMA 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.sdma",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "SDMA 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.12",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.12",
+      "displayName": "프럭토사민 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.fructosamine",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "프럭토사민 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.13",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.13",
+      "displayName": "총담즙산 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.bile-acids",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "총담즙산 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.14",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.14",
+      "displayName": "젖산 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "clinical_chemistry",
+      "familyLabel": "임상화학",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.lactate",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "젖산 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.15",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.15",
+      "displayName": "C-반응단백 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "inflammation",
+      "familyLabel": "염증 표지",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.crp",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "C-반응단백 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.16",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.16",
+      "displayName": "혈청 아밀로이드 A 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "inflammation",
+      "familyLabel": "염증 표지",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.saa",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "혈청 아밀로이드 A 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.17",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.17",
+      "displayName": "총 T4 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "thyroid",
+      "familyLabel": "갑상선",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.total-t4",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "총 T4 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.18",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.18",
+      "displayName": "유리 T4 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "thyroid",
+      "familyLabel": "갑상선",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.free-t4",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "유리 T4 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.19",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.19",
+      "displayName": "갑상선자극호르몬 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "thyroid",
+      "familyLabel": "갑상선",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.tsh",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "갑상선자극호르몬 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.20",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.20",
+      "displayName": "코르티솔 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "adrenal",
+      "familyLabel": "부신·코르티솔",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.cortisol",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "코르티솔 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.21",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.21",
+      "displayName": "요 크레아티닌 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.urine-creatinine",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요 크레아티닌 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.22",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.22",
+      "displayName": "요단백·크레아티닌 비율 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.upc-ratio",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요단백·크레아티닌 비율 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.23",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.23",
+      "displayName": "요 pH 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.urine-ph",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요 pH 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.24",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.24",
+      "displayName": "요당 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.urine-glucose",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요당 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.25",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.25",
+      "displayName": "요케톤 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.urine-ketone",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요케톤 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.26",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.26",
+      "displayName": "요빌리루빈 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "urinalysis",
+      "familyLabel": "요검사",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.urine-bilirubin",
+        "specimenKey": "cm.specimen.urine"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "urine",
+        "testPanel": "요빌리루빈 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.27",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.27",
+      "displayName": "분변 부유 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "fecal_parasitology",
+      "familyLabel": "분변·기생충",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.fecal-flotation",
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "feces",
+        "testPanel": "분변 부유 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.28",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.28",
+      "displayName": "분변 잠혈 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "fecal_parasitology",
+      "familyLabel": "분변·기생충",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.fecal-occult-blood",
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "feces",
+        "testPanel": "분변 잠혈 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "same_source_label",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.29",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.29",
+      "displayName": "개 파보바이러스 항원 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "개 파보바이러스 항원 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "conflicting_source_labels",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.30",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.30",
+      "displayName": "개 디스템퍼바이러스 항원 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.canine-distemper-antigen",
+        "specimenKey": "cm.specimen.swab"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "개 디스템퍼바이러스 항원 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "conflicting_source_labels",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.31",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.31",
+      "displayName": "개 심장사상충 항원 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.canine-heartworm-antigen",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "개 심장사상충 항원 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.32",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.32",
+      "displayName": "고양이 범백혈구감소증 항원 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+        "specimenKey": "cm.specimen.feces"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "고양이 범백혈구감소증 항원 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "conflicting_source_labels",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.33",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.33",
+      "displayName": "고양이 백혈병바이러스 항원 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.feline-leukemia-antigen",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "고양이 백혈병바이러스 항원 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.34",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.34",
+      "displayName": "고양이 면역결핍바이러스 항체 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "고양이 면역결핍바이러스 항체 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.35",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.35",
+      "displayName": "고양이 코로나바이러스 항체 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+        "specimenKey": "cm.specimen.serum"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "고양이 코로나바이러스 항체 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.36",
+      "orderCode": "preset:execution:cm.order.v4.lab-test.36",
+      "displayName": "바베시아 PCR 검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "cm.path.laboratory",
+      "speciesApplicability": [
+        "cat",
+        "dog"
+      ],
+      "speciesSource": "clinical-master-operational-v4-authoring",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "infectious_disease",
+      "familyLabel": "감염성 질환",
+      "currentBinding": {
+        "bindingType": "lab_test",
+        "panelKey": null,
+        "testKey": "cm.lab-test.v4.babesia-pcr",
+        "specimenKey": "cm.specimen.edta-whole-blood"
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "바베시아 PCR 검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "blood_processing_unspecified",
+      "researchStatus": "source_partial",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "phase1.optionb.v1.order.metabolic",
+      "orderCode": "preset:execution:phase1.optionb.v1.order.metabolic",
+      "displayName": "합성 기초 혈액검사",
+      "clinicalOrderType": "clinical_lab",
+      "subcategory": "phase1a2.fallback.path.lab",
+      "speciesApplicability": [
+        "dog"
+      ],
+      "speciesSource": "clinical-master-execution-preset-release-frozen-orders",
+      "sourceKind": "persisted_master_fixture",
+      "familyId": "legacy_exception",
+      "familyLabel": "레거시 예외",
+      "currentBinding": {
+        "bindingType": "none",
+        "panelKey": null,
+        "testKey": null,
+        "specimenKey": null
+      },
+      "currentPanelMemberCount": 0,
+      "currentPanelMembers": [],
+      "bindingEvidence": "local_authoring_fixture",
+      "remoteStateVerified": false,
+      "priorCandidateDefaults": {
+        "specimenType": "blood",
+        "testPanel": "합성 기초 혈액검사",
+        "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+      },
+      "priorCandidateProvenance": "wp-01a_non_applied_candidate_not_current_defaults",
+      "specimenComparisonStatus": "unbound_fixture",
+      "researchStatus": "functional_fixture_required",
+      "evidenceScope": "family_landscape_only",
+      "orderSpecificMethodVerified": false,
+      "numericValuesExtracted": false,
+      "applicationAllowed": false
+    }
+  ]
+}

@@ -82,7 +82,7 @@ export type ClinicalOrderFieldDefinition = {
 export type ClinicalOrderFieldSchema = {
   clinicalOrderType: ClinicalOrderType;
   label: string;
-  version: 1;
+  version: 1 | 2;
   defaultDestinationModule: ClinicalOrderDestinationModule | null;
   defaultExecutionMode: Exclude<ClinicalOrderExecutionMode, "aggregate">;
   fields: readonly ClinicalOrderFieldDefinition[];
@@ -388,6 +388,39 @@ export const CLINICAL_ORDER_FIELD_SCHEMAS: Readonly<
   },
 };
 
+// V1 is immutable historical planning vocabulary. V2 names planned quantities
+// explicitly; actual administration/measurement belongs to task result versions.
+export const TREATMENT_FIELD_SCHEMA_V2: ClinicalOrderFieldSchema = {
+  clinicalOrderType: "treatment", label: "처치", version: 2,
+  defaultDestinationModule: "treatment", defaultExecutionMode: "routed",
+  fields: [
+    field({ key: "procedureKind", valueType: "string", label: "시행 유형", control: "select", options: ["procedure", "preparation", "monitoring", "measurement", "administration", "device_session", "dental", "surgery"], displayOrder: 5, required: true, placement: "detail", semantics: "metadata" }),
+    field({ key: "method", valueType: "string", label: "시행 예정 방법", control: "input", displayOrder: 10, required: true, validation: { minLength: 1, maxLength: 200 }, placement: "inline", bulkEditable: true, semantics: "instruction" }),
+    field({ key: "site", valueType: "string", label: "시행 예정 부위", control: "input", displayOrder: 20, validation: { minLength: 1, maxLength: 120 }, placement: "inline", bulkEditable: true }),
+    field({ key: "plannedProcedureCount", valueType: "number", label: "시행 예정 횟수", control: "number", displayOrder: 25, required: true, validation: { min: 1, max: 1000, precision: 0 }, placement: "inline", semantics: "calculation_input" }),
+    field({ key: "procedureCountUnit", valueType: "string", label: "시행 계수 단위", control: "select", options: ["session", "site", "tooth", "specimen", "load"], displayOrder: 26, required: true, placement: "detail", semantics: "metadata" }),
+    field({ key: "plannedAmount", valueType: "number", label: "예정 사용·투여량", control: "number", displayOrder: 30, validation: { min: 0, max: 1000000, precision: 3 }, placement: "inline", semantics: "calculation_input" }),
+    field({ key: "plannedAmountUnit", valueType: "string", label: "예정량 단위", control: "input", displayOrder: 31, validation: { minLength: 1, maxLength: 80 }, placement: "inline", semantics: "metadata" }),
+    field({ key: "frequency", valueType: "string", label: "시행 빈도", control: "select", options: ["once", "sid", "bid", "tid", "qid", "custom"], displayOrder: 40, required: true, placement: "inline", bulkEditable: true, semantics: "instruction" }),
+    field({ key: "schedule", valueType: "string", label: "시행 예정 일정", control: "schedule", displayOrder: 50, required: true, validation: { minLength: 1, maxLength: 1000 }, placement: "inline", semantics: "instruction" }),
+    field({ key: "administrationPolicy", valueType: "string", label: "약품·용액 사용 방식", control: "select", options: ["not_applicable", "separate_medication_order", "direct_quantity"], displayOrder: 60, required: true, placement: "detail", semantics: "instruction" }),
+    field({ key: "linkedMedicationOrderId", valueType: "string", label: "연결 약품 오더 ID", control: "input", displayOrder: 61, validation: { minLength: 36, maxLength: 36 }, placement: "detail", semantics: "metadata" }),
+    field({ key: "productReference", valueType: "string", label: "예정 약품·용액 식별", control: "input", displayOrder: 62, validation: { minLength: 1, maxLength: 500 }, placement: "detail", semantics: "metadata" }),
+    field({ key: "plannedRoute", valueType: "string", label: "예정 사용 경로", control: "input", displayOrder: 63, validation: { minLength: 1, maxLength: 100 }, placement: "detail", semantics: "instruction" }),
+    field({ key: "deviceProtocol", valueType: "string", label: "장비·수기 프로토콜", control: "textarea", displayOrder: 70, validation: { maxLength: 2000 }, placement: "detail", semantics: "instruction" }),
+    field({ key: "measurementUnit", valueType: "string", label: "측정 결과 단위", control: "input", displayOrder: 80, validation: { minLength: 1, maxLength: 80 }, placement: "detail", semantics: "metadata" }),
+    field({ key: "observationDomains", valueType: "string_array", label: "관찰 항목", control: "textarea", displayOrder: 90, placement: "detail", semantics: "instruction" }),
+    field({ key: "stagedInstructions", valueType: "string", label: "단계별 예정 지시", control: "textarea", displayOrder: 110, required: true, validation: { minLength: 1, maxLength: 4000 }, placement: "detail", semantics: "instruction" }),
+    field({ key: "exceptions", valueType: "string", label: "중단·확인 조건", control: "textarea", displayOrder: 120, required: true, validation: { minLength: 1, maxLength: 2000 }, placement: "detail", semantics: "instruction" }),
+  ],
+};
+
+export function getClinicalOrderFieldSchema(type: ClinicalOrderType, version: number = 1): ClinicalOrderFieldSchema | null {
+  if (version === 1) return CLINICAL_ORDER_FIELD_SCHEMAS[type];
+  if (version === 2 && type === "treatment") return TREATMENT_FIELD_SCHEMA_V2;
+  return null;
+}
+
 export type ClinicalOrderMasterContractInput = {
   categoryGroup: ServiceItemType;
   clinicalOrderType?: unknown;
@@ -407,7 +440,7 @@ export type ClinicalOrderMasterContract = {
   isExternalLab: boolean;
   destinationModule: ClinicalOrderDestinationModule | null;
   executionMode: Exclude<ClinicalOrderExecutionMode, "aggregate">;
-  detailSchemaVersion: 1;
+  detailSchemaVersion: 1 | 2;
   detailFieldSchema: ClinicalOrderFieldSchema;
   billingEligible: boolean;
 };
@@ -421,7 +454,13 @@ export function resolveClinicalOrderMasterContract(
   const isExternalLab = input.isExternalLab === true;
   const clinicalOrderType =
     explicitType ?? mapLegacyCategoryToClinicalOrderType(input.categoryGroup, isExternalLab);
-  const schema = CLINICAL_ORDER_FIELD_SCHEMAS[clinicalOrderType];
+  const requestedVersion = input.detailSchemaVersion === undefined || input.detailSchemaVersion === null ? 1 : input.detailSchemaVersion;
+  const schema = typeof requestedVersion === "number" ? getClinicalOrderFieldSchema(clinicalOrderType, requestedVersion) : null;
+  if (!schema) throw new Error("detail_schema_version_mismatch");
+  if (isClinicalOrderFieldSchema(input.detailFieldSchema) &&
+    (input.detailFieldSchema.clinicalOrderType !== clinicalOrderType || input.detailFieldSchema.version !== schema.version)) {
+    throw new Error("detail_field_schema_mismatch");
+  }
   const explicitMode = isExecutionMode(input.executionMode)
     ? input.executionMode
     : null;
@@ -453,8 +492,7 @@ export function resolveClinicalOrderMasterContract(
     isExternalLab: clinicalOrderType === "external_lab",
     destinationModule,
     executionMode,
-    detailSchemaVersion:
-      input.detailSchemaVersion === 1 ? 1 : schema.version,
+    detailSchemaVersion: schema.version,
     detailFieldSchema:
       isClinicalOrderFieldSchema(input.detailFieldSchema)
         ? input.detailFieldSchema
@@ -481,8 +519,8 @@ export function validateClinicalOrderDetailInputs({
   requireComplete?: boolean;
   schemaVersion: number;
 }): ClinicalOrderDetailValidationResult {
-  const schema = CLINICAL_ORDER_FIELD_SCHEMAS[clinicalOrderType];
-  if (schemaVersion !== schema.version) {
+  const schema = getClinicalOrderFieldSchema(clinicalOrderType, schemaVersion);
+  if (!schema) {
     return { valid: false, fieldErrors: { _schema: "detail_schema_version_mismatch" } };
   }
   if (!isRecord(detailInputs)) {
@@ -496,7 +534,7 @@ export function validateClinicalOrderDetailInputs({
     if (!fieldKeys.has(key)) fieldErrors[key] = "unknown_field";
   }
   for (const definition of schema.fields) {
-    const value = detailInputs[definition.key] ?? definition.defaultValue;
+    const value = detailInputs[definition.key];
     if (requireComplete && definition.required && isEmptyValue(value)) {
       fieldErrors[definition.key] = "required";
       continue;
@@ -510,6 +548,23 @@ export function validateClinicalOrderDetailInputs({
     normalized[definition.key] = value;
   }
 
+  if (clinicalOrderType === "hospitalization" && !isEmptyValue(detailInputs.wardOrCage)
+    && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(detailInputs.wardOrCage))) {
+    fieldErrors.wardOrCage = "registered_inpatient_location_required";
+  }
+  if (clinicalOrderType === "treatment" && schemaVersion === 2) {
+    const hasAmount = !isEmptyValue(detailInputs.plannedAmount);
+    const hasUnit = !isEmptyValue(detailInputs.plannedAmountUnit);
+    if (hasAmount !== hasUnit) fieldErrors.plannedAmountUnit = "amount_unit_pair_required";
+    if (requireComplete && detailInputs.administrationPolicy === "direct_quantity") {
+      for (const key of ["plannedAmount", "plannedAmountUnit", "productReference", "plannedRoute"]) {
+        if (isEmptyValue(detailInputs[key])) fieldErrors[key] = "required";
+      }
+    }
+    if (requireComplete && detailInputs.administrationPolicy === "separate_medication_order" && isEmptyValue(detailInputs.linkedMedicationOrderId)) fieldErrors.linkedMedicationOrderId = "required";
+    if (!isEmptyValue(detailInputs.linkedMedicationOrderId) && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(detailInputs.linkedMedicationOrderId))) fieldErrors.linkedMedicationOrderId = "invalid_order_id";
+    if (requireComplete && detailInputs.procedureKind === "measurement" && isEmptyValue(detailInputs.measurementUnit)) fieldErrors.measurementUnit = "required";
+  }
   return Object.keys(fieldErrors).length > 0
     ? { valid: false, fieldErrors }
     : { valid: true, normalized };
@@ -594,7 +649,7 @@ function isClinicalOrderFieldSchema(
 ): value is ClinicalOrderFieldSchema {
   return (
     isRecord(value) &&
-    value.version === 1 &&
+    (value.version === 1 || value.version === 2) &&
     isClinicalOrderType(value.clinicalOrderType) &&
     Array.isArray(value.fields)
   );

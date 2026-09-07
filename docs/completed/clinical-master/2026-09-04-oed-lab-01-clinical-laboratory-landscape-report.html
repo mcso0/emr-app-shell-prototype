@@ -1,0 +1,1479 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <meta name="description" content="CLAiR 임상병리 마스터 오더 86건의 외부 전체 구조 조사 보고서" />
+    <title>OED-LAB-01 · 임상병리 검사 86개 구조 조사</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+        color: #172033;
+        background: #eef3f8;
+        font-synthesis: none;
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; min-width: 320px; line-height: 1.72; word-break: keep-all; }
+      a { color: #155eef; text-underline-offset: 3px; }
+      a:hover { color: #004eeb; }
+      code { padding: 0.15em 0.42em; border-radius: 6px; background: #eef2f7; color: #344054; font-size: 0.88em; word-break: break-all; }
+
+      .progress { position: fixed; inset: 0 0 auto; z-index: 20; height: 3px; background: linear-gradient(90deg, #5eead4 var(--progress, 0%), transparent 0); pointer-events: none; }
+      .page-shell { width: min(1320px, calc(100% - 40px)); margin: 0 auto; padding: 28px 0 76px; }
+      .hero { position: relative; overflow: hidden; padding: clamp(30px, 5vw, 62px); border: 1px solid #1f3153; border-radius: 26px; background: radial-gradient(circle at 87% 12%, rgba(94, 234, 212, .23), transparent 31%), radial-gradient(circle at 8% 92%, rgba(99, 102, 241, .20), transparent 34%), linear-gradient(135deg, #111a2c 0%, #1b2d4c 58%, #17434b 100%); box-shadow: 0 25px 68px rgba(35, 52, 78, .19); color: white; }
+      .eyebrow { margin: 0 0 13px; color: #9cebd8; font-size: 12px; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+      .hero h1 { max-width: 900px; margin: 0; font-size: clamp(34px, 5.1vw, 58px); line-height: 1.1; letter-spacing: -.045em; }
+      .hero-summary { max-width: 860px; margin: 21px 0 0; color: #d8e4f3; font-size: clamp(16px, 2vw, 20px); }
+      .status-row { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 25px; }
+      .chip { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.18); border-radius: 999px; background: rgba(255,255,255,.09); color: #f6fbff; font-size: 13px; font-weight: 750; }
+      .chip::before { width: 7px; height: 7px; border-radius: 50%; background: #5eead4; content: ""; }
+      .chip.caution::before { background: #fbbf24; }
+      .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 34px; }
+      .metric { padding: 18px; border: 1px solid rgba(255,255,255,.14); border-radius: 15px; background: rgba(255,255,255,.08); backdrop-filter: blur(12px); }
+      .metric strong { display: block; font-size: 31px; line-height: 1.05; letter-spacing: -.035em; }
+      .metric span { display: block; margin-top: 8px; color: #cbd7e6; font-size: 12px; font-weight: 700; }
+
+      .decision { display: grid; grid-template-columns: auto 1fr; gap: 14px; margin: 20px 0; padding: 18px 20px; border: 1px solid #b8e6da; border-radius: 16px; background: #effbf7; color: #18594c; }
+      .decision strong { white-space: nowrap; }
+      .decision p { margin: 0; }
+      .content-grid { display: grid; grid-template-columns: 238px minmax(0, 1fr); gap: 22px; align-items: start; }
+      .toc { position: sticky; top: 18px; padding: 18px; border: 1px solid #d8e2ee; border-radius: 17px; background: rgba(255,255,255,.92); box-shadow: 0 12px 34px rgba(41,57,80,.07); backdrop-filter: blur(12px); }
+      .toc-title { margin: 0 0 10px; color: #667085; font-size: 11px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+      .toc a { display: block; padding: 7px 8px; border-radius: 8px; color: #475467; font-size: 13px; font-weight: 680; text-decoration: none; }
+      .toc a:hover { background: #f0f4f8; color: #155eef; }
+      .toc .divider { height: 1px; margin: 13px 0; background: #e4eaf1; }
+      .toc .source-link { color: #155eef; }
+
+      article { min-width: 0; padding: clamp(24px, 4vw, 50px); border: 1px solid #d8e2ee; border-radius: 19px; background: white; box-shadow: 0 14px 42px rgba(41,57,80,.075); }
+      article h2, article h3, article h4 { scroll-margin-top: 26px; color: #172033; letter-spacing: -.025em; }
+      article h2 { margin: 3.1em 0 .7em; padding-top: .2em; font-size: clamp(25px, 3vw, 32px); line-height: 1.25; }
+      article h2:first-child { margin-top: 0; }
+      article h3 { margin: 2.1em 0 .55em; font-size: 21px; }
+      article h4 { margin: 1.65em 0 .45em; font-size: 17px; }
+      article p { margin: .8em 0; }
+      article ul, article ol { padding-left: 1.35em; }
+      article li + li { margin-top: .34em; }
+      article strong { color: #101828; }
+      article blockquote { margin: 1.2em 0; padding: 12px 18px; border-left: 4px solid #5e7ce2; background: #f7f8fe; color: #344054; }
+      .table-scroll { margin: 1.15em 0 1.8em; overflow: auto; border: 1px solid #dbe3ed; border-radius: 13px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; line-height: 1.48; }
+      th { position: sticky; top: 0; z-index: 1; padding: 11px 12px; border-bottom: 1px solid #cfd9e5; background: #f2f5f9; color: #344054; font-weight: 800; text-align: left; white-space: nowrap; }
+      td { padding: 10px 12px; border-bottom: 1px solid #e8edf3; vertical-align: top; }
+      tr:last-child td { border-bottom: 0; }
+      tbody tr:hover { background: #f8fbfd; }
+      #gaps + .table-scroll tbody tr td:nth-child(2) { color: #b42318; font-weight: 800; }
+      .table-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 15px 0 10px; }
+      .table-toolbar input { flex: 1 1 320px; min-height: 42px; padding: 9px 13px; border: 1px solid #cfd9e5; border-radius: 10px; background: #fff; color: #172033; font: inherit; }
+      .table-toolbar input:focus { outline: 3px solid rgba(21,94,239,.14); border-color: #155eef; }
+      .table-count { color: #667085; font-size: 13px; font-weight: 750; }
+      .footer { margin-top: 22px; padding: 18px 20px; border: 1px solid #d8e2ee; border-radius: 15px; background: #fff; color: #667085; font-size: 13px; }
+
+      @media (max-width: 940px) {
+        .content-grid { grid-template-columns: 1fr; }
+        .toc { position: relative; top: 0; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); }
+        .toc-title, .toc .divider { grid-column: 1 / -1; }
+        .metrics { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      }
+      @media (max-width: 620px) {
+        .page-shell { width: min(100% - 20px, 1320px); padding-top: 10px; }
+        .hero { border-radius: 18px; }
+        .metrics { grid-template-columns: 1fr 1fr; }
+        .metric strong { font-size: 26px; }
+        .decision { grid-template-columns: 1fr; }
+        article { padding: 22px 17px; }
+        .toc { grid-template-columns: 1fr; }
+        .toc-title, .toc .divider { grid-column: auto; }
+        body { word-break: normal; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="progress" aria-hidden="true"></div>
+    <main class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">CLAiR · Clinical Master · OED-LAB-01</p>
+        <h1>임상병리 검사 86개<br />외부 전체 구조 조사</h1>
+        <p class="hero-summary">로컬 고정 목록 86건의 구조를 대조했다. 9월 6일 분류 오류와 후보값 출처를 보정했다. 검사별 정상범위·장비 호환성 정밀 조사는 다음 단계다.</p>
+        <div class="status-row">
+          <span class="chip">전체 지도 작성 · 9/6 보정</span>
+          <span class="chip caution">임상 검수 아님</span>
+          <span class="chip caution">앱·DB·마스터 비적용</span>
+          <span class="chip">다음 작업 OED-LAB-02</span>
+        </div>
+        <div class="metrics" aria-label="핵심 수치">
+          <div class="metric"><strong>86</strong><span>전체 임상병리 오더</span></div>
+          <div class="metric"><strong>72</strong><span>현재 검사 결과 정의</span></div>
+          <div class="metric"><strong>16</strong><span>로컬 독립 주문 연결 없음</span></div>
+          <div class="metric"><strong>6</strong><span>구조 변경을 막는 blocker</span></div>
+        </div>
+      </header>
+
+      <aside class="decision">
+        <strong>한 줄 판단</strong>
+        <p>검사명을 더 채우는 문제가 아니야. 세트와 하위 오더, 결과값, 장비·종별 정상범위를 서로 다른 계층으로 분리해야 해.</p>
+      </aside>
+
+      <div class="content-grid">
+        <nav class="toc" aria-label="보고서 목차">
+          <p class="toc-title">Report contents</p>
+          <a href="#conclusion">결론</a>
+          <a href="#corrections">9/6 보정 결과</a>
+          <a href="#scope">조사 범위와 경계</a>
+          <a href="#numbers">현재 구조 수치</a>
+          <a href="#model">공통 구조</a>
+          <a href="#families">검사군 전체 지도</a>
+          <a href="#gaps">핵심 문제</a>
+          <a href="#orders">86개 전수 분류</a>
+          <a href="#equipment">장비와 수행 경로</a>
+          <a href="#sources">출처 원장</a>
+          <a href="#next-step">다음 작업</a>
+          <div class="divider"></div>
+          <a class="source-link" href="../../work/clinical-master/order-execution-defaults/artifacts/oed-lab-01/report-source.md">AI용 Markdown 열기</a>
+          <a class="source-link" href="../../work/clinical-master/order-execution-defaults/artifacts/oed-lab-01/artifact-manifest.v1.json">JSON 산출물 목록</a>
+        </nav>
+        <article><h2 id="conclusion">결론</h2>
+<p>86개를 로컬 고정 목록·V4 표본·기존 비적용 후보와 대조했다. 검사군별 외부 자료는 구조를 정리하는 데 사용했으며 개별 검사법·수치까지 검증한 것은 아니다. 로컬 표본에는 검사 세트와 개별 결과 정의가 일부 있지만 <strong>세트 → 독립 하위 오더 → 결과값</strong> 구조는 보완이 필요하다.</p>
+<p>로컬 V4 표본의 CBC에는 WBC·HCT·PLT 세 항목만 연결돼 있다. 72개 검사 정의 중 16개는 독립 order profile이 없다. 건강검진·노령·응급 검사 조합은 기존 패널 하나를 가리키며, 종·검체·검사법·장비별 정상범위와 판별 규칙을 담은 버전 프로필도 이 표본에서 확인되지 않는다. 실제 DB와 앱의 지원 범위는 OED-LAB-03에서 별도로 확인한다.</p>
+<p>이번 단계에서 한 일은 이 구조와 빈틈을 확인한 것까지다. 앱, DB, Airtable, Supabase, 마스터 오더에는 아무것도 적용하지 않았다. 다음 작업인 <code>OED-LAB-02</code>에서는 CBC 하나를 표본으로 삼아 정확한 하위 항목과 프로토타입용 대표 값을 고정한다.</p>
+<h2 id="corrections">2026-09-06 보정 결과</h2>
+<p>86건의 분류와 검체 표기, 근거 연결을 다시 대조했다. 범백혈구감소증 항원 검사는 CBC에서 감염성 검사로, 마취 전 확장 검사 조합은 혈액화학에서 복합 검사 조합으로 바로잡았다. 미등록 ID를 혈액화학으로 자동 분류하던 처리도 제거했다.</p>
+<p>이전 WP-01A 비적용 후보의 검체와 로컬 V4 표본의 검체 표기가 충돌하는 항목은 5건이다. 요단백 평가 패널, 감염성 선별 패널, 개 파보 항원, 개 디스템퍼 항원, 고양이 범백혈구감소증 항원 검사다. 두 자료를 비교한 결과이며 특정 제품에서 허용하는 검체를 확정한 것은 아니다. 패널은 하위 검사마다 검체가 다를 수 있다.</p>
+<p>나머지는 같은 검체 표기 27건, 혈액 채취·처리 조건 미지정 38건, 후보 검체 없음 12건, 채취 검체와 표본 제작 형태의 구분 필요 2건, 후보가 other로만 지정된 항목 1건, 로컬 검사 연결 없음 1건이다. 검체가 일치해도 임상 검증 완료를 뜻하지 않는다. 원본 후보와 표본은 수정하지 않았다.</p>
+<p>기존 currentDefaultSummary라는 이름 때문에 이전 후보가 현재 기본값처럼 보였다. 이를 priorCandidateDefaults로 바꾸고 비적용 후보라는 출처를 명시했다. 실제 원격 마스터·병원관리 값을 읽은 결과는 아니다.</p>
+<p>검사군 자료가 있다는 이유로 개별 검사까지 확인 완료로 표시하던 처리도 수정했다. 85건은 source_partial, 레거시 예외 1건은 functional_fixture_required다. 이 상태는 조사 근거를 어디까지 확보했는지만 나타낸다. 오더 사용 가능 상태나 검수 대기 상태는 바꾸지 않는다. 검사별 정확한 방법과 정상범위 숫자는 이번 단계에서 추출하지 않았다.</p>
+<p>수행 경로와 장비는 검사군 후보로만 표시한다. 개별 검사에 대한 지원 여부는 후속 조사에서 확인한다. 개별 오더에 검사군 전체 하위 목록을 붙이던 추천도 제거했다.</p>
+<p>다음은 OED-LAB-02에서 CBC의 하위 항목, 대표 프로필, 단위·정상범위·판별, 단일 항목 재검 후보를 완성하는 일이다. 이번 보정은 조사 파일과 보고서에만 반영했다. 앱·DB·마스터에는 적용하지 않았다.</p>
+<p>보정 검증은 로컬 회귀 테스트 7개 통과, 생성 원문과 최종 보고서 표 일치, 입력 파일·산출물 해시 일치까지 확인했다. HTML은 전체 86건, CBC 검색 4건, 범백 검색 1건이며 데스크톱·모바일 너비에서 가로 넘침과 브라우저 오류가 없었다. 실제 앱 화면 검증은 이번 범위에 포함하지 않았다. 전체 문서 검사는 기존 persona 안내서 링크 오류 1건으로 실패했고 해당 파일은 수정하지 않았다.</p>
+<h2 id="scope">조사 범위와 경계</h2>
+<ul>
+<li>기준 목록은 WP-00의 <code>clinical_lab</code> 86건이다.</li>
+<li>레포의 V4 authoring fixture에 있는 72개 검사 정의, 18개 패널, 120개 연결, 85개 오더 프로필을 함께 대조했다.</li>
+<li>외부 근거는 표준기관, 수의임상병리 전문단체, 수의과대학 검사실, 제조사 공식 메뉴·설명서만 사용했다.</li>
+<li>숫자 정상범위를 마스터 후보로 옮기지 않았다. 이 조사에서 확인한 것은 구조, 값의 형태, 자료 확보 가능성과 대표 수행 경로다.</li>
+<li>실제 병원의 장비 보유나 시스템 연동을 가정하지 않았다. 장비 결과 입력은 현재 모두 <code>not_integrated + manual_entry</code>다.</li>
+<li>찾지 못한 값은 런타임 fallback으로 채우지 않는다. 필요한 경우 후속 단계에서 CLAiR 데모 프로필의 <code>synthetic_functional_fixture</code>로 명시한다.</li>
+</ul>
+<h2 id="numbers">현재 구조를 숫자로 보면</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>항목</th>
+<th align="right">현재 확인값</th>
+<th>의미</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>임상병리 오더</td>
+<td align="right">86</td>
+<td>이번 조사 전체 범위</td>
+</tr>
+<tr>
+<td>검사 결과 정의</td>
+<td align="right">72</td>
+<td>수치·정성·서술 결과를 정의한 현재 lab_test 수</td>
+</tr>
+<tr>
+<td>검사 패널 정의</td>
+<td align="right">18</td>
+<td>현재 lab_panel 수</td>
+</tr>
+<tr>
+<td>패널-검사 연결</td>
+<td align="right">120</td>
+<td>평면 panel → lab_test 연결 수</td>
+</tr>
+<tr>
+<td>오더-검사 프로필</td>
+<td align="right">85</td>
+<td>86개 중 1개가 연결되지 않음</td>
+</tr>
+<tr>
+<td>직접 주문 가능한 검사 정의</td>
+<td align="right">56</td>
+<td>lab_test와 직접 연결된 order profile 수</td>
+</tr>
+<tr>
+<td>독립 주문 연결이 없는 검사 정의</td>
+<td align="right">16</td>
+<td>로컬 V4 표본에 독립 order profile이 없음</td>
+</tr>
+<tr>
+<td>중첩 검사 패널</td>
+<td align="right">0</td>
+<td>로컬 V4 검사 연결 기준; 실제 DB 지원 여부는 별도 조사</td>
+</tr>
+<tr>
+<td>앱·DB 적용</td>
+<td align="right">0</td>
+<td>전부 비적용 조사 자료</td>
+</tr>
+</tbody></table></div>
+<h2 id="model">외부 조사에서 확인한 공통 구조</h2>
+<h3>1. 주문 세트와 결과를 분리해야 한다</h3>
+<p>LOINC에서 패널은 여러 하위 결과를 묶은 주문 단위다. FHIR 역시 검사 요청은 ServiceRequest, 최종 값은 Observation, 결과를 모은 보고서는 DiagnosticReport로 구분한다. 이 기준을 따르면 CBC 부모 오더 하나에 결과값을 넣는 것이 아니라, CBC를 주문했을 때 WBC·RBC·HGB 같은 독립 결과가 만들어져야 한다.</p>
+<p>특히 하위 항목을 따로 재검할 수 있어야 하므로 단순 component만으로는 부족하다. 각 항목에 별도 order/result identity를 주고, 재검할 때는 기존 결과를 덮어쓰지 않은 채 새 주문을 만들어 최초 세트와 직전 결과를 연결해야 한다.</p>
+<h3>2. 정상범위는 검사명 하나에 붙는 값이 아니다</h3>
+<p>ASVCP와 대학 검사실 자료에서 정상범위는 고정된 숫자 한 쌍이 아니다. 동물종과 연령, 필요한 경우 품종·성별뿐 아니라 검체, 전처리, 검사법, 분석 장비와 시약에 따라서도 달라진다. 따라서 <code>WBC 정상범위</code> 하나를 모든 병원에 공통으로 적용할 수는 없다.</p>
+<p>마스터에는 버전이 있는 결과 프로필 후보를 둔다. 각 워크스페이스는 그중 실제 사용하는 장비·수기·외부검사실 프로필을 명시적으로 선택한다. 결과를 저장할 때는 당시 단위, 정상범위, 판별 규칙과 프로필 버전까지 함께 스냅샷으로 남긴다.</p>
+<h3>3. 검사마다 결과 모양이 다르다</h3>
+<ul>
+<li>CBC·화학·응고: 주로 수치, 단위, 미달·정상·초과, 장비 플래그</li>
+<li>신속 항원·항체와 PCR: 양성·음성·검출·미검출·무효·판정 불가</li>
+<li>요시험지: 항목별 반정량 코드와 일부 수치</li>
+<li>요침사·분변 현미경: 반복 관찰값, 개수나 등급, 이미지, 소견</li>
+<li>혈액도말·세포검사: 형태, 등급, 서술, 이미지와 종합 해석</li>
+<li>코르티솔 동적검사: 프로토콜과 채혈 시간점별 여러 수치</li>
+</ul>
+<p>하나의 <code>numeric/text/coded</code> 칸만으로는 이 결과들을 안전하게 표현할 수 없다.</p>
+<h2 id="families">검사군별 전체 지도</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>family ID</th>
+<th>검사군</th>
+<th>목표 구조</th>
+<th>검사군 수행 경로 후보</th>
+<th>구조 근거</th>
+<th>검사군 수준 값 자료 상태</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>hematology_cbc</code></td>
+<td>혈구검사·CBC</td>
+<td>test_panel</td>
+<td>in_house_device, in_house_manual, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_found</code></td>
+</tr>
+<tr>
+<td><code>clinical_chemistry</code></td>
+<td>임상화학</td>
+<td>test_panel_or_atomic</td>
+<td>in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_found</code></td>
+</tr>
+<tr>
+<td><code>electrolytes</code></td>
+<td>전해질</td>
+<td>test_panel</td>
+<td>in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_found</code></td>
+</tr>
+<tr>
+<td><code>coagulation</code></td>
+<td>응고</td>
+<td>test_panel</td>
+<td>in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_found</code></td>
+</tr>
+<tr>
+<td><code>urinalysis</code></td>
+<td>요검사</td>
+<td>panel_of_subpanels</td>
+<td>in_house_manual, in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>fecal_parasitology</code></td>
+<td>분변·기생충</td>
+<td>test_panel_or_repeatable_observation</td>
+<td>in_house_manual, point_of_care_rapid_test, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>not_applicable</code></td>
+</tr>
+<tr>
+<td><code>infectious_disease</code></td>
+<td>감염성 질환</td>
+<td>species_and_method_specific_panel</td>
+<td>point_of_care_rapid_test, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>not_applicable</code></td>
+</tr>
+<tr>
+<td><code>blood_typing</code></td>
+<td>혈액형</td>
+<td>atomic_coded_result</td>
+<td>in_house_manual, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>not_applicable</code></td>
+</tr>
+<tr>
+<td><code>reticulocyte</code></td>
+<td>망상적혈구</td>
+<td>atomic_numeric_pair</td>
+<td>in_house_device, in_house_manual, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_found</code></td>
+</tr>
+<tr>
+<td><code>blood_smear</code></td>
+<td>혈액도말</td>
+<td>complex_report</td>
+<td>in_house_manual, in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>not_applicable</code></td>
+</tr>
+<tr>
+<td><code>cytology</code></td>
+<td>세포검사</td>
+<td>complex_report</td>
+<td>in_house_manual, in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>not_applicable</code></td>
+</tr>
+<tr>
+<td><code>thyroid</code></td>
+<td>갑상선</td>
+<td>test_panel</td>
+<td>in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>adrenal</code></td>
+<td>부신·코르티솔</td>
+<td>protocol_panel</td>
+<td>in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>inflammation</code></td>
+<td>염증 표지</td>
+<td>species_conditional_panel</td>
+<td>in_house_device, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>pancreatic</code></td>
+<td>췌장 평가</td>
+<td>test_panel</td>
+<td>in_house_device, point_of_care_rapid_test, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>organ_or_metabolic_panel</code></td>
+<td>장기·대사 평가</td>
+<td>test_panel_or_panel_of_panels</td>
+<td>in_house_device, in_house_manual, external_lab</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>composite_diagnostic_plan</code></td>
+<td>종합 검사 조합</td>
+<td>panel_of_panels</td>
+<td>mixed</td>
+<td><code>source_found</code></td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td><code>legacy_exception</code></td>
+<td>레거시 예외</td>
+<td>retire_or_redefine</td>
+<td>결정 필요</td>
+<td><code>source_partial</code></td>
+<td><code>functional_fixture_required</code></td>
+</tr>
+</tbody></table></div>
+<h3>대표 구조 예시</h3>
+<h4>CBC</h4>
+<p>외부 자료의 CBC 구성은 적혈구계, 백혈구계, 혈소판계와 형태 검토로 이어진다. 최소한 WBC, 백혈구 감별 절대수·비율, RBC, HGB, HCT, MCV, MCH, MCHC, RDW, PLT, MPV는 각각 결과를 기록할 수 있어야 한다. 망상적혈구와 혈액도말은 조건에 따라 붙이거나 별도 검사로 연결할 수 있다.</p>
+<p>로컬 CBC 표본에는 WBC·HCT·PLT 세 항목만 연결돼 있다. RBC와 HGB 정의는 이미 fixture에 있지만 독립 order profile과 CBC 패널 연결이 없다. <code>OED-LAB-02</code>에서는 이 차이를 먼저 기능 표본으로 구체화한다.</p>
+<h4>요검사</h4>
+<p>요검사는 물리적 관찰, 비중, 시험지, 침사, 필요한 경우 UPC까지 묶는 검사다. 지금처럼 시험지와 침사를 각각 한 줄로만 두면 pH·단백·당·케톤·빌리루빈·혈액, RBC·WBC·세균·상피·원주·결정, 이미지와 소견을 따로 기록할 수 없다. 시험지·비중·침사·UPC를 하위 세트로 나누고, 최종 관찰값은 독립 결과로 두는 구조가 필요하다.</p>
+<h4>감염성 검사</h4>
+<p>같은 질환 이름을 쓰더라도 항원, 항체와 PCR은 서로 다른 검사다. 현재 감염성 질환 선별 패널은 개·고양이 검사와 분변 검사, 신속키트, PCR까지 한 번에 섞어 둔다. 실제 제품에서는 동물종·검사법·패널 버전을 구분하고, 항목마다 양성·음성·무효·판정 불가 상태를 따로 저장해야 한다.</p>
+<h4>세포검사와 혈액도말</h4>
+<p>세포검사와 혈액도말에는 일괄적인 low/high 숫자 범위를 억지로 붙이지 않는다. 대신 검체 부위와 채취법, 적합성, 세포·미생물·염증 소견, 진단과 감별, 이미지와 판독자 의견을 남긴다. 관절액처럼 단백, 점도, 세포수와 감별계수 같은 수치 결과가 더해지는 검사는 복합 패널로 다룬다.</p>
+<h2 id="gaps">현재 구조의 핵심 문제</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>갭</th>
+<th>심각도</th>
+<th>내용</th>
+<th align="right">영향 수</th>
+<th>다음 작업</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>LAB-GAP-01</code></td>
+<td>blocker</td>
+<td>86개 중 1개 오더에 검사 프로필 연결이 없다</td>
+<td align="right">1</td>
+<td><code>OED-LAB-03</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-02</code></td>
+<td>blocker</td>
+<td>로컬 V4 검사 정의 16개에 독립 주문 연결이 없다</td>
+<td align="right">16</td>
+<td><code>OED-LAB-03</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-03</code></td>
+<td>blocker</td>
+<td>CBC 패널이 3개 항목으로 축소돼 있다</td>
+<td align="right">1</td>
+<td><code>OED-LAB-02</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-04</code></td>
+<td>blocker</td>
+<td>요시험지·요침사가 복합 결과를 한 필드로 축소한다</td>
+<td align="right">11</td>
+<td><code>OED-LAB-03</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-05</code></td>
+<td>blocker</td>
+<td>로컬 V4 검사 패널 연결에 중첩 구성이 없다</td>
+<td align="right">12</td>
+<td><code>OED-LAB-03</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-06</code></td>
+<td>blocker</td>
+<td>버전 있는 정상범위·판별 프로필이 없다</td>
+<td align="right">86</td>
+<td><code>OED-LAB-03</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-07</code></td>
+<td>high</td>
+<td>워크스페이스 수행 장비·수기·외부검사실 선택 계약이 없다</td>
+<td align="right">86</td>
+<td><code>OED-LAB-03</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-08</code></td>
+<td>high</td>
+<td>감염성 선별 패널이 종과 검사법을 혼합한다</td>
+<td align="right">2</td>
+<td><code>later_family_research</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-09</code></td>
+<td>high</td>
+<td>부신 검사가 시간점이 있는 프로토콜을 표현하지 못한다</td>
+<td align="right">2</td>
+<td><code>later_family_research</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-10</code></td>
+<td>high</td>
+<td>췌장 평가에 pancreas-specific lipase 항목이 없다</td>
+<td align="right">2</td>
+<td><code>later_family_research</code></td>
+</tr>
+<tr>
+<td><code>LAB-GAP-11</code></td>
+<td>high</td>
+<td>정확한 상용 장비값이 없는 경우의 기능용 프로필이 아직 없다</td>
+<td align="right">37</td>
+<td><code>OED-LAB-02_and_later_family_research</code></td>
+</tr>
+</tbody></table></div>
+<h2 id="orders">86개 오더 전수 분류표</h2>
+<p><code>panel · N</code>과 <code>atomic test</code>는 로컬 V4 표본의 연결이다. 조사 상태는 검사군 근거 확보 범위이며 개별 제품·검사법·정상범위 검증이나 오더 검수·사용 가능 상태가 아니다. 검사군 공통 자료로 개별 검사를 확인 완료 처리하지 않는다.</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th align="right">#</th>
+<th>order ID</th>
+<th>표시명</th>
+<th>검사군</th>
+<th>현재 연결</th>
+<th>조사 상태</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">1</td>
+<td><code>cm.order.lab.panel.cbc-basic</code></td>
+<td>전혈구 기본 패널</td>
+<td>혈구검사·CBC</td>
+<td>panel · 3</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">2</td>
+<td><code>cm.order.lab.panel.chemistry-basic</code></td>
+<td>기본 혈청화학 패널</td>
+<td>임상화학</td>
+<td>panel · 6</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">3</td>
+<td><code>cm.order.lab.panel.fecal</code></td>
+<td>분변 검사 패널</td>
+<td>분변·기생충</td>
+<td>panel · 2</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">4</td>
+<td><code>cm.order.lab.panel.urinalysis</code></td>
+<td>요검사 패널</td>
+<td>요검사</td>
+<td>panel · 2</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">5</td>
+<td><code>cm.order.lab.test.cbc-hct</code></td>
+<td>헤마토크릿 검사</td>
+<td>혈구검사·CBC</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">6</td>
+<td><code>cm.order.lab.test.cbc-plt</code></td>
+<td>혈소판 수 검사</td>
+<td>혈구검사·CBC</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">7</td>
+<td><code>cm.order.lab.test.cbc-wbc</code></td>
+<td>백혈구 수 검사</td>
+<td>혈구검사·CBC</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">8</td>
+<td><code>cm.order.lab.test.chem-alp</code></td>
+<td>ALP 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">9</td>
+<td><code>cm.order.lab.test.chem-alt</code></td>
+<td>ALT 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">10</td>
+<td><code>cm.order.lab.test.chem-bun</code></td>
+<td>BUN 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">11</td>
+<td><code>cm.order.lab.test.chem-creatinine</code></td>
+<td>크레아티닌 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">12</td>
+<td><code>cm.order.lab.test.chem-glucose</code></td>
+<td>혈당 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">13</td>
+<td><code>cm.order.lab.test.chem-total-protein</code></td>
+<td>총단백 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">14</td>
+<td><code>cm.order.lab.test.fecal-microscopy</code></td>
+<td>분변 현미경 검사</td>
+<td>분변·기생충</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">15</td>
+<td><code>cm.order.lab.test.giardia-antigen</code></td>
+<td>지아르디아 항원 검사</td>
+<td>분변·기생충</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">16</td>
+<td><code>cm.order.lab.test.ua-sediment</code></td>
+<td>요침사 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">17</td>
+<td><code>cm.order.lab.test.ua-strip</code></td>
+<td>요시험지 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">18</td>
+<td><code>cm.order.synthetic.lab-01</code></td>
+<td>전해질 검사</td>
+<td>전해질</td>
+<td>panel · 7</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">19</td>
+<td><code>cm.order.synthetic.lab-02</code></td>
+<td>응고 검사</td>
+<td>응고</td>
+<td>panel · 2</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">20</td>
+<td><code>cm.order.synthetic.lab-03</code></td>
+<td>수술 전 검사</td>
+<td>장기·대사 평가</td>
+<td>panel · 8</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">21</td>
+<td><code>cm.order.synthetic.lab-04</code></td>
+<td>간 검사</td>
+<td>장기·대사 평가</td>
+<td>panel · 8</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">22</td>
+<td><code>cm.order.synthetic.lab-05</code></td>
+<td>신장 검사</td>
+<td>장기·대사 평가</td>
+<td>panel · 8</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">23</td>
+<td><code>cm.order.synthetic.lab-06</code></td>
+<td>당대사 패널</td>
+<td>장기·대사 평가</td>
+<td>panel · 14</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">24</td>
+<td><code>cm.order.synthetic.lab-07</code></td>
+<td>혈액형 검사 서비스</td>
+<td>혈액형</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">25</td>
+<td><code>cm.order.synthetic.lab-08</code></td>
+<td>망상적혈구 검사 서비스</td>
+<td>망상적혈구</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">26</td>
+<td><code>cm.order.synthetic.lab-09</code></td>
+<td>혈액도말 검사 서비스</td>
+<td>혈액도말</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">27</td>
+<td><code>cm.order.synthetic.lab-10</code></td>
+<td>피부 세포검사</td>
+<td>세포검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">28</td>
+<td><code>cm.order.synthetic.lab-11</code></td>
+<td>귀 분비물 세포검사</td>
+<td>세포검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">29</td>
+<td><code>cm.order.synthetic.lab-12</code></td>
+<td>종괴 세포검사</td>
+<td>세포검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">30</td>
+<td><code>cm.order.synthetic.lab-13</code></td>
+<td>관절액 세포검사</td>
+<td>세포검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">31</td>
+<td><code>cm.order.v4.lab-panel.01</code></td>
+<td>확장 혈청화학 패널</td>
+<td>임상화학</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">32</td>
+<td><code>cm.order.v4.lab-panel.02</code></td>
+<td>지질 검사 패널</td>
+<td>임상화학</td>
+<td>panel · 4</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">33</td>
+<td><code>cm.order.v4.lab-panel.03</code></td>
+<td>췌장 평가 패널</td>
+<td>췌장 평가</td>
+<td>panel · 6</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">34</td>
+<td><code>cm.order.v4.lab-panel.04</code></td>
+<td>염증 표지 패널</td>
+<td>염증 표지</td>
+<td>panel · 6</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">35</td>
+<td><code>cm.order.v4.lab-panel.05</code></td>
+<td>갑상선 검사 패널</td>
+<td>갑상선</td>
+<td>panel · 5</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">36</td>
+<td><code>cm.order.v4.lab-panel.06</code></td>
+<td>부신 검사 패널</td>
+<td>부신·코르티솔</td>
+<td>panel · 5</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">37</td>
+<td><code>cm.order.v4.lab-panel.07</code></td>
+<td>요단백 평가 패널</td>
+<td>요검사</td>
+<td>panel · 10</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">38</td>
+<td><code>cm.order.v4.lab-panel.08</code></td>
+<td>감염성 질환 선별 패널</td>
+<td>감염성 질환</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">39</td>
+<td><code>cm.order.v4.lab-service.basic-checkup</code></td>
+<td>기본 건강검진 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">40</td>
+<td><code>cm.order.v4.lab-service.emergency-initial</code></td>
+<td>응급 초기 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 6</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">41</td>
+<td><code>cm.order.v4.lab-service.hepatobiliary</code></td>
+<td>간담도 평가 검사 조합</td>
+<td>장기·대사 평가</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">42</td>
+<td><code>cm.order.v4.lab-service.infectious-workup</code></td>
+<td>감염성 질환 검사 조합</td>
+<td>감염성 질환</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">43</td>
+<td><code>cm.order.v4.lab-service.preanesthetic-expanded</code></td>
+<td>마취 전 확장 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">44</td>
+<td><code>cm.order.v4.lab-service.pu-pd</code></td>
+<td>다뇨·다갈 검사 조합</td>
+<td>요검사</td>
+<td>panel · 10</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">45</td>
+<td><code>cm.order.v4.lab-service.renal</code></td>
+<td>신장 평가 검사 조합</td>
+<td>장기·대사 평가</td>
+<td>panel · 10</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">46</td>
+<td><code>cm.order.v4.lab-service.senior-cat</code></td>
+<td>노령묘 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 5</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">47</td>
+<td><code>cm.order.v4.lab-service.senior-dog</code></td>
+<td>노령견 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 12</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">48</td>
+<td><code>cm.order.v4.lab-service.vomiting-diarrhea</code></td>
+<td>구토·설사 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 6</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">49</td>
+<td><code>cm.order.v4.lab-service.weight-loss</code></td>
+<td>체중감소 검사 조합</td>
+<td>종합 검사 조합</td>
+<td>panel · 5</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">50</td>
+<td><code>cm.order.v4.lab-test.01</code></td>
+<td>혈청 글로불린 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">51</td>
+<td><code>cm.order.v4.lab-test.02</code></td>
+<td>알부민·글로불린 비율 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">52</td>
+<td><code>cm.order.v4.lab-test.03</code></td>
+<td>직접 빌리루빈 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">53</td>
+<td><code>cm.order.v4.lab-test.04</code></td>
+<td>감마글루타밀전이효소 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">54</td>
+<td><code>cm.order.v4.lab-test.05</code></td>
+<td>젖산탈수소효소 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">55</td>
+<td><code>cm.order.v4.lab-test.06</code></td>
+<td>크레아틴키나아제 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">56</td>
+<td><code>cm.order.v4.lab-test.07</code></td>
+<td>총콜레스테롤 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">57</td>
+<td><code>cm.order.v4.lab-test.08</code></td>
+<td>중성지방 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">58</td>
+<td><code>cm.order.v4.lab-test.09</code></td>
+<td>아밀라아제 검사</td>
+<td>췌장 평가</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">59</td>
+<td><code>cm.order.v4.lab-test.10</code></td>
+<td>리파아제 검사</td>
+<td>췌장 평가</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">60</td>
+<td><code>cm.order.v4.lab-test.11</code></td>
+<td>SDMA 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">61</td>
+<td><code>cm.order.v4.lab-test.12</code></td>
+<td>프럭토사민 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">62</td>
+<td><code>cm.order.v4.lab-test.13</code></td>
+<td>총담즙산 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">63</td>
+<td><code>cm.order.v4.lab-test.14</code></td>
+<td>젖산 검사</td>
+<td>임상화학</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">64</td>
+<td><code>cm.order.v4.lab-test.15</code></td>
+<td>C-반응단백 검사</td>
+<td>염증 표지</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">65</td>
+<td><code>cm.order.v4.lab-test.16</code></td>
+<td>혈청 아밀로이드 A 검사</td>
+<td>염증 표지</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">66</td>
+<td><code>cm.order.v4.lab-test.17</code></td>
+<td>총 T4 검사</td>
+<td>갑상선</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">67</td>
+<td><code>cm.order.v4.lab-test.18</code></td>
+<td>유리 T4 검사</td>
+<td>갑상선</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">68</td>
+<td><code>cm.order.v4.lab-test.19</code></td>
+<td>갑상선자극호르몬 검사</td>
+<td>갑상선</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">69</td>
+<td><code>cm.order.v4.lab-test.20</code></td>
+<td>코르티솔 검사</td>
+<td>부신·코르티솔</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">70</td>
+<td><code>cm.order.v4.lab-test.21</code></td>
+<td>요 크레아티닌 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">71</td>
+<td><code>cm.order.v4.lab-test.22</code></td>
+<td>요단백·크레아티닌 비율 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">72</td>
+<td><code>cm.order.v4.lab-test.23</code></td>
+<td>요 pH 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">73</td>
+<td><code>cm.order.v4.lab-test.24</code></td>
+<td>요당 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">74</td>
+<td><code>cm.order.v4.lab-test.25</code></td>
+<td>요케톤 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">75</td>
+<td><code>cm.order.v4.lab-test.26</code></td>
+<td>요빌리루빈 검사</td>
+<td>요검사</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">76</td>
+<td><code>cm.order.v4.lab-test.27</code></td>
+<td>분변 부유 검사</td>
+<td>분변·기생충</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">77</td>
+<td><code>cm.order.v4.lab-test.28</code></td>
+<td>분변 잠혈 검사</td>
+<td>분변·기생충</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">78</td>
+<td><code>cm.order.v4.lab-test.29</code></td>
+<td>개 파보바이러스 항원 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">79</td>
+<td><code>cm.order.v4.lab-test.30</code></td>
+<td>개 디스템퍼바이러스 항원 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">80</td>
+<td><code>cm.order.v4.lab-test.31</code></td>
+<td>개 심장사상충 항원 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">81</td>
+<td><code>cm.order.v4.lab-test.32</code></td>
+<td>고양이 범백혈구감소증 항원 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">82</td>
+<td><code>cm.order.v4.lab-test.33</code></td>
+<td>고양이 백혈병바이러스 항원 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">83</td>
+<td><code>cm.order.v4.lab-test.34</code></td>
+<td>고양이 면역결핍바이러스 항체 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">84</td>
+<td><code>cm.order.v4.lab-test.35</code></td>
+<td>고양이 코로나바이러스 항체 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">85</td>
+<td><code>cm.order.v4.lab-test.36</code></td>
+<td>바베시아 PCR 검사</td>
+<td>감염성 질환</td>
+<td>atomic test</td>
+<td><code>source_partial</code></td>
+</tr>
+<tr>
+<td align="right">86</td>
+<td><code>phase1.optionb.v1.order.metabolic</code></td>
+<td>합성 기초 혈액검사</td>
+<td>레거시 예외</td>
+<td>연결 없음</td>
+<td><code>functional_fixture_required</code></td>
+</tr>
+</tbody></table></div>
+<h2 id="equipment">장비와 수행 경로 결론</h2>
+<p>대표 장비 후보는 실제 보유 장비를 추정하기 위해서가 아니라 기능 구조를 확인하기 위해 골랐다. 혈구분석기, 화학분석기, 응고분석기, 요시험지 분석기, 요침사 분석기, 세포 분석기, 신속키트 판독기와 수기 현미경·원심분리기·굴절계가 서로 다른 결과 흐름을 만든다는 점을 구분했다.</p>
+<p>보고서에 적힌 장비가 청담점이나 다른 워크스페이스에 실제로 있다는 뜻은 아니다. 프로토타입에서는 워크스페이스가 사용할 수행 프로필을 직접 선택하고, 화면에는 <code>수동 입력</code>과 <code>연동 안 됨</code>을 사실대로 표시한다. 선택하지 않은 장비 프로필이나 화면 목업값으로 자동 대체하는 fallback은 두지 않는다.</p>
+<h2 id="sources">출처 원장</h2>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>source ID</th>
+<th>기관</th>
+<th>문서</th>
+<th>직접 뒷받침하는 범위</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ASVCP-QALS</code></td>
+<td>American Society for Veterinary Clinical Pathology</td>
+<td><a href="https://www.asvcp.org/page/QALS_Guidelines" target="_blank" rel="noreferrer">Quality Assurance and Laboratory Standards Guidelines</a></td>
+<td>quality_governance, reference_interval_governance, cytology_reporting</td>
+</tr>
+<tr>
+<td><code>ASVCP-RI-GUIDELINE</code></td>
+<td>ASVCP QALS</td>
+<td><a href="https://onlinelibrary.wiley.com/doi/full/10.1111/vcp.12006" target="_blank" rel="noreferrer">Reference interval guidelines</a></td>
+<td>reference_interval_dimensions, method_device_dependence, interval_transference</td>
+</tr>
+<tr>
+<td><code>ASVCP-RI-TRANSFER</code></td>
+<td>ASVCP QALS</td>
+<td><a href="https://www.asvcp.org/resource/resmgr/qals/ref_interval_transference/transferenceverification-upd.pdf" target="_blank" rel="noreferrer">Reference Interval Transference Verification Checklist</a></td>
+<td>reference_interval_verification, local_validation_required</td>
+</tr>
+<tr>
+<td><code>CORNELL-HEMATOLOGY</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/hematology" target="_blank" rel="noreferrer">Hematology testing protocols and interpretations</a></td>
+<td>cbc_children, reticulocyte, blood_smear, fecal_occult_blood</td>
+</tr>
+<tr>
+<td><code>CORNELL-HEMATOLOGY-RI</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/laboratories/clinical-pathology/reference-intervals/hematology-advia-2120" target="_blank" rel="noreferrer">Hematology reference intervals - ADVIA 2120</a></td>
+<td>cbc_units, species_reference_intervals, device_specific_profile</td>
+</tr>
+<tr>
+<td><code>IDEXX-PROCYTE-RI</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/files/procyte-dx-reference-ranges-en.pdf" target="_blank" rel="noreferrer">ProCyte Dx reference intervals</a></td>
+<td>cbc_device_profile, species_reference_intervals, cbc_units</td>
+</tr>
+<tr>
+<td><code>ZOETIS-HM5-MANUAL</code></td>
+<td>Zoetis Diagnostics</td>
+<td><a href="https://www.zoetisdiagnostics.com/assets/Resources/PDF/VETSCAN-HM5-Blue-Version-Operators-Manual.pdf" target="_blank" rel="noreferrer">VETSCAN HM5 Operator&#39;s Manual</a></td>
+<td>cbc_device_parameters, hematology_equipment_class</td>
+</tr>
+<tr>
+<td><code>CORNELL-CHEMISTRY</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/veterinary-resources/testing-guidelines/clinical-chemistry" target="_blank" rel="noreferrer">Clinical Chemistry</a></td>
+<td>chemistry_panels, electrolytes, organ_panels, specimens</td>
+</tr>
+<tr>
+<td><code>CORNELL-CHEMISTRY-RI</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/laboratories/clinical-pathology/reference-intervals/chemistry-cobas" target="_blank" rel="noreferrer">Chemistry reference intervals - Cobas</a></td>
+<td>chemistry_units, species_reference_intervals, method_device_dependence</td>
+</tr>
+<tr>
+<td><code>IDEXX-CATALYST-MENU</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/analyzers/catalyst-one-chemistry-analyzer/test-menu/" target="_blank" rel="noreferrer">Catalyst One test menu</a></td>
+<td>chemistry_device_menu, single_analyte_recheck, upc, endocrine_poc</td>
+</tr>
+<tr>
+<td><code>ZOETIS-VS2-PROFILES</code></td>
+<td>Zoetis Diagnostics</td>
+<td><a href="https://www.zoetisdiagnostics.com/IE/assets/pdf/Zoetis-Vetscan-VS2-Testing-Profiles-VTS-01169A-NOV2123.pdf" target="_blank" rel="noreferrer">VETSCAN VS2 testing profiles</a></td>
+<td>chemistry_device_menu, panel_composition, species_scope</td>
+</tr>
+<tr>
+<td><code>IDEXX-COAG-DX</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/analyzers/coag-dx-analyzer/" target="_blank" rel="noreferrer">Coag Dx Analyzer</a></td>
+<td>pt, aptt, coagulation_equipment, species_scope</td>
+</tr>
+<tr>
+<td><code>CORNELL-COAG-PANEL</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/diagnostic-services/diagnostic-plans-and-panels/canine-diagnostic-plans-and-panels" target="_blank" rel="noreferrer">Canine diagnostic plans and coagulation panels</a></td>
+<td>coagulation_panel, panel_of_panels, specimens</td>
+</tr>
+<tr>
+<td><code>CORNELL-URINALYSIS</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/urinalysis" target="_blank" rel="noreferrer">Urinalysis</a></td>
+<td>urinalysis_children, upc, urine_specimen</td>
+</tr>
+<tr>
+<td><code>IDEXX-VETLAB-UA</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/analyzers/vetlab-ua-analyzer/" target="_blank" rel="noreferrer">VetLab UA Analyzer</a></td>
+<td>urine_strip_device, semiquantitative_results, species_scope</td>
+</tr>
+<tr>
+<td><code>IDEXX-SEDIVUE</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/analyzers/sedivue-dx-analyzer/" target="_blank" rel="noreferrer">SediVue Dx Urine Sediment Analyzer</a></td>
+<td>urine_sediment_children, images, sediment_device</td>
+</tr>
+<tr>
+<td><code>CORNELL-PARASITOLOGY</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/testing/testing-protocols-interpretations/parasitology" target="_blank" rel="noreferrer">Parasitology</a></td>
+<td>fecal_flotation, organism_observations, qualitative_quantitative_results</td>
+</tr>
+<tr>
+<td><code>IDEXX-SNAP-GIARDIA</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/snap-tests/snap-giardia-test/" target="_blank" rel="noreferrer">SNAP Giardia Test</a></td>
+<td>giardia_antigen, point_of_care_rapid_test, qualitative_result</td>
+</tr>
+<tr>
+<td><code>IDEXX-SNAP-INFECTIOUS</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/support/rapid-assay-snap-product-inserts/" target="_blank" rel="noreferrer">SNAP rapid assay product inserts</a></td>
+<td>parvo_antigen, heartworm_antigen, felv_antigen, fiv_antibody, panel_status</td>
+</tr>
+<tr>
+<td><code>UC-DAVIS-PCR</code></td>
+<td>UC Davis Veterinary Genetics and Molecular Diagnostics</td>
+<td><a href="https://pcrlab.vetmed.ucdavis.edu/veterinary-diagnostics/veterinary-submission-formsdiagnostic-tests-and-panels" target="_blank" rel="noreferrer">Veterinary PCR tests and panels</a></td>
+<td>infectious_pcr, babesia, species_specific_panels, external_lab_route</td>
+</tr>
+<tr>
+<td><code>CORNELL-PCR-INTERPRETATION</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/testing-laboratories/molecular-diagnostics/interpretation-pcr-results" target="_blank" rel="noreferrer">Interpretation of PCR results</a></td>
+<td>pcr_result_shape, assay_specific_interpretation, inconclusive_results</td>
+</tr>
+<tr>
+<td><code>CORNELL-BLOOD-TYPE</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/laboratories/comparative-coagulation/clinical-topics/canine-feline-blood-typing" target="_blank" rel="noreferrer">Canine and Feline Blood Typing</a></td>
+<td>blood_type, species_specific_codes, edta_specimen</td>
+</tr>
+<tr>
+<td><code>CORNELL-CYTOLOGY</code></td>
+<td>Cornell University AHDC</td>
+<td><a href="https://www.vet.cornell.edu/animal-health-diagnostic-center/veterinary-resources/testing-guidelines/cytology-fluid-samples-only" target="_blank" rel="noreferrer">Cytology - fluid samples</a></td>
+<td>joint_fluid, cytology_specimen, manual_external_route</td>
+</tr>
+<tr>
+<td><code>IDEXX-INVUE</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/analyzers/invue-dx-analyzer/" target="_blank" rel="noreferrer">inVue Dx Cellular Analyzer</a></td>
+<td>ear_cytology, blood_morphology, images, semiquantitative_results</td>
+</tr>
+<tr>
+<td><code>UC-DAVIS-ENDOCRINOLOGY</code></td>
+<td>UC Davis Veterinary Medical Teaching Hospital</td>
+<td><a href="https://www.vetmed.ucdavis.edu/hospital/support-services/lab-services/clinical-laboratory-services/clinical-chemistry" target="_blank" rel="noreferrer">Clinical chemistry and endocrinology services</a></td>
+<td>thyroid_tests, cortisol, crp, endocrine_equipment</td>
+</tr>
+<tr>
+<td><code>IDEXX-CORTISOL</code></td>
+<td>IDEXX Laboratories</td>
+<td><a href="https://www.idexx.com/en/veterinary/analyzers/catalyst-one-chemistry-analyzer/test-menu/cortisol/" target="_blank" rel="noreferrer">Catalyst Cortisol Test</a></td>
+<td>cortisol_protocol, timed_results, canine_device_profile</td>
+</tr>
+<tr>
+<td><code>LOINC-PANELS</code></td>
+<td>Regenstrief Institute</td>
+<td><a href="https://loinc.org/kb/users-guide/panels" target="_blank" rel="noreferrer">LOINC Panels (Batteries)</a></td>
+<td>panel_children, nested_panels, conditionality</td>
+</tr>
+<tr>
+<td><code>LOINC-RESULT-TYPES</code></td>
+<td>Regenstrief Institute</td>
+<td><a href="https://loinc.org/kb/users-guide/panels/types-of-results" target="_blank" rel="noreferrer">Types of results found in panels</a></td>
+<td>primary_observation, derived_observation, panel_interpretation</td>
+</tr>
+<tr>
+<td><code>UCUM-2.2</code></td>
+<td>UCUM Organization</td>
+<td><a href="https://ucum.org/ucum" target="_blank" rel="noreferrer">Unified Code for Units of Measure v2.2</a></td>
+<td>machine_readable_units</td>
+</tr>
+<tr>
+<td><code>FHIR-SERVICE-REQUEST</code></td>
+<td>HL7 International</td>
+<td><a href="https://hl7.org/fhir/servicerequest.html" target="_blank" rel="noreferrer">FHIR R5 ServiceRequest</a></td>
+<td>order_instance, panel_request, requisition</td>
+</tr>
+<tr>
+<td><code>FHIR-OBSERVATION</code></td>
+<td>HL7 International</td>
+<td><a href="https://hl7.org/fhir/observation.html" target="_blank" rel="noreferrer">FHIR R5 Observation</a></td>
+<td>atomic_result, has_member, value_types, reference_range</td>
+</tr>
+<tr>
+<td><code>FHIR-DIAGNOSTIC-REPORT</code></td>
+<td>HL7 International</td>
+<td><a href="https://hl7.org/fhir/diagnosticreport.html" target="_blank" rel="noreferrer">FHIR R5 DiagnosticReport</a></td>
+<td>report_grouping, atomic_results, images, interpretation</td>
+</tr>
+</tbody></table></div>
+<h2 id="next-step">다음 작업 인계: OED-LAB-02</h2>
+<p>다음에는 CBC 하나를 기능 표본으로 정해 구조를 끝까지 구체화한다. 전체를 곧바로 구현하는 대신 CBC에서 세트, 독립 하위 오더, 장비 프로필, 수동 입력, 판별과 재검이 한 흐름으로 맞물리는지 먼저 확인한다.</p>
+<ol>
+<li>CBC 하위 결과 항목을 core, optional, manual review로 나누고 각 항목의 안정적인 후보 ID를 만든다.</li>
+<li>개·고양이용 대표 장비 프로필 하나와 CLAiR 데모 프로필 사용 조건을 정한다.</li>
+<li>각 결과의 입력형, UCUM 단위, 소수점, 정상범위 차원, 판별과 장비 플래그를 확정한다.</li>
+<li>CBC 전체 주문과 WBC 같은 단일 하위 오더 재검 흐름을 함께 그린다.</li>
+<li>결과 화면에 장비, 수동 입력, 연동 안 됨, 단위, 정상범위, 판별, 형태 소견과 이미지를 어떻게 보여줄지 정의한다.</li>
+<li>이 단계에서도 앱·DB·마스터에는 적용하지 않는다. 제품 검토 뒤 <code>OED-LAB-03</code>에서 목표 저장 구조와 전환 계획을 만든다.</li>
+</ol>
+<h3>다음 에이전트가 먼저 읽을 파일</h3>
+<ol>
+<li><code>OED-LAB-00-requirements-and-research-contract.md</code></li>
+<li><code>OED-LAB-01-clinical-laboratory-landscape-research.md</code></li>
+<li>이 <code>report-source.md</code></li>
+<li><code>oed-lab-01-gap-matrix.v1.json</code></li>
+<li><code>oed-lab-01-set-atomic-map.v1.json</code></li>
+<li><code>oed-lab-01-result-shape-matrix.v1.json</code></li>
+<li><code>oed-lab-01-source-ledger.v1.json</code></li>
+</ol>
+<h3>다음 작업에서 지켜야 할 금지선</h3>
+<ul>
+<li>실제 병원 데이터나 임상 검증값이라고 표현하지 않는다.</li>
+<li>상용 장비 이름에 임의 정상범위를 붙이지 않는다.</li>
+<li>값이 없을 때 런타임 fallback 또는 가라 오더를 만들지 않는다.</li>
+<li>연구 후보를 앱, Airtable, Supabase, 마스터 또는 워크스페이스에 적용하지 않는다.</li>
+<li>원격 DB 조사와 변경은 <code>OED-LAB-03</code>의 별도 범위와 승인 기준을 따른다.</li>
+</ul>
+<h2 id="artifacts">산출물 목록</h2>
+<ul>
+<li><code>artifact-manifest.v1.json</code></li>
+<li><code>oed-lab-01-order-inventory.v1.json</code></li>
+<li><code>oed-lab-01-set-atomic-map.v1.json</code></li>
+<li><code>oed-lab-01-execution-route-matrix.v1.json</code></li>
+<li><code>oed-lab-01-equipment-landscape.v1.json</code></li>
+<li><code>oed-lab-01-result-shape-matrix.v1.json</code></li>
+<li><code>oed-lab-01-source-ledger.v1.json</code></li>
+<li><code>oed-lab-01-gap-matrix.v1.json</code></li>
+<li><code>oed-lab-01-correction-audit.v1.json</code></li>
+</ul>
+<p>모든 JSON은 <code>research_only_non_applied</code>, <code>applicationAllowed: false</code>다.</p>
+</article>
+      </div>
+
+      <footer class="footer">최초 조사 2026-09-04 · 보정 2026-09-06 · research_only_non_applied · applicationAllowed: false · 원격 상태 미검증</footer>
+    </main>
+    <script>
+      const progress = document.querySelector('.progress');
+      const updateProgress = () => {
+        const total = document.documentElement.scrollHeight - innerHeight;
+        const value = total > 0 ? Math.min(100, Math.max(0, scrollY / total * 100)) : 0;
+        progress.style.setProperty('--progress', value + '%');
+      };
+      addEventListener('scroll', updateProgress, { passive: true });
+      updateProgress();
+
+      const ordersHeading = document.querySelector('#orders');
+      const orderTable = ordersHeading?.nextElementSibling?.matches('p')
+        ? ordersHeading.nextElementSibling.nextElementSibling
+        : ordersHeading?.nextElementSibling;
+      if (orderTable?.classList.contains('table-scroll')) {
+        const rows = [...orderTable.querySelectorAll('tbody tr')];
+        const toolbar = document.createElement('div');
+        toolbar.className = 'table-toolbar';
+        toolbar.innerHTML = '<input type="search" aria-label="86개 오더 검색" placeholder="오더 ID, 표시명, 검사군으로 검색" /><span class="table-count"></span>';
+        orderTable.before(toolbar);
+        const input = toolbar.querySelector('input');
+        const count = toolbar.querySelector('.table-count');
+        const filter = () => {
+          const query = input.value.trim().toLocaleLowerCase('ko');
+          let visible = 0;
+          for (const row of rows) {
+            const show = !query || row.textContent.toLocaleLowerCase('ko').includes(query);
+            row.hidden = !show;
+            if (show) visible += 1;
+          }
+          count.textContent = visible + ' / ' + rows.length + '건';
+        };
+        input.addEventListener('input', filter);
+        filter();
+      }
+    </script>
+  </body>
+</html>

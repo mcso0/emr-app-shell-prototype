@@ -1,6 +1,9 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
 import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
-import { resolveWorkspacePermission } from "@/features/auth/permission-resolver";
+import {
+  resolveWorkspacePermission,
+  type WorkspacePermissionAdapter,
+} from "@/features/auth/permission-resolver";
 import {
   demoSessionUserIdHeader,
   resolveRoleUpdateActorIdentity,
@@ -23,6 +26,7 @@ import {
 } from "@/features/chart/server-preconsultation-context-core";
 import {
   createSupabaseOrderCatalogGateway,
+  searchOrderCatalogForChart,
   type SupabaseOrderCatalogRpcClient,
 } from "@/features/hospital-admin/server-order-catalog-core";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
@@ -268,15 +272,19 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     }
   }
   const result = await timing.measure("rpc", async () => {
-    const runtimeRows = client
+    const runtimeResult = client
       ? await resolveConsultationRuntimeRows({
+          actorUserId: identity.actorUserId,
+          permissionAdapter,
           client:
             client as unknown as ConsultationRuntimeResolutionInput["client"],
           encounterId: resolvedEncounter.encounterId,
           rows: draftRows,
           workspaceId,
         })
-      : draftRows;
+      : { ok: true as const, rows: draftRows };
+    if (!runtimeResult.ok) return runtimeResult;
+    const runtimeRows = runtimeResult.rows;
     return saveChartOrderDraft({
       actorUserId: identity.actorUserId,
       workspaceId,
@@ -300,13 +308,17 @@ export async function PATCH(request: Request, { params }: RouteContext) {
 async function readJsonBody(request: Request): Promise<ChartOrderDraftInput> {
   try {
     const value = (await request.json()) as unknown;
-    return value && typeof value === "object" ? value as ChartOrderDraftInput : {};
+    return value && typeof value === "object"
+      ? (value as ChartOrderDraftInput)
+      : {};
   } catch {
     return {};
   }
 }
 
 type ConsultationRuntimeResolutionInput = {
+  actorUserId: string;
+  permissionAdapter?: WorkspacePermissionAdapter;
   client: SupabaseChartPreconsultationContextClient &
     SupabaseOrderCatalogRpcClient;
   encounterId: string;
@@ -315,18 +327,32 @@ type ConsultationRuntimeResolutionInput = {
 };
 
 async function resolveConsultationRuntimeRows({
+  actorUserId,
+  permissionAdapter,
   client,
   encounterId,
   rows,
   workspaceId,
-}: ConsultationRuntimeResolutionInput): Promise<ChartOrderDraftRowInput[]> {
+}: ConsultationRuntimeResolutionInput): Promise<
+  | { ok: true; rows: ChartOrderDraftRowInput[] }
+  | Exclude<
+      Awaited<ReturnType<typeof searchOrderCatalogForChart>>,
+      { ok: true }
+    >
+> {
   const [contextResult, catalogResult] = await Promise.all([
     createSupabaseChartPreconsultationContextGateway(client).readContext({
       encounterId,
       workspaceId,
     }),
-    createSupabaseOrderCatalogGateway(client).listChartSearch({ workspaceId }),
+    searchOrderCatalogForChart({
+      actorUserId,
+      permissionAdapter,
+      gateway: createSupabaseOrderCatalogGateway(client),
+      workspaceId,
+    }),
   ]);
+  if (!catalogResult.ok) return catalogResult;
   const primaryVeterinarianId =
     contextResult.ok ? contextResult.context.veterinarian?.id : undefined;
   const consultationCatalogItemIds = new Set(
@@ -371,7 +397,9 @@ async function resolveConsultationRuntimeRows({
       }),
   );
 
-  return rows.map((row) => {
+  return {
+    ok: true,
+    rows: rows.map((row) => {
     if (row.rowType === "individual") {
       if (!consultationCatalogItemIds.has(row.workspaceCatalogItemId)) {
         return row;
@@ -405,7 +433,8 @@ async function resolveConsultationRuntimeRows({
       };
     });
     return childInputs ? { ...row, childInputs } : row;
-  });
+    }),
+  };
 }
 
 function mergeConsultationRuntimeInput({

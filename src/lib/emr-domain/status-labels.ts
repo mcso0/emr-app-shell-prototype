@@ -89,6 +89,7 @@ export const statusLabels = {
     voided: "무효",
   },
   labJudgment: {
+    abnormal: "이상",
     low: "낮음",
     normal: "정상",
     high: "높음",

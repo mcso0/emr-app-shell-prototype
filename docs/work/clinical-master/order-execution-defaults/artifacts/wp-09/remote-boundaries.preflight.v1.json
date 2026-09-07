@@ -1,0 +1,318 @@
+{
+  "capturedAt": "2026-09-06 14:10:24 UTC",
+  "purpose": "Preflight only; refresh immediately before approved apply. Whole scoped rows hashed in canonical text order, no patient/guardian data exported.",
+  "rows": [
+    {
+      "table_name": "lab_result_entries",
+      "workspace_id": "clair-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entries",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entries",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entries",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entry_rows",
+      "workspace_id": "clair-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entry_rows",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entry_rows",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_result_entry_rows",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_test_item_versions",
+      "workspace_id": "clair-demo",
+      "row_count": 69,
+      "sha256": "11d8fc904cc793e6598419a86ec4323c7373205bfad87f13e851ac2b6fe1cc89"
+    },
+    {
+      "table_name": "lab_test_item_versions",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_test_item_versions",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 69,
+      "sha256": "0664ab3c744a48505f9fdd401bbbafeab199aa4a5b9d9029bd8919b6acd50270"
+    },
+    {
+      "table_name": "lab_test_item_versions",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 69,
+      "sha256": "3aa2dff611c77cc09d2750ede8c02a0cf4a4e168a7fd2fa07fba9ab5307db63f"
+    },
+    {
+      "table_name": "lab_test_items",
+      "workspace_id": "clair-demo",
+      "row_count": 69,
+      "sha256": "f8447f1ebf32a9897225588af5e2c8b6c0189b694f1dd6963ed1baf2c6b0d951"
+    },
+    {
+      "table_name": "lab_test_items",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "lab_test_items",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 69,
+      "sha256": "0ab2092957159ab692c7a5379ebcfd7969f801068f3be1c2666163ba50b0f783"
+    },
+    {
+      "table_name": "lab_test_items",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 69,
+      "sha256": "72828c8ed9bc8280e3199a71d79a9415953357ff309dfe1490e7a501c2c92202"
+    },
+    {
+      "table_name": "order_billing_candidates",
+      "workspace_id": "clair-demo",
+      "row_count": 29,
+      "sha256": "69b325ea318aee5fed92627859ff6481226c98cff2aa206c016564a3b988025a"
+    },
+    {
+      "table_name": "order_billing_candidates",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_billing_candidates",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 19,
+      "sha256": "9b5b13d583eaa7163b35dc7ee7cb886cea1496e4766c4d9e95804b917cbeee40"
+    },
+    {
+      "table_name": "order_billing_candidates",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_catalog_items",
+      "workspace_id": "clair-demo",
+      "row_count": 541,
+      "sha256": "02e03f3c203d98aebcd679eed528062d082e0e996c02593cc8c478198b1642a6"
+    },
+    {
+      "table_name": "order_catalog_items",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_catalog_items",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 534,
+      "sha256": "7b764ddb24d475a63f62627cd665a912b0027c4ab832a3a0c119e9cfe8f38e39"
+    },
+    {
+      "table_name": "order_catalog_items",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 522,
+      "sha256": "a40596153f31f727668946a507d47d463fd98313efca1f98163d7c438088d952"
+    },
+    {
+      "table_name": "order_confirmation_commands",
+      "workspace_id": "clair-demo",
+      "row_count": 29,
+      "sha256": "badf22af172ed05663bdfa0c17aaec3c2abfc1a0d431c0150e93d9c3b8b34d4c"
+    },
+    {
+      "table_name": "order_confirmation_commands",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_confirmation_commands",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 20,
+      "sha256": "e267e0ac89713a6dea397342e49c93bab25fb2558b0b7a146add505962bd8b4f"
+    },
+    {
+      "table_name": "order_confirmation_commands",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_fulfillment_work_items",
+      "workspace_id": "clair-demo",
+      "row_count": 25,
+      "sha256": "f6841c13829ecc32d5f6d0c914917a07c69d8f6ec49918a39c25b970eaf64565"
+    },
+    {
+      "table_name": "order_fulfillment_work_items",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_fulfillment_work_items",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 14,
+      "sha256": "72db17ecccf9ef0cbf2f240c301da0d9fe98562db943ab1a4ddf5abce7c3d277"
+    },
+    {
+      "table_name": "order_fulfillment_work_items",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_set_revisions",
+      "workspace_id": "clair-demo",
+      "row_count": 20,
+      "sha256": "19abfd51b466031ffff4f1a1533863eca460ef90f9da6542b78e4fa1ab9145d2"
+    },
+    {
+      "table_name": "order_set_revisions",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_set_revisions",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 22,
+      "sha256": "2958b0759f03cbdc4bb8388466f5048ca8bba0e39804532487b2fa66cbff74dd"
+    },
+    {
+      "table_name": "order_set_revisions",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 20,
+      "sha256": "902f632aaeb6d35dd745abcc5761a36b9a76f7c4c9a604b4dae7155fd50b003c"
+    },
+    {
+      "table_name": "order_sets",
+      "workspace_id": "clair-demo",
+      "row_count": 20,
+      "sha256": "4324fbef8f7974a5a3003f54d9ea45d409733c5f757bd9ec585cadf191b2c059"
+    },
+    {
+      "table_name": "order_sets",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_sets",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 24,
+      "sha256": "f85902c1791b8b9be8f87046c012405a3fa2e9b944ca1bf828b09c4a494b2b9d"
+    },
+    {
+      "table_name": "order_sets",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 20,
+      "sha256": "ca9e749483758cc6d4048ecc42f770ca475f349f33f97d0ef533f112bf6140ea"
+    },
+    {
+      "table_name": "order_task_events",
+      "workspace_id": "clair-demo",
+      "row_count": 29,
+      "sha256": "c7d06a0c3441efe5b8054faa6d98c122889112a324d94831580a1738a5105de2"
+    },
+    {
+      "table_name": "order_task_events",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_task_events",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 30,
+      "sha256": "7399f64a771e23f173b6647683ccfa10cb0f610b8e0621bbf09069996b837da0"
+    },
+    {
+      "table_name": "order_task_events",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_tasks",
+      "workspace_id": "clair-demo",
+      "row_count": 29,
+      "sha256": "f68d8bc1729e21eee6b6b5588f5464c61a36ea9fbad6d1cce2f9f9737e27a330"
+    },
+    {
+      "table_name": "order_tasks",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "order_tasks",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 21,
+      "sha256": "a841e1211a24cc8800b97548cfea5d8bdb9421c408ff01021d8d4d90e0ac175a"
+    },
+    {
+      "table_name": "order_tasks",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "orders",
+      "workspace_id": "clair-demo",
+      "row_count": 33,
+      "sha256": "951d2fc4e69aa8c0ed282cf101c97524e1899d119db1c789d22bcb764f3f1647"
+    },
+    {
+      "table_name": "orders",
+      "workspace_id": "clair-foreign-demo",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    },
+    {
+      "table_name": "orders",
+      "workspace_id": "workspace-clair-cheongdam",
+      "row_count": 96,
+      "sha256": "7121b632be23bf4692c859a7c342e5f94dcfff64bdbb2a7489cc8bc57ea8dd8b"
+    },
+    {
+      "table_name": "orders",
+      "workspace_id": "workspace-clinical-master-pilot-v1",
+      "row_count": 0,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    }
+  ]
+}

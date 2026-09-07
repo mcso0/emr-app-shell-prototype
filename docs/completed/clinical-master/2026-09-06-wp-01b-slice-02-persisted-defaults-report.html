@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>WP-01B 두 번째 단계 · 저장된 기본값 읽기 일치</title>
+  <style>
+    :root{color-scheme:light;--ink:#182b32;--muted:#536970;--line:#dce5e5;--paper:#f4f7f6;--accent:#156f62}
+    *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.75;word-break:keep-all;overflow-wrap:anywhere}a{color:var(--accent);text-underline-offset:4px}header{background:#163b39;color:#fff;padding:52px max(24px,calc((100vw - 1040px)/2)) 38px}.eyebrow{font-size:13px;letter-spacing:.08em;color:#badbd2}.badge{display:inline-block;margin:10px 0;padding:4px 11px;border:1px solid #a8ccbd;border-radius:24px;color:#d8f3e5;font-size:13px}h1{font-size:clamp(28px,4vw,44px);line-height:1.3;letter-spacing:-.045em;margin:18px 0}header p{max-width:740px;color:#d4e5df;font-size:17px}nav{display:flex;flex-wrap:wrap;gap:18px;margin-top:24px}nav a{color:#e2eee9;font-size:14px}main{max-width:1088px;padding:30px 24px 60px;margin:auto}section{scroll-margin-top:20px;margin-bottom:30px}h2{font-size:24px;letter-spacing:-.035em;margin:0 0 18px}h3{font-size:18px;margin:0 0 9px}p{margin:0 0 12px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:34px}.metric,.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px}.metric strong{font-size:30px;display:block;line-height:1.3}.metric span{color:var(--muted);font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.label{font-size:12px;color:var(--accent);font-weight:700;display:block;margin-bottom:8px}.card p:last-child{margin-bottom:0}.notice{padding:22px;background:#fff5dc;border:1px solid #e8d4a6;border-left:4px solid #b68d35;border-radius:10px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:white}table{border-collapse:collapse;width:100%;font-size:14px}th,td{padding:15px 18px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}th{background:#eaf0ed;color:#34564f}tr:last-child td{border-bottom:0}.next{background:#e2eee8;border:1px solid #c0d6ca;border-radius:14px;padding:28px}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}.step{background:#ffffffb8;border-radius:8px;padding:14px;font-size:14px}.step b{display:block;color:var(--accent);margin-bottom:5px}details{border:1px solid var(--line);border-radius:10px;background:#fff;padding:18px 20px;margin:20px 0}summary{cursor:pointer;font-weight:600}code{font-family:ui-monospace,SFMono-Regular,monospace;font-size:12px}.subtle,footer{color:var(--muted);font-size:14px}footer{border-top:1px solid var(--line);padding-top:18px}li{margin-bottom:6px}@media(max-width:650px){header{padding:32px 22px}.metrics{gap:8px}.metric{padding:15px 10px}.metric strong{font-size:23px}.grid,.steps{grid-template-columns:1fr}main{padding:24px 18px}.next{padding:22px}th,td{padding:12px;min-width:105px}}@media print{body{background:white}header{background:white;color:var(--ink);padding:20px 0}header p,.eyebrow,.badge{color:#34564f}nav{display:none}main{padding:20px 0}.card,.metric,.notice,.next{break-inside:avoid}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">ORDER EXECUTION DEFAULTS · WP-01B / SLICE 02</div>
+    <div class="badge">2026-09-06 · 로컬 구현 및 계약 테스트 완료 · 배포 전</div>
+    <h1>저장하지 않은 값은<br>기본값처럼 보여주지 않는다</h1>
+    <p>병원관리와 새 차트 오더가 같은 오더의 저장된 세부 값을 읽도록 맞췄다. 값이 없으면 미설정으로 남기고 필수값이 없는 오더는 완성된 오더로 인정하지 않는다.</p>
+    <nav aria-label="보고서 목차"><a href="#changes">수정 내용</a><a href="#verification">검증 결과</a><a href="#limits">남은 범위</a><a href="#next-step">다음 작업</a></nav>
+  </header>
+  <main>
+    <div class="metrics" aria-label="검증 요약">
+      <div class="metric"><strong>82개 통과</strong><span>카탈로그·기본값·차트 검증 테스트</span></div>
+      <div class="metric"><strong>10개 필드</strong><span>하나씩 제거해 누락 상태 확인</span></div>
+      <div class="metric"><strong>변경 없음</strong><span>원격 DB · 마스터 · 배포</span></div>
+    </div>
+    <section id="changes">
+      <h2>이번에 바뀐 것</h2>
+      <div class="grid">
+        <article class="card"><span class="label">01 · 같은 저장값</span><h3>읽기 규칙을 한곳으로 모았다</h3><p>공통 기본값을 먼저 읽는다. 공통 값이 없는 기존 오더는 같은 오더 안의 구형 저장 필드만 제한적으로 읽고 출처를 함께 전달한다. 다른 오더나 임시 데이터로 대체하지 않는다.</p></article>
+        <article class="card"><span class="label">02 · 누락을 숨기지 않기</span><h3>값이 없으면 미설정</h3><p>용량·단위·경로·횟수·일수·총량을 임의로 채우던 값을 제거했다. 차트의 표시·수정·검증에서도 스키마의 예시 기본값을 읽지 않는다. 숫자 0과 false는 없는 값과 구분한다.</p></article>
+        <article class="card"><span class="label">03 · 편집과 저장</span><h3>지운 값이 되살아나지 않게</h3><p>병원관리에서 수정하거나 지운 값이 두 저장 표현에 동일하게 반영되도록 맞췄다. 수동 총량 사유와 권한 정보는 저장 내용에 보존하되 차트의 임상 입력값과는 분리한다.</p></article>
+        <article class="card"><span class="label">04 · 계산 조건</span><h3>계산할 근거가 있을 때만</h3><p>환자당 용량과 총량의 단위가 같고 필요한 값이 있을 때만 총량을 계산한다. 체중·체표면적·다른 단위의 변환을 추정하지 않는다. 새 조제 오더도 용량이나 투약 경로를 미리 채우지 않는다.</p></article>
+      </div>
+    </section>
+    <section id="verification">
+      <h2>어디까지 확인했나</h2>
+      <div class="table-wrap"><table><thead><tr><th scope="col">점검</th><th scope="col">결과</th><th scope="col">확인 범위</th></tr></thead><tbody>
+        <tr><td>계약 테스트</td><td>82개 통과</td><td>저장값 선택, 필드 누락, 생성·수정 시 값 일치, 모든 임상 오더 유형의 필수값 검증. 테스트용 데이터만 사용.</td></tr>
+        <tr><td>수정 파일 린트</td><td>통과</td><td>이번 소스·테스트·설정 파일. 전체 저장소 검사는 아님.</td></tr>
+        <tr><td>독립 코드 검토</td><td>지적 1건 수정</td><td>빈 기본값의 출처 표시를 보존했다. 응답을 다시 읽어도 구형 값이 되살아나지 않는 회귀 테스트를 추가했다.</td></tr>
+        <tr><td>전체 타입 검사</td><td>실패</td><td>설치 환경의 <code>@blocknote/*</code> 누락과 관련 오류. 수정 파일의 타입 오류는 보고되지 않음.</td></tr>
+        <tr><td>문서 링크 검사</td><td>기존 오류 1건</td><td>이전 persona-qa 문서의 누락 링크.</td></tr>
+        <tr><td>실제 화면·원격 저장</td><td>검증 전</td><td>로그인한 화면, 원격 DB 저장, 배포 상태는 이번에 검증하지 않음.</td></tr>
+      </tbody></table></div>
+      <p class="subtle" style="margin-top:12px">82개는 브라우저 조작 테스트가 아닌 코드 계약 테스트다. 이번 단계의 통과를 전체 서비스 동작이나 임상 데이터 검증 완료로 해석하지 않는다.</p>
+    </section>
+    <section id="limits">
+      <h2>아직 남은 범위</h2>
+      <div class="notice"><h3>WP-01B 전체가 끝난 것은 아니다</h3><p>분류 추정, 화면의 임시 초기 목록, 검색 후보와 병원관리의 개수·ID 일치, 워크스페이스 전환은 후속 단계에 남아 있다. 병원관리의 <code>qod</code>·<code>sachet</code> 선택지와 차트 스키마의 허용값 차이도 별도 보완이 필요하다.</p><p>522개 후보 데이터를 마스터나 워크스페이스에 적용하지 않았다. CBC·장비별 정상범위 구조도 바꾸지 않았다. 원격 DB 변경, 커밋·푸시·배포는 하지 않았고 기존 작업 파일은 보존했다.</p></div>
+    </section>
+    <section id="next-step" class="next">
+      <span class="label">NEXT · WP-01B SLICE 03</span><h2>분류와 병원관리 핵심 세부 내용 표시</h2>
+      <p>저장된 분류를 기준으로 오더를 배치하고 각 카테고리 테이블에 필요한 핵심 세부 값만 보여준다. 누락된 분류와 값은 명확하게 표시한다.</p>
+      <p><strong>완료 기준:</strong> 같은 오더의 테이블·상세창·API가 저장된 분류와 세부 값에 일치해야 한다.</p>
+      <div class="steps"><div class="step"><b>바로 다음 · Slice 03</b>분류·핵심 세부 내용</div><div class="step"><b>Slice 04</b>검색 후보·차트 값 연결</div><div class="step"><b>Slice 05</b>실제 화면·워크스페이스 검증</div></div>
+      <p class="subtle" style="margin-top:16px">CBC 검사 구조 변경은 별도 후속 작업이다. 이번 읽기 규칙 수정 때문에 외부 자료조사를 처음부터 다시 시작하지 않는다.</p>
+    </section>
+    <details><summary>변경 파일과 이어받기 기록</summary>
+      <ul><li>병원관리 <code>persisted-order-defaults.ts</code> · <code>data.ts</code> · <code>module.tsx</code> · <code>server-order-catalog-core.ts</code></li><li>차트 <code>module.tsx</code> · <code>order-execution-domain.ts</code> · <code>server-order-draft-persistence-core.ts</code></li><li><code>tests/hospital-admin-persisted-defaults.spec.ts</code> · <code>playwright.catalog-contract.config.ts</code></li></ul>
+      <p><a href="../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-02-persisted-defaults.md">AI용 실행 기록·다음 단계 MD</a> · <a href="../../work/clinical-master/order-execution-defaults/WP-01B-persisted-admin-chart-read-parity.md">WP-01B 하위 계획서</a></p>
+      <p class="subtle">상위·하위 계획서, 작업 인덱스, 현재 상태와 데이터 계약도 갱신했다. 과거 보고서는 당시 기록으로 보존했다.</p>
+    </details>
+    <footer><p>루멘 · 2026-09-06 · 로컬 작업 보고서<br>한국어 문장은 humanize-korean fast 규칙으로 검토했다. 자동 문체 지표는 설치본의 스크립트 누락으로 사용하지 못했다.</p></footer>
+  </main>
+</body>
+</html>

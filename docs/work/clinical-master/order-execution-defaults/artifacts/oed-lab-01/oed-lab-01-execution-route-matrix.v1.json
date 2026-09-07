@@ -1,0 +1,1970 @@
+{
+  "schemaVersion": "oed-lab-01-execution-route-matrix/v1",
+  "generatedAt": "2026-09-06",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "routeVocabulary": {
+    "in_house_manual": "원내 수기·현미경·수동 판독",
+    "in_house_device": "원내 분석 장비를 사용하되 현재 프로토타입은 결과 수동 입력",
+    "point_of_care_rapid_test": "원내 신속 키트 수기 또는 판독 보조 장비",
+    "external_lab": "외부 검사실 의뢰 후 결과 수동 입력·첨부",
+    "mixed": "하위 검사별 수행 경로가 다른 복합 조합"
+  },
+  "integrationContract": {
+    "currentState": "not_integrated",
+    "resultEntryMode": "manual_entry",
+    "noFallbackEquipmentSelection": true,
+    "workspaceMustSelectActiveExecutionProfile": true
+  },
+  "orders": [
+    {
+      "orderId": "cm.order.lab.panel.cbc-basic",
+      "displayName": "전혈구 기본 패널",
+      "familyId": "hematology_cbc",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "hematology_analyzer",
+        "microscope_or_cellular_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.panel.chemistry-basic",
+      "displayName": "기본 혈청화학 패널",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.panel.fecal",
+      "displayName": "분변 검사 패널",
+      "familyId": "fecal_parasitology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "centrifuge_and_microscope",
+        "rapid_immunoassay_reader"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.panel.urinalysis",
+      "displayName": "요검사 패널",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-hct",
+      "displayName": "헤마토크릿 검사",
+      "familyId": "hematology_cbc",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "hematology_analyzer",
+        "microscope_or_cellular_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-plt",
+      "displayName": "혈소판 수 검사",
+      "familyId": "hematology_cbc",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "hematology_analyzer",
+        "microscope_or_cellular_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-wbc",
+      "displayName": "백혈구 수 검사",
+      "familyId": "hematology_cbc",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "hematology_analyzer",
+        "microscope_or_cellular_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alp",
+      "displayName": "ALP 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alt",
+      "displayName": "ALT 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-bun",
+      "displayName": "BUN 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-creatinine",
+      "displayName": "크레아티닌 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-glucose",
+      "displayName": "혈당 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-total-protein",
+      "displayName": "총단백 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.fecal-microscopy",
+      "displayName": "분변 현미경 검사",
+      "familyId": "fecal_parasitology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "centrifuge_and_microscope",
+        "rapid_immunoassay_reader"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.giardia-antigen",
+      "displayName": "지아르디아 항원 검사",
+      "familyId": "fecal_parasitology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "centrifuge_and_microscope",
+        "rapid_immunoassay_reader"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-sediment",
+      "displayName": "요침사 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-strip",
+      "displayName": "요시험지 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-01",
+      "displayName": "전해질 검사",
+      "familyId": "electrolytes",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_electrolyte_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-02",
+      "displayName": "응고 검사",
+      "familyId": "coagulation",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "coagulation_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-COAG-DX",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-03",
+      "displayName": "수술 전 검사",
+      "familyId": "organ_or_metabolic_panel",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-04",
+      "displayName": "간 검사",
+      "familyId": "organ_or_metabolic_panel",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-05",
+      "displayName": "신장 검사",
+      "familyId": "organ_or_metabolic_panel",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-06",
+      "displayName": "당대사 패널",
+      "familyId": "organ_or_metabolic_panel",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-07",
+      "displayName": "혈액형 검사 서비스",
+      "familyId": "blood_typing",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "blood_typing_kit_or_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-BLOOD-TYPE"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-08",
+      "displayName": "망상적혈구 검사 서비스",
+      "familyId": "reticulocyte",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "hematology_analyzer",
+        "microscope"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "IDEXX-PROCYTE-RI"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-09",
+      "displayName": "혈액도말 검사 서비스",
+      "familyId": "blood_smear",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "microscope_or_cellular_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "IDEXX-INVUE"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-10",
+      "displayName": "피부 세포검사",
+      "familyId": "cytology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "microscope_or_cellular_analyzer",
+        "external_cytopathology"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-11",
+      "displayName": "귀 분비물 세포검사",
+      "familyId": "cytology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "microscope_or_cellular_analyzer",
+        "external_cytopathology"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-12",
+      "displayName": "종괴 세포검사",
+      "familyId": "cytology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "microscope_or_cellular_analyzer",
+        "external_cytopathology"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ]
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-13",
+      "displayName": "관절액 세포검사",
+      "familyId": "cytology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "microscope_or_cellular_analyzer",
+        "external_cytopathology"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.01",
+      "displayName": "확장 혈청화학 패널",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.02",
+      "displayName": "지질 검사 패널",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.03",
+      "displayName": "췌장 평가 패널",
+      "familyId": "pancreatic",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "rapid_immunoassay_reader",
+        "external_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.04",
+      "displayName": "염증 표지 패널",
+      "familyId": "inflammation",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "hematology_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.05",
+      "displayName": "갑상선 검사 패널",
+      "familyId": "thyroid",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.06",
+      "displayName": "부신 검사 패널",
+      "familyId": "adrenal",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CORTISOL"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.07",
+      "displayName": "요단백 평가 패널",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.08",
+      "displayName": "감염성 질환 선별 패널",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.basic-checkup",
+      "displayName": "기본 건강검진 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.emergency-initial",
+      "displayName": "응급 초기 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.hepatobiliary",
+      "displayName": "간담도 평가 검사 조합",
+      "familyId": "organ_or_metabolic_panel",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.infectious-workup",
+      "displayName": "감염성 질환 검사 조합",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "displayName": "마취 전 확장 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.pu-pd",
+      "displayName": "다뇨·다갈 검사 조합",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.renal",
+      "displayName": "신장 평가 검사 조합",
+      "familyId": "organ_or_metabolic_panel",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-cat",
+      "displayName": "노령묘 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-dog",
+      "displayName": "노령견 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.vomiting-diarrhea",
+      "displayName": "구토·설사 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.weight-loss",
+      "displayName": "체중감소 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "familyRouteCandidates": [
+        "mixed"
+      ],
+      "familyEquipmentClassCandidates": [
+        "multiple"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.01",
+      "displayName": "혈청 글로불린 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.02",
+      "displayName": "알부민·글로불린 비율 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.03",
+      "displayName": "직접 빌리루빈 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.04",
+      "displayName": "감마글루타밀전이효소 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.05",
+      "displayName": "젖산탈수소효소 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.06",
+      "displayName": "크레아틴키나아제 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.07",
+      "displayName": "총콜레스테롤 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.08",
+      "displayName": "중성지방 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.09",
+      "displayName": "아밀라아제 검사",
+      "familyId": "pancreatic",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "rapid_immunoassay_reader",
+        "external_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.10",
+      "displayName": "리파아제 검사",
+      "familyId": "pancreatic",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer",
+        "rapid_immunoassay_reader",
+        "external_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.11",
+      "displayName": "SDMA 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.12",
+      "displayName": "프럭토사민 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.13",
+      "displayName": "총담즙산 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.14",
+      "displayName": "젖산 검사",
+      "familyId": "clinical_chemistry",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.15",
+      "displayName": "C-반응단백 검사",
+      "familyId": "inflammation",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "hematology_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.16",
+      "displayName": "혈청 아밀로이드 A 검사",
+      "familyId": "inflammation",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "hematology_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.17",
+      "displayName": "총 T4 검사",
+      "familyId": "thyroid",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.18",
+      "displayName": "유리 T4 검사",
+      "familyId": "thyroid",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.19",
+      "displayName": "갑상선자극호르몬 검사",
+      "familyId": "thyroid",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.20",
+      "displayName": "코르티솔 검사",
+      "familyId": "adrenal",
+      "familyRouteCandidates": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CORTISOL"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.21",
+      "displayName": "요 크레아티닌 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.22",
+      "displayName": "요단백·크레아티닌 비율 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.23",
+      "displayName": "요 pH 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.24",
+      "displayName": "요당 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.25",
+      "displayName": "요케톤 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.26",
+      "displayName": "요빌리루빈 검사",
+      "familyId": "urinalysis",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.27",
+      "displayName": "분변 부유 검사",
+      "familyId": "fecal_parasitology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "centrifuge_and_microscope",
+        "rapid_immunoassay_reader"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.28",
+      "displayName": "분변 잠혈 검사",
+      "familyId": "fecal_parasitology",
+      "familyRouteCandidates": [
+        "in_house_manual",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "centrifuge_and_microscope",
+        "rapid_immunoassay_reader"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.29",
+      "displayName": "개 파보바이러스 항원 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.30",
+      "displayName": "개 디스템퍼바이러스 항원 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.31",
+      "displayName": "개 심장사상충 항원 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.32",
+      "displayName": "고양이 범백혈구감소증 항원 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.33",
+      "displayName": "고양이 백혈병바이러스 항원 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.34",
+      "displayName": "고양이 면역결핍바이러스 항체 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.35",
+      "displayName": "고양이 코로나바이러스 항체 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.36",
+      "displayName": "바베시아 PCR 검사",
+      "familyId": "infectious_disease",
+      "familyRouteCandidates": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "familyEquipmentClassCandidates": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ]
+    },
+    {
+      "orderId": "phase1.optionb.v1.order.metabolic",
+      "displayName": "합성 기초 혈액검사",
+      "familyId": "legacy_exception",
+      "familyRouteCandidates": [],
+      "familyEquipmentClassCandidates": [],
+      "routeValidation": "per_order_method_unverified",
+      "defaultRouteDecision": "workspace_selection_required",
+      "integrationStatus": "not_integrated",
+      "resultEntryMode": "manual_entry",
+      "sourceIds": []
+    }
+  ]
+}

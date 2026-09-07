@@ -1,0 +1,404 @@
+{
+  "schemaVersion": "wp01b-taxonomy-vocabulary-proposal/v1",
+  "applicationAllowed": false,
+  "runtimeImportAllowed": false,
+  "scope": "Frozen 522 only; unused existing codes are neither removed nor asserted supported by this target matrix.",
+  "subcategories": [
+    {
+      "code": "basic-consultation",
+      "parentCode": "consultation",
+      "label": "기본 진찰",
+      "allowedClinicalTypes": [
+        "consultation"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "other-consultation",
+      "parentCode": "consultation",
+      "label": "상담·기타 진료비",
+      "allowedClinicalTypes": [
+        "consultation"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "prevention",
+      "parentCode": "prevention",
+      "label": "예방",
+      "allowedClinicalTypes": [
+        "consultation"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "clinical-pathology",
+      "parentCode": "lab",
+      "label": "임상병리",
+      "allowedClinicalTypes": [
+        "clinical_lab"
+      ],
+      "requiresLabFamily": true,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "system-exam",
+      "parentCode": "lab",
+      "label": "계통검사",
+      "allowedClinicalTypes": [
+        "system_exam"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "radiography",
+      "parentCode": "imaging",
+      "label": "방사선",
+      "allowedClinicalTypes": [
+        "imaging"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "ultrasound",
+      "parentCode": "imaging",
+      "label": "초음파",
+      "allowedClinicalTypes": [
+        "imaging"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "image-interpretation",
+      "parentCode": "imaging",
+      "label": "영상 판독 상담",
+      "allowedClinicalTypes": [
+        "imaging"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "dental-care",
+      "parentCode": "treatment",
+      "label": "치과 진료·처치",
+      "allowedClinicalTypes": [
+        "treatment"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "basic-treatment",
+      "parentCode": "treatment",
+      "label": "처치",
+      "allowedClinicalTypes": [
+        "treatment"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "anesthesia",
+      "parentCode": "surgery",
+      "label": "마취",
+      "allowedClinicalTypes": [
+        "treatment"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "surgery",
+      "parentCode": "surgery",
+      "label": "수술",
+      "allowedClinicalTypes": [
+        "treatment"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "therapy",
+      "parentCode": "therapy",
+      "label": "치료",
+      "allowedClinicalTypes": [
+        "treatment"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "hospitalization",
+      "parentCode": "hospitalization",
+      "label": "입원",
+      "allowedClinicalTypes": [
+        "hospitalization"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "document-service",
+      "parentCode": "misc",
+      "label": "서류 발급·기록 사본",
+      "allowedClinicalTypes": [
+        "other"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "emergency-service",
+      "parentCode": "misc",
+      "label": "응급 서비스",
+      "allowedClinicalTypes": [
+        "other"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "medical-supply",
+      "parentCode": "medical-supply",
+      "label": "의료물품",
+      "allowedClinicalTypes": [
+        "other"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "oral-medication",
+      "parentCode": "dispensing",
+      "label": "경구",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "injection",
+      "parentCode": "dispensing",
+      "label": "주사제 조제",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "topical",
+      "parentCode": "dispensing",
+      "label": "피부 외용",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "ophthalmic",
+      "parentCode": "dispensing",
+      "label": "점안",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "otic",
+      "parentCode": "dispensing",
+      "label": "점이",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "transdermal",
+      "parentCode": "dispensing",
+      "label": "경피",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "oromucosal",
+      "parentCode": "dispensing",
+      "label": "구강점막",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "dispensing-packaging",
+      "parentCode": "dispensing",
+      "label": "조제 포장",
+      "allowedClinicalTypes": [
+        "dispensing"
+      ],
+      "requiresLabFamily": false,
+      "status": "proposed_new_code"
+    }
+  ],
+  "labFamilies": [
+    {
+      "code": "cbc",
+      "label": "CBC",
+      "researchFamilyId": "hematology_cbc",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "chemistry",
+      "label": "혈액화학",
+      "researchFamilyId": "clinical_chemistry",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "fecal-parasitology",
+      "label": "분변·기생충",
+      "researchFamilyId": "fecal_parasitology",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "urinalysis",
+      "label": "요검사",
+      "researchFamilyId": "urinalysis",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "electrolyte-abg",
+      "label": "전해질검사/동맥혈",
+      "researchFamilyId": "electrolytes",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "coagulation",
+      "label": "응고",
+      "researchFamilyId": "coagulation",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "organ-metabolic",
+      "label": "장기·대사 평가",
+      "researchFamilyId": "organ_or_metabolic_panel",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "blood-typing",
+      "label": "혈액형",
+      "researchFamilyId": "blood_typing",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "reticulocyte",
+      "label": "망상적혈구",
+      "researchFamilyId": "reticulocyte",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "blood-smear",
+      "label": "혈액도말",
+      "researchFamilyId": "blood_smear",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "cell",
+      "label": "세포 검사",
+      "researchFamilyId": "cytology",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "reuse_existing_ui_code"
+    },
+    {
+      "code": "pancreatic",
+      "label": "췌장",
+      "researchFamilyId": "pancreatic",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "inflammation",
+      "label": "염증",
+      "researchFamilyId": "inflammation",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "thyroid",
+      "label": "갑상샘",
+      "researchFamilyId": "thyroid",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "adrenal",
+      "label": "부신",
+      "researchFamilyId": "adrenal",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "infectious-disease",
+      "label": "감염병",
+      "researchFamilyId": "infectious_disease",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "composite-assessment",
+      "label": "복합 검사 평가",
+      "researchFamilyId": "composite_diagnostic_plan",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "proposed_new_code"
+    },
+    {
+      "code": "in-house-blood",
+      "label": "원내 혈액 검사",
+      "researchFamilyId": "legacy_exception",
+      "parentSubcategoryCode": "clinical-pathology",
+      "status": "reuse_existing_ui_code"
+    }
+  ],
+  "canonicalAliasProposal": {
+    "oldUiLeaf": "blood-chemistry",
+    "storedPair": {
+      "adminSubcategoryCode": "clinical-pathology",
+      "labFamilyCode": "chemistry"
+    },
+    "runtimeAliasImplemented": false
+  },
+  "sourceLineage": {
+    "decisions": {
+      "path": "scripts/lib/wp01b-taxonomy-reviewed-mapping.mjs",
+      "sha256": "a9b2b4de926061c2253db956d5ab61b7aca9c24e62ef861eba817961ca20b96d"
+    },
+    "existingUiVocabulary": {
+      "path": "src/features/hospital-admin/data.ts",
+      "sha256": "1f13fa11d251e009b448ba65edbb8de7c710be17c7db90959bcc3f1136e3d0b9"
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "oed-lab-03-manifest/v1",
+  "observedAt": "2026-09-06 06:04:09 UTC",
+  "localHead": "f564a493b52be6f5592bda6484dd0bcf9a8a2c4b",
+  "localBoundary": "Dirty local checkout; sourceHashes, not HEAD alone, identify inspected content. Not deployed-app proof.",
+  "remoteBoundary": "Schema metadata, synthetic master records and six CBC-related Cheongdam catalog rows only. No patient/result records read. SELECT only; no mutations.",
+  "applicationAllowed": false,
+  "sourceHashes": {
+    "src/features/clinical-master/server-clinical-master-publisher-core.ts": "ab5fbb48242cecea3d3fbb87e9579ab7adf3677a9d462a343ffdd13af15f4447",
+    "src/features/hospital-admin/server-order-catalog-core.ts": "cfe8422f8b2f41a61897469c0eb0cf037d5b453cca626206a29702d10cc6ba26",
+    "src/features/hospital-admin/module.tsx": "6d164f6813f612d21ca1dd407b2f9e92d862787fdb18ca1a9f5b229aec95f64d",
+    "src/features/chart/module.tsx": "7ced648adae716a13db81f0384def559bbb3abf78da79d46a53e9398e865b895",
+    "src/features/lab-imaging/module.tsx": "c8dd163bdc197fa37d88a7dbc416a86d88d60701c88a3338ee89eb83e8bc9946",
+    "src/types/emr-domain.ts": "ed55bc80c53eb03a3d881ad455f38bb46b63697a47394ea89fd371d8bf4956e1",
+    "src/features/billing/server-invoice-candidate-sync-core.ts": "82f7143c2997a3986bfbe518f26c5e31768e0909ecd850dd47fc90a6a62b7784",
+    "src/features/fulfillment/server-fulfillment-work-item-core.ts": "281bad60fd292d55d6e6060cfdab6630de9358ad36dc2202fa34e057dfc6e5df",
+    "supabase/migrations/20260819172501_clinical_master_phase1b1_laboratory_slice.sql": "7c2295e142bb6d75ce93e916d6bb0f1736f3a4e440116a910235095b82536f0a",
+    "supabase/migrations/20260820100000_clinical_master_phase1b2_order_set_revisions.sql": "e280750aeb21b4ab2e5a3f0d6141dbcab720cc425682f65a6a24124e61e26698",
+    "supabase/migrations/20260820140000_clinical_master_phase1b3_chart_set_runtime.sql": "b0aab162340c364a0f55c822022b76f65cb0883e4551e27988ef6c875ef3fd10",
+    "supabase/migrations/20260820150000_clinical_master_phase1b3_confirm_lab_freeze.sql": "fa718de7a5ba62e96aa40c7744a1abe8dd09ce8a85690eca5e9766bb1f4afa5f",
+    "supabase/migrations/20260824091724_clinical_master_release_scoped_workspace_adoption.sql": "4699bbd82b0e5af6a40066750f6876110cf128b1e7d546f187aa10a1ed6c9cd2",
+    "supabase/migrations/20260825241000_chart_order_atomic_confirmation_contract.sql": "c9013eaace5a99b31fdd572977c5693feb8f60248d6e13a3bdaa7080d69984e7",
+    "supabase/migrations/20260831070431_clinical_master_execution_preset_runtime_transport.sql": "2fd39befe4d7ea17e395aa58bbeeb37d64d795b1222ba01406bb19133418a0a2",
+    "supabase/migrations/20260831070512_clinical_master_execution_preset_publish_adopt.sql": "e01d7f266a68fe0056a41a94a6a9900463834f63694aeda5863ad275edadd9d9",
+    "supabase/migrations/20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql": "59f5572b04c3e175bee5907735b6a3709d8a5882fae790abfe9d51ca516fe42b",
+    "docs/work/clinical-master/order-execution-defaults/artifacts/oed-lab-02/artifact-manifest.v1.json": "ca2820a1432ecda98759f75279038b6b9f5d0bd2f40d9d0291c4426c989e09af"
+  },
+  "artifactHashes": {
+    "remote-evidence.v1.json": "8a5fa6e3eb5f0e1dfb89cb95c565ce40ea384eba5964831cc9cd64579cb6e45d",
+    "id-reconciliation.v1.json": "a8ea5331d36db8e822635c2a180b4bfeae9ddbe0dd98511c4b5c524158cf980b",
+    "audit-and-transition-plan.md": "592f0d5198db9c99cd1e92bc9639d64efe69a2e019db5e96f14138cc688b3b1b",
+    "report-source.ko.md": "723a90237c79e9f1487e5971c3355638b63f335579037650d50774771d1b55e7"
+  },
+  "idCounts": {
+    "atomicOrders": 26,
+    "newOrderKeys": 21,
+    "newTestKeys": 19
+  },
+  "verificationBoundary": "Artifact consistency and static report QA only; no live mutation, authenticated UI or RLS replay.",
+  "nextWork": "WP-01B persisted admin/chart read parity, followed by CBC-first OED-LAB-04 slices and WP-02 inheritance."
+}

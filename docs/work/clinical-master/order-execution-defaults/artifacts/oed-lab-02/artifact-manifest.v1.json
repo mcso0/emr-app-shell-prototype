@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-09-06",
+  "revision": "oed-lab-02.v1",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "schemaVersion": "oed-lab-02-manifest/v1",
+  "runtimeImportAllowed": false,
+  "databaseMutationAllowed": false,
+  "sourceFingerprints": {
+    "tests/fixtures/clinical-master-operational-v4-authoring.json": "d733beccbec0a384b7098aacf6a40c1979ff4da45357605a47722396bf5e5e6b",
+    "docs/work/clinical-master/order-execution-defaults/artifacts/oed-lab-01/artifact-manifest.v1.json": "a18863b4cbc059771c77c0385a120a09b7b4d576dea7aed333459e1e50a44e72"
+  },
+  "artifactFingerprints": {
+    "cbc-order-candidates.non-applied.v1.json": "56701115f1ced94588f30b1e973bf746c06ac72b0bcfcb533a0e9fd6e363121d",
+    "cbc-result-definitions.non-applied.v1.json": "59f7bcbfd4317da003bdc5bcbb37c47b39a68aefa982f1850808806609f5b6ed",
+    "cbc-result-profiles.non-applied.v1.json": "ac29eb04b9303fab3758cffd53dcebfb1014c0906501216e64c6bf80c864e49f",
+    "cbc-functional-fixtures.v1.json": "28664d5984faf2672110e1d514cbf61706dac061e365773c30dd2345920da550",
+    "cbc-workflow-and-screen-contract.v1.json": "8b9c494bebae3885a704ea9b280674e7797723d70ef58e5ff1ed6784d2e29b02",
+    "source-ledger-and-gaps.v1.json": "41e0206e369665378c7a4b93bb23a1dccad63c655c8c178f503d46820721b5a7"
+  },
+  "counts": {
+    "atomicOrders": 26,
+    "core": 20,
+    "optional": 5,
+    "manual": 1,
+    "sets": 5,
+    "numericProfiles": 4,
+    "manualProfiles": 1,
+    "publishedSpeciesIntervals": 37,
+    "numericBranchFixtures": 837,
+    "newOrderIds": 21,
+    "newResultIds": 19
+  },
+  "nextWork": "OED-LAB-03"
+}

@@ -3490,7 +3490,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     ? addDaysToIsoDate(miniCalendarWeekStartDate, 6)
     : undefined;
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
-  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId) ||
+    (workspaceId === "workspace-clinical-master-pilot-v1" && shouldUseSupabaseAuth());
   const staffResourceKey = getReceptionStaffResourceKey({
     operatingDate,
     workspaceId,
@@ -6730,7 +6731,8 @@ export function ReceptionContent() {
     ? operatingSchedule
     : resolveEffectiveOperatingHours(createInitialHospitalBasicSettingsDraft(), operatingDate);
   const currentOperatingMinutes = getWorkspaceCurrentOperatingMinutes(workspaceId);
-  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId) ||
+    (workspaceId === "workspace-clinical-master-pilot-v1" && shouldUseSupabaseAuth());
   const staffResourceKey = getReceptionStaffResourceKey({
     operatingDate,
     workspaceId,
@@ -11303,7 +11305,8 @@ export function ReceptionDrawer({
   );
   const operatingDate =
     operatingDateOverride ?? getWorkspaceOperatingDate(workspaceId);
-  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId);
+  const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId) ||
+    (workspaceId === "workspace-clinical-master-pilot-v1" && shouldUseSupabaseAuth());
   const staffResourceKey = getReceptionStaffResourceKey({
     operatingDate,
     workspaceId,

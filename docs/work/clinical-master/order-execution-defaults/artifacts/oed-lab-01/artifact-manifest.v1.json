@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "oed-lab-01-artifact-manifest/v1",
+  "generatedAt": "2026-09-06",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "runtimeImportAllowed": false,
+  "databaseMutationAllowed": false,
+  "masterMutationAllowed": false,
+  "sourceFileFingerprints": {
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-00-frozen-manifest.v1.json": "add64d19e9b4e92849bc326c246c1354abc5db500c4a7a18c4fb8cef130e1419",
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01a-order-default-candidates.non-applied.v1.json": "39e288b7ad3cc06fc52d8bcf998872517aef667102af407e017dffec354da16c",
+    "tests/fixtures/clinical-master-operational-v4-authoring.json": "d733beccbec0a384b7098aacf6a40c1979ff4da45357605a47722396bf5e5e6b"
+  },
+  "researchCompletedScope": "broad_family_landscape_only",
+  "orderSpecificMethodVerificationComplete": false,
+  "counts": {
+    "clinicalLabOrders": 86,
+    "currentLabTestDefinitions": 72,
+    "currentLabPanelDefinitions": 18,
+    "currentPanelMemberships": 120,
+    "currentOrderProfiles": 85,
+    "directlyOrderableLabTests": 56,
+    "labTestsWithoutDirectOrder": 16,
+    "unboundClinicalLabOrders": 1
+  },
+  "artifactFingerprints": {
+    "oed-lab-01-order-inventory.v1.json": "7a7976ecca51f0ceea151e3cbb361e2e85502188bff03304b51b77abea716af6",
+    "oed-lab-01-set-atomic-map.v1.json": "1f50e4b25fcfbb4d2be751c8b72465ed1b69949033e55b59d1d57030663455cc",
+    "oed-lab-01-execution-route-matrix.v1.json": "4bca405d2f7859b13ee79c62eaaf42a86eb6049926ec0cc3dddf7b184648252a",
+    "oed-lab-01-equipment-landscape.v1.json": "2081af2775d9e2c36133c69b021f489e28baeac9ea8e8706202725d0699a4dd1",
+    "oed-lab-01-result-shape-matrix.v1.json": "a6af1bbb3404e67f3b52b356f25871865f9ec3b394b0ca8d86718d6ac1fc5663",
+    "oed-lab-01-source-ledger.v1.json": "fa3af96041131901ce816294449d4750de54a03c267b35079acca26810d0234d",
+    "oed-lab-01-gap-matrix.v1.json": "cad5bc6e57c0e489109342611e2bdc60d182f0b8c144a77e2152b952cc045b61",
+    "oed-lab-01-correction-audit.v1.json": "0968b66765a5c48f3db569e55e65fc613c4cdf83fa126d796e5b096eba1eefa3"
+  },
+  "nextWork": "OED-LAB-02"
+}

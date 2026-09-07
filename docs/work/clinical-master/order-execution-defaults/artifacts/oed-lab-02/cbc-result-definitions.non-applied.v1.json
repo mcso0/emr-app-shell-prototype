@@ -1,0 +1,675 @@
+{
+  "generatedAt": "2026-09-06",
+  "revision": "oed-lab-02.v1",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "schemaVersion": "oed-lab-02-results/v1",
+  "definitions": [
+    {
+      "code": "RBC",
+      "displayName": "적혈구 수",
+      "resultDefinitionId": "cm.lab-test.synthetic-01",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*6/uL",
+      "displayUnit": "M/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "HCT",
+      "displayName": "헤마토크릿",
+      "resultDefinitionId": "cm.lab-test.cbc-hct",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "RBC",
+          "MCV"
+        ],
+        "formula": "RBC * MCV / 10",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "HGB",
+      "displayName": "혈색소",
+      "resultDefinitionId": "cm.lab-test.synthetic-02",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "g/dL",
+      "displayUnit": "g/dL",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "MCV",
+      "displayName": "평균 적혈구 용적",
+      "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "fL",
+      "displayUnit": "fL",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "MCH",
+      "displayName": "평균 적혈구 혈색소량",
+      "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "pg",
+      "displayUnit": "pg",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "HGB",
+          "RBC"
+        ],
+        "formula": "HGB * 10 / RBC",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE",
+        "CORNELL-INDICES"
+      ]
+    },
+    {
+      "code": "MCHC",
+      "displayName": "평균 적혈구 혈색소 농도",
+      "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "g/dL",
+      "displayUnit": "g/dL",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "HGB",
+          "HCT"
+        ],
+        "formula": "HGB * 100 / HCT",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE",
+        "CORNELL-INDICES"
+      ]
+    },
+    {
+      "code": "RDW",
+      "displayName": "적혈구 크기 분포",
+      "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "RETIC_ABS",
+      "displayName": "망상적혈구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "optional",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "RETIC_HGB",
+      "displayName": "망상적혈구 혈색소",
+      "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "pg",
+      "displayUnit": "pg",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "optional",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "WBC",
+      "displayName": "백혈구 수",
+      "resultDefinitionId": "cm.lab-test.cbc-wbc",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "NEU_ABS",
+      "displayName": "호중구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "LYM_ABS",
+      "displayName": "림프구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "MONO_ABS",
+      "displayName": "단핵구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "EOS_ABS",
+      "displayName": "호산구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "BASO_ABS",
+      "displayName": "호염기구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "PLT",
+      "displayName": "혈소판 수",
+      "resultDefinitionId": "cm.lab-test.cbc-plt",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "10*3/uL",
+      "displayUnit": "K/µL",
+      "decimalScale": 0,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "MPV",
+      "displayName": "평균 혈소판 용적",
+      "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "fL",
+      "displayUnit": "fL",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "PDW",
+      "displayName": "혈소판 크기 분포",
+      "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "fL",
+      "displayUnit": "fL",
+      "decimalScale": 1,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "optional",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "device_reported_measurement_or_index",
+      "calculation": null,
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "PCT",
+      "displayName": "혈소판 용적률",
+      "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "optional",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "PLT",
+          "MPV"
+        ],
+        "formula": "PLT * MPV / 10000",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "NEU_PCT",
+      "displayName": "호중구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "NEU_ABS",
+          "WBC"
+        ],
+        "formula": "NEU_ABS / WBC * 100",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "LYM_PCT",
+      "displayName": "림프구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "LYM_ABS",
+          "WBC"
+        ],
+        "formula": "LYM_ABS / WBC * 100",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "MONO_PCT",
+      "displayName": "단핵구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "MONO_ABS",
+          "WBC"
+        ],
+        "formula": "MONO_ABS / WBC * 100",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "EOS_PCT",
+      "displayName": "호산구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "EOS_ABS",
+          "WBC"
+        ],
+        "formula": "EOS_ABS / WBC * 100",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "BASO_PCT",
+      "displayName": "호염기구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "core",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "BASO_ABS",
+          "WBC"
+        ],
+        "formula": "BASO_ABS / WBC * 100",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "RETIC_PCT",
+      "displayName": "망상적혈구 비율",
+      "resultDefinitionId": "cm.lab-test.synthetic-13",
+      "revision": "oed-lab-02.v1",
+      "kind": "quantity",
+      "unit": "%",
+      "displayUnit": "%",
+      "decimalScale": 2,
+      "decimalPolicy": "prototype_display_only_preserve_raw_input",
+      "group": "optional",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "derived_or_device_reported",
+      "calculation": {
+        "inputs": [
+          "RETIC_ABS",
+          "RBC"
+        ],
+        "formula": "RETIC_ABS / (RBC * 1000) * 100",
+        "policy": "same_attempt_inputs_only_no_prior_value_fallback",
+        "authority": "prototype_arithmetic_relation_not_device_algorithm"
+      },
+      "sourceIds": [
+        "IDEXX-MENU",
+        "IDEXX-GUIDE"
+      ]
+    },
+    {
+      "code": "SMEAR",
+      "displayName": "혈액도말 형태 검토",
+      "resultDefinitionId": "cm.lab-test.synthetic-14",
+      "revision": "oed-lab-02.v1",
+      "kind": "narrative_with_attachments",
+      "unit": null,
+      "displayUnit": null,
+      "decimalScale": null,
+      "group": "manual_review",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "provenance": "synthetic_research_informed",
+      "observationDefault": null,
+      "acquisition": "manual_review",
+      "calculation": null,
+      "sourceIds": [
+        "CORNELL-CBC"
+      ],
+      "structuredSections": [
+        "rbc_morphology",
+        "wbc_morphology",
+        "platelet_estimate",
+        "parasite_observation",
+        "overall_comment"
+      ],
+      "interpretationCodes": [
+        "unremarkable",
+        "abnormal",
+        "inconclusive",
+        "not_performed"
+      ],
+      "codeAuthority": "prototype_vocabulary_not_manufacturer_codes"
+    }
+  ]
+}

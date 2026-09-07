@@ -1,0 +1,2579 @@
+{
+  "schemaVersion": 1,
+  "artifactState": "non_applied",
+  "runtimeImportAllowed": false,
+  "applied": false,
+  "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3",
+  "originalCount": 30,
+  "records": [
+    {
+      "masterKey": "cm.order.imaging.abdominal-radiography",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "복부 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "1abfeefd-d4ad-56aa-9363-13a6279c3369",
+          "presetKey": "preset:execution:cm.order.imaging.abdominal-radiography",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "복부",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "복부 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "391e7d6e0f75fe8d81f3e153b5af65fc7ef2ba7e64745edb76e796184e079251",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "f1ce73089b591e58666319989a37fcc2baa59abb4079a2fafab80e8d77013a8f",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.abdominal-ultrasound",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "복부 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "3195f6d6-5d9d-532c-8d11-d4ad35231ea2",
+          "presetKey": "preset:execution:cm.order.imaging.abdominal-ultrasound",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "복부",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "복부 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "b5f1ef094ea1790861ef01c5c0fd755becdb7ce88690538994d100b576796c31",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "69259b6485fb4c81c3999665a67cbe9165018b9dd12e7139a24c148dfa44b956",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.chest-radiography",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "흉부 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "6199a1e1-8b3c-516f-b8de-08abc2af1125",
+          "presetKey": "preset:execution:cm.order.imaging.chest-radiography",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "흉부",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "흉부 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "4c7a449228c29679c4760c873413bf37ae6b3f6188d2c0ae9838edd3cbd2dd27",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "193e0d723e3e6fe2a045f2d1ca80e03cfc98adb168b1fd8e7e5665aebee805e4",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.imaging.echocardiography",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "심장 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "298a9ebf-f995-5da5-9e4b-d633f2109fb9",
+          "presetKey": "preset:execution:cm.order.imaging.echocardiography",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "심장 초음파 검사 표준 검사 프로토콜로 시행",
+            "bodyRegion": "심장",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "preset_fixed",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "ba376c0d7239fdcfd99c5844fd45acb2052dabc59cc4232be630cb492a52dbdf",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "36632f9007856fd0589da661bf33df1e152ca6b8203371b1a7cd5b881ee79b34",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-01",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "사지 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "551ce1b7-92a3-54cc-a12d-dea224280186",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-01",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "사지",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "사지 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "6df036a075b655a73c061e9ddd6777263e97bf099c6cb1b6e90e6f2aa61303f5",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "6d2fd20d973f543f9fe21ac7ab465a448d740900e25bde248026bcb1bed6f8ab",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-02",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "골반 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "e9399d75-191a-5fed-966f-feb69af5deac",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-02",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "골반",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "골반 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "290e4a996ca0b72eeea0b4e6624a967a3943008f934378cf8105541150fd2d13",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "4bfc73969d41ae1e23cd5da37590c4aa0ae806fe8f87e397e9113446eca91634",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-03",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "척추 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "43fcd7d2-4c71-5f09-84bf-2827dd18ef32",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-03",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "척추",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "척추 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "ea6e23b7ef3a5e86cff30416996ada747673762ae64a0fc1bd3b71632fb271f7",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "2ecf854b7bb0f3079b6f9daa4b0169fb1df350d05fb0e044bd56e757d78774cb",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-04",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "치과 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "4115bff3-8209-5654-9787-a2b86ebc4b16",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-04",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "치과",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "치과 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "3c2417829a780521bbb5db1bf12f198ad9bfa9c714a02d58abdbe3518cb1867e",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "a5e5bfe3604ec8118da50ddd1971e57e3da1c90785a5b35265f76dfd45cf9c49",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-05",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "경부 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "c94ad509-6c7c-5aad-b68d-b4bb60af9dd5",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-05",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "경부",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "경부 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "51d7370ac78f6c02f7fb8e7294ddb14753697f961b175c883ba27612ac8e93a8",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "ed90a5982a84472832abc9f42ce7aa28709bc06a3d663b4484c64669121c8b67",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-06",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "근골격 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "6019bfe7-0980-5bca-ab7e-992541d13a26",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-06",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "근골격계",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "근골격 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "89afe17d66a628dcdc627962795df3379de4e6a0513286ad7d734e6c4fb8a7bf",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "e0f95a3ff6965ce050a9fb6368703fcd9c235a45df8d242ed193e0a228052a52",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-07",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "안구 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "e06cb296-be5d-5ec6-ae81-0cb12dab24c2",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-07",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "안구",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "안구 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "a2a3a86bf67874ae03d02b68855fe9159084f1fde98a6255bab05b290d453049",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "1851d7097e6a2c1be1cd94f67e1e9b3a9cc41683a54e2038b163f028a1acef49",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.synthetic.imaging-08",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "임신 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "b95ef2ef-6418-5410-8576-629a581ff1e1",
+          "presetKey": "preset:execution:cm.order.synthetic.imaging-08",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "임신 초음파 검사 표준 검사 프로토콜로 시행",
+            "bodyRegion": "자궁·태아",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "preset_fixed",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "edd9954a694d81eb5e1a423f5da3e4fdc89e5c97479d6315ad08959b87d22214",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "949900c6bad0cc6bd0afcb36cae521721f1fcfdb8056871026f70ccd6f739e5a",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.01",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "흉부 방사선 정면 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "5db2f1fe-875a-51a0-8d9e-42ee6b5b276f",
+          "presetKey": "preset:execution:cm.order.v4.imaging.01",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "흉부",
+            "position": "정면",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "흉부 방사선 정면 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "801df6317ee4700418d8c43dedd8d158586d6028837fd29673f6e8e8191eb1a2",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "b0e1528588ac5d6a4c41c0525f4a15e9e9dac6ca996b02bf5f6ec6c8782b66d8",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.02",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "흉부 방사선 측면 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "8713d600-cb51-521e-ac6a-52fd8553c878",
+          "presetKey": "preset:execution:cm.order.v4.imaging.02",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "흉부",
+            "position": "측면",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "흉부 방사선 측면 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "871e316050273134dedb12fe8eff268a573c556124f402c53a6c3a7e83756199",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "ad539e442021a221d76d8d1dc8a67c19440a8dec0937ee293f4e01d40c3043b5",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.03",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "복부 방사선 정면 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "6173511a-faf5-577b-aca4-83a993ee05bc",
+          "presetKey": "preset:execution:cm.order.v4.imaging.03",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "복부",
+            "position": "정면",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "복부 방사선 정면 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "91224f37dae97e9780e3256f9bc1d1ccb674bbb66c10d8e161c8e9ae8c92178c",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "1d43c5dfad14c93b5d0ed01a50f5a593edb04c13166cacdea5fb2e408edfdda4",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.04",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "복부 방사선 측면 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "0d9541f0-de5d-5e9e-8499-8aecf4929635",
+          "presetKey": "preset:execution:cm.order.v4.imaging.04",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "복부",
+            "position": "측면",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "복부 방사선 측면 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "25d0ae76ddd8b4794ee8e48f09a66299b0facbb4fbb3c51b8d60758e58dc8a85",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "9d6f61261d7b9ab1406ac4f3f5a3e0d764101525ae41321e956976194326876f",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.05",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "두개골 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "0676bd8f-8253-56bf-94e6-c2d37ec7fe2c",
+          "presetKey": "preset:execution:cm.order.v4.imaging.05",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "두개골",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "두개골 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "97e23b1f98636b38436a742562f68e8e01b1ff44e33562d326fa3ea9f128bfed",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "c362f9e116b8f92e3e84919885d9be07f8db3c36fdbc36da67a4601d22321cc8",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.06",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "슬관절 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "80a05c5b-16d5-575e-abfa-ea18d449ab69",
+          "presetKey": "preset:execution:cm.order.v4.imaging.06",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "슬관절",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "슬관절 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "7d383f443372152e97dbde9ed77cc498c71fb913cfaf2fd5c427bd916801c359",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "740b81e2498ae4de4eebe37664149efd1bb25f848ce5bb5573c0d2affa8aa190",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.07",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "고관절 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "fd80384d-c39a-55bc-a481-b007942d3d40",
+          "presetKey": "preset:execution:cm.order.v4.imaging.07",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "고관절",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "고관절 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "c9d2bfb6ef2f4909f42c8e2ffa510edab9066640b2bd1b7a442833625f3d372b",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "cc46283ffa6d9c6cb1b03333a7ba371a09fb118c6bc622427c25e4cf77b9ca5b",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.08",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "견관절 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "a83feacc-db97-59b5-a3a3-619c97f0373f",
+          "presetKey": "preset:execution:cm.order.v4.imaging.08",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "견관절",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "견관절 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "3ff6e68dd5ed9f1b8e977076dcc6c671671b12b06c87b3a0355d87a2622db494",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "54307d86c05dd01c8287e31b0d70485173645a0bfb304ef09141ad9d92a2e0ac",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.09",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "주관절 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "43361cb7-aba9-55f7-aae8-26ae5ad26d7e",
+          "presetKey": "preset:execution:cm.order.v4.imaging.09",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "주관절",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "주관절 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "176fe709dc0a8b2e45e349a5efa4e695f344f9e7b1202294e12bb5d40de2e1c1",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "b8f59ab4b3115c4f6c9973b95e8b31eb1d4e5ae54f1a1496669f8112861ef3aa",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.10",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "수근관절 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "948450f2-9927-5ff6-a64b-2052493259a2",
+          "presetKey": "preset:execution:cm.order.v4.imaging.10",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "수근관절",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "수근관절 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "133acb3d541442811bfca4d83e88b676450425ccfb463cea695bdc22feea6392",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "e0c932371f86cd378123e8b8e4383e4358c61accb61f0f47837061890917c3eb",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.11",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "족근관절 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "540f626a-43d3-50c5-b279-1749654165d5",
+          "presetKey": "preset:execution:cm.order.v4.imaging.11",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "족근관절",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "족근관절 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "09517dbbf5d598287273fa8bcd47b2fe1f4fdc393fb5792355a25ca20cb5e63e",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "0d26e01c9c7b5131fb7fc4c1649b1e6a989ea8a99e1b9070fa7a205a89d2a717",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.12",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "비강 방사선 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "81f9377b-1e97-56a1-b00e-133b883b0a50",
+          "presetKey": "preset:execution:cm.order.v4.imaging.12",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "비강",
+            "position": "표준 직교 자세",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "비강 방사선 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "2f738038cb9342a8a124de2945f63c4966a42b11e183a8067f7111822fd5b50f",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "e947ec0b4500239ee779aa576e4517966ee1484ab7abbe4cb844fca7ed338b79",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.13",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "방광 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "c9118ff8-bd8b-5dc8-a5d8-a9085e4a0153",
+          "presetKey": "preset:execution:cm.order.v4.imaging.13",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "방광",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "방광 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "9af40803cf9fa51c3dac1005b2625f0d62704fca797b30b5cc872ebc391332c6",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "402b2fb76002ec237f79a942d9275b61496691986618ffd099a7ce6165e944ab",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.14",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "신장 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "da7db979-9439-532a-ae25-f13ae94ebbfc",
+          "presetKey": "preset:execution:cm.order.v4.imaging.14",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "신장",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "신장 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "460d0a5a1f91ce37b49bf1e7c7a4e6000b9348a1ca551f67e94d75707e0aa791",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "1f7979d31afccb5c789d6d96553e9d2e0bee05db9af6f39f7ee4886e3bac2758",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.15",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "간담도 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "9d8c9e53-e9d2-523b-9285-883a0eaf0361",
+          "presetKey": "preset:execution:cm.order.v4.imaging.15",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "간담도",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "간담도 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "ffc8f93a997a7af5a7f9e575dc1b35d5afd67d0a05bf679dea6316e638213547",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "c6592c58fd68f72b7995b41dc649ab5f24ec6bcb72d9f645103c3454363a1730",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.16",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "위장관 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "10cbd291-d147-5205-bdfe-e7970b4fc436",
+          "presetKey": "preset:execution:cm.order.v4.imaging.16",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "bodyRegion": "위장관",
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "위장관 초음파 검사 표준 검사 프로토콜로 시행",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "derived_from_profile",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "7ac5c4ef41aeb89e4a760651da7cf435f15642a047e04cecc0f9d76258fdc66f",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "7b5ecab732336deef63fc731acc1609c182acf851afc7882e4a0762908313cd4",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.17",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "응급 집중 초음파 검사",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "8ce36397-bb10-5ae6-a37b-e1d28a218f8a",
+          "presetKey": "preset:execution:cm.order.v4.imaging.17",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "position": "등쪽 또는 측면",
+            "viewCount": 1,
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "imagingProtocol": "응급 집중 초음파 검사 표준 검사 프로토콜로 시행",
+            "bodyRegion": "흉부·복부 (합성 응급 집중 초음파 시나리오)",
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "preset_fixed",
+            "position": "derived_from_profile",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "derived_from_profile",
+            "sedationRequired": "derived_from_profile",
+            "imagingProtocol": "derived_from_profile",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "f443ae122a06abf4428152754de6e2df21c7380da3b13ad57caf184f22930979",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "9dd7978f6384f22f99aec097ff6018c7a39c97c523b9f61281e6951d05ea543e",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    },
+    {
+      "masterKey": "cm.order.v4.imaging.18",
+      "recordType": "order",
+      "lifecycleStatus": "published",
+      "safetyStatus": "normal",
+      "safetyReason": null,
+      "names": [
+        {
+          "languageCode": "ko",
+          "nameKind": "preferred",
+          "name": "CT 영상자료 판독 상담",
+          "searchable": true,
+          "sortOrder": 0
+        }
+      ],
+      "source": {
+        "sourceType": "synthetic",
+        "title": "CLAiR operational pilot fixture",
+        "referenceUri": null,
+        "sourceVersion": "v1",
+        "accessedAt": "2026-08-23",
+        "licenseNotes": "Synthetic structural data; not for clinical use."
+      },
+      "detail": {
+        "classificationPathKey": "cm.path.imaging",
+        "defaultSalesUnitCode": "case",
+        "defaultBillingReflectionEnabled": true,
+        "defaultQuantity": 1,
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "executionPreset": {
+          "presetId": "ffc8bd61-26d0-5023-8be9-32ac9e00e5e0",
+          "presetKey": "preset:execution:cm.order.v4.imaging.18",
+          "presetRevision": 2,
+          "clinicalOrderType": "imaging",
+          "detailSchemaVersion": 1,
+          "defaultDetailInputs": {
+            "position": "제공된 CT 영상의 기존 촬영 자세 참조",
+            "viewCount": 1,
+            "imagingProtocol": "제공된 합성 CT 영상자료를 검토한다. 신규 촬영·조영·진정을 시행하는 오더가 아니다. 실제 검토한 영상 범위와 판독 결과를 직접 기록한다.",
+            "bodyRegion": "흉부 (제공된 합성 CT 판독 범위)",
+            "contrastRequired": false,
+            "sedationRequired": false,
+            "exceptions": "합성 기능 검증 시나리오 · 실제 환자와 장비에 적용할 임상 촬영 지시가 아님. 부위·자세·뷰·조영·진정 계획이 다르면 환자별로 수정하고 실제 수행값을 별도로 기록한다. 조영·진정 false는 이번 판독 오더에서 신규 시행하지 않는다는 뜻이며, 과거 CT 촬영의 시행 여부를 단정하지 않는다. View 수 1은 제공 영상 검토 단위이지 신규 촬영 횟수가 아니다."
+          },
+          "fieldPolicies": {
+            "bodyRegion": "preset_fixed",
+            "position": "preset_fixed",
+            "viewCount": "derived_from_profile",
+            "contrastRequired": "preset_fixed",
+            "sedationRequired": "preset_fixed",
+            "imagingProtocol": "preset_fixed",
+            "exceptions": "preset_fixed"
+          },
+          "provenance": {
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "sourceReleaseId": null,
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "sourceRecordFingerprint": "822866729023354e8beff6cc441aee68a2250bba3020cb4829334df7aca1ecda",
+            "sourceType": "synthetic-imaging-runtime-v1",
+            "generatorProfileKey": "wp06.imaging.v1",
+            "sourceNotes": "Preserved original30 identities and26 authored scopes; four exact-ID synthetic scope corrections. No clinical findings or real device data.",
+            "evidenceKeys": [
+              "dicom.wg25",
+              "aaha.anesthesia"
+            ],
+            "unresolvedClinicalAuthority": [],
+            "clinicalUseNotice": "합성 데모 전용 · 임상 검증 안 됨 · 실제 진료에 사용 금지",
+            "prototypeContract": {
+              "availabilityIntent": "active",
+              "dataOrigin": "synthetic",
+              "clinicalValidation": "not_clinically_validated",
+              "intendedUse": "prototype_only",
+              "clinicalUseAllowed": false
+            }
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "clinicalUseAllowed": false,
+          "contentSha256": "bfa35ddfe18ae3a1e01a42c17c3184fda69b128fc949d65f229c9ae589af0269",
+          "sourceArtifactSha256": "2b1269e7d42801034beaa8aee928e24b83a3441f316a7de5344dc1905c41dbf3"
+        }
+      }
+    }
+  ],
+  "corrections": {
+    "cm.order.imaging.echocardiography": {
+      "bodyRegion": "심장"
+    },
+    "cm.order.synthetic.imaging-08": {
+      "bodyRegion": "자궁·태아"
+    },
+    "cm.order.v4.imaging.17": {
+      "bodyRegion": "흉부·복부 (합성 응급 집중 초음파 시나리오)"
+    },
+    "cm.order.v4.imaging.18": {
+      "bodyRegion": "흉부 (제공된 합성 CT 판독 범위)",
+      "position": "제공된 CT 영상의 기존 촬영 자세 참조",
+      "contrastRequired": false,
+      "sedationRequired": false,
+      "imagingProtocol": "제공된 합성 CT 영상자료를 검토한다. 신규 촬영·조영·진정을 시행하는 오더가 아니다. 실제 검토한 영상 범위와 판독 결과를 직접 기록한다."
+    }
+  },
+  "semanticFingerprint": "4c7b411255df1386d3ab029e46f16798c9af1c303c670fb7d081f2aaea374c39"
+}

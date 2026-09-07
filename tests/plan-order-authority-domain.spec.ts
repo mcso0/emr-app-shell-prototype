@@ -7,6 +7,7 @@ import {
   derivePlanOrderTotalOccurrences,
   parsePlanOrderAuthority,
   proposePlanOrderActualDispenseQuantity,
+  proposePlanOrderPreparation,
   type PlanOrderAuthorityConfig,
 } from "@/features/chart/plan-order-authority-domain";
 
@@ -30,6 +31,54 @@ const ingredientConfig: PlanOrderAuthorityConfig = {
   billingUnit: "mL",
   taxClass: "taxable",
 };
+
+const productUnitV2: PlanOrderAuthorityConfig = {
+  schemaVersion: 2,
+  calculationMode: "product_unit",
+  dispenseUnit: "tablet",
+  preparationPolicy: {
+    quantityScope: "course_total", increment: 0.5, roundingMode: "up", displayPrecision: 1,
+  },
+};
+
+test("V2 preserves dose and rounds the course once, not each administration", () => {
+  expect(parsePlanOrderAuthority(productUnitV2)).toEqual({ valid: true, value: productUnitV2 });
+  expect(proposePlanOrderPreparation({ config: productUnitV2,
+    theoreticalPerAdministration: 0.25, occurrences: { kind: "daily", dailyCount: 3, durationDays: 5 },
+  })).toEqual({ quantityScope: "course_total", theoreticalTotal: 3.75,
+    plannedPracticalQuantity: 4, plannedPracticalTotal: 4, unit: "tablet" });
+  expect(proposePlanOrderPreparation({ config: productUnitV2,
+    theoreticalPerAdministration: 0.25, occurrences: { kind: "daily", dailyCount: 1, durationDays: 1 },
+  })?.plannedPracticalTotal).toBe(0.5);
+  expect(proposePlanOrderActualDispenseQuantity({ config: productUnitV2, theoreticalQuantity: 0.25 })).toBeNull();
+});
+
+test("V2 product units follow edited order dose and never infer drops to mL", () => {
+  const input = { config: productUnitV2, doseBasis: "head" as const, dosePerAdministration: 0.5,
+    doseUnit: "tablet", encounterId: "encounter-1", confirmationAt: "2026-09-06T10:00:00Z" };
+  expect(calculatePlanOrderDispenseQuantity(input)).toMatchObject({ ok: true, quantity: 0.5, formula: "product_unit" });
+  expect(calculatePlanOrderDispenseQuantity({ ...input, dosePerAdministration: 1 })).toMatchObject({ ok: true, quantity: 1 });
+  expect(calculatePlanOrderDispenseQuantity({ ...input, doseUnit: "drop" })).toEqual({ ok: false, reason: "unit_conversion_missing" });
+});
+
+test("V2 requires scope, rejects V1 ambiguity and incomplete occurrence plans", () => {
+  expect(parsePlanOrderAuthority({ ...productUnitV2, schemaVersion: 1 }).valid).toBe(false);
+  expect(parsePlanOrderAuthority({ ...productUnitV2, preparationPolicy: { ...productUnitV2.preparationPolicy, quantityScope: undefined } }).valid).toBe(false);
+  expect(parsePlanOrderAuthority({ ...productUnitV2, fixedProductQuantity: 1 }).valid).toBe(false);
+  expect(proposePlanOrderPreparation({ config: productUnitV2, theoreticalPerAdministration: 0.25,
+    occurrences: { kind: "prn", maximumAuthorizedCount: 0 } })).toBeNull();
+  expect(proposePlanOrderPreparation({ config: { ...productUnitV2,
+    preparationPolicy: { ...productUnitV2.preparationPolicy!, quantityScope: "per_administration" } },
+    theoreticalPerAdministration: 0.25, occurrences: { kind: "daily", dailyCount: 3, durationDays: 5 },
+  })?.plannedPracticalTotal).toBe(7.5);
+});
+
+test("V2 decimal increment boundary agrees with PostgreSQL numeric", () => {
+  expect(proposePlanOrderPreparation({ config: { ...productUnitV2,
+    preparationPolicy: { ...productUnitV2.preparationPolicy!, increment: 0.1 } },
+    theoreticalPerAdministration: 0.1, occurrences: { kind: "daily", dailyCount: 3, durationDays: 1 },
+  })?.plannedPracticalTotal).toBe(0.3);
+});
 
 test.describe("plan-order authority contract", () => {
   test("treats an absent master authority as an explicit unconfigured state", () => {

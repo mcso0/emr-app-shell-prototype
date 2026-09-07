@@ -1,0 +1,4054 @@
+{
+  "schemaVersion": "oed-lab-01-set-atomic-map/v1",
+  "generatedAt": "2026-09-06",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "modelingDecision": {
+    "hierarchy": "orderable_set_or_panel -> independently_orderable_atomic_order -> result_observation",
+    "nestedPanelsAllowed": true,
+    "cyclesAllowed": false,
+    "childOrderabilityMustBeExplicit": true,
+    "retestCreatesNewOrder": true,
+    "parentPanelCarriesResultValue": false,
+    "standardsBasis": [
+      "LOINC-PANELS",
+      "LOINC-RESULT-TYPES",
+      "FHIR-SERVICE-REQUEST",
+      "FHIR-OBSERVATION",
+      "FHIR-DIAGNOSTIC-REPORT"
+    ]
+  },
+  "familyBlueprints": {
+    "hematology_cbc": {
+      "label": "혈구검사·CBC",
+      "targetShape": "test_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "hematology_analyzer",
+        "microscope_or_cellular_analyzer"
+      ],
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_found",
+      "recommendedChildren": [
+        "WBC",
+        "NEU#",
+        "LYM#",
+        "MONO#",
+        "EOS#",
+        "BASO#",
+        "NEU%",
+        "LYM%",
+        "MONO%",
+        "EOS%",
+        "BASO%",
+        "RBC",
+        "HGB",
+        "HCT",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "RDW",
+        "PLT",
+        "MPV",
+        "RETIC#",
+        "RETIC%",
+        "RBC morphology",
+        "WBC morphology",
+        "platelet estimate",
+        "hemoparasite",
+        "plasma appearance",
+        "total protein"
+      ],
+      "note": "장비 결과와 수기 도말 결과를 한 패널에서 묶되 각 결과는 독립 항목으로 보존한다."
+    },
+    "clinical_chemistry": {
+      "label": "임상화학",
+      "targetShape": "test_panel_or_atomic",
+      "primaryRoutes": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_analyzer"
+      ],
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_found",
+      "recommendedChildren": [
+        "ALB",
+        "GLOB",
+        "A/G",
+        "TP",
+        "ALT",
+        "AST",
+        "ALP",
+        "GGT",
+        "TBIL",
+        "DBIL",
+        "GLU",
+        "BUN",
+        "CREA",
+        "BUN/CREA",
+        "Ca",
+        "PHOS",
+        "CHOL",
+        "TRIG",
+        "AMYL",
+        "LIPA",
+        "CK",
+        "LDH",
+        "SDMA",
+        "Mg",
+        "bile acids"
+      ],
+      "note": "패널 구성은 장비 SKU가 아니라 버전 있는 논리 세트로 관리하고 단일 분석항목도 독립 주문 가능하게 둔다."
+    },
+    "electrolytes": {
+      "label": "전해질",
+      "targetShape": "test_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_or_electrolyte_analyzer"
+      ],
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_found",
+      "recommendedChildren": [
+        "Na",
+        "K",
+        "Cl",
+        "HCO3/tCO2",
+        "Na/K",
+        "anion gap",
+        "Mg"
+      ],
+      "note": "GLU·CREA는 기본 전해질 패널의 필수 구성으로 고정하지 않는다."
+    },
+    "coagulation": {
+      "label": "응고",
+      "targetShape": "test_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "coagulation_analyzer"
+      ],
+      "sourceIds": [
+        "IDEXX-COAG-DX",
+        "CORNELL-COAG-PANEL"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_found",
+      "recommendedChildren": [
+        "PT",
+        "aPTT",
+        "TCT",
+        "fibrinogen",
+        "D-dimer"
+      ],
+      "note": "기본 원내 패널은 PT·aPTT, 확장 외부 패널은 TCT·fibrinogen·D-dimer를 선택 항목으로 둔다."
+    },
+    "urinalysis": {
+      "label": "요검사",
+      "targetShape": "panel_of_subpanels",
+      "primaryRoutes": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "urine_strip_analyzer",
+        "refractometer",
+        "urine_sediment_analyzer",
+        "microscope",
+        "chemistry_analyzer"
+      ],
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "color",
+        "turbidity",
+        "specific gravity",
+        "pH",
+        "protein",
+        "glucose",
+        "ketone",
+        "bilirubin",
+        "blood/hemoglobin",
+        "sediment RBC",
+        "sediment WBC",
+        "squamous epithelial",
+        "nonsquamous epithelial",
+        "rods",
+        "cocci",
+        "hyaline casts",
+        "nonhyaline casts",
+        "struvite crystals",
+        "calcium oxalate crystals",
+        "ammonium biurate crystals",
+        "bilirubin crystals",
+        "unclassified crystals",
+        "UPRO",
+        "UCRE",
+        "UPC",
+        "image",
+        "comment"
+      ],
+      "note": "시험지·비중·침사·UPC를 하위 세트로 나누고 결과 항목은 수치·반정량·이미지를 함께 지원한다."
+    },
+    "fecal_parasitology": {
+      "label": "분변·기생충",
+      "targetShape": "test_panel_or_repeatable_observation",
+      "primaryRoutes": [
+        "in_house_manual",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "centrifuge_and_microscope",
+        "rapid_immunoassay_reader"
+      ],
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "not_applicable",
+      "recommendedChildren": [
+        "direct smear",
+        "centrifugal flotation",
+        "organism/taxon",
+        "life stage",
+        "detected",
+        "burden/count",
+        "Giardia antigen",
+        "occult blood",
+        "comment"
+      ],
+      "note": "기생충 목록은 고정 열보다 반복 가능한 검출 결과로 저장한다."
+    },
+    "infectious_disease": {
+      "label": "감염성 질환",
+      "targetShape": "species_and_method_specific_panel",
+      "primaryRoutes": [
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "rapid_immunoassay_reader",
+        "external_molecular_or_serology_lab"
+      ],
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "not_applicable",
+      "recommendedChildren": [
+        "pathogen-specific antigen",
+        "pathogen-specific antibody",
+        "pathogen-specific PCR",
+        "panel invalid",
+        "inconclusive",
+        "comment"
+      ],
+      "note": "항원·항체·PCR은 별도 오더다. 개·고양이 항목을 하나의 무조건 실행 패널로 묶지 않는다."
+    },
+    "blood_typing": {
+      "label": "혈액형",
+      "targetShape": "atomic_coded_result",
+      "primaryRoutes": [
+        "in_house_manual",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "blood_typing_kit_or_lab"
+      ],
+      "sourceIds": [
+        "CORNELL-BLOOD-TYPE"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "not_applicable",
+      "recommendedChildren": [
+        "species-specific blood type",
+        "test validity",
+        "comment"
+      ],
+      "note": "개 DEA와 고양이 A/B/AB는 같은 코드 목록을 공유하지 않는다."
+    },
+    "reticulocyte": {
+      "label": "망상적혈구",
+      "targetShape": "atomic_numeric_pair",
+      "primaryRoutes": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "hematology_analyzer",
+        "microscope"
+      ],
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "IDEXX-PROCYTE-RI"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_found",
+      "recommendedChildren": [
+        "RETIC%",
+        "RETIC#",
+        "comment"
+      ],
+      "note": "절대 망상적혈구 수와 비율을 분리하며 절대값 계산에는 RBC가 필요하다."
+    },
+    "blood_smear": {
+      "label": "혈액도말",
+      "targetShape": "complex_report",
+      "primaryRoutes": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "microscope_or_cellular_analyzer"
+      ],
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "IDEXX-INVUE"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "not_applicable",
+      "recommendedChildren": [
+        "RBC morphology",
+        "WBC morphology",
+        "manual differential",
+        "platelet estimate",
+        "hemoparasite",
+        "images",
+        "interpretation"
+      ],
+      "note": "정상범위 하나가 아니라 형태·등급·서술·이미지 결과다."
+    },
+    "cytology": {
+      "label": "세포검사",
+      "targetShape": "complex_report",
+      "primaryRoutes": [
+        "in_house_manual",
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "microscope_or_cellular_analyzer",
+        "external_cytopathology"
+      ],
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "not_applicable",
+      "recommendedChildren": [
+        "site",
+        "collection method",
+        "adequacy",
+        "cell population",
+        "organisms",
+        "inflammation",
+        "interpretation",
+        "differentials",
+        "images",
+        "comment"
+      ],
+      "note": "관절액은 세포검사 서술 외에 단백·점도·세포수 등 수치 결과를 추가하는 복합 패널이다."
+    },
+    "thyroid": {
+      "label": "갑상선",
+      "targetShape": "test_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "TT4",
+        "fT4",
+        "TSH",
+        "TGAA",
+        "interpretive comment"
+      ],
+      "note": "fT4 검사법과 TSH 종 적용은 별도 결과 프로필로 고정한다."
+    },
+    "adrenal": {
+      "label": "부신·코르티솔",
+      "targetShape": "protocol_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_or_immunoassay_analyzer",
+        "external_endocrinology_lab"
+      ],
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CORTISOL"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "basal cortisol",
+        "protocol type",
+        "timed cortisol samples",
+        "stimulation/suppression agent",
+        "interpretive comment"
+      ],
+      "note": "ACTH 자극·억제 검사는 시간점이 있는 프로토콜 결과로 다룬다."
+    },
+    "inflammation": {
+      "label": "염증 표지",
+      "targetShape": "species_conditional_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_or_immunoassay_analyzer",
+        "hematology_analyzer"
+      ],
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "canine CRP",
+        "feline SAA",
+        "CBC panel reference",
+        "albumin",
+        "interpretive comment"
+      ],
+      "note": "CRP와 SAA를 모든 종에 동일 적용하지 않고 종 조건을 둔다."
+    },
+    "pancreatic": {
+      "label": "췌장 평가",
+      "targetShape": "test_panel",
+      "primaryRoutes": [
+        "in_house_device",
+        "point_of_care_rapid_test",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_analyzer",
+        "rapid_immunoassay_reader",
+        "external_lab"
+      ],
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "amylase",
+        "lipase",
+        "species-specific pancreatic lipase",
+        "glucose",
+        "triglyceride",
+        "comment"
+      ],
+      "note": "일반 lipase와 pancreas-specific lipase를 같은 검사로 취급하지 않는다."
+    },
+    "organ_or_metabolic_panel": {
+      "label": "장기·대사 평가",
+      "targetShape": "test_panel_or_panel_of_panels",
+      "primaryRoutes": [
+        "in_house_device",
+        "in_house_manual",
+        "external_lab"
+      ],
+      "equipmentClasses": [
+        "chemistry_analyzer",
+        "hematology_analyzer",
+        "urinalysis_equipment"
+      ],
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "note": "간·신장·수술 전·건강검진 조합은 목적과 종에 따라 하위 패널을 버전으로 고정한다."
+    },
+    "composite_diagnostic_plan": {
+      "label": "종합 검사 조합",
+      "targetShape": "panel_of_panels",
+      "primaryRoutes": [
+        "mixed"
+      ],
+      "equipmentClasses": [
+        "multiple"
+      ],
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "structureEvidenceStatus": "source_found",
+      "valueEvidenceStatus": "source_partial",
+      "recommendedChildren": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "note": "현재 하나의 패널 별칭으로 축소된 서비스 조합을 실제 하위 패널 목록으로 바꿔야 한다."
+    },
+    "legacy_exception": {
+      "label": "레거시 예외",
+      "targetShape": "retire_or_redefine",
+      "primaryRoutes": [],
+      "equipmentClasses": [],
+      "sourceIds": [],
+      "structureEvidenceStatus": "source_partial",
+      "valueEvidenceStatus": "functional_fixture_required",
+      "recommendedChildren": [],
+      "note": "fallback 경로의 합성 오더다. 임의 연결하지 말고 제거 또는 명시적 재정의가 필요하다."
+    }
+  },
+  "orders": [
+    {
+      "orderId": "cm.order.lab.panel.cbc-basic",
+      "displayName": "전혈구 기본 패널",
+      "familyId": "hematology_cbc",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.cbc-wbc",
+          "displayName": "백혈구 수 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-hct",
+          "displayName": "헤마토크릿 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-plt",
+          "displayName": "혈소판 수 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "WBC",
+        "NEU#",
+        "LYM#",
+        "MONO#",
+        "EOS#",
+        "BASO#",
+        "NEU%",
+        "LYM%",
+        "MONO%",
+        "EOS%",
+        "BASO%",
+        "RBC",
+        "HGB",
+        "HCT",
+        "MCV",
+        "MCH",
+        "MCHC",
+        "RDW",
+        "PLT",
+        "MPV",
+        "RETIC#",
+        "RETIC%",
+        "RBC morphology",
+        "WBC morphology",
+        "platelet estimate",
+        "hemoparasite",
+        "plasma appearance",
+        "total protein"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.panel.chemistry-basic",
+      "displayName": "기본 혈청화학 패널",
+      "familyId": "clinical_chemistry",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_atomic",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "ALB",
+        "GLOB",
+        "A/G",
+        "TP",
+        "ALT",
+        "AST",
+        "ALP",
+        "GGT",
+        "TBIL",
+        "DBIL",
+        "GLU",
+        "BUN",
+        "CREA",
+        "BUN/CREA",
+        "Ca",
+        "PHOS",
+        "CHOL",
+        "TRIG",
+        "AMYL",
+        "LIPA",
+        "CK",
+        "LDH",
+        "SDMA",
+        "Mg",
+        "bile acids"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.panel.fecal",
+      "displayName": "분변 검사 패널",
+      "familyId": "fecal_parasitology",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_repeatable_observation",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.fecal-microscopy",
+          "displayName": "분변 현미경 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.giardia-antigen",
+          "displayName": "지아르디아 항원 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "direct smear",
+        "centrifugal flotation",
+        "organism/taxon",
+        "life stage",
+        "detected",
+        "burden/count",
+        "Giardia antigen",
+        "occult blood",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.panel.urinalysis",
+      "displayName": "요검사 패널",
+      "familyId": "urinalysis",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_subpanels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "color",
+        "turbidity",
+        "specific gravity",
+        "pH",
+        "protein",
+        "glucose",
+        "ketone",
+        "bilirubin",
+        "blood/hemoglobin",
+        "sediment RBC",
+        "sediment WBC",
+        "squamous epithelial",
+        "nonsquamous epithelial",
+        "rods",
+        "cocci",
+        "hyaline casts",
+        "nonhyaline casts",
+        "struvite crystals",
+        "calcium oxalate crystals",
+        "ammonium biurate crystals",
+        "bilirubin crystals",
+        "unclassified crystals",
+        "UPRO",
+        "UCRE",
+        "UPC",
+        "image",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-hct",
+      "displayName": "헤마토크릿 검사",
+      "familyId": "hematology_cbc",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-plt",
+      "displayName": "혈소판 수 검사",
+      "familyId": "hematology_cbc",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-wbc",
+      "displayName": "백혈구 수 검사",
+      "familyId": "hematology_cbc",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "CORNELL-HEMATOLOGY-RI",
+        "IDEXX-PROCYTE-RI",
+        "ZOETIS-HM5-MANUAL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alp",
+      "displayName": "ALP 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alt",
+      "displayName": "ALT 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-bun",
+      "displayName": "BUN 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-creatinine",
+      "displayName": "크레아티닌 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-glucose",
+      "displayName": "혈당 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-total-protein",
+      "displayName": "총단백 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.fecal-microscopy",
+      "displayName": "분변 현미경 검사",
+      "familyId": "fecal_parasitology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.giardia-antigen",
+      "displayName": "지아르디아 항원 검사",
+      "familyId": "fecal_parasitology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-sediment",
+      "displayName": "요침사 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-strip",
+      "displayName": "요시험지 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-01",
+      "displayName": "전해질 검사",
+      "familyId": "electrolytes",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-07",
+          "displayName": "혈청화학 인 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "Na",
+        "K",
+        "Cl",
+        "HCO3/tCO2",
+        "Na/K",
+        "anion gap",
+        "Mg"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-02",
+      "displayName": "응고 검사",
+      "familyId": "coagulation",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.synthetic-11",
+          "displayName": "응고 프로트롬빈시간 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-12",
+          "displayName": "응고 활성화부분트롬보플라스틴시간 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "PT",
+        "aPTT",
+        "TCT",
+        "fibrinogen",
+        "D-dimer"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "IDEXX-COAG-DX",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-03",
+      "displayName": "수술 전 검사",
+      "familyId": "organ_or_metabolic_panel",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-04",
+      "displayName": "간 검사",
+      "familyId": "organ_or_metabolic_panel",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-05",
+      "displayName": "신장 검사",
+      "familyId": "organ_or_metabolic_panel",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-07",
+          "displayName": "혈청화학 인 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-06",
+      "displayName": "당대사 패널",
+      "familyId": "organ_or_metabolic_panel",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-07",
+          "displayName": "혈청화학 인 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 12,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 13,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-07",
+      "displayName": "혈액형 검사 서비스",
+      "familyId": "blood_typing",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-BLOOD-TYPE"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-08",
+      "displayName": "망상적혈구 검사 서비스",
+      "familyId": "reticulocyte",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "IDEXX-PROCYTE-RI"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-09",
+      "displayName": "혈액도말 검사 서비스",
+      "familyId": "blood_smear",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-HEMATOLOGY",
+        "IDEXX-INVUE"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-10",
+      "displayName": "피부 세포검사",
+      "familyId": "cytology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-11",
+      "displayName": "귀 분비물 세포검사",
+      "familyId": "cytology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-12",
+      "displayName": "종괴 세포검사",
+      "familyId": "cytology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-13",
+      "displayName": "관절액 세포검사",
+      "familyId": "cytology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CYTOLOGY",
+        "IDEXX-INVUE",
+        "ASVCP-QALS"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.01",
+      "displayName": "확장 혈청화학 패널",
+      "familyId": "clinical_chemistry",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_atomic",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "ALB",
+        "GLOB",
+        "A/G",
+        "TP",
+        "ALT",
+        "AST",
+        "ALP",
+        "GGT",
+        "TBIL",
+        "DBIL",
+        "GLU",
+        "BUN",
+        "CREA",
+        "BUN/CREA",
+        "Ca",
+        "PHOS",
+        "CHOL",
+        "TRIG",
+        "AMYL",
+        "LIPA",
+        "CK",
+        "LDH",
+        "SDMA",
+        "Mg",
+        "bile acids"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.02",
+      "displayName": "지질 검사 패널",
+      "familyId": "clinical_chemistry",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel_or_atomic",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.triglyceride",
+          "displayName": "중성지방 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "ALB",
+        "GLOB",
+        "A/G",
+        "TP",
+        "ALT",
+        "AST",
+        "ALP",
+        "GGT",
+        "TBIL",
+        "DBIL",
+        "GLU",
+        "BUN",
+        "CREA",
+        "BUN/CREA",
+        "Ca",
+        "PHOS",
+        "CHOL",
+        "TRIG",
+        "AMYL",
+        "LIPA",
+        "CK",
+        "LDH",
+        "SDMA",
+        "Mg",
+        "bile acids"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.03",
+      "displayName": "췌장 평가 패널",
+      "familyId": "pancreatic",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.amylase",
+          "displayName": "아밀라아제 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.lipase",
+          "displayName": "리파아제 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.triglyceride",
+          "displayName": "중성지방 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "amylase",
+        "lipase",
+        "species-specific pancreatic lipase",
+        "glucose",
+        "triglyceride",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.04",
+      "displayName": "염증 표지 패널",
+      "familyId": "inflammation",
+      "currentKind": "test_panel",
+      "targetKind": "species_conditional_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.crp",
+          "displayName": "C-반응단백 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.saa",
+          "displayName": "혈청 아밀로이드 A 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-wbc",
+          "displayName": "백혈구 수 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-hct",
+          "displayName": "헤마토크릿 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-plt",
+          "displayName": "혈소판 수 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "canine CRP",
+        "feline SAA",
+        "CBC panel reference",
+        "albumin",
+        "interpretive comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.05",
+      "displayName": "갑상선 검사 패널",
+      "familyId": "thyroid",
+      "currentKind": "test_panel",
+      "targetKind": "test_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.total-t4",
+          "displayName": "총 T4 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.free-t4",
+          "displayName": "유리 T4 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.tsh",
+          "displayName": "갑상선자극호르몬 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ck",
+          "displayName": "크레아틴키나아제 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "TT4",
+        "fT4",
+        "TSH",
+        "TGAA",
+        "interpretive comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.06",
+      "displayName": "부신 검사 패널",
+      "familyId": "adrenal",
+      "currentKind": "test_panel",
+      "targetKind": "protocol_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.cortisol",
+          "displayName": "코르티솔 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-08",
+          "displayName": "전해질 나트륨 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-09",
+          "displayName": "전해질 칼륨 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-10",
+          "displayName": "전해질 염소 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "basal cortisol",
+        "protocol type",
+        "timed cortisol samples",
+        "stimulation/suppression agent",
+        "interpretive comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CORTISOL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.07",
+      "displayName": "요단백 평가 패널",
+      "familyId": "urinalysis",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_subpanels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.urine-creatinine",
+          "displayName": "요 크레아티닌 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.upc-ratio",
+          "displayName": "요단백·크레아티닌 비율 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ph",
+          "displayName": "요 pH 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-glucose",
+          "displayName": "요당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ketone",
+          "displayName": "요케톤 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-bilirubin",
+          "displayName": "요빌리루빈 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-16",
+          "displayName": "요화학 단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-15",
+          "displayName": "요화학 비중 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "color",
+        "turbidity",
+        "specific gravity",
+        "pH",
+        "protein",
+        "glucose",
+        "ketone",
+        "bilirubin",
+        "blood/hemoglobin",
+        "sediment RBC",
+        "sediment WBC",
+        "squamous epithelial",
+        "nonsquamous epithelial",
+        "rods",
+        "cocci",
+        "hyaline casts",
+        "nonhyaline casts",
+        "struvite crystals",
+        "calcium oxalate crystals",
+        "ammonium biurate crystals",
+        "bilirubin crystals",
+        "unclassified crystals",
+        "UPRO",
+        "UCRE",
+        "UPC",
+        "image",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.08",
+      "displayName": "감염성 질환 선별 패널",
+      "familyId": "infectious_disease",
+      "currentKind": "test_panel",
+      "targetKind": "species_and_method_specific_panel",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.fecal-flotation",
+          "displayName": "분변 부유 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.fecal-occult-blood",
+          "displayName": "분변 잠혈 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+          "displayName": "개 파보바이러스 항원 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-distemper-antigen",
+          "displayName": "개 디스템퍼바이러스 항원 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-heartworm-antigen",
+          "displayName": "개 심장사상충 항원 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+          "displayName": "고양이 범백혈구감소증 항원 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-leukemia-antigen",
+          "displayName": "고양이 백혈병바이러스 항원 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+          "displayName": "고양이 면역결핍바이러스 항체 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+          "displayName": "고양이 코로나바이러스 항체 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.babesia-pcr",
+          "displayName": "바베시아 PCR 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.giardia-antigen",
+          "displayName": "지아르디아 항원 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.fecal-microscopy",
+          "displayName": "분변 현미경 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "pathogen-specific antigen",
+        "pathogen-specific antibody",
+        "pathogen-specific PCR",
+        "panel invalid",
+        "inconclusive",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.basic-checkup",
+      "displayName": "기본 건강검진 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.emergency-initial",
+      "displayName": "응급 초기 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.crp",
+          "displayName": "C-반응단백 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.saa",
+          "displayName": "혈청 아밀로이드 A 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-wbc",
+          "displayName": "백혈구 수 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-hct",
+          "displayName": "헤마토크릿 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.cbc-plt",
+          "displayName": "혈소판 수 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.hepatobiliary",
+      "displayName": "간담도 평가 검사 조합",
+      "familyId": "organ_or_metabolic_panel",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.infectious-workup",
+      "displayName": "감염성 질환 검사 조합",
+      "familyId": "infectious_disease",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.fecal-flotation",
+          "displayName": "분변 부유 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.fecal-occult-blood",
+          "displayName": "분변 잠혈 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-parvovirus-antigen",
+          "displayName": "개 파보바이러스 항원 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-distemper-antigen",
+          "displayName": "개 디스템퍼바이러스 항원 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.canine-heartworm-antigen",
+          "displayName": "개 심장사상충 항원 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-panleukopenia-antigen",
+          "displayName": "고양이 범백혈구감소증 항원 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-leukemia-antigen",
+          "displayName": "고양이 백혈병바이러스 항원 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+          "displayName": "고양이 면역결핍바이러스 항체 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.feline-coronavirus-antibody",
+          "displayName": "고양이 코로나바이러스 항체 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.babesia-pcr",
+          "displayName": "바베시아 PCR 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.giardia-antigen",
+          "displayName": "지아르디아 항원 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.fecal-microscopy",
+          "displayName": "분변 현미경 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "pathogen-specific antigen",
+        "pathogen-specific antibody",
+        "pathogen-specific PCR",
+        "panel invalid",
+        "inconclusive",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "displayName": "마취 전 확장 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.pu-pd",
+      "displayName": "다뇨·다갈 검사 조합",
+      "familyId": "urinalysis",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.urine-creatinine",
+          "displayName": "요 크레아티닌 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.upc-ratio",
+          "displayName": "요단백·크레아티닌 비율 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ph",
+          "displayName": "요 pH 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-glucose",
+          "displayName": "요당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ketone",
+          "displayName": "요케톤 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-bilirubin",
+          "displayName": "요빌리루빈 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-16",
+          "displayName": "요화학 단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-15",
+          "displayName": "요화학 비중 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "color",
+        "turbidity",
+        "specific gravity",
+        "pH",
+        "protein",
+        "glucose",
+        "ketone",
+        "bilirubin",
+        "blood/hemoglobin",
+        "sediment RBC",
+        "sediment WBC",
+        "squamous epithelial",
+        "nonsquamous epithelial",
+        "rods",
+        "cocci",
+        "hyaline casts",
+        "nonhyaline casts",
+        "struvite crystals",
+        "calcium oxalate crystals",
+        "ammonium biurate crystals",
+        "bilirubin crystals",
+        "unclassified crystals",
+        "UPRO",
+        "UCRE",
+        "UPC",
+        "image",
+        "comment"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.renal",
+      "displayName": "신장 평가 검사 조합",
+      "familyId": "organ_or_metabolic_panel",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.urine-creatinine",
+          "displayName": "요 크레아티닌 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.upc-ratio",
+          "displayName": "요단백·크레아티닌 비율 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ph",
+          "displayName": "요 pH 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-glucose",
+          "displayName": "요당 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-ketone",
+          "displayName": "요케톤 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.urine-bilirubin",
+          "displayName": "요빌리루빈 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-16",
+          "displayName": "요화학 단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-15",
+          "displayName": "요화학 비중 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.ua-strip",
+          "displayName": "요시험지 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.ua-sediment",
+          "displayName": "요침사 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "versioned organ-specific chemistry panel",
+        "optional CBC",
+        "optional urinalysis",
+        "optional endocrine or disease-specific tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-COAG-PANEL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-cat",
+      "displayName": "노령묘 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.total-t4",
+          "displayName": "총 T4 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.free-t4",
+          "displayName": "유리 T4 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.tsh",
+          "displayName": "갑상선자극호르몬 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ck",
+          "displayName": "크레아틴키나아제 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-dog",
+      "displayName": "노령견 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.chem-alt",
+          "displayName": "ALT 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-alp",
+          "displayName": "ALP 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-03",
+          "displayName": "혈청화학 AST 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-04",
+          "displayName": "혈청화학 총빌리루빈 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.direct-bilirubin",
+          "displayName": "직접 빌리루빈 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.chem-total-protein",
+          "displayName": "총단백 검사",
+          "sortOrder": 6,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.globulin",
+          "displayName": "혈청 글로불린 검사",
+          "sortOrder": 7,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ag-ratio",
+          "displayName": "알부민·글로불린 비율 검사",
+          "sortOrder": 8,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-bun",
+          "displayName": "BUN 검사",
+          "sortOrder": 9,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-creatinine",
+          "displayName": "크레아티닌 검사",
+          "sortOrder": 10,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 11,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.vomiting-diarrhea",
+      "displayName": "구토·설사 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.amylase",
+          "displayName": "아밀라아제 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.lipase",
+          "displayName": "리파아제 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.chem-glucose",
+          "displayName": "혈당 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-05",
+          "displayName": "혈청화학 알부민 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.synthetic-06",
+          "displayName": "혈청화학 칼슘 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": false
+        },
+        {
+          "testKey": "cm.lab-test.v4.triglyceride",
+          "displayName": "중성지방 검사",
+          "sortOrder": 5,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.weight-loss",
+      "displayName": "체중감소 검사 조합",
+      "familyId": "composite_diagnostic_plan",
+      "currentKind": "test_panel",
+      "targetKind": "panel_of_panels",
+      "currentChildren": [
+        {
+          "testKey": "cm.lab-test.v4.total-t4",
+          "displayName": "총 T4 검사",
+          "sortOrder": 0,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.free-t4",
+          "displayName": "유리 T4 검사",
+          "sortOrder": 1,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.tsh",
+          "displayName": "갑상선자극호르몬 검사",
+          "sortOrder": 2,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.cholesterol",
+          "displayName": "총콜레스테롤 검사",
+          "sortOrder": 3,
+          "required": true,
+          "independentlyOrderable": true
+        },
+        {
+          "testKey": "cm.lab-test.v4.ck",
+          "displayName": "크레아틴키나아제 검사",
+          "sortOrder": 4,
+          "required": true,
+          "independentlyOrderable": true
+        }
+      ],
+      "recommendedChildBlueprint": [
+        "CBC panel",
+        "chemistry panel",
+        "electrolyte panel",
+        "urinalysis panel",
+        "condition-specific atomic tests"
+      ],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": true,
+      "sourceIds": [
+        "CORNELL-COAG-PANEL",
+        "CORNELL-CHEMISTRY",
+        "LOINC-PANELS",
+        "FHIR-DIAGNOSTIC-REPORT"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.01",
+      "displayName": "혈청 글로불린 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.02",
+      "displayName": "알부민·글로불린 비율 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.03",
+      "displayName": "직접 빌리루빈 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.04",
+      "displayName": "감마글루타밀전이효소 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.05",
+      "displayName": "젖산탈수소효소 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.06",
+      "displayName": "크레아틴키나아제 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.07",
+      "displayName": "총콜레스테롤 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.08",
+      "displayName": "중성지방 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.09",
+      "displayName": "아밀라아제 검사",
+      "familyId": "pancreatic",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.10",
+      "displayName": "리파아제 검사",
+      "familyId": "pancreatic",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-CHEMISTRY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.11",
+      "displayName": "SDMA 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.12",
+      "displayName": "프럭토사민 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.13",
+      "displayName": "총담즙산 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.14",
+      "displayName": "젖산 검사",
+      "familyId": "clinical_chemistry",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-CHEMISTRY",
+        "CORNELL-CHEMISTRY-RI",
+        "IDEXX-CATALYST-MENU",
+        "ZOETIS-VS2-PROFILES"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.15",
+      "displayName": "C-반응단백 검사",
+      "familyId": "inflammation",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.16",
+      "displayName": "혈청 아밀로이드 A 검사",
+      "familyId": "inflammation",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.17",
+      "displayName": "총 T4 검사",
+      "familyId": "thyroid",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.18",
+      "displayName": "유리 T4 검사",
+      "familyId": "thyroid",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.19",
+      "displayName": "갑상선자극호르몬 검사",
+      "familyId": "thyroid",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.20",
+      "displayName": "코르티솔 검사",
+      "familyId": "adrenal",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "UC-DAVIS-ENDOCRINOLOGY",
+        "IDEXX-CORTISOL"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.21",
+      "displayName": "요 크레아티닌 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.22",
+      "displayName": "요단백·크레아티닌 비율 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.23",
+      "displayName": "요 pH 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.24",
+      "displayName": "요당 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.25",
+      "displayName": "요케톤 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.26",
+      "displayName": "요빌리루빈 검사",
+      "familyId": "urinalysis",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-URINALYSIS",
+        "IDEXX-VETLAB-UA",
+        "IDEXX-SEDIVUE",
+        "IDEXX-CATALYST-MENU"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.27",
+      "displayName": "분변 부유 검사",
+      "familyId": "fecal_parasitology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.28",
+      "displayName": "분변 잠혈 검사",
+      "familyId": "fecal_parasitology",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "CORNELL-PARASITOLOGY",
+        "IDEXX-SNAP-GIARDIA",
+        "CORNELL-HEMATOLOGY"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.29",
+      "displayName": "개 파보바이러스 항원 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.30",
+      "displayName": "개 디스템퍼바이러스 항원 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.31",
+      "displayName": "개 심장사상충 항원 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.32",
+      "displayName": "고양이 범백혈구감소증 항원 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.33",
+      "displayName": "고양이 백혈병바이러스 항원 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.34",
+      "displayName": "고양이 면역결핍바이러스 항체 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.35",
+      "displayName": "고양이 코로나바이러스 항체 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.36",
+      "displayName": "바베시아 PCR 검사",
+      "familyId": "infectious_disease",
+      "currentKind": "atomic_order",
+      "targetKind": "atomic_order",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [
+        "IDEXX-SNAP-INFECTIOUS",
+        "UC-DAVIS-PCR",
+        "CORNELL-PCR-INTERPRETATION"
+      ],
+      "researchStatus": "source_partial",
+      "applicationAllowed": false
+    },
+    {
+      "orderId": "phase1.optionb.v1.order.metabolic",
+      "displayName": "합성 기초 혈액검사",
+      "familyId": "legacy_exception",
+      "currentKind": "exception",
+      "targetKind": "retire_or_redefine",
+      "currentChildren": [],
+      "recommendedChildBlueprint": [],
+      "recommendationScope": "family_examples_not_final_membership",
+      "independentlyReorderableChildrenRequired": false,
+      "sourceIds": [],
+      "researchStatus": "functional_fixture_required",
+      "applicationAllowed": false
+    }
+  ]
+}

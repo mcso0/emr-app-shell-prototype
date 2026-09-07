@@ -13,7 +13,7 @@ related_work:
   - CLINICAL-MASTER-PR-020
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-29
+last_updated: 2026-09-06
 ---
 
 # Order Catalog Preset Initialization Contract
@@ -30,11 +30,120 @@ The system must be able to:
 - import newly released presets later
 - update workspace rows that have not been customized
 - preserve hospital-customized values
-- keep Sales Demo and mock fallback paths deterministic
+- keep persisted synthetic demo catalogs deterministic without runtime fallback
 
 Remote Supabase migration push, remote RLS replay, production deploy, and real hospital data import remain approval-gated.
 
+## Runtime read boundary — WP-01B Slice 01
+
+Local implementation on 2026-09-06, not yet deployed:
+
+- Admin and chart catalog RPC failures return typed non-success results. No
+  direct-table retry or error-to-empty conversion is allowed. A successful `[]`
+  remains a legitimate empty catalog; malformed responses fail as a whole.
+- Admin rejects foreign-workspace rows. Individual chart rows require a catalog
+  ID and consistent row/snapshot catalog and preset identities. Full cross-view
+  ID/eligibility reconciliation remains a later WP-01B slice.
+- Catalog request handlers require explicitly supplied gateways and permission
+  adapters. The hospital order-catalog route rejects mock/demo-header identity.
+  Test fixtures remain available only through explicit core-test injection.
+- Catalog-dependent chart draft preparation checks `service_catalog:view`
+  before reading, because the underlying SQL may express denial as zero rows.
+  Failed reads stop draft save and catalog before-image mutation processing.
+- The legacy lab delete-lock route has no explicit persisted gateway and now
+  returns `503 catalog_gateway_required` instead of a fabricated fixture lock.
+  This is a known unavailable backend, not proof that deletion is safe.
+
+This slice does not remove remaining UI seed rows, schema/default-value
+substitution or classification heuristics. See the
+[WP-01B execution record](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-01-read-boundary.md)
+for evidence and the next slice.
+
+## Persisted default projection — WP-01B Slice 02
+
+Local implementation on 2026-09-06, not yet deployed:
+
+- `readPersistedOrderDefaults` selects one stored object: non-empty generic
+  defaults, otherwise bounded same-row legacy nested defaults, otherwise missing.
+  It never fills individual missing fields from other objects or schema defaults.
+- Select the source before projecting policy keys. A transported empty generic
+  object with a source marker remains authoritative and cannot revive nested data.
+- `storedValues` retains the raw object for Admin round-trips. `values` excludes
+  `planOrderAuthority`, `manualQuantityReason`, and `autoDispenseQuantityEnabled`
+  from chart clinical inputs. These are separate clones, not shared mutable state.
+- Admin dispensing creates/updates mirror generic and nested raw defaults. Keep
+  manual quantity reason in the nested object because the current SQL validator
+  requires it for manual quantity. Clearing an editable field removes it from both
+  representations; unrelated stored fields and authority are preserved.
+- Auto-quantity policy is read explicitly from saved metadata. Missing does not
+  mean true or false. Display/edit/validation do not materialize schema defaults;
+  explicit zero and false stay distinct from missing.
+- Auto quantity is computed only for explicit per-patient, same-unit inputs with
+  known frequency and finite numbers/result. No weight/BSA or strength conversion
+  is inferred. Missing unit-price draft quantity stays empty; a fixed-order-price
+  billing instance remains quantity one, not a clinical default.
+
+No data migration or remote write occurred. SQL policy defaults, existing
+`qod`/`sachet` authoring-versus-chart option mismatches, remaining UI seed removal,
+classification and full browser acceptance are not resolved by this slice.
+See [Slice 02 evidence](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-02-persisted-defaults.md).
+
+## Classification and core display — WP-01B Slice 03
+
+WP-01B Slice 03 local display checkpoint (2026-09-06): Admin read responses mark
+clinical type as persisted or derived. Explicit invalid types fail mapping;
+derived types are not presented as saved taxonomy. Broad category follows saved
+clinical type (including system_exam under misc), otherwise a known saved group.
+Opaque classification UUIDs, names and dispensing provenance never establish a
+fine category. Unresolved rows remain discoverable in category-wide and
+confirmation-needed lists. UUID present but semantic transport absent is distinct
+from a genuinely absent subtype. Read-only taxonomy fields remain out of updates.
+
+Admin table/drawer share a fixed core field matrix; absent keys remain visible.
+Core presence labels are not clinical review or confirmability states.
+
+Slice 03 follow-up (2026-09-06): an additive local migration exposes an exact-row
+`classification_path` descriptor through the existing permission-guarded Admin
+RPC. The gateway validates identity and types; Admin distinguishes unavailable,
+unclassified, retired and conflicting paths. Names are display-only. Mutation
+readback checks workspace, row, revision and path identity; failed readback keeps
+the committed write successful but explicitly marks taxonomy unavailable, never
+reuses stale metadata or invites a duplicate save. Metadata is not in write patches.
+
+Read-only staging inspection established that paths themselves are broad: CBC and
+chemistry share a lab path; modalities share an imaging path. There is no persisted
+Admin fine-subtype/pathology code. Transport alone cannot supply those values.
+Local PostgreSQL rollback checks passed; remote migration and authenticated app
+parity remain outstanding. Fine-taxonomy authoring/data scope must be defined
+before claiming Slice 03 complete.
+See [Slice 03 checkpoint](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-classification-core.md).
+
 ## Data Families
+
+### Fine classification extension (local implementation; not remotely applied)
+
+The [Slice 03 design proposal](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-design.md)
+defines master/workspace `admin_subcategory_code` and `lab_family_code`, with
+parent-category lookup from an explicit vocabulary rather than name inference.
+Execution type/path remain separate. Two-field copy/override/merge validation is
+a bounded WP-02 prerequisite for deployment. The reviewed 522-row mapping remains
+non-applied. Migration `20260906074651` implements local storage, immutable-version
+publication, explicit vocabulary validation, workspace merge, and new snapshots.
+Per-field `taxonomy_source_baseline` tracks value/revision independently of price
+or execution defaults. Explicit null is a local clear, not a request to inherit.
+Invalid merged pairs retain both values/baselines and record `taxonomy_merge_conflict`.
+Wildcard customization and detached rows are preserved; resets are explicit,
+server-resolved and CAS-checked. No historical chart snapshot is enriched.
+Generic creation dispatches dispensing through its existing authorized clinical
+writer before adding taxonomy atomically; clinical lifecycle is unchanged.
+These are local contracts, not deployed schema or remote adoption claims. See
+[tests, limitations and next scope](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-fields-local.md).
+
+Local UI extension: editing uses the catalog snapshot captured when the drawer opens,
+including its CAS revision. A same-ID background refresh cannot turn a taxonomy-only
+edit into a broad clinical patch. Reset sends only `resetTaxonomyFields` for the two
+classification fields; merge-conflict metadata is parsed for Admin display and never
+copied into chart clinical defaults. See the [UI evidence](../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-ui.md).
 
 | Data family | Owner | Persistence meaning |
 | --- | --- | --- |
@@ -171,9 +280,9 @@ Required applied snapshot fields remain defined in [Workspace Order Catalog Plat
 ## Mock And Demo Seed Rules
 
 - Demo seeds must use synthetic data only.
-- The Sales Demo workspace must remain deterministic.
-- Mock fallback should still work when no live workspace catalog rows are available.
-- Existing `defaultOrderCatalogItems` can remain the local fixture source until DEN-282 wires an explicit system preset catalog.
+- A demo workspace must remain deterministic through versioned persisted seed or adoption data.
+- An empty or failed workspace catalog read must stay empty or failed. Runtime code must not substitute `defaultOrderCatalogItems`, master-only rows, or another fixture catalog.
+- `defaultOrderCatalogItems` and equivalent fixtures may remain only in explicitly isolated tests, stories, or development harnesses that inject them directly. They cannot be a default dependency of a hospital workspace route.
 - Demo ids should stay stable to preserve Playwright and report evidence.
 
 ## Permission And Audit Expectations
@@ -196,12 +305,24 @@ DEN-282 should focus on the smallest local-first slice:
 3. Build an idempotent workspace catalog initialization function.
 4. Add auto-add/auto-update behavior for unmodified rows.
 5. Preserve customized rows.
-6. Keep mock fallback and Sales Demo paths working.
+6. Keep synthetic demo rows deterministic through persisted initialization and prove that missing/failed reads do not fall back to fixtures.
 7. Add focused tests for idempotency, non-overwrite behavior, and deterministic demo data.
 
 DEN-282 may write repo migration files and local/static tests if needed. It must not apply remote Supabase changes without explicit approval.
 
 ## Related Docs
+
+### WP-02 local execution-field extension
+
+The pending deployment migration `20260906084900` adds presence-aware per-field
+execution baselines/conflicts. Untouched values and policies inherit; changed
+workspace fields use dotted customization paths and survive source advancement.
+Whole-object legacy markers remain protected until explicit source reconciliation.
+Field keep/reset decisions require catalog CAS, source-revision agreement and the
+existing management permission. No read-time default filling or historical snapshot
+enrichment is introduced. New confirmed snapshots freeze per-field provenance.
+See [WP-02 contract and evidence](../../work/clinical-master/order-execution-defaults/WP-02-execution-field-lineage-and-merge.md)
+for the exact local verification and still-unverified remote acceptance boundary.
 
 - [Workspace Order Catalog Platform](../../product/domain/workspace-order-catalog-platform.md)
 - [Hospital Admin Order Catalog Schema Plan](../auth-security/auth-login/hospital-admin-order-catalog-schema-plan.md)

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
@@ -281,7 +282,7 @@ test("lab workspace renders shared empty state for true-empty live result rows",
     }
   );
   await page.route(
-    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab-imaging/result-sheet-catalog?*`,
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab-imaging/result-entries?*`,
     async (route) => {
       catalogRequestCount += 1;
       await route.fulfill({
@@ -290,9 +291,7 @@ test("lab workspace renders shared empty state for true-empty live result rows",
         body: JSON.stringify({
           ok: true,
           status: 200,
-          catalogItemId: "catalog-cheongdam-empty-cbc",
-          enforcedBy: "lab-result-sheet-catalog-read",
-          items: [],
+          savedResult: null,
         }),
       });
     }
@@ -325,6 +324,83 @@ test("lab workspace renders shared empty state for true-empty live result rows",
   await emptyState.screenshot({
     path: ".omo/evidence/empty-state-screen-adoption/browser/t4-lab-true-empty.png",
   });
+});
+
+test("CBC V2 actual persisted results load, preserve blank, submit typed states and reload", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const profiles = JSON.parse(readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/oed-lab-04/cbc-runtime.non-applied.v1.json", "utf8")).profiles;
+  const profile = profiles.find((p: { profileKey: string }) => p.profileKey === "cm.lab-profile.clair-demo-cbc.dog");
+  const rule = profile.rules.find((r: { code: string }) => r.code === "WBC");
+  const wi = { id: "97050000-0000-4000-8000-000000000011", orderId: "97050000-0000-4000-8000-000000000012",
+    encounterId: "97050000-0000-4000-8000-000000000013", workspaceId, queueType: "lab", status: "in_progress", requestCycle: 1, rowRevision: 1,
+    sourceSnapshot: { orderDisplayName: "합성 CBC WBC", patientName: "합성 검증 환자", detail: { species: "dog" } } };
+  const result = { ok: true, status: 200, workspaceId, orderId: wi.orderId, encounterId: wi.encounterId, workItemId: wi.id,
+    resultId: "lab-result-persisted-cbc", entryWriteRevision: 0,
+    resultDefinitionSnapshot: { schemaVersion: 2, resultProfile: { profileKey: profile.profileKey, revision: 1, clinicalUseAllowed: false,
+      integrationStatus: "not_integrated", device: { name: "직접 등록한 합성 CBC 수기" } } },
+    rows: [{ id: "frozen-wbc-row", analyteName: "WBC", value: null as string | null, unit: rule.unit, decimalScale: rule.decimalScale,
+      resultValueKind: "numeric", judgment: "not_judged", interpretationRule: rule,
+      referenceRange: `${rule.referenceInterval.low}–${rule.referenceInterval.high}`, resultState: "not_entered", resultPresence: "value", qualifier: "exact", deviceFlag: null }] };
+  let posted: Record<string, unknown> | null = null; let catalogRequests = 0; let retestPosted: Record<string, unknown> | null = null;
+  const deviceId = "97050000-0000-4000-8000-000000000021";
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-profiles**`, route => route.fulfill({ json: { ok: true, configuration: {
+    workspaceId, catalogItemId: "catalog-wbc", canConfigure: true, canSelect: false, canRetest: true,
+    order: { id: wi.orderId, updatedAt: "2026-09-06T11:00:00Z", confirmationStatus: "confirmed", species: "dog", requiresProfile: true,
+      selectedProfileVersionId: profile.id, selectedDeviceId: deviceId }, profiles: [profile],
+    devices: [{ id: deviceId, workspace_id: workspaceId, name: "합성 CBC 수기", ...profile.device,
+      entry_mode: "manual_entry", integration_status: "not_integrated", active: true, row_revision: 1 }],
+    bindings: [{ workspace_id: workspaceId, order_catalog_item_id: "catalog-wbc", species: "dog", device_id: deviceId, profile_version_id: profile.id, row_revision: 1 }],
+  } } }));
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/retests`, async route => {
+    retestPosted = route.request().postDataJSON();
+    await route.fulfill({ json: { ok: true, workspaceId, priorOrderId: wi.orderId, encounterId: wi.encounterId,
+      orderId: "97050000-0000-4000-8000-000000000022", confirmationStatus: "draft" } });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items**`, route => route.fulfill({ json: { ok: true, workItems: [wi] } }));
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-sheet-catalog**`, route => { catalogRequests++; return route.fulfill({ status: 500, json: { ok: false } }); });
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-entries**`, async route => {
+    if (route.request().method() === "POST") {
+      posted = route.request().postDataJSON();
+      const row = (posted!.rows as Array<Record<string, unknown>>)[0];
+      result.rows[0].value = row.value as string; result.rows[0].qualifier = row.qualifier as string;
+      result.rows[0].resultState = "qualified_result"; result.entryWriteRevision++;
+      await route.fulfill({ json: { ok: true, entryWriteRevision: result.entryWriteRevision } });
+    } else {
+      expect(new URL(route.request().url()).searchParams.get("workItemId")).toBe(wi.id);
+      await route.fulfill({ json: result });
+    }
+  });
+  const url = `/w/${workspaceId}/lab?modulePanel=open&aside=closed&labResultId=live-lab-${wi.id}`;
+  await page.goto(url);
+  await expect(page.getByTestId("lab-frozen-profile")).toContainText("수동 입력 / 장비 미연동 / 합성 테스트용");
+  await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue("");
+  await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
+  await page.getByLabel("WBC 결과값", { exact: true }).fill(String(rule.referenceInterval.low));
+  await expect(page.getByTestId("lab-result-row-frozen-wbc-row").getByText("정상", { exact: true })).toBeVisible();
+  await page.getByLabel("WBC 부등호").selectOption("less_than");
+  await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
+  await page.getByTestId("lab-result-save-button").click();
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장");
+  expect(posted).toMatchObject({ resultId: result.resultId, expectedEntryWriteRevision: 0,
+    rows: [{ rowId: "frozen-wbc-row", qualifier: "less_than", deviceFlag: null, resultState: "value" }] });
+  await page.reload();
+  await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(String(rule.referenceInterval.low));
+  await expect(page.getByLabel("WBC 부등호")).toHaveValue("less_than");
+  expect(catalogRequests).toBe(0);
+  await page.getByRole("button", { name: "WBC만 재검 요청" }).click();
+  const retest = page.getByTestId("lab-atomic-retest-dialog");
+  await expect(page.getByRole("button", { name: "재검 오더 초안 만들기" })).toBeDisabled();
+  await retest.getByLabel("재검 사유").fill("합성 WBC 단독 확인");
+  await retest.getByLabel("재검 검체 결정").selectOption("new_specimen");
+  await retest.getByLabel("재검 검체 참조").fill("synthetic-new-edta-002");
+  await expect(retest.getByLabel("재검 청구 정책")).toHaveValue("no_charge");
+  await retest.getByLabel("재검 프로필").selectOption(`${profile.id}:${deviceId}`);
+  await page.getByRole("button", { name: "재검 오더 초안 만들기" }).click();
+  await expect(retest.getByRole("link", { name: "차트에서 확인·확정" })).toBeVisible();
+  expect(retestPosted).toMatchObject({ resultId: result.resultId, rowId: "frozen-wbc-row", expectedEntryWriteRevision: 1,
+    specimenDecision: "new_specimen", specimenReference: "synthetic-new-edta-002", billingPolicy: "no_charge", profileVersionId: profile.id, deviceId });
+  expect(result.rows[0].value).toBe(String(rule.referenceInterval.low));
 });
 
 test("lab workspace shows equipment receipts in the right panel", async ({ page }) => {

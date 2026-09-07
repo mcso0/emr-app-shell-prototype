@@ -100,12 +100,16 @@ import {
   FulfillmentWorkLifecycleAction,
   type FulfillmentTransitionOptions,
 } from "@/features/fulfillment/components/work-lifecycle-action";
+import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
 import type {
   FulfillmentWorkItemAction,
   FulfillmentWorkItemStatus,
 } from "@/features/fulfillment/server-fulfillment-work-item-core";
 import { useLabImagingStore } from "@/features/lab-imaging/store";
+import { evaluateLabProfileValue } from "./result-profile-contract";
+import { usePersistedLabResult } from "./use-persisted-lab-result";
+import { AtomicLabRetestAction } from "./components/atomic-retest-dialog";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -163,7 +167,9 @@ const getReceptionTypeLabel = (encounter: Encounter) =>
 const getTaskQueueClockTime = (dateTime?: string) =>
   formatShortDateTime(dateTime).slice(9).trim() || "-";
 const getOrderRequesterName = (order?: EmrOrder) =>
-  getStaffName(order?.requestedByUserId) ?? "이수지";
+  order && (!isLegacySalesDemoWorkspace(order.workspaceId) || isLiveAuthRuntime())
+    ? "정보 없음"
+    : getStaffName(order?.requestedByUserId) ?? "이수지";
 const getOrderEventTime = (order?: EmrOrder, fallbackDateTime?: string) =>
   getTaskQueueClockTime(order?.requestedAt ?? fallbackDateTime);
 
@@ -254,7 +260,7 @@ const parseReferenceRange = (referenceRange?: string) => {
   if (!referenceRange) return null;
 
   const match = referenceRange.match(
-    /(-?\d+(?:\.\d+)?)\s*-\s*(-?\d+(?:\.\d+)?)/,
+    /^\s*(-?\d+(?:\.\d+)?)\s*[-–]\s*(-?\d+(?:\.\d+)?)\s*$/,
   );
   if (!match) return null;
 
@@ -300,6 +306,12 @@ const getDerivedLabJudgment = (
   row: LabResultRow,
   value: string,
 ): LabJudgment => {
+  if (row.interpretationRule) {
+    const result = evaluateLabProfileValue(row.interpretationRule, { value, qualifier: row.qualifier,
+      deviceFlag: row.deviceFlag, resultState: row.resultPresence });
+    return result.valid ? result.judgment : "not_judged";
+  }
+  if (!value.trim()) return "not_judged";
   const range = parseReferenceRange(row.referenceRange);
   const numericValue = Number(value);
 
@@ -336,6 +348,7 @@ const rangeStateByJudgment: Partial<
 };
 
 const judgmentBadgeClassName: Record<LabResultRow["judgment"], string> = {
+  abnormal: "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
   critical:
     "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
   high: "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
@@ -392,6 +405,9 @@ type FulfillmentWorkItem = {
     guardianName?: string;
     instruction?: string;
     orderDisplayName?: string;
+    effectiveDisplayName?: string;
+    inHospitalOrderName?: string;
+    standardOrderName?: string;
     patientName?: string;
     requestingVetName?: string;
     serviceItemId?: string;
@@ -662,7 +678,19 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): EmrOrder {
     displayName: getSnapshotString(
       workItem.sourceSnapshot,
       "orderDisplayName",
-      "Live order",
+      getSnapshotString(
+        workItem.sourceSnapshot,
+        "effectiveDisplayName",
+        getSnapshotString(
+          workItem.sourceSnapshot,
+          "inHospitalOrderName",
+          getSnapshotString(
+            workItem.sourceSnapshot,
+            "standardOrderName",
+            "검사명 정보 없음",
+          ),
+        ),
+      ),
     ),
     status:
       workItem.status === "completed"
@@ -672,7 +700,7 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): EmrOrder {
           : "in_progress",
     workStatus: workItem.status === "completed" ? "completed" : "pending",
     priority: "normal",
-    requestedByUserId: "user-vet",
+    requestedByUserId: workItem.requestedByUserId ?? "",
     requestedAt: workItem.createdAt ?? now,
     currentAssigneeUserId: workItem.assignedToUserId ?? undefined,
     instruction: workItem.sourceSnapshot?.instruction,
@@ -993,6 +1021,8 @@ async function saveLabResultEntry({
             note: row.note ?? null,
             rowId: row.id,
             value: row.value ?? null,
+            ...(row.interpretationRule ? { qualifier: row.qualifier ?? "exact", deviceFlag: row.deviceFlag ?? null,
+              resultState: row.resultPresence ?? "value" } : {}),
           })),
           workItemId: workItem?.id,
         }),
@@ -1160,14 +1190,11 @@ function applyFulfillmentToImagingItems(
 function createLiveLabItems(workItems: FulfillmentWorkItem[]): LabWorkItem[] {
   return workItems
     .filter((workItem) => workItem.queueType === "lab")
-    .map((workItem) => {
+    .map((workItem): LabWorkItem => {
       const patient = getLivePatientFromWorkItem(workItem);
       const primaryGuardian = getLiveGuardianFromWorkItem(workItem);
       const encounter = getLiveEncounterFromWorkItem(workItem, patient);
       const order = getLiveOrderFromWorkItem(workItem);
-      const timestamp =
-        workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
-
       return {
         encounter,
         order,
@@ -1182,17 +1209,9 @@ function createLiveLabItems(workItems: FulfillmentWorkItem[]): LabWorkItem[] {
           resultName: order.displayName,
           status: mapFulfillmentToLabStatus(workItem.status, "pending"),
           rows: [],
-          collectedAt: workItem.createdAt ?? timestamp,
-          receivedAt: timestamp,
-          enteredAt:
-            workItem.status === "in_progress" || workItem.status === "completed"
-              ? timestamp
-              : undefined,
-          performedByUserId: workItem.assignedToUserId ?? undefined,
+          // Queue creation/assignment is not specimen collection or performance.
+          // Actual metadata must come from its persisted result/execution record.
         },
-        technicianName: workItem.assignedToUserId
-          ? currentLabAssignee.name
-          : undefined,
       };
     })
     .sort((a, b) => {
@@ -1207,22 +1226,17 @@ function createLiveImagingItems(
 ): ImagingWorkItem[] {
   return workItems
     .filter((workItem) => workItem.queueType === "imaging")
-    .map((workItem) => {
+    .map((workItem): ImagingWorkItem => {
       const patient = getLivePatientFromWorkItem(workItem);
       const primaryGuardian = getLiveGuardianFromWorkItem(workItem);
       const encounter = getLiveEncounterFromWorkItem(workItem, patient);
       const order = getLiveOrderFromWorkItem(workItem);
-      const timestamp =
-        workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
 
       return {
         encounter,
         order,
         patient,
         primaryGuardian,
-        radiologistName: workItem.assignedToUserId
-          ? currentLabAssignee.name
-          : undefined,
         study: {
           id: `live-imaging-${workItem.id}`,
           workspaceId: workItem.workspaceId,
@@ -1240,13 +1254,8 @@ function createLiveImagingItems(
             order.displayName,
           ),
           status: mapFulfillmentToImagingStatus(workItem.status, "requested"),
-          requestedAt: workItem.createdAt ?? timestamp,
-          capturedAt:
-            workItem.status === "in_progress" || workItem.status === "completed"
-              ? timestamp
-              : undefined,
-          readAt: workItem.status === "completed" ? timestamp : undefined,
-          radiologistUserId: workItem.assignedToUserId ?? undefined,
+          requestedAt: workItem.createdAt ?? "",
+          // Queue state is not evidence of image acquisition or interpretation.
         },
       };
     })
@@ -2156,24 +2165,31 @@ function LabResultInputSection({
     rowValueState.resultId === result.id
       ? rowValueState.values
       : initialRowValues;
+  const [metadataState, setMetadataState] = useState<{ resultId: string; rows: Record<string, Partial<LabResultRow>> }>({ resultId: result.id, rows: {} });
+  const rowMetadata = useMemo(() => metadataState.resultId === result.id ? metadataState.rows : {}, [metadataState, result.id]);
   const rows = useMemo(
     () =>
       result.rows.map((row) => {
-        const value = rowValues[row.id] ?? row.value ?? "";
-
-        return {
-          ...row,
-          judgment: getDerivedLabJudgment(row, value),
-          value,
-        };
+        const edited = { ...row, ...rowMetadata[row.id], value: rowValues[row.id] ?? row.value ?? "" };
+        const evaluation = edited.interpretationRule ? evaluateLabProfileValue(edited.interpretationRule, {
+          value: edited.value, qualifier: edited.qualifier, deviceFlag: edited.deviceFlag, resultState: edited.resultPresence,
+        }) : null;
+        return { ...edited, judgment: getDerivedLabJudgment(edited, edited.value),
+          resultState: evaluation?.valid ? evaluation.state : edited.resultState };
       }),
-    [result.rows, rowValues],
+    [result.rows, rowValues, rowMetadata],
   );
   const abnormalRows = rows.filter(
     (row) => row.judgment !== "normal" && row.judgment !== "not_judged",
   );
   const saveResult = async () => {
     if (!onSave) return;
+    if (rows.some(row => row.interpretationRule && !evaluateLabProfileValue(row.interpretationRule, {
+      value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence,
+    }).valid)) {
+      setSaveState({ resultId: result.id, value: "invalid", message: "선택한 프로필의 값 형식과 결과 상태를 확인해 주세요." });
+      return;
+    }
     const requestId = saveRequestId ?? crypto.randomUUID();
     setSaveRequestId(requestId);
     setSaveState({ resultId: result.id, value: "saving" });
@@ -2230,6 +2246,11 @@ function LabResultInputSection({
       actions={
         <>
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          {result.resultDefinitionOrigin === "canonical" && onCatalogRetry ? <Button variant="outline" size="xs" disabled={currentSaveState === "saving"}
+            onClick={() => {
+              setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
+              setRowValueState({ resultId: "", values: {} }); setMetadataState({ resultId: "", rows: {} }); onCatalogRetry();
+            }}>입력 초기화·재조회</Button> : null}
           <Button variant="outline" size="xs" className="bg-card">
             판정적용
           </Button>
@@ -2303,8 +2324,16 @@ function LabResultInputSection({
         <LabResultDataTable
           assigneeName={assigneeName}
           density={density}
+          persistedResult={result}
           emptyRowsKind={emptyRowsKind}
           initialLoading={catalogStatus === "loading" && rows.length === 0}
+          onMetadataChange={(rowId, patch) => {
+            setSaveRequestId(null);
+            setMetadataState(current => ({ resultId: result.id, rows: {
+              ...(current.resultId === result.id ? current.rows : {}),
+              [rowId]: { ...(current.resultId === result.id ? current.rows[rowId] : {}), ...patch },
+            } }));
+          }}
           onValueChange={(rowId, value) => {
             setSaveRequestId(null);
             setRowValueState((current) => {
@@ -2335,6 +2364,8 @@ function LabResultDataTable({
   emptyRowsKind,
   initialLoading,
   onValueChange,
+  onMetadataChange,
+  persistedResult,
   rows,
 }: {
   assigneeName: string;
@@ -2342,6 +2373,8 @@ function LabResultDataTable({
   emptyRowsKind: Extract<EmrEmptyStateKind, "no-data" | "upstream-pending">;
   initialLoading: boolean;
   onValueChange: (rowId: string, value: string) => void;
+  onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
+  persistedResult: LabResult;
   rows: LabResultRow[];
 }) {
   const columns = useMemo<ColumnDef<LabResultRow, unknown>[]>(
@@ -2368,22 +2401,51 @@ function LabResultDataTable({
       {
         id: "value",
         accessorKey: "value",
-        size: 120,
-        minSize: 96,
+        size: 240,
+        minSize: 200,
         enableSorting: false,
         enableResizing: false,
         header: "결과값",
         meta: { label: "결과값", resize: "none" },
         cell: ({ row }) => (
-          <Input
+          <div className="flex flex-col gap-1 py-1">
+          {row.original.interpretationRule?.resultValueKind === "coded" ? <select
+            className="h-8 rounded-md border bg-background px-2 text-sm"
+            aria-label={row.original.analyteName + " 결과값"} value={row.original.value ?? ""}
+            disabled={row.original.resultPresence === "instrument_no_result"}
+            onChange={event => onValueChange(row.original.id, event.target.value)}>
+            <option value="">선택 안 함</option>
+            {row.original.interpretationRule.codes.map(code => <option key={code.code} value={code.code}>{code.label}</option>)}
+          </select> : <Input
             aria-label={row.original.analyteName + " 결과값"}
             className="h-8 w-24"
             data-testid={"lab-result-input-" + row.original.id}
             value={row.original.value}
+            disabled={row.original.resultPresence === "instrument_no_result"}
             onChange={(event) =>
               onValueChange(row.original.id, event.target.value)
             }
-          />
+          />}
+          {row.original.interpretationRule ? <>
+            <select aria-label={row.original.analyteName + " 결과 상태"} className="h-8 rounded-md border bg-background px-2 text-sm"
+              value={row.original.resultPresence ?? "value"} onChange={event => {
+                const presence = event.target.value as "value" | "instrument_no_result";
+                if (presence === "instrument_no_result") onValueChange(row.original.id, "");
+                onMetadataChange(row.original.id, { resultPresence: presence, qualifier: "exact", deviceFlag: undefined });
+              }}>
+              <option value="value">결과 입력</option><option value="instrument_no_result">측정 불가</option>
+            </select>
+            {row.original.interpretationRule.resultValueKind === "numeric" && row.original.resultPresence !== "instrument_no_result" ? <>
+              <select aria-label={row.original.analyteName + " 부등호"} className="h-8 rounded-md border bg-background px-2 text-sm"
+                value={row.original.qualifier ?? "exact"} onChange={event => onMetadataChange(row.original.id, { qualifier: event.target.value as LabResultRow["qualifier"] })}>
+                <option value="exact">정확한 값</option><option value="less_than">미만 (&lt;)</option><option value="greater_than">초과 (&gt;)</option>
+              </select>
+              <Input aria-label={row.original.analyteName + " 장비 경고"} className="h-8" placeholder="장비 경고(있는 경우)"
+                value={row.original.deviceFlag ?? ""} maxLength={200}
+                onChange={event => onMetadataChange(row.original.id, { deviceFlag: event.target.value || undefined })} />
+            </> : null}
+          </> : null}
+          </div>
         ),
       },
       {
@@ -2450,8 +2512,16 @@ function LabResultDataTable({
           </span>
         ),
       },
+      ...(persistedResult.resultDefinitionOrigin === "canonical" ? [{
+        id: "retest", header: "재검", size: 100, enableSorting: false,
+        cell: ({ row }: { row: { original: LabResultRow } }) => {
+          const savedRow = persistedResult.rows.find(saved => saved.id === row.original.id);
+          return savedRow && (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result")
+            ? <AtomicLabRetestAction result={persistedResult} row={savedRow} /> : null;
+        },
+      }] : []),
     ],
-    [assigneeName, onValueChange],
+    [assigneeName, onValueChange, onMetadataChange, persistedResult],
   );
   // TanStack Table owns the result grid controller.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -2505,6 +2575,10 @@ function NormalRangeCell({ row }: { row: LabResultRow }) {
     markerClassName:
       "bg-[var(--emr-status-neutral-text)] fill-[var(--emr-status-neutral-text)]",
   };
+
+  if (!range || !row.value?.trim() || row.judgment === "not_judged") {
+    return <span className="text-muted-foreground">{row.referenceRange ?? "참고범위 없음"} · 미판정</span>;
+  }
 
   return (
     <div
@@ -2599,7 +2673,24 @@ function NormalRangeChart({
   );
 }
 
-function LabResultCommentSection({ result }: { result: LabResult }) {
+function LabResultCommentSection({
+  result,
+  allowDemoContent = false,
+}: {
+  result: LabResult;
+  allowDemoContent?: boolean;
+}) {
+  if (!allowDemoContent) {
+    return (
+      <section className="rounded-lg border bg-card p-4">
+        <h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>
+        <p className="mt-2 emr-text-dense text-muted-foreground">
+          종합소견 저장은 아직 지원하지 않습니다. 검사 결과는 결과표에서 입력해
+          주세요.
+        </p>
+      </section>
+    );
+  }
   const abnormalRows = getActionableLabRows(result);
   const defaultComment = abnormalRows.length
     ? `${abnormalRows.map((row) => row.analyteName).join(", ")} 항목이 참고치 밖입니다. 임상 증상과 함께 재평가가 필요합니다.`
@@ -2644,9 +2735,11 @@ const labDemoImageAttachment: AttachmentPreviewItem = {
 function AttachmentStrip({
   attachments,
   showImageExample = false,
+  allowDemoContent = false,
 }: {
   attachments: EmrAttachment[];
   showImageExample?: boolean;
+  allowDemoContent?: boolean;
 }) {
   const displayAttachments: AttachmentPreviewItem[] = [
     ...attachments.map((attachment) => ({
@@ -2658,7 +2751,7 @@ function AttachmentStrip({
         ? ("image" as const)
         : ("file" as const),
     })),
-    ...(showImageExample ? [labDemoImageAttachment] : []),
+    ...(allowDemoContent && showImageExample ? [labDemoImageAttachment] : []),
   ];
 
   return (
@@ -2672,10 +2765,13 @@ function AttachmentStrip({
           size="xs"
           variant="outline"
           className="bg-card"
-          aria-label="첨부자료 추가"
+          aria-label={
+            allowDemoContent ? "첨부자료 추가" : "첨부자료 추가 미지원"
+          }
+          disabled={!allowDemoContent}
         >
           <CdsActionsPlusIcon data-icon="inline-start" />
-          추가
+          {allowDemoContent ? "추가" : "추가 미지원"}
         </Button>
       </div>
       <div className="flex flex-wrap gap-3 p-4">
@@ -3229,6 +3325,8 @@ export function LabContent({
   hasRightPanel,
   workspaceId,
 }: ShellComponentProps) {
+  const allowDemoContent =
+    isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const searchParams = useSearchParams();
   const selectedLabResultId = useLabImagingStore(
     (state) => state.selectedLabResultId,
@@ -3246,7 +3344,7 @@ export function LabContent({
     searchParams,
     selectedLabResultId,
     fulfillmentQueue.workItems,
-    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
+    { allowMockFallback: allowDemoContent },
   );
   const fulfillmentWorkItem = useMemo(
     () =>
@@ -3256,12 +3354,15 @@ export function LabContent({
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
   const catalogRowsState = useLabResultSheetCatalogRows({
-    result: detail?.result,
+    result: allowDemoContent ? detail?.result : undefined,
     workItem: fulfillmentWorkItem,
     workspaceId,
   });
+  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !allowDemoContent);
+  const reloadPersistedResult = persistedResult.retry;
   const effectiveDetail = useMemo(() => {
     if (!detail) return null;
+    if (!allowDemoContent) return { ...detail, result: persistedResult.result ?? { ...detail.result, rows: [] } };
     if (detail.result.rows.length > 0 || catalogRowsState.rows.length === 0)
       return detail;
 
@@ -3272,14 +3373,15 @@ export function LabContent({
         rows: catalogRowsState.rows,
       },
     };
-  }, [catalogRowsState.rows, detail]);
+  }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
+    workspaceId: string;
     resultId: string;
     revision: number;
   } | null>(null);
   const saveResultRevision =
-    savedEntryRevision?.resultId === effectiveDetail?.result.id
-      ? savedEntryRevision?.revision
+    savedEntryRevision?.workspaceId === workspaceId && savedEntryRevision?.resultId === effectiveDetail?.result.id
+      ? Math.max(savedEntryRevision.revision, effectiveDetail?.result.entryWriteRevision ?? 0)
       : effectiveDetail?.result.entryWriteRevision;
   const saveResultRows = useCallback(
     async (rows: LabResultRow[], requestId: string) => {
@@ -3303,9 +3405,11 @@ export function LabContent({
       });
       if (outcome.ok && outcome.entryWriteRevision !== undefined) {
         setSavedEntryRevision({
+          workspaceId,
           resultId: effectiveDetail.result.id,
           revision: outcome.entryWriteRevision,
         });
+        if (!allowDemoContent) reloadPersistedResult();
       }
       return outcome;
     },
@@ -3314,6 +3418,8 @@ export function LabContent({
       fulfillmentWorkItem,
       saveResultRevision,
       workspaceId,
+      reloadPersistedResult,
+      allowDemoContent,
     ],
   );
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
@@ -3563,7 +3669,7 @@ export function LabContent({
                   className="flex flex-wrap items-center gap-1.5"
                 >
                   <span>
-                    {formatShortDateTime(displayDetail.result.collectedAt)}
+                    {formatShortDateTime(displayDetail.order?.requestedAt)}
                   </span>
                   <EmrStatusBadge
                     label={getStatusLabel(
@@ -3581,13 +3687,23 @@ export function LabContent({
               ],
               [
                 "요청 수의사",
-                getStaffName(displayDetail.order?.requestedByUserId) ??
-                  "이수지",
+                allowDemoContent
+                  ? (getStaffName(displayDetail.order?.requestedByUserId) ??
+                    "이수지")
+                  : getSnapshotString(
+                      fulfillmentWorkItem?.sourceSnapshot,
+                      "requestingVetName",
+                      "정보 없음",
+                    ),
               ],
               [
                 "검사 담당",
                 <span key="lab-assignee" aria-live="polite">
-                  {assignment.assigneeName}
+                  {allowDemoContent
+                    ? assignment.assigneeName
+                    : fulfillmentWorkItem?.assignedToUserId
+                      ? "담당자 지정됨"
+                      : "미지정"}
                 </span>,
               ],
               [
@@ -3632,20 +3748,29 @@ export function LabContent({
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div className="flex flex-col gap-4 pb-10 pt-4">
+          {displayDetail.result.resultProfileLabel ? <p className="text-sm text-muted-foreground" data-testid="lab-frozen-profile">{displayDetail.result.resultProfileLabel}</p> : null}
           <LabResultInputSection
-            assigneeName={assignment.assigneeName}
+            assigneeName={
+              allowDemoContent
+                ? assignment.assigneeName
+                : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"
+            }
             catalogStatus={
-              detail?.result.rows.length === 0
+              !allowDemoContent ? persistedResult.status : detail?.result.rows.length === 0
                 ? catalogRowsState.status
                 : "idle"
             }
             emptyRowsKind={fulfillmentWorkItem ? "upstream-pending" : "no-data"}
             result={displayDetail.result}
-            onCatalogRetry={catalogRowsState.retry}
+            onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
             onSave={saveResultRows}
           />
-          <LabResultCommentSection result={displayDetail.result} />
+          <LabResultCommentSection
+            result={displayDetail.result}
+            allowDemoContent={allowDemoContent}
+          />
           <AttachmentStrip
+            allowDemoContent={allowDemoContent}
             attachments={displayDetail.attachments}
             showImageExample
           />
@@ -3907,7 +4032,15 @@ function getImagingDocumentId(study: ImagingStudy) {
   return `IMG-${suffix}`;
 }
 
-function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
+function ImagingOrderDetailTable({
+  detail,
+  requesterName,
+  assigneeName,
+}: {
+  detail: ImagingDetail;
+  requesterName: string;
+  assigneeName: string;
+}) {
   const [density, setDensity] = useState<EmrTableDensity>("comfortable");
   const columns = useMemo<ColumnDef<ImagingDetail, unknown>[]>(
     () => [
@@ -3925,7 +4058,11 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
             variant="secondary"
             className="h-5 rounded-md px-1.5 emr-text-micro"
           >
-            {row.original.study.modality === "X-ray" ? "XR" : "US"}
+            {row.original.study.modality === "X-ray"
+              ? "XR"
+              : row.original.study.modality === "Ultrasound"
+                ? "US"
+                : row.original.study.modality}
           </Badge>
         ),
       },
@@ -3963,16 +4100,14 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
       },
       {
         id: "requestedBy",
-        accessorFn: (row) =>
-          getStaffName(row.order?.requestedByUserId) ?? "이수지",
+        accessorFn: () => requesterName,
         size: 130,
         minSize: 110,
         enableSorting: false,
         enableResizing: false,
         header: "요청자",
         meta: { label: "요청자", resize: "none" },
-        cell: ({ row }) =>
-          getStaffName(row.original.order?.requestedByUserId) ?? "이수지",
+        cell: () => requesterName,
       },
       {
         id: "requestedAt",
@@ -3987,23 +4122,24 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
       },
       {
         id: "radiologist",
-        accessorFn: (row) => row.radiologistName ?? "미지정",
+        accessorFn: () => assigneeName,
         size: 120,
         minSize: 100,
         enableSorting: false,
         enableResizing: false,
         header: "검사 담당자",
         meta: { label: "검사 담당자", resize: "none" },
-        cell: ({ row }) => row.original.radiologistName ?? "미지정",
+        cell: () => assigneeName,
       },
     ],
-    [],
+    [requesterName, assigneeName],
   );
+  const tableData = useMemo(() => [detail], [detail]);
   // TanStack Table owns the imaging detail grid controller.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns,
-    data: [detail],
+    data: tableData,
     enableColumnResizing: false,
     enableSorting: false,
     getCoreRowModel: getCoreRowModel(),
@@ -4043,7 +4179,24 @@ function ImagingOrderDetailTable({ detail }: { detail: ImagingDetail }) {
     </EmrOrderGroupSection>
   );
 }
-function ImagingReadingSections({ study }: { study: ImagingStudy }) {
+function ImagingReadingSections({
+  study,
+  allowDemoContent = false,
+}: {
+  study: ImagingStudy;
+  allowDemoContent?: boolean;
+}) {
+  if (!allowDemoContent) {
+    return (
+      <section className="rounded-lg border bg-card p-4">
+        <h2 className="emr-text-body font-semibold">스터디 판독의견</h2>
+        <p className="mt-2 emr-text-dense text-muted-foreground">
+          이 영역의 판독의견 저장은 아직 지원하지 않습니다. 판독 내용은
+          수행기록에서 입력하고 이력에서 확인해 주세요.
+        </p>
+      </section>
+    );
+  }
   return (
     <section className="rounded-lg border bg-card">
       <div className="flex min-h-11 items-center justify-between gap-3 border-b px-4">
@@ -4119,6 +4272,8 @@ function ImagingReadingSections({ study }: { study: ImagingStudy }) {
 }
 
 export function ImagingContent({ workspaceId }: ShellComponentProps) {
+  const allowDemoContent =
+    isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const searchParams = useSearchParams();
   const selectedImagingStudyId = useLabImagingStore(
     (state) => state.selectedImagingStudyId,
@@ -4313,7 +4468,10 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                   PACS
                 </Button>
                 {fulfillmentWorkItem ? (
-                  <FulfillmentWorkLifecycleAction
+                  <FulfillmentExecutionActions
+                    workspaceId={fulfillmentWorkItem.workspaceId}
+                    workItemId={fulfillmentWorkItem.id}
+                    onSaved={fulfillmentQueue.refresh}
                     activityLabel="판독"
                     assignedToUserId={fulfillmentWorkItem.assignedToUserId}
                     completeLabel="판독완료"
@@ -4366,12 +4524,22 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
               ["촬영 부위", detail.study.bodyPart],
               [
                 "요청 수의사",
-                getStaffName(detail.order?.requestedByUserId) ?? "이수지",
+                allowDemoContent
+                  ? (getStaffName(detail.order?.requestedByUserId) ?? "이수지")
+                  : getSnapshotString(
+                      fulfillmentWorkItem?.sourceSnapshot,
+                      "requestingVetName",
+                      "정보 없음",
+                    ),
               ],
               [
                 "검사 담당",
                 <span key="imaging-assignee" aria-live="polite">
-                  {assignment.assigneeName}
+                  {allowDemoContent
+                    ? assignment.assigneeName
+                    : fulfillmentWorkItem?.assignedToUserId
+                      ? "담당자 지정됨"
+                      : "미지정"}
                 </span>,
               ],
             ].map(([label, value]) => (
@@ -4398,9 +4566,23 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
           <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 emr-text-dense font-medium leading-5 text-[var(--emr-status-warning-text)]">
             병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
           </section>
-          <ImagingOrderDetailTable detail={detail} />
-          <ImagingReadingSections study={detail.study} />
-          <AttachmentStrip attachments={detail.attachments} />
+          <ImagingOrderDetailTable
+            detail={detail}
+            requesterName={allowDemoContent
+              ? getStaffName(detail.order?.requestedByUserId) ?? "이수지"
+              : getSnapshotString(fulfillmentWorkItem?.sourceSnapshot, "requestingVetName", "정보 없음")}
+            assigneeName={allowDemoContent
+              ? assignment.assigneeName
+              : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"}
+          />
+          <ImagingReadingSections
+            study={detail.study}
+            allowDemoContent={allowDemoContent}
+          />
+          <AttachmentStrip
+            attachments={detail.attachments}
+            allowDemoContent={allowDemoContent}
+          />
         </div>
       </ScrollArea>
     </div>
@@ -4437,6 +4619,8 @@ function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
 }
 
 export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
+  const allowDemoContent =
+    isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const { detail } = useCurrentImagingDetail(workspaceId);
   const labItems = useMemo(
     () => (isLegacySalesDemoWorkspace(workspaceId) ? getLabWorkItems() : []),
@@ -4524,18 +4708,27 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
               <div className="emr-text-dense font-semibold">
                 보호자 공유용 종합 코멘트
               </div>
-              <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--emr-surface-muted)] px-3 emr-text-dense font-semibold text-muted-foreground">
-                <span>B</span>
-                <span className="italic">I</span>
-                <span>T</span>
-                <span>link</span>
-                <span>list</span>
-              </div>
-              <Textarea
-                aria-label="영상 종합 코멘트"
-                className="mt-2 min-h-28 resize-none bg-background emr-text-dense leading-5"
-                defaultValue={`- ${detail.study.impression ?? "종합소견 text"}\n- 보호자에게 CBC 결과와 함께 안내`}
-              />
+              {allowDemoContent ? (
+                <>
+                  <div className="mt-2 flex h-8 items-center gap-3 rounded-lg bg-[var(--emr-surface-muted)] px-3 emr-text-dense font-semibold text-muted-foreground">
+                    <span>B</span>
+                    <span className="italic">I</span>
+                    <span>T</span>
+                    <span>link</span>
+                    <span>list</span>
+                  </div>
+                  <Textarea
+                    aria-label="영상 종합 코멘트"
+                    className="mt-2 min-h-28 resize-none bg-background emr-text-dense leading-5"
+                    defaultValue={`- ${detail.study.impression ?? "종합소견 text"}\n- 보호자에게 CBC 결과와 함께 안내`}
+                  />
+                </>
+              ) : (
+                <p className="mt-2 emr-text-dense text-muted-foreground">
+                  공유용 종합 코멘트 저장은 아직 지원하지 않습니다. 판독 내용은
+                  수행기록과 이력에서 확인해 주세요.
+                </p>
+              )}
             </section>
 
             <section>
@@ -4558,6 +4751,7 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
                       variant="ghost"
                       size="icon-xs"
                       aria-label={`${attachment.fileName} 삭제`}
+                      disabled={!allowDemoContent}
                     >
                       <CdsFilesFileIcon className="size-4" aria-hidden="true" />
                     </Button>
@@ -4577,10 +4771,12 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
         size="compact"
         className="grid grid-cols-2 gap-2 p-3"
       >
-        <Button variant="outline" size="sm" className="bg-card">
+        <Button variant="outline" size="sm" className="bg-card" disabled={!allowDemoContent}>
           취소
         </Button>
-        <Button size="sm">저장</Button>
+        <Button size="sm" disabled={!allowDemoContent}>
+          {allowDemoContent ? "저장" : "저장 미지원"}
+        </Button>
       </EmrRightPanelFooter>
     </EmrRightPanel>
   );

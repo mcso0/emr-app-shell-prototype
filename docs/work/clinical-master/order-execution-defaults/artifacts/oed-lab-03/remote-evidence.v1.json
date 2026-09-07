@@ -1,0 +1,5611 @@
+{
+  "schemaVersion": "oed-lab-03-remote-evidence/v1",
+  "observedAt": "2026-09-06 06:04:09 UTC",
+  "environment": "clair-emr-staging",
+  "scope": "Schema metadata, synthetic master records and six CBC-related Cheongdam catalog rows only. No patient/result records read. SELECT only; no mutations.",
+  "notProved": [
+    "authenticated browser parity",
+    "RLS replay under user roles",
+    "production deployed app SHA",
+    "writes or migration compatibility"
+  ],
+  "columns": {
+    "query": "select table_schema as schema,table_name as name,jsonb_agg(jsonb_build_object('column',column_name,'type',data_type,'nullable',is_nullable) order by ordinal_position) as columns from information_schema.columns where (table_schema='master' and table_name ~ '(order|lab|profile|equipment|specimen|release)') or (table_schema='public' and table_name in ('order_catalog_items','lab_test_items','lab_test_item_versions','order_catalog_lab_test_item_links','order_set_revision_items','order_set_revisions','orders','order_revisions','order_revision_fields','order_tasks','order_fulfillment_work_items','lab_result_entries','lab_result_entry_rows','workspace_lab_item_updates','workspace_order_billing_policies')) group by 1,2 order by 1,2",
+    "rows": [
+      {
+        "schema": "master",
+        "name": "dispensing_order_prescription_presets",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "preset_key",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "preset_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "dispensing_profile_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "dispensing_profile_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "preset_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "detail_schema_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "default_detail_inputs",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "medication_metadata",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "provenance",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "content_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_artifact_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_evidence_extract_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "is_current",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "clinical_use_allowed",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "dispensing_order_profiles",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "profile_key",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "profile_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "order_record_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "product_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "product_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "allowed_routes",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "prescription_default_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "prescription_defaults",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "korean_translation_review_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "evidence_fingerprint",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "lifecycle_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "lab_order_profiles",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "order_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "lab_test_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "lab_panel_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "specimen_type_id",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "lab_panel_items",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "lab_panel_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "lab_test_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "required",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "display_group",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "lab_panels",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "master_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "panel_code",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "lab_tests",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "master_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "test_code",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "result_input_type_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "canonical_unit_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "decimal_scale",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "master_releases",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "bigint",
+            "column": "release_no",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "release_key",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "record_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_fingerprint",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "release_notes",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "published_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "published_by_label",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "published_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "adoption_scope",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "medication_regulatory_profiles",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "regulatory_key",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "product_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "product_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "jurisdiction",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "authorization_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "controlled_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "policy_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "review_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "reviewer_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "reviewed_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "order_categories",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "master_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "category_code",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "category_level",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "parent_category_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "order_execution_preset_activation_batches",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_set_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "activated_set_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "preset_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "compatibility_preset_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "target_workspace_ids",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "negative_control_workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "reviewer_label",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "reviewer_label_source",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "review_scope",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "usage_scope",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "approval_reference",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "approval_reason",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "source_name_price_fingerprints",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "recorded_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "order_execution_preset_current",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "order_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "preset_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "preset_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "activated_in_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "order_execution_presets",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "preset_key",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "preset_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "order_record_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "clinical_order_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "detail_schema_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "default_detail_inputs",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "field_policies",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "provenance",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "preset_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "clinical_use_allowed",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "content_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_artifact_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "order_species_links",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "order_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "species_record_id",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "orders",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "master_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "classification_path_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "default_sales_unit_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "boolean",
+            "column": "default_billing_reflection_enabled",
+            "nullable": "NO"
+          },
+          {
+            "type": "numeric",
+            "column": "default_quantity",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "master",
+        "name": "specimen_types",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "master_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "specimen_code",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "lab_result_entries",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "encounter_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "work_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "result_payload",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "abnormal_flag",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "entered_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "entered_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "reviewed_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "reviewed_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "entry_write_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_workspace_catalog_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_workspace_catalog_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_order_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_order_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_panel_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_panel_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_test_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_test_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "result_definition_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_definition_snapshot_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_definition_origin",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_quarantine_reason",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "lab_result_entry_rows",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "lab_result_entry_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "row_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "lab_test_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "analyte_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_value",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_unit",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "reference_range",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "judgment",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "note",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "row_definition_origin",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "workspace_result_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_test_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "owner_pinned_source_test_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "item_version_source_master_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "item_version_source_test_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_value_kind",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_input_type",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "decimal_scale",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_ordinal",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "effective_sort_order",
+            "nullable": "YES"
+          },
+          {
+            "type": "boolean",
+            "column": "required",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "display_group",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "lab_test_item_versions",
+        "columns": [
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "lab_test_item_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "workspace_result_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "test_item_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_input_type",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_value_kind",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_unit",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "decimal_scale",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "definition_origin",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "quarantine_reason",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "customization_state",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_projection_schema_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "source_projection_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_projection_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "local_definition_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "local_definition_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "created_by",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "lab_test_items",
+        "columns": [
+          {
+            "type": "text",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "category_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "test_item_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_input_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "result_unit",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "availability_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "saved_result_usage_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "definition_origin",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "result_value_kind",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "decimal_scale",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "workspace_result_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "local_settings_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "customization_state",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "source_projection_schema_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "source_projection_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_projection_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "local_definition_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "local_definition_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "historical_unattributed_usage_residual",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "canonical_saved_result_usage_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "legacy_saved_result_usage_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "quarantine_saved_result_usage_count",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "quarantine_reason",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_catalog_items",
+        "columns": [
+          {
+            "type": "text",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "standard_order_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_preset_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "category_group",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "category_label",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "t_code",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "t_code_label",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "standard_order_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "in_hospital_order_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "billing_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "aliases",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "availability_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "price_krw",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "sales_unit",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "target_species",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "default_destination_module",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "default_task_required",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "billing_reflection_enabled",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "care_guide",
+            "nullable": "YES"
+          },
+          {
+            "type": "boolean",
+            "column": "care_guide_delivery_enabled",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "internal_instruction",
+            "nullable": "YES"
+          },
+          {
+            "type": "boolean",
+            "column": "internal_instruction_delivery_enabled",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "tax_included",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "rounding_rule",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "pricing_rule",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "medication_metadata",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "vaccine_metadata",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "initial_imported_preset_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "last_auto_merged_preset_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "customization_state",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "customized_fields",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "last_customized_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "last_customized_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "preset_merge_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "origin_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "initial_imported_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "last_auto_merged_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "classification_path_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "catalog_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "source_projection_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_projection_fingerprint",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "last_applied_lab_membership_projection_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "last_applied_lab_membership_projection_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "last_applied_lab_membership_projection_schema_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "clinical_order_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "is_external_lab",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "destination_module",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "execution_mode",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "detail_schema_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "detail_field_schema",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "billing_eligible",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_dispensing_profile_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_dispensing_profile_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_medication_product_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_medication_product_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_clinical_review_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_evidence_fingerprint",
+            "nullable": "YES"
+          },
+          {
+            "type": "boolean",
+            "column": "clinical_use_allowed",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "dispensing_profile_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "dispensing_profile_snapshot_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "workspace_dispensing_review_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "workspace_dispensing_review_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "workspace_dispensing_authored_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "workspace_dispensing_authored_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "workspace_dispensing_reviewed_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "workspace_dispensing_reviewed_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "workspace_dispensing_review_note",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "default_detail_inputs",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "default_detail_input_policies",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_execution_preset_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_execution_preset_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_execution_preset_sha256",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_catalog_lab_test_item_links",
+        "columns": [
+          {
+            "type": "text",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "order_catalog_item_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "lab_test_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "lab_test_category_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "snapshot_metadata",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "link_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "link_origin",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "profile_kind",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_order_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_order_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_panel_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_panel_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_test_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "owner_pinned_source_test_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_ordinal",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "effective_sort_order",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "pinned_workspace_result_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "boolean",
+            "column": "required",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "display_group",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "snapshot_metadata_schema_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "snapshot_metadata_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "link_quarantine_reason",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_fulfillment_work_items",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "encounter_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "order_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "queue_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "priority",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "requested_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "assigned_to_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "due_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "completed_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "cancelled_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "returned_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "reason",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "source_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "task_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "task_attempt_no",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "clinical_order_type",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "destination_module",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "assigned_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "assigned_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "started_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "started_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "detailed_phase",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "paused_from_phase",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "request_cycle",
+            "nullable": "NO"
+          },
+          {
+            "type": "bigint",
+            "column": "row_revision",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_revision_fields",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_revision_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "field_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "previous_value",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "current_value",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_revisions",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "revision_no",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "reason",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "created_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "change_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "expected_revision_no",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "idempotency_key",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "request_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "before_values",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "after_values",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "affected_tasks",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "billing_impact",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "result",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "completed_at",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_set_revision_items",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "order_set_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "revision_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_set_revision_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "child_kind",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "child_order_catalog_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "child_order_catalog_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "child_order_set_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "child_set_revision_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "default_selected",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "billing_reflection_default",
+            "nullable": "NO"
+          },
+          {
+            "type": "numeric",
+            "column": "default_quantity",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "quantity_source",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_set_revisions",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "order_set_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "revision_no",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "validation_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "validation_errors",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "set_category",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "set_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "billing_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "amount_basis",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "set_price_krw",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "range_basis",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "sales_unit",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "billing_reflection_enabled",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "tax_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "target_species",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "care_guide",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "internal_instruction",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "created_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "order_tasks",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "encounter_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "parent_task_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "task_role",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "clinical_order_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "destination_module",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "priority",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "attempt_no",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "re_requested_from_task_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "effective_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "result_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "created_by_user_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "started_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "completed_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "cancelled_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "assigned_to_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "assigned_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "assigned_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "started_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "returned_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "detailed_phase",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "paused_from_phase",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "request_cycle",
+            "nullable": "NO"
+          },
+          {
+            "type": "bigint",
+            "column": "row_revision",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "orders",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "encounter_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "order_group_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "service_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "order_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "display_name",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "billing_display_name",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "work_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "priority",
+            "nullable": "NO"
+          },
+          {
+            "type": "numeric",
+            "column": "quantity",
+            "nullable": "NO"
+          },
+          {
+            "type": "numeric",
+            "column": "unit_price_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "requested_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "requested_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "confirmed_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "confirmed_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "due_at",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "current_assignee_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "instruction",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "warning_message",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "cancellation_reason",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "sort_order",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "row_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_order_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_order_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_set_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "source_set_version",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "set_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "parent_chart_order_line_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "row_depth",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "applied_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "applied_price_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "calculation_inputs",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "calculation_outputs",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "quantity_source",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "price_rule_source",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "billing_reflection_enabled",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "order_confirmation_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "billing_candidate_status",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "billing_candidate_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "invoice_line_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "task_status",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "workspace_catalog_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_record_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "workspace_catalog_revision",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_set_revision_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "source_set_revision_no",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "source_set_revision_item_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "applied_snapshot_schema_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "applied_snapshot_sha256",
+            "nullable": "YES"
+          },
+          {
+            "type": "numeric",
+            "column": "line_total_snapshot",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "clinical_order_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "destination_module",
+            "nullable": "YES"
+          },
+          {
+            "type": "text",
+            "column": "execution_mode",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "detail_inputs",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "detail_schema_version",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "confirmed_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "revision_no",
+            "nullable": "NO"
+          },
+          {
+            "type": "boolean",
+            "column": "billing_eligible",
+            "nullable": "NO"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "workspace_lab_item_updates",
+        "columns": [
+          {
+            "type": "uuid",
+            "column": "id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "lab_test_item_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_release_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "bigint",
+            "column": "source_release_no",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_owner_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "source_owner_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "target_key",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "replay_key",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "source_master_record_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "integer",
+            "column": "source_master_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "update_type",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "status",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "superseded_by_update_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "integer",
+            "column": "expected_workspace_result_revision",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "changed_source_fields",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "source_projection_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "source_projection_sha256",
+            "nullable": "NO"
+          },
+          {
+            "type": "jsonb",
+            "column": "workspace_projection_snapshot",
+            "nullable": "NO"
+          },
+          {
+            "type": "ARRAY",
+            "column": "affected_catalog_item_ids",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "created_by",
+            "nullable": "YES"
+          },
+          {
+            "type": "uuid",
+            "column": "resolved_by",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "created_at",
+            "nullable": "NO"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "resolved_at",
+            "nullable": "YES"
+          }
+        ]
+      },
+      {
+        "schema": "public",
+        "name": "workspace_order_billing_policies",
+        "columns": [
+          {
+            "type": "text",
+            "column": "workspace_id",
+            "nullable": "NO"
+          },
+          {
+            "type": "text",
+            "column": "vat_calculation_policy",
+            "nullable": "YES"
+          },
+          {
+            "type": "jsonb",
+            "column": "adjustment_reasons",
+            "nullable": "NO"
+          },
+          {
+            "type": "uuid",
+            "column": "updated_by_user_id",
+            "nullable": "YES"
+          },
+          {
+            "type": "timestamp with time zone",
+            "column": "updated_at",
+            "nullable": "NO"
+          }
+        ]
+      }
+    ]
+  },
+  "masterTables": [
+    {
+      "name": "chart_groups",
+      "rls": true
+    },
+    {
+      "name": "classification_paths",
+      "rls": true
+    },
+    {
+      "name": "clinical_actions",
+      "rls": true
+    },
+    {
+      "name": "clinical_reviews",
+      "rls": true
+    },
+    {
+      "name": "diagnoses",
+      "rls": true
+    },
+    {
+      "name": "diagnosis_categories",
+      "rls": true
+    },
+    {
+      "name": "diagnosis_category_links",
+      "rls": true
+    },
+    {
+      "name": "dispensing_order_prescription_presets",
+      "rls": true
+    },
+    {
+      "name": "dispensing_order_profiles",
+      "rls": true
+    },
+    {
+      "name": "evidence_assertions",
+      "rls": true
+    },
+    {
+      "name": "evidence_documents",
+      "rls": true
+    },
+    {
+      "name": "lab_order_profiles",
+      "rls": true
+    },
+    {
+      "name": "lab_panel_items",
+      "rls": true
+    },
+    {
+      "name": "lab_panels",
+      "rls": true
+    },
+    {
+      "name": "lab_tests",
+      "rls": true
+    },
+    {
+      "name": "master_record_names",
+      "rls": true
+    },
+    {
+      "name": "master_record_sources",
+      "rls": true
+    },
+    {
+      "name": "master_record_versions",
+      "rls": true
+    },
+    {
+      "name": "master_records",
+      "rls": true
+    },
+    {
+      "name": "master_releases",
+      "rls": true
+    },
+    {
+      "name": "master_review_events",
+      "rls": true
+    },
+    {
+      "name": "master_sources",
+      "rls": true
+    },
+    {
+      "name": "medication_ingredients",
+      "rls": true
+    },
+    {
+      "name": "medication_product_handling",
+      "rls": true
+    },
+    {
+      "name": "medication_product_ingredients",
+      "rls": true
+    },
+    {
+      "name": "medication_products",
+      "rls": true
+    },
+    {
+      "name": "medication_regulatory_profiles",
+      "rls": true
+    },
+    {
+      "name": "medication_species_applicability",
+      "rls": true
+    },
+    {
+      "name": "order_categories",
+      "rls": true
+    },
+    {
+      "name": "order_execution_preset_activation_batches",
+      "rls": true
+    },
+    {
+      "name": "order_execution_preset_current",
+      "rls": true
+    },
+    {
+      "name": "order_execution_presets",
+      "rls": true
+    },
+    {
+      "name": "order_species_links",
+      "rls": true
+    },
+    {
+      "name": "orders",
+      "rls": true
+    },
+    {
+      "name": "result_input_types",
+      "rls": true
+    },
+    {
+      "name": "species",
+      "rls": true
+    },
+    {
+      "name": "specimen_types",
+      "rls": true
+    },
+    {
+      "name": "task_routes",
+      "rls": true
+    },
+    {
+      "name": "units",
+      "rls": true
+    }
+  ],
+  "masterCounts": {
+    "query": "select record_type,count(*) as count from master.master_records where record_type in ('order','lab_test','lab_panel','specimen_type') group by 1 order by 1",
+    "rows": [
+      {
+        "record_type": "lab_panel",
+        "count": 19
+      },
+      {
+        "record_type": "lab_test",
+        "count": 73
+      },
+      {
+        "record_type": "order",
+        "count": 522
+      },
+      {
+        "record_type": "specimen_type",
+        "count": 9
+      }
+    ]
+  },
+  "cbcProfiles": {
+    "query": "select r.master_key as order_key,r.current_revision,panel.master_key as panel_key,test.master_key as test_key,spec.master_key as specimen_key,\n(select jsonb_agg(jsonb_build_object('test_key',tr.master_key,'required',i.required,'sort',i.sort_order,'group',i.display_group) order by i.sort_order) from master.lab_panel_items i join master.master_records tr on tr.id=i.lab_test_id where i.lab_panel_id=p.lab_panel_id) as panel_members\nfrom master.lab_order_profiles p join master.master_records r on r.id=p.order_record_id\nleft join master.master_records panel on panel.id=p.lab_panel_id left join master.master_records test on test.id=p.lab_test_id left join master.master_records spec on spec.id=p.specimen_type_id\nwhere r.master_key in ('cm.order.lab.panel.cbc-basic','cm.order.lab.test.cbc-wbc','cm.order.lab.test.cbc-hct','cm.order.lab.test.cbc-plt','cm.order.synthetic.lab-08','cm.order.synthetic.lab-09') order by 1",
+    "rows": [
+      {
+        "order_key": "cm.order.lab.panel.cbc-basic",
+        "current_revision": 2,
+        "panel_key": "cm.lab-panel.cbc-basic",
+        "test_key": null,
+        "specimen_key": "cm.specimen.edta-whole-blood",
+        "panel_members": [
+          {
+            "sort": 0,
+            "group": "hematology",
+            "required": true,
+            "test_key": "cm.lab-test.cbc-wbc"
+          },
+          {
+            "sort": 1,
+            "group": "hematology",
+            "required": true,
+            "test_key": "cm.lab-test.cbc-hct"
+          },
+          {
+            "sort": 2,
+            "group": "hematology",
+            "required": true,
+            "test_key": "cm.lab-test.cbc-plt"
+          }
+        ]
+      },
+      {
+        "order_key": "cm.order.lab.test.cbc-hct",
+        "current_revision": 2,
+        "panel_key": null,
+        "test_key": "cm.lab-test.cbc-hct",
+        "specimen_key": "cm.specimen.edta-whole-blood",
+        "panel_members": null
+      },
+      {
+        "order_key": "cm.order.lab.test.cbc-plt",
+        "current_revision": 2,
+        "panel_key": null,
+        "test_key": "cm.lab-test.cbc-plt",
+        "specimen_key": "cm.specimen.edta-whole-blood",
+        "panel_members": null
+      },
+      {
+        "order_key": "cm.order.lab.test.cbc-wbc",
+        "current_revision": 2,
+        "panel_key": null,
+        "test_key": "cm.lab-test.cbc-wbc",
+        "specimen_key": "cm.specimen.edta-whole-blood",
+        "panel_members": null
+      },
+      {
+        "order_key": "cm.order.synthetic.lab-08",
+        "current_revision": 2,
+        "panel_key": null,
+        "test_key": "cm.lab-test.synthetic-13",
+        "specimen_key": "cm.specimen.edta-whole-blood",
+        "panel_members": null
+      },
+      {
+        "order_key": "cm.order.synthetic.lab-09",
+        "current_revision": 2,
+        "panel_key": null,
+        "test_key": "cm.lab-test.synthetic-14",
+        "specimen_key": "cm.specimen.edta-whole-blood",
+        "panel_members": null
+      }
+    ]
+  },
+  "cheongdam": {
+    "query": "select r.master_key as source_key,i.source_master_revision,i.catalog_revision,i.availability_status,i.clinical_order_type,i.default_detail_inputs,i.customized_fields,i.customization_state,i.source_execution_preset_revision,\n(select jsonb_agg(jsonb_build_object('test_key',tr.master_key,'workspace_result_revision',l.pinned_workspace_result_revision,'required',l.required) order by l.effective_sort_order) from public.order_catalog_lab_test_item_links l left join master.master_records tr on tr.id=l.source_master_test_record_id where l.workspace_id=i.workspace_id and l.order_catalog_item_id=i.id) as links\nfrom public.order_catalog_items i join master.master_records r on r.id=i.source_master_record_id\nwhere i.workspace_id='workspace-clair-cheongdam' and r.master_key in ('cm.order.lab.panel.cbc-basic','cm.order.lab.test.cbc-wbc','cm.order.lab.test.cbc-hct','cm.order.lab.test.cbc-plt','cm.order.synthetic.lab-08','cm.order.synthetic.lab-09') order by r.master_key",
+    "rows": [
+      {
+        "source_key": "cm.order.lab.panel.cbc-basic",
+        "source_master_revision": 2,
+        "catalog_revision": 7,
+        "availability_status": "active",
+        "clinical_order_type": "clinical_lab",
+        "default_detail_inputs": {
+          "testPanel": "전혈구 기본 패널",
+          "specimenType": "blood",
+          "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+        },
+        "customized_fields": [
+          "availabilityStatus",
+          "priceKrw"
+        ],
+        "customization_state": "customized",
+        "source_execution_preset_revision": 2,
+        "links": [
+          {
+            "required": true,
+            "test_key": "cm.lab-test.cbc-wbc",
+            "workspace_result_revision": 1
+          },
+          {
+            "required": true,
+            "test_key": "cm.lab-test.cbc-hct",
+            "workspace_result_revision": 1
+          },
+          {
+            "required": true,
+            "test_key": "cm.lab-test.cbc-plt",
+            "workspace_result_revision": 1
+          }
+        ]
+      },
+      {
+        "source_key": "cm.order.lab.test.cbc-hct",
+        "source_master_revision": 2,
+        "catalog_revision": 6,
+        "availability_status": "active",
+        "clinical_order_type": "clinical_lab",
+        "default_detail_inputs": {
+          "testPanel": "헤마토크릿 검사",
+          "specimenType": "blood",
+          "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+        },
+        "customized_fields": [
+          "availabilityStatus",
+          "priceKrw"
+        ],
+        "customization_state": "customized",
+        "source_execution_preset_revision": 2,
+        "links": [
+          {
+            "required": true,
+            "test_key": "cm.lab-test.cbc-hct",
+            "workspace_result_revision": 1
+          }
+        ]
+      },
+      {
+        "source_key": "cm.order.lab.test.cbc-plt",
+        "source_master_revision": 2,
+        "catalog_revision": 6,
+        "availability_status": "active",
+        "clinical_order_type": "clinical_lab",
+        "default_detail_inputs": {
+          "testPanel": "혈소판 수 검사",
+          "specimenType": "blood",
+          "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+        },
+        "customized_fields": [
+          "availabilityStatus",
+          "priceKrw"
+        ],
+        "customization_state": "customized",
+        "source_execution_preset_revision": 2,
+        "links": [
+          {
+            "required": true,
+            "test_key": "cm.lab-test.cbc-plt",
+            "workspace_result_revision": 1
+          }
+        ]
+      },
+      {
+        "source_key": "cm.order.lab.test.cbc-wbc",
+        "source_master_revision": 2,
+        "catalog_revision": 6,
+        "availability_status": "active",
+        "clinical_order_type": "clinical_lab",
+        "default_detail_inputs": {
+          "testPanel": "백혈구 수 검사",
+          "specimenType": "blood",
+          "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+        },
+        "customized_fields": [
+          "availabilityStatus",
+          "priceKrw"
+        ],
+        "customization_state": "customized",
+        "source_execution_preset_revision": 2,
+        "links": [
+          {
+            "required": true,
+            "test_key": "cm.lab-test.cbc-wbc",
+            "workspace_result_revision": 1
+          }
+        ]
+      },
+      {
+        "source_key": "cm.order.synthetic.lab-08",
+        "source_master_revision": 2,
+        "catalog_revision": 6,
+        "availability_status": "active",
+        "clinical_order_type": "clinical_lab",
+        "default_detail_inputs": {
+          "testPanel": "망상적혈구 검사 서비스",
+          "specimenType": "blood",
+          "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+        },
+        "customized_fields": [
+          "availabilityStatus",
+          "priceKrw"
+        ],
+        "customization_state": "customized",
+        "source_execution_preset_revision": 2,
+        "links": [
+          {
+            "required": true,
+            "test_key": "cm.lab-test.synthetic-13",
+            "workspace_result_revision": 1
+          }
+        ]
+      },
+      {
+        "source_key": "cm.order.synthetic.lab-09",
+        "source_master_revision": 2,
+        "catalog_revision": 6,
+        "availability_status": "active",
+        "clinical_order_type": "clinical_lab",
+        "default_detail_inputs": {
+          "testPanel": "혈액도말 검사 서비스",
+          "specimenType": "blood",
+          "collectionCondition": "병원 표준 검체 채취 절차 확인 후 채취"
+        },
+        "customized_fields": [
+          "availabilityStatus",
+          "priceKrw"
+        ],
+        "customization_state": "customized",
+        "source_execution_preset_revision": 2,
+        "links": [
+          {
+            "required": true,
+            "test_key": "cm.lab-test.synthetic-14",
+            "workspace_result_revision": 1
+          }
+        ]
+      }
+    ]
+  },
+  "idMatches": {
+    "query": "with requested(master_key) as (values ('candidate.order.cbc.rbc.v1'),('cm.lab-test.synthetic-01'),('cm.order.lab.test.cbc-hct'),('cm.lab-test.cbc-hct'),('candidate.order.cbc.hgb.v1'),('cm.lab-test.synthetic-02'),('candidate.order.cbc.mcv.v1'),('candidate.lab-test.cbc.mcv.v1'),('candidate.order.cbc.mch.v1'),('candidate.lab-test.cbc.mch.v1'),('candidate.order.cbc.mchc.v1'),('candidate.lab-test.cbc.mchc.v1'),('candidate.order.cbc.rdw.v1'),('candidate.lab-test.cbc.rdw.v1'),('candidate.order.cbc.retic_abs.v1'),('candidate.lab-test.cbc.retic_abs.v1'),('candidate.order.cbc.retic_hgb.v1'),('candidate.lab-test.cbc.retic_hgb.v1'),('cm.order.lab.test.cbc-wbc'),('cm.lab-test.cbc-wbc'),('candidate.order.cbc.neu_abs.v1'),('candidate.lab-test.cbc.neu_abs.v1'),('candidate.order.cbc.lym_abs.v1'),('candidate.lab-test.cbc.lym_abs.v1'),('candidate.order.cbc.mono_abs.v1'),('candidate.lab-test.cbc.mono_abs.v1'),('candidate.order.cbc.eos_abs.v1'),('candidate.lab-test.cbc.eos_abs.v1'),('candidate.order.cbc.baso_abs.v1'),('candidate.lab-test.cbc.baso_abs.v1'),('cm.order.lab.test.cbc-plt'),('cm.lab-test.cbc-plt'),('candidate.order.cbc.mpv.v1'),('candidate.lab-test.cbc.mpv.v1'),('candidate.order.cbc.pdw.v1'),('candidate.lab-test.cbc.pdw.v1'),('candidate.order.cbc.pct.v1'),('candidate.lab-test.cbc.pct.v1'),('candidate.order.cbc.neu_pct.v1'),('candidate.lab-test.cbc.neu_pct.v1'),('candidate.order.cbc.lym_pct.v1'),('candidate.lab-test.cbc.lym_pct.v1'),('candidate.order.cbc.mono_pct.v1'),('candidate.lab-test.cbc.mono_pct.v1'),('candidate.order.cbc.eos_pct.v1'),('candidate.lab-test.cbc.eos_pct.v1'),('candidate.order.cbc.baso_pct.v1'),('candidate.lab-test.cbc.baso_pct.v1'),('cm.order.synthetic.lab-08'),('cm.lab-test.synthetic-13'),('cm.order.synthetic.lab-09'),('cm.lab-test.synthetic-14'),('cm.order.lab.panel.cbc-basic'),('candidate.set.cbc.erythrocytes.v1'),('candidate.set.cbc.leukocytes.v1'),('candidate.set.cbc.platelets.v1'),('candidate.set.cbc.reticulocytes.v1'),('cm.lab-panel.cbc-basic')) select req.master_key,r.record_type,r.current_revision,r.lifecycle_status from requested req left join master.master_records r using(master_key) order by req.master_key",
+    "rows": [
+      {
+        "master_key": "candidate.lab-test.cbc.baso_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.baso_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.eos_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.eos_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.lym_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.lym_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.mch.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.mchc.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.mcv.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.mono_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.mono_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.mpv.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.neu_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.neu_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.pdw.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.rdw.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.retic_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.lab-test.cbc.retic_hgb.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.baso_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.baso_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.eos_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.eos_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.hgb.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.lym_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.lym_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.mch.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.mchc.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.mcv.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.mono_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.mono_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.mpv.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.neu_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.neu_pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.pct.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.pdw.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.rbc.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.rdw.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.retic_abs.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.order.cbc.retic_hgb.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.set.cbc.erythrocytes.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.set.cbc.leukocytes.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.set.cbc.platelets.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "candidate.set.cbc.reticulocytes.v1",
+        "record_type": null,
+        "current_revision": null,
+        "lifecycle_status": null
+      },
+      {
+        "master_key": "cm.lab-panel.cbc-basic",
+        "record_type": "lab_panel",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.cbc-hct",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.cbc-plt",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.cbc-wbc",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-01",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-02",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-13",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-14",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.order.lab.panel.cbc-basic",
+        "record_type": "order",
+        "current_revision": 2,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.order.lab.test.cbc-hct",
+        "record_type": "order",
+        "current_revision": 2,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.order.lab.test.cbc-plt",
+        "record_type": "order",
+        "current_revision": 2,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.order.lab.test.cbc-wbc",
+        "record_type": "order",
+        "current_revision": 2,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.order.synthetic.lab-08",
+        "record_type": "order",
+        "current_revision": 2,
+        "lifecycle_status": "published"
+      },
+      {
+        "master_key": "cm.order.synthetic.lab-09",
+        "record_type": "order",
+        "current_revision": 2,
+        "lifecycle_status": "published"
+      }
+    ]
+  },
+  "tests": {
+    "query": "select r.master_key,r.record_type,r.current_revision,r.lifecycle_status,t.test_code,u.unit_code,t.decimal_scale,\n(select count(*) from master.lab_order_profiles p where p.lab_test_id=r.id) as standalone_order_count\nfrom master.master_records r left join master.lab_tests t on t.master_record_id=r.id left join master.units u on u.master_record_id=t.canonical_unit_id\nwhere r.record_type='lab_test' order by r.master_key",
+    "rows": [
+      {
+        "master_key": "cm.lab-test.cbc-hct",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "HCT",
+        "unit_code": "percent",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.cbc-plt",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "PLT",
+        "unit_code": "k_per_ul",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.cbc-wbc",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "WBC",
+        "unit_code": "k_per_ul",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.chem-alp",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "ALP",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.chem-alt",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "ALT",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.chem-bun",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "BUN",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.chem-creatinine",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CREA",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.chem-glucose",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "GLU",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.chem-total-protein",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "TP",
+        "unit_code": "g_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.fecal-microscopy",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FECAL_MICRO",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.giardia-antigen",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "GIARDIA_AG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-01",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "RBC",
+        "unit_code": "million_per_ul",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-02",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "HGB",
+        "unit_code": "g_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-03",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "AST",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-04",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "TBIL",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-05",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "ALB",
+        "unit_code": "g_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-06",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CA",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-07",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "PHOS",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-08",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "NA",
+        "unit_code": "mmol_l",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-09",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "K",
+        "unit_code": "mmol_l",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-10",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CL",
+        "unit_code": "mmol_l",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-11",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "PT",
+        "unit_code": "seconds",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-12",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "APTT",
+        "unit_code": "seconds",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-13",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "RETIC",
+        "unit_code": "percent",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-14",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "SMEAR",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-15",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_SG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-16",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_PROTEIN",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-17",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "HCO3",
+        "unit_code": "mmol_l",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-18",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "SKIN_CYTOLOGY",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-19",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "EAR_CYTOLOGY",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-20",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "MASS_CYTOLOGY",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-21",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "JOINT_FLUID_CYTOLOGY",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-22",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "MG",
+        "unit_code": "mmol_l",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      },
+      {
+        "master_key": "cm.lab-test.synthetic-23",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "BLOOD_TYPE",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.ua-sediment",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_SED",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.ua-strip",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_STRIP",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.ag-ratio",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "AG_RATIO",
+        "unit_code": null,
+        "decimal_scale": 2,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.amylase",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "AMYL",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.babesia-pcr",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "BABESIA_PCR",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.bile-acids",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "TBA",
+        "unit_code": null,
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.canine-distemper-antigen",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CDV_AG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.canine-heartworm-antigen",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CHW_AG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.canine-parvovirus-antigen",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CPV_AG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.cholesterol",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CHOL",
+        "unit_code": "mg_dl",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.ck",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CK",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.cortisol",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CORTISOL",
+        "unit_code": null,
+        "decimal_scale": 2,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.crp",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "CRP",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.direct-bilirubin",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "DBIL",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.fecal-flotation",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FECAL_FLOAT",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.fecal-occult-blood",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FECAL_OB",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.feline-coronavirus-antibody",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FCOV_AB",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.feline-immunodeficiency-antibody",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FIV_AB",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.feline-leukemia-antigen",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FELV_AG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.feline-panleukopenia-antigen",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FPV_AG",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.free-t4",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FT4",
+        "unit_code": null,
+        "decimal_scale": 2,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.fructosamine",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "FRUCTOSAMINE",
+        "unit_code": "mg_dl",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.ggt",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "GGT",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.globulin",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "GLOB",
+        "unit_code": "g_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.lactate",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "LACTATE",
+        "unit_code": "mmol_l",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.ldh",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "LDH",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.lipase",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "LIPA",
+        "unit_code": "u_l",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.saa",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "SAA",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.sdma",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "SDMA",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.total-t4",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "TT4",
+        "unit_code": null,
+        "decimal_scale": 2,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.triglyceride",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "TG",
+        "unit_code": "mg_dl",
+        "decimal_scale": 0,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.tsh",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "TSH",
+        "unit_code": null,
+        "decimal_scale": 2,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.upc-ratio",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UPC",
+        "unit_code": null,
+        "decimal_scale": 2,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.urine-bilirubin",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_BILIRUBIN",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.urine-creatinine",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UCREA",
+        "unit_code": "mg_dl",
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.urine-glucose",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_GLUCOSE",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.urine-ketone",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_KETONE",
+        "unit_code": null,
+        "decimal_scale": null,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "cm.lab-test.v4.urine-ph",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "UA_PH",
+        "unit_code": null,
+        "decimal_scale": 1,
+        "standalone_order_count": 1
+      },
+      {
+        "master_key": "phase1.optionb.v1.test.glucose",
+        "record_type": "lab_test",
+        "current_revision": 1,
+        "lifecycle_status": "published",
+        "test_code": "OPT_GLU",
+        "unit_code": "OPT_MGDL",
+        "decimal_scale": 1,
+        "standalone_order_count": 0
+      }
+    ]
+  },
+  "nameCheck": {
+    "query": "select r.master_key,array_agg(distinct n.name order by n.name) as names,tr.master_key as linked_test\nfrom master.master_records r join master.master_record_names n on n.master_record_id=r.id\nleft join master.lab_order_profiles p on p.order_record_id=r.id left join master.master_records tr on tr.id=p.lab_test_id\nwhere r.record_type='order' and (n.name ~* '\\m(RBC|HGB|MCV|MCH|MCHC|RDW|MPV|PDW|PCT|NEU|LYM|MONO|EOS|BASO|RETIC)\\M' or n.name ~ '(적혈구|헤모글로빈|혈색소|혈소판|호중구|림프구|단핵구|호산구|호염기구|망상)')\ngroup by r.master_key,tr.master_key order by r.master_key",
+    "rows": [
+      {
+        "master_key": "cm.order.lab.test.cbc-plt",
+        "names": [
+          "혈소판 수 검사"
+        ],
+        "linked_test": "cm.lab-test.cbc-plt"
+      },
+      {
+        "master_key": "cm.order.synthetic.lab-08",
+        "names": [
+          "망상적혈구 검사 서비스"
+        ],
+        "linked_test": "cm.lab-test.synthetic-13"
+      }
+    ]
+  },
+  "canonicalFunctions": {
+    "query": "with f as (select p.proname,pg_get_functiondef(p.oid) as body from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('private','public') and p.proname in ('clair_assert_lab_result_definition_snapshot','clair_guard_canonical_lab_result_row_definition','clair_save_lab_result_entry_v2','clair_create_lab_result_entry_for_confirmed_order','clair_create_lab_result_entry_for_confirmed_order_legacy_base')) select f.proname,md5(body) as definition_md5,l.line_no,l.line from f cross join lateral regexp_split_to_table(body,E'\\n') with ordinality as l(line,line_no) where l.line ~* '(referenceRange|reference_range|judgment|not_judged|lab_test_item_id|result_definition_snapshot)' order by f.proname,l.line_no",
+    "rows": [
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 1,
+        "line": "CREATE OR REPLACE FUNCTION private.clair_assert_lab_result_definition_snapshot(p_workspace_id text, p_result_entry_id uuid)"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 13,
+        "line": "  v_expected_keys text[] := array['analyteName','decimalScale','displayGroup','effectiveSortOrder','itemVersionSourceMasterRecordId','itemVersionSourceTestRevision','labTestItemId','ordinal','ownerPinnedSourceTestRevision','referenceRange','required','resultInputType','resultValueKind','rowDefinitionOrigin','rowId','sourceMasterTestRecordId','sourceOrdinal','unit','workspaceResultRevision'];"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 19,
+        "line": "  if v_entry.result_definition_snapshot_sha256 is distinct from private.clinical_master_sha256(v_entry.result_definition_snapshot) then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 20,
+        "line": "  if (select array_agg(key order by key) from jsonb_object_keys(v_entry.result_definition_snapshot) keys(key)) is distinct from array['rows','schemaVersion','source']::text[]"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 21,
+        "line": "     or jsonb_typeof(v_entry.result_definition_snapshot->'schemaVersion') <> 'number'"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 22,
+        "line": "     or v_entry.result_definition_snapshot->>'schemaVersion' <> '1'"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 23,
+        "line": "     or jsonb_typeof(v_entry.result_definition_snapshot->'source') <> 'object'"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 24,
+        "line": "     or jsonb_typeof(v_entry.result_definition_snapshot->'rows') <> 'array' then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 25,
+        "line": "  v_source := v_entry.result_definition_snapshot->'source';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 26,
+        "line": "  if (select array_agg(key order by key) from jsonb_object_keys(v_source) keys(key)) is distinct from array['masterOrderRecordId','masterOrderRevision','profile','workspaceCatalogItemId','workspaceCatalogRevision']::text[] then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 30,
+        "line": "     or nullif(v_source->>'masterOrderRevision','')::integer is distinct from v_entry.source_master_order_revision then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 38,
+        "line": "    raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 53,
+        "line": "    raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 55,
+        "line": "  if (select array_agg(key order by key) from jsonb_object_keys(v_profile) keys(key)) is distinct from array['labPanelRecordId','labPanelRevision','labTestRecordId','labTestRevision','orderRecordId','specimenTypeRecordId','specimenTypeRevision','targetType']::text[] then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 62,
+        "line": "     or nullif(v_profile->>'labTestRevision','')::integer is distinct from v_entry.source_master_test_revision then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 64,
+        "line": "    raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 78,
+        "line": "    raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 83,
+        "line": "     or v_row_count <> jsonb_array_length(v_entry.result_definition_snapshot->'rows')"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 84,
+        "line": "     or v_row_count <> (select count(distinct value->>'rowId') from jsonb_array_elements(v_entry.result_definition_snapshot->'rows') rows(value))"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 85,
+        "line": "     or (select count(distinct (value->>'ordinal')::integer) from jsonb_array_elements(v_entry.result_definition_snapshot->'rows') rows(value)) <> v_row_count"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 86,
+        "line": "     or (select min((value->>'ordinal')::integer) from jsonb_array_elements(v_entry.result_definition_snapshot->'rows') rows(value)) <> 1"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 87,
+        "line": "     or (select max((value->>'ordinal')::integer) from jsonb_array_elements(v_entry.result_definition_snapshot->'rows') rows(value)) <> v_row_count"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 88,
+        "line": "     or exists (select 1 from jsonb_array_elements(v_entry.result_definition_snapshot->'rows') with ordinality rows(value,position) where (value->>'ordinal')::integer <> position::integer) then"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 89,
+        "line": "    raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 91,
+        "line": "  for v_row in select value from jsonb_array_elements(v_entry.result_definition_snapshot->'rows') rows(value) loop"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 108,
+        "line": "       or coalesce(jsonb_typeof(v_row->'referenceRange'),'missing') <> 'null'"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 111,
+        "line": "      raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 116,
+        "line": "       or v_row->>'referenceRange' is not null"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 130,
+        "line": "       or v_row->>'required' is null then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 136,
+        "line": "        raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 141,
+        "line": "        raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 147,
+        "line": "      raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 150,
+        "line": "      raise exception 'lab_result_definition_snapshot_invalid';"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 155,
+        "line": "       or v_stored.lab_test_item_id is distinct from v_row->>'labTestItemId'"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 160,
+        "line": "       or v_stored.reference_range is not null"
+      },
+      {
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "definition_md5": "de0024e134ada83c54932d110dd4f2fb",
+        "line_no": 172,
+        "line": "       or v_stored.judgment is distinct from 'not_judged' then raise exception 'lab_result_definition_snapshot_invalid'; end if;"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 107,
+        "line": "       or v_link.snapshot_metadata->>'labTestItemId' is distinct from v_link.lab_test_item_id"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 110,
+        "line": "    where version_row.workspace_id=p_workspace_id and version_row.lab_test_item_id=v_link.lab_test_item_id and version_row.workspace_result_revision=v_link.pinned_workspace_result_revision;"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 123,
+        "line": "    if not exists(select 1 from public.lab_test_items item where item.workspace_id=p_workspace_id and item.id=v_link.lab_test_item_id and item.availability_status='active') then"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 139,
+        "line": "    select * into v_version from public.lab_test_item_versions version_row where version_row.workspace_id=p_workspace_id and version_row.lab_test_item_id=v_link.lab_test_item_id and version_row.workspace_result_revision=v_link.pinned_workspace_result_revision;"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 141,
+        "line": "    v_row := jsonb_build_object('rowId',v_row_id,'rowDefinitionOrigin',v_link.link_origin,'ordinal',v_ordinal,'labTestItemId',v_link.lab_test_item_id,'sourceMasterTestRecordId',v_link.source_master_test_record_id,'ownerPinnedSourceTestRevision',v_link.owner_pinned_source_test_revision,'itemVersionSourceMasterRecordId',v_version.source_master_record_id,'itemVersionSourceTestRevision',v_version.source_master_revision,'workspaceResultRevision',v_version.workspace_result_revision,'sourceOrdinal',v_link.source_ordinal,'effectiveSortOrder',v_link.effective_sort_order,'analyteName',v_version.test_item_name,'resultValueKind',v_version.result_value_kind,'resultInputType',v_version.result_input_type,'unit',v_version.result_unit,'decimalScale',v_version.decimal_scale,'referenceRange',null,'required',coalesce(v_link.required,true),'displayGroup',v_link.display_group);"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 143,
+        "line": "    v_members := v_members || jsonb_build_array(jsonb_build_object('linkOrigin',v_link.link_origin,'profileKind',v_link.profile_kind,'sourceMasterTestRecordId',v_link.source_master_test_record_id,'ownerPinnedSourceTestRevision',v_link.owner_pinned_source_test_revision,'itemVersionSourceMasterRecordId',v_version.source_master_record_id,'itemVersionSourceTestRevision',v_version.source_master_revision,'labTestItemId',v_link.lab_test_item_id,'pinnedWorkspaceResultRevision',v_link.pinned_workspace_result_revision,'sourceOrdinal',v_link.source_ordinal,'effectiveSortOrder',v_link.effective_sort_order,'required',coalesce(v_link.required,true),'displayGroup',v_link.display_group));"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 144,
+        "line": "    v_item_ids := array_append(v_item_ids,v_link.lab_test_item_id);"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 153,
+        "line": "  insert into public.lab_result_entries(workspace_id,result_id,encounter_id,order_id,result_status,result_payload,abnormal_flag,entry_write_revision,source_workspace_catalog_item_id,source_workspace_catalog_revision,source_master_order_record_id,source_master_order_revision,source_master_panel_record_id,source_master_panel_revision,source_master_test_record_id,source_master_test_revision,result_definition_snapshot,result_definition_snapshot_sha256,result_definition_origin,result_quarantine_reason,created_at,updated_at)"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 154,
+        "line": "  values(p_workspace_id,v_result_id,p_encounter_id,p_order_id,'received','{}'::jsonb,'not_judged',0,v_order.workspace_catalog_item_id,v_order.workspace_catalog_revision,v_order.source_master_record_id,v_order.source_master_revision,v_source_panel_id,v_source_panel_revision,v_source_test_id,v_source_test_revision,v_snapshot,private.clinical_master_sha256(v_snapshot),'canonical',null,now(),now())"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 161,
+        "line": "    insert into public.lab_result_entry_rows(workspace_id,lab_result_entry_id,row_id,lab_test_item_id,analyte_name,result_value,result_unit,reference_range,judgment,note,sort_order,row_definition_origin,workspace_result_revision,source_master_test_record_id,owner_pinned_source_test_revision,item_version_source_master_record_id,item_version_source_test_revision,result_value_kind,result_input_type,decimal_scale,source_ordinal,effective_sort_order,required,display_group,created_at,updated_at)"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order",
+        "definition_md5": "f5361a1989329af1f18dfe1180b16edc",
+        "line_no": 162,
+        "line": "    values(p_workspace_id,v_header_id,v_row->>'rowId',v_row->>'labTestItemId',v_row->>'analyteName',null,v_row->>'unit',null,'not_judged',null,(v_row->>'ordinal')::integer,v_row->>'rowDefinitionOrigin',nullif(v_row->>'workspaceResultRevision','')::integer,nullif(v_row->>'sourceMasterTestRecordId','')::uuid,nullif(v_row->>'ownerPinnedSourceTestRevision','')::integer,nullif(v_row->>'itemVersionSourceMasterRecordId','')::uuid,nullif(v_row->>'itemVersionSourceTestRevision','')::integer,v_row->>'resultValueKind',v_row->>'resultInputType',nullif(v_row->>'decimalScale','')::integer,nullif(v_row->>'sourceOrdinal','')::integer,(v_row->>'effectiveSortOrder')::integer,(v_row->>'required')::boolean,v_row->>'displayGroup',now(),now());"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 65,
+        "line": "    where version.workspace_id=p_workspace_id and version.lab_test_item_id=v_link.lab_test_item_id and version.workspace_result_revision=v_link.pinned_workspace_result_revision;"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 67,
+        "line": "    if not exists(select 1 from public.lab_test_items item where item.workspace_id=p_workspace_id and item.id=v_link.lab_test_item_id and item.availability_status='active') then"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 76,
+        "line": "      'labTestItemId',v_link.lab_test_item_id,"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 89,
+        "line": "      'referenceRange',null,"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 94,
+        "line": "    v_item_ids := array_append(v_item_ids,v_link.lab_test_item_id);"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 103,
+        "line": "  insert into public.lab_result_entries(workspace_id,result_id,encounter_id,order_id,result_status,result_payload,abnormal_flag,entry_write_revision,source_workspace_catalog_item_id,source_workspace_catalog_revision,source_master_order_record_id,source_master_order_revision,source_master_panel_record_id,source_master_panel_revision,source_master_test_record_id,source_master_test_revision,result_definition_snapshot,result_definition_snapshot_sha256,result_definition_origin,result_quarantine_reason,created_at,updated_at)"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 104,
+        "line": "  values(p_workspace_id,v_result_id,p_encounter_id,p_order_id,'received','{}'::jsonb,'not_judged',0,v_order.workspace_catalog_item_id,v_order.workspace_catalog_revision,v_order.source_master_record_id,v_order.source_master_revision,v_profile.lab_panel_id,(select current_revision from master.master_records where id=v_profile.lab_panel_id),v_profile.lab_test_id,(select current_revision from master.master_records where id=v_profile.lab_test_id),v_snapshot,private.clinical_master_sha256(v_snapshot),'canonical',null,now(),now())"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 109,
+        "line": "    insert into public.lab_result_entry_rows(workspace_id,lab_result_entry_id,row_id,lab_test_item_id,analyte_name,result_value,result_unit,reference_range,judgment,note,sort_order,row_definition_origin,workspace_result_revision,source_master_test_record_id,owner_pinned_source_test_revision,item_version_source_master_record_id,item_version_source_test_revision,result_value_kind,result_input_type,decimal_scale,source_ordinal,effective_sort_order,required,display_group,created_at,updated_at)"
+      },
+      {
+        "proname": "clair_create_lab_result_entry_for_confirmed_order_legacy_base",
+        "definition_md5": "d79332f75ce5f9b20eb9814553e1ffaa",
+        "line_no": 110,
+        "line": "    values(p_workspace_id,v_header_id,v_row->>'rowId',v_row->>'labTestItemId',v_row->>'analyteName',null,v_row->>'unit',null,'not_judged',null,(v_row->>'ordinal')::integer,v_row->>'rowDefinitionOrigin',(v_row->>'workspaceResultRevision')::integer,nullif(v_row->>'sourceMasterTestRecordId','')::uuid,nullif(v_row->>'ownerPinnedSourceTestRevision','')::integer,nullif(v_row->>'itemVersionSourceMasterRecordId','')::uuid,nullif(v_row->>'itemVersionSourceTestRevision','')::integer,v_row->>'resultValueKind',v_row->>'resultInputType',nullif(v_row->>'decimalScale','')::integer,nullif(v_row->>'sourceOrdinal','')::integer,(v_row->>'effectiveSortOrder')::integer,(v_row->>'required')::boolean,v_row->>'displayGroup',now(),now());"
+      },
+      {
+        "proname": "clair_guard_canonical_lab_result_row_definition",
+        "definition_md5": "7edf859cebc71e1637dadde91cd23f73",
+        "line_no": 16,
+        "line": "       or NEW.lab_test_item_id is distinct from OLD.lab_test_item_id"
+      },
+      {
+        "proname": "clair_guard_canonical_lab_result_row_definition",
+        "definition_md5": "7edf859cebc71e1637dadde91cd23f73",
+        "line_no": 19,
+        "line": "       or NEW.reference_range is distinct from OLD.reference_range"
+      },
+      {
+        "proname": "clair_guard_canonical_lab_result_row_definition",
+        "definition_md5": "7edf859cebc71e1637dadde91cd23f73",
+        "line_no": 20,
+        "line": "       or NEW.judgment is distinct from OLD.judgment"
+      },
+      {
+        "proname": "clair_save_lab_result_entry_v2",
+        "definition_md5": "19fca3055cd5ced777ea2812f007cd70",
+        "line_no": 36,
+        "line": "  perform private.clair_assert_lab_result_definition_snapshot(p_workspace_id,v_entry.id);"
+      },
+      {
+        "proname": "clair_save_lab_result_entry_v2",
+        "definition_md5": "19fca3055cd5ced777ea2812f007cd70",
+        "line_no": 68,
+        "line": "    update public.lab_result_entry_rows set result_value=case when jsonb_typeof(v_row->'value')='null' then null else v_row->>'value' end,note=case when jsonb_typeof(v_row->'note')='null' then null else v_row->>'note' end,judgment='not_judged',updated_at=now() where workspace_id=p_workspace_id and lab_result_entry_id=v_entry.id and row_id=v_row->>'rowId';"
+      },
+      {
+        "proname": "clair_save_lab_result_entry_v2",
+        "definition_md5": "19fca3055cd5ced777ea2812f007cd70",
+        "line_no": 70,
+        "line": "  update public.lab_result_entries set result_status=case when result_status='received' then 'entered' else result_status end,entered_by_user_id=case when result_status='received' then p_actor_user_id else entered_by_user_id end,entered_at=case when result_status='received' then now() else entered_at end,entry_write_revision=v_next_revision,abnormal_flag='not_judged',updated_at=now() where workspace_id=p_workspace_id and id=v_entry.id;"
+      }
+    ]
+  },
+  "constraints": {
+    "query": "select n.nspname as schema,c.relname as table_name,con.conname,pg_get_constraintdef(con.oid) as definition from pg_constraint con join pg_class c on c.oid=con.conrelid join pg_namespace n on n.oid=c.relnamespace where (n.nspname='master' and c.relname in ('lab_order_profiles','lab_panel_items')) or (n.nspname='public' and c.relname in ('lab_result_entries','lab_result_entry_rows','order_tasks','order_set_revision_items')) order by 1,2,3",
+    "rows": [
+      {
+        "schema": "master",
+        "table_name": "lab_order_profiles",
+        "conname": "lab_order_profiles_check",
+        "definition": "CHECK (((lab_test_id IS NOT NULL) <> (lab_panel_id IS NOT NULL)))"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_order_profiles",
+        "conname": "lab_order_profiles_lab_panel_id_fkey",
+        "definition": "FOREIGN KEY (lab_panel_id) REFERENCES master.lab_panels(master_record_id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_order_profiles",
+        "conname": "lab_order_profiles_lab_test_id_fkey",
+        "definition": "FOREIGN KEY (lab_test_id) REFERENCES master.lab_tests(master_record_id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_order_profiles",
+        "conname": "lab_order_profiles_order_record_id_fkey",
+        "definition": "FOREIGN KEY (order_record_id) REFERENCES master.orders(master_record_id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_order_profiles",
+        "conname": "lab_order_profiles_pkey",
+        "definition": "PRIMARY KEY (order_record_id)"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_order_profiles",
+        "conname": "lab_order_profiles_specimen_type_id_fkey",
+        "definition": "FOREIGN KEY (specimen_type_id) REFERENCES master.specimen_types(master_record_id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_panel_items",
+        "conname": "lab_panel_items_lab_panel_id_fkey",
+        "definition": "FOREIGN KEY (lab_panel_id) REFERENCES master.lab_panels(master_record_id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_panel_items",
+        "conname": "lab_panel_items_lab_panel_id_lab_test_id_key",
+        "definition": "UNIQUE (lab_panel_id, lab_test_id)"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_panel_items",
+        "conname": "lab_panel_items_lab_panel_id_sort_order_key",
+        "definition": "UNIQUE (lab_panel_id, sort_order)"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_panel_items",
+        "conname": "lab_panel_items_lab_test_id_fkey",
+        "definition": "FOREIGN KEY (lab_test_id) REFERENCES master.lab_tests(master_record_id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_panel_items",
+        "conname": "lab_panel_items_pkey",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "master",
+        "table_name": "lab_panel_items",
+        "conname": "lab_panel_items_sort_order_check",
+        "definition": "CHECK ((sort_order >= 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_abnormal_flag_check",
+        "definition": "CHECK ((abnormal_flag = ANY (ARRAY['normal'::text, 'low'::text, 'high'::text, 'critical'::text, 'not_judged'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_canonical_definition_deferred",
+        "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_entered_by_user_id_fkey",
+        "definition": "FOREIGN KEY (entered_by_user_id) REFERENCES users(id) ON DELETE SET NULL"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_origin_check",
+        "definition": "CHECK ((result_definition_origin = ANY (ARRAY['canonical'::text, 'legacy'::text, 'quarantined'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_origin_snapshot_check",
+        "definition": "CHECK ((((result_definition_origin = 'legacy'::text) AND (source_workspace_catalog_item_id IS NULL) AND (source_workspace_catalog_revision IS NULL) AND (source_master_order_record_id IS NULL) AND (source_master_order_revision IS NULL) AND (source_master_panel_record_id IS NULL) AND (source_master_panel_revision IS NULL) AND (source_master_test_record_id IS NULL) AND (source_master_test_revision IS NULL) AND (result_definition_snapshot = '{}'::jsonb) AND (result_definition_snapshot_sha256 IS NULL) AND (result_quarantine_reason IS NULL)) OR ((result_definition_origin = 'canonical'::text) AND (source_workspace_catalog_item_id IS NOT NULL) AND (source_workspace_catalog_revision IS NOT NULL) AND (source_master_order_record_id IS NOT NULL) AND (source_master_order_revision IS NOT NULL) AND (result_definition_snapshot <> '{}'::jsonb) AND (result_definition_snapshot_sha256 ~ '^[0-9a-f]{64}$'::text) AND (result_quarantine_reason IS NULL)) OR ((result_definition_origin = 'quarantined'::text) AND (result_quarantine_reason IS NOT NULL) AND (length(btrim(result_quarantine_reason)) > 0))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_pkey",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_result_id_check",
+        "definition": "CHECK ((length(TRIM(BOTH FROM result_id)) > 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_result_payload_check",
+        "definition": "CHECK ((jsonb_typeof(result_payload) = 'object'::text))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_result_status_check",
+        "definition": "CHECK ((result_status = ANY (ARRAY['received'::text, 'entered'::text, 'reviewed'::text, 'corrected'::text, 'cancelled'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_reviewed_by_user_id_fkey",
+        "definition": "FOREIGN KEY (reviewed_by_user_id) REFERENCES users(id) ON DELETE SET NULL"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_snapshot_object_check",
+        "definition": "CHECK ((jsonb_typeof(result_definition_snapshot) = 'object'::text))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_source_order_pair_check",
+        "definition": "CHECK (((source_master_order_record_id IS NULL) = (source_master_order_revision IS NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_source_panel_pair_check",
+        "definition": "CHECK (((source_master_panel_record_id IS NULL) = (source_master_panel_revision IS NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_source_test_pair_check",
+        "definition": "CHECK (((source_master_test_record_id IS NULL) = (source_master_test_revision IS NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_work_item_id_fkey",
+        "definition": "FOREIGN KEY (work_item_id) REFERENCES order_fulfillment_work_items(id) ON DELETE SET NULL"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_workspace_encounter_fk",
+        "definition": "FOREIGN KEY (workspace_id, encounter_id) REFERENCES encounters(workspace_id, id) ON DELETE RESTRICT NOT VALID"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_workspace_id_check",
+        "definition": "CHECK ((workspace_id <> ''::text))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_workspace_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_workspace_id_id_key",
+        "definition": "UNIQUE (workspace_id, id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_workspace_id_result_id_key",
+        "definition": "UNIQUE (workspace_id, result_id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entries",
+        "conname": "lab_result_entries_workspace_order_fk",
+        "definition": "FOREIGN KEY (workspace_id, order_id) REFERENCES orders(workspace_id, id) ON DELETE RESTRICT NOT VALID"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_analyte_name_check",
+        "definition": "CHECK ((length(TRIM(BOTH FROM analyte_name)) > 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_canonical_definition_deferred",
+        "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_decimal_scale_check",
+        "definition": "CHECK (((decimal_scale IS NULL) OR (decimal_scale >= 0)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_input_type_check",
+        "definition": "CHECK (((result_input_type IS NULL) OR (result_input_type = ANY (ARRAY['number'::text, 'text'::text, 'select'::text, 'positive_negative'::text, 'grade'::text]))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_judgment_check",
+        "definition": "CHECK ((judgment = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'critical'::text, 'not_judged'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_lab_result_entry_id_row_id_key",
+        "definition": "UNIQUE (lab_result_entry_id, row_id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_origin_check",
+        "definition": "CHECK ((row_definition_origin = ANY (ARRAY['clair_master'::text, 'workspace_custom'::text, 'legacy'::text, 'quarantined'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_pkey",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_row_id_check",
+        "definition": "CHECK ((length(TRIM(BOTH FROM row_id)) > 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_source_test_pair_check",
+        "definition": "CHECK (((item_version_source_master_record_id IS NULL) = (item_version_source_test_revision IS NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_value_kind_check",
+        "definition": "CHECK (((result_value_kind IS NULL) OR (result_value_kind = ANY (ARRAY['numeric'::text, 'text'::text, 'coded'::text]))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_workspace_entry_fk",
+        "definition": "FOREIGN KEY (workspace_id, lab_result_entry_id) REFERENCES lab_result_entries(workspace_id, id) ON DELETE RESTRICT NOT VALID"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_workspace_id_check",
+        "definition": "CHECK ((workspace_id <> ''::text))"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_workspace_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "public",
+        "table_name": "lab_result_entry_rows",
+        "conname": "lab_result_entry_rows_workspace_item_fk",
+        "definition": "FOREIGN KEY (workspace_id, lab_test_item_id) REFERENCES lab_test_items(workspace_id, id) ON DELETE RESTRICT NOT VALID"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_integrity_deferred",
+        "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_atomic_fk",
+        "definition": "FOREIGN KEY (workspace_id, child_order_catalog_item_id) REFERENCES order_catalog_items(workspace_id, id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_child_kind_check",
+        "definition": "CHECK ((child_kind = ANY (ARRAY['atomic'::text, 'order_set'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_child_revision_fk",
+        "definition": "FOREIGN KEY (workspace_id, child_order_set_id, child_set_revision_id) REFERENCES order_set_revisions(workspace_id, order_set_id, id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_child_set_fk",
+        "definition": "FOREIGN KEY (workspace_id, child_order_set_id) REFERENCES order_sets(workspace_id, id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_default_quantity_check",
+        "definition": "CHECK ((default_quantity > (0)::numeric))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_pkey",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_quantity_ck",
+        "definition": "CHECK ((((quantity_source = 'fixed_one'::text) AND (default_quantity = (1)::numeric)) OR ((quantity_source = ANY (ARRAY['preset_quantity'::text, 'manual_at_apply'::text])) AND (default_quantity > (0)::numeric))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_quantity_source_check",
+        "definition": "CHECK ((quantity_source = ANY (ARRAY['fixed_one'::text, 'preset_quantity'::text, 'manual_at_apply'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_revision_fk",
+        "definition": "FOREIGN KEY (workspace_id, order_set_id, revision_id) REFERENCES order_set_revisions(workspace_id, order_set_id, id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_sort_order_check",
+        "definition": "CHECK ((sort_order > 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_union_ck",
+        "definition": "CHECK ((((child_kind = 'atomic'::text) AND (child_order_catalog_item_id IS NOT NULL) AND (child_order_catalog_revision IS NOT NULL) AND (child_order_catalog_revision > 0) AND (child_order_set_id IS NULL) AND (child_set_revision_id IS NULL)) OR ((child_kind = 'order_set'::text) AND (child_order_catalog_item_id IS NULL) AND (child_order_catalog_revision IS NULL) AND (child_order_set_id IS NOT NULL) AND (child_set_revision_id IS NOT NULL) AND (quantity_source = 'fixed_one'::text) AND (default_quantity = (1)::numeric) AND (billing_reflection_default = false))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_workspace_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_set_revision_items",
+        "conname": "order_set_revision_items_workspace_id_revision_id_sort_orde_key",
+        "definition": "UNIQUE (workspace_id, revision_id, sort_order)"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_assigned_by_user_id_fkey",
+        "definition": "FOREIGN KEY (assigned_by_user_id) REFERENCES users(id) ON DELETE SET NULL"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_assigned_to_user_id_fkey",
+        "definition": "FOREIGN KEY (assigned_to_user_id) REFERENCES users(id) ON DELETE SET NULL"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_assignment_shape_check",
+        "definition": "CHECK ((((assigned_to_user_id IS NULL) AND (assigned_by_user_id IS NULL) AND (assigned_at IS NULL)) OR ((assigned_to_user_id IS NOT NULL) AND (assigned_by_user_id IS NOT NULL) AND (assigned_at IS NOT NULL))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_attempt_no_check",
+        "definition": "CHECK ((attempt_no > 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_check",
+        "definition": "CHECK ((((task_role = 'aggregate'::text) AND (parent_task_id IS NULL) AND (destination_module IS NULL)) OR (task_role = 'execution'::text)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_check2",
+        "definition": "CHECK (((status <> 'in_progress'::text) OR (started_at IS NOT NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_check3",
+        "definition": "CHECK (((status <> 'complete'::text) OR (completed_at IS NOT NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_check4",
+        "definition": "CHECK (((status <> 'cancelled'::text) OR (cancelled_at IS NOT NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_check5",
+        "definition": "CHECK (((parent_task_id IS NULL) OR (parent_task_id <> id)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_check6",
+        "definition": "CHECK (((re_requested_from_task_id IS NULL) OR (re_requested_from_task_id <> id)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_clinical_order_type_v2_check",
+        "definition": "CHECK ((clinical_order_type = ANY (ARRAY['consultation'::text, 'clinical_lab'::text, 'imaging'::text, 'external_lab'::text, 'dispensing'::text, 'treatment'::text, 'hospitalization'::text, 'system_exam'::text, 'other'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_created_by_user_id_fkey",
+        "definition": "FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_destinationless_attempt_check",
+        "definition": "CHECK (((task_role = 'aggregate'::text) OR (destination_module IS NOT NULL) OR ((attempt_no = 1) AND (status = 'complete'::text)) OR ((attempt_no > 1) AND (re_requested_from_task_id IS NOT NULL))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_effective_snapshot_check",
+        "definition": "CHECK ((jsonb_typeof(effective_snapshot) = 'object'::text))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_pkey",
+        "definition": "PRIMARY KEY (id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_priority_check",
+        "definition": "CHECK ((priority = ANY (ARRAY['normal'::text, 'urgent'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_request_cycle_check",
+        "definition": "CHECK (((request_cycle > 0) AND (request_cycle = attempt_no)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_result_snapshot_check",
+        "definition": "CHECK (((result_snapshot IS NULL) OR (jsonb_typeof(result_snapshot) = 'object'::text)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_returned_at_check",
+        "definition": "CHECK (((status <> 'returned'::text) OR (returned_at IS NOT NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_row_revision_check",
+        "definition": "CHECK ((row_revision > 0))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_start_shape_check",
+        "definition": "CHECK ((((started_at IS NULL) AND (started_by_user_id IS NULL)) OR ((started_at IS NOT NULL) AND (started_by_user_id IS NOT NULL))))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_started_by_user_id_fkey",
+        "definition": "FOREIGN KEY (started_by_user_id) REFERENCES users(id) ON DELETE SET NULL"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_started_status_check",
+        "definition": "CHECK (((status <> ALL (ARRAY['in_progress'::text, 'paused'::text, 'partial_complete'::text, 'complete'::text])) OR (started_at IS NOT NULL)))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_status_v3_check",
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'paused'::text, 'partial_complete'::text, 'complete'::text, 'returned'::text, 'cancelled'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_task_role_check",
+        "definition": "CHECK ((task_role = ANY (ARRAY['execution'::text, 'aggregate'::text])))"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_encounter_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id, encounter_id) REFERENCES encounters(workspace_id, id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_id_attempt_no_key",
+        "definition": "UNIQUE (workspace_id, id, attempt_no)"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_id_key",
+        "definition": "UNIQUE (workspace_id, id)"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_order_id_attempt_no_key",
+        "definition": "UNIQUE (workspace_id, order_id, attempt_no)"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_order_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id, order_id) REFERENCES orders(workspace_id, id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_parent_task_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id, parent_task_id) REFERENCES order_tasks(workspace_id, id) ON DELETE RESTRICT"
+      },
+      {
+        "schema": "public",
+        "table_name": "order_tasks",
+        "conname": "order_tasks_workspace_id_re_requested_from_task_id_fkey",
+        "definition": "FOREIGN KEY (workspace_id, re_requested_from_task_id) REFERENCES order_tasks(workspace_id, id) ON DELETE RESTRICT"
+      }
+    ]
+  },
+  "grants": {
+    "query": "select n.nspname as schema,p.proname,pg_get_function_identity_arguments(p.oid) as args,p.prosecdef as security_definer,p.proconfig,\nhas_function_privilege('anon',p.oid,'EXECUTE') as anon_execute,has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_execute\nfrom pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('private','public') and p.proname in ('clair_save_lab_result_entry_v2','clair_assert_lab_result_definition_snapshot','clair_list_order_catalog_admin_v2','clair_list_order_catalog_chart_search_v2') order by 1,2",
+    "rows": [
+      {
+        "schema": "private",
+        "proname": "clair_assert_lab_result_definition_snapshot",
+        "args": "p_workspace_id text, p_result_entry_id uuid",
+        "security_definer": true,
+        "proconfig": [
+          "search_path=public, private, master, extensions, pg_catalog"
+        ],
+        "anon_execute": false,
+        "authenticated_execute": false
+      },
+      {
+        "schema": "public",
+        "proname": "clair_list_order_catalog_admin_v2",
+        "args": "p_workspace_id text",
+        "security_definer": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "anon_execute": false,
+        "authenticated_execute": true
+      },
+      {
+        "schema": "public",
+        "proname": "clair_list_order_catalog_chart_search_v2",
+        "args": "p_workspace_id text",
+        "security_definer": true,
+        "proconfig": [
+          "search_path=\"\""
+        ],
+        "anon_execute": false,
+        "authenticated_execute": true
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_lab_result_entry_v2",
+        "args": "p_workspace_id text, p_actor_user_id uuid, p_result_id text, p_encounter_id uuid, p_order_id uuid, p_work_item_id uuid, p_expected_entry_write_revision integer, p_request_id uuid, p_rows jsonb",
+        "security_definer": true,
+        "proconfig": [
+          "search_path=public, private, master, extensions, pg_catalog"
+        ],
+        "anon_execute": false,
+        "authenticated_execute": true
+      }
+    ]
+  },
+  "boundaryFunctions": {
+    "query": "with f as (select n.nspname as schema,p.proname,pg_get_functiondef(p.oid) as body from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private') and (p.proname like '%order_set%' or p.proname in ('clair_save_lab_result_entry_v2','clair_list_order_catalog_admin_v2','clair_list_order_catalog_chart_search_v2'))) select schema,proname,md5(body) as definition_md5,l.line_no,l.line from f cross join lateral regexp_split_to_table(body,E'\\n') with ordinality l(line,line_no) where l.line ~ '(depth_exceeded|nested.*(depth|level)|auth.uid|permission|actor_user_id.*distinct)' order by schema,proname,l.line_no",
+    "rows": [
+      {
+        "schema": "private",
+        "proname": "clair_assert_order_set_revision_integrity",
+        "definition_md5": "40dc6d40163ba1b4116937ad771f4641",
+        "line_no": 52,
+        "line": "    raise exception 'order_set_revision_nested_depth_exceeded';"
+      },
+      {
+        "schema": "private",
+        "proname": "clair_b3_expand_chart_order_set",
+        "definition_md5": "ac914c1ca80f92246fe5cdc95f0357bd",
+        "line_no": 222,
+        "line": "    raise exception 'order_set_depth_exceeded';"
+      },
+      {
+        "schema": "private",
+        "proname": "clair_seed_order_set_compatibility_projection",
+        "definition_md5": "ddc85fc632f98ebfae6b853e9cdbf9f9",
+        "line_no": 14,
+        "line": "      and (m.roles @> array['hospital_admin']::text[] or exists(select 1 from public.permission_policies pp where pp.workspace_id=p_workspace_id and ((pp.scope='role' and pp.target_role=any(m.roles)) or (pp.scope='user' and pp.target_user_id=p_actor_user_id)) and coalesce(pp.permissions->'allowed','[]'::jsonb) ? 'service_catalog:manage'))"
+      },
+      {
+        "schema": "private",
+        "proname": "clair_seed_order_set_compatibility_projection",
+        "definition_md5": "ddc85fc632f98ebfae6b853e9cdbf9f9",
+        "line_no": 16,
+        "line": "  if not v_allowed then raise exception 'seed_actor_permission_missing' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_create_order_set",
+        "definition_md5": "2f9fdcd0778a2c10c23ef5e024457f09",
+        "line_no": 8,
+        "line": "  if auth.uid() is null then raise exception 'authentication_required' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_create_order_set",
+        "definition_md5": "2f9fdcd0778a2c10c23ef5e024457f09",
+        "line_no": 9,
+        "line": "  if not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'service_catalog:manage') then raise exception 'permission_missing' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_create_order_set",
+        "definition_md5": "2f9fdcd0778a2c10c23ef5e024457f09",
+        "line_no": 10,
+        "line": "  return private.clair_b2_create_core(p_workspace_id,p_definition,p_availability_status,auth.uid(),p_request_id,null);"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_get_order_set",
+        "definition_md5": "9c416e50101b6d09c79636189ad43cbf",
+        "line_no": 9,
+        "line": "  if auth.uid() is null then raise exception 'authentication_required' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_get_order_set",
+        "definition_md5": "9c416e50101b6d09c79636189ad43cbf",
+        "line_no": 10,
+        "line": "  if not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'service_catalog:view') then raise exception 'permission_missing' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_list_order_catalog_admin_v2",
+        "definition_md5": "3b914c9da229656b3ec1ac4f1fd8d41c",
+        "line_no": 34,
+        "line": "    and private.clair_current_user_has_workspace_permission("
+      },
+      {
+        "schema": "public",
+        "proname": "clair_list_order_catalog_chart_search_v2",
+        "definition_md5": "e6c361e32c15dea312faec14fc6f66d3",
+        "line_no": 190,
+        "line": "  where private.clair_current_user_has_workspace_permission("
+      },
+      {
+        "schema": "public",
+        "proname": "clair_list_order_sets",
+        "definition_md5": "727cf9badc30078da1ed9ba0938dadbb",
+        "line_no": 8,
+        "line": "  if auth.uid() is null then raise exception 'authentication_required' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_list_order_sets",
+        "definition_md5": "727cf9badc30078da1ed9ba0938dadbb",
+        "line_no": 9,
+        "line": "  if not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'service_catalog:view') then raise exception 'permission_missing' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_preview_chart_order_set",
+        "definition_md5": "652a15d751e6a8bc7fb0a1067b132006",
+        "line_no": 8,
+        "line": "  if auth.uid() is null then"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_preview_chart_order_set",
+        "definition_md5": "652a15d751e6a8bc7fb0a1067b132006",
+        "line_no": 14,
+        "line": "  if not private.clair_current_user_has_workspace_permission(workspace_id, 'chart:update') then"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_preview_chart_order_set",
+        "definition_md5": "652a15d751e6a8bc7fb0a1067b132006",
+        "line_no": 15,
+        "line": "    raise exception 'permission_missing';"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_resolve_order_set_update_review",
+        "definition_md5": "2590a97a3a3d4236e19d409f06c58742",
+        "line_no": 8,
+        "line": "  if auth.uid() is null then raise exception 'authentication_required' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_resolve_order_set_update_review",
+        "definition_md5": "2590a97a3a3d4236e19d409f06c58742",
+        "line_no": 9,
+        "line": "  if not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'service_catalog:manage') then raise exception 'permission_missing' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_resolve_order_set_update_review",
+        "definition_md5": "2590a97a3a3d4236e19d409f06c58742",
+        "line_no": 10,
+        "line": "  return private.clair_b2_resolve_review_core(p_workspace_id,p_review_id,p_expected_parent_revision_id,p_action,auth.uid(),p_request_id);"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_lab_result_entry_v2",
+        "definition_md5": "19fca3055cd5ced777ea2812f007cd70",
+        "line_no": 21,
+        "line": "  if auth.uid() is null or p_actor_user_id is distinct from auth.uid() then raise exception 'actor_mismatch' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_lab_result_entry_v2",
+        "definition_md5": "19fca3055cd5ced777ea2812f007cd70",
+        "line_no": 23,
+        "line": "  if not private.clair_current_user_has_workspace_permission(p_workspace_id,'lab:complete') then raise exception 'permission_missing'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_lab_result_entry_v2",
+        "definition_md5": "19fca3055cd5ced777ea2812f007cd70",
+        "line_no": 57,
+        "line": "    if v_existing.actor_user_id is distinct from p_actor_user_id or v_existing.normalized_payload_sha256 is distinct from v_hash or v_existing.base_entry_write_revision is distinct from p_expected_entry_write_revision then raise exception 'entry_request_id_conflict'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_order_set_revision",
+        "definition_md5": "d879d065bc701383cad9e475eb2536a3",
+        "line_no": 8,
+        "line": "  if auth.uid() is null then raise exception 'authentication_required' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_order_set_revision",
+        "definition_md5": "d879d065bc701383cad9e475eb2536a3",
+        "line_no": 9,
+        "line": "  if not private.clair_is_active_workspace_member(p_workspace_id) or not private.clair_current_user_has_workspace_permission(p_workspace_id,'service_catalog:manage') then raise exception 'permission_missing' using errcode='42501'; end if;"
+      },
+      {
+        "schema": "public",
+        "proname": "clair_save_order_set_revision",
+        "definition_md5": "d879d065bc701383cad9e475eb2536a3",
+        "line_no": 10,
+        "line": "  return private.clair_b2_save_core(p_workspace_id,p_order_set_id,p_expected_current_revision_id,p_definition,p_availability_status,auth.uid(),p_request_id);"
+      }
+    ]
+  }
+}

@@ -1,4 +1,7 @@
 import { parsePlanOrderAuthority } from "@/features/chart/plan-order-authority-domain";
+import { parseLabResultProfile, type LabResultProfile } from "@/features/lab-imaging/result-profile-contract";
+import { expandLabComposition, parseLabComposition, type LabComposition } from "@/features/lab-imaging/composition-contract";
+import { isOrderTaxonomyValid } from "@/features/hospital-admin/order-taxonomy";
 
 // Server-only validation and normalization seam.
 // PostgreSQL remains the sole release fingerprint authority.
@@ -82,6 +85,9 @@ export type ClinicalMasterPublishPayload = {
   classificationPaths?: ClinicalMasterClassificationPathInput[];
   labPanelItems?: ClinicalMasterLabPanelItemInput[];
   labOrderProfiles?: ClinicalMasterLabOrderProfileInput[];
+  labResultProfiles?: LabResultProfile[];
+  labResultProfileOrderKeys?: string[];
+  labCompositions?: LabComposition[];
 };
 
 export type ClinicalMasterValidationIssue = {
@@ -148,6 +154,9 @@ const detailAllowedKeys: Record<ClinicalMasterRecordType, ReadonlySet<string>> =
     "defaultQuantity",
     "species",
     "planOrderAuthority",
+    "executionPreset",
+    "adminSubcategoryCode",
+    "labFamilyCode",
   ]),
   species: new Set(["speciesCode"]),
   unit: new Set(["unitCode", "symbol", "decimalScale"]),
@@ -158,7 +167,7 @@ const detailAllowedKeys: Record<ClinicalMasterRecordType, ReadonlySet<string>> =
 };
 
 const contractAllowedKeys: Record<string, ReadonlySet<string>> = {
-  payload: new Set(["releaseKey", "releaseNotes", "adoptionScope", "publishedByLabel", "records", "classificationPaths", "labPanelItems", "labOrderProfiles"]),
+  payload: new Set(["releaseKey", "releaseNotes", "adoptionScope", "publishedByLabel", "records", "classificationPaths", "labPanelItems", "labOrderProfiles", "labResultProfiles", "labResultProfileOrderKeys", "labCompositions"]),
   record: new Set(["masterKey", "recordType", "lifecycleStatus", "safetyStatus", "safetyReason", "names", "source", "detail"]),
   name: new Set(["languageCode", "nameKind", "name", "searchable", "sortOrder"]),
   source: new Set(["sourceType", "title", "referenceUri", "sourceVersion", "accessedAt", "licenseNotes"]),
@@ -300,6 +309,30 @@ function validateRecordDetail(
     return;
   }
   validateDetailKeys(record.recordType, detail, path, issues);
+  if (record.recordType === "order") {
+    const preset = detail.executionPreset;
+    if (preset !== undefined) {
+      const required = ["presetId", "presetKey", "presetRevision", "clinicalOrderType", "detailSchemaVersion", "defaultDetailInputs", "fieldPolicies", "provenance", "presetStatus", "clinicalUseAllowed", "contentSha256", "sourceArtifactSha256"];
+      const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const sha = /^[0-9a-f]{64}$/;
+      if (!isRecordObject(preset) || Object.keys(preset).length !== required.length || required.some(key => !Object.hasOwn(preset, key))
+        || typeof preset.presetId !== "string" || !uuid.test(preset.presetId)
+        || typeof preset.presetKey !== "string" || !preset.presetKey.trim()
+        || !Number.isSafeInteger(preset.presetRevision) || Number(preset.presetRevision) < 1
+        || ![1, 2].includes(Number(preset.detailSchemaVersion)) || typeof preset.detailSchemaVersion !== "number"
+        || !["consultation", "clinical_lab", "external_lab", "system_exam", "imaging", "treatment", "dispensing", "hospitalization", "other"].includes(String(preset.clinicalOrderType))
+        || !isRecordObject(preset.defaultDetailInputs) || !isRecordObject(preset.fieldPolicies) || !isRecordObject(preset.provenance)
+        || preset.presetStatus !== "synthetic_unreviewed" || preset.clinicalUseAllowed !== false
+        || typeof preset.contentSha256 !== "string" || !sha.test(preset.contentSha256)
+        || typeof preset.sourceArtifactSha256 !== "string" || !sha.test(preset.sourceArtifactSha256)) {
+        addIssue(issues, `${path}.executionPreset`, "execution_preset_invalid", "An exact synthetic execution preset envelope is required; PostgreSQL verifies schema policies and the canonical content hash.");
+      }
+    }
+    if ((detail.adminSubcategoryCode !== undefined || detail.labFamilyCode !== undefined)
+      && !isOrderTaxonomyValid(isRecordObject(preset) ? preset.clinicalOrderType : undefined, detail.adminSubcategoryCode, detail.labFamilyCode)) {
+      addIssue(issues, path, "order_taxonomy_invalid", "Taxonomy must match the explicit clinical order type and laboratory family contract.");
+    }
+  }
 
   switch (record.recordType) {
     case "order_category": {
@@ -386,7 +419,7 @@ function validateRecordDetail(
       requireRecordDetailString(detail, "testCode", path, issues);
       requireRecordDetailString(detail, "resultInputTypeKey", path, issues);
       validateOptionalString(detail.canonicalUnitKey, `${path}.canonicalUnitKey`, issues);
-      if (detail.decimalScale !== undefined && (typeof detail.decimalScale !== "number" || !Number.isInteger(detail.decimalScale) || detail.decimalScale < 0)) {
+      if (detail.decimalScale !== undefined && detail.decimalScale !== null && (typeof detail.decimalScale !== "number" || !Number.isInteger(detail.decimalScale) || detail.decimalScale < 0)) {
         addIssue(issues, `${path}.decimalScale`, "decimal_scale_invalid", "Decimal scale must be a non-negative integer.");
       }
       break;
@@ -595,6 +628,13 @@ export function normalizeClinicalMasterPublishPayload(payload: ClinicalMasterPub
       }))
       .sort((left, right) => left.orderMasterKey.localeCompare(right.orderMasterKey)),
   };
+  if (payload.labResultProfiles !== undefined) {
+    normalized.labResultProfiles = structuredClone(payload.labResultProfiles).sort((a, b) => a.profileKey.localeCompare(b.profileKey) || a.revision - b.revision);
+    normalized.labResultProfileOrderKeys = [...(payload.labResultProfileOrderKeys ?? [])].sort();
+  }
+  if (payload.labCompositions !== undefined) {
+    normalized.labCompositions = structuredClone(payload.labCompositions).sort((a, b) => a.masterKey.localeCompare(b.masterKey) || a.revision - b.revision);
+  }
   return normalized;
 }
 
@@ -678,7 +718,7 @@ export function validateClinicalMasterPublishPayload(
       const rawNames = record.names as unknown[];
       const preferredKo = rawNames.filter((name): name is ClinicalMasterNameInput => isRecordObject(name) && name.languageCode === "ko" && name.nameKind === "preferred");
       const preferredEn = rawNames.filter((name): name is ClinicalMasterNameInput => isRecordObject(name) && name.languageCode === "en" && name.nameKind === "preferred");
-      if (preferredKo.length !== 1) addIssue(issues, `${path}.names`, "preferred_ko_exactly_one", "Exactly one preferred Korean name is required per record.");
+      if (preferredKo.length > 1 || preferredKo.length + preferredEn.length === 0) addIssue(issues, `${path}.names`, "preferred_ko_exactly_one", "A preferred Korean or English name is required; at most one per language is allowed.");
       if (preferredEn.length > 1) addIssue(issues, `${path}.names`, "preferred_en_at_most_one", "At most one preferred English name is allowed per record.");
       const nameKeys = new Set<string>();
       rawNames.forEach((rawName, nameIndex) => {
@@ -795,6 +835,40 @@ export function validateClinicalMasterPublishPayload(
       if (panelRecord && panelRecord.recordType !== "lab_panel") addIssue(issues, `${path}.labPanelMasterKey`, "lab_panel_reference_invalid", "Profile panel must reference a lab_panel record.");
       if (specimenRecord && specimenRecord.recordType !== "specimen_type") addIssue(issues, `${path}.specimenMasterKey`, "specimen_reference_invalid", "Profile specimen must reference a specimen_type record.");
     });
+  }
+
+  if (payload.labResultProfiles !== undefined || payload.labResultProfileOrderKeys !== undefined) {
+    const profiles = payload.labResultProfiles;
+    const keys = payload.labResultProfileOrderKeys;
+    if (!Array.isArray(profiles) || profiles.length < 1 || profiles.length > 200 || profiles.some(p => !parseLabResultProfile(p))) {
+      addIssue(issues, "labResultProfiles", "lab_result_profiles_invalid", "Explicit valid immutable result profiles are required.");
+    } else if (new Set(profiles.map(p => `${p.profileKey}:${p.revision}`)).size !== profiles.length || new Set(profiles.map(p => p.id)).size !== profiles.length) {
+      addIssue(issues, "labResultProfiles", "lab_result_profiles_duplicate", "Profile revision and IDs must be unique.");
+    }
+    if (!Array.isArray(keys) || keys.length < 1 || keys.length > 300 || keys.some(key => typeof key !== "string" || recordsByKey.get(key)?.recordType !== "order")
+      || new Set(keys).size !== keys.length) {
+      addIssue(issues, "labResultProfileOrderKeys", "lab_result_profile_orders_invalid", "Each required-profile order must be explicitly present once in the release.");
+    }
+  }
+
+  if (payload.labCompositions !== undefined) {
+    const graph = payload.labCompositions;
+    if (!Array.isArray(graph) || graph.length < 1 || graph.length > 200 || graph.some(node => !parseLabComposition(node))) {
+      addIssue(issues, "labCompositions", "lab_compositions_invalid", "Explicit immutable laboratory composition definitions are required.");
+    } else if (new Set(graph.map(node => node.id)).size !== graph.length || new Set(graph.map(node => node.masterKey)).size !== graph.length) {
+      addIssue(issues, "labCompositions", "lab_compositions_duplicate", "Composition identities must be unique within the release.");
+    } else {
+      const atomicKeys = new Set((Array.isArray(payload.labOrderProfiles) ? payload.labOrderProfiles : [])
+        .filter(profile => profile && profile.labTestMasterKey && !profile.labPanelMasterKey && recordsByKey.get(profile.orderMasterKey)?.recordType === "order")
+        .map(profile => profile.orderMasterKey));
+      graph.forEach((node, index) => {
+        if (node.originalOrderMasterKey && recordsByKey.get(node.originalOrderMasterKey)?.recordType !== "order") {
+          addIssue(issues, `labCompositions[${index}].originalOrderMasterKey`, "lab_composition_original_missing", "Original orders must be present in the release.");
+        }
+        try { expandLabComposition(graph, node.masterKey, atomicKeys); }
+        catch { addIssue(issues, `labCompositions[${index}]`, "lab_composition_graph_invalid", "Composition references, depth and unique atomic leaves must be valid."); }
+      });
+    }
   }
 
   const rawPaths: unknown = payload.classificationPaths === undefined ? [] : payload.classificationPaths;

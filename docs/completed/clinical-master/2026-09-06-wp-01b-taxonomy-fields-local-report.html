@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>오더 분류 저장·상속 — 로컬 구현 결과</title>
+<style>
+:root{color-scheme:light;--ink:#172d34;--muted:#556d73;--line:#d5e2e1;--accent:#086857;--paper:#fff;--bg:#f2f6f4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}main{max-width:1120px;margin:auto;padding:52px 28px 80px}a{color:var(--accent);text-underline-offset:4px}.eyebrow{font-size:12px;font-weight:750;letter-spacing:.13em;text-transform:uppercase;color:var(--accent)}h1{font-size:clamp(30px,5vw,52px);line-height:1.22;letter-spacing:-.05em;margin:14px 0 20px}h2{font-size:25px;letter-spacing:-.035em;margin:0 0 18px}h3{font-size:17px;margin:0 0 8px}p{margin:0 0 16px}.lead{font-size:19px;max-width:810px;color:var(--muted)}nav{display:flex;gap:22px;flex-wrap:wrap;margin:24px 0 32px;font-size:14px}.badge{display:inline-block;padding:5px 11px;border:1px solid var(--line);border-radius:30px;font-size:12px;background:white;margin:0 6px 5px 0}.banner{background:var(--ink);color:#fff;border-radius:18px;padding:24px 28px;margin:26px 0}.banner p{margin:0}.banner small{color:#bce3d8}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.card,section.panel{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:26px}.card .number{font-size:38px;font-weight:700;letter-spacing:-.05em;color:var(--accent)}.card p{font-size:14px;color:var(--muted);margin:0}.panel{margin-top:24px}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;padding:16px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:12px;color:var(--muted)}td:first-child{width:26%;font-weight:650}tr:last-child td{border:0}.status{font-weight:700;color:var(--accent)}.warning{color:#9c5419}.steps{list-style:none;counter-reset:step;padding:0;margin:0}.steps li{counter-increment:step;display:grid;grid-template-columns:34px 1fr;gap:14px;margin:20px 0}.steps li:before{content:counter(step);display:block;background:#e4f0ec;color:var(--accent);border-radius:50%;width:32px;height:32px;text-align:center;font-weight:700}.steps p{font-size:14px;color:var(--muted);margin:2px 0}.links{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}.muted{color:var(--muted);font-size:13px}code{font-size:.85em;overflow-wrap:anywhere}footer{font-size:12px;color:var(--muted);margin-top:28px}section{scroll-margin-top:22px}@media(max-width:680px){main{padding:30px 18px 50px}.grid{grid-template-columns:1fr}.card{padding:18px 22px}.card .number{font-size:30px}.panel{padding:20px!important}td:first-child{width:31%}th,td{padding:12px 5px}nav{gap:14px}.banner{padding:22px}.lead{font-size:17px}}@media print{body{background:white}main{padding:0}.panel,.card{break-inside:avoid}nav{display:none}}
+</style>
+</head>
+<body><main>
+<header>
+<div class="eyebrow">CLAiR · ORDER EXECUTION DEFAULTS · WP-01B</div>
+<h1>오더 분류를 저장하고<br>병원 수정값을 지키도록</h1>
+<p class="lead">세부 분류와 검사 계열의 저장·전달·상속을 로컬에서 구현했습니다. 병원이 수정한 값은 남기고, 수정하지 않은 분류만 마스터 값으로 갱신합니다.</p>
+<span class="badge">2026.09.06</span><span class="badge">로컬 구현 · 검증 완료</span><span class="badge">원격 적용 · 배포 안 함</span>
+<nav aria-label="보고서 목차"><a href="#changed">구현 내용</a><a href="#verification">검증 결과</a><a href="#next-step">다음 작업</a><a href="#files">기록 파일</a></nav>
+</header>
+<div class="banner"><small>현재 상태</small><p>저장·상속 기능은 로컬 검증을 마쳤습니다.<br>522개 오더 후보는 아직 적용 전이며, 화면 완성과 배포 검증은 남아 있습니다.</p></div>
+<div class="grid" aria-label="핵심 결과">
+<article class="card"><div class="number">2개 필드</div><h3>세부 분류 · 검사 계열</h3><p>임상 기본값·업무 전달 경로와 분리해 저장합니다.</p></article>
+<article class="card"><div class="number">140개</div><h3>계약 테스트 통과</h3><p>저장값 표시와 생성·수정·전달 경로를 확인했습니다.</p></article>
+<article class="card"><div class="number">전체 롤백</div><h3>로컬 DB 회귀 검증</h3><p>시험용 데이터와 스키마 변경을 모두 되돌렸습니다.</p></article>
+</div>
+<section class="panel" id="changed"><h2>무엇이 달라졌나</h2>
+<table><thead><tr><th>목표</th><th>이번 구현과 확인 결과</th></tr></thead><tbody>
+<tr><td>같은 분류 전달</td><td>마스터 발행 기록 → 워크스페이스 복사 → 병원관리/API → 새 차트 스냅샷에 분류를 전달합니다. 이름으로 분류를 추측하거나 임시 오더를 끼워 넣지 않습니다.</td></tr>
+<tr><td>병원 수정값 보존</td><td>수정한 분류와 명시적으로 비운 값은 보존합니다. 가격을 바꾼 오더도 수정하지 않은 분류는 별도로 갱신됩니다.</td></tr>
+<tr><td>충돌 처리</td><td>세부 분류와 검사 계열의 조합이 맞지 않으면 두 값 모두 보존하고 충돌을 기록합니다. 같은 작업을 다시 실행해도 중복 수정하지 않습니다.</td></tr>
+<tr><td>생성·초기화</td><td>일반·조제 오더 생성에 분류 저장을 연결했습니다. 잘못된 분류를 보내면 생성 전체가 취소됩니다. 명시적 초기화는 서버에서 원본을 확인합니다.</td></tr>
+<tr><td>기존 업무 보존</td><td>분류만 바꿀 때 임상 기본값과 업무 경로를 바꾸지 않습니다. 기존 생성 권한과 조제 상태도 유지합니다. 과거 차트 기록은 새 분류로 덮어쓰지 않습니다.</td></tr>
+</tbody></table></section>
+<section class="panel" id="verification"><h2>검증 결과와 한계</h2>
+<table><thead><tr><th>검증</th><th>결과</th></tr></thead><tbody>
+<tr><td>계약 테스트</td><td><span class="status">140개 통과.</span> 고정된 522개 매핑의 분류 조합도 새 코드 목록과 대조했습니다.</td></tr>
+<tr><td>로컬 PostgreSQL</td><td><span class="status">통과.</span> 실제 발행·복사 함수를 실행해 상속·수정 보존·초기화·충돌·재실행·잘못된 입력의 취소를 확인했습니다. 외부 합성 워크스페이스와 기존 차트 기록은 그대로였습니다.</td></tr>
+<tr><td>코드 검사</td><td>변경 범위 ESLint와 공백 검사는 통과했습니다. <span class="warning">전체 타입 검사는 기존 차트 테스트 3개 파일의 오류로 실패했습니다.</span></td></tr>
+<tr><td>문서 검사</td><td><span class="warning">기존 끊어진 링크 2개로 실패했습니다.</span> 누락된 persona 안내 파일을 가리키는 링크입니다.</td></tr>
+<tr><td>실제 서비스</td><td>원격 DB 적용·오더 발행·배포·로그인 화면 검증은 하지 않았습니다. 모든 마이그레이션의 처음부터 재실행도 이번 검증에는 포함하지 않았습니다.</td></tr>
+</tbody></table>
+<p class="muted" style="margin-top:18px">SQL 시험은 지정된 로컬 합성 DB에서만 실행했습니다. 종료 후 시험용 카탈로그 행, 새 분류 컬럼, 시험용 릴리스가 남지 않은 것을 확인했습니다. 임상 유효성이나 전체 서비스 완료를 뜻하는 결과는 아닙니다.</p>
+</section>
+<section class="panel" id="next-step"><div class="eyebrow">NEXT · 바로 배포하지 않습니다</div><h2>다음은 병원관리 화면 연결</h2>
+<ol class="steps">
+<li><div><h3>분류 편집·초기화·충돌 표시</h3><p>생성 화면의 선택값이 저장되는지 확인하고, 수정값 보존과 원본 초기화를 화면에서 분명하게 보여줍니다.</p></div></li>
+<li><div><h3>전체 분류 탐색과 차트 대조</h3><p>분류가 없거나 충돌한 오더도 숨기지 않는지 확인합니다. 병원관리와 차트가 같은 워크스페이스 오더를 읽는지 시험합니다.</p></div></li>
+<li><div><h3>적용·배포 준비</h3><p>기존 검사 오류를 정리하고, 원격 오더의 최신 ID·버전·병원 수정값을 다시 확인합니다. 대상 목록과 복구 절차를 고정한 뒤 별도 적용 단계로 넘어갑니다.</p></div></li>
+</ol>
+<p class="muted">검사 세트·개별 항목·장비별 정상범위와 전체 기본값 상속은 별도 후속 작업입니다. 이번 분류 작업으로 완료됐다고 보지 않습니다.</p>
+</section>
+<section class="panel" id="files"><h2>다음 작업에 필요한 기록</h2>
+<div class="links">
+<a href="../../work/clinical-master/order-execution-defaults/artifacts/wp-01b/slice-03-taxonomy-fields-local.md">AI용 구현·검증·후속 작업 기록</a>
+<a href="../../work/clinical-master/order-execution-defaults/WP-01B-persisted-admin-chart-read-parity.md">WP-01B 계획서</a>
+<a href="2026-09-06-wp-01b-taxonomy-mapping-report.html">앞선 522개 매핑 보고서</a>
+</div>
+<p class="muted" style="margin-top:18px">주요 변경 파일: DB 마이그레이션, order-taxonomy.ts, server-order-catalog-core.ts, data.ts, 회귀 테스트·SQL 검증 스크립트. 상위 계획서와 현재 상태 문서도 갱신했습니다.</p>
+</section>
+<footer>루멘 · 프로토타입 개발 기록<br>한국어 보고서는 humanize-korean 규칙으로 문장을 점검했습니다. 번들 계측 스크립트가 없어 수동 검토했으며 수치 점수는 부여하지 않았습니다.</footer>
+</main></body></html>

@@ -152,6 +152,7 @@ function buildValidInputs(type: ClinicalOrderType) {
 }
 
 function validValue(field: ClinicalOrderFieldDefinition) {
+  if (field.key === "wardOrCage") return "97070000-0000-4000-8000-000000000001";
   if (field.defaultValue !== null && field.defaultValue !== undefined) {
     return field.defaultValue;
   }

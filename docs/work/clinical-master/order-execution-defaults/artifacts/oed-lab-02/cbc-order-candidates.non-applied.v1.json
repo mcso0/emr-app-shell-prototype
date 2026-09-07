@@ -1,0 +1,875 @@
+{
+  "generatedAt": "2026-09-06",
+  "revision": "oed-lab-02.v1",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "schemaVersion": "oed-lab-02-orders/v1",
+  "orders": [
+    {
+      "orderId": "candidate.order.cbc.rbc.v1",
+      "code": "RBC",
+      "displayName": "적혈구 수",
+      "resultDefinitionId": "cm.lab-test.synthetic-01",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-hct",
+      "code": "HCT",
+      "displayName": "헤마토크릿",
+      "resultDefinitionId": "cm.lab-test.cbc-hct",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.hgb.v1",
+      "code": "HGB",
+      "displayName": "혈색소",
+      "resultDefinitionId": "cm.lab-test.synthetic-02",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.mcv.v1",
+      "code": "MCV",
+      "displayName": "평균 적혈구 용적",
+      "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.mch.v1",
+      "code": "MCH",
+      "displayName": "평균 적혈구 혈색소량",
+      "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.mchc.v1",
+      "code": "MCHC",
+      "displayName": "평균 적혈구 혈색소 농도",
+      "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.rdw.v1",
+      "code": "RDW",
+      "displayName": "적혈구 크기 분포",
+      "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.retic_abs.v1",
+      "code": "RETIC_ABS",
+      "displayName": "망상적혈구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": false,
+      "group": "optional",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.retic_hgb.v1",
+      "code": "RETIC_HGB",
+      "displayName": "망상적혈구 혈색소",
+      "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": false,
+      "group": "optional",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-wbc",
+      "code": "WBC",
+      "displayName": "백혈구 수",
+      "resultDefinitionId": "cm.lab-test.cbc-wbc",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.neu_abs.v1",
+      "code": "NEU_ABS",
+      "displayName": "호중구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.lym_abs.v1",
+      "code": "LYM_ABS",
+      "displayName": "림프구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.mono_abs.v1",
+      "code": "MONO_ABS",
+      "displayName": "단핵구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.eos_abs.v1",
+      "code": "EOS_ABS",
+      "displayName": "호산구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.baso_abs.v1",
+      "code": "BASO_ABS",
+      "displayName": "호염기구 절대수",
+      "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-plt",
+      "code": "PLT",
+      "displayName": "혈소판 수",
+      "resultDefinitionId": "cm.lab-test.cbc-plt",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.mpv.v1",
+      "code": "MPV",
+      "displayName": "평균 혈소판 용적",
+      "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.pdw.v1",
+      "code": "PDW",
+      "displayName": "혈소판 크기 분포",
+      "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": false,
+      "group": "optional",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.pct.v1",
+      "code": "PCT",
+      "displayName": "혈소판 용적률",
+      "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": false,
+      "group": "optional",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.neu_pct.v1",
+      "code": "NEU_PCT",
+      "displayName": "호중구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.lym_pct.v1",
+      "code": "LYM_PCT",
+      "displayName": "림프구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.mono_pct.v1",
+      "code": "MONO_PCT",
+      "displayName": "단핵구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.eos_pct.v1",
+      "code": "EOS_PCT",
+      "displayName": "호산구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "candidate.order.cbc.baso_pct.v1",
+      "code": "BASO_PCT",
+      "displayName": "호염기구 비율",
+      "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": true,
+      "group": "core",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-08",
+      "code": "RETIC_PCT",
+      "displayName": "망상적혈구 비율",
+      "resultDefinitionId": "cm.lab-test.synthetic-13",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": false,
+      "group": "optional",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-09",
+      "code": "SMEAR",
+      "displayName": "혈액도말 형태 검토",
+      "resultDefinitionId": "cm.lab-test.synthetic-14",
+      "revision": "oed-lab-02.v1",
+      "category": "clinical_lab",
+      "availability": "active",
+      "clinicalValidation": "not_clinically_validated",
+      "directRequestAllowed": true,
+      "retestAllowed": true,
+      "selectedByDefault": false,
+      "group": "manual_review",
+      "specimenKey": "cm.specimen.edta-whole-blood",
+      "executionDetail": "Requested output is independent; supporting measurements or a full physical analyzer run may still be required.",
+      "chargePolicy": "no_automatic_child_charge; explicit workspace billing decision later"
+    }
+  ],
+  "sets": [
+    {
+      "setId": "cm.order.lab.panel.cbc-basic",
+      "existingLabPanelId": "cm.lab-panel.cbc-basic",
+      "revision": "oed-lab-02.v1",
+      "candidateMeaning": "CBC core with five-part differential; new revision of existing basic set, never rewrite historical membership",
+      "members": [
+        {
+          "memberId": "candidate.set.cbc.erythrocytes.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.set.cbc.leukocytes.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.set.cbc.platelets.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.set.cbc.reticulocytes.v1",
+          "defaultIncluded": false
+        },
+        {
+          "memberId": "candidate.order.cbc.pdw.v1",
+          "defaultIncluded": false
+        },
+        {
+          "memberId": "candidate.order.cbc.pct.v1",
+          "defaultIncluded": false
+        },
+        {
+          "memberId": "cm.order.synthetic.lab-09",
+          "defaultIncluded": false
+        }
+      ]
+    },
+    {
+      "setId": "candidate.set.cbc.erythrocytes.v1",
+      "revision": "oed-lab-02.v1",
+      "members": [
+        {
+          "memberId": "candidate.order.cbc.rbc.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.hgb.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "cm.order.lab.test.cbc-hct",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.mcv.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.mch.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.mchc.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.rdw.v1",
+          "defaultIncluded": true
+        }
+      ]
+    },
+    {
+      "setId": "candidate.set.cbc.leukocytes.v1",
+      "revision": "oed-lab-02.v1",
+      "members": [
+        {
+          "memberId": "cm.order.lab.test.cbc-wbc",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.neu_abs.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.neu_pct.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.lym_abs.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.lym_pct.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.mono_abs.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.mono_pct.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.eos_abs.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.eos_pct.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.baso_abs.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.baso_pct.v1",
+          "defaultIncluded": true
+        }
+      ]
+    },
+    {
+      "setId": "candidate.set.cbc.platelets.v1",
+      "revision": "oed-lab-02.v1",
+      "members": [
+        {
+          "memberId": "cm.order.lab.test.cbc-plt",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.mpv.v1",
+          "defaultIncluded": true
+        }
+      ]
+    },
+    {
+      "setId": "candidate.set.cbc.reticulocytes.v1",
+      "revision": "oed-lab-02.v1",
+      "members": [
+        {
+          "memberId": "candidate.order.cbc.retic_abs.v1",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "cm.order.synthetic.lab-08",
+          "defaultIncluded": true
+        },
+        {
+          "memberId": "candidate.order.cbc.retic_hgb.v1",
+          "defaultIncluded": true
+        }
+      ]
+    }
+  ],
+  "idMap": [
+    {
+      "code": "RBC",
+      "orderId": "candidate.order.cbc.rbc.v1",
+      "resultDefinitionId": "cm.lab-test.synthetic-01",
+      "orderAction": "new_candidate_order",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "RBC",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.million-per-ul",
+        "decimalScale": 1
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "HCT",
+      "orderId": "cm.order.lab.test.cbc-hct",
+      "resultDefinitionId": "cm.lab-test.cbc-hct",
+      "orderAction": "reuse_id_add_version_no_historical_rewrite",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "HCT",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.percent",
+        "decimalScale": 1
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "HGB",
+      "orderId": "candidate.order.cbc.hgb.v1",
+      "resultDefinitionId": "cm.lab-test.synthetic-02",
+      "orderAction": "new_candidate_order",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "HGB",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.g-dl",
+        "decimalScale": 1
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "MCV",
+      "orderId": "candidate.order.cbc.mcv.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.mcv.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "MCH",
+      "orderId": "candidate.order.cbc.mch.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.mch.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "MCHC",
+      "orderId": "candidate.order.cbc.mchc.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.mchc.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "RDW",
+      "orderId": "candidate.order.cbc.rdw.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.rdw.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "RETIC_ABS",
+      "orderId": "candidate.order.cbc.retic_abs.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.retic_abs.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "RETIC_HGB",
+      "orderId": "candidate.order.cbc.retic_hgb.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.retic_hgb.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "WBC",
+      "orderId": "cm.order.lab.test.cbc-wbc",
+      "resultDefinitionId": "cm.lab-test.cbc-wbc",
+      "orderAction": "reuse_id_add_version_no_historical_rewrite",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "WBC",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.k-per-ul",
+        "decimalScale": 1
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "NEU_ABS",
+      "orderId": "candidate.order.cbc.neu_abs.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.neu_abs.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "LYM_ABS",
+      "orderId": "candidate.order.cbc.lym_abs.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.lym_abs.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "MONO_ABS",
+      "orderId": "candidate.order.cbc.mono_abs.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.mono_abs.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "EOS_ABS",
+      "orderId": "candidate.order.cbc.eos_abs.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.eos_abs.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "BASO_ABS",
+      "orderId": "candidate.order.cbc.baso_abs.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.baso_abs.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "PLT",
+      "orderId": "cm.order.lab.test.cbc-plt",
+      "resultDefinitionId": "cm.lab-test.cbc-plt",
+      "orderAction": "reuse_id_add_version_no_historical_rewrite",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "PLT",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.k-per-ul",
+        "decimalScale": 1
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "MPV",
+      "orderId": "candidate.order.cbc.mpv.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.mpv.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "PDW",
+      "orderId": "candidate.order.cbc.pdw.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.pdw.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "PCT",
+      "orderId": "candidate.order.cbc.pct.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.pct.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "NEU_PCT",
+      "orderId": "candidate.order.cbc.neu_pct.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.neu_pct.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "LYM_PCT",
+      "orderId": "candidate.order.cbc.lym_pct.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.lym_pct.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "MONO_PCT",
+      "orderId": "candidate.order.cbc.mono_pct.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.mono_pct.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "EOS_PCT",
+      "orderId": "candidate.order.cbc.eos_pct.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.eos_pct.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "BASO_PCT",
+      "orderId": "candidate.order.cbc.baso_pct.v1",
+      "resultDefinitionId": "candidate.lab-test.cbc.baso_pct.v1",
+      "orderAction": "new_candidate_order",
+      "resultAction": "new_candidate_definition",
+      "priorDefinition": null,
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "RETIC_PCT",
+      "orderId": "cm.order.synthetic.lab-08",
+      "resultDefinitionId": "cm.lab-test.synthetic-13",
+      "orderAction": "reuse_id_add_version_no_historical_rewrite",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "RETIC",
+        "resultInputTypeKey": "cm.result-input.numeric",
+        "canonicalUnitKey": "cm.unit.percent",
+        "decimalScale": 1
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    },
+    {
+      "code": "SMEAR",
+      "orderId": "cm.order.synthetic.lab-09",
+      "resultDefinitionId": "cm.lab-test.synthetic-14",
+      "orderAction": "reuse_id_add_version_no_historical_rewrite",
+      "resultAction": "reuse_id_new_version",
+      "priorDefinition": {
+        "testCode": "SMEAR",
+        "resultInputTypeKey": "cm.result-input.text",
+        "canonicalUnitKey": null
+      },
+      "requiredBackfill": "LAB-03 mapping audit only; never infer or overwrite prior results"
+    }
+  ]
+}

@@ -42,6 +42,9 @@ type LabResultEntryWriteRow = {
   note: string | null;
   rowId: string;
   value: string | null;
+  qualifier?: "exact" | "less_than" | "greater_than";
+  deviceFlag?: string | null;
+  resultState?: "value" | "instrument_no_result";
 };
 
 type LabResultEntrySnapshot = {
@@ -721,8 +724,11 @@ function readStrictResultWriteRow(
   const row = value as Record<string, unknown>;
   if ("rowId" in row) {
     if (
-      Object.keys(row).some((key) => !["rowId", "value", "note"].includes(key)) ||
-      Object.keys(row).length !== 3 ||
+      Object.keys(row).some((key) => !["rowId", "value", "note", "qualifier", "deviceFlag", "resultState"].includes(key)) ||
+      !["rowId", "value", "note"].every((key) => key in row) ||
+      ("qualifier" in row && !["exact", "less_than", "greater_than"].includes(String(row.qualifier))) ||
+      ("resultState" in row && !["value", "instrument_no_result"].includes(String(row.resultState))) ||
+      ("deviceFlag" in row && row.deviceFlag !== null && (typeof row.deviceFlag !== "string" || !row.deviceFlag.trim() || row.deviceFlag.length > 200)) ||
       typeof row.rowId !== "string" ||
       !row.rowId.trim() ||
       !(row.value === null || typeof row.value === "string") ||
@@ -734,6 +740,9 @@ function readStrictResultWriteRow(
       note: row.note,
       rowId: row.rowId,
       value: row.value,
+      ...("qualifier" in row ? { qualifier: row.qualifier as LabResultEntryWriteRow["qualifier"] } : {}),
+      ...("deviceFlag" in row ? { deviceFlag: row.deviceFlag as string | null } : {}),
+      ...("resultState" in row ? { resultState: row.resultState as LabResultEntryWriteRow["resultState"] } : {}),
     };
   }
   const allowedLegacyKeys = [

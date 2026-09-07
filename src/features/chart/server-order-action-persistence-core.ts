@@ -4,6 +4,7 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import { parseChartActualRecords, type ChartActualRecords } from "./chart-actual-contract";
 import {
   emitLiveMutationAuditEvent,
   type LiveMutationAuditOptions,
@@ -82,6 +83,7 @@ export function mapCatalogCategoryToBillingCategory(
 export type ChartOrderCatalogSelectionInput = Record<string, unknown>;
 
 export type ChartOrderActionInput = {
+  actualRecords?: ChartActualRecords;
   action?: ChartOrderActionKind;
   /** @deprecated Replaced by persisted draft rows and server-owned snapshots. */
   catalogSelections?: ChartOrderCatalogSelectionInput[];
@@ -208,6 +210,7 @@ export type ChartOrderActionGateway = {
     workspaceId: string;
   }): Promise<ChartOrderActionGatewayResult>;
   saveOrderAction(input: {
+    actualRecords?: ChartActualRecords;
     action: ChartOrderActionKind;
     actorUserId: string;
     /** @deprecated Ignored; snapshots come from persisted chart rows. */
@@ -448,6 +451,7 @@ export async function saveChartOrderAction({
   }
 
   const result = await gateway.saveOrderAction({
+    actualRecords: normalized.actualRecords ?? undefined,
     action: normalized.action as ChartOrderActionKind,
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
@@ -737,7 +741,7 @@ export type SupabaseChartOrderActionRpcClient = {
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_confirm_chart_order_candidates",
+    functionName: "clair_confirm_chart_order_candidates_with_actual",
     args: {
       p_workspace_id: string;
       p_actor_user_id: string;
@@ -745,6 +749,7 @@ export type SupabaseChartOrderActionRpcClient = {
       p_selected_root_order_ids: string[];
       p_expected_draft_etag: string;
       p_idempotency_key: string;
+      p_actual_records: ChartActualRecords;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -774,6 +779,7 @@ export function createSupabaseChartOrderActionGateway(
       return mapped;
     },
     async saveOrderAction({
+      actualRecords,
       action,
       actorUserId,
       encounterId,
@@ -784,7 +790,7 @@ export function createSupabaseChartOrderActionGateway(
     }) {
       if (action === "confirm") {
         const { data, error } = await client.rpc(
-          "clair_confirm_chart_order_candidates",
+          "clair_confirm_chart_order_candidates_with_actual",
           {
             p_workspace_id: workspaceId,
             p_actor_user_id: actorUserId,
@@ -794,6 +800,7 @@ export function createSupabaseChartOrderActionGateway(
               .filter((orderId): orderId is string => Boolean(orderId)),
             p_expected_draft_etag: expectedEtag,
             p_idempotency_key: idempotencyKey ?? "",
+            p_actual_records: actualRecords ?? {},
           },
         );
         if (error) return mapAtomicConfirmationRpcError(error.message ?? "");
@@ -1001,6 +1008,7 @@ function buildOrderActionKey(workspaceId: string, encounterId: string) {
 
 function normalizeOrderActionInput(input: ChartOrderActionInput) {
   return {
+    actualRecords: parseChartActualRecords(input.actualRecords),
     action:
       input.action === "bill" || input.action === "confirm"
         ? input.action
@@ -1028,6 +1036,7 @@ function validateOrderActionInput(
   > = {};
 
   if (!input.action) fieldErrors.action = "오더 작업을 선택해 주세요.";
+  if (input.actualRecords === null) fieldErrors.orderIds = "실제 수행 시각·본인 확인·결과를 확인해 주세요.";
   if (!input.encounterId)
     fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (!input.orderIds.length) fieldErrors.orderIds = "오더를 선택해 주세요.";
@@ -1232,6 +1241,10 @@ function mapAtomicConfirmationResponse(
 function mapAtomicConfirmationRpcError(
   message: string,
 ): ChartOrderActionGatewayResult {
+  for (const error of ["invalid_chart_actual", "chart_actual_record_required", "chart_actual_finding_mismatch", "chart_actual_scope_mismatch",
+    "invalid_performed_at", "inpatient_location_required", "inpatient_location_unavailable", "confirmed_inpatient_location_immutable"]) {
+    if (message.includes(error)) return { ok: false, status: 422, error };
+  }
   for (const error of [
     "encounter_unavailable",
     "order_unavailable",

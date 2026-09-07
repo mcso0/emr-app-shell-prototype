@@ -93,7 +93,9 @@ test("private master is denied to Data API/client roles", () => {
   expect(migration).toContain("set search_path = ''");
   expect(migration).not.toContain("grant execute");
   expect(publisherSource).toContain("PostgreSQL remains the sole release fingerprint authority");
-  expect(publisherSource).not.toMatch(/createHash|sha256|sourceFingerprint.*hash/i);
+  // Incoming immutable preset SHA fields are validated and transported, never
+  // recomputed as the authoritative release fingerprint in application code.
+  expect(publisherSource).not.toMatch(/createHash|subtle\.digest|sourceFingerprint\s*[:=].*hash/i);
 });
 
 test("synthetic fixture structurally covers X/T/A, Other, CG/NT, dog/cat, and atomic order", () => {

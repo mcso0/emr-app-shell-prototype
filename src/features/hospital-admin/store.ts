@@ -3,8 +3,6 @@
 import { create } from "zustand";
 import {
   createEmptyHospitalOrderDraft,
-  getDefaultSubcategoryId,
-  hospitalOrderSeedItems,
   type HospitalOrderCatalogItem,
   type HospitalOrderCategoryId,
   type HospitalOrderDraft,
@@ -26,6 +24,13 @@ export type HospitalAdminSection =
   | "vitals";
 
 type HospitalAdminStore = {
+  catalogWorkspaceId: string | null;
+  catalogGeneration: number;
+  catalogReadStatus: "idle" | "loading" | "ready" | "error" | "denied";
+  beginCatalogLoad: (workspaceId: string) => number;
+  finishCatalogLoad: (workspaceId: string, generation: number, result:
+    | { status: "ready"; orders: HospitalOrderCatalogItem[]; capabilities: OrderCatalogAdminCapabilities }
+    | { status: "error" | "denied" }) => void;
   activeSection: HospitalAdminSection;
   focusedOrderId: string | null;
   orders: HospitalOrderCatalogItem[];
@@ -60,15 +65,49 @@ type HospitalAdminStore = {
 };
 
 const defaultCategoryId: HospitalOrderCategoryId = "lab";
-const defaultSubcategoryId = getDefaultSubcategoryId(defaultCategoryId) ?? "clinical-pathology";
+const defaultSubcategoryId: HospitalOrderSubcategoryId = "unclassified";
 
 const localDraftOrderIdPrefix = "hospital-order-custom-";
 const getNextOrderId = () => `${localDraftOrderIdPrefix}${Date.now().toString(36)}`;
+export const emptyHospitalOrders: HospitalOrderCatalogItem[] = [];
+export const deniedCatalogCapabilities: OrderCatalogAdminCapabilities = {
+  canManageCatalog: false, canAuthorDispensing: false, canApproveDispensing: false,
+};
 
 export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => ({
+  catalogWorkspaceId: null,
+  catalogGeneration: 0,
+  catalogReadStatus: "idle",
+  beginCatalogLoad: (workspaceId) => {
+    const state = get();
+    const sameWorkspace = state.catalogWorkspaceId === workspaceId;
+    const generation = state.catalogGeneration + 1;
+    set({ catalogWorkspaceId: workspaceId, catalogGeneration: generation,
+      catalogReadStatus: "loading", catalogCapabilities: deniedCatalogCapabilities,
+      orders: sameWorkspace ? state.orders.filter(order => !order.sourceCatalogItem && order.id.startsWith(localDraftOrderIdPrefix)) : [],
+      selectedOrderIds: [], focusedOrderId: null,
+      ...(!sameWorkspace ? { searchQuery: "", selectedCategoryId: defaultCategoryId, selectedSubcategoryId: defaultSubcategoryId } : {}),
+    });
+    return generation;
+  },
+  finishCatalogLoad: (workspaceId, generation, result) => {
+    const state = get();
+    if (state.catalogWorkspaceId !== workspaceId || state.catalogGeneration !== generation) return;
+    if (result.status !== "ready") {
+      set({ orders: [], catalogReadStatus: result.status, catalogCapabilities: deniedCatalogCapabilities,
+        selectedOrderIds: [], focusedOrderId: null });
+      return;
+    }
+    if (result.orders.some(order => order.sourceCatalogItem?.workspaceId !== workspaceId)) {
+      state.finishCatalogLoad(workspaceId, generation, { status: "error" });
+      return;
+    }
+    state.setOrders(result.orders);
+    set({ catalogReadStatus: "ready", catalogCapabilities: result.capabilities });
+  },
   activeSection: "orders",
   focusedOrderId: null,
-  orders: hospitalOrderSeedItems,
+  orders: [],
   searchQuery: "",
   selectedCategoryId: defaultCategoryId,
   selectedOrderIds: [],
@@ -186,7 +225,7 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
       focusedOrderId: null,
       selectedCategoryId,
       selectedOrderIds: [],
-      selectedSubcategoryId: getDefaultSubcategoryId(selectedCategoryId) ?? defaultSubcategoryId,
+      selectedSubcategoryId: "unclassified",
     }),
   setSelectedSubcategoryId: (selectedSubcategoryId) =>
     set({ focusedOrderId: null, selectedOrderIds: [], selectedSubcategoryId }),
@@ -220,8 +259,8 @@ export const useHospitalAdminStore = create<HospitalAdminStore>()((set, get) => 
               ...order,
               ...draft,
               id: draft.id ?? order.id,
-              updatedAtLabel: "방금",
-              updatedBy: "송민재",
+              updatedAtLabel: draft.sourceCatalogItem ? draft.updatedAtLabel ?? order.updatedAtLabel : "방금",
+              updatedBy: draft.sourceCatalogItem ? draft.updatedBy ?? order.updatedBy : "송민재",
             }
           : order
       ),

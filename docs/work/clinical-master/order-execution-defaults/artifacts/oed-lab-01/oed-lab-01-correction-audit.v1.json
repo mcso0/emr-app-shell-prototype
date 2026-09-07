@@ -1,0 +1,733 @@
+{
+  "schemaVersion": "oed-lab-01-correction-audit/v1",
+  "generatedAt": "2026-09-06",
+  "originalResearchDate": "2026-09-04",
+  "artifactState": "research_only_non_applied",
+  "applicationAllowed": false,
+  "remoteStateVerified": false,
+  "sourceFileFingerprints": {
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-00-frozen-manifest.v1.json": "add64d19e9b4e92849bc326c246c1354abc5db500c4a7a18c4fb8cef130e1419",
+    "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01a-order-default-candidates.non-applied.v1.json": "39e288b7ad3cc06fc52d8bcf998872517aef667102af407e017dffec354da16c",
+    "tests/fixtures/clinical-master-operational-v4-authoring.json": "d733beccbec0a384b7098aacf6a40c1979ff4da45357605a47722396bf5e5e6b"
+  },
+  "supersededInventoryFingerprint": "356a5931be0f1dca1b250fd4ae7341bde13793bfe5fe6e4d6bb1bde9871620f4",
+  "classificationCorrections": [
+    {
+      "orderId": "cm.order.v4.lab-test.32",
+      "before": "hematology_cbc",
+      "after": "infectious_disease",
+      "reason": "Antigen test identity, not the disease-name substring 백혈구"
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "before": "clinical_chemistry",
+      "after": "composite_diagnostic_plan",
+      "reason": "Composite service intent was hidden by the chemistry default branch"
+    }
+  ],
+  "specimenPolicy": "Compare labels only; no source is promoted to a clinically validated specimen or applied automatically. Panel child specimens require separate review.",
+  "specimenStatusCounts": {
+    "blood_processing_unspecified": 38,
+    "same_source_label": 27,
+    "missing_candidate": 12,
+    "collection_vs_preparation_needs_review": 2,
+    "candidate_underspecified": 1,
+    "conflicting_source_labels": 5,
+    "unbound_fixture": 1
+  },
+  "evidenceStatusCounts": {
+    "source_partial": 85,
+    "functional_fixture_required": 1
+  },
+  "orders": [
+    {
+      "orderId": "cm.order.lab.panel.cbc-basic",
+      "familyId": "hematology_cbc",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.panel.chemistry-basic",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.panel.fecal",
+      "familyId": "fecal_parasitology",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": "feces",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.panel.urinalysis",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-hct",
+      "familyId": "hematology_cbc",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-plt",
+      "familyId": "hematology_cbc",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.cbc-wbc",
+      "familyId": "hematology_cbc",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alp",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-alt",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-bun",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-creatinine",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-glucose",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.chem-total-protein",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.fecal-microscopy",
+      "familyId": "fecal_parasitology",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": "feces",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.giardia-antigen",
+      "familyId": "fecal_parasitology",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-sediment",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.lab.test.ua-strip",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-01",
+      "familyId": "electrolytes",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-02",
+      "familyId": "coagulation",
+      "fixtureSpecimenKey": "cm.specimen.citrate-plasma",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-03",
+      "familyId": "organ_or_metabolic_panel",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-04",
+      "familyId": "organ_or_metabolic_panel",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-05",
+      "familyId": "organ_or_metabolic_panel",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-06",
+      "familyId": "organ_or_metabolic_panel",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-07",
+      "familyId": "blood_typing",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-08",
+      "familyId": "reticulocyte",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-09",
+      "familyId": "blood_smear",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-10",
+      "familyId": "cytology",
+      "fixtureSpecimenKey": "cm.specimen.cytology-slide",
+      "priorNonAppliedCandidateSpecimen": "swab",
+      "comparisonStatus": "collection_vs_preparation_needs_review",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-11",
+      "familyId": "cytology",
+      "fixtureSpecimenKey": "cm.specimen.swab",
+      "priorNonAppliedCandidateSpecimen": "swab",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-12",
+      "familyId": "cytology",
+      "fixtureSpecimenKey": "cm.specimen.cytology-slide",
+      "priorNonAppliedCandidateSpecimen": "tissue",
+      "comparisonStatus": "collection_vs_preparation_needs_review",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.synthetic.lab-13",
+      "familyId": "cytology",
+      "fixtureSpecimenKey": "cm.specimen.joint-fluid",
+      "priorNonAppliedCandidateSpecimen": "other",
+      "comparisonStatus": "candidate_underspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.01",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.02",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.03",
+      "familyId": "pancreatic",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.04",
+      "familyId": "inflammation",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.05",
+      "familyId": "thyroid",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.06",
+      "familyId": "adrenal",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.07",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "conflicting_source_labels",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-panel.08",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "serum",
+      "comparisonStatus": "conflicting_source_labels",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.basic-checkup",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.emergency-initial",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.hepatobiliary",
+      "familyId": "organ_or_metabolic_panel",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.infectious-workup",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.pu-pd",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.renal",
+      "familyId": "organ_or_metabolic_panel",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-cat",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.senior-dog",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.vomiting-diarrhea",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-service.weight-loss",
+      "familyId": "composite_diagnostic_plan",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": null,
+      "comparisonStatus": "missing_candidate",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.01",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.02",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.03",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.04",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.05",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.06",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.07",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.08",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.09",
+      "familyId": "pancreatic",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.10",
+      "familyId": "pancreatic",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.11",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.12",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.13",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.14",
+      "familyId": "clinical_chemistry",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.15",
+      "familyId": "inflammation",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.16",
+      "familyId": "inflammation",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.17",
+      "familyId": "thyroid",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.18",
+      "familyId": "thyroid",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.19",
+      "familyId": "thyroid",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.20",
+      "familyId": "adrenal",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.21",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.22",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.23",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.24",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.25",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.26",
+      "familyId": "urinalysis",
+      "fixtureSpecimenKey": "cm.specimen.urine",
+      "priorNonAppliedCandidateSpecimen": "urine",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.27",
+      "familyId": "fecal_parasitology",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": "feces",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.28",
+      "familyId": "fecal_parasitology",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": "feces",
+      "comparisonStatus": "same_source_label",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.29",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "conflicting_source_labels",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.30",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.swab",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "conflicting_source_labels",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.31",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.32",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.feces",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "conflicting_source_labels",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.33",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.34",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.35",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.serum",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "cm.order.v4.lab-test.36",
+      "familyId": "infectious_disease",
+      "fixtureSpecimenKey": "cm.specimen.edta-whole-blood",
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "blood_processing_unspecified",
+      "appliedSpecimen": null
+    },
+    {
+      "orderId": "phase1.optionb.v1.order.metabolic",
+      "familyId": "legacy_exception",
+      "fixtureSpecimenKey": null,
+      "priorNonAppliedCandidateSpecimen": "blood",
+      "comparisonStatus": "unbound_fixture",
+      "appliedSpecimen": null
+    }
+  ],
+  "nextWork": "OED-LAB-02: exact CBC method/profile candidates; OED-LAB-03: actual schema audit. Reconcile other candidate conflicts before any later application."
+}

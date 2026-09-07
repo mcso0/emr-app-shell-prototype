@@ -1,0 +1,348 @@
+{
+  "schemaVersion": "clinical-master-order-research-profiles/v1",
+  "profileRevision": 1,
+  "artifactState": "non_applied_research_contract",
+  "purpose": "Deterministic category and order-family rules for generating synthetic prototype candidates without changing runtime or authoritative data.",
+  "statusContract": {
+    "availability": "active",
+    "provenance": "synthetic_research_informed",
+    "clinicalValidation": "not_clinically_validated",
+    "runtimeFallbackAllowed": false
+  },
+  "globalRules": {
+    "fieldOwnershipOrder": [
+      "master_default",
+      "workspace_override_or_resolver",
+      "encounter_planned_input",
+      "actual_or_result_record"
+    ],
+    "missingReusableValue": "unresolved_blocking",
+    "missingDisplayValue": "show_miseoljeong",
+    "patientSpecificRule": "Store the reusable basis, formula, unit, constraints, required inputs, and adjustment reason in the master contract; choose the patient value only in the chart.",
+    "actualResultRule": "Never prefill an actual preparation, administration, acquisition, measurement, interpretation, or finding as a master default.",
+    "unitRule": "Use a machine-readable unit code and validate dimensional compatibility before calculation.",
+    "roundingRule": "Do not apply a universal increment or direction. Record product or tool increment, pre-round value, chosen value, delta, reason, and authorizer.",
+    "speciesRule": "Preserve the frozen order species scope and split rules when the evidence differs by species.",
+    "evidenceClasses": [
+      "direct_source",
+      "derived_source",
+      "synthetic_assumption",
+      "unresolved"
+    ],
+    "prohibitedBehaviors": [
+      "runtime_fallback_order",
+      "runtime_fallback_field_value",
+      "uncited_clinical_number",
+      "cross_species_value_copy",
+      "planned_actual_value_conflation",
+      "review_lifecycle_gate"
+    ]
+  },
+  "profiles": {
+    "consultation.general.v1": {
+      "clinicalOrderTypes": ["consultation"],
+      "candidateDisposition": "candidate_ready_for_product_review",
+      "sourceClaimIds": ["EXAM-01"],
+      "sourceIds": ["KR-VET-RULE-13"],
+      "reusableMasterContract": [
+        "consultation subtype and scope",
+        "standard instruction and expected output",
+        "default occurrence count and timing where universally valid"
+      ],
+      "workspaceContract": [],
+      "encounterInputs": [
+        "responsible clinician resolved from the authenticated encounter context",
+        "patient-specific clinical context",
+        "consultation note and attachments"
+      ],
+      "actualResults": [
+        "assessment, diagnosis, recommendation, and completed note"
+      ],
+      "blockingConditions": [
+        "responsible clinician resolver fails closed",
+        "subtype does not define a reusable scope or output"
+      ],
+      "hospitalAdminCoreSummary": [
+        "scope or subtype",
+        "occurrence and timing",
+        "concise instruction"
+      ]
+    },
+    "dispensing.product-specific.v1": {
+      "clinicalOrderTypes": ["dispensing"],
+      "matchRule": "order is linked to an identifiable official product record with product, formulation, strength, species, route, and dosing context",
+      "candidateDisposition": "candidate_ready_for_product_review",
+      "sourceClaimIds": ["RX-01", "RX-02", "RX-03", "RX-04"],
+      "sourceIds": ["VMD-PRODUCT-DB"],
+      "reusableMasterContract": [
+        "product, active ingredient, formulation, strength or concentration",
+        "applicable species and dosing context",
+        "dose basis, coefficient or product-unit dose, route, frequency, and duration",
+        "calculation formula, variables, units, theoretical total, and dimensional checks",
+        "preparation increment, rounding policy, storage, dispenser instruction, and guardian instruction"
+      ],
+      "calculationRules": [
+        {
+          "ruleId": "dispensing.active-ingredient-target.v1",
+          "formula": "patient_measure * prescribed_coefficient",
+          "requiredInputs": ["patient_measure", "prescribed_coefficient"],
+          "output": "target_active_ingredient"
+        },
+        {
+          "ruleId": "dispensing.liquid-volume.v1",
+          "formula": "target_active_ingredient / concentration",
+          "requiredInputs": ["target_active_ingredient", "concentration"],
+          "output": "planned_liquid_volume"
+        },
+        {
+          "ruleId": "dispensing.theoretical-total.v1",
+          "formula": "planned_amount_per_administration * scheduled_administration_count",
+          "requiredInputs": [
+            "planned_amount_per_administration",
+            "frequency_schedule",
+            "duration"
+          ],
+          "output": "theoretical_total_quantity"
+        }
+      ],
+      "encounterInputs": [
+        "patient weight or other ordered basis",
+        "indication and veterinarian-selected coefficient where not fixed by the exact order",
+        "patient-specific frequency, duration, taper, contraindication, and extra-label reason",
+        "authorized adjustment and rounding reason"
+      ],
+      "actualResults": [
+        "actual prepared quantity",
+        "actual dispensed quantity",
+        "lot and expiry when tracked",
+        "dispenser and completion time"
+      ],
+      "blockingConditions": [
+        "official product identity or strength is missing",
+        "species or indication applicability is unresolved",
+        "formula dimensions do not match",
+        "rounded total lacks a product or tool rule and reason"
+      ],
+      "hospitalAdminCoreSummary": [
+        "dose and unit",
+        "route",
+        "frequency",
+        "duration",
+        "planned total quantity"
+      ]
+    },
+    "dispensing.generic-unresolved.v1": {
+      "clinicalOrderTypes": ["dispensing"],
+      "matchRule": "order lacks an identifiable product or ingredient-strength-formulation context",
+      "candidateDisposition": "unresolved_blocking",
+      "sourceClaimIds": ["RX-01", "RX-02", "RX-03"],
+      "gapIds": ["GAP-DISPENSING-51"],
+      "requiredResolution": [
+        "split the generic order into identifiable product or ingredient-strength-formulation orders",
+        "link an applicable official product document",
+        "record species and dosing context",
+        "regenerate formulas, units, instructions, and totals"
+      ],
+      "prohibitedResolution": "Do not copy values from another medicine or generate a plausible-looking dose, route, frequency, duration, or total."
+    },
+    "treatment.planned-actual-split.v1": {
+      "clinicalOrderTypes": ["treatment"],
+      "candidateDisposition": "unresolved_blocking",
+      "sourceClaimIds": ["TX-01", "TX-02"],
+      "gapIds": ["GAP-TREATMENT-AMOUNT"],
+      "reusableMasterContract": [
+        "method and preparation steps",
+        "planned amount basis, formula, unit, range, and adjustment rule when applicable",
+        "default site policy, frequency, schedule, staged instructions, and exception criteria"
+      ],
+      "encounterInputs": [
+        "patient-specific planned amount and unit",
+        "planned site",
+        "schedule adjustment and reason"
+      ],
+      "actualResults": [
+        "actual amount and unit",
+        "actual site and route",
+        "performer and time",
+        "materials, complications, outcome, and completion state"
+      ],
+      "blockingConditions": [
+        "administeredAmount remains required before confirmation",
+        "planned amount has no order-specific basis or unit",
+        "a universal fluid or treatment quantity is substituted for a patient decision"
+      ],
+      "hospitalAdminCoreSummary": [
+        "method",
+        "default or conditional site",
+        "planned amount basis and unit",
+        "frequency or schedule"
+      ]
+    },
+    "laboratory.order-result-graph.v1": {
+      "clinicalOrderTypes": ["clinical_lab", "external_lab"],
+      "candidateDisposition": "unresolved_blocking",
+      "sourceClaimIds": ["LAB-01", "LAB-02", "LAB-03", "LAB-04"],
+      "gapIds": ["GAP-LAB-REFERENCE-RANGES"],
+      "reusableMasterContract": [
+        "versioned panel and analyte membership",
+        "specimen, container, additive, minimum quantity, collection, pretreatment, storage, delay, and transport rules",
+        "result type, display unit, machine unit, precision, measuring range, method, analyzer, and site conditions",
+        "versioned reference-interval applicability and separately approved critical thresholds"
+      ],
+      "workspaceContract": [
+        "available analyzer or external provider",
+        "local method and unit mapping",
+        "locally verified or provisional reference-interval adoption state",
+        "approved critical thresholds"
+      ],
+      "encounterInputs": [
+        "clinical context",
+        "collection time and specimen condition",
+        "patient dimensions required by interval applicability"
+      ],
+      "actualResults": [
+        "raw value and comparator",
+        "reported unit and machine unit",
+        "method, analyzer, specimen, and site snapshot",
+        "applicable reference bounds and version snapshot",
+        "calculated interpretation flag and result status"
+      ],
+      "blockingConditions": [
+        "panel analytes are not versioned",
+        "specimen handling is a generic placeholder",
+        "analyzer-specific ranges are presented as locally validated",
+        "low or high flags are stored as static master defaults"
+      ],
+      "hospitalAdminCoreSummary": [
+        "specimen",
+        "test or panel",
+        "collection condition"
+      ]
+    },
+    "imaging.study-protocol.v1": {
+      "clinicalOrderTypes": ["imaging"],
+      "candidateDisposition": "candidate_ready_with_synthetic_assumption",
+      "sourceClaimIds": ["IMG-01", "IMG-02", "IMG-03"],
+      "gapIds": ["GAP-IMAGING-PROTOCOLS"],
+      "reusableMasterContract": [
+        "modality, anatomy region, view or position set, and expected acquisition count",
+        "protocol preparation, acquisition, quality check, and required output",
+        "contrast and sedation policy as required, not required, or patient-decided"
+      ],
+      "encounterInputs": [
+        "clinical question and indication",
+        "patient-specific view exceptions",
+        "contrast and sedation plan when patient-decided",
+        "limitations anticipated before acquisition"
+      ],
+      "actualResults": [
+        "actual study and image count",
+        "actual contrast, sedation, and reaction",
+        "quality and limitations",
+        "findings, impression, signature, final state, and addendum history"
+      ],
+      "blockingConditions": [
+        "modality, region, or protocol family is unresolved",
+        "a global view count is used without modality-region context",
+        "an unsupported universal contrast dose or sedation value is emitted"
+      ],
+      "hospitalAdminCoreSummary": [
+        "body region",
+        "position or views",
+        "contrast state",
+        "sedation state"
+      ]
+    },
+    "hospitalization.care-plan.v1": {
+      "clinicalOrderTypes": ["hospitalization"],
+      "candidateDisposition": "unresolved_blocking",
+      "sourceClaimIds": ["INPATIENT-01", "INPATIENT-02"],
+      "gapIds": ["GAP-WARD-RESOLVER"],
+      "reusableMasterContract": [
+        "duration, care level, monitoring interval, and nursing plan",
+        "diet assessment and plan structure",
+        "isolation applicability, escalation criteria, and handover requirements"
+      ],
+      "workspaceContract": [
+        "ward or cage selected from the authorized workspace resource catalog",
+        "workspace staffing role and monitoring capabilities"
+      ],
+      "encounterInputs": [
+        "patient-specific monitoring targets",
+        "diet amount, route, frequency, and restriction",
+        "escalation and isolation decision"
+      ],
+      "actualResults": [
+        "observations and interventions",
+        "actual intake and output",
+        "handover, escalation, and discharge events"
+      ],
+      "blockingConditions": [
+        "ward or cage resolver is absent or falls back",
+        "monitoring or diet detail is a generic placeholder",
+        "actual intake is stored as a default"
+      ],
+      "hospitalAdminCoreSummary": [
+        "duration",
+        "care level",
+        "monitoring interval",
+        "resolved ward or cage"
+      ]
+    },
+    "system-exam.structured-result.v1": {
+      "clinicalOrderTypes": ["system_exam"],
+      "candidateDisposition": "unresolved_blocking",
+      "sourceClaimIds": ["EXAM-01"],
+      "gapIds": ["GAP-SYSTEM-EXAM-SPECIES"],
+      "reusableMasterContract": [
+        "body system, comprehensive or focused scope, and examination method",
+        "conditional site, laterality, measurement, and not-examined rules"
+      ],
+      "encounterInputs": [
+        "site and laterality when applicable",
+        "scope exception and reason"
+      ],
+      "actualResults": [
+        "finding summary",
+        "measurement and unit",
+        "abnormal findings",
+        "not-examined reason and attachments"
+      ],
+      "blockingConditions": [
+        "proposed order lacks persisted master identity",
+        "species scope is unresolved",
+        "normal or abnormal finding is prefilled from the master"
+      ],
+      "hospitalAdminCoreSummary": ["body system", "exam scope", "exam method"]
+    },
+    "other.typed-work-output.v1": {
+      "clinicalOrderTypes": ["other"],
+      "candidateDisposition": "unresolved_blocking",
+      "sourceClaimIds": ["DOC-01", "EMERGENCY-01"],
+      "reusableMasterContract": [
+        "explicit subtype and structured task instruction",
+        "required actor, destination, prerequisites, output type, and completion rule for that subtype"
+      ],
+      "encounterInputs": [
+        "patient and recipient context",
+        "jurisdiction or form choice",
+        "exceptions and requested delivery behavior"
+      ],
+      "actualResults": [
+        "prepared or issued document",
+        "signatures, submission, acknowledgement, and output attachment",
+        "emergency event timeline and outcomes when applicable"
+      ],
+      "blockingConditions": [
+        "structuredValue is only a repeat of the display name",
+        "subtype-specific output or completion rule is absent",
+        "actual document or emergency result is prefilled as a default"
+      ],
+      "hospitalAdminCoreSummary": [
+        "subtype",
+        "concise instruction",
+        "destination or task behavior"
+      ]
+    }
+  }
+}
