@@ -6,6 +6,7 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { createMockOrderCatalogGateway } from "../src/features/hospital-admin/server-order-catalog-core";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import type { ChartLiveQueueRecord } from "../src/features/chart/chart-live-queue";
 import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
@@ -1468,20 +1469,23 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
       viewportAfterFilterBox,
       scrollbarAfterFilterBox,
       footerAfterFilterBox,
+      composerBox,
     ] = await Promise.all([
       orderTableSurface.boundingBox(),
       orderTableRoot.boundingBox(),
       pinnedViewport.boundingBox(),
       horizontalScrollbar.boundingBox(),
       orderFooter.boundingBox(),
+      page.getByTestId("chart-order-quick-add").boundingBox(),
     ]);
     expect(surfaceAfterFilterBox).not.toBeNull();
     expect(rootAfterFilterBox).not.toBeNull();
     expect(viewportAfterFilterBox).not.toBeNull();
     expect(scrollbarAfterFilterBox).not.toBeNull();
     expect(footerAfterFilterBox).not.toBeNull();
-    const tableBottom =
-      surfaceAfterFilterBox!.y + surfaceAfterFilterBox!.height;
+    const surfaceBottom = surfaceAfterFilterBox!.y + surfaceAfterFilterBox!.height;
+    expect(composerBox).not.toBeNull();
+    const tableBottom = surfaceBottom - composerBox!.height;
     expect(
       Math.abs(
         rootAfterFilterBox!.y + rootAfterFilterBox!.height - tableBottom,
@@ -1501,7 +1505,7 @@ test("chart Plan/Order keeps a 394px pinned region and scrolls detail columns", 
           tableBottom,
       ),
     ).toBeLessThanOrEqual(1);
-    expect(Math.abs(footerAfterFilterBox!.y - tableBottom)).toBeLessThanOrEqual(
+    expect(Math.abs(footerAfterFilterBox!.y - surfaceBottom)).toBeLessThanOrEqual(
       1,
     );
     expect(
@@ -8221,4 +8225,336 @@ test("chart confirmation continues after an ambiguous draft response only when r
       `order-queue-item-live-fulfillment-${fulfillmentWorkItemId}`,
     ),
   ).toContainText(displayName);
+});
+
+
+async function routeQuickAddCatalog(page: Page) {
+  const result = await createMockOrderCatalogGateway().listChartSearch({ workspaceId: "clair-demo" });
+  if (!result.ok) throw new Error("Synthetic chart catalog failed");
+  // Synthetic persisted defaults exercise valid autosave without inventing app defaults.
+  const baso = result.rows.find((row) => row.workspaceCatalogItemId === "ord-lab-cbc-baso");
+  if (baso) baso.appliedSnapshot.defaultDetailInputs = { specimenType: "blood", testPanel: "CBC", collectionCondition: "EDTA 전혈" };
+  await page.route("**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search", (route) =>
+    route.fulfill({ json: { ok: true, status: 200, rows: result.rows } }),
+  );
+  await page.route("**/hospital-admin/order-sets/*/expand?*", async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    const preview = await createMockOrderCatalogGateway().previewOrderSet!({
+      workspaceId: "clair-demo", encounterId: params.get("encounterId")!,
+      orderSetId: "set-vomit-basic", revisionId: params.get("revisionId")!,
+      selectionIntent: JSON.parse(params.get("selectionIntent")!),
+    });
+    await route.fulfill({ status: preview.ok ? 200 : preview.status, json: preview });
+  });
+  return result.rows;
+}
+
+test("chart quick-add continuously appends without resending unchanged orders", async ({ page }) => {
+  const catalog = await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const quantity = page.getByLabel("Maropitant 16mg T 수량 수정");
+  await quantity.fill("2");
+  await quantity.press("Tab");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("저장됨");
+  const sentRows: Array<Array<Record<string, unknown>>> = [];
+  await page.route("**/api/workspaces/clair-demo/chart/order-drafts*", async (route) => {
+    if (route.request().method() === "PATCH") sentRows.push(route.request().postDataJSON().rows);
+    await route.fallback();
+  });
+  const existingIds = new Set(kongDefaultOrderDraftRows.map((row) => row.workspaceCatalogItemId));
+  const candidates = catalog.filter((row) => row.rowType === "individual" && row.targetSpecies.includes("dog") &&
+    !existingIds.has(row.workspaceCatalogItemId ?? row.sourcePresetId)).slice(0, 2);
+  expect(candidates).toHaveLength(2);
+  const composer = page.getByTestId("chart-order-quick-add");
+  await composer.getByRole("button", { name: "Order 추가", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "오더 빠른 검색", exact: true });
+  await expect(input).toBeFocused();
+  await expect(page.getByText("오더명 또는 청구명을 입력해 주세요.")).toBeVisible();
+  for (const candidate of candidates) {
+    await input.fill(candidate.displayName);
+    await expect(page.getByRole("listbox", { name: "오더 빠른 검색 결과" }).getByRole("option").first()).toContainText(candidate.displayName);
+    await input.press("Enter");
+    await expect(input).toHaveValue("");
+    await expect(input).toBeFocused();
+    await expect(page.getByLabel(`${candidate.displayName} 수량 수정`, { exact: true }).last()).toBeVisible();
+  }
+  const basoQuantity = page.getByLabel("[CBC 검사] #BASO 수량 수정", { exact: true });
+  await expect(basoQuantity).toHaveValue("");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("입력 확인 필요");
+  await basoQuantity.fill("1");
+  await basoQuantity.press("Tab");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("저장됨");
+  expect(sentRows.length).toBeGreaterThan(0);
+  for (const rows of sentRows) {
+    expect(rows.every((row) => !existingIds.has(String(row.workspaceCatalogItemId)))).toBe(true);
+  }
+  await expect(quantity.first()).toHaveValue("2");
+  for (const row of kongDefaultOrderDraftRows) await expect(page.getByTestId(`chart-order-row-${row.orderId}`)).toBeVisible();
+  await page.screenshot({ path: "test-results/quick-add-continuous.png" });
+  await restoreKongOrderDraftDefaults(page);
+});
+
+async function openQuickAddForTest(page: Page, query = "") {
+  await page.getByTestId("chart-order-quick-add").getByRole("button", { name: "Order 추가", exact: true }).click();
+  const input = page.getByRole("combobox", { name: "오더 빠른 검색", exact: true });
+  await expect(input).toBeFocused();
+  if (query) await input.fill(query);
+  return input;
+}
+
+test("chart quick-add preserves query and focus through detailed search and set cancellation", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const input = await openQuickAddForTest(page, "BASO");
+  await expect(page.getByRole("option").filter({ hasText: "#BASO" })).toBeVisible();
+  await page.getByRole("button", { name: "상세 오더 검색" }).click();
+  const catalog = page.getByRole("dialog", { name: "오더 추가", exact: true });
+  await expect(catalog).toBeVisible();
+  await expect(catalog.getByRole("combobox", { name: "전체 오더 검색", exact: true })).toHaveValue("BASO");
+  await page.keyboard.press("Escape");
+  await expect(catalog).toBeHidden();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("BASO");
+  await input.fill("구토 기본 세트");
+  await expect(page.getByRole("option").filter({ hasText: "구토 기본 세트" })).toBeVisible();
+  await input.press("Enter");
+  const setDialog = page.getByRole("dialog", { name: "구토 기본 세트 구성 선택", exact: true });
+  await expect(setDialog).toBeVisible();
+  await setDialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("구토 기본 세트");
+  await expect(page.getByTestId("chart-order-row-order-kong-maropitant")).toBeVisible();
+  await input.press("Escape");
+  await expect(page.getByTestId("chart-order-quick-add").getByRole("button", { name: "Order 추가", exact: true })).toBeFocused();
+});
+
+test("chart quick-add hides only for total-empty and restores after existing first-add flow", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await saveKongOrderDraftRows(page, [], { removeOmittedTopLevelRows: true });
+  await page.reload();
+  const composer = page.getByTestId("chart-order-quick-add");
+  await expect(composer).toHaveCount(0);
+  await page.getByTestId("chart-order-empty-body").getByRole("button", { name: "+ Order", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "오더 추가", exact: true });
+  await searchChartOrderCatalog(dialog, "BASO");
+  await page.getByTestId("chart-order-catalog-candidate-std-ord-lab-cbc-baso").click();
+  await confirmChartOrderCatalogSelection(dialog, 1);
+  await expect(composer).toBeVisible();
+  await page.getByRole("tab", { name: "영상 0", exact: true }).click();
+  await expect(page.getByTestId("chart-order-empty-body")).toBeVisible();
+  await expect(composer).toBeVisible();
+  await page.getByRole("tab", { name: /전체오더 1/, exact: true }).click();
+  await page.getByRole("button", { name: "[CBC 검사] #BASO 후보 삭제", exact: true }).click({ force: true });
+  await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(composer).toHaveCount(0);
+  await expect(page.getByTestId("chart-order-empty-body").getByRole("button", { name: "+ Order", exact: true })).toBeVisible();
+  await restoreKongOrderDraftDefaults(page);
+});
+
+test("chart quick-add blocks IME and duplicates while awaiting save acknowledgment", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  let releaseSave!: () => void;
+  const gate = new Promise<void>((resolve) => { releaseSave = resolve; });
+  let gated = false;
+  const addedIds: string[] = [];
+  await page.route("**/api/workspaces/clair-demo/chart/order-drafts*", async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    const rows = route.request().postDataJSON().rows as Array<{ orderId: string; workspaceCatalogItemId: string }>;
+    const added = rows.filter((row) => row.workspaceCatalogItemId === "ord-med-maropitant");
+    if (!added.length || gated) return route.fallback();
+    addedIds.push(...added.map((row) => row.orderId));
+    gated = true;
+    const response = await route.fetch();
+    await gate;
+    await route.fulfill({ response });
+  });
+  try {
+    const input = await openQuickAddForTest(page, "Maropitant");
+    const option = page.getByRole("option").filter({ hasText: "Maropitant" });
+    await expect(option).toBeVisible();
+    await input.dispatchEvent("keydown", { key: "Enter", code: "Enter", isComposing: true });
+    await expect(input).toHaveValue("Maropitant");
+    await expect(page.getByLabel("Maropitant 16mg T 수량 수정", { exact: true })).toHaveCount(1);
+    await input.press("Enter");
+    await expect.poll(() => gated).toBe(true);
+    await expect(page.getByTestId("chart-order-save-status")).toContainText("저장 중");
+    await input.fill("Maropitant");
+    await expect(option).toBeDisabled();
+    await expect(option).toContainText("이미 추가됨");
+    await input.press("Enter");
+    await expect(page.getByLabel("Maropitant 16mg T 수량 수정", { exact: true })).toHaveCount(2);
+    expect(addedIds).toHaveLength(1);
+    releaseSave();
+    await expect(page.getByTestId("chart-order-save-status")).toContainText("저장됨");
+  } finally {
+    releaseSave();
+  }
+  await restoreKongOrderDraftDefaults(page);
+});
+
+test("chart quick-add distinguishes lookup errors and measures the pinned column span", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  let fail = true;
+  await page.route("**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search", (route) =>
+    fail ? route.fulfill({ status: 503, json: { ok: false, error: "unavailable" } }) : route.fallback(),
+  );
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const input = await openQuickAddForTest(page);
+  await expect(page.getByText("오더를 불러오지 못했습니다.", { exact: true })).toBeVisible();
+  await expect(page.getByText("검색 결과가 없습니다", { exact: true })).toHaveCount(0);
+  fail = false;
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(page.getByText("오더명 또는 청구명을 입력해 주세요.")).toBeVisible();
+  await input.fill("존재하지않는항목");
+  await expect(page.getByText("검색 결과가 없습니다", { exact: true })).toBeVisible();
+  await input.fill("BASO");
+  await expect(page.getByRole("option").filter({ hasText: "#BASO" })).toBeVisible();
+  for (const width of [1440, 1100]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const surface = page.locator('[data-slot="chart-order-table-surface"]');
+    const category = surface.locator('thead [data-column-id="orderType"]');
+    const name = surface.locator('thead [data-column-id="displayName"]');
+    await expect.poll(async () => {
+      const [anchor, left, right] = await Promise.all([input.boundingBox(), category.boundingBox(), name.boundingBox()]);
+      return Math.abs(anchor!.x - left!.x) + Math.abs(anchor!.width - (right!.x + right!.width - left!.x));
+    }).toBeLessThan(2);
+    const popover = page.getByRole("dialog", { name: "오더 빠른 추가", exact: true });
+    await expect(popover).toBeVisible();
+    const box = (await popover.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(1000);
+  }
+  await page.screenshot({ path: "test-results/quick-add-search.png" });
+});
+
+test("chart quick-add applies the existing set preview and returns to continuous entry", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const input = await openQuickAddForTest(page, "구토 기본 세트");
+  await expect(page.getByRole("option").filter({ hasText: "구토 기본 세트" })).toBeVisible();
+  await input.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "구토 기본 세트 구성 선택", exact: true });
+  await expect(dialog.getByRole("button", { name: "구성 적용", exact: true })).toBeEnabled();
+  await dialog.getByRole("button", { name: "구성 적용", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("저장됨");
+  await expect(page.locator('tr[data-testid^="chart-order-row-"]').filter({ has: page.getByText("구토 기본 세트", { exact: true }) })).toHaveCount(1);
+  await restoreKongOrderDraftDefaults(page);
+});
+
+test("chart quick-add retains failed additions and prevents re-append on retry", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  let fail = true;
+  const addedIds: string[] = [];
+  await page.route("**/api/workspaces/clair-demo/chart/order-drafts*", async (route) => {
+    if (route.request().method() !== "PATCH") return route.fallback();
+    const rows = route.request().postDataJSON().rows as Array<{ orderId: string; workspaceCatalogItemId: string }>;
+    const added = rows.find((row) => row.workspaceCatalogItemId === "ord-med-maropitant");
+    if (!added) return route.fallback();
+    addedIds.push(added.orderId);
+    if (fail) return route.fulfill({ status: 503, json: { ok: false, error: "save_failed" } });
+    await route.fallback();
+  });
+  const input = await openQuickAddForTest(page, "Maropitant");
+  await expect(page.getByRole("option").filter({ hasText: "Maropitant" })).toBeVisible();
+  await input.press("Enter");
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("저장 실패");
+  await input.fill("Maropitant");
+  await expect(page.getByRole("option").filter({ hasText: "Maropitant" })).toBeDisabled();
+  await input.press("Enter");
+  await expect(page.getByLabel("Maropitant 16mg T 수량 수정", { exact: true })).toHaveCount(2);
+  await input.press("Escape");
+  fail = false;
+  await page.getByRole("button", { name: "다시 저장", exact: true }).click();
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("저장됨");
+  expect(addedIds.length).toBeGreaterThan(1);
+  expect(new Set(addedIds).size).toBe(1);
+  await restoreKongOrderDraftDefaults(page);
+});
+
+test("chart quick-add ignores cancelled set preview and apply responses", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  for (const phase of ["preview", "apply"]) {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let calls = 0;
+    let gated = false;
+    let delivered = false;
+    const pattern = "**/hospital-admin/order-sets/*/expand?*";
+    const handler = async (route: Route) => {
+      calls += 1;
+      if (calls !== (phase === "preview" ? 1 : 2)) return route.fallback();
+      const params = new URL(route.request().url()).searchParams;
+      const preview = await createMockOrderCatalogGateway().previewOrderSet!({
+        workspaceId: "clair-demo", encounterId: params.get("encounterId")!,
+        orderSetId: "set-vomit-basic", revisionId: params.get("revisionId")!,
+        selectionIntent: JSON.parse(params.get("selectionIntent")!),
+      });
+      gated = true;
+      await gate;
+      await route.fulfill({ status: preview.ok ? 200 : preview.status, json: preview });
+      delivered = true;
+    };
+    await page.route(pattern, handler);
+    const input = await openQuickAddForTest(page, "구토 기본 세트");
+    await expect(page.getByRole("option").filter({ hasText: "구토 기본 세트" })).toBeVisible();
+    await input.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "구토 기본 세트 구성 선택", exact: true });
+    if (phase === "apply") await dialog.getByRole("button", { name: "구성 적용", exact: true }).click();
+    await expect.poll(() => gated).toBe(true);
+    await dialog.getByRole("button", { name: "취소", exact: true }).click();
+    release();
+    await expect.poll(() => delivered).toBe(true);
+    await expect(input).toBeFocused();
+    await expect(input).toHaveValue("구토 기본 세트");
+    await expect(page.locator('tr[data-testid^="chart-order-row-"]').filter({ has: page.getByText("구토 기본 세트", { exact: true }) })).toHaveCount(0);
+    await expect(page.locator('tr[data-testid^="chart-order-row-"]')).toHaveCount(4);
+    await input.press("Escape");
+    await page.unroute(pattern, handler);
+  }
+});
+
+test("chart quick-add scrolls only long results and keeps its anchor during horizontal table scroll", async ({ page }) => {
+  const catalog = await routeQuickAddCatalog(page);
+  const template = catalog.find((row) => row.workspaceCatalogItemId === "ord-lab-cbc-baso")!;
+  const rows = Array.from({ length: 18 }, (_, index) => ({
+    ...template, workspaceCatalogItemId: `quick-search-fixture-${index}`,
+    displayName: `Quick ${String(index + 1).padStart(2, "0")}`, billingName: "Quick fixture",
+  }));
+  await page.route("**/hospital-admin/order-catalog?mode=chart-search", (route) => route.fulfill({ json: { ok: true, rows } }));
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const input = await openQuickAddForTest(page, "Quick");
+  const list = page.getByRole("listbox", { name: "오더 빠른 검색 결과" });
+  await expect(list.getByRole("option")).toHaveCount(18);
+  const initialWindowScroll = await page.evaluate(() => window.scrollY);
+  await input.press("ArrowUp");
+  await expect(input).toHaveAttribute("aria-activedescendant", await list.getByRole("option").last().getAttribute("id") as string);
+  await expect.poll(() => list.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  const [listBox, lastBox] = await Promise.all([list.boundingBox(), list.getByRole("option").last().boundingBox()]);
+  expect(lastBox!.y).toBeGreaterThanOrEqual(listBox!.y - 1);
+  expect(lastBox!.y + lastBox!.height).toBeLessThanOrEqual(listBox!.y + listBox!.height + 1);
+  expect(await page.evaluate(() => window.scrollY)).toBe(initialWindowScroll);
+  await input.press("ArrowDown");
+  await expect(input).toHaveAttribute("aria-activedescendant", await list.getByRole("option").first().getAttribute("id") as string);
+  const before = (await input.boundingBox())!;
+  const scrollOwner = page.locator('[data-slot="chart-order-table-surface"] [data-emr-pinned-table-scroll-owner="true"]');
+  await scrollOwner.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+  await expect.poll(async () => Math.abs((await input.boundingBox())!.x - before.x)).toBeLessThan(1);
+  await expect(input).toBeFocused();
 });

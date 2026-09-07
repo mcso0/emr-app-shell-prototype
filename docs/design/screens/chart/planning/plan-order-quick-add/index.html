@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CLAiR · 오더 빠른 추가 시안</title>
+  <link rel="stylesheet" href="prototype.css">
+  <script src="prototype.js" defer></script>
+</head>
+<body>
+  <header class="review-header">
+    <div class="identity"><img src="clair-logo-mark.svg" alt="CLAiR"><div><div class="eyebrow">CHART EXPERIENCE · DESIGN REVIEW 01</div><h1>오더를 추가하고, 바로 다음 오더로.</h1></div></div>
+    <div class="review-actions"><span class="prototype-label">인터랙티브 시안</span><button id="planButton">기획 보기</button></div>
+  </header>
+  <section class="review-tools" aria-label="시안 검토 도구">
+    <label for="scenario">확인할 상황</label><select id="scenario"><option value="base">기본 · 오더 3개</option><option value="search">검색 · CBC</option><option value="empty">첫 오더 추가</option><option value="long">긴 목록 · 오더 18개</option><option value="lookupError">검색 실패</option><option value="saveError">저장 실패</option><option value="readonly">읽기 전용</option></select>
+    <button id="resetButton">처음으로</button>
+    <div class="tool-divider"></div><button id="narrowButton" aria-pressed="false">좁은 패널</button><button id="contextButton" aria-pressed="false">오더 집중 보기</button>
+    <span class="fixture-note">가상 데이터 · 실제 차트에 저장되지 않아요</span>
+  </section>
+  <main>
+    <div class="workspace" id="workspace">
+      <aside class="rail" aria-label="차트 화면 맥락"><img src="clair-logo-mark.svg" alt=""><span>홈</span><span>접수</span><span class="current">진료</span><span>검사</span><span>수납</span></aside>
+      <div class="chart">
+        <div class="patient"><strong>데모 환자</strong><span>개 · 중성화 수컷 · 7세</span><span class="vertical-line"></span><span>가상 차트</span><span class="patient-meta">전체 데이터는 시안용 예시입니다</span></div>
+        <div class="chart-title"><strong>차트 <span>26.09.06</span></strong><span>재진</span><span class="chart-id">DEMO-001</span><span class="chart-state">진료중</span></div>
+        <div class="clinical-context" id="clinicalContext">
+          <section><h2>Subject/Object</h2><div class="context-tabs">기본 S/O</div><p><b>S</b> 보호자 문진 및 주호소 기록</p><p><b>O</b> 신체검사와 관찰 결과 기록</p></section>
+          <section><h2>Assessment</h2><div class="context-tabs muted">계통 전체 <span>진단명 검색</span></div><div class="context-empty">진단 기록 영역</div></section>
+          <section><h2>History</h2><div class="context-tabs muted">진단이력</div><p class="muted">26.09.03</p><p>이전 진료 기록</p></section>
+        </div>
+        <section class="order-panel" aria-labelledby="orderHeading">
+          <div class="panel-heading"><h2 id="orderHeading">Plan/Order</h2><span class="muted">미확정 오더</span></div>
+          <div class="order-toolbar"><div id="categories" class="tabs" role="group" aria-label="오더 분류"></div><div class="toolbar-end"><span class="density">좁은 간격</span><button id="catalogButton">+ Order</button></div></div>
+          <div class="notice" id="notice" hidden></div>
+          <div class="table-wrap" id="tableWrap">
+            <div class="table-scroll" id="tableScroll" tabindex="-1"><table aria-label="처방 오더 시안"><colgroup id="columns"></colgroup><thead><tr id="headers"></tr></thead><tbody id="rows"></tbody></table><div class="table-bottom-space"></div></div>
+            <div class="empty-table" id="emptyTable" hidden><strong>아직 추가한 오더가 없습니다</strong><span id="emptyHint">오더를 추가해 주세요.</span><button id="emptyCatalogButton">+ Order</button></div>
+            <div class="composer" id="composer">
+              <button class="add-trigger" id="addTrigger"><span class="plus">+</span> Order 추가</button>
+              <div class="search-box" id="searchBox" hidden><span class="search-icon" aria-hidden="true"></span><input id="quickSearch" role="combobox" aria-label="오더 빠른 검색" aria-autocomplete="list" aria-controls="results" aria-expanded="false" autocomplete="off" placeholder="오더명·청구명 검색"><button id="closeSearch" class="close-button" aria-label="빠른 검색 닫기" title="빠른 검색 닫기"><svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.4697 5.46967C17.7626 5.17678 18.2374 5.17678 18.5302 5.46967C18.823 5.76257 18.8231 6.23736 18.5302 6.53022L13.0605 12L18.5302 17.4697C18.823 17.7626 18.8231 18.2374 18.5302 18.5302C18.2374 18.8231 17.7626 18.823 17.4697 18.5302L12 13.0605L6.53022 18.5302C6.23736 18.8231 5.76257 18.823 5.46967 18.5302C5.17678 18.2374 5.17678 17.7626 5.46967 17.4697L10.9394 12L5.46967 6.53022C5.17678 6.23733 5.17678 5.76256 5.46967 5.46967C5.76256 5.17678 6.23733 5.17678 6.53022 5.46967L12 10.9394L17.4697 5.46967Z" fill="currentColor"/></svg></button></div>
+            </div>
+          </div>
+          <footer class="bill"><div class="bill-left"><strong id="orderCount">오더 3건</strong><span class="separator">·</span><span id="saveState">변경 없음</span><span class="vertical-line"></span><span>확정 전 <b id="draftCount">3</b></span></div><div class="bill-right"><span>청구 예상 총액</span><strong id="amount">93,300원</strong><span class="fixture-amount">예시</span><button disabled title="확정·청구는 이번 시안 범위에 포함하지 않습니다">Order 청구</button></div></footer>
+        </section>
+      </div>
+    </div>
+    <div class="review-caption"><span class="step-marker">01</span><p id="scenarioHint">마지막 오더 아래의 <b>+ Order 추가</b>를 눌러 보세요. CBC, 방사선, 세트로 검색할 수 있어요.</p><span class="key-hints"><kbd>↑</kbd><kbd>↓</kbd> 이동 <kbd>Enter</kbd> 추가 <kbd>Esc</kbd> 닫기</span></div>
+  </main>
+  <div class="popover" id="popover" hidden>
+    <div class="result-heading"><span id="resultHeading">오더 검색</span><span class="muted" id="resultCount"></span></div>
+    <div id="results" role="listbox" aria-label="오더 검색 결과"></div>
+    <button class="full-catalog" id="fullCatalog">상세 오더 검색 <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8.67745 5.85384C8.95312 5.57818 9.39995 5.57818 9.67562 5.85384L15.3227 11.5009C15.5984 11.7766 15.5984 12.2234 15.3227 12.4991L9.67562 18.1462C9.39995 18.4218 8.95312 18.4218 8.67745 18.1462C8.40179 17.8705 8.40179 17.4237 8.67745 17.148L13.8255 12L8.67745 6.85201C8.40179 6.57634 8.40179 6.12951 8.67745 5.85384Z" fill="currentColor"/></svg></button>
+  </div>
+  <div class="announcement" id="announcement" role="status" aria-live="polite"></div>
+  <dialog id="catalogDialog" aria-labelledby="catalogTitle"><form method="dialog" class="dialog-head"><div><div class="eyebrow">전체 카탈로그</div><h2 id="catalogTitle">오더 추가</h2></div><button aria-label="전체 오더 닫기">닫기</button></form><div class="dialog-body"><p class="muted">빠른 검색의 검색어를 이어받아요. 항목을 선택해 추가할 수 있어요.</p><input id="catalogSearch" aria-label="전체 카탈로그 검색" placeholder="오더명·청구명 검색"><div id="catalogList" class="catalog-list"></div></div><div class="dialog-foot"><span id="catalogCount">선택한 오더 0개</span><button id="catalogApply" class="primary" disabled>선택한 오더 추가</button></div></dialog>
+  <dialog id="setDialog" aria-labelledby="setTitle"><form method="dialog" class="dialog-head"><div><div class="eyebrow">세트 구성 확인</div><h2 id="setTitle">기본 검사 세트</h2></div><button aria-label="세트 구성 닫기">닫기</button></form><div class="dialog-body"><p>추가할 구성 항목을 확인해 주세요.</p><div id="setItems" class="set-items"></div><p class="small muted">구성·금액은 시안용 예시입니다. 실제 구현에서는 기존 세트 구성창을 사용합니다.</p></div><div class="dialog-foot"><span id="setCount"></span><button id="setApply" class="primary">구성 확인 후 추가</button></div></dialog>
+  <dialog id="removeDialog" aria-labelledby="removeTitle"><div class="dialog-head"><h2 id="removeTitle">미확정 오더 삭제</h2></div><div class="dialog-body"><p id="removeMessage"></p><p class="muted small">이 시안의 가상 목록에서만 삭제됩니다.</p></div><div class="dialog-foot"><button id="removeCancel">취소</button><button id="removeApply" class="primary">삭제</button></div></dialog>
+  <dialog id="planDialog" class="plan-dialog" aria-labelledby="planTitle"><form method="dialog" class="dialog-head"><div><div class="eyebrow">DESIGN SPEC · 2026.09.06</div><h2 id="planTitle">Plan/Order 빠른 추가 기획</h2></div><button>닫기</button></form><div class="dialog-body plan-body">
+    <p class="plan-lead">익숙한 오더를, 목록을 보던 자리에서<br><strong>검색하고 연속으로 추가합니다.</strong></p>
+    <div class="plan-grid"><section><h3>확정한 방향</h3><p>오더가 1개 이상일 때 마지막 오더 아래에 + Order 추가를 표시합니다. 클릭하면 검색으로 전환하고, 하나를 추가해도 입력창과 포커스를 유지합니다.</p></section><section><h3>이번 단계</h3><p>기획과 클릭 가능한 시안까지. 실제 앱 구현·데이터 연결·배포는 다음 단계입니다.</p></section></div>
+    <h3>첫 오더와 표시 조건</h3><p>오더가 0개면 하단 빠른 추가를 숨기고 기존 빈 상태의 + Order 버튼으로 첫 오더를 추가합니다. 첫 추가 뒤 하단 빠른 추가가 나타나고, 마지막 오더를 삭제하면 다시 숨깁니다. 현재 분류만 비어 있고 다른 분류에 오더가 있으면 빠른 추가를 유지합니다.</p>
+    <h3>세 가지 동작 원칙</h3><ol><li><b>전체에서 찾기</b> — 분류를 먼저 고르지 않고 오더명·청구명으로 검색합니다.</li><li><b>선택은 미확정 추가</b> — 단일 오더는 바로 추가하고 세트는 구성 확인을 거칩니다.</li><li><b>다음 검색으로 이어가기</b> — 검색어는 비우고 포커스는 유지합니다. 저장은 별도 상태로 표시합니다.</li></ol>
+    <h3>위치와 밀도</h3><p>분류 제목과 값을 왼쪽 정렬하고, 추가 버튼은 보조 문구 없이 + Order 추가로 표시합니다. 40px 추가행과 36px 입력창을 기준으로 잡았습니다. 버튼·입력창·결과창의 너비는 분류 열 시작부터 고정된 Order 명 열의 오른쪽 경계까지 맞춥니다(현재 332px). 긴 목록에서는 같은 추가행을 청구 요약 위에 고정하고, 좁은 패널에서도 같은 열 기준으로 정렬하고 사용 가능한 너비 안에 맞춥니다. 결과창은 남는 공간에 따라 위·아래로 열립니다.</p>
+    <h3>검색창과 결과 표시</h3><ul><li>입력창 플레이스홀더는 ‘오더명·청구명 검색’입니다.</li><li>입력 전에는 제목·건수·예시 검색어를 숨기고 ‘오더명 또는 청구명을 입력해 주세요.’만 안내합니다.</li><li>검색 후 ‘검색 결과 3건’처럼 제목과 건수를 6px 간격으로 붙입니다. 결과 없음은 0건, 검색 실패는 제목과 건수를 숨깁니다.</li><li>결과 항목은 분류·오더명·가격만 표시하고 이름 아래 보조 설명을 넣지 않습니다.</li><li>입력 전·결과 없음·오류 안내에는 결과 스크롤바를 표시하지 않습니다. 실제 결과 목록이 넘칠 때만 스크롤합니다.</li><li>검색 닫기는 CDS X 아이콘이며 접근성 이름은 ‘빠른 검색 닫기’입니다. ‘상세 오더 검색’ 뒤에는 CDS 오른쪽 꺾쇠를 표시합니다.</li></ul>
+    <h3>실수와 실패를 다루는 방법</h3><ul><li>이미 추가한 오더와 저장 중인 오더는 다시 넣지 않습니다.</li><li>저장 실패 시 행을 남기고 ‘다시 저장’을 제공합니다. 성공 안내는 저장이 끝난 뒤 표시합니다.</li><li>현재 분류에 안 보이는 항목을 추가하면 ‘전체에서 보기’로 안내합니다.</li><li>검색 결과 없음·검색 실패·읽기 전용을 다른 상태로 표시합니다.</li><li>한글 조합 중 Enter는 오더 추가로 처리하지 않습니다.</li></ul>
+    <h3>현재 앱과 연결할 부분</h3><p>‘상세 오더 검색’은 상단·빈 상태의 + Order와 동일한 기존 오더 추가 다이얼로그로 연결하고 검색어를 이어받습니다. 기존 카탈로그 조회, 미확정 오더 추가·저장, 세트 구성창을 재사용합니다. 기존 전체 선택창의 목록 교체 로직과 빠른 추가 로직을 구분해, 기존 오더가 사라지지 않게 합니다.</p>
+    <h3>다음으로 검토할 것</h3><p>추가행의 위치와 검색창 크기, 연속 추가 시 시선 이동, 긴 목록 고정 방식이 편한지 확인합니다. 이후 실제 사용자에게 익숙한 오더 3개를 추가하게 해 시간과 수정 횟수를 비교합니다.</p>
+    <p class="small muted">최근 사용·즐겨찾기·AI 추천·새 오더 생성은 첫 구현에서 제외합니다. 정렬·동시 저장 충돌·환자 전환·실제 가격 계산은 시안 검증 범위 밖이며 앱 구현 단계에서 검증합니다.</p>
+    <div class="sources"><a href="https://support.airtable.com/articles/4087973664-adding-duplicating-and-deleting-airtable-records" target="_blank" rel="noreferrer">Airtable · 행 추가 ↗</a><a href="https://support.airtable.com/articles/3370222027-linking-records-in-airtable" target="_blank" rel="noreferrer">Airtable · 선택창 ↗</a><a href="https://linear.app/docs/assigning-issues" target="_blank" rel="noreferrer">Linear · 연속 생성 ↗</a><a href="spec.md" target="_blank">상세 기획 문서 ↗</a></div>
+  </div></dialog>
+</body>
+</html>

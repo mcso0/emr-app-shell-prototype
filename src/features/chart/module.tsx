@@ -37,9 +37,12 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   useCallback,
   useEffect,
+  useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type Dispatch,
   type KeyboardEvent,
   type PointerEvent,
@@ -59,7 +62,7 @@ import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
+import { CdsNavigationChevronDownIcon, CdsNavigationChevronRightIcon } from "@/components/cds-icons/navigation";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
@@ -78,6 +81,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrIconButton } from "@/components/emr/icon-button";
+import { EmrPopoverHeader, EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
@@ -6562,6 +6566,9 @@ function ChartOrderActualDispenseCell({
 }
 
 function ChartOrderTable({
+  quickAdd,
+  revealOrderId,
+  highlightedOrderId,
   selectionActionsHidden,
   actualDispenseSavingOrderIds,
   intendedAssigneeLoadingOrderIds,
@@ -6600,6 +6607,9 @@ function ChartOrderTable({
   sortState,
   writeDisabled,
 }: {
+  quickAdd?: ReactNode;
+  revealOrderId?: string;
+  highlightedOrderId?: string;
   selectionActionsHidden: boolean;
   actualDispenseSavingOrderIds: Set<string>;
   intendedAssigneeLoadingOrderIds: Set<string>;
@@ -6662,6 +6672,10 @@ function ChartOrderTable({
     emrTableDensityOptions.find((option) => option.value === density)
       ?.headerHeight ?? 36;
   const [columnSizing, setColumnSizing] = useState<Record<string, number>>({});
+  const quickAddSurfaceRef = useRef<HTMLDivElement>(null);
+  const quickAddComposerRef = useRef<HTMLDivElement>(null);
+  const revealedOrderIdRef = useRef<string | undefined>(undefined);
+  const showQuickAdd = hasAnyRows && !loading && Boolean(quickAdd);
   const editableCallbacksRef = useRef({
     onFlushDraft,
     onLoadIntendedAssignees,
@@ -6835,6 +6849,7 @@ function ChartOrderTable({
         },
         meta: {
           label: chartOrderSortLabels.orderType,
+          align: "left",
           headerInteraction: "sortable",
           resize: "none",
         },
@@ -7722,12 +7737,66 @@ function ChartOrderTable({
     },
   });
 
+  // Measure the live table and control, including resized columns and density.
+  // The composer is outside the horizontal scroll canvas and never becomes a row.
+  useLayoutEffect(() => {
+    const surface = quickAddSurfaceRef.current;
+    const composer = quickAddComposerRef.current;
+    if (!surface) return;
+    if (!showQuickAdd || !composer) {
+      surface.style.removeProperty("--chart-order-quick-add-space");
+      return;
+    }
+    const scrollOwner = surface.querySelector<HTMLElement>(
+      '[data-emr-pinned-table-scroll-owner="true"]',
+    );
+    const categoryHeader = surface.querySelector<HTMLElement>('thead [data-column-id="orderType"]');
+    const nameHeader = surface.querySelector<HTMLElement>('thead [data-column-id="displayName"]');
+    const body = surface.querySelector("tbody");
+    const updatePosition = () => {
+      if (!categoryHeader || !nameHeader) return;
+      const bounds = surface.getBoundingClientRect();
+      const categoryBounds = categoryHeader.getBoundingClientRect();
+      const left = categoryBounds.left - bounds.left;
+      composer.style.left = `${left}px`;
+      composer.style.width = `${Math.max(0, Math.min(nameHeader.getBoundingClientRect().right - categoryBounds.left, bounds.width - left))}px`;
+      const height = composer.getBoundingClientRect().height;
+      surface.style.setProperty("--chart-order-quick-add-space", `${height}px`);
+      const dockTop = Math.max(0, surface.clientHeight - height);
+      const lastRow = body?.querySelector<HTMLElement>('tr[data-testid^="chart-order-row-"]:last-child');
+      const rowBottom = lastRow?.getBoundingClientRect().bottom;
+      const headerBottom = categoryBounds.bottom - bounds.top;
+      const naturalTop = rowBottom === undefined ? dockTop : rowBottom - bounds.top;
+      composer.style.top = `${Math.min(dockTop, Math.max(headerBottom, naturalTop))}px`;
+    };
+    if (revealOrderId && revealOrderId !== revealedOrderIdRef.current && !sortState) {
+      const addedRow = Array.from(body?.querySelectorAll<HTMLElement>('tr[data-testid]') ?? [])
+        .find((row) => row.dataset.testid === `chart-order-row-${revealOrderId}`);
+      if (addedRow && scrollOwner) {
+        const overflow = addedRow.getBoundingClientRect().bottom - scrollOwner.getBoundingClientRect().bottom;
+        if (overflow > 0) scrollOwner.scrollTop += overflow;
+        revealedOrderIdRef.current = revealOrderId;
+      }
+    }
+    updatePosition();
+    const observer = new ResizeObserver(updatePosition);
+    [surface, composer, categoryHeader, nameHeader, body].forEach((node) => {
+      if (node) observer.observe(node);
+    });
+    surface.addEventListener("scroll", updatePosition, true);
+    return () => {
+      observer.disconnect();
+      surface.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [columnSizing, density, revealOrderId, rows, showQuickAdd, sortState]);
+
   return (
     <div
       data-slot="chart-order-table-surface"
       className="h-full overflow-hidden bg-[var(--emr-surface-panel)]"
     >
-      <div className="relative flex h-full min-h-0 min-w-0">
+      <div ref={quickAddSurfaceRef} className="relative h-full min-h-0 min-w-0">
+        <div className="flex h-full min-h-0" style={{ paddingBottom: "var(--chart-order-quick-add-space, 0px)" }}>
         <EmrDataTable
           aria-label="처방/오더 테이블"
           className="bg-[var(--emr-surface-panel)] [--emr-table-row-height-compact:40px]"
@@ -8025,6 +8094,9 @@ function ChartOrderTable({
           }}
           getRowProps={(row) => ({
             className: cn("text-[var(--emr-text-secondary)]"),
+            style: row.original.order.id === highlightedOrderId && !invalidOrderIds.has(row.original.order.id)
+              ? { "--emr-table-row-state-surface": "var(--emr-status-info-bg)" } as CSSProperties
+              : undefined,
             "data-dirty": isChartOrderDraftRowDirty(row.original)
               ? "true"
               : undefined,
@@ -8040,7 +8112,7 @@ function ChartOrderTable({
           <EmrTableFeedbackSurface
             className="absolute inset-x-0 bottom-0 z-20 overflow-auto"
             data-testid="chart-order-empty-body"
-            style={{ top: tableHeaderHeight }}
+            style={{ top: tableHeaderHeight, bottom: "var(--chart-order-quick-add-space, 0px)" }}
           >
             <EmrEmptyState
               description={
@@ -8071,6 +8143,16 @@ function ChartOrderTable({
               }
             />
           </EmrTableFeedbackSurface>
+        ) : null}
+        </div>
+        {showQuickAdd ? (
+          <div
+            ref={quickAddComposerRef}
+            data-testid="chart-order-quick-add"
+            className="absolute z-30 min-h-[calc(var(--clair-control-height-xl)+var(--spacing)*3)] py-1.5"
+          >
+            {quickAdd}
+          </div>
         ) : null}
       </div>
     </div>
@@ -9224,6 +9306,8 @@ function getChartOrderCatalogCategoryLabel(
 }
 
 function ChartOrderCatalogDialog({
+  initialQuery = "",
+  onReturnFocus,
   bundle,
   candidates,
   initialSelectedCatalogSourceKeys,
@@ -9234,6 +9318,8 @@ function ChartOrderCatalogDialog({
   onOpenChange,
   onRetry,
 }: {
+  initialQuery?: string;
+  onReturnFocus?: () => HTMLElement | false;
   bundle: ChartBundle;
   candidates: ChartOrderCatalogSearchRow[];
   initialSelectedCatalogSourceKeys: readonly string[];
@@ -9249,8 +9335,16 @@ function ChartOrderCatalogDialog({
 }) {
   const [activeCandidateIndex, setActiveCandidateIndex] = useState(0);
   const [category, setCategory] = useState<ChartOrderCatalogCategory>("all");
-  const [query, setQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState(initialQuery);
+  const [searchOpen, setSearchOpen] = useState(Boolean(initialQuery));
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setQuery(initialQuery);
+      setSearchOpen(Boolean(initialQuery));
+    }
+  }
   const [selectedRows, setSelectedRows] = useState<
     ChartOrderCatalogSearchRow[]
   >([]);
@@ -9511,7 +9605,8 @@ function ChartOrderCatalogDialog({
         bodyClassName={orderCatalogDialogStyles.body}
         headerClassName={orderCatalogDialogStyles.header}
         footerClassName={orderCatalogDialogStyles.footer}
-        initialFocus={() => categoryTabRefs.current[0]}
+        initialFocus={() => initialQuery ? searchInputRef.current : categoryTabRefs.current[0]}
+        finalFocus={onReturnFocus}
         footerMeta={
           <strong aria-live="polite">
             선택한 오더 {selectedRows.length}개
@@ -9787,6 +9882,7 @@ function ChartOrderCatalogDialog({
   );
 }
 function ChartOrderSetConfigurationDialog({
+  onReturnFocus,
   candidate,
   error,
   loading,
@@ -9798,6 +9894,7 @@ function ChartOrderSetConfigurationDialog({
   onPreview,
   onRangeInputChange,
 }: {
+  onReturnFocus?: () => HTMLElement | false;
   candidate: ChartOrderCatalogSearchRow | null;
   error?: string;
   loading: boolean;
@@ -9852,7 +9949,7 @@ function ChartOrderSetConfigurationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl gap-0 p-0">
+      <DialogContent className="max-w-2xl gap-0 p-0" finalFocus={onReturnFocus}>
         <DialogHeader className="border-b px-5 py-4">
           <DialogTitle>{title} 구성 선택</DialogTitle>
           <DialogDescription>
@@ -10095,6 +10192,21 @@ function OrderArea({
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
+  const [catalogInitialQuery, setCatalogInitialQuery] = useState("");
+  const [quickAddRequested, setQuickAddOpen] = useState(false);
+  const quickAddOpen = quickAddRequested && draftRows.length > 0 && !writeDisabled;
+  const [quickAddQuery, setQuickAddQuery] = useState("");
+  const [quickAddActiveIndex, setQuickAddActiveIndex] = useState(-1);
+  const [quickAddedSourceKey, setQuickAddedSourceKey] = useState<string>();
+  const [quickAddHighlightedKey, setQuickAddHighlightedKey] = useState<string>();
+  const quickAddResultsRef = useRef<HTMLDivElement>(null);
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
+  const quickAddTriggerRef = useRef<HTMLButtonElement>(null);
+  const [quickAddReturn, setQuickAddReturn] = useState(false);
+  const quickAddPendingSourceKeysRef = useRef(new Set<string>());
+  const quickAddListId = useId();
+  const setPreviewRequestSequenceRef = useRef(0);
+  useEffect(() => () => { setPreviewRequestSequenceRef.current += 1; }, []);
   const catalogRequestSequenceRef = useRef(0);
   useEffect(() => () => { catalogRequestSequenceRef.current += 1; }, []);
   const [catalogRows, setCatalogRows] = useState<ChartOrderCatalogSearchRow[]>(
@@ -10231,6 +10343,47 @@ function OrderArea({
       orderFilter === "all" || getChartOrderClinicalType(row) === orderFilter,
   );
   const visibleOrderRows = filteredOrderRows;
+  const quickAddedRow = draftRows.find((row) => getChartDraftRowCatalogSourceKey(row) === quickAddedSourceKey);
+  const quickAddedHidden = quickAddedRow && !visibleOrderRows.includes(quickAddedRow);
+  const quickAddExistingKeys = useMemo(() => new Set(draftRows.map(getChartDraftRowCatalogSourceKey)), [draftRows]);
+  const quickAddConfirmedKeys = useMemo(() => new Set(draftRows.filter(isChartOrderConfirmedRow).map(getChartDraftRowCatalogSourceKey)), [draftRows]);
+  const quickAddCandidates = useMemo(() => {
+    const query = quickAddQuery.trim().toLocaleLowerCase();
+    if (!query || catalogSearchStatus !== "ready") return [];
+    const rank = (row: ChartOrderCatalogSearchRow) => {
+      const name = row.displayName.toLocaleLowerCase();
+      return name === query ? 0 : name.startsWith(query) ? 1 : 2;
+    };
+    return catalogRows.filter((row) =>
+      isCatalogCandidateTargetingPatient(row, bundle.patient.species) &&
+      [row.displayName, row.billingName].some((name) => name.toLocaleLowerCase().includes(query)),
+    ).sort((left, right) => rank(left) - rank(right));
+  }, [bundle.patient.species, catalogRows, catalogSearchStatus, quickAddQuery]);
+  const quickAddEligibleIndexes = quickAddCandidates.flatMap((row, index) =>
+    quickAddExistingKeys.has(getChartCatalogSourceKey(row)) ? [] : [index],
+  );
+  const quickAddActive = quickAddEligibleIndexes.includes(quickAddActiveIndex)
+    ? quickAddActiveIndex : (quickAddEligibleIndexes[0] ?? -1);
+  useEffect(() => {
+    quickAddPendingSourceKeysRef.current.clear();
+  }, [draftRows]);
+  useEffect(() => {
+    if (quickAddOpen) quickAddInputRef.current?.focus();
+  }, [quickAddOpen]);
+  useEffect(() => {
+    const results = quickAddResultsRef.current;
+    const active = document.getElementById(`${quickAddListId}-${quickAddActive}`);
+    if (!quickAddOpen || !results || !active) return;
+    const viewport = results.getBoundingClientRect();
+    const option = active.getBoundingClientRect();
+    if (option.top < viewport.top) results.scrollTop -= viewport.top - option.top;
+    else if (option.bottom > viewport.bottom) results.scrollTop += option.bottom - viewport.bottom;
+  }, [quickAddActive, quickAddListId, quickAddOpen, quickAddQuery]);
+  useEffect(() => {
+    if (!quickAddHighlightedKey) return;
+    const timer = window.setTimeout(() => setQuickAddHighlightedKey(undefined), 1500);
+    return () => window.clearTimeout(timer);
+  }, [quickAddHighlightedKey]);
   const selectedAmount = draftRows.reduce((sum, row) => {
     if (!selectedOrderIds.has(row.order.id)) return sum;
 
@@ -10563,11 +10716,39 @@ function OrderArea({
   };
   const openCatalogDialog = () => {
     if (writeDisabled) return;
+    setCatalogInitialQuery("");
+    setQuickAddReturn(false);
+    setQuickAddOpen(false);
     if (collapsed) onCollapsedChange(false);
     setCatalogDialogOpen(true);
     void loadCatalogRows();
   };
+  const openQuickAdd = () => {
+    if (writeDisabled || !draftRowsRef.current.length || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict") return;
+    setQuickAddReturn(false);
+    setQuickAddOpen(true);
+    setQuickAddActiveIndex(-1);
+    void loadCatalogRows();
+  };
+  const closeQuickAdd = (restoreFocus = false) => {
+    setQuickAddOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => quickAddTriggerRef.current?.focus());
+  };
+  const returnToQuickAdd = () => {
+    if (!quickAddReturn || setCandidate || catalogDialogOpen || writeDisabled || !draftRowsRef.current.length) return false;
+    setQuickAddOpen(true);
+    requestAnimationFrame(() => quickAddInputRef.current?.focus());
+    return quickAddInputRef.current ?? false;
+  };
+  const openDetailedOrderSearch = () => {
+    setQuickAddReturn(true);
+    setCatalogInitialQuery(quickAddQuery);
+    closeQuickAdd();
+    setCatalogDialogOpen(true);
+    void loadCatalogRows();
+  };
   const resetSetConfiguration = () => {
+    setPreviewRequestSequenceRef.current += 1;
     setSetCandidate(null);
     setSetPreview(null);
     setSetRangeInput("");
@@ -10575,6 +10756,8 @@ function OrderArea({
     setSetPreviewLoading(false);
   };
   const closeSetConfiguration = () => {
+    if (quickAddReturn) setQuickAddOpen(true);
+    quickAddPendingSourceKeysRef.current.clear();
     setCatalogSelectionQueue([]);
     resetSetConfiguration();
   };
@@ -10582,6 +10765,7 @@ function OrderArea({
     row: ChartOrderCatalogSearchRow,
     selectionIntent: ChartOrderSetSelectionIntent,
   ) => {
+    const requestSequence = ++setPreviewRequestSequenceRef.current;
     setSetPreviewLoading(true);
     setSetPreviewError(undefined);
     const result = await loadChartOrderSetPreview({
@@ -10592,6 +10776,7 @@ function OrderArea({
       selectionIntent,
       workspaceId: bundle.encounter.workspaceId,
     });
+    if (requestSequence !== setPreviewRequestSequenceRef.current) return undefined;
     setSetPreviewLoading(false);
     if (!result.ok) {
       setSetPreviewError(
@@ -10650,6 +10835,39 @@ function OrderArea({
     if (collapsed) onCollapsedChange(false);
     if (row.sourceSetAmountBasis !== "range_price") {
       void requestSetPreview(row, { items: [] });
+    }
+  };
+  const addQuickCandidate = (candidate: ChartOrderCatalogSearchRow) => {
+    if (writeDisabled || catalogSearchStatus !== "ready" || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict") return;
+    const key = getChartCatalogSourceKey(candidate);
+    if (quickAddPendingSourceKeysRef.current.has(key) || draftRowsRef.current.some((row) => getChartDraftRowCatalogSourceKey(row) === key)) return;
+    quickAddPendingSourceKeysRef.current.add(key);
+    if (candidate.rowType === "set") {
+      setQuickAddReturn(true);
+      closeQuickAdd();
+    } else {
+      setQuickAddQuery("");
+      setQuickAddActiveIndex(-1);
+      setQuickAddedSourceKey(key);
+      setQuickAddHighlightedKey(key);
+    }
+    processCatalogSelection([candidate]);
+  };
+  const handleQuickAddKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeQuickAdd(true);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      if (quickAddActive >= 0) addQuickCandidate(quickAddCandidates[quickAddActive]);
+    } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!quickAddEligibleIndexes.length) return;
+      const current = quickAddEligibleIndexes.indexOf(quickAddActive);
+      const offset = event.key === "ArrowDown" ? 1 : -1;
+      setQuickAddActiveIndex(quickAddEligibleIndexes[(current + offset + quickAddEligibleIndexes.length) % quickAddEligibleIndexes.length]);
     }
   };
   const applyCatalogSelection = (
@@ -10795,7 +11013,13 @@ function OrderArea({
     markDraftTouched("discrete");
     setDraftRows((currentRows) => [...currentRows, appendedSetRow]);
     toast.info(`${setCandidate.displayName} Order 세트를 추가했어요 · 저장 중`);
+    if (quickAddReturn) {
+      setQuickAddQuery("");
+      setQuickAddedSourceKey(getChartCatalogSourceKey(setCandidate));
+      setQuickAddHighlightedKey(getChartCatalogSourceKey(setCandidate));
+    }
     const remainingRows = catalogSelectionQueue;
+    if (quickAddReturn && !remainingRows.length) setQuickAddOpen(true);
     setCatalogSelectionQueue([]);
     resetSetConfiguration();
     if (remainingRows.length) {
@@ -12750,8 +12974,124 @@ function OrderArea({
             </span>
           </EmrInlineAlert>
         ) : null}
+        {quickAddedHidden ? (
+          <EmrInlineAlert severity="info" title="다른 분류에 오더를 추가했어요." action={<Button size="sm" variant="ghost" onClick={() => setOrderFilter("all")}>전체에서 보기</Button>} />
+        ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
+            revealOrderId={quickAddedRow?.order.id}
+            highlightedOrderId={quickAddedSourceKey === quickAddHighlightedKey ? quickAddedRow?.order.id : undefined}
+            quickAdd={
+              <Popover
+                open={quickAddOpen}
+                onOpenChange={(open, details) => {
+                  if (!open && details.reason === "trigger-press") return;
+                  if (open) {
+                    if (!quickAddOpen) openQuickAdd();
+                  } else closeQuickAdd();
+                }}
+              >
+                <PopoverTrigger nativeButton={false} role="presentation" tabIndex={-1} render={<div className="relative w-full" />}>
+                  {quickAddOpen ? (
+                    <>
+                      <Input
+                        ref={quickAddInputRef}
+                        role="combobox"
+                        aria-label="오더 빠른 검색"
+                        aria-autocomplete="list"
+                        aria-expanded={quickAddOpen}
+                        aria-controls={quickAddCandidates.length ? quickAddListId : undefined}
+                        aria-activedescendant={quickAddActive >= 0 ? `${quickAddListId}-${quickAddActive}` : undefined}
+                        autoComplete="off"
+                        placeholder="오더명·청구명 검색"
+                        value={quickAddQuery}
+                        className="h-[var(--clair-control-height-lg)] bg-[var(--emr-surface-panel)] pr-9"
+                        onKeyDown={handleQuickAddKeyDown}
+                        onValueChange={(value) => {
+                          setQuickAddQuery(value);
+                          setQuickAddActiveIndex(-1);
+                        }}
+                      />
+                      <EmrIconButton
+                        aria-label="빠른 검색 닫기"
+                        iconSize="md"
+                        className="absolute right-1 top-1/2 size-[var(--clair-control-height-sm)] -translate-y-1/2"
+                        onClick={(event) => { event.stopPropagation(); closeQuickAdd(true); }}
+                      >
+                        <CdsActionsXIcon />
+                      </EmrIconButton>
+                    </>
+                  ) : (
+                    <Button
+                      ref={quickAddTriggerRef}
+                      disabled={writeDisabled || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict"}
+                      className="h-[var(--clair-control-height-xl)] w-full justify-start gap-1.5 px-2.5 text-[var(--emr-text-secondary)]"
+                      variant="ghost"
+                    >
+                      <CdsActionsPlusIcon aria-hidden="true" className="size-4" />
+                      Order 추가
+                    </Button>
+                  )}
+                </PopoverTrigger>
+                <EmrPopoverShell
+                  width="anchor"
+                  align="start"
+                  initialFocus={false}
+                  finalFocus={false}
+                  className="max-h-[var(--available-height)]"
+                  aria-label="오더 빠른 추가"
+                  bodyClassName="flex min-h-0 flex-col gap-0 overflow-hidden p-0"
+                  footer={
+                    <Button className="w-full justify-between" variant="ghost" size="sm" onClick={openDetailedOrderSearch}>
+                      상세 오더 검색<CdsNavigationChevronRightIcon aria-hidden="true" className="size-4" />
+                    </Button>
+                  }
+                >
+                  {quickAddQuery.trim() && catalogSearchStatus === "ready" ? (
+                    <EmrPopoverHeader className="px-3 py-2" title={
+                      <span className="flex items-center gap-1.5 text-xs"><span>검색 결과</span><span className="font-normal text-[var(--emr-text-tertiary)]">{quickAddCandidates.length}건</span></span>
+                    } />
+                  ) : null}
+                  {catalogSearchStatus === "loading" || catalogSearchStatus === "idle" ? (
+                    <div className="p-3"><ClassificationExplorerLoadingState label="오더" message="오더를 불러오는 중입니다" /></div>
+                  ) : catalogSearchStatus === "error" || catalogSearchStatus === "denied" ? (
+                    <EmrInlineAlert
+                      className="m-3"
+                      severity={catalogSearchStatus === "denied" ? "warning" : "error"}
+                      title={catalogSearchStatus === "denied" ? "오더 검색 권한이 없습니다." : "오더를 불러오지 못했습니다."}
+                      action={catalogSearchStatus === "error" ? <Button size="sm" variant="outline" onClick={() => void loadCatalogRows()}>다시 시도</Button> : undefined}
+                    />
+                  ) : !quickAddQuery.trim() ? (
+                    <p className="px-3 py-5 text-xs text-[var(--emr-text-tertiary)]">오더명 또는 청구명을 입력해 주세요.</p>
+                  ) : !quickAddCandidates.length ? (
+                    <EmrEmptyState kind="no-search-results" surface="widget" icon={false} reserveActionSpace={false} size="sm" title="검색 결과가 없습니다" description="다른 이름이나 청구명으로 검색해 주세요." />
+                  ) : (
+                    <div ref={quickAddResultsRef} id={quickAddListId} role="listbox" aria-label="오더 빠른 검색 결과" className="min-h-0 max-h-72 overflow-y-auto overscroll-contain">
+                      {quickAddCandidates.map((candidate, index) => {
+                        const sourceKey = getChartCatalogSourceKey(candidate);
+                        const present = quickAddExistingKeys.has(sourceKey);
+                        return (
+                          <ClassificationExplorerOption
+                            key={sourceKey}
+                            id={`${quickAddListId}-${index}`}
+                            disabled={present}
+                            aria-disabled={present}
+                            tabIndex={-1}
+                            selected={quickAddActive === index}
+                            className="h-12 min-h-12 px-3 text-xs"
+                            label={<span className="flex min-w-0 items-center gap-2"><span className="shrink-0 text-[var(--emr-text-tertiary)]">{getChartOrderCatalogCategoryLabel(candidate.categoryGroup)}</span><span className="truncate">{candidate.displayName}</span></span>}
+                            trailing={present ? (quickAddConfirmedKeys.has(sourceKey) ? "이미 확정됨" : "이미 추가됨") : candidate.rowType === "set" ? "구성 확인" : candidate.appliedSnapshot.appliedPriceKrw === null ? "가격 확인 필요" : getCatalogCandidatePriceLabel(candidate)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => addQuickCandidate(candidate)}
+                            onPointerMove={() => { if (!present) setQuickAddActiveIndex(index); }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                </EmrPopoverShell>
+              </Popover>
+            }
             selectionActionsHidden={orderActionDialog !== null || historyOrderId !== null || detailOrderId !== null}
             actualDispenseSavingOrderIds={actualDispenseSavingOrderIds}
             confirmationDisabled={
@@ -12851,6 +13191,8 @@ function OrderArea({
           row={mutationOrderRow}
         />
         <ChartOrderCatalogDialog
+          initialQuery={catalogInitialQuery}
+          onReturnFocus={quickAddReturn ? returnToQuickAdd : undefined}
           bundle={bundle}
           candidates={catalogRows}
           initialSelectedCatalogSourceKeys={
@@ -12864,6 +13206,7 @@ function OrderArea({
           onRetry={() => void loadCatalogRows()}
         />
         <ChartOrderSetConfigurationDialog
+          onReturnFocus={quickAddReturn ? returnToQuickAdd : undefined}
           key={`${setCandidate?.sourceSetId ?? setCandidate?.sourcePresetId ?? "none"}-${setPreview?.selectionFingerprint ?? "empty"}`}
           candidate={setCandidate}
           error={setPreviewError}
