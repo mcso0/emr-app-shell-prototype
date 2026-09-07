@@ -6,6 +6,7 @@ import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-
 import { CdsFilesGridIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
 import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, MenuIcon } from "@/components/icons";
+import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { EmrDateNavigator } from "@/components/emr/subpanel";
 import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
@@ -143,10 +144,13 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const hasFilters = view === "hospital" && (query.owners !== null || hiddenTypes.length > 0);
 
   return <section className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="home-workspace" aria-busy={loading}>
-    <header className="flex shrink-0 flex-col gap-5 border-b border-[var(--emr-border-default)] px-6 py-5">
+    <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
+    <header className="flex min-h-[108px] shrink-0 flex-col gap-3 bg-[var(--emr-surface-workspace)] px-12 py-4">
       <EmrPageHeader
+        className="min-h-8 gap-3"
+        titleClassName="text-[24px] font-bold leading-8 tracking-[-0.552px] text-[var(--clair-color-atomic-neutral-900)]"
         title={view === "hospital" ? "원내 현황" : "내 업무"}
-        badge={<Badge variant="secondary" aria-label="표시 업무 수">{loading ? "…" : blocked ? "—" : tasks.length}</Badge>}
+        badge={<Badge variant="secondary" aria-label="표시 업무 수" className="h-7 min-w-5 rounded-md bg-[var(--clair-color-atomic-black-alpha-4)] px-2 py-0 text-[16px] font-medium leading-6 tracking-[0.096px] text-[var(--clair-color-atomic-neutral-900)]">{loading ? "…" : blocked ? "—" : tasks.length}</Badge>}
         actions={view === "hospital" ? <div className="emr-text-metadata flex flex-wrap items-center gap-2 text-[var(--emr-text-secondary)]" aria-label="현재 병원 환자 현황">
           <span>원내 {patientSummary?.present ?? "—"}마리</span><span aria-hidden="true">·</span>
           <span>진료 대기 {patientSummary?.waiting ?? "—"}마리</span><span aria-hidden="true">·</span>
@@ -156,14 +160,14 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
       {view === "mine" && <SegmentedControl aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" items={[{ value: "assigned", label: "내가 할 업무" }, { value: "requested", label: "내가 요청한 업무" }]} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex shrink-0 items-center gap-2">
-          <EmrDateNavigator dateLabel={query.date} selectedDate={query.date} todayDate={today}
+          <EmrDateNavigator className="h-8 gap-1.5 px-0 [&>button]:h-8 [&>button]:rounded-lg [&>button[aria-label='이전_날짜']]:order-2 [&>button[aria-label='다음_날짜']]:order-3 [&>button[aria-label$='날짜_선택']]:justify-start [&>button[aria-label$='날짜_선택']]:pl-0" dateLabel={query.date} selectedDate={query.date} todayDate={today}
             onDateChange={(date) => updateQuery(view, { date })}
             onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1) })}
             onNext={() => updateQuery(view, { date: offsetDate(query.date, 1) })}
           />
           {query.date !== today && <Button variant="ghost" size="sm" onClick={() => updateQuery(view, { date: today })}>오늘</Button>}
         </div>
-        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
           <label className="emr-text-body flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[var(--emr-text-secondary)]">
             <Checkbox checked={query.includeCompleted} onCheckedChange={(checked) => updateQuery(view, { includeCompleted: checked === true })} />완료 포함
           </label>
@@ -174,7 +178,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
               onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
           </>}
           <div className="relative w-52 min-w-0">
-            <Input aria-label={view === "hospital" ? "환자 보호자 업무 검색" : "내 업무 검색"} placeholder={view === "hospital" ? "환자·업무 검색" : "내 업무 검색"} value={query.search} onValueChange={(search) => updateQuery(view, { search })} className="h-8 pr-8" />
+            <Input aria-label={view === "hospital" ? "환자 보호자 업무 검색" : "내 업무 검색"} placeholder={view === "hospital" ? "환자·업무 검색" : "내 업무 검색"} value={query.search} onValueChange={(search) => updateQuery(view, { search })} className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
             {query.search ? <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label="검색어 지우기" onClick={() => updateQuery(view, { search: "" })}><CircleCloseFillIcon className="size-4" /></Button> : <CdsActionsSearchIcon className="pointer-events-none absolute right-2 top-2 size-4 text-[var(--emr-text-tertiary)]" />}
           </div>
           {hasFilters && <Button variant="ghost" size="sm" onClick={reset}>필터 해제</Button>}
@@ -215,7 +219,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
 
 function HomeMultiSelect({ label, options, values, allSelected, onChange }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void }) {
   const text = allSelected ? `${label} 전체` : values.length === 0 ? `${label} 선택 없음` : values.length === 1 ? options.find((option) => option.id === values[0])?.label || values[0] : `${label} ${values.length}개`;
-  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="sm" className="h-8 min-w-24 gap-1" aria-label={`${label} 다중 선택`}>{text}<ChevronDownIcon className="size-3" /></Button>} />
+  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="sm" className="h-8 min-h-8 min-w-24 gap-1 rounded-lg px-3 py-1.5 shadow-[var(--clair-shadow-xs)]" aria-label={`${label} 다중 선택`}>{text}<ChevronDownIcon className="size-3" /></Button>} />
     <DropdownMenuContent align="end" className="w-52 p-2">
       <div className="flex justify-between border-b border-border pb-1"><Button size="xs" variant="ghost" onClick={() => onChange(options.map((option) => option.id))}>전체 선택</Button><Button size="xs" variant="ghost" onClick={() => onChange([])}>선택 해제</Button></div>
       <div className="max-h-64 overflow-auto" role="group" aria-label={`${label} 선택`}>

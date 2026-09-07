@@ -83,3 +83,9 @@ Authenticated Preview revealed that source-table SELECT is revoked for authentic
 - Ten focused server tests pass, adding missing fulfillment names, incomplete-RPC fail-closed behavior and invoice-only guardian fallback. Original UI/navigation/creation parity checks remain applicable.
 - Paging is complete for static source data; source changes between offset pages are reflected on refresh. No artificial date cutoff is used for earlier unfinished work.
 - Rollback: restore the previous application deployment. The additive read-only RPC can remain unused without affecting the previous app; no source-data rollback is needed.
+
+## Header Appearance Follow-up — 2026-09-08
+
+승욱 requested Customer-page visual consistency for both 원내 현황 and 내 업무 while retaining Home's existing filters, views and behavior, then requested commit/push/PR/main delivery. The follow-up uses the same adaptive top spacer, 24px title, count badge, 48px side inset and 32px controls. The date trigger and its calendar icon align with the title; previous/next controls follow the date. Overrides are confined to Home and do not change the shared date picker for other modules.
+
+Seven existing Home UI tests passed. Additional temporary browser geometry checks verified title/date-icon alignment in both views with the calendar open and closed, 24px title text, 32px controls and calendar open/close behavior. TypeScript and targeted ESLint passed. Synthetic screenshots were inspected; final candidate/release evidence is recorded in the follow-up PR.
