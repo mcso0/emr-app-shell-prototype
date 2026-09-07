@@ -409,3 +409,30 @@ passed. Build retains an existing broad NFT trace warning through the docs reade
 no unrelated configuration change was made. The final commit's docs/secret gate,
 exact Release Check and Ready Preview must still be recorded. PR711 is not merged;
 compatible app delivery and authenticated three-workspace acceptance remain open.
+
+### Authenticated Preview discovery and nullable-set correction — 2026-09-07
+
+Candidate564688 passed Release Check34093913274 and reached Ready Preview
+`dpl_WqpNRQqhPkYaNBNhMiPFxETJTKLT`. With an existing signed-in synthetic account,
+Cheongdam Admin showed the blood-glucose order's exact identity, serum defaults,
+dog/cat manual-profile bindings and preserved36012KRW price. A temporary search
+alias survived save/reload; use-stop persisted as paused. The ordinary UI restored
+active status and empty aliases afterward (catalog revision13); audit/customization
+metadata was retained rather than reset. No clinical default or price changed.
+
+Chart candidate loading then failed with HTTP500 before any new QA order existed.
+The existing four encounter drafts were fingerprinted and left untouched. A bounded
+read-only RPC returned541 unique rows; offline replay through the actual gateway
+rejected33 non-range-priced sets. `readString(null)` had erased the explicit SQL
+null range basis, contradicting the mapper's own non-range price contract.
+The narrow mapper correction preserves explicit nullable range basis for both
+SQL and camel-case envelopes; missing/malformed values still fail closed. The
+regression failed before the fix, then all541 captured rows passed full-list replay
+and104 focused catalog/read/taxonomy tests passed. Independent review found no
+must-fix issue. No DB migration, policy weakening or candidate filtering was used.
+
+The corrected code still needs its own exact Release Check/Ready Preview and
+resumed authenticated acceptance. The pilot workspace has no patients/encounters;
+its acceptance requires a synthetic fixture through the supported UI. No new QA
+patient, chart order, actual result or retest was created at this checkpoint.
+Production remains unmerged; the full deployment objective is still active.

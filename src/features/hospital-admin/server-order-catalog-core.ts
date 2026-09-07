@@ -3948,9 +3948,12 @@ function mapChartSearchRow(value: unknown): ChartOrderCatalogSearchRow | null {
     const ranges = mapOrderSetRanges(
       row.sourceSetPriceRanges ?? row.source_set_price_ranges,
     );
-    const rangeBasis = readString(
-      row.sourceSetRangeBasis ?? row.source_set_range_basis,
-    );
+    const rawRangeBasis = row.sourceSetRangeBasis !== undefined
+      ? row.sourceSetRangeBasis
+      : row.source_set_range_basis;
+    // SQL null means this set has no range pricing; missing/malformed values
+    // must not be normalized to that valid, explicit non-range contract.
+    const rangeBasis = rawRangeBasis === null ? null : readString(rawRangeBasis);
     const sourceSetAvailabilityStatus = readString(
       row.sourceSetAvailabilityStatus ?? row.source_set_availability_status,
     );

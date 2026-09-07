@@ -87,6 +87,10 @@ per workspace,9 manual devices/519 synthetic bindings/90 compositions, and all15
 existing catalog pricing rows unchanged. No replay was performed after the timeout.
 Final exact-candidate checks, Production delivery and three-workspace authenticated
 smoke remain. The full objective stays active; data adoption is not app delivery.
+Authenticated Preview Admin save/reload/use-stop passed in Cheongdam, with test
+alias/status restored. Chart loading exposed an explicit-null set-price mapper
+bug; a narrow local correction passed541 real-row replay and104 focused tests.
+Its new Preview and remaining authenticated chart/result/retest acceptance are pending.
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 

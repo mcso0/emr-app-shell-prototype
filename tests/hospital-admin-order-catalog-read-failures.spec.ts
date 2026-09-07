@@ -243,6 +243,49 @@ test("chart preserves a valid individual but rejects the entire mixed-validity l
   }
 });
 
+test("chart preserves explicit null range basis for non-range sets without accepting malformed prices", async () => {
+  for (const basis of ["included_order_sum", "set_fixed_price"] as const) {
+    for (const casing of ["sql", "camel"] as const) {
+      const row: Record<string, unknown> = {
+        row_type: "set", source_preset_id: "synthetic-set", source_preset_version: "revision-1",
+        display_name: "합성 검증 세트", billing_name: "합성 검증 세트", category_group: "set",
+        target_species: ["dog"], applied_snapshot: { billingReflectionEnabled: false },
+        source_set_id: "synthetic-set", source_set_revision_id: "synthetic-revision",
+        source_set_revision_no: 1, source_set_amount_basis: basis,
+        source_set_price_krw: basis === "set_fixed_price" ? 1000 : null,
+        source_set_tax_type: basis === "set_fixed_price" ? "taxable" : "derived",
+        source_set_availability_status: "active", source_set_validation_status: "valid",
+        source_set_needs_composition_review: false, source_set_price_ranges: [],
+        source_set_pending_review_count: 0,
+      };
+      const rangeKey = casing === "sql" ? "source_set_range_basis" : "sourceSetRangeBasis";
+      for (const rangeBasis of [null, undefined, 42, {}, "invalid", "weight"]) {
+        const gateway = createSupabaseOrderCatalogGateway({ async rpc() {
+          return { data: [{ ...row, [rangeKey]: rangeBasis }], error: null };
+        } });
+        const result = await gateway.listChartSearch({ workspaceId });
+        expect(result.ok, `${basis}/${casing}/${String(rangeBasis)}`).toBe(rangeBasis === null);
+        if (result.ok) expect(result.rows[0].sourceSetRangeBasis).toBeNull();
+      }
+      for (const patch of [
+        { source_set_price_krw: basis === "set_fixed_price" ? null : 1000 },
+        { source_set_tax_type: basis === "set_fixed_price" ? "derived" : "taxable" },
+        { source_set_price_ranges: [{}] },
+        { source_set_validation_status: "invalid" },
+        { source_set_availability_status: "paused" },
+        { source_set_needs_composition_review: true },
+      ]) {
+        const gateway = createSupabaseOrderCatalogGateway({ async rpc() {
+          return { data: [{ ...row, [rangeKey]: null, ...patch }], error: null };
+        } });
+        expect(await gateway.listChartSearch({ workspaceId })).toEqual({
+          ok: false, status: 500, error: "catalog_response_invalid",
+        });
+      }
+    }
+  }
+});
+
 test("chart rejects missing or contradictory catalog and preset identities", async () => {
   const fixture = await createMockOrderCatalogGateway().listChartSearch({
     workspaceId,
