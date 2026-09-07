@@ -15,7 +15,7 @@ related_docs:
 related_work:
   - "docs/work/home/HOME-PR-011-home-operations-live-work-items.md"
   - "docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md"
-last_updated: 2026-07-05
+last_updated: 2026-09-07
 ---
 
 # Home Operations Work Status Read Model
@@ -26,14 +26,24 @@ This document turns the product contract for Home `원내 현황` into the imple
 
 Home operations must not derive hospital-wide work by merging mock data in the browser. The server must own workspace scope, permission filtering, source freshness, status normalization, and partial-read handling.
 
-## Implemented In HOME-PR-011
+## Current Reader In HOME-PR-014
+
+The Next.js endpoint resolves each source's existing view permission before invoking its reader and repeats workspace/source filtering before counts. It no longer invokes the historical aggregate RPC. Fulfillment uses the guarded `clair_list_fulfillment_work_items`; reception, encounter context, invoice candidates and member labels use `clair_get_home_operations_source_snapshot`, a workspace-scoped paginated reader (500 rows per source per page). Its private implementation validates auth.uid and reception:view, gates consultation queue rows with chart:view and billing arrays with billing:view, and returns only the selected Home columns. Original table SELECT remains revoked. Operational staff IDs come from workspace/source-matched assignment subqueries, including cancelled records. Member names are joined through workspace memberships. Each page is consistent; concurrent source changes between offset pages are reflected on refresh.
+
+`isMyWork` uses direct user assignment (including reception/reservation operational staff arrays). `isRequestedWork` uses requester user ID. Team availability is not personal assignment. `scheduledAt` is distinct from `requestedAt`; operational date uses scheduled date when present. Previous unfinished records are retained; completed prior-date records and future work are excluded. Invoice work requires a billing-candidate anchor on the line or its order.
+
+`currentPatients` is a current encounter snapshot with distinct patient counts, independent of work filters/date; null means unavailable. Active encounters contribute to present count; waiting and consultation/ordered contribute to their respective clinical counts. Ready-for-billing is present, not currently in consultation. No inpatient persistence is invented.
+
+The old SECURITY DEFINER aggregate remains a pre-existing DB boundary concern: it checks membership without all per-source permissions. This application change stops using it but does not revoke or migrate the remote function. Any DB remediation requires separately scoped authorization and verification.
+
+## Historical Implementation In HOME-PR-011
 
 The first implementation uses an additive Supabase RPC plus a Next.js read endpoint:
 
 - RPC: `public.clair_list_home_operations_work_items(p_workspace_id, p_actor_user_id, p_operating_date, p_scope, p_include_completed, p_include_cancelled)`.
 - API route: `GET /api/workspaces/[workspaceId]/operations/work-items`.
 - Sources: appointments, reception/waiting queue entries, `order_fulfillment_work_items`, and billing invoice/invoice-line candidates.
-- The route computes `isMyWork` from personal assignment plus processable team queues, and uses `scope=mine` to filter the response.
+- The original route computed `isMyWork` from personal assignment plus processable team queues, and uses `scope=mine` to filter the response.
 - The Home client uses this route for non-legacy workspaces and does not use mock fallback for read failures.
 
 ## Verified In HOME-PR-012
@@ -59,7 +69,7 @@ Query parameters:
 | Parameter | Type | Default | Meaning |
 |---|---|---|---|
 | `date` | `YYYY-MM-DD` | workspace local today | Selected operating date. |
-| `scope` | `all` \| `mine` | `all` | `mine` includes personal assignments plus processable team queues. |
+| `scope` | `all` \| `mine` | `all` | `mine` includes only assignments to the authenticated actor. |
 | `includeCompleted` | boolean | `false` | Include completed work in response. |
 | `includeCancelled` | boolean | `false` | Include cancelled work in response. |
 
@@ -192,7 +202,9 @@ type HomeOperationsSummary = {
 `scope=mine` includes:
 
 - `assigneeUserId === currentUser.id`
-- team/role queues the current user can process according to membership, role, and permission policy
+- `assigneeUserIds` includes the current user for operational reception/reservation staff assignments
+
+`isRequestedWork` independently compares `requesterUserId` to the current user. Unassigned team work is excluded from `scope=mine`.
 
 ## Attention Signal Mapping
 

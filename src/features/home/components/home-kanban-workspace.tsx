@@ -1,1292 +1,296 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { CdsActionsRefreshCcwIcon } from "@/components/cds-icons/actions-and-controls";
-import { ChevronDownIcon, ChevronRightIcon } from "@/components/icons";
+import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
+import { CdsFilesGridIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
+import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, MenuIcon } from "@/components/icons";
+import { EmrPageHeader } from "@/components/emr/page-header";
+import { EmrDateNavigator } from "@/components/emr/subpanel";
+import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
+import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
+import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
+import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
+import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState } from "@/components/emr/empty-state";
-import {
-  EmrSidePanelCard,
-  EmrSidePanelCardAction,
-  EmrSidePanelIdentityLine,
-  EmrSidePanelMetaBadge,
-  EmrSidePanelStatusBadge,
-  EmrSidePanelTypeBadge,
-} from "@/components/emr/side-panel-card";
-import {
-  EMR_SIDE_PANEL_COLLAPSE_EASE,
-  EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE,
-  EmrSidePanelCollapsibleGroup,
-} from "@/components/emr/side-panel-collapsible-group";
-import {
-  EmrSubpanel,
-  EmrSubpanelBody,
-  EmrQueueEmptyState,
-  EmrSubpanelTitle,
-} from "@/components/emr/subpanel";
-import {
-  EmrTaskQueueCard,
-  getTaskQueueEventKindFromStatus,
-  type EmrTaskQueueCardItem,
-} from "@/components/emr/task-queue-card";
+import { EmrModuleListSidePanel } from "@/components/emr/module-list-side-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  SegmentedControl,
-  type SegmentedControlItem,
-} from "@/components/ui/segmented-control";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import {
-  HomeMutedPill,
-  HomeTaskDecisionBadge,
-  HomeTaskDecisionPill,
-} from "@/features/home/components/home-task-badges";
-import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
-import type {
-  HomeDashboardData,
-  HomeKanbanColumn,
-  HomeOperationsAttentionSignal,
-  HomeOperationsProgressState,
-  HomeTask,
-} from "@/features/home/home.types";
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLayoutStore } from "@/stores/layout-store";
+import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
+import type { HomeDashboardData, HomeTask, HomeOperationsProgressState } from "@/features/home/home.types";
+import { cn } from "@/lib/utils";
 
+const workTypes = [
+  { id: "waiting", label: "접수" }, { id: "reservation", label: "예약" },
+  { id: "chart", label: "진료" }, { id: "lab", label: "임상병리" },
+  { id: "imaging", label: "영상검사" }, { id: "dispensing", label: "조제" },
+  { id: "treatment", label: "처치" }, { id: "billing", label: "수납" },
+] as const;
+const statusGroups: Array<{ id: HomeOperationsProgressState; label: string }> = [
+  { id: "waiting", label: "대기" }, { id: "in_progress", label: "진행 중" }, { id: "completed", label: "완료" },
+];
+const typeLabel = (task: HomeTask) => workTypes.find((type) => type.id === task.kanbanColumn)?.label ?? task.sourceLabel;
+const taskOwners = (task: HomeTask) => task.assigneeNames?.length ? task.assigneeNames : [ownerLabel(task)];
+const ownerLabel = (task: HomeTask) => task.assigneeName || (task.assigneeUserId || task.assigneeUserIds?.length ? "담당자 지정됨" : "미배정");
+function progress(task: HomeTask): HomeOperationsProgressState {
+  if (task.progressState) return task.progressState;
+  if (task.status === "completed" || task.status === "cancelled") return task.status;
+  return task.status === "in_progress" || task.status === "inProgress" ? "in_progress" : "waiting";
+}
+function operatingDay(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value.slice(0, 10) : new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+}
+function previous(task: HomeTask, date: string) {
+  return progress(task) !== "completed" && progress(task) !== "cancelled" && (task.operatingDate || operatingDay(task.dueAt || task.requestedAt)) < date;
+}
+function elapsed(task: HomeTask) {
+  const timestamp = Date.parse(task.stateEnteredAt || task.requestedAt);
+  if (!Number.isFinite(timestamp)) return "—";
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
+  return minutes >= 1440 ? `${Math.floor(minutes / 1440)}일` : minutes >= 60 ? `${Math.floor(minutes / 60)}시간 ${minutes % 60}분` : `${minutes}분`;
+}
+function offsetDate(date: string, amount: number) {
+  const day = new Date(`${date}T12:00:00Z`); day.setUTCDate(day.getUTCDate() + amount); return day.toISOString().slice(0, 10);
+}
+function toggleValue(values: string[], value: string) {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
+export type HomePatientSummary = { present: number; waiting: number; inProgress: number };
 type HomeKanbanWorkspaceProps = {
   data: HomeDashboardData;
-  errorMessage?: string;
-  includeCancelled?: boolean;
-  includeCompleted?: boolean;
+  today: string;
   loading?: boolean;
   sourceStatus?: "empty" | "error" | "live" | "partial" | "permission_denied";
-  onIncludeCancelledChange?: (value: boolean) => void;
-  onIncludeCompletedChange?: (value: boolean) => void;
+  errorMessage?: string;
   onRefresh?: () => void;
+  patientSummary?: HomePatientSummary | null;
 };
 
-type HomeAssigneeFilter = string;
-type HomeOperationMode = "flow" | "mine" | "assignment" | "attention" | "load";
-type HomeWorkStatusFilter =
-  | "all"
-  | HomeOperationsAttentionSignal
-  | HomeOperationsProgressState;
-type HomeWorkstreamFilter = string;
-
-const allFilterLabel = "전체";
-const unassignedFilterLabel = "미지정";
-
-const statusLabel: Record<HomeOperationsProgressState, string> = {
-  waiting: "대기",
-  in_progress: "진행중",
-  completed: "완료",
-  cancelled: "취소",
-};
-
-const statusGroupItems: Array<{
-  id: HomeOperationsProgressState;
-  label: string;
-}> = [
-  {
-    id: "in_progress",
-    label: statusLabel.in_progress,
-  },
-  {
-    id: "waiting",
-    label: statusLabel.waiting,
-  },
-  {
-    id: "completed",
-    label: statusLabel.completed,
-  },
-  {
-    id: "cancelled",
-    label: statusLabel.cancelled,
-  },
-];
-
-const workStatusFilterItems: Array<{ value: HomeWorkStatusFilter; label: string }> = [
-  { value: "all", label: "전체" },
-  { value: "urgent", label: "긴급" },
-  { value: "re_requested", label: "재요청" },
-  { value: "assignment_missing", label: "배정 누락" },
-  { value: "long_stay", label: "오래 머묾" },
-  { value: "waiting", label: statusLabel.waiting },
-  { value: "in_progress", label: statusLabel.in_progress },
-  { value: "completed", label: statusLabel.completed },
-  { value: "cancelled", label: statusLabel.cancelled },
-];
-
-function getShortTime(value?: string) {
-  if (!value) return "기한 없음";
-
-  return value.slice(11, 16);
-}
-
-function getUrgentCount(tasks: HomeTask[]) {
-  return tasks.filter(isAttentionTask).length;
-}
-
-function getModeCount(tasks: HomeTask[], mode: HomeOperationMode, myTaskIds: Set<string>) {
-  if (mode === "mine") return tasks.filter((task) => myTaskIds.has(task.id)).length;
-  if (mode === "assignment") return tasks.filter((task) => hasAttentionSignal(task, "assignment_missing")).length;
-  if (mode === "attention") return tasks.filter(isAttentionTask).length;
-  if (mode === "load") return new Set(tasks.map((task) => getAssigneeLabel(task))).size;
-
-  return tasks.length;
-}
-
-function matchesOperationMode(task: HomeTask, mode: HomeOperationMode, myTaskIds: Set<string>) {
-  if (mode === "mine") return myTaskIds.has(task.id);
-  if (mode === "assignment") return hasAttentionSignal(task, "assignment_missing");
-  if (mode === "attention") return isAttentionTask(task);
-
-  return true;
-}
-
-function matchesAssigneeFilter(task: HomeTask, filter: HomeAssigneeFilter) {
-  if (filter === allFilterLabel) return true;
-  if (filter === unassignedFilterLabel) {
-    return task.assignment === "roleQueue" || task.assignment === "assignmentMissing" || getAssigneeLabel(task) === unassignedFilterLabel;
-  }
-
-  return getAssigneeLabel(task) === filter;
-}
-
-function matchesWorkStatusFilter(task: HomeTask, filter: HomeWorkStatusFilter) {
-  if (filter === "all") return true;
-  if (filter === "long_stay") return hasAttentionSignal(task, "long_stay") || task.status === "overdue";
-  if (isAttentionFilter(filter)) return hasAttentionSignal(task, filter);
-
-  return getTaskProgressState(task) === filter;
-}
-
-function getRequesterLabel(task: HomeTask) {
-  if (task.requestedBy) return task.requestedBy;
-  if (task.assignment === "roleQueue") return task.roleQueueLabel?.replace(" · 미배정", "") ?? task.sourceLabel;
-
-  return task.sourceLabel;
-}
-
-function getAssigneeLabel(task: HomeTask) {
-  if (task.assigneeName) return task.assigneeName;
-  if (task.assignment === "assignmentMissing") return "배정 누락";
-  if (task.assignment === "roleQueue") return "팀 큐";
-
-  return "미지정";
-}
-
-function getDecisionReason(task: HomeTask) {
-  if (task.priority === "urgent") return "긴급 확인";
-  if (hasAttentionSignal(task, "urgent")) return "긴급";
-  if (hasAttentionSignal(task, "re_requested")) return "재요청";
-  if (hasAttentionSignal(task, "assignment_missing")) return "배정 누락";
-  if (hasAttentionSignal(task, "long_stay") || task.status === "overdue") return "오래 머묾";
-  if (task.priority === "high") return "주의 필요";
-  if (task.assignment === "roleQueue") return "팀 큐 대기";
-  if (getTaskProgressState(task) === "in_progress") return "진행 중";
-
-  return task.sourceLabel;
-}
-
-function getTimeSignal(task: HomeTask) {
-  if (hasAttentionSignal(task, "long_stay") || task.status === "overdue") return `${getShortTime(task.dueAt ?? task.requestedAt)} 오래 머묾`;
-  if (task.dueAt) return `${getShortTime(task.dueAt)}까지`;
-
-  return `${getShortTime(task.requestedAt)} 요청`;
-}
-
-function getModeDescription(mode: HomeOperationMode) {
-  if (mode === "mine") return "내 업무와 처리 가능한 팀 큐 업무를 모아 봅니다.";
-  if (mode === "assignment") return "팀 큐도 개인 담당도 없는 배정 누락을 확인합니다.";
-  if (mode === "attention") return "긴급, 재요청, 오래 머문 업무를 먼저 확인합니다.";
-  if (mode === "load") return "담당자별 업무량과 미배정 편중을 확인합니다.";
-
-  return "접수부터 수납까지 전체 업무 흐름을 봅니다.";
-}
-
-function getTaskTypeLabel(task: HomeTask) {
-  if (task.kanbanColumn === "reservation") return "예약";
-  if (task.kanbanColumn === "lab") return "임상병리";
-  if (task.kanbanColumn === "imaging") return "영상검사";
-  if (task.kanbanColumn === "dispensing") return "조제";
-  if (task.kanbanColumn === "treatment") return "처치";
-  if (task.kanbanColumn === "billing") return "수납";
-
-  return "진료";
-}
-
-function getStatusDisplayLabel(task: HomeTask) {
-  if (task.priority === "urgent") return "긴급";
-  if (hasAttentionSignal(task, "re_requested")) return "재요청";
-  if (hasAttentionSignal(task, "assignment_missing")) return "배정 누락";
-  if (hasAttentionSignal(task, "long_stay")) return "오래 머묾";
-  if (getTaskProgressState(task) === "in_progress") return "진행";
-  if (getTaskProgressState(task) === "completed") return "완료";
-  if (getTaskProgressState(task) === "cancelled") return "취소";
-
-  return "대기";
-}
-
-function sortNextActions(tasks: HomeTask[]) {
-  return [...tasks].sort((first, second) => {
-    const score = (task: HomeTask) => {
-      if (task.priority === "urgent" || hasAttentionSignal(task, "urgent")) return 0;
-      if (hasAttentionSignal(task, "re_requested")) return 1;
-      if (hasAttentionSignal(task, "assignment_missing")) return 2;
-      if (task.isMyWork && isAttentionTask(task)) return 2.5;
-      if (hasAttentionSignal(task, "long_stay") || task.status === "overdue") return 3;
-      if (getTaskProgressState(task) === "in_progress") return 4;
-
-      return 5;
-    };
-
-    return score(first) - score(second) || (first.dueAt ?? first.requestedAt).localeCompare(second.dueAt ?? second.requestedAt);
-  });
-}
-
-function groupNextActions(tasks: HomeTask[]) {
-  const attention = tasks.filter((task) =>
-    task.priority === "urgent" ||
-    task.priority === "high" ||
-    hasAttentionSignal(task, "urgent") ||
-    hasAttentionSignal(task, "re_requested")
-  );
-  const assignment = tasks.filter((task) => hasAttentionSignal(task, "assignment_missing"));
-  const longStay = tasks.filter((task) => hasAttentionSignal(task, "long_stay") || task.status === "overdue");
-
-  return [
-    { id: "attention", label: "긴급/재요청", tasks: attention },
-    { id: "assignment", label: "배정 누락", tasks: assignment },
-    { id: "long-stay", label: "오래 머문 업무", tasks: longStay },
-  ].filter((group) => group.tasks.length > 0);
-}
-
-function hasAttentionSignal(task: HomeTask, signal: HomeOperationsAttentionSignal) {
-  return task.attentionSignals?.includes(signal) === true;
-}
-
-function isAttentionTask(task: HomeTask) {
-  return (
-    task.priority === "urgent" ||
-    task.priority === "high" ||
-    task.status === "overdue" ||
-    hasAttentionSignal(task, "urgent") ||
-    hasAttentionSignal(task, "re_requested") ||
-    hasAttentionSignal(task, "assignment_missing") ||
-    hasAttentionSignal(task, "long_stay")
-  );
-}
-
-function isAttentionFilter(filter: HomeWorkStatusFilter): filter is HomeOperationsAttentionSignal {
-  return (
-    filter === "urgent" ||
-    filter === "re_requested" ||
-    filter === "assignment_missing" ||
-    filter === "team_queue" ||
-    filter === "long_stay"
-  );
-}
-
-function getTaskProgressState(task: HomeTask): HomeOperationsProgressState {
-  if (task.progressState) return task.progressState;
-  if (task.status === "inProgress") return "in_progress";
-  if (task.status === "completed" || task.status === "cancelled") return task.status;
-  return "waiting";
-}
-
-export function HomeKanbanWorkspace({
-  data,
-  errorMessage,
-  includeCancelled = false,
-  includeCompleted = false,
-  loading = false,
-  sourceStatus = "live",
-  onIncludeCancelledChange,
-  onIncludeCompletedChange,
-  onRefresh,
-}: HomeKanbanWorkspaceProps) {
-  const router = useRouter();
-  const [activeOperationMode, setActiveOperationMode] = useState<HomeOperationMode>("flow");
-  const [activeAssigneeFilter, setActiveAssigneeFilter] = useState<HomeAssigneeFilter>(allFilterLabel);
-  const [activeWorkStatusFilter, setActiveWorkStatusFilter] = useState<HomeWorkStatusFilter>("all");
-  const [activeWorkstreamFilters, setActiveWorkstreamFilters] = useState<HomeWorkstreamFilter[]>([]);
-  const [attentionOnly, setAttentionOnly] = useState(false);
-  const selectedTaskId = useHomeWorkspaceStore((state) => state.selectedTaskId);
-  const detailOpen = useHomeWorkspaceStore((state) => state.detailOpen);
-  const selectTask = useHomeWorkspaceStore((state) => state.selectTask);
-  const closeTaskDetail = useHomeWorkspaceStore((state) => state.closeTaskDetail);
-  const clearSelection = useHomeWorkspaceStore((state) => state.clearSelection);
-  const tasks = data.hospitalTasks;
-  const hasHospitalTasks = tasks.length > 0;
-  const blockingState = sourceStatus === "error" || sourceStatus === "permission_denied";
-  const hasBoardChrome = hasHospitalTasks && !blockingState;
-  const myTaskIds = useMemo(() => new Set(data.tasks.map((task) => task.id)), [data.tasks]);
-  const operationModeItems = useMemo<Array<SegmentedControlItem<HomeOperationMode>>>(
-    () => [
-      { value: "flow", label: "전체 흐름", count: getModeCount(tasks, "flow", myTaskIds) },
-      { value: "mine", label: "내 업무 보기", count: getModeCount(tasks, "mine", myTaskIds) },
-      { value: "assignment", label: "배정 누락", count: getModeCount(tasks, "assignment", myTaskIds) },
-      { value: "attention", label: "긴급/재요청", count: getModeCount(tasks, "attention", myTaskIds) },
-      { value: "load", label: "팀 부하", count: getModeCount(tasks, "load", myTaskIds) },
-    ],
-    [myTaskIds, tasks]
-  );
-  const activeWorkstreamColumns = data.columns.filter((column) => activeWorkstreamFilters.includes(column.label));
-  const operationModeTasks = tasks.filter((task) => matchesOperationMode(task, activeOperationMode, myTaskIds));
-  const scopedTasks = tasks.filter(
-    (task) =>
-      operationModeTasks.some((item) => item.id === task.id) &&
-      matchesAssigneeFilter(task, activeAssigneeFilter) &&
-      matchesWorkStatusFilter(task, activeWorkStatusFilter) &&
-      (!attentionOnly || hasAttentionSignal(task, "long_stay") || task.status === "overdue")
-  );
-  const filteredTasks = activeWorkstreamColumns.length > 0
-    ? scopedTasks.filter((task) => activeWorkstreamColumns.some((column) => column.id === task.kanbanColumn))
-    : scopedTasks;
-  const filteredTaskCountByColumn = filteredTasks.reduce<Map<string, number>>((counts, task) => {
-    counts.set(task.kanbanColumn, (counts.get(task.kanbanColumn) ?? 0) + 1);
-    return counts;
-  }, new Map());
-  const visibleColumns = activeWorkstreamColumns.length > 0
-    ? activeWorkstreamColumns
-    : activeOperationMode === "flow" || activeOperationMode === "load"
-      ? data.columns
-      : data.columns
-          .map((column, index) => ({
-            column,
-            count: filteredTaskCountByColumn.get(column.id) ?? 0,
-            index,
-          }))
-          .sort((a, b) => Number(b.count > 0) - Number(a.count > 0) || a.index - b.index)
-          .map((item) => item.column);
-  const selectedTask = selectedTaskId
-    ? tasks.find((task) => task.id === selectedTaskId)
-    : undefined;
-  const assigneeFilterItems = useMemo<Array<{ value: HomeAssigneeFilter; label: string }>>(() => {
-    const assignees = Array.from(
-      new Set(
-        data.hospitalTasks
-          .map((task) => getAssigneeLabel(task))
-          .filter((assignee) => assignee !== "미지정" && assignee !== "팀 큐" && assignee !== "배정 누락")
-      )
-    ).sort((a, b) => a.localeCompare(b, "ko-KR"));
-
-    return [
-      { value: allFilterLabel, label: allFilterLabel },
-      { value: unassignedFilterLabel, label: unassignedFilterLabel },
-      ...assignees.map((assignee) => ({
-        value: assignee,
-        label: assignee,
-      })),
-    ];
-  }, [data.hospitalTasks]);
-
-  return (
-    <div
-      className="h-full min-h-0 overflow-hidden bg-[var(--emr-surface-workspace)]"
-      data-testid="home-kanban-workspace"
-    >
-      <section className="flex h-full min-h-0 min-w-0 overflow-hidden bg-card">
-        <div
-          data-testid="home-kanban-board"
-          className={cn(
-            "grid h-full min-h-0 min-w-0 flex-1 p-4",
-            hasBoardChrome
-              ? "grid-rows-[auto_auto_minmax(0,1fr)] gap-3"
-              : "grid-rows-[minmax(0,1fr)]"
-          )}
-        >
-          {hasBoardChrome ? (
-            <>
-              <div className="flex min-h-9 min-w-0 items-center justify-between gap-4 max-sm:flex-col max-sm:items-start">
-                <div className="min-w-0">
-                  <h1 className="text-[18px] font-bold leading-7 text-foreground">업무 현황</h1>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-right max-md:grid-cols-1">
-                  <HomeBoardMetric label="배정 누락" value={`${tasks.filter((task) => hasAttentionSignal(task, "assignment_missing")).length}건`} tone="warning" />
-                  <HomeBoardMetric label="주의 업무" value={`${getUrgentCount(tasks)}건`} tone="danger" />
-                  <HomeBoardMetric label="내 업무" value={`${data.tasks.length}건`} />
-                </div>
-              </div>
-
-              <div className="grid min-w-0 gap-2 border-b border-[var(--emr-border-default)] bg-card py-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <SegmentedControl
-                    value={activeOperationMode}
-                    items={operationModeItems}
-                    aria-label="업무 현황 운영 모드"
-                    disabled={!hasHospitalTasks}
-                    variant="pill"
-                    className="max-w-full gap-2 overflow-x-auto"
-                    itemClassName="h-8 min-h-8 rounded-full px-4 text-[13px] font-semibold leading-5"
-                    onValueChange={(mode) => {
-                      setActiveOperationMode(mode);
-                      setActiveAssigneeFilter(allFilterLabel);
-                      setActiveWorkStatusFilter("all");
-                      setActiveWorkstreamFilters([]);
-                      setAttentionOnly(false);
-                      clearSelection();
-                    }}
-                  />
-                  <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                    <HomeFilterSelect
-                      label="담당자"
-                      ariaLabel="담당자 필터"
-                      disabled={!hasHospitalTasks}
-                      value={activeAssigneeFilter}
-                      items={assigneeFilterItems}
-                      onValueChange={(value) => {
-                        setActiveAssigneeFilter(value as HomeAssigneeFilter);
-                        clearSelection();
-                      }}
-                    />
-                    <HomeWorkstreamMultiSelect
-                      label="업무"
-                      columns={data.columns}
-                      disabled={!hasHospitalTasks}
-                      tasks={scopedTasks}
-                      selectedFilters={activeWorkstreamFilters}
-                      onSelectedFiltersChange={(filters) => {
-                        setActiveWorkstreamFilters(filters);
-                        clearSelection();
-                      }}
-                    />
-                    <HomeFilterSelect
-                      label="업무 상태"
-                      ariaLabel="업무 상태 필터"
-                      disabled={!hasHospitalTasks}
-                      value={activeWorkStatusFilter}
-                      items={workStatusFilterItems}
-                      onValueChange={(value) => {
-                        setActiveWorkStatusFilter(value as HomeWorkStatusFilter);
-                        clearSelection();
-                      }}
-                    />
-                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
-                      <Checkbox
-                        aria-label="완료 포함"
-                        checked={includeCompleted}
-                        disabled={!hasHospitalTasks || !onIncludeCompletedChange}
-                        onCheckedChange={(checked) => {
-                          onIncludeCompletedChange?.(checked === true);
-                          clearSelection();
-                        }}
-                      />
-                      완료 포함
-                    </label>
-                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
-                      <Checkbox
-                        aria-label="취소 포함"
-                        checked={includeCancelled}
-                        disabled={!hasHospitalTasks || !onIncludeCancelledChange}
-                        onCheckedChange={(checked) => {
-                          onIncludeCancelledChange?.(checked === true);
-                          clearSelection();
-                        }}
-                      />
-                      취소 포함
-                    </label>
-                    <label className="flex h-7 items-center gap-1.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2 text-[12px] font-semibold text-muted-foreground">
-                      <Checkbox
-                        aria-label="오래 머문 업무만 보기"
-                        checked={attentionOnly}
-                        disabled={!hasHospitalTasks}
-                        onCheckedChange={(checked) => {
-                          setAttentionOnly(checked === true);
-                          clearSelection();
-                        }}
-                      />
-                      오래 머묾
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : null}
-
-        <div className="relative min-h-0 overflow-hidden">
-          {blockingState ? (
-            <HomeOperationsState
-              errorMessage={errorMessage}
-              sourceStatus={sourceStatus}
-              onRefresh={onRefresh ?? (() => router.refresh())}
-            />
-          ) : hasHospitalTasks ? (
-            <div className="h-full min-h-0 overflow-x-auto pb-2">
-              <div className="grid h-full min-h-[620px] grid-flow-col auto-cols-[280px] items-start gap-3 max-sm:auto-cols-[248px]">
-                {visibleColumns.map((column) => (
-                  <HomeKanbanColumn
-                    key={column.id}
-                    column={column}
-                    selectedTaskId={selectedTaskId}
-                    tasks={filteredTasks.filter((task) => task.kanbanColumn === column.id)}
-                    onSelectTask={selectTask}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div
-              className="grid h-full min-h-[620px] min-w-full place-items-center pb-2"
-              data-testid="home-kanban-empty-state-surface"
-            >
-              <EmrEmptyState
-                kind="upstream-pending"
-                priority="supporting"
-                size="xl"
-                surface="content"
-                testId="home-kanban-empty-state"
-                title="원내 업무가 없습니다"
-                description="오늘 표시할 원내 업무가 없습니다."
-                primaryAction={
-                  <Button
-                    size="default"
-                    variant="outline"
-                    roundness="round"
-                    className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
-                    disabled={loading}
-                    onClick={onRefresh ?? (() => router.refresh())}
-                  >
-                    <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
-                    새로고침
-                  </Button>
-                }
-              />
-            </div>
-          )}
-        </div>
-
-        </div>
-
-        {detailOpen && selectedTask ? (
-          <TaskDetailPanel
-            activeMode={activeOperationMode}
-            task={selectedTask}
-            onClose={closeTaskDetail}
-          />
-        ) : null}
-      </section>
-    </div>
-  );
-}
-
-function HomeBoardMetric({
-  label,
-  tone = "normal",
-  value,
-}: {
-  label: string;
-  tone?: "danger" | "normal" | "warning";
-  value: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "grid min-w-[92px] gap-0.5 rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-card px-2.5 py-1.5",
-        tone === "danger" && "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)]",
-        tone === "warning" && "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)]"
-      )}
-    >
-      <span className="text-[11px] font-semibold leading-3 text-muted-foreground">{label}</span>
-      <span className="text-[13px] font-bold leading-5 text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function HomeOperationsState({
-  errorMessage,
-  onRefresh,
-  sourceStatus,
-}: {
-  errorMessage?: string;
-  onRefresh: () => void;
-  sourceStatus: "error" | "permission_denied";
-}) {
-  const permissionDenied = sourceStatus === "permission_denied";
-
-  return (
-    <div
-      className="grid h-full min-h-[620px] min-w-full place-items-center pb-2"
-      data-testid={permissionDenied ? "home-kanban-permission-state-surface" : "home-kanban-error-state-surface"}
-    >
-      <EmrEmptyState
-        kind={permissionDenied ? "no-permission" : "upstream-pending"}
-        priority="supporting"
-        size="xl"
-        surface="content"
-        testId={permissionDenied ? "home-kanban-permission-state" : "home-kanban-error-state"}
-        title={permissionDenied ? "원내 현황을 볼 수 없습니다" : "원내 현황을 불러오지 못했습니다"}
-        description={
-          permissionDenied
-            ? "현재 계정에는 원내 업무 현황 접근 권한이 없습니다."
-            : errorMessage ?? "업무 없음이 아니라 데이터 연결 상태를 확인해야 합니다."
-        }
-        primaryAction={
-          permissionDenied ? undefined : (
-            <Button
-              size="default"
-              variant="outline"
-              roundness="round"
-              className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
-              onClick={onRefresh}
-            >
-              <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
-              다시 시도
-            </Button>
-          )
-        }
-      />
-    </div>
-  );
-}
-
-export function HomeHospitalStatusSidePanel({
-  errorMessage,
-  loading = false,
-  onRefresh,
-  sourceStatus = "live",
-  tasks,
-}: {
-  errorMessage?: string;
-  loading?: boolean;
-  sourceStatus?: "empty" | "error" | "live" | "partial" | "permission_denied";
-  tasks: HomeTask[];
-  onRefresh?: () => void;
-}) {
-  const groupedActions = groupNextActions(sortNextActions(tasks));
-  const selectedTaskId = useHomeWorkspaceStore((state) => state.selectedTaskId);
-  const selectTask = useHomeWorkspaceStore((state) => state.selectTask);
+export function HomeNavigationSidePanel() {
+  const view = useHomeWorkspaceStore((state) => state.view);
+  const setView = useHomeWorkspaceStore((state) => state.setView);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const blockingState = sourceStatus === "error" || sourceStatus === "permission_denied";
-
-  return (
-    <div className="h-full min-h-0" data-testid="home-next-action-side-panel">
-      <EmrSubpanel>
-        <EmrSubpanelTitle
-          title={<h2 className="truncate">원내 현황</h2>}
-          collapseLabel="원내 현황 패널 접기"
-          onCollapse={() => setModulePanelOpen(false)}
-        />
-        <EmrSubpanelBody>
-          <div
-            className={cn(
-              "pt-1",
-              groupedActions.length > 0 ? "grid gap-3" : "grid min-h-full flex-1 place-items-center"
-            )}
-            data-testid={groupedActions.length > 0 ? undefined : "home-side-panel-empty-state-surface"}
-          >
-            {blockingState ? (
-              <HomeSidePanelState
-                errorMessage={errorMessage}
-                loading={loading}
-                sourceStatus={sourceStatus}
-                onRefresh={onRefresh}
-              />
-            ) : groupedActions.length > 0 ? (
-              groupedActions.map((group) => (
-                <div key={group.id} className="grid gap-1.5">
-                  <div className="flex h-8 items-center justify-between px-1">
-                    <span className="emr-text-section font-semibold text-[var(--emr-sidepanel-list-title-text)]">{group.label}</span>
-                    <Badge variant="secondary" className="h-5 min-w-5 rounded-[var(--clair-radius-atomic-6)] px-1.5 emr-text-status">
-                      {group.tasks.length}
-                    </Badge>
-                  </div>
-                  <div className="grid gap-2">
-                    {group.tasks.slice(0, 4).map((task, index) => (
-                      <NextActionSidePanelCard
-                        key={`${group.id}-${task.id}`}
-                        rank={index + 1}
-                        selected={selectedTaskId === task.id}
-                        task={task}
-                        onSelect={() => selectTask(task.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <EmrQueueEmptyState
-                className="min-h-0"
-                data-testid="home-side-panel-empty-state"
-                description="오늘 표시할 원내 업무가 없습니다"
-                title="원내 업무가 없습니다"
-              />
-            )}
-          </div>
-        </EmrSubpanelBody>
-      </EmrSubpanel>
-    </div>
-  );
+  return <EmrModuleListSidePanel
+    title="홈"
+    testId="home-navigation-side-panel"
+    collapseLabel="홈 패널 접기"
+    onCollapse={() => setModulePanelOpen(false)}
+    openSectionIds={new Set()}
+    onToggleSection={() => undefined}
+    items={[
+      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <CdsFilesGridIcon />, onClick: () => setView("hospital") },
+      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <MenuIcon />, onClick: () => setView("mine") },
+      { id: "inbox", type: "button", label: "인박스", disabled: true, disabledBadgeLabel: "예정" },
+      { id: "messages", type: "button", label: "메시지", disabled: true, disabledBadgeLabel: "예정" },
+    ]}
+  />;
 }
 
-function HomeSidePanelState({
-  errorMessage,
-  loading,
-  onRefresh,
-  sourceStatus,
-}: {
-  errorMessage?: string;
-  loading: boolean;
-  sourceStatus: "error" | "permission_denied";
-  onRefresh?: () => void;
-}) {
-  const permissionDenied = sourceStatus === "permission_denied";
-
-  return (
-    <div className="grid gap-2 text-center" data-testid={permissionDenied ? "home-side-panel-permission-state" : "home-side-panel-error-state"}>
-      <EmrQueueEmptyState
-        className="min-h-0"
-        title={permissionDenied ? "권한 부족" : "데이터 연결 실패"}
-      />
-      <p className="px-3 text-[12px] leading-5 text-muted-foreground">
-        {permissionDenied
-          ? "원내 현황을 볼 수 없습니다."
-          : errorMessage ?? "업무 없음으로 처리하지 않고 다시 확인이 필요합니다."}
-      </p>
-      {!permissionDenied && onRefresh ? (
-        <Button
-          size="sm"
-          variant="outline"
-          className="mx-auto h-8 bg-card"
-          disabled={loading}
-          onClick={onRefresh}
-        >
-          <CdsActionsRefreshCcwIcon data-icon="inline-start" aria-hidden="true" />
-          다시 시도
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function NextActionSidePanelCard({
-  onSelect,
-  rank,
-  selected,
-  task,
-}: {
-  onSelect: () => void;
-  rank: number;
-  selected: boolean;
-  task: HomeTask;
-}) {
-  return (
-    <EmrSidePanelCard
-      selected={selected}
-      selectionVariant="modulePanel"
-      className="min-h-[116px]"
-      testId={`home-next-action-${task.id}`}
-      onSelect={onSelect}
-    >
-      <EmrSidePanelIdentityLine
-        patientName={task.patientName ?? "환자 미지정"}
-        guardianName={task.clientName ?? "보호자 미지정"}
-        typeBadge={<EmrSidePanelTypeBadge label={task.receptionType ?? getTaskTypeLabel(task)} />}
-        action={<EmrSidePanelCardAction ariaLabel={`${task.title} 더보기`} />}
-      />
-      <div className="grid gap-1">
-        <div className="flex min-w-0 items-start gap-2">
-          <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-[11px] font-bold leading-3 text-background">
-            {rank}
-          </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-5 text-[var(--emr-sidepanel-task-card-title-text)]">
-            {task.title}
-          </span>
-        </div>
-        <div className="flex min-w-0 flex-wrap gap-1">
-          <HomeTaskDecisionPill task={task} label={getDecisionReason(task)} />
-          <HomeMutedPill label={getTimeSignal(task)} />
-        </div>
-        <div className="flex min-w-0 flex-wrap gap-1">
-          <EmrSidePanelMetaBadge label="담당" maxWidthClassName="max-w-[96px]" value={getAssigneeLabel(task)} />
-          <EmrSidePanelStatusBadge maxWidthClassName="max-w-[112px]">{getStatusDisplayLabel(task)}</EmrSidePanelStatusBadge>
-        </div>
-      </div>
-    </EmrSidePanelCard>
-  );
-}
-
-function TaskDetailPanel({
-  activeMode,
-  onClose,
-  task,
-}: {
-  activeMode: HomeOperationMode;
-  onClose: () => void;
-  task: HomeTask;
-}) {
+export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus = "live", errorMessage, onRefresh, patientSummary }: HomeKanbanWorkspaceProps) {
   const router = useRouter();
+  const view = useHomeWorkspaceStore((state) => state.view);
+  const personalTab = useHomeWorkspaceStore((state) => state.personalTab);
+  const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
+  const preferences = useHomeWorkspaceStore((state) => state.preferences);
+  const updateQuery = useHomeWorkspaceStore((state) => state.updateQuery);
+  const updatePreferences = useHomeWorkspaceStore((state) => state.updatePreferences);
+  const setPersonalTab = useHomeWorkspaceStore((state) => state.setPersonalTab);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollKey = `${view}:${view === "hospital" ? preferences.layout : personalTab}`;
+  const term = query.search.trim().toLocaleLowerCase();
+  const owners = [...new Set(data.hospitalTasks.flatMap(taskOwners))].sort((a, b) => a.localeCompare(b, "ko"));
+  const visibleTypes = workTypes.filter((type) => !preferences.hidden.includes(type.id));
+  const hiddenTypes = workTypes.filter((type) => preferences.hidden.includes(type.id));
+  const scopeTasks = data.hospitalTasks.filter((task) => {
+    if (progress(task) === "cancelled" || (!query.includeCompleted && progress(task) === "completed")) return false;
+    const date = task.operatingDate || operatingDay(task.dueAt || task.requestedAt);
+    if (!(date === query.date || previous(task, query.date))) return false;
+    if (view === "mine") return personalTab === "assigned" ? task.isMyWork === true : task.isRequestedWork === true;
+    return true;
+  });
+  const tasks = scopeTasks.filter((task) =>
+    (view !== "hospital" || (!preferences.hidden.includes(task.kanbanColumn) && (query.owners === null || taskOwners(task).some((owner) => query.owners?.includes(owner))))) &&
+    (!term || [task.patientName, task.clientName, task.title, task.sourceLabel, task.assigneeName].filter(Boolean).join(" ").toLocaleLowerCase().includes(term)),
+  );
+  const blocked = sourceStatus === "error" || sourceStatus === "permission_denied";
 
-  return (
-    <aside
-      className="flex h-full w-[420px] shrink-0 flex-col border-l border-[var(--emr-border-strong)] bg-[var(--emr-surface-panel)]"
-      data-testid="home-work-status-detail"
-      aria-label="선택한 업무 상세"
-    >
-      <header className="flex min-h-[58px] items-start justify-between gap-3 border-b border-[var(--emr-border-default)] px-4 py-3">
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-2">
-            <h2 className="text-[15px] font-semibold leading-6">선택한 업무</h2>
-            <HomeTaskDecisionBadge task={task} label={getDecisionReason(task)} />
-          </div>
-          <p className="mt-0.5 text-[12px] leading-4 text-muted-foreground">
-            업무 원본 화면으로 이동하기 전 확인할 실행 맥락입니다.
-          </p>
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || loading) return;
+    const saved = useHomeWorkspaceStore.getState().scroll[scrollKey];
+    if (saved) { element.scrollLeft = saved.left; element.scrollTop = saved.top; }
+  }, [scrollKey, loading]);
+
+  function rememberScroll() {
+    const element = scrollRef.current;
+    if (element) useHomeWorkspaceStore.getState().rememberScroll(scrollKey, { left: element.scrollLeft, top: element.scrollTop });
+  }
+  function navigate(task: HomeTask) {
+    rememberScroll();
+    router.push(task.actionHref);
+  }
+  function toggleGroup(key: string) { updatePreferences({ collapsed: toggleValue(preferences.collapsed, key) }); }
+  const collapsed = (key: string) => preferences.collapsed.includes(key);
+  const reset = () => { updateQuery("hospital", { owners: null }); updatePreferences({ hidden: [] }); };
+  const hasFilters = view === "hospital" && (query.owners !== null || hiddenTypes.length > 0);
+
+  return <section className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="home-workspace" aria-busy={loading}>
+    <header className="flex shrink-0 flex-col gap-5 border-b border-[var(--emr-border-default)] px-6 py-5">
+      <EmrPageHeader
+        title={view === "hospital" ? "원내 현황" : "내 업무"}
+        badge={<Badge variant="secondary" aria-label="표시 업무 수">{loading ? "…" : blocked ? "—" : tasks.length}</Badge>}
+        actions={view === "hospital" ? <div className="emr-text-metadata flex flex-wrap items-center gap-2 text-[var(--emr-text-secondary)]" aria-label="현재 병원 환자 현황">
+          <span>원내 {patientSummary?.present ?? "—"}마리</span><span aria-hidden="true">·</span>
+          <span>진료 대기 {patientSummary?.waiting ?? "—"}마리</span><span aria-hidden="true">·</span>
+          <span>진료 중 {patientSummary?.inProgress ?? "—"}마리</span>
+        </div> : undefined}
+      />
+      {view === "mine" && <SegmentedControl aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" items={[{ value: "assigned", label: "내가 할 업무" }, { value: "requested", label: "내가 요청한 업무" }]} />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex shrink-0 items-center gap-2">
+          <EmrDateNavigator dateLabel={query.date} selectedDate={query.date} todayDate={today}
+            onDateChange={(date) => updateQuery(view, { date })}
+            onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1) })}
+            onNext={() => updateQuery(view, { date: offsetDate(query.date, 1) })}
+          />
+          {query.date !== today && <Button variant="ghost" size="sm" onClick={() => updateQuery(view, { date: today })}>오늘</Button>}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="size-7 shrink-0 rounded-full"
-          aria-label="선택한 업무 닫기"
-          onClick={onClose}
-        >
-          ×
-        </Button>
-      </header>
-
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <p className="text-[12px] font-semibold leading-4 text-muted-foreground">{getTaskTypeLabel(task)}</p>
-            <h2 className="text-[20px] font-bold leading-7 text-foreground">{task.title}</h2>
-            <p className="text-[13px] leading-5 text-muted-foreground">{task.recommendedAction}</p>
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
+          <label className="emr-text-body flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[var(--emr-text-secondary)]">
+            <Checkbox checked={query.includeCompleted} onCheckedChange={(checked) => updateQuery(view, { includeCompleted: checked === true })} />완료 포함
+          </label>
+          {view === "hospital" && <>
+            <HomeMultiSelect label="담당자" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
+              onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
+            <HomeMultiSelect label="업무" options={[...workTypes]} values={visibleTypes.map((type) => type.id)} allSelected={hiddenTypes.length === 0}
+              onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
+          </>}
+          <div className="relative w-52 min-w-0">
+            <Input aria-label={view === "hospital" ? "환자 보호자 업무 검색" : "내 업무 검색"} placeholder={view === "hospital" ? "환자·업무 검색" : "내 업무 검색"} value={query.search} onValueChange={(search) => updateQuery(view, { search })} className="h-8 pr-8" />
+            {query.search ? <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label="검색어 지우기" onClick={() => updateQuery(view, { search: "" })}><CircleCloseFillIcon className="size-4" /></Button> : <CdsActionsSearchIcon className="pointer-events-none absolute right-2 top-2 size-4 text-[var(--emr-text-tertiary)]" />}
           </div>
-
-          <div className="grid gap-2 rounded-[var(--clair-radius-atomic-8)] bg-[var(--emr-surface-muted)] p-3 text-[12px] leading-4">
-            <DetailRow label="환자/보호자" value={[task.patientName, task.clientName].filter(Boolean).join(" · ") || "미지정"} />
-            <DetailRow label="요청 출처" value={getRequesterLabel(task)} />
-            <DetailRow label="담당" value={getAssigneeLabel(task)} />
-            <DetailRow label="담당 팀" value={task.roleQueueLabel ?? task.sourceLabel} />
-            <DetailRow label="시간 신호" value={getTimeSignal(task)} />
-            <DetailRow label="운영 모드" value={getModeDescription(activeMode)} />
-          </div>
-
-          <div className="grid gap-2">
-            <p className="text-[12px] font-semibold leading-4 text-muted-foreground">다음 판단</p>
-            <div className="grid gap-1.5">
-              {[getDecisionReason(task), task.sourceLabel, task.roleQueueLabel ?? task.encounterLabel ?? "관련 맥락 확인"].map((item, index) => (
-                <span
-                  key={`${item}-${index}`}
-                  className="rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-subtle)] bg-card px-2.5 py-2 text-[12px] font-medium leading-4 text-muted-foreground"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
+          {hasFilters && <Button variant="ghost" size="sm" onClick={reset}>필터 해제</Button>}
+          {view === "hospital" && <SegmentedControl aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: "보드" }, { value: "list", label: "리스트" }]} />}
         </div>
       </div>
-
-      <footer className="mt-auto grid shrink-0 gap-2 border-t border-[var(--emr-border-default)] bg-card p-4">
-        <Button
-          size="default"
-          className="w-full justify-center rounded-[var(--clair-radius-atomic-8)] bg-foreground text-background hover:bg-foreground/90"
-          onClick={() => router.push(task.actionHref)}
-        >
-          {task.actionLabel}
-          <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
-        </Button>
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="default" disabled>
-            담당 배정
-          </Button>
-          <Button variant="outline" size="default" disabled>
-            메모 남기기
-          </Button>
-        </div>
-      </footer>
-    </aside>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-2">
-      <span className="font-semibold text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-foreground">{value}</span>
-    </div>
-  );
-}
-
-function HomeWorkstreamMultiSelect({
-  columns,
-  disabled = false,
-  label,
-  onSelectedFiltersChange,
-  selectedFilters,
-  tasks,
-}: {
-  columns: HomeKanbanColumn[];
-  disabled?: boolean;
-  label: string;
-  onSelectedFiltersChange: (value: HomeWorkstreamFilter[]) => void;
-  selectedFilters: HomeWorkstreamFilter[];
-  tasks: HomeTask[];
-}) {
-  const displayLabel =
-    selectedFilters.length === 0
-      ? allFilterLabel
-      : selectedFilters.length === 1
-        ? selectedFilters[0]
-        : `${selectedFilters.length}개 선택`;
-  const toggleFilter = (value: HomeWorkstreamFilter) => {
-    onSelectedFiltersChange(
-      selectedFilters.includes(value)
-        ? selectedFilters.filter((item) => item !== value)
-        : [...selectedFilters, value]
-    );
-  };
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[12px] font-medium leading-4 text-muted-foreground">{label}</span>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          aria-label="업무 필터"
-          disabled={disabled}
-          className={cn(
-            "flex h-7 w-[112px] items-center justify-between gap-1 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 text-left text-[12px] font-semibold leading-4 text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/40",
-            disabled && "cursor-not-allowed opacity-45 hover:bg-card",
-          )}
-        >
-          <span className="min-w-0 truncate">{displayLabel}</span>
-          <ChevronDownIcon className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[220px] p-2" data-testid="home-workstream-filter-menu">
-          <div className="grid gap-1">
-            <label
-              className={cn(
-                "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 py-2 text-[12px] leading-4 transition-colors hover:border-[var(--emr-state-selected-border)] hover:bg-[var(--emr-state-hover)]",
-                selectedFilters.length === 0 && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-              )}
-              onClick={() => onSelectedFiltersChange([])}
-            >
-              <Checkbox
-                aria-label="전체 업무 선택"
-                checked={selectedFilters.length === 0}
-                onCheckedChange={() => onSelectedFiltersChange([])}
-                onClick={(event) => event.stopPropagation()}
-              />
-              <span className="font-semibold text-foreground">전체 업무</span>
-              <span className="font-bold text-foreground">{tasks.length}</span>
-            </label>
-            {columns.map((column) => {
-              const columnTaskCount = tasks.filter((task) => task.kanbanColumn === column.id).length;
-              const active = selectedFilters.includes(column.label);
-
-              return (
-                <label
-                  key={column.id}
-                  className={cn(
-                    "grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-[var(--clair-radius-atomic-8)] border border-border bg-card px-2 py-2 text-[12px] leading-4 transition-colors hover:border-[var(--emr-state-selected-border)] hover:bg-[var(--emr-state-hover)]",
-                    active && "border-[var(--emr-state-selected-border)] bg-[var(--emr-state-selected)]"
-                  )}
-                  onClick={() => toggleFilter(column.label)}
-                >
-                  <Checkbox
-                    aria-label={`${column.label} 업무 선택`}
-                    checked={active}
-                    onCheckedChange={(checked) => {
-                      onSelectedFiltersChange(
-                        checked
-                          ? [...selectedFilters, column.label]
-                          : selectedFilters.filter((item) => item !== column.label)
-                      );
-                    }}
-                    onClick={(event) => event.stopPropagation()}
-                  />
-                  <span className="font-semibold text-foreground">{column.label}</span>
-                  <span className="font-bold text-foreground">{columnTaskCount}</span>
-                </label>
-              );
+    </header>
+    {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
+    {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
+      <div className="flex min-h-0 flex-1 gap-3 p-6">
+        <div ref={scrollRef} onScroll={rememberScroll} className="min-h-0 min-w-0 flex-1 overflow-auto" data-testid="home-workspace-scroll">
+          {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
+          view === "hospital" && preferences.layout === "board" ? <div className="grid h-full min-h-64 content-stretch items-start gap-3" data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "minmax(240px, 1fr)").join(" ") }}>
+            {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={query.date} collapsed={collapsed(`column:${type.id}`)}
+              onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
+              isGroupCollapsed={collapsed} onToggleGroup={toggleGroup} onNavigate={navigate} />)}
+            {visibleTypes.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 업무 종류를 선택해 주세요" />}
+          </div> : <div className="space-y-5" data-testid="home-task-list">
+            {(view === "hospital" ? visibleTypes.map((type) => ({ id: type.id, label: type.label, items: tasks.filter((task) => task.kanbanColumn === type.id) })) : personalTab === "assigned" ? [
+              { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, query.date)) },
+              { id: "selected", label: query.date === today ? "오늘 할 업무" : "선택일 업무", items: tasks.filter((task) => !previous(task, query.date)) },
+            ] : statusGroups.filter((group) => group.id !== "completed" || query.includeCompleted).map((group) => ({ id: group.id, label: group.label, items: tasks.filter((task) => progress(task) === group.id) }))).map((group) => {
+              const key = `list:${view}:${group.id}`;
+              return <EmrSidePanelCollapsibleGroup key={key} label={group.label} accessibleLabel={`${group.label} 업무 목록`} count={group.items.length} collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} indicatorVisible={false} stateIconState={false}
+                className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)]" contentClassName="gap-0">
+                {group.items.length ? <HomeWorkTable tasks={group.items} personal={view === "mine"} date={query.date} onNavigate={navigate} /> : <EmrEmptyState kind={term ? "no-search-results" : scopeTasks.length ? "no-filter-results" : "no-data"} surface="table" density="compact" size="sm" title={term ? "검색 결과가 없습니다" : "해당 업무가 없습니다"} />}
+              </EmrSidePanelCollapsibleGroup>;
             })}
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
-function HomeFilterSelect({
-  ariaLabel,
-  disabled = false,
-  displayLabel,
-  items,
-  label,
-  onValueChange,
-  value,
-}: {
-  ariaLabel: string;
-  disabled?: boolean;
-  displayLabel?: string;
-  items: Array<{ value: string; label: string }>;
-  label: string;
-  onValueChange: (value: string) => void;
-  value: string;
-}) {
-  const selectedLabel = displayLabel ?? items.find((item) => item.value === value)?.label;
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[12px] font-medium leading-4 text-muted-foreground">{label}</span>
-      <Select
-        disabled={disabled}
-        value={value}
-        onValueChange={(nextValue) => {
-          if (nextValue) onValueChange(nextValue);
-        }}
-      >
-        <SelectTrigger
-          aria-label={ariaLabel}
-          size="sm"
-          className="h-7 w-[112px] rounded-[var(--clair-radius-atomic-8)] bg-card px-2 text-[12px] font-semibold"
-        >
-          {selectedLabel ? <span className="flex flex-1 text-left">{selectedLabel}</span> : <SelectValue />}
-        </SelectTrigger>
-        <SelectContent align="end" className="min-w-[140px]">
-          <SelectGroup>
-            {items.map((item) => (
-              <SelectItem key={item.value} value={item.value} className="text-[12px]">
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-function HomeKanbanColumn({
-  column,
-  onSelectTask,
-  selectedTaskId,
-  tasks,
-}: {
-  column: HomeKanbanColumn;
-  onSelectTask: (taskId: string) => void;
-  selectedTaskId?: string | null;
-  tasks: HomeTask[];
-}) {
-  const reduceMotion = useReducedMotion();
-  const [columnCollapsed, setColumnCollapsed] = useState(false);
-  const [collapsedStatusIds, setCollapsedStatusIds] = useState<Set<HomeOperationsProgressState>>(new Set());
-  const groupedTasks = statusGroupItems
-    .map((group) => ({
-      ...group,
-      tasks: tasks.filter((task) => getTaskProgressState(task) === group.id),
-    }))
-    .filter((group) => group.tasks.length > 0);
-  const toggleGroup = (status: HomeOperationsProgressState) => {
-    setCollapsedStatusIds((current) => {
-      const next = new Set(current);
-
-      if (next.has(status)) {
-        next.delete(status);
-      } else {
-        next.add(status);
-      }
-
-      return next;
-    });
-  };
-
-  return (
-    <section
-      data-testid={`home-kanban-column-${column.id}`}
-      className={cn(
-        "group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--clair-radius-md)] border border-border bg-[var(--emr-surface-muted)]",
-        columnCollapsed ? "h-auto" : "h-full"
-      )}
-    >
-      <header className="flex min-h-[48px] items-center justify-between gap-3 border-b border-border px-3 py-3">
-        <div className="min-w-0">
-          <h2 className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold leading-5">
-            <span className="truncate">{column.label}</span>
-            <Badge variant="outline" className="h-5 min-w-6 rounded-full bg-card px-1.5 text-[11px] font-semibold">
-              {tasks.length}
-            </Badge>
-          </h2>
+          </div>}
         </div>
-        <button
-          type="button"
-          aria-expanded={!columnCollapsed}
-          aria-label={`${column.label} ${columnCollapsed ? "펼치기" : "접기"}`}
-          className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground opacity-0 transition-colors hover:bg-[var(--emr-state-hover)] hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 group-hover/column:opacity-100"
-          onClick={() => setColumnCollapsed((current) => !current)}
-        >
-          <motion.span
-            animate={{ rotate: columnCollapsed ? 180 : 0 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}
-          >
-            <ChevronDownIcon className="size-4" aria-hidden="true" />
-          </motion.span>
-        </button>
-      </header>
-
-      <AnimatePresence initial={false}>
-        {columnCollapsed ? null : (
-          <motion.div
-            className="min-h-0 flex-1 overflow-hidden"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{
-              height: "auto",
-              opacity: 1,
-              transition: reduceMotion
-                ? { duration: 0 }
-                : {
-                    height: { duration: 0.24, ease: EMR_SIDE_PANEL_COLLAPSE_EASE },
-                    opacity: { duration: 0.14, ease: "easeOut" },
-                  },
-            }}
-            exit={{
-              height: 0,
-              opacity: 0,
-              transition: reduceMotion
-                ? { duration: 0 }
-                : {
-                    height: { duration: 0.18, ease: EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE },
-                    opacity: { duration: 0.12, ease: "easeIn" },
-                  },
-            }}
-          >
-            <div className="grid max-h-full content-start gap-3 overflow-y-auto p-2.5">
-              {groupedTasks.length > 0 ? (
-                groupedTasks.map((group) => (
-                  <EmrSidePanelCollapsibleGroup
-                    key={group.id}
-                    collapsed={collapsedStatusIds.has(group.id)}
-                    count={group.tasks.length}
-                    dataTestId={`home-kanban-status-${column.id}-${group.id}`}
-                    indicatorVisible={false}
-                    label={group.label}
-                    onToggle={() => toggleGroup(group.id)}
-                    stateIconState={false}
-                    contentClassName="gap-2"
-                  >
-                    {group.tasks.map((task) => (
-                      <HomeKanbanTaskCard
-                        key={task.id}
-                        selected={selectedTaskId === task.id}
-                        task={task}
-                        onSelect={() => onSelectTask(task.id)}
-                      />
-                    ))}
-                  </EmrSidePanelCollapsibleGroup>
-                ))
-              ) : (
-                <div className="rounded-[var(--clair-radius-md)] border border-dashed border-border bg-card px-3 py-6 text-center text-[12px] leading-5 text-muted-foreground">
-                  현재 표시할 업무가 없습니다.
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
+        {view === "hospital" && hiddenTypes.length > 0 && <section className="h-fit w-40 shrink-0 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] p-2" aria-label="숨김 업무">
+          <div className="emr-text-metadata flex items-center justify-between gap-1 whitespace-nowrap"><strong>숨김 업무 {hiddenTypes.length}</strong><Button className="px-1" variant="ghost" size="xs" onClick={() => updatePreferences({ hidden: [] })}>모두 표시</Button></div>
+          {hiddenTypes.map((type) => <div key={type.id} className="emr-text-body flex items-center justify-between gap-2 py-1"><span>{type.label}</span><Button variant="ghost" size="xs" aria-label={`${type.label} 열 표시`} onClick={() => updatePreferences({ hidden: preferences.hidden.filter((id) => id !== type.id) })}>표시</Button></div>)}
+        </section>}
+      </div>}
+  </section>;
 }
 
-function HomeKanbanTaskCard({
-  onSelect,
-  selected,
-  task,
-}: {
-  onSelect: () => void;
-  selected: boolean;
-  task: HomeTask;
+function HomeMultiSelect({ label, options, values, allSelected, onChange }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void }) {
+  const text = allSelected ? `${label} 전체` : values.length === 0 ? `${label} 선택 없음` : values.length === 1 ? options.find((option) => option.id === values[0])?.label || values[0] : `${label} ${values.length}개`;
+  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="sm" className="h-8 min-w-24 gap-1" aria-label={`${label} 다중 선택`}>{text}<ChevronDownIcon className="size-3" /></Button>} />
+    <DropdownMenuContent align="end" className="w-52 p-2">
+      <div className="flex justify-between border-b border-border pb-1"><Button size="xs" variant="ghost" onClick={() => onChange(options.map((option) => option.id))}>전체 선택</Button><Button size="xs" variant="ghost" onClick={() => onChange([])}>선택 해제</Button></div>
+      <div className="max-h-64 overflow-auto" role="group" aria-label={`${label} 선택`}>
+        {options.map((option) => <label key={option.id} className="emr-text-body flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-[var(--emr-state-hover)]"><Checkbox aria-label={`${option.label} 선택`} checked={values.includes(option.id)} onCheckedChange={() => onChange(toggleValue(values, option.id))} />{option.label}</label>)}
+      </div>
+    </DropdownMenuContent>
+  </DropdownMenu>;
+}
+
+function HomeTaskSignals({ task, date }: { task: HomeTask; date: string }) {
+  return <div className="flex flex-wrap items-center gap-1">
+    {previous(task, date) && <Badge variant="secondary" className="emr-text-metadata">이전 미완료</Badge>}
+    {task.attentionSignals?.includes("urgent") && <Badge variant="destructive" className="emr-text-metadata">긴급 요청</Badge>}
+    {task.attentionSignals?.includes("re_requested") && <Badge variant="secondary" className="emr-text-metadata">재요청</Badge>}
+  </div>;
+}
+function HomeTaskState({ task }: { task: HomeTask }) {
+  const state = progress(task);
+  return <span className="emr-text-body inline-flex items-center gap-1.5 whitespace-nowrap text-[var(--emr-text-secondary)]"><EmrSidePanelStateIcon state={state === "completed" ? "done" : state === "in_progress" ? "in-progress" : "to-do"} />{statusGroups.find((group) => group.id === state)?.label ?? "취소"}</span>;
+}
+function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, isGroupCollapsed, onToggleGroup, onNavigate }: {
+  id: string; label: string; tasks: HomeTask[]; date: string; collapsed: boolean; onToggle: () => void; onHide: () => void;
+  isGroupCollapsed: (key: string) => boolean; onToggleGroup: (key: string) => void; onNavigate: (task: HomeTask) => void;
 }) {
-  return (
-    <EmrTaskQueueCard
-      item={getHomeTaskQueueCardItem(task)}
-      selected={selected}
-      onSelect={onSelect}
-    />
-  );
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = scrollRef.current; const saved = useHomeWorkspaceStore.getState().scroll[`column:${id}`];
+    if (element && saved) element.scrollTop = saved.top;
+  }, [id, collapsed]);
+  return <section data-testid={`home-kanban-column-${id}`} className={cn("group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)]", collapsed ? "h-fit" : "h-full")}>
+    {collapsed ? <div className="flex flex-col items-center gap-3 py-3"><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 펼치기`} aria-expanded={false} onClick={onToggle}><ChevronRightIcon /></Button><h2 className="emr-text-body [writing-mode:vertical-rl]">{label}</h2><span className="emr-text-metadata text-muted-foreground">{tasks.length}</span></div> : <>
+      <header className="flex h-12 shrink-0 items-center justify-between gap-1 border-b border-[var(--emr-border-default)] px-3">
+        <h2 className="emr-text-section flex items-center gap-2">{label}<span className="emr-text-metadata text-[var(--emr-text-tertiary)]">{tasks.length}</span></h2>
+        <div className="flex items-center opacity-0 transition-opacity group-hover/column:opacity-100 group-focus-within/column:opacity-100 has-[[data-popup-open]]:opacity-100 [@media(hover:none)]:opacity-100">
+          <Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded={true} onClick={onToggle}><ChevronRightIcon className="rotate-180" /></Button>
+          <EmrRowActionMenu ariaLabel={`${label} 열 메뉴`} density="compact" items={[{ key: "hide", label: "이 업무 열 숨기기", onSelect: onHide }]} />
+        </div>
+      </header>
+      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2" onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>
+        {statusGroups.filter((group) => tasks.some((task) => progress(task) === group.id)).map((group) => {
+          const key = `status:${id}:${group.id}`; const items = tasks.filter((task) => progress(task) === group.id);
+          return <EmrSidePanelCollapsibleGroup key={key} label={group.label} accessibleLabel={`${label} ${group.label}`} count={items.length} collapsed={isGroupCollapsed(key)} onToggle={() => onToggleGroup(key)} indicatorVisible={false} stateIconState={false} dataTestId={`home-kanban-status-${id}-${group.id}`}>
+            {items.map((task) => <div key={task.id} className="space-y-1">
+              <EmrTaskQueueCard selected={false} item={{
+                patientName: task.patientName || "환자 미지정", guardianName: task.clientName || "보호자 미지정", receptionType: task.receptionType || "외래",
+                secondLineText: task.queueCardSecondLineText || task.title, secondLineBadgeLabel: task.queueCardSecondLineBadgeLabel,
+                assigneeName: ownerLabel(task), eventActorName: task.requestedBy || "", eventTime: "", eventText: task.queueCardEventText || `${elapsed(task)} 경과`,
+                actionAriaLabel: `${task.patientName || "환자"} ${label} 업무 메뉴`, actionMenuDensity: "compact",
+                actionItems: [{ key: "source", label: `${label} 화면으로 이동`, onSelect: () => onNavigate(task) }], testId: `home-kanban-task-${task.id}`,
+              }} />
+              <HomeTaskSignals task={task} date={date} />
+            </div>)}
+          </EmrSidePanelCollapsibleGroup>;
+        })}
+        {tasks.length === 0 && <p className="emr-text-metadata px-2 py-5 text-center text-muted-foreground">표시할 업무가 없습니다.</p>}
+      </div>
+    </>}
+  </section>;
 }
 
-function getHomeTaskQueueCardItem(task: HomeTask): EmrTaskQueueCardItem {
-  const eventText = task.queueCardEventText ?? getQueueCardEventText(task);
-
-  return {
-    actionAriaLabel: `${task.title} 더보기`,
-    actionTestId: `home-kanban-task-action-${task.id}`,
-    assigneeName: task.assigneeName,
-    eventActorName: getQueueCardEventActorName(task),
-    eventKind: getTaskQueueEventKindFromStatus(task.sourceStatus ?? task.status),
-    eventText,
-    eventTime: getShortTime(task.requestedAt),
-    guardianName: task.clientName ?? "보호자 미지정",
-    patientName: task.patientName ?? "환자 미지정",
-    receptionType: getQueueCardReceptionType(task),
-    secondLineBadgeLabel:
-      task.queueCardSecondLineBadgeLabel ?? getQueueCardSecondLineBadgeLabel(task),
-    secondLineText: task.queueCardSecondLineText ?? getQueueCardSecondLineText(task),
-    testId: `home-kanban-task-${task.id}`,
-  };
-}
-
-function getQueueCardReceptionType(task: HomeTask) {
-  if (task.receptionType) return task.receptionType;
-  if (task.sourceType === "appointment") return "예약";
-  if (task.sourceType === "inpatient") return getTaskTypeLabel(task);
-
-  return "외래";
-}
-
-function getQueueCardEventActorName(task: HomeTask) {
-  if (task.requestedBy) return task.requestedBy;
-  if (task.sourceType === "appointment") return "예약";
-  if (task.sourceType === "reception" || task.sourceType === "consultation") return "접수";
-  if (task.sourceType === "billing") return "수납";
-
-  return "요청자 미정";
-}
-
-function getQueueCardEventText(task: HomeTask) {
-  const time = getShortTime(task.requestedAt);
-  if (task.sourceType === "appointment") return `${time} 예약`;
-  if (task.sourceType === "reception") return `${time} 접수`;
-  if (task.sourceType === "consultation") {
-    return `${time} ${getQueueCardReceptionType(task) === "예약" ? "예약" : "접수"}`;
-  }
-
-  return undefined;
-}
-
-function getQueueCardSecondLineBadgeLabel(task: HomeTask) {
-  if (task.sourceType === "appointment" || task.sourceType === "reception") {
-    return getTaskProgressState(task) === "cancelled" ? "취소" : "대기";
-  }
-  if (task.sourceType === "consultation") return "방문목적";
-  if (task.sourceType === "billing") return undefined;
-
-  return task.sourceLabel;
-}
-
-function getQueueCardSecondLineText(task: HomeTask) {
-  if (
-    task.sourceType === "appointment" ||
-    task.sourceType === "reception" ||
-    task.sourceType === "consultation"
-  ) {
-    return task.recommendedAction || task.title;
-  }
-
-  return task.title;
+function HomeWorkTable({ tasks, personal, date, onNavigate }: { tasks: HomeTask[]; personal: boolean; date: string; onNavigate: (task: HomeTask) => void }) {
+  const columns = useMemo<Array<ColumnDef<HomeTask>>>(() => [
+    { id: "patient", meta: { label: "환자 / 보호자" }, size: 170, cell: ({ row }) => <span className="flex items-center gap-2"><strong>{row.original.patientName || "환자 미지정"}</strong><span className="emr-text-metadata text-muted-foreground">{row.original.clientName}</span></span> },
+    ...(personal ? [{ id: "type", meta: { label: "업무 종류" }, size: 100, cell: ({ row }: { row: { original: HomeTask } }) => <Badge variant="secondary" className="whitespace-nowrap">{typeLabel(row.original)}</Badge> }] : []),
+    { id: "task", meta: { label: personal ? "세부 업무" : "업무" }, size: 300, cell: ({ row }) => <div className="flex flex-wrap items-center gap-2"><span>{row.original.queueCardSecondLineText || row.original.title}</span><HomeTaskSignals task={row.original} date={date} /></div> },
+    { id: "state", meta: { label: "상태" }, size: 110, cell: ({ row }) => <HomeTaskState task={row.original} /> },
+    { id: "owner", meta: { label: "담당자" }, size: 100, cell: ({ row }) => ownerLabel(row.original) },
+    { id: "time", meta: { label: "경과" }, size: 95, cell: ({ row }) => elapsed(row.original) },
+  ], [date, personal]);
+  // TanStack owns mutable table state; React Compiler must not memoize this API.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({ data: tasks, columns, getCoreRowModel: getCoreRowModel(), getRowId: (task) => task.id, defaultColumn: { enableSorting: false, meta: { resize: "none" } } });
+  return <EmrDataTable table={table} aria-label={personal ? "내 업무 목록" : "원내 업무 목록"} viewportMode="content" density="standard" rowOverlayWidth={200}
+    getRowProps={(row) => ({ onClick: () => onNavigate(row.original), "aria-label": `${row.original.patientName} ${row.original.title}` })}
+    getRowOverlayAriaLabel={(row) => `${row.original.patientName} 업무 이동`}
+    renderRowOverlay={({ row }) => <Button variant="outline" size="sm" onClick={() => onNavigate(row.original)}>{typeLabel(row.original)} 화면으로 이동</Button>}
+  />;
 }

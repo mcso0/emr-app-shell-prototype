@@ -32,7 +32,7 @@ const operationsColumns: HomeKanbanColumn[] = [
   },
   {
     id: "lab",
-    label: "임상병리검사",
+    label: "임상병리",
     description: "검사 오더와 결과 입력 업무",
   },
   {
@@ -111,12 +111,18 @@ function mapOperationsItemToHomeTask(item: HomeOperationsWorkItem): HomeTask {
     receptionType: getReceptionTypeLabel(item),
     sourceLabel,
     requestedBy: item.requesterName,
+    requesterUserId: item.requesterUserId,
+    assigneeUserId: item.assigneeUserId,
+    assigneeUserIds: item.assigneeUserIds,
+    assigneeNames: item.assigneeNames,
+    isRequestedWork: item.isRequestedWork,
+    stateEnteredAt: item.stateEnteredAt,
     assigneeName: item.assigneeName,
     queueCardEventText: item.queueCardEventText,
     queueCardSecondLineBadgeLabel: item.queueCardSecondLineBadgeLabel,
     queueCardSecondLineText: item.queueCardSecondLineText,
     requestedAt: item.requestedAt,
-    dueAt: item.stateEnteredAt ?? item.requestedAt,
+    dueAt: item.scheduledAt,
     status: item.progressState,
     priority: item.attentionSignals.includes("urgent")
       ? "urgent"

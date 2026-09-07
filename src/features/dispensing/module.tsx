@@ -1105,10 +1105,11 @@ export function DispensingSidePanel({
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const queryEncounterId = searchParams.get("encounterId");
+  const queryWorkItemId = searchParams.get("workItemId");
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } =
     useLayoutStore();
   const { selectDate, selectedDate, todayDate } =
-    useSelectedOperatingDate(workspaceId);
+    useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   useQueueRealtimeRefresh({
     onQueueChange: fulfillmentQueue.refresh,
@@ -1121,7 +1122,7 @@ export function DispensingSidePanel({
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
-    const queryQueueItem = findQueueItemByEncounterId(
+    const queryQueueItem = queryWorkItemId ? items.find((item) => item.id === `live-fulfillment-${queryWorkItemId}`) : findQueueItemByEncounterId(
       items,
       fulfillmentQueue.workItems,
       queryEncounterId,
@@ -1132,7 +1133,7 @@ export function DispensingSidePanel({
       return;
     }
 
-    if (queryEncounterId) {
+    if (queryEncounterId || queryWorkItemId) {
       setSelectedQueueItem("dispensing", "");
       return;
     }
@@ -1144,6 +1145,7 @@ export function DispensingSidePanel({
     fulfillmentQueue.workItems,
     items,
     queryEncounterId,
+    queryWorkItemId,
     selectedQueueItemIds.dispensing,
     setSelectedQueueItem,
   ]);
@@ -1201,8 +1203,9 @@ export function DispensingHeader({
   moduleId,
   workspaceId,
 }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const { selectedQueueItemIds } = useLayoutStore();
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
@@ -1322,6 +1325,7 @@ export function DispensingContentAside({
   moduleId,
   workspaceId,
 }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const selectedQueueItemIds = useLayoutStore(
     (state) => state.selectedQueueItemIds,
   );
@@ -1331,7 +1335,7 @@ export function DispensingContentAside({
   const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
     Set<string>
   >(() => new Set());
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
@@ -1989,10 +1993,11 @@ export function DispensingContent({
   moduleId,
   workspaceId,
 }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const selectedQueueItemIds = useLayoutStore(
     (state) => state.selectedQueueItemIds,
   );
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(

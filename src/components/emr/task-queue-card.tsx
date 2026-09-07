@@ -38,7 +38,7 @@ type EmrTaskQueueCardProps = {
   className?: string;
   item: EmrTaskQueueCardItem;
   selected: boolean;
-  onSelect: () => void;
+  onSelect?: () => void;
 };
 
 const eventKindLabels: Record<EmrTaskQueueEventKind, string> = {

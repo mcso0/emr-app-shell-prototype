@@ -18,6 +18,7 @@ export type EmrModuleListSidePanelButtonItem = EmrModuleListSidePanelBaseItem & 
   active?: boolean;
   count?: ReactNode;
   disabled?: boolean;
+  disabledBadgeLabel?: string;
   icon?: ReactNode;
   onClick?: () => void;
   testId?: string;
@@ -344,7 +345,7 @@ export function EmrModuleListSidePanel({
                     active={item.active}
                     count={item.count}
                     disabled={item.disabled}
-                    disabledBadge={<EmrModuleListSidePanelBadge variant="outline">미구현</EmrModuleListSidePanelBadge>}
+                    disabledBadge={<EmrModuleListSidePanelBadge variant="outline">{item.disabledBadgeLabel ?? "미구현"}</EmrModuleListSidePanelBadge>}
                     icon={item.icon}
                     onClick={item.onClick}
                     testId={item.testId}

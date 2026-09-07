@@ -90,6 +90,12 @@ export interface HomeTask {
   receptionType?: "예약" | "외래" | "접수";
   sourceLabel: string;
   requestedBy?: string;
+  requesterUserId?: string;
+  assigneeUserId?: string;
+  assigneeUserIds?: string[];
+  assigneeNames?: string[];
+  isRequestedWork?: boolean;
+  stateEnteredAt?: string;
   assigneeName?: string;
   queueCardEventText?: string;
   queueCardSecondLineBadgeLabel?: string;
@@ -214,6 +220,8 @@ export type HomeOperationsSummary = {
 export type HomeOperationsWorkItem = {
   assigneeName?: string;
   assigneeUserId?: string;
+  assigneeUserIds?: string[];
+  assigneeNames?: string[];
   attentionSignals: HomeOperationsAttentionSignal[];
   drawerSummary?: string;
   encounterId?: string;
@@ -231,6 +239,9 @@ export type HomeOperationsWorkItem = {
   queueCardSecondLineText?: string;
   receptionType?: "예약" | "외래" | "접수";
   requestedAt: string;
+  scheduledAt?: string;
+  requesterUserId?: string;
+  isRequestedWork?: boolean;
   requesterName?: string;
   sourceHref: string;
   sourceId: string;
@@ -254,6 +265,7 @@ export type HomeOperationsWorkItemsResponse =
       ok: true;
       accessIssues?: HomeOperationsAccessIssue[];
       generatedAt: string;
+      currentPatients?: { present: number; waiting: number; inProgress: number } | null;
       items: HomeOperationsWorkItem[];
       operatingDate: string;
       sourceStatus: "empty" | "live" | "partial";

@@ -1703,7 +1703,7 @@ export function LabSidePanel({
     (state) => state.setModulePanelOpen,
   );
   const { selectDate, selectedDate, todayDate } =
-    useSelectedOperatingDate(workspaceId);
+    useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<
     Set<LabResult["status"]>
   >(() => new Set());
@@ -1909,7 +1909,7 @@ export function ImagingSidePanel({
     (state) => state.setModulePanelOpen,
   );
   const { selectDate, selectedDate, todayDate } =
-    useSelectedOperatingDate(workspaceId);
+    useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<
     Set<ImagingStudyStatus>
   >(() => new Set());
@@ -3338,7 +3338,7 @@ export function LabContent({
   );
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(
     searchParams,
@@ -3785,7 +3785,7 @@ function useCurrentImagingDetail(workspaceId: string) {
   const selectedImagingStudyId = useLabImagingStore(
     (state) => state.selectedImagingStudyId,
   );
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
 
   return getImagingDetailFromSearchParams(
@@ -4285,7 +4285,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
   );
-  const { selectedDate } = useSelectedOperatingDate(workspaceId);
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
   const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(
     searchParams,
