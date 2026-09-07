@@ -8362,24 +8362,35 @@ function ChartOrderHistorySheet({
   row?: ChartOrderDraftRow;
 }) {
   if (!row) return null;
+  const scopedExecution =
+    execution?.workspaceId === workspaceId &&
+    execution.encounterId === row.order.encounterId
+      ? execution
+      : undefined;
   const tasks =
-    execution?.tasks
+    scopedExecution?.tasks
       .filter((task) => task.orderId === row.order.id)
       .sort((left, right) => right.attemptNo - left.attemptNo) ?? [];
+  const planTask = tasks.find((task) =>
+    task.effectiveSnapshot.snapshotSchemaVersion === 1 &&
+    task.effectiveSnapshot.workspaceId === workspaceId &&
+    task.effectiveSnapshot.encounterId === row.order.encounterId &&
+    task.effectiveSnapshot.orderId === row.order.id,
+  );
   const taskIds = new Set(tasks.map((task) => task.taskId));
   const events =
-    execution?.events
+    scopedExecution?.events
       .filter((event) => taskIds.has(event.taskId))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt)) ??
     [];
   const revisions =
-    execution?.revisions
+    scopedExecution?.revisions
       .filter((revision) => revision.orderId === row.order.id)
       .sort((left, right) => right.revisionNo - left.revisionNo) ?? [];
   const queues =
-    execution?.queues.filter((queue) => taskIds.has(queue.taskId)) ?? [];
+    scopedExecution?.queues.filter((queue) => taskIds.has(queue.taskId)) ?? [];
   const billingCandidates =
-    execution?.billingCandidates.filter(
+    scopedExecution?.billingCandidates.filter(
       (candidate) => candidate.orderId === row.order.id,
     ) ?? [];
   return (
@@ -8388,7 +8399,7 @@ function ChartOrderHistorySheet({
         <SheetHeader className="border-b border-[var(--emr-border-default)] pr-12">
           <SheetTitle>{row.order.displayName} 이력</SheetTitle>
           <SheetDescription>
-            확정 snapshot과 revision/attempt 연결은 원본을 덮어쓰지 않습니다.
+            Task 수행 계획과 revision/attempt 연결은 원본을 덮어쓰지 않습니다.
           </SheetDescription>
         </SheetHeader>
         <div className="grid gap-3 overflow-y-auto p-4">
@@ -8402,12 +8413,17 @@ function ChartOrderHistorySheet({
             </p>
           </div>
           <div className="rounded-lg border border-[var(--emr-border-default)] p-3">
-            <strong className="text-sm">확정 snapshot</strong>
+            <strong className="text-sm">수행 계획 snapshot</strong>
             <p className="mt-1 emr-text-metadata text-[var(--emr-text-secondary)]">
-              {row.runtimeRow?.snapshotHash
-                ? `hash ${row.runtimeRow.snapshotHash}`
-                : "확정 전 Draft이거나 legacy snapshot입니다."}
+              {planTask
+                ? `Task 계획 보관됨 · attempt ${planTask.attemptNo}`
+                : "수행 계획 snapshot을 확인하지 못했어요. 확정 전 후보 또는 이전 형식의 이력일 수 있어요."}
             </p>
+            {row.runtimeRow?.snapshotHash ? (
+              <p className="mt-1 break-all emr-text-metadata text-[var(--emr-text-secondary)]">
+                {`세트 적용 hash ${row.runtimeRow.snapshotHash}`}
+              </p>
+            ) : null}
           </div>
           {tasks.length > 0 ? (
             tasks.map((task) => (
@@ -11644,11 +11660,35 @@ function OrderArea({
         toast.error("확정 결과의 최신 금액을 확인하지 못했어요.");
         return false;
       }
+      // The atomic command can return rows captured before its final revision
+      // update. Refresh only these confirmed roots/children, never other local
+      // drafts. A failed read must not turn a successful command into a retry.
+      let confirmedRows = result.rows ?? [];
+      const readback = await loadChartOrderActions({
+        actorHeaders,
+        encounterId: bundle.encounter.id,
+        workspaceId: bundle.encounter.workspaceId,
+      });
+      if (readback.ok) {
+        const freshById = new Map(
+          (readback.rows ?? [])
+            .filter((row) =>
+              row.workspaceId === bundle.encounter.workspaceId &&
+              row.encounterId === bundle.encounter.id &&
+              (row.orderConfirmationStatus === "confirmed" ||
+                row.orderConfirmationStatus === "billed") &&
+              (confirmedRootOrderIds.includes(row.orderId) ||
+                Boolean(row.parentOrderId && confirmedRootOrderIds.includes(row.parentOrderId))),
+            )
+            .map((row) => [row.orderId, row]),
+        );
+        confirmedRows = confirmedRows.map((row) => freshById.get(row.orderId) ?? row);
+      }
       const applyResult = (currentRows: ChartOrderDraftRow[]) =>
         applyBillingCandidatesToOrderRows(
           applyPersistedOrderActions(
             currentRows,
-            result.rows ?? [],
+            confirmedRows,
             bundle.encounter.workspaceId,
             result.orderActions,
           ),

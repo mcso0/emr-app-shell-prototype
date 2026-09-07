@@ -93,9 +93,18 @@ bug; a narrow local correction passed541 real-row replay and104 focused tests.
 Its exact5b731 Preview and Release Check passed; authenticated chart search now
 loads. New-order save exposed resubmission of untouched old drafts, including a
 paused source. The narrow client delta-save fix passes10 serializer regressions,
-28 existing contracts and one local API test; new Preview verification remains.
-The failed request created no orders and all four old-order fingerprints match.
-Authenticated chart/result/retest acceptance and Production delivery remain pending.
+28 existing contracts and one local API test. Exact3658 Preview/Release Check
+passed. Cheongdam added and confirmed consultation/WBC/CT-review candidates;
+all four old drafts retained exact fingerprints. Consultation and imaging actual
+v1/v2 persisted with unchanged Task plans; WBC9.9 and separate no-charge retest10.1
+saved and completed, with original result preserved and no retest billing candidate.
+Follow-up local fixes correct stale post-confirm revision and Task-plan history
+labels, remove unsaved/mock narratives and media from live lab/imaging surfaces,
+and route pilot live reception through existing real staff sourcing. Focused
+regressions and237 combined contracts, full type/lint/build/docs/UX checks pass.
+Clair-demo Admin alias/default edit/reload/master-reset/use-stop passed and original
+values/status/price were restored. New Preview and remaining workspace flow
+acceptance are pending. Production delivery and the full objective remain open.
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 

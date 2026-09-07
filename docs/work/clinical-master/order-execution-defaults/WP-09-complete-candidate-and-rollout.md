@@ -475,3 +475,63 @@ Cheongdam final revision13 remains the earlier restored baseline. These intended
 Admin edits postdate the116-fingerprint adoption proof; do not claim the entire
 catalog/audit state stayed unchanged after QA. Clair-demo Admin and clinical-default
 edit/reset checks remain. The full objective and Production delivery are not done.
+
+### Authenticated result/retest evidence and live-display corrections — 2026-09-07
+
+Exact3658c2c396217c9216680a3ca0d2f93f01aac2c9 passed Release Check34097346851
+and Ready Preview `dpl_AWesFdDCWnDj6Uz3RfmaB6XWkk7s`; the branch alias points to
+that deployment. Cheongdam synthetic encounter8da74865-36ff-4cda-ae7d-1e3b4d55c7d2
+successfully added consultation868c98f7-173d-4f4f-a797-3432d99c8907,
+WBC2800faee-c72a-452e-880d-39ebcbdc0fb0 and existing-CT-review
+c4f4569c-cf6a-4bd9-9b26-b1f5045ec01d. All four prior draft-row fingerprints
+remain identical after these confirmations; paused catalog sources stayed paused.
+
+Consultation and imaging actual records both retain original v1 plus reasoned v2,
+the original performer/time and an unchanged Task-plan hash. UI reload and separate
+DB reads agree. A completed consultation Task intentionally retains its initial
+plan even when the Order confirmed snapshot later receives calculation metadata;
+do not assert equality between these two distinct snapshots or rewrite either.
+Canonical WBC9.9 persisted and generated an explicitly chosen same-encounter,
+new-specimen/manual-profile/no-charge atomic retest52dff63f-9059-4871-8bbd-60ba2dbd01eb.
+The retest was separately confirmed, saved as10.1 and completed. Its billing
+candidate count remains0, and the original9.9 row fingerprint is unchanged.
+Entering a QA marker in the device-warning field correctly produced flagged_result
+and blocked completion. Removing that non-device marker through normal result-save
+created entry revision2 and allowed completion; no guard or permission was weakened.
+All four new execution tasks are complete. These are synthetic functional records,
+not real exams, clinical validation, hardware input, payment or external messages.
+
+Observed UI defects are corrected locally without a migration:
+
+- Atomic confirmation returns rows captured before its final revision update.
+  A scoped existing GET readback now refreshes only confirmed selected roots/children;
+  failed readback preserves the successful command and its original ETag.
+- The old history label treated the B3 set-application hash as the confirmed plan.
+  Individual orders normally lack that hash. The UI now distinguishes a scoped
+  Task execution plan from the optional set hash; no snapshot/hash is invented.
+- Live lab/imaging pages exposed unsaved comment editors, sample attachments,
+  generated clinical prose and mock staff/US fallbacks. These unsupported live
+  surfaces now explain their limits; canonical result saving and typed actual/history
+  actions remain. Existing snapshot names, request time and assignment presence are
+  used without guessing an unprovided clinician name or imaging modality.
+- Pilot reception showed mock staff IDs rejected by the existing UUID/membership
+  guard. Its three staff-source predicates now reuse the existing real workspace
+  staff path only for pilot plus Supabase auth, including its existing scoped
+  reception snapshot and missing-patient profile reads. Cheongdam, legacy/mock behavior,
+  permission checks and registered-location boundaries are unchanged.
+
+Focused regression evidence: chart history13, live display6 and pilot staff4 pass,
+with failures reproduced on the previous code; previous delta-save10 remains covered.
+The browserless catalog contract config now includes all four files and passes237
+combined tests. Independent chart, lab and reception reviews found no must-fix issue.
+Full typecheck, lint, build, docs1009, secrets4241 and UX-copy pass; the build retains the existing
+unrelated docs-reader NFT warning. The first UX command used an incorrect script name
+and ran no check; the correct ux-copy:check passed. Final staged secret scan4244
+also passed; new Preview verification remains. Clair-demo glucose Admin alias plus pretreatment-default edit/save/reload,
+field-only master reset and use-stop passed. Final catalog revision13 is active,
+aliases empty, original default inputs and36012KRW restored; audit/revisions remain.
+The initial save confirmation was dismissed by a premature QA reload and wrote
+nothing; the subsequent confirmed save and reload are the verified result.
+pilot synthetic registration/encounter and remaining workspace flow acceptance are
+not yet complete. PR711 remains open and unmerged. Preserve all synthetic QA IDs as
+append-only evidence; do not reset historical results to make fingerprints match.

@@ -1,9 +1,13 @@
 import { defineConfig } from "@playwright/test";
 
-// These server contracts inject in-memory clients; no app server or DB is used.
+// These contracts use in-memory clients or extracted app code; no app server or DB is used.
 export default defineConfig({
   testDir: "./tests",
   testMatch: [
+    "chart-order-draft-delta-save.spec.ts",
+    "chart-order-confirm-history.spec.ts",
+    "lab-live-display-boundary.spec.ts",
+    "reception-live-staff-scope.spec.ts",
     "chart-actual-contract.spec.ts",
     "inpatient-location-contract.spec.ts",
     "lab-result-profile-contract.spec.ts",
