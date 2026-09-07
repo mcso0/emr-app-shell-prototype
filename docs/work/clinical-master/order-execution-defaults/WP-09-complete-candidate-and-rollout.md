@@ -588,3 +588,13 @@ the existing unrelated docs-reader NFT warning. Docs1009, secrets4244, UX-copy a
 diff checks pass; the final staged secret scan includes the new test and passes4245.
 Independent selection-boundary and clinician-render reviews found no must-fix issue.
 PR711 remains open; this local delta still needs commit/check/Preview verification.
+
+Exact ecfd4059ac7484504540bf4a9afa4d872d8180ce subsequently passed Release
+Check34103126811; Preview dpl_EA3UegvdkC1KkZf5UwZLQ6qT8BjW is Ready.
+Reload now opens the actual Sep7 lab/imaging work, not the May1 fixture date.
+Remaining lab acceptance exposed one blocking legacy condition: LabContent disabled
+persisted result loading solely for clair-demo. The existing allowDemoContent guard
+now owns fallback, result loading, effective rows, retry and save-refresh consistently.
+This changes no API, DB, permission or fixture data. Its focused live/mock regression
+and248 combined contracts, full typecheck/lint/build pass. Preview verification of
+this last correction remains; no broader cleanup is included.

@@ -7,6 +7,39 @@ import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 
 const source = readFileSync("src/features/lab-imaging/module.tsx", "utf8");
+test("live lab enables persisted result rows even in clair-demo; mock keeps its fixture", () => {
+  const start = source.indexOf("export function LabContent(");
+  const body = source.slice(start, source.indexOf("  const [savedEntryRevision", start));
+  const script = ts.transpileModule(body.replace("export function", "function") +
+    '\nreturn effectiveDetail; }\nLabContent({ workspaceId: "clair-demo" })', {}).outputText;
+  for (const live of [true, false]) {
+    let enabled: boolean | undefined;
+    let mockFallback: boolean | undefined;
+    const result = runInNewContext(script, {
+      isLegacySalesDemoWorkspace: () => true,
+      isLiveAuthRuntime: () => live,
+      useSearchParams: () => ({}),
+      useLabImagingStore: () => undefined,
+      useLayoutStore: () => undefined,
+      useSelectedOperatingDate: () => ({ selectedDate: "2026-09-07" }),
+      useFulfillmentQueue: () => ({ workItems: [{ id: "work", orderId: "order" }] }),
+      getLabDetailFromSearchParams: (_a: unknown, _b: unknown, _c: unknown, options: { allowMockFallback: boolean }) => {
+        mockFallback = options.allowMockFallback;
+        return { detail: { order: { id: "order" }, result: { rows: [{ value: "mock" }] } } };
+      },
+      useMemo: (fn: () => unknown) => fn(),
+      useLabResultSheetCatalogRows: () => ({ rows: [] }),
+      usePersistedLabResult: (_a: unknown, _b: unknown, _c: unknown, shouldLoad: boolean) => {
+        enabled = shouldLoad;
+        return { result: { rows: [{ value: "persisted" }] }, retry: () => undefined };
+      },
+    });
+    assert.equal(enabled, live);
+    assert.equal(mockFallback, !live);
+    assert.equal(result.result.rows[0].value, live ? "persisted" : "mock");
+  }
+});
+
 const ast = ts.createSourceFile(
   "module.tsx",
   source,

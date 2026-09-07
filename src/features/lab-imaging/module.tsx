@@ -3344,7 +3344,7 @@ export function LabContent({
     searchParams,
     selectedLabResultId,
     fulfillmentQueue.workItems,
-    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
+    { allowMockFallback: allowDemoContent },
   );
   const fulfillmentWorkItem = useMemo(
     () =>
@@ -3354,15 +3354,15 @@ export function LabContent({
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
   const catalogRowsState = useLabResultSheetCatalogRows({
-    result: isLegacySalesDemoWorkspace(workspaceId) ? detail?.result : undefined,
+    result: allowDemoContent ? detail?.result : undefined,
     workItem: fulfillmentWorkItem,
     workspaceId,
   });
-  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !isLegacySalesDemoWorkspace(workspaceId));
+  const persistedResult = usePersistedLabResult(workspaceId, fulfillmentWorkItem?.id, detail?.result, !allowDemoContent);
   const reloadPersistedResult = persistedResult.retry;
   const effectiveDetail = useMemo(() => {
     if (!detail) return null;
-    if (!isLegacySalesDemoWorkspace(workspaceId)) return { ...detail, result: persistedResult.result ?? { ...detail.result, rows: [] } };
+    if (!allowDemoContent) return { ...detail, result: persistedResult.result ?? { ...detail.result, rows: [] } };
     if (detail.result.rows.length > 0 || catalogRowsState.rows.length === 0)
       return detail;
 
@@ -3373,7 +3373,7 @@ export function LabContent({
         rows: catalogRowsState.rows,
       },
     };
-  }, [catalogRowsState.rows, detail, persistedResult.result, workspaceId]);
+  }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
     workspaceId: string;
     resultId: string;
@@ -3409,7 +3409,7 @@ export function LabContent({
           resultId: effectiveDetail.result.id,
           revision: outcome.entryWriteRevision,
         });
-        if (!isLegacySalesDemoWorkspace(workspaceId)) reloadPersistedResult();
+        if (!allowDemoContent) reloadPersistedResult();
       }
       return outcome;
     },
@@ -3419,6 +3419,7 @@ export function LabContent({
       saveResultRevision,
       workspaceId,
       reloadPersistedResult,
+      allowDemoContent,
     ],
   );
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
@@ -3755,13 +3756,13 @@ export function LabContent({
                 : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"
             }
             catalogStatus={
-              !isLegacySalesDemoWorkspace(workspaceId) ? persistedResult.status : detail?.result.rows.length === 0
+              !allowDemoContent ? persistedResult.status : detail?.result.rows.length === 0
                 ? catalogRowsState.status
                 : "idle"
             }
             emptyRowsKind={fulfillmentWorkItem ? "upstream-pending" : "no-data"}
             result={displayDetail.result}
-            onCatalogRetry={isLegacySalesDemoWorkspace(workspaceId) ? catalogRowsState.retry : persistedResult.retry}
+            onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
             onSave={saveResultRows}
           />
           <LabResultCommentSection
