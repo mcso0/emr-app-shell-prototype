@@ -436,3 +436,42 @@ resumed authenticated acceptance. The pilot workspace has no patients/encounters
 its acceptance requires a synthetic fixture through the supported UI. No new QA
 patient, chart order, actual result or retest was created at this checkpoint.
 Production remains unmerged; the full deployment objective is still active.
+
+### Authenticated draft-save preservation correction — 2026-09-07
+
+Exact5b731f5dfa5ed27e68a4a9fdf5f81f35b84488e5 passed Release Check34095495498
+and Ready Preview `dpl_DAj6cRsufepHRUkfwkuqWCourBv4`. After login, Cheongdam chart
+search loaded492 patient-eligible candidates (the server list is541; species
+filtering is separate). Selecting three new synthetic consultation/lab/imaging
+orders reached the draft writer but returned HTTP500. Postgres logs at16:40:58KST
+reported `P0001 catalog_item_unavailable`, not a memory/statement-timeout failure.
+Independent readback found no new order and identical fingerprints for all four
+existing encounter drafts. No confirm/result/retest occurred.
+
+The old eye-drop dispensing draft still pins its original snapshot while its
+catalog source is now paused. The client sent all existing drafts with the new
+ones; the SQL upsert writer rebuilds every submitted catalog snapshot. This both
+rejects a paused source and risks rebasing untouched active-source pins/prices.
+The existing RPC contract preserves omitted rows; only `removedOrderIds` removes
+drafts. The correction therefore stays in the shared client serializer: omit an
+unchanged persisted root, keep every new/edited root, and submit the parent with
+all child inputs when a set child changes. Full UI/reconciliation rows, CAS,
+explicit removal, source eligibility and both save callers remain unchanged.
+No SQL migration, catalog reactivation, permission change or history rewrite.
+
+Ten tests execute the actual extracted serializer/dirty helpers: eight failed
+before the fix; all ten pass afterward. Twenty-eight existing pure contracts pass,
+and the local API route test passes with the configured mock dev server. An initial
+serverless test invocation had one Invalid URL setup failure; it was rerun with
+the app server rather than counted as passing. Typecheck, focused/full lint,
+build, docs1009 and UX-copy checks pass; build retains the existing unrelated
+docs-reader NFT warning. Independent review found no must-fix issue and reran
+all10 serializer cases successfully. New exact-candidate Release Check/Preview
+and authenticated acceptance remain required.
+
+Pilot Admin alias/save/reload/use-stop also passed on the earlier Preview and was
+restored to active/empty aliases at revision12, retaining36012KRW and defaults.
+Cheongdam final revision13 remains the earlier restored baseline. These intended
+Admin edits postdate the116-fingerprint adoption proof; do not claim the entire
+catalog/audit state stayed unchanged after QA. Clair-demo Admin and clinical-default
+edit/reset checks remain. The full objective and Production delivery are not done.

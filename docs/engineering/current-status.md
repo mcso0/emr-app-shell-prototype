@@ -90,7 +90,12 @@ smoke remain. The full objective stays active; data adoption is not app delivery
 Authenticated Preview Admin save/reload/use-stop passed in Cheongdam, with test
 alias/status restored. Chart loading exposed an explicit-null set-price mapper
 bug; a narrow local correction passed541 real-row replay and104 focused tests.
-Its new Preview and remaining authenticated chart/result/retest acceptance are pending.
+Its exact5b731 Preview and Release Check passed; authenticated chart search now
+loads. New-order save exposed resubmission of untouched old drafts, including a
+paused source. The narrow client delta-save fix passes10 serializer regressions,
+28 existing contracts and one local API test; new Preview verification remains.
+The failed request created no orders and all four old-order fingerprints match.
+Authenticated chart/result/retest acceptance and Production delivery remain pending.
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 

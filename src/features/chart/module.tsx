@@ -2766,6 +2766,21 @@ async function saveChartOrderDraftRoute({
       // draft inputs would lose the set parent/child discriminator on retry.
       if (row.runtimeRow?.rowType === "set_child") return [];
 
+      // RPC rows are upserts, not a replacement list. Re-submitting an
+      // untouched row would rebase its pinned snapshot (or reject a paused
+      // source). Keep it locally and submit only new/edited roots; a changed
+      // set child still requires its parent and the complete child inputs.
+      if (
+        row.runtimeRow &&
+        !isChartOrderDraftRowDirty(row) &&
+        !rows.some(
+          (child) =>
+            child.runtimeRow?.rowType === "set_child" &&
+            child.runtimeRow.parentOrderId === row.order.id &&
+            isChartOrderDraftRowDirty(child),
+        )
+      ) return [];
+
       const isSet =
         row.runtimeRow?.rowType === "set" ||
         row.catalogSearchRow?.rowType === "set" ||
