@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-09-06
+Updated: 2026-09-07
 
 This is the short startup status for new Codex sessions and human review. It should stay compact. Module and release evidence is preserved in [MVP Status Detail Snapshot](current-status-details.md). Older history remains in [MVP Current Status History](current-status-history.md). Read details only for the active task.
 
@@ -74,9 +74,19 @@ billing, existing pilot nonbillable exceptions and differentiated new-item demo
 prices are approved. Fresh delivery checks include203 contracts,93 artifact tests,
 docs/secrets/typecheck/build; publisher35 and mocked browser evidence are recorded
 separately. [WP09](../work/clinical-master/order-execution-defaults/WP-09-complete-candidate-and-rollout.md)
-owns exact hashes and remaining gates. Remote DB apply, authenticated smoke,
-exact PR Preview/Release Check and Production approval/delivery remain.
-The full objective stays active; local rollback is not remote completion.
+owns exact hashes and remaining gates. Remote DDL and the approved three-workspace
+candidate are installed; the compatible Production app is not yet delivered. After a
+rehearsal-time server restart,44 master/116 workspace fingerprints remained exact.
+Two scalar memory fixes passed1516 differential cases locally and remotely; the
+parity-corrected23-migration rollback/late-failure/retry harness also passed.
+Do not use the old Production writer against the new actual-value triggers.
+The full remote rehearsal passed without residue, followed by one committed rollout.
+Its postcommit bulk guard timed out; independent split readback matched all116
+fingerprints and the persisted receipt, with524 selectable/51 paused/53 new prices
+per workspace,9 manual devices/519 synthetic bindings/90 compositions, and all1597
+existing catalog pricing rows unchanged. No replay was performed after the timeout.
+Final exact-candidate checks, Production delivery and three-workspace authenticated
+smoke remain. The full objective stays active; data adoption is not app delivery.
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 

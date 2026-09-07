@@ -2,7 +2,7 @@
 type: Work Package
 title: Complete candidate reconciliation and staged rollout
 status: in_progress
-updated: 2026-09-06
+updated: 2026-09-07
 ---
 
 # WP-09 — Complete candidate and rollout
@@ -298,3 +298,114 @@ The default full historical-gap/structural-rejection/ACL/rollback harness and th
 new exact-head Release Check/Preview must also pass before remote continuation.
 Latest completion evidence is recorded in the PR packet rather than inferred
 from this intermediate cutover checkpoint.
+
+### Resource and transport remediation — 2026-09-07
+
+The approved one-item Cheongdam synthetic glucose activation is now the baseline;
+the canonical writer changed only item activity/local revision and the linked
+catalog revision, with an explicit audit. Existing result pins/history and all
+other scoped tables remained unchanged. Candidate packet
+`31dc031650cdd29d0150bc34537372443f397a92615e8f76d25a8047bd38f048`
+retains the same payload/configuration and updates only that approved preflight.
+Its full rehearsal lost the connection during a server restart at05:11:51 UTC.
+The CSV was empty: FAILED, not PASS. Independent44 master/116 workspace-table
+fingerprints matched the after-glucose baseline, with zero candidate release and
+zero receipt. Restart logs do not prove an OOM cause. The prior Production writer
+remains incompatible with the installed actual-value triggers; no order workflow
+is claimed usable until coordinated app/DB delivery and authenticated smoke.
+
+The initial local memory estimate used an obsolete cumulative publisher. Added
+the two already-deployed20260831132225/20260831135847 prerequisites to the local
+harness and assert current remote cumulative-body SHA
+`5f2f2992c15d80f4a9d8ddad84574ba16831590c86f92bce08454f134982016a`.
+Do not use the older relation-function memory experiment as a remote diagnosis.
+
+On the matched baseline, two scalar SQL-function context groups retained about
+447MB after retry. The narrow remediation wraps their exact SELECT bodies in
+PL/pgSQL, preserving current treatmentV2 validation, SQL NULL/JSON null, errors,
+OID, owner/ACL, definer/invoker, search_path and every other pg_proc property.
+Migration `20260907054704_clinical_master_oed_scalar_memory.sql` pins both previous
+body hashes and changes no table, publisher, fingerprint, audit or atomicity rule.
+The paired local experiment removed those two large retained groups; sparse
+whole-container samples were1.527GiB before /789.1MiB after. These are neither
+exact peaks nor a remote capacity guarantee, and do not establish restart cause.
+
+Fresh local evidence:
+
+- Scalar differential:416 field-cell +1100 schema cases, result and SQLSTATE/message
+  equality, unchanged function metadata; outer ROLLBACK.
+- Full23-migration WP09 harness: structural drift/ACL/actor/SHA/foreign/stale
+  rejection; complete false-rehearsal residue check; late-failure rollback;
+  524 selectable/51 paused/53 new prices per target;9 devices/519 bindings/
+  90 compositions; exact retry stable; outer ROLLBACK.
+- Reviewed rehearsal transport:12 tests, including mock-TTY exit/failure/interruption/
+  accelerated deadline and one-shot replay rejection. Existing client timeout
+  independently terminated a local sleep. No password or remote DB was used.
+
+`scripts/run-wp09-reviewed-rehearsal.mjs` requires a separately reviewed manifest
+SHA; `--check` is non-mutating. `--run` launches only once per manifest, verifies
+copied bytes, uses clean container environment and verified TLS, reads the password
+directly through psql, and bounds the client to960 seconds plus a host watchdog.
+Transport exit (including zero) always leaves remote outcome UNKNOWN until CSV
+validation and independent server/residue inspection. No automatic retry or paid
+compute change. The manifest, CA, connection details, terminal logs, before/after
+snapshots and rollback function definitions stay in restricted local evidence,
+not committed docs. New runtime hashes require a freshly reviewed wrapper before
+another full remote rehearsal.
+
+The narrow scalar migration was then applied remotely as ledger version
+`20260907055739_clinical_master_oed_scalar_memory`. Exact replacement body hashes
+and unchanged OID/owner/ACL/metadata were independently read back. The416+1100
+differential cases also passed remotely inside a rolled-back temporary test.
+All44 master and116 scoped workspace fingerprints remained exact, with no
+candidate release/receipt and no further server restart. This is function-only
+remediation, not the full candidate rollout. The newly prepared wrapper pins both
+replacement bodies and metadata before/after execution. The subsequent execution
+and independent readback are recorded below; Production remains incomplete.
+
+### Persistent candidate and independent readback — 2026-09-07
+
+The complete remote false rehearsal passed for packet SHA-256
+`31dc031650cdd29d0150bc34537372443f397a92615e8f76d25a8047bd38f048`.
+Its CSV was validated, then all44 master and116 scoped workspace fingerprints,
+both scalar functions and their metadata were independently unchanged; candidate
+release/receipt counts were zero. Failed password attempts never started SQL.
+Their one-shot markers and logs were retained rather than reused or removed.
+
+The separately reviewed true operation committed that same packet once. Independent
+readback found one receipt and one published release
+`85c4a744-5d2b-4a86-aa64-10a6fd009958`. The214059-byte outcome CSV exactly equals
+the persisted receipt outcome: applied true, rehearsal false, clinical approval
+false, exact three-workspace allowlist, and240 canonical lab-owner refresh entries.
+
+The client reported `postcommit_receipt_guard` statement timeout (`57014`) with
+`commit_acknowledged=true`; it did not report a successful terminal marker. A bulk
+MCP fingerprint read also exceeded its transport limit. Neither failure was treated
+as rollback or used to justify replay. Independent read-only queries, split into
+four workspace/table comparisons per request using the same native row ordering
+and digest expression, matched all116 receipt after-fingerprints. All65 protected
+foreign/history comparisons matched the pre-apply baseline. These split reads span
+multiple read transactions, not one shared snapshot; no intervening writes were
+performed by this task. Both scalar bodies/metadata, the rollout helper, and the
+server start time remained unchanged.
+
+Independent semantic queries confirmed each workspace has524 selectable candidates,
+51 paused replacements,53 exact approved new prices,3 manual devices,173 synthetic
+manual-profile bindings, and30 current compositions with the approved parent-price
+or pilot nonbillable policy. The pre-apply exact catalog backup contains1597 rows;
+every existing ID, price, pricing rule, billing eligibility/reflection and sales unit
+matched after commit. Manual profiles remain synthetic and not clinically validated.
+
+Workspace adoption retries ran inside the committed helper and passed its no-change
+assertion. A separate top-level receipt replay has not been executed after commit;
+do not claim it was. No automatic retry, credential reset, paid compute change,
+permission weakening, deletion of history, or additional workspace adoption occurred.
+Restricted local evidence retains the original backups, failed transport logs,
+receipt, CSV, split fingerprints, semantic checks and runtime metadata.
+
+Current local follow-up gates:12 transport tests including mock-TTY scenarios,
+15 packet/configuration tests, secret scan, diff check, lint, typecheck and build
+passed. Build retains an existing broad NFT trace warning through the docs reader;
+no unrelated configuration change was made. The final commit's docs/secret gate,
+exact Release Check and Ready Preview must still be recorded. PR711 is not merged;
+compatible app delivery and authenticated three-workspace acceptance remain open.

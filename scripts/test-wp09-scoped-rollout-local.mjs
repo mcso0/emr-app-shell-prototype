@@ -17,13 +17,27 @@ const migrations = [...baselineHarness.matchAll(/fs\.readFileSync\("(supabase\/m
 if (migrations.length < 17 || new Set(migrations).size !== migrations.length
   || migrations.at(-1) !== "supabase/migrations/20260906135526_clinical_master_synthetic_dispensing_rebind.sql") throw Error("wp09_local_migration_baseline_drift");
 migrations.splice(1, 0, "supabase/migrations/20260906070813_clinical_master_admin_classification_read.sql");
+// The named seed predates these already-deployed publisher patches. Without
+// them the harness exercises an obsolete row-wise publisher and its resource
+// profile cannot be compared to the current remote rollout.
+migrations.unshift(
+  "supabase/migrations/20260831132225_clinical_master_publisher_set_based_owner_revision.sql",
+  "supabase/migrations/20260831135847_clinical_master_publisher_set_based_finalization.sql",
+);
 migrations.push("supabase/migrations/20260906141337_clinical_master_oed_scoped_rollout.sql");
 migrations.push("supabase/migrations/20260906161551_clinical_master_oed_lab_owner_cascade.sql");
+migrations.push("supabase/migrations/20260907054704_clinical_master_oed_scalar_memory.sql");
 const migrationSources = migrations.map(file => readFileSync(file, "utf8"));
 console.log(JSON.stringify({ localOnly: true, outerRollback: true, positiveOnly, migrations: migrations.length, migrationSha256: createHash("sha256").update(migrationSources.at(-1)).digest("hex"),
   configurationSha256: configuration.artifactSha256 }));
 const literal = value => `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 const sql = ["BEGIN; SET LOCAL statement_timeout='180s';", ...migrationSources,
+  `DO $parity$ BEGIN
+    IF (SELECT encode(extensions.digest(prosrc,'sha256'),'hex') FROM pg_proc
+      WHERE oid='private.publish_clinical_master_release_cumulative(jsonb,uuid)'::regprocedure)
+      IS DISTINCT FROM '5f2f2992c15d80f4a9d8ddad84574ba16831590c86f92bce08454f134982016a'
+    THEN RAISE EXCEPTION 'wp09_publisher_remote_parity_mismatch'; END IF;
+  END $parity$;`,
   // Some included migrations set their own timeout. Reapply a bounded budget
   // for the three complete rollback/apply scenarios in the assertion DO block.
   "SET LOCAL statement_timeout='300s';",
