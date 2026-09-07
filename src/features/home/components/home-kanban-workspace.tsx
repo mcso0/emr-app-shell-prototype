@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { CdsFilesGridIcon } from "@/components/cds-icons/files-and-layout";
+import { CdsFilesGridIcon, CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
 import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, MenuIcon } from "@/components/icons";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
@@ -12,7 +12,6 @@ import { EmrDateNavigator } from "@/components/emr/subpanel";
 import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
-import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrModuleListSidePanel } from "@/components/emr/module-list-side-panel";
@@ -20,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
@@ -255,7 +254,16 @@ function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, 
         <h2 className="emr-text-section flex items-center gap-2">{label}<span className="emr-text-metadata text-[var(--emr-text-tertiary)]">{tasks.length}</span></h2>
         <div className="flex items-center opacity-0 transition-opacity group-hover/column:opacity-100 group-focus-within/column:opacity-100 has-[[data-popup-open]]:opacity-100 [@media(hover:none)]:opacity-100">
           <Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded={true} onClick={onToggle}><ChevronRightIcon className="rotate-180" /></Button>
-          <EmrRowActionMenu ariaLabel={`${label} 열 메뉴`} density="compact" items={[{ key: "hide", label: "이 업무 열 숨기기", onSelect: onHide }]} />
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label={`${label} 열 메뉴`} />} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+              <CdsFilesMoreHorizontalIcon aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem className="h-8 cursor-pointer justify-start px-2.5 py-1.5" onClick={(event) => { event.stopPropagation(); onHide(); }}>
+                <span className="emr-text-dense w-full truncate font-medium">이 업무 열 숨기기</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2" onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>

@@ -89,3 +89,9 @@ Authenticated Preview revealed that source-table SELECT is revoked for authentic
 승욱 requested Customer-page visual consistency for both 원내 현황 and 내 업무 while retaining Home's existing filters, views and behavior, then requested commit/push/PR/main delivery. The follow-up uses the same adaptive top spacer, 24px title, count badge, 48px side inset and 32px controls. The date trigger and its calendar icon align with the title; previous/next controls follow the date. Overrides are confined to Home and do not change the shared date picker for other modules.
 
 Seven existing Home UI tests passed. Additional temporary browser geometry checks verified title/date-icon alignment in both views with the calendar open and closed, 24px title text, 32px controls and calendar open/close behavior. TypeScript and targeted ESLint passed. Synthetic screenshots were inspected; final candidate/release evidence is recorded in the follow-up PR.
+
+## Section Menu Ghost Follow-up — 2026-09-08
+
+승욱 requested the Kanban section overflow button match its adjacent collapse chevron, then explicitly requested commit/push/PR/main delivery and approved deployment. Replaced the card-oriented outlined row-menu trigger locally in Home with the same ghost/icon-xs Button used by the chevron. The menu retains its compact content, event propagation handling, accessible label and hide-column action; task-card controls are unchanged.
+
+Seven existing Home UI tests passed, including column hiding/restoration. A temporary browser check verified matching button dimensions, radius, border, shadow and icon width, no hover/open shadow, and menu open/dismiss behavior; its synthetic screenshot was inspected. Release candidate, preflight and deployment evidence are recorded in the follow-up PR.
