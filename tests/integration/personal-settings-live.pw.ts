@@ -248,8 +248,12 @@ test("live profile uses canonical data and all three categories render without o
 test("recovery requests use a separate callback and never send a real email", async ({
   page,
   request,
+  context,
 }) => {
-  await page.goto("/reset-password");
+  await context.clearCookies();
+  await page.goto("/login");
+  await page.getByRole("link", { name: "비밀번호 찾기" }).click();
+  await expect(page).toHaveURL(/\/reset-password$/);
   await page.getByLabel("로그인 이메일").fill("settings@example.test");
   await page.getByRole("button", { name: "재설정 메일 요청" }).click();
   await expect(page.getByRole("status")).toContainText("가입된 이메일이라면");
