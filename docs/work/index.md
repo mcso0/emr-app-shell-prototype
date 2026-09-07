@@ -507,3 +507,5 @@ Proposed board cleanup candidates for 승욱 review:
 ## Inbox
 
 See `docs/work/inbox.md`.
+
+| CHART-PR-036 | human_review | chart | P1 | Local status presentation implemented and focused checks passed | `docs/work/chart/CHART-PR-036-plan-order-status-presentation.md` |
