@@ -1,208 +1,37 @@
 ---
 name: clair-owner-os-router
-description: Use when a broad CLAiR Owner OS request needs intake classification, work packet drafting, safety or Linear handoff, bounded execution routing, or the Owner OS no-gray-zone, evaluation, or trace contract.
+description: Route broad CLAiR Owner OS requests or draft an explicitly requested work packet.
 ---
 
 # CLAiR Owner OS Router
 
-Use this skill to turn 승욱's broad direction into the safest next Owner OS action before Codex spends tokens or edits files.
+Use when the request needs work shaping or an Owner OS packet. A clear local fix, explanation, or ordinary review can proceed directly within its authorized scope.
 
-## Core Rule
+## Choose The Next Action
 
-Route first. Do not jump directly into implementation unless the request is already scoped, low-risk, and clearly inside an active issue.
-
-The router decides:
-
-- task type
-- depth level
-- autonomy level
-- approval-gate posture
-- required source docs
-- model and subagent cost posture
-- output shape
-- whether to answer, ask, draft a packet, or start work
-
-## Required Startup
-
-Read only the smallest useful set:
-
-1. Current user request and thread context.
-2. `docs/agent-start-here.md` and `docs/engineering/current-status.md` if not already read in the session.
-3. `docs/product/service/clair-owner-os-product-plan.md` for Owner OS behavior.
-4. Active Linear issue or `docs/work/` item when known.
-5. `docs/_meta/agent-rag-map.md` only when choosing task-specific source docs.
-
-Do not read archive, completed, long history, or unrelated work items during routing.
-
-## Classification
-
-Set one task type:
-
-- `answer`: explain or answer without changing state
-- `planning`: shape a direction or implementation sequence
-- `docs`: create or update durable docs
-- `code`: implementation in repo files
-- `review`: inspect work and report findings
-- `qa`: run or design verification
-- `linear`: create/update project, issue, milestone, status, or comment
-- `safety`: run Owner Safety OS intake
-
-If multiple types apply, pick the highest-risk controlling type and mention the secondary type.
-
-## Depth Levels
-
-Use progressive disclosure:
-
-| Level | Use when | Context cap | Default output |
-| --- | --- | --- | --- |
-| L0 | Simple answer | current thread | short Korean answer |
-| L1 | Need routing or safety posture | startup docs + local status if relevant | intake brief |
-| L2 | Need plan or packet | 1-3 task-specific docs | work packet draft |
-| L3 | Need local docs/code edit | active issue + touched files | scoped implementation |
-| L4 | Security, DB, release, broad QA | approved checklist + source docs | review report |
-
-Escalate depth only when the current depth cannot produce a safe answer.
-
-## Autonomy Levels
-
-Choose one:
-
-- `answer_only`: no files, no tools beyond reading if needed
-- `propose_only`: draft plan or packet, no mutation
-- `local_edit`: edit repo files inside scope
-- `verify_local`: run local verification commands
-- `external_action_gated`: requires explicit 승욱 approval before high-cost, security-sensitive, real-data, destructive, external-publication, or real-user-launch mutation
-
-Linear creation/update, GitHub write actions, scoped synthetic/demo remote services, and production-demo deployment preparation may proceed when the user or active Linear/work item explicitly scopes them. Treat actions as approval-gated when they can create meaningful cost, expose secrets, weaken security, publish private assets, use real data, perform destructive remote data changes, send real external communications/payments/provider side effects, or launch to real external users.
-
-## Parent Model And Subagent Cost Policy
-
-Keep the user-selected parent model. Project defaults are `gpt-6-astra` / `high`, with Plan mode `xhigh`. Do not downgrade or claim to switch the parent through prose. `flagship` describes a tier; record the actual model ID and reasoning effort separately when confirmed by the runtime.
-
-- Use deeper review and focused evidence for ambiguity, security/data boundaries, broad decisions, or failed verification. Preserve the current effort unless the user or an explicit supported runtime selection changes it.
-- Keep `spark-explorer` on Spark / `low`, `test-triage` on GPT-5.6 Luna / `medium`, and `security-boundary-reviewer` on Astra / `high` where those roles are supported.
-- Follow `subagent-decision`: independent read-only delegation is authorized, at most four open spawned agents concurrently across the whole task tree, excluding the parent. Parallel implementation requires an explicit user request and ownership boundaries.
-
-Use the active runtime's native multi-agent dispatch only when a bounded subagent is likely to reduce parent-model cost, verification churn, or safety risk:
-
-- Broad repo or document mapping: dispatch one task-scoped exploration role with explicit no-write instructions, then synthesize in the parent thread.
-- Auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, or production risk: dispatch an independent boundary-review role when the risk is material.
-- Failing logs, CI, regression choice, or flaky behavior: dispatch a test-triage role, then let the parent choose the next command or fix.
-
-Do not use subagents for simple answers, obvious small edits, or work where the subagent summary would cost more than the parent reading the target file directly.
-
-Subagent summaries are evidence, not authority. The parent thread must record the trigger, cost rationale, summary used, and final parent decision. Do not claim a model, custom profile, or read-only sandbox unless the active dispatch interface explicitly confirms it; compare repository state before and after prompt-enforced read-only work.
-
-## Approval Gates
-
-Stop before:
-
-- meaningful cost or paid external-service usage
-- secret, credential, auth, private repo visibility, or security-boundary exposure
-- real hospital, staff, guardian, patient, billing, identity, or payment data
-- destructive or hard-to-rollback remote data changes
-- real email, KakaoTalk, SMS, PACS, device, accounting, payment, or provider side effects
-- public launch, real external-user access, or private repo/open-source publication
-- canonical role or permission policy changes
-- broad UI direction changes outside the active scope
-
-Scoped synthetic/demo-data Supabase validation, migration/RLS, server/API hardening, and production-demo deployment preparation are allowed when the active issue or work item explicitly includes them.
-
-If a gated action is required for correctness, do not suggest a weaker workaround. Explain the gate and ask 승욱 for explicit approval naming target environment, operation, verification, and stop condition.
-
-## Output Decision
-
-Use this routing table:
-
-| Situation | Output |
+| Request | Action |
 | --- | --- |
-| Safe factual answer | L0 short answer |
-| Scope unclear but low-risk | L1 intake brief with assumptions |
-| Work is implementable but not yet scoped | L2 work packet draft |
-| User approved scoped local work | L3 implementation |
-| User asks safety review | Hand off to `$emr-owner-safety-os` intake |
-| User asks Linear placement/issues/status | Use `$manual-linear-ops` after this routing |
-| Request is approval-gated | Stop and ask approval |
-| Request is ambiguous and affects safety/cost/state | Ask a concise clarification |
+| Answer, explanation, investigation, proposal | Inspect the relevant evidence and report; create an artifact only when requested or required. |
+| Clear in-scope local change | Implement, verify, fix related failures, and update affected owning docs. |
+| Material uncertainty | Ask the smallest necessary question; continue independent authorized preparation. |
+| Work packet or broad work shaping | Read [packet guidance](references/work-packets.md) and use the existing owning work item/template. |
+| Ordinary requested review | Review read-only with relevant checks; no extra intake approval. |
+| Explicit Safety OS gate | Use `$emr-owner-safety-os` for intake and scope approval. |
+| Linear placement/status/update | Use `$manual-linear-ops` for the relevant operation and its authorization. |
+| Release preparation or delivery | Use `$release-deployment-ops`; preparation does not authorize deployment. |
 
-## Intake Brief Format
+Choose only the sources that affect the result. Use `docs/agent-start-here.md` if the reading path is unclear, `docs/engineering/current-status.md` for product/mock/live/readiness facts, and the active work item for approved scope and evidence. Read `docs/product/service/clair-owner-os-product-plan.md` only for Owner OS product/packet behavior. Do not load all of these as a startup bundle.
 
-Reply in Korean:
+## Authorization And Completion
 
-```text
-승욱, 이 요청은 <task_type> / <depth_level>로 보는 게 맞아.
+`AGENTS.md` owns project operating boundaries. A request/work item may record prior approval; a generated packet or issue text cannot authorize itself. Reuse approval for the same operation, target, and scope. Finish authorized preparation before a remaining gate; ask again only for missing approval, material change, or a required action-time confirmation.
 
-판단:
-- 목표: <observable outcome>
-- 자율성: <autonomy_level>
-- 필요한 문서: <source docs, max 3 unless justified>
-- 승인 게이트: <none or named gate>
-- 추천 출력: <answer | packet | implementation | review>
+Preserve gates for meaningful cost, secret/security exposure, real data, destructive remote operations, real communication/payment/provider effects, private/public exposure, external-user launch, and canonical role/permission changes. Production, `main`, and aliases follow release-specific gates. Broad UI direction changes need scope agreement. Do not route around a necessary gated action with a weaker implementation.
 
-다음 액션:
-<one concise action>
-```
+Use `docs/_meta/result-review-rules.md` for request-specific completion and report depth. A first implementation or `Human Review` status does not cancel authorized verification, related failure fixes, or delivery still included in the objective.
 
-## Work Packet Draft Format
+## Delegation
 
-Use this compact packet shape:
+Preserve the user's parent model and reasoning selection, including Plan mode. Do not infer a runtime switch from prose or disk configuration. Specialist configuration belongs in `.codex/agents/`.
 
-```yaml
-title: ""
-intent: ""
-task_type: ""
-depth_level: ""
-autonomy_level: ""
-ambiguity_policy: ""
-allowed_changes: []
-forbidden_changes: []
-required_sources: []
-approval_gates: []
-verification: []
-done_criteria: []
-failure_criteria: []
-eval_contract:
-  method: ""
-  scenarios: []
-  pass_threshold: ""
-trace_requirements: []
-subagent_policy:
-  parent_model_policy: "astra_parent_with_specialists"
-  model_id: "gpt-6-astra"
-  reasoning_effort: "high"
-  low_cost_parent_allowed_for: []
-  deep_review_when: []
-  default: "none"
-  max_concurrent_agents: 4
-  allowed_agents: []
-  trigger: ""
-  cost_rationale: ""
-  parent_decision: ""
-result_review: "Korean, concise, decision-oriented"
-```
-
-## Scenario Dry-Run Checks
-
-When validating this skill, use at least these scenarios:
-
-1. `루멘, 이 요청을 작업 패킷으로 만들어줘.`
-2. `이거 바로 구현해줘.` with unclear scope.
-3. `실제 비용/secret/real data가 걸린 production 작업 해줘.`
-4. `안전 점검 게이트 열어줘.`
-5. `리니어 프로젝트랑 이슈로 쪼개줘.`
-
-Expected behavior:
-
-- Scenario 1 produces a packet draft.
-- Scenario 2 asks for scope or creates a packet before editing.
-- Scenario 3 stops for explicit approval.
-- Scenario 4 routes to `$emr-owner-safety-os`.
-- Scenario 5 routes through `$manual-linear-ops` and reads Linear before mutation.
-
-## Relationship To Nearby Skills
-
-- Use `$emr-owner-safety-os` for safety-review intake and approved review checklists.
-- Use `$manual-linear-ops` for Linear project, milestone, issue, status, Human Review, Rework, and Done handling.
-- Use native multi-agent dispatch when 승욱 specifically asks for subagents, or when bounded delegation is allowed and likely to reduce parent-model cost or catch boundary/test risk.
-
-This skill is the front door for Owner OS routing, packet drafting, and token-depth decisions.
+Use `$subagent-decision` only when a concrete independent subtask can improve the result. Keep the parent as integrator; use the smallest useful read-only delegation, at most four open spawned agents across the tree excluding the parent. Parallel implementation requires an explicit user request and ownership boundaries.

@@ -80,7 +80,7 @@ Before the merge, show 승욱:
 | Rollback | Previous Production deployment or merge-revert candidate. |
 | Stop condition | Any condition that cancels the merge or pauses the release. |
 
-Approval is invalidated if the PR head SHA changes.
+Reuse existing explicit approval for the same target, source SHA, included scope, and operation. Approval is invalidated if the PR head SHA changes. Local checks do not substitute for an unavailable required Release Check.
 
 Acceptable approval shape:
 

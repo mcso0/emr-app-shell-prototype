@@ -89,9 +89,9 @@ Responsibilities:
 - Keep issue scope PR-sized.
 - Mark status changes.
 - Implement or coordinate implementation.
-- Attach Korean HTML reports for meaningful completed work.
-- Stop at `Human Review` unless the representative asks to commit, push, PR, or mark done.
-- Scoped synthetic/demo-data Supabase, migration/RLS, server/API, and production-demo deployment work may proceed when the active Linear issue includes it; do not treat those categories as blocked by default.
+- Use `docs/_meta/result-review-rules.md` for report depth; attach an HTML report only when required and sharing is authorized.
+- Reach `Human Review` after authorized implementation and verification. Continue remaining delivery already authorized in the same objective; mark `Done` only on representative acceptance/request.
+- Scoped synthetic/demo Supabase, migration/RLS, and server/API work may proceed within an active approved issue and existing operation/target/scope authorization. Production retains its exact-candidate release gate; issue text alone grants no new permission.
 
 Execution mode:
 
@@ -134,7 +134,7 @@ Release/deployment requests must route to `release-deployment-ops` and `docs/eng
 | `Ready` | Scoped and approved to start | Codex may start when asked. |
 | `In Progress` | Implementation or report work active | Exactly one owner session should work. |
 | `Security Review` | CSO/security review active | Use security-review posture; code changes only if explicitly approved. |
-| `Human Review` | Waiting for representative review | Stop and report. |
+| `Human Review` | Ready for representative acceptance | Report the verified result; continue any remaining work already authorized in the same objective. |
 | `Rework` | Representative requested fixes | Continue from existing context. |
 | `Blocked` | Waiting on product, credential, design, or dependency | Do not guess through the blocker. |
 | `Done` | Representative accepted the work | Terminal. |
@@ -147,13 +147,13 @@ Release/deployment requests must route to `release-deployment-ops` and `docs/eng
 2. Codex checks existing Linear projects/issues and repo work docs.
 3. Codex reports a short plan in Korean.
 4. Codex asks the representative before creating a new project, moving work into a different project, or choosing between a new project and an existing project.
-5. Codex creates or updates a Linear project/milestone/issue only after the placement decision is clear.
-6. Codex moves the active issue to `In Progress` or `Security Review`.
+5. Codex creates or updates a Linear project/milestone/issue only when the operation is authorized and the placement decision is clear. A work item alone is not evidence of new permission.
+6. Codex moves the active issue to `In Progress` or `Security Review` when that external update is authorized.
 7. Codex implements or writes the scoped report.
 8. Codex runs the narrowest useful verification, then broader checks when risk requires.
-9. Codex creates a Korean HTML report for meaningful project work.
-10. Codex attaches the report to Linear through a document/comment/attachment when possible.
-11. Codex moves the issue to `Human Review`.
+9. Codex records verification and uses `docs/_meta/result-review-rules.md` for report depth.
+10. Codex updates Linear or attaches a report only within the authorized external-update/sharing scope.
+11. Codex moves the issue to `Human Review` when that status update is authorized and implementation/verification are complete.
 12. Representative decides `Done` or `Rework`.
 
 ## Issue Shaping Rules
@@ -256,11 +256,11 @@ Ask the representative before:
 - Combining unrelated issues into one PR.
 - Marking an issue `Done` without an explicit request.
 
-If the work is scoped to synthetic/demo data, low-risk, and clearly inside an existing issue's scope, Codex may proceed without asking, including Supabase validation, DB migration/RLS, server/API hardening, and production-demo deployment preparation.
+For low-risk synthetic/demo work inside an active approved issue, reuse existing authorization for the same operation, target, and scope. Complete permitted Supabase validation, migration/RLS, server/API hardening, and release preparation; issue text alone does not authorize remote mutation or deployment.
 
 ## Rework and Done Rules
 
-Codex normally stops at `Human Review`.
+`Human Review` records pending human acceptance after implementation and applicable verification. It does not cancel already-authorized delivery or other remaining work in the same objective. `Done` requires representative acceptance/request.
 
 Representative decisions:
 
@@ -328,11 +328,11 @@ Use `docs/_meta/result-review-rules.md` and this shortcut:
 | Work type | Report depth |
 | --- | --- |
 | Tiny typo, link, wording fix | Final chat summary only. |
-| Small docs update with durable guidance | Update source doc and run `docs:check`; no HTML report unless tied to Linear issue. |
-| Linear issue, product decision, implementation, QA, or security review | Korean HTML report required. |
+| Small docs update with durable guidance | Update the owning doc and relevant verification; no automatic HTML report. |
+| Linear issue, product decision, implementation, QA, or security review | Follow `docs/_meta/result-review-rules.md`; issue membership alone does not require HTML. |
 | PR publish work only | PR description and final chat summary are enough unless a Linear issue requires a report. |
 
-Do not create heavy reports for every tiny maintenance change. Do create reports for meaningful representative-facing work.
+Use one appropriate owning record. Create a separate visual report for substantial multi-part results/decisions or when the user/active work item requires it.
 
 ## Project and Milestone Rules
 
@@ -483,7 +483,7 @@ If verification cannot run, state why in the Linear comment and final user repor
 
 ## Reporting Rules
 
-For meaningful Linear work, create a Korean HTML report under:
+Use `docs/_meta/result-review-rules.md` to decide whether an HTML report is needed. When required, create it under:
 
 ```text
 docs/completed/<area>/YYYY-MM-DD-<issue-or-slug>-report.html
@@ -499,7 +499,7 @@ The report should be representative-friendly:
 - Risks and out-of-scope items
 - Recommended next step
 
-Then add the report to Linear through:
+When the external update and sharing scope are authorized, add the report to Linear through:
 
 - Linear document when useful
 - Linear comment with local path

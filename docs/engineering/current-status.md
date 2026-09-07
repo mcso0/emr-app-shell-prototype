@@ -2,7 +2,7 @@
 
 Updated: 2026-09-06
 
-This is the short startup status for new Codex sessions and human review. It should stay compact. Module and release evidence is preserved in [MVP Status Detail Snapshot](current-status-details.md). Older history remains in [MVP Current Status History](current-status-history.md). Read details only for the active task.
+This is the current product-status source for scope, mock/live boundaries, and human review. Read the relevant sections when those facts affect the task. It should stay compact. Module and release evidence is preserved in [MVP Status Detail Snapshot](current-status-details.md). Older history remains in [MVP Current Status History](current-status-history.md). Read details only for the active task.
 
 ## Agent Compact Summary
 
@@ -11,7 +11,6 @@ This is the short startup status for new Codex sessions and human review. It sho
 * The product has moved beyond a pure static demo: many auth, workspace, local-first DB/RLS, persistence, audit, billing, and customer-management foundations have been implemented in local-first form.
 * Remote Supabase validation, production-demo deployment, DB/API hardening, migration/RLS work, and server-side enforcement may now be scoped for synthetic/demo data under active Linear/work items. Real customer data, real provider/payment side effects, and final compliance/legal review are not complete.
 * Client-only permission gating is not complete security. Treat server/API/DB/RLS enforcement as the required security boundary.
-* Use concise English for agent-facing plans and handoff notes. Keep user-facing result reviews in Korean unless requested otherwise.
 
 ## Current Working Target
 
@@ -54,18 +53,17 @@ Do not claim these as done without a scoped work item and verification evidence:
 
 * Do not treat client-only permission checks, hidden buttons, or mock role labels as complete security.
 * Scoped synthetic/demo-data Supabase, migration, RLS, server/API, and production-demo deployment work is allowed when the active Linear issue or work item includes it.
-* Stop for explicit approval before meaningful cost, secret/security exposure, private repo/public exposure, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote data changes, real external email/KakaoTalk/payment/provider side effects, or real external-user launch.
+* Apply the project operating and approval boundaries in `AGENTS.md`; an active work item records scope but does not itself grant new remote-action permission. Production and `main` follow the release runbook.
 * Do not let mock fallback or legacy Sales Demo paths silently mask Cheongdam seed/API failures; legacy Sales Demo removal is now explicitly scoped through DEMO-DATA-PR-002.
 * Use synthetic demo data only. Do not introduce real patient, guardian, hospital, payment, or identity data.
-* For Next.js application code, read the relevant guide in `node_modules/next/dist/docs/` before coding.
-* For docs, planning, and Linear work, use `docs/_meta/agent-rag-map.md` to choose the smallest source-doc set.
+* Use `docs/agent-start-here.md` when choosing a task-specific reading path.
 
 ## Current Verification Baseline
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 
 * `npm run docs:check` for docs path/reference changes
-* `npm run lint`, `npx tsc --noEmit`, and `npm run build` for implementation changes
+* `npm run lint`, `npx tsc --noEmit`, and `npm run build` when required by the active work item, release gate, or affected implementation scope
 * focused Playwright specs for touched workflows
 * `tests/ui-demo-api-wiring-e2e.spec.ts` for current reception/chart/downstream API wiring and synthetic outpatient route-boundary proof
 * `tests/fulfillment-handoff-replay.spec.ts` for chart confirmation through downstream fulfillment, lifecycle, and billing readback
@@ -79,7 +77,7 @@ Do not assume the full suite has been run for a new task unless the current work
 
 The internal `/docs` viewer is the active read-only reader path; GitBook is inactive/deprecated unless explicitly revived. See [Docs Portal](../README.md). Historical documentation milestones are preserved in the [detail snapshot](current-status-details.md#current-documentation-work).
 
-Agent operating guidance now uses Astra `high`, Plan `xhigh`, bounded read-only delegation (maximum four), and separate ordinary-review versus explicit Safety OS intake routes. See [OWNER-OS-PR-012](../work/agent-orchestration/OWNER-OS-PR-012-astra-agent-guidance.md). Disk settings do not establish what an already-running task has loaded.
+Agent operating guidance now uses Astra `high`, Plan `xhigh`, bounded read-only delegation (maximum four), and separate ordinary-review versus explicit Safety OS intake routes. See [OWNER-OS-PR-012](../work/agent-orchestration/OWNER-OS-PR-012-astra-agent-guidance.md). Disk settings do not establish what an already-running task has loaded. Task-conditional reading, progressive skill references, scoped authorization reuse, and request-specific completion/report depth are maintained in the linked work item and operating docs.
 
 ## Recommended Next Work
 

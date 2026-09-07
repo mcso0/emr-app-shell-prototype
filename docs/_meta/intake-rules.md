@@ -1,10 +1,10 @@
 # Intake Rules
 
-Use this file when the user gives a natural-language instruction in chat.
+Use this file when changing documentation structure, work routing, or durable guidance. Ordinary questions, local explanations, and tiny isolated fixes do not require this intake flow.
 
 ## Intake Flow
 
-1. Classify the instruction into one or more areas: `business`, `product`, `design`, `engineering`, or `work`.
+1. Identify the owning area only as needed for placement: `business`, `product`, `design`, `engineering`, or `work`. Keep read-only proposals in chat unless a durable artifact is requested.
 2. Search existing docs and work items before creating anything new.
 3. Choose the documentation depth from `docs/_meta/documentation-depth-rules.md`.
 4. Decide whether the instruction is an idea, source-of-truth change, durable decision, PR-sized execution item, closeout, or archive operation.

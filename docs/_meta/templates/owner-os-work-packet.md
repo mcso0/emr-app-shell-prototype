@@ -9,6 +9,8 @@ doc_type: "template"
 
 Use this template when Owner OS turns a broad request into an executable Codex handoff.
 
+Use this format only for an explicitly requested Owner OS packet or a workflow that requires its schema. The model/effort values below are illustrative compatibility examples, not configuration overrides; preserve the actual user-selected runtime and disclose unknown selection.
+
 The packet is intentionally stricter than a normal work item. It must state scope, side effects, approval gates, verification, eval, trace evidence, parent model tier, deep-review posture, and subagent cost policy before implementation starts.
 
 ```owner_os_work_packet
@@ -28,9 +30,8 @@ out_of_scope:
   - "Real data"
   - "Payment/provider/email integration"
 required_sources:
-  - "docs/agent-start-here.md"
-  - "docs/engineering/current-status.md"
-  - "Task-specific source doc or work item"
+  - "Task-specific owning contract and active work item"
+  - "Current-status section only when product scope or mock/live readiness matters"
 trusted_inputs:
   - "Repo source docs, active work item, git diff, test output"
 untrusted_inputs:
@@ -123,4 +124,4 @@ npm run owner-os:packet:check
 
 The validator checks this template and the approved example packet. It also checks that the intentionally bad example fails, so missing required fields are caught.
 
-New packets use `deep_review_when`. The validator accepts historical `escalate_to_5_5_when` as a read-only compatibility alias; do not rewrite old approved packets or treat their model policy as current. `model_id` and effort fields are configured defaults, not proof of runtime selection. `escalation_decision` now records review-depth need, not a model switch.
+New packets use `deep_review_when`. The validator accepts historical `escalate_to_5_5_when` as a read-only compatibility alias; do not rewrite old approved packets or treat their model policy as current. `model_id` and effort fields in examples are illustrative values, not proof of runtime selection or instructions to change it. `escalation_decision` now records review-depth need, not a model switch.

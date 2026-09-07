@@ -1,6 +1,6 @@
 ---
 name: release-deployment-ops
-description: Release and deployment operating workflow for CLAiR EMR. Use when the user asks to deploy, publish, promote, release, inspect Vercel, coordinate a PR-to-main release, or check env/secret deployment safety.
+description: Prepare or deliver CLAiR PR previews, production releases, or deployment checks.
 ---
 
 # Release Deployment Ops

@@ -1,67 +1,34 @@
 # Result Review Rules
 
-After completing work, the agent must give the user a concise result review.
+Use this document when deciding whether the requested outcome is complete and how much to report. Reply in concise Korean unless asked otherwise; supporting agent handoffs use concise English.
 
-Default language: Korean, unless the user asks otherwise. Keep any supporting agent-facing handoff notes in concise English.
+## Completion By Request
 
-## Default Review Shape
+| Request | Complete when |
+| --- | --- |
+| Investigation or proposal | Current evidence, findings, recommendation, and relevant uncertainty are reported. Do not create files solely for the report. |
+| Local implementation | Requested behavior works, relevant checks are complete, failures caused by the change are fixed, and affected contracts/status docs are updated. |
+| Read-only review | Actionable findings include evidence and impact, with verification limits stated. Review itself does not authorize fixes. |
+| Release preparation | Candidate/scope, verification, smoke plan, rollback, and remaining approval are concrete and reviewable. |
+| Authorized delivery | The approved delivery workflow and actual outcome are verified under its release gates; report partial or blocked stages truthfully. |
 
-Include:
+Do not stop at a first implementation while authorized verification or corrections remain. Once required checks pass, broaden or repeat only for new changes, failures, or unresolved concerns. A concrete blocker permits a handoff, not an unsupported completion claim.
 
-- a brief non-developer summary of what changed and why it matters
-- what changed
-- which files or docs changed
-- current status
-- verification result
-- useful next step
+`Human Review` means implementation and applicable verification are ready for human acceptance. Continue other work already authorized in the same objective; only change an external status when authorized. Mark `Done` only when 승욱 accepts or asks.
 
-Keep the first review short and understandable for a non-developer decision-maker. Expand only when the user asks for details or when there is a notable risk.
+## Concise Result
 
-For Level 0 changes from `docs/_meta/documentation-depth-rules.md`, the result review is the only required record. Do not create a work item, changelog entry, or closeout just to document a tiny one-off change.
+Lead with what changed, why it matters, and the current state. Include relevant files, verification, and limitations without repeating the same result in multiple sections. Distinguish local implementation, remote delivery, and human acceptance.
 
-## Plain-Language First
+Mention a failed or unavailable check, material residual risk, or existing WIP when it affects the result. Link evidence rather than copying long logs. Include a next step only when one is useful.
 
-Start with a concise explanation for a non-developer:
+## Record Depth
 
-- what happened
-- why it matters
-- what state things are in now
+Use `docs/_meta/documentation-depth-rules.md` for the owning record:
 
-Keep it short by default. Do not turn result reviews into long lessons.
-If the user asks about a term or concept, explain it in a learning-friendly way with a small example.
+- Tiny one-off changes: final response only.
+- Behavior/contract/durable-guidance changes: update the owning source doc and work item when applicable. Do not create another report solely to repeat them.
+- Create a Korean HTML report when the user or active work item explicitly requires it, or a substantial multi-part result/decision needs a separate visual review artifact. Merely having a Linear issue is not sufficient.
+- Read-only consultation and review remain in chat unless a durable artifact is requested or required by the active work item.
 
-## HTML Report Requirement
-
-For meaningful project work, especially Linear issue work, create a Korean HTML report for the representative/CEO audience and place it under `docs/completed/<area>/YYYY-MM-DD-<issue-or-slug>-report.html`.
-
-For read-only consultation, exploration, or review, report in chat unless the user asks for a durable artifact or the active work item requires one. Do not create files just to satisfy a reporting template during a read-only request.
-
-The report should be concise and decision-oriented:
-
-- what was requested
-- what changed or was decided
-- why it matters
-- changed files or docs
-- verification result
-- risks, caveats, or out-of-scope items
-- recommended next step
-
-After creating the report, add its path to the relevant Linear issue only when the user has authorized that external update. Otherwise include the local link in the final review.
-
-## Good Review
-
-```text
-완료했어요. 이번 변경으로 docs/_meta 운영 규칙, 영역별 changelog/decision 구조, work item 연결이 추가됐고 docs:check도 새 필수 문서를 확인합니다.
-
-검증은 npm run docs:check와 npm run lint를 통과했습니다. 다음 작업은 기존 product/design/engineering 주요 문서에 frontmatter를 넓게 적용하는 쪽이 자연스럽습니다.
-```
-
-## Required Caveats
-
-Mention clearly when:
-
-- verification could not be run
-- a command failed
-- user-owned changes were left untouched
-- a document was intentionally left as a compatibility stub
-- implementation was not performed because the task was planning-only
+When warranted, use `docs/completed/<area>/YYYY-MM-DD-<issue-or-slug>-report.html`. Keep it decision-oriented: requested outcome, changes, verification, material risks, and unresolved decisions. Add it to Linear or another external service only within the authorized sharing/update scope; otherwise provide the local link.

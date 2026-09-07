@@ -1,190 +1,30 @@
 ---
 name: subagent-decision
-description: Use when a CLAiR EMR coding, docs, QA, or planning task may benefit from subagents, delegation, parallelization, independent review, test triage, codebase exploration, risk review, or separate worktrees or threads.
+description: Choose bounded delegation when independent investigation, review, or test triage can improve the task.
 ---
 
 # Subagent Decision
 
-Use this skill as the decision gate before delegating work. It decides the execution shape, then dispatches approved work through the current runtime's native multi-agent capability.
+Use before dispatching an agent. Choose by dependency and risk; no scorecard or formal decision report is required for routine choices.
 
-Core rule:
+## Decide
 
-```text
-Parallelize reading, investigation, validation, and review.
-Centralize final design decisions, integration, and high-risk implementation.
-```
+- Work locally when the task is small, sequential, tightly coupled, or delegation would duplicate the parent's work.
+- Delegate one bounded read-only investigation, review, or test-triage task when it can run independently alongside useful parent work and improve evidence or reduce cost.
+- Ask about material ambiguity before delegating dependent work; continue other authorized work.
+- Use parallel implementation only on explicit user request with disjoint file/module ownership and defined interfaces. General read-only delegation permission does not authorize it.
+- Keep unrelated product directions in separate workspaces when needed. Creating a user-facing task/thread requires an explicit request; subagents belong to the current task.
 
-## Project Defaults
+If the user requests a formal delegation decision, briefly explain the chosen shape, rationale, permissions, and parent responsibility. Existing category labels may be used for compatibility: `DO_NOT_USE_SUBAGENTS`, `CLARIFY_OR_PLAN_FIRST`, `USE_SUBAGENTS_FOR_EXPLORATION`, `USE_SUBAGENTS_FOR_REVIEW_ONLY`, `USE_SUBAGENTS_FOR_PARALLEL_IMPLEMENTATION`, `SPLIT_INTO_WORKTREES_OR_THREADS_INSTEAD`.
 
-- Keep one parent/main agent responsible for final decisions, integration, verification, and the final user summary.
-- The user has authorized bounded independent read-only delegation. Use the smallest useful number, up to four open spawned agents concurrently across the whole task tree, excluding the parent. This is an initial operating cap, not a target or benchmark. Child agents must coordinate capacity with the parent and must not create their own untracked fan-out.
-- After this skill recommends delegation, use the active runtime's native agent-dispatch tool directly.
-- Prefer read-only subagents for broad search, logs, code-path mapping, risk review, security review, and test triage.
-- Keep implementation in the parent thread unless file/module ownership boundaries are clear and the user explicitly wants parallel implementation.
-- Do not use subagents to bypass Linear status, work item scope, branch/file ownership, approval gates, security boundaries, real-data restrictions, destructive remote operations, external publication, or Human Review rules.
-- Treat subagent summaries as evidence, not authority.
-- Do not claim that a model, custom profile, or read-only sandbox was selected unless the active dispatch interface explicitly supports and confirms that control.
-- When read-only behavior is prompt-enforced rather than sandbox-enforced, compare repository state before and after delegation.
+## Dispatch Contract
 
-Use task-scoped roles in native dispatch prompts:
+- Use the smallest useful count, up to four open spawned agents concurrently across the whole task tree, excluding the parent. Children coordinate capacity with the parent; no untracked fan-out.
+- Give each agent a concrete question, minimal sources, permitted side effects, and expected evidence. Use native dispatch rather than creating a sidebar task.
+- Keep one parent responsible for final decisions, implementation/integration, verification, and the user response. Read-only delegates report findings; they do not fix files or mutate remote state.
+- Implementation workers must know they are not alone, preserve others' changes, and own explicit files/modules. Ask before material ownership/scope expansion.
+- Delegation cannot bypass authorization, workspace/data/security boundaries, release gates, or human acceptance. A review recommendation grants no new permission.
+- Preserve the user-selected parent model/effort. Use supported specialist roles from `.codex/agents/`; confirm actual runtime controls before claiming a model or sandbox was used.
+- Treat summaries as evidence and resolve material conflicts against source. For prompt-enforced read-only work, compare affected state before/after and distinguish concurrent changes from delegate actions.
 
-- exploration role: read-only codebase or docs mapping.
-- boundary-review role: auth, workspace, Supabase, RLS, audit, billing integrity, real data, provider, payment, or production risk review.
-- test-triage role: failing tests, logs, CI/build/lint/typecheck output, regression choice, and flaky behavior.
-
-## Decision Flow
-
-1. Confirm requirements are clear enough to delegate. If not, choose `CLARIFY_OR_PLAN_FIRST`.
-2. Score the task using the heuristics below.
-3. Choose exactly one decision category.
-4. Name what stays with the main agent.
-5. If subagents are recommended, provide a bounded prompt and permissions.
-6. If delegation is approved, dispatch the smallest useful task-scoped roles through the current runtime and wait for their summaries.
-
-## Scoring
-
-Parallelism Score: 0-5, add 1 for each true statement.
-
-- Work splits by file, module, domain, route, endpoint, package, or feature.
-- Each part has a clear output.
-- Parts can run independently.
-- Interfaces between parts are clear.
-- One main agent can merge the results.
-
-Conflict Risk Score: 0-5, add 1 for each true statement.
-
-- Multiple agents would edit the same file.
-- Multiple agents would change shared state, schema, permissions, or abstractions.
-- Multiple agents would make architecture decisions.
-- Requirements are ambiguous.
-- Existing test coverage is weak or unknown.
-
-Noise Reduction Score: 0-5, add 1 for each true statement.
-
-- Task requires broad repo or docs search.
-- Task requires reading logs, stack traces, CI output, or test output.
-- Task requires testing several hypotheses.
-- Task requires inspecting many files.
-- Task requires summarizing findings from several areas.
-
-## Decision Categories
-
-### DO_NOT_USE_SUBAGENTS
-
-Use for small, linear, tightly coupled work:
-
-- copy, typo, label, or narrow CSS changes
-- one-file fixes
-- single-function bug fixes
-- simple prop additions
-- tasks that can be completed safely in 10-30 minutes
-- work where all agents would edit the same file
-- unclear requirements
-
-Recommendation: main agent only, plus normal verification.
-
-### CLARIFY_OR_PLAN_FIRST
-
-Use when delegation would force agents to guess:
-
-- goal, scope, source of truth, or done criteria are unclear
-- file/module ownership is unclear
-- approval-gated actions may be required
-- the user asked for a plan before implementation
-
-Recommendation: produce a plan or ask the smallest necessary question before delegating.
-
-### USE_SUBAGENTS_FOR_EXPLORATION
-
-Use when the task is read-heavy, broad, uncertain, or noisy:
-
-- large codebase exploration
-- architecture or data-flow investigation
-- bug root-cause investigation
-- log, stack trace, CI, or test failure analysis
-- migration impact mapping
-- UI regression reproduction
-- library/API usage verification
-
-Project mapping: usually one read-only exploration role; add a test-triage role for failures and an independent boundary-review role for boundary-sensitive areas.
-
-### USE_SUBAGENTS_FOR_REVIEW_ONLY
-
-Use when implementation should remain centralized but independent review reduces risk:
-
-- auth, session, workspace, role, permission, Supabase, RLS, migration, audit, or server-enforcement changes
-- billing amount integrity or payment-adjacent changes
-- high-risk refactors
-- core business logic
-- UI flows with loading, empty, error, disabled, responsive, or accessibility states
-- pre-merge or final risk review
-
-Default workflow: main agent implements, subagents review read-only, main agent applies only must-fix items unless the user approves broader cleanup.
-
-### USE_SUBAGENTS_FOR_PARALLEL_IMPLEMENTATION
-
-Use only when all required conditions hold:
-
-- each subagent owns separate files, folders, modules, endpoints, packages, or feature boundaries
-- subagents do not need to edit the same files
-- interfaces are already defined or easy to define
-- final integration can be handled by one main agent
-- tests can run after integration
-- the task is large enough that parallelism saves meaningful time
-- the user explicitly requests parallel implementation; general permission for read-only delegation is insufficient
-
-Each implementation subagent must report scope, changed files, tests run, results, assumptions, and unresolved risks. The main agent must review all diffs, resolve conflicts, normalize style, run final tests, and summarize the integrated result.
-
-### SPLIT_INTO_WORKTREES_OR_THREADS_INSTEAD
-
-Use when tasks are separate product directions, experiments, or features rather than parts of one implementation:
-
-- alternative UI approaches
-- competing architecture approaches
-- unrelated features in parallel
-- independent experiments that should not share a diff
-
-Rule: use subagents inside one task; use separate worktrees/threads for separate tasks or competing directions.
-
-## Decision Logic
-
-Use this priority order:
-
-1. If requirements are unclear, choose `CLARIFY_OR_PLAN_FIRST`.
-2. If the task is small and linear, choose `DO_NOT_USE_SUBAGENTS`.
-3. If the work is separate features or competing directions, choose `SPLIT_INTO_WORKTREES_OR_THREADS_INSTEAD`.
-4. If the user explicitly requested parallel implementation, `Parallelism Score >= 4`, and `Conflict Risk Score <= 2`, choose `USE_SUBAGENTS_FOR_PARALLEL_IMPLEMENTATION`.
-5. If `Noise Reduction Score >= 3`, choose `USE_SUBAGENTS_FOR_EXPLORATION`.
-6. If the work is high-risk or boundary-sensitive, choose `USE_SUBAGENTS_FOR_REVIEW_ONLY`.
-7. Otherwise choose main agent only, with optional final review if risk increases.
-
-## Required Output
-
-When invoked directly, respond in this shape:
-
-```text
-## Subagent Decision
-Decision: <one category>
-Reason: <brief reason covering parallelism, conflict risk, ambiguity, noise, and implementation risk>
-Scores:
-- Parallelism Score: x/5
-- Conflict Risk Score: x/5
-- Noise Reduction Score: x/5
-Recommended Workflow:
-- Step 1
-- Step 2
-- Step 3
-Subagents:
-- <agent or role>: scope, permissions, expected output
-Main Agent Responsibility:
-- final design decision
-- final implementation or integration
-- final tests
-- final summary
-Do Not Delegate:
-- <files, decisions, or areas that must remain centralized>
-Prompt To Use:
-- <ready-to-paste prompt>
-```
-
-Load `references/prompt-templates.md` only when the user asks for a ready prompt, the delegation plan is complex, or parallel implementation/review instructions need exact wording.
+Load [prompt templates](references/prompt-templates.md) only when a ready-to-use delegation prompt or complex ownership handoff is needed. Select the relevant role; a template is not a requirement to spawn every example agent.

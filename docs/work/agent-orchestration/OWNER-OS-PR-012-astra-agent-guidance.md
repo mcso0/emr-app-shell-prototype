@@ -123,3 +123,57 @@ Read-only delegates: one configuration audit and one policy review. The parent m
 - Clean-worktree checks passed: secret scan (4,018 tracked files), full docs check (975 Markdown files), six focused tests, three packet cases, 15 routing cases, focused ESLint, TOML values, five skill frontmatters, and byte-preservation of the original status snapshot. The dirty checkout's ignored workspace-note link is not part of this candidate.
 - Product behavior, env files, remote data, and deployment settings are unchanged. Global AGENTS and the experimental context opt-in remain local, outside this repository's PR.
 - The exact committed candidate, remote Release Check, Preview, current Production/rollback evidence, and merge approval are recorded in the PR/release handoff. Do not treat the earlier general delivery request as evidence that a later candidate's checks or Production gate passed.
+
+
+## 2026-09-07: Skill And Instruction Simplification
+
+승욱 approved the article-based proposal to simplify global/project skills, document loading, AGENTS guidance, authorization boundaries, and completion criteria. This follow-up is local guidance work and grants no product, remote-data, publication, or release authorization.
+
+### Applied Decisions
+
+- Global AGENTS owns personal language/autonomy defaults; repo AGENTS owns project data/workspace/release boundaries. Startup/RAG documents now route conditionally. Installed Next.js guidance applies to framework-dependent changes, not unrelated copy/styling.
+- Preserve the user-selected parent model/effort, specialist configuration, sandbox/approval settings, and unrelated plugin settings.
+- Complete authorized implementation, focused verification, and related failure fixes. Human Review records pending human acceptance and does not cancel other authorized work. Done still requires representative acceptance/request.
+- Use HTML reports for explicit user/work-item requirements or substantial results/decisions needing a separate visual artifact; Linear membership alone is insufficient. Routine evidence stays in the owning docs/work item.
+- Work items/packets record scope and approval evidence; they cannot authorize themselves. Reuse valid approval for unchanged operation/target/source/scope. External comments, attachments, and status updates need their applicable authorization.
+- Align production/merge runbooks with approval reuse and authorized Linear updates. Preserve exact-candidate Release Check and release preflight/smoke/rollback gates. Correct the fixed-staging table to staging, consistent with its existing branch rule. Local results do not substitute for unavailable required CI.
+- Docs-sync now uses canonical repo docs and the active internal /docs viewer. GitBook/SUMMARY remain legacy-only unless explicitly revived.
+- Shorten repo discovery descriptions, remove routine subagent scorecards/mandatory reports, and narrow Owner OS routing to broad shaping/packets. Ordinary reviews do not gain an intake round. Translate review-animations' existing explicit-only intent from imported disable-model-invocation frontmatter into Codex agents/openai.yaml policy allow_implicit_invocation=false; other invocation policies remain unchanged.
+- Split Emil/Apple technical guidance into task-selected references. Retain technical content, excluding only boundary blank-line normalization; remove the promotional opening and forced review table. Entrypoints preserve component-contract and accessibility boundaries.
+- Retain global find-skills and remove the redundant repo copy. A project-only disable parsed but was not reflected by installed CLI skills/list with either documented path representation, so the ineffective override was removed. Project config is byte-for-byte restored to this follow-up's starting WIP.
+- Preserve other plugins: configured entries do not prove current installation, usage, or redundant behavior. No bulk disable, cache edit, global skill relocation, or catalog-budget increase was applied.
+
+### Verification
+
+- Existing Owner OS routing/compatibility regressions: 6/6 passed, including their embedded deterministic routing evaluation. Packet cases: 3/3 passed. These checks do not prove live-model behavior.
+- Skill YAML/UI metadata validated with Ruby YAML. The bundled Python quick validator could not start because system Python lacks PyYAML; no dependency was installed. CLI discovery reported zero skill errors.
+- CLI 0.153.4 app-server skills/list verified one enabled global find-skills entry in both this repo and an outside directory. Only initialization/config-read/skill-list requests were sent; no model task was started. This does not prove the already-running desktop task refreshed its initial catalog/instructions.
+- Technical reference contents match the originals apart from boundary blank lines. Final checks passed for 79 local Markdown references, scoped/task-only whitespace, TOML parsing, and 15 changed skill frontmatters (14 repo plus the retained global skill) with UI metadata. All 314 existing out-of-scope WIP files retained their starting hashes.
+- Repo skill entrypoints reduced from 150,164 to 80,652 bytes (46.3%); discovery descriptions from 5,069 to 1,300 characters (74.4%); repo skills from 15 to 14. These measure entrypoint/catalog text, not model token savings or task-speed gains. Reference content remains available on demand.
+- Full docs checker still reports the missing persona guide target from the old workspace summary and historical evidence in this work item. No unrelated file was repaired or failure hidden.
+- Independent read-only forward review covered nine fictional requests: typo, ordinary review, explicit gate, release preparation, approved delivery, changed candidate, unapproved packet side effect, small Linear-linked fix, and inactive-GitBook docs sync. Five lower-level contradictions were corrected. Fresh review of cases 4-7 plus unavailable CI and delivery without Linear-update authorization found no remaining actionable contradiction. This validates instruction interpretation, not actual execution or benchmark performance.
+- Existing out-of-scope WIP matched its starting fingerprints at the verification checkpoint. All edits were made by the parent; the independent reviewer was read-only.
+
+### Sources And Recovery
+
+- [Article discussed with the user](https://x.com/pvncher/status/2095991462416490862)
+- [Official skills and progressive disclosure](https://learn.chatgpt.com/docs/build-skills)
+- [Official AGENTS discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md)
+- [Official configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
+- [Official Astra initiative and verification guidance](https://developers.openai.com/api/docs/guides/latest-model)
+
+A temporary pre-change snapshot holds per-file originals and hashes for incremental rollback over existing WIP. Compare those originals against current files and restore only this follow-up's edits; do not reset the checkout or replace newer work wholesale. Restore the repo find-skills file if a self-contained distribution later needs that optional discovery workflow.
+
+Local implementation and focused validation are complete, with the existing full-docs-check failure and live desktop-refresh limitation disclosed. No commit, push, PR, production delivery, account permission change, or model/effort override was performed in this follow-up.
+
+
+## 2026-09-07: Simplification Delivery Follow-up
+
+The user approved the remaining broken-link repair, fresh-session verification, and commit/push/PR work. This authorizes this guidance slice through PR review, not a Production merge.
+
+- Restored [the historical persona guide](../../business/customer-discovery/persona-qa-skill-guide.html) from the existing 2026-08-01 rewrite artifact. Added an archival notice and replaced links to the three absent persona sources with unavailable labels. This does not install persona-qa or establish current research evidence.
+- A fresh ephemeral CLI 0.153.4 read-only task correctly quoted the new conditional startup, exact-scope approval reuse, ordinary-review/Safety OS distinction, and completion rules from already-loaded instructions. It made no tool calls. Existing optional MCP initialization failures did not prevent the response; desktop refresh and model behavior beyond these statements remain unverified.
+- Isolated this slice from `origin/main` `22f40916` in `codex/guidance-progressive-disclosure`. Preserved the upstream PR-to-main release model and its retired-staging compatibility stub. Earlier staging-specific edits above describe the primary-checkout pass and are superseded by this delivery integration.
+- Excluded unrelated clinical-master WIP and the separate uncommitted model-picker config change. The candidate does not modify project/global config or specialist profiles; its status text retains the actual upstream defaults. Global AGENTS/find-skills changes remain local and are not shipped by this PR.
+- Primary full docs check passed (1,051 Markdown files). Isolated docs check passed (982 Markdown files); six routing tests and three packet cases passed. The changed HTML/local links and skill metadata are checked separately. No application code changed, so local app lint/typecheck/build are omitted; the remote Release Check supplies its normal combined gate before a future Production approval.
+- The PR records the committed SHA, remote checks, and Preview outcome. Commit/PR completion must not be read as Production approval or deployment completion.

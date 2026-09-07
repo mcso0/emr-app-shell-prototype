@@ -1,0 +1,1502 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
+    <meta
+      name="description"
+      content="CLAiR의 근거 기반 동물병원 프로토 페르소나로 화면과 업무 흐름을 검토하는 persona-qa 스킬 사용 가이드"
+    />
+    <title>CLAiR 페르소나 QA 스킬 가이드</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #17211c;
+        --muted: #637069;
+        --line: #dbe3de;
+        --line-strong: #c5d0ca;
+        --surface: #ffffff;
+        --surface-soft: #f5f8f6;
+        --surface-green: #edf6f0;
+        --brand: #17633c;
+        --brand-deep: #0e482a;
+        --brand-soft: #d9eddf;
+        --blue: #225f83;
+        --blue-soft: #e8f3f8;
+        --amber: #875d11;
+        --amber-soft: #fff4d9;
+        --red: #993c34;
+        --red-soft: #fbecea;
+        --shadow: 0 18px 50px rgba(31, 58, 43, 0.09);
+        --radius-xl: 28px;
+        --radius-lg: 20px;
+        --radius-md: 14px;
+        --page: 1180px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at 8% 0%,
+            rgba(177, 222, 190, 0.32),
+            transparent 28rem
+          ),
+          linear-gradient(180deg, #fbfdfb 0, #f3f7f4 48rem, #f7f9f7 100%);
+        font-family:
+          Pretendard,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        font-size: 16px;
+        line-height: 1.65;
+        word-break: keep-all;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      button,
+      code {
+        font-family: inherit;
+      }
+
+      .skip-link {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
+        padding: 10px 14px;
+        border-radius: 10px;
+        color: #fff;
+        background: var(--brand-deep);
+        transform: translateY(-150%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .page {
+        width: min(calc(100% - 40px), var(--page));
+        margin: 0 auto;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        border-bottom: 1px solid rgba(197, 208, 202, 0.78);
+        background: rgba(250, 253, 251, 0.9);
+        backdrop-filter: blur(18px);
+      }
+
+      .topbar-inner {
+        display: flex;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 10px;
+        color: white;
+        background: var(--brand);
+        font-size: 12px;
+        letter-spacing: 0;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .nav a {
+        text-decoration: none;
+      }
+
+      .nav a:hover,
+      .nav a:focus-visible {
+        color: var(--brand);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(310px, 0.65fr);
+        gap: 48px;
+        align-items: end;
+        padding: 88px 0 68px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 20px;
+        color: var(--brand);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .eyebrow::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        background: #35a05f;
+        content: "";
+        box-shadow: 0 0 0 5px rgba(53, 160, 95, 0.13);
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin-bottom: 24px;
+        font-size: clamp(42px, 6.5vw, 74px);
+        line-height: 1.06;
+        letter-spacing: -0.055em;
+      }
+
+      h1 span {
+        color: var(--brand);
+      }
+
+      .hero-copy {
+        max-width: 720px;
+        margin-bottom: 30px;
+        color: #4e5e55;
+        font-size: clamp(17px, 2vw, 20px);
+        line-height: 1.7;
+        letter-spacing: -0.015em;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 31px;
+        padding: 5px 11px;
+        border: 1px solid var(--line-strong);
+        border-radius: 99px;
+        color: #4c5a52;
+        background: rgba(255, 255, 255, 0.75);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .hero-panel {
+        padding: 28px;
+        border: 1px solid rgba(197, 208, 202, 0.8);
+        border-radius: var(--radius-xl);
+        background: rgba(255, 255, 255, 0.83);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-panel-label {
+        margin-bottom: 17px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .command {
+        position: relative;
+        margin: 0;
+        padding: 20px 48px 20px 20px;
+        border-radius: 15px;
+        color: #eaf9ee;
+        background: #163224;
+        font-size: 14px;
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+      }
+
+      .copy-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        min-width: 34px;
+        height: 34px;
+        padding: 0 9px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        border-radius: 9px;
+        color: #d8ebde;
+        background: rgba(255, 255, 255, 0.08);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .copy-button:hover,
+      .copy-button:focus-visible {
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .hero-panel-note {
+        margin: 17px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      main {
+        padding-bottom: 96px;
+      }
+
+      .section {
+        padding: 74px 0 8px;
+        scroll-margin-top: 66px;
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: minmax(200px, 0.42fr) minmax(0, 0.58fr);
+        gap: 52px;
+        align-items: start;
+        margin-bottom: 34px;
+      }
+
+      .section-index {
+        display: block;
+        margin-bottom: 13px;
+        color: var(--brand);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.07em;
+      }
+
+      h2 {
+        margin-bottom: 0;
+        font-size: clamp(29px, 4vw, 43px);
+        line-height: 1.2;
+        letter-spacing: -0.04em;
+      }
+
+      .section-lead {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .grid-3,
+      .grid-2,
+      .persona-grid,
+      .mode-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .card {
+        padding: 25px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: var(--surface);
+      }
+
+      .card-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        margin-bottom: 38px;
+        place-items: center;
+        border-radius: 13px;
+        color: var(--brand-deep);
+        background: var(--brand-soft);
+        font-size: 18px;
+        font-weight: 850;
+      }
+
+      h3 {
+        margin-bottom: 10px;
+        font-size: 19px;
+        line-height: 1.4;
+        letter-spacing: -0.025em;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .card p:last-child,
+      .card ul:last-child {
+        margin-bottom: 0;
+      }
+
+      .callout {
+        margin-top: 18px;
+        padding: 20px 22px;
+        border: 1px solid #cfdfd4;
+        border-radius: var(--radius-md);
+        background: var(--surface-green);
+        color: #345142;
+        font-size: 14px;
+      }
+
+      .callout strong {
+        color: var(--brand-deep);
+      }
+
+      .persona-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+      }
+
+      .persona {
+        min-height: 250px;
+        padding: 20px 17px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: var(--surface);
+      }
+
+      .persona-id {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+      }
+
+      .persona-name {
+        margin: 23px 0 3px;
+        color: var(--brand-deep);
+        font-size: 23px;
+        font-weight: 850;
+        letter-spacing: -0.04em;
+      }
+
+      .persona-title {
+        min-height: 48px;
+        margin-bottom: 17px;
+        font-size: 14px;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .persona-role {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: flow;
+      }
+
+      .flow li {
+        position: relative;
+        min-height: 174px;
+        padding: 55px 17px 20px;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--surface);
+        counter-increment: flow;
+      }
+
+      .flow li::before {
+        position: absolute;
+        top: 17px;
+        left: 17px;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
+        border-radius: 9px;
+        color: var(--brand-deep);
+        background: var(--brand-soft);
+        content: counter(flow);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .flow strong {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 14px;
+      }
+
+      .flow span {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .mode-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .mode {
+        padding: 25px;
+        border-radius: var(--radius-lg);
+      }
+
+      .mode-default {
+        border: 1px solid #bcd8c4;
+        background: var(--surface-green);
+      }
+
+      .mode-compare {
+        border: 1px solid #c8dce7;
+        background: var(--blue-soft);
+      }
+
+      .mode-scenario {
+        border: 1px solid #ead5a5;
+        background: var(--amber-soft);
+      }
+
+      .mode-label {
+        display: inline-flex;
+        margin-bottom: 26px;
+        padding: 4px 9px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .mode h3 {
+        margin-bottom: 9px;
+      }
+
+      .mode p {
+        margin-bottom: 0;
+        color: #53625a;
+        font-size: 14px;
+      }
+
+      .examples {
+        display: grid;
+        gap: 10px;
+      }
+
+      .example {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        padding: 14px 15px 14px 18px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+
+      .example-persona {
+        color: var(--brand);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .example code {
+        color: #304039;
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+
+      .example button {
+        padding: 7px 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 9px;
+        color: #4e5c54;
+        background: var(--surface-soft);
+        cursor: pointer;
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .report {
+        display: grid;
+        grid-template-columns: minmax(0, 0.45fr) minmax(0, 0.55fr);
+        gap: 18px;
+        padding: 24px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-xl);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .report-meta {
+        padding: 7px 15px 7px 7px;
+      }
+
+      .report-meta dl {
+        display: grid;
+        grid-template-columns: 90px 1fr;
+        gap: 10px 14px;
+        margin: 25px 0 0;
+        font-size: 13px;
+      }
+
+      .report-meta dt {
+        color: var(--muted);
+      }
+
+      .report-meta dd {
+        margin: 0;
+        font-weight: 750;
+      }
+
+      .finding {
+        padding: 23px;
+        border-radius: 18px;
+        background: var(--surface-soft);
+      }
+
+      .finding-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 17px;
+      }
+
+      .finding-id {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.05em;
+      }
+
+      .severity {
+        padding: 4px 9px;
+        border-radius: 99px;
+        color: var(--red);
+        background: var(--red-soft);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .finding h3 {
+        font-size: 17px;
+      }
+
+      .finding-grid {
+        display: grid;
+        grid-template-columns: 86px 1fr;
+        gap: 9px 13px;
+        margin-top: 17px;
+        font-size: 13px;
+      }
+
+      .finding-key {
+        color: var(--muted);
+      }
+
+      .guardrail-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .guardrail-list li {
+        position: relative;
+        padding: 16px 17px 16px 46px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        color: #4d5b53;
+        font-size: 13px;
+      }
+
+      .guardrail-list li::before {
+        position: absolute;
+        top: 15px;
+        left: 16px;
+        display: grid;
+        width: 21px;
+        height: 21px;
+        place-items: center;
+        border-radius: 7px;
+        color: var(--red);
+        background: var(--red-soft);
+        content: "×";
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .source-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .source-link {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        padding: 17px 19px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        text-decoration: none;
+      }
+
+      .source-link:hover,
+      .source-link:focus-visible {
+        border-color: #93b9a1;
+        box-shadow: 0 9px 26px rgba(31, 58, 43, 0.06);
+      }
+
+      .source-link strong {
+        display: block;
+        margin-bottom: 3px;
+        font-size: 14px;
+      }
+
+      .source-link span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .source-arrow {
+        color: var(--brand);
+        font-size: 18px;
+        font-weight: 750;
+      }
+
+      .comparison {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--line);
+        border-radius: 17px;
+        background: var(--surface);
+        overflow: hidden;
+      }
+
+      .comparison th,
+      .comparison td {
+        padding: 15px 17px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 13px;
+      }
+
+      .comparison tr:last-child th,
+      .comparison tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .comparison th {
+        width: 20%;
+        color: #39483f;
+        background: var(--surface-soft);
+        font-weight: 800;
+      }
+
+      .comparison td {
+        color: var(--muted);
+      }
+
+      .not-installed {
+        display: inline-block;
+        margin-left: 6px;
+        padding: 2px 7px;
+        border-radius: 99px;
+        color: var(--amber);
+        background: var(--amber-soft);
+        font-size: 10px;
+        font-weight: 850;
+      }
+
+      footer {
+        padding: 34px 0 50px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .footer-inner {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      @media (max-width: 1050px) {
+        .persona-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .flow {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 820px) {
+        .nav {
+          display: none;
+        }
+
+        .hero,
+        .section-heading,
+        .report {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          gap: 34px;
+          padding-top: 60px;
+        }
+
+        .grid-3,
+        .mode-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .persona-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .card-icon {
+          margin-bottom: 24px;
+        }
+
+        .example {
+          grid-template-columns: 82px minmax(0, 1fr);
+        }
+
+        .example button {
+          grid-column: 2;
+          justify-self: start;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .page {
+          width: min(calc(100% - 28px), var(--page));
+        }
+
+        .topbar-inner {
+          min-height: 56px;
+        }
+
+        .hero {
+          padding: 46px 0 40px;
+        }
+
+        h1 {
+          font-size: 42px;
+        }
+
+        .section {
+          padding-top: 58px;
+        }
+
+        .section-heading {
+          gap: 19px;
+        }
+
+        .grid-2,
+        .persona-grid,
+        .flow,
+        .guardrail-list {
+          grid-template-columns: 1fr;
+        }
+
+        .persona {
+          min-height: 0;
+        }
+
+        .persona-title {
+          min-height: 0;
+        }
+
+        .flow li {
+          min-height: 145px;
+        }
+
+        .report {
+          padding: 17px;
+        }
+
+        .report-meta dl,
+        .finding-grid {
+          grid-template-columns: 1fr;
+          gap: 2px;
+        }
+
+        .report-meta dd,
+        .finding-grid > :nth-child(even) {
+          margin-bottom: 9px;
+        }
+
+        .comparison-wrap {
+          overflow-x: auto;
+        }
+
+        .comparison {
+          min-width: 650px;
+        }
+
+        .footer-inner {
+          display: block;
+        }
+      }
+
+      @media print {
+        body {
+          background: white;
+        }
+
+        .topbar,
+        .copy-button,
+        .example button {
+          display: none;
+        }
+
+        .hero,
+        .section {
+          padding-top: 36px;
+        }
+
+        .card,
+        .persona,
+        .report,
+        .mode,
+        .source-link,
+        .flow li {
+          break-inside: avoid;
+          box-shadow: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 이동</a>
+
+    <header class="topbar">
+      <div class="page topbar-inner">
+        <a class="brand" href="#top" aria-label="페이지 처음으로">
+          <span class="brand-mark">PQ</span>
+          CLAiR 페르소나 QA
+        </a>
+        <nav class="nav" aria-label="문서 목차">
+          <a href="#personas">페르소나</a>
+          <a href="#workflow">사용 흐름</a>
+          <a href="#output">결과 읽기</a>
+          <a href="#safety">안전 기준</a>
+          <a href="#sources">관련 문서</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="page" id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div>
+          <p class="eyebrow">Project-local skill · v1</p>
+          <h1 id="hero-title">
+            <span>사용자 관점</span>에서 기능을 검토하는 가장 짧은 방법
+          </h1>
+          <p class="hero-copy">
+            <strong>persona-qa</strong>는 CLAiR 화면과 업무 흐름을 7개 동물병원
+            프로토 페르소나의 목표와 Claim, 근거에 맞춰 살펴본다. 화면에서
+            확인한 사실과 AI의 추론을 나눈다. 알 수 없는 부분은 모르는 상태로
+            남긴다.
+          </p>
+          <div class="chips" aria-label="스킬 특성">
+            <span class="chip">읽기 전용이 기본</span>
+            <span class="chip">Claim과 근거 연결</span>
+            <span class="chip">로컬·합성 데이터 우선</span>
+            <span class="chip">7개 호출명으로 바로 시작</span>
+            <span class="chip">외부 MCP 없음</span>
+          </div>
+        </div>
+
+        <aside class="hero-panel" aria-label="빠른 시작">
+          <p class="hero-panel-label">Quick start</p>
+          <div class="command">
+            <code>$persona-qa 서진 관점에서 검사 결과 검토 화면을 QA해줘.</code>
+            <button
+              class="copy-button"
+              type="button"
+              data-copy-parent
+              aria-label="요청문 복사"
+            >
+              복사
+            </button>
+          </div>
+          <p class="hero-panel-note">
+            이름은 페르소나를 짧게 부르기 위한 호출명이다. 실제 인물의 성별,
+            나이, 성격, 권한과는 관계없다.
+          </p>
+        </aside>
+      </section>
+    </div>
+
+    <main class="page" id="main">
+      <aside class="section" aria-label="보관 자료 안내">
+        <h2>과거 가이드 보관본</h2>
+        <p>2026-08-01 작업 결과에서 복구한 자료야. 본문의 스킬과 페르소나는 당시 구성을 설명해.
+        2026-09-07 복구 시점에는 persona-qa 스킬, 프로토 페르소나 원본, Evidence 로그가
+        저장소에 없어서 해당 항목은 링크 없이 표시했어. 현재 설치 상태나 조사 근거를 뜻하지 않아.</p>
+      </aside>
+
+      <section class="section" id="overview" aria-labelledby="overview-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">01 · PURPOSE</span>
+            <h2 id="overview-title">이 스킬이 하는 일</h2>
+          </div>
+          <p class="section-lead">
+            특정 사용자를 흉내 내는 도구가 아니다. 지금 화면에서 확인한 사실과
+            조사 근거로 짚어낸 위험을 따로 보여줘, 다음 제품 판단에 바로 쓸 수
+            있게 한다.
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">1</div>
+            <h3>관찰과 추론을 분리한다</h3>
+            <p>
+              화면에서 확인한 상태와 페르소나가 겪을 수 있는 어려움을 하나의
+              사실처럼 섞지 않는다.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">2</div>
+            <h3>Claim으로 근거를 추적한다</h3>
+            <p>
+              각 위험은 `PER-01-C01` 같은 Claim에 연결해 상태와 신뢰도, 한계를
+              함께 확인한다.
+            </p>
+          </article>
+          <article class="card">
+            <div class="card-icon" aria-hidden="true">3</div>
+            <h3>모르면 모른다고 남긴다</h3>
+            <p>
+              연결할 근거가 없으면 그럴듯한 이야기를 보태지 않는다. `미확인`으로
+              남기고 실제 사용자에게 확인할 질문으로 바꾼다.
+            </p>
+          </article>
+        </div>
+
+        <div class="callout">
+          <strong>이 스킬이 내놓은 결과는 사용자 조사 결과가 아니다.</strong>
+          제품 개선 가설로만 쓴다. Evidence 로그에는 비식별 인터뷰와 현장 관찰,
+          사용성 테스트, 추가 출처 검토 결과만 기록한다.
+        </div>
+      </section>
+
+      <section class="section" id="personas" aria-labelledby="personas-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">02 · PERSONAS</span>
+            <h2 id="personas-title">7개 호출명</h2>
+          </div>
+          <p class="section-lead">
+            한 번에 한 명을 보는 것이 기본이다. 목표나 인계 조건이 실제로
+            맞부딪힐 때만 2~3명을 함께 비교한다. 병원 직함이 아니라 이 기능에서
+            맡는 행동을 기준으로 고른다.
+          </p>
+        </div>
+
+        <div class="persona-grid">
+          <article class="persona">
+            <span class="persona-id">PER-01</span>
+            <p class="persona-name">서진</p>
+            <h3 class="persona-title">임상 의사결정 통합자</h3>
+            <p class="persona-role">선임 진료 수의사<br />의료 책임자</p>
+          </article>
+          <article class="persona">
+            <span class="persona-id">PER-02</span>
+            <p class="persona-name">도윤</p>
+            <h3 class="persona-title">감독받는 최전선 진료자</h3>
+            <p class="persona-role">진료 수의사<br />페이닥터</p>
+          </article>
+          <article class="persona">
+            <span class="persona-id">PER-03</span>
+            <p class="persona-name">지우</p>
+            <h3 class="persona-title">진단 판독 전문자</h3>
+            <p class="persona-role">영상의학·임상병리<br />수의사</p>
+          </article>
+          <article class="persona">
+            <span class="persona-id">PER-04</span>
+            <p class="persona-name">현우</p>
+            <h3 class="persona-title">이동형 처치 실행자</h3>
+            <p class="persona-role">외래·처치·수술 보조<br />테크니션</p>
+          </article>
+          <article class="persona">
+            <span class="persona-id">PER-05</span>
+            <p class="persona-name">수아</p>
+            <h3 class="persona-title">연속관리·ICU 인계자</h3>
+            <p class="persona-role">입원·ICU<br />테크니션</p>
+          </article>
+          <article class="persona">
+            <span class="persona-id">PER-06</span>
+            <p class="persona-name">하린</p>
+            <h3 class="persona-title">환자 흐름·진료의뢰 코디네이터</h3>
+            <p class="persona-role">데스크·원무<br />예약·의뢰·CS</p>
+          </article>
+          <article class="persona">
+            <span class="persona-id">PER-07</span>
+            <p class="persona-name">민석</p>
+            <h3 class="persona-title">운영·시스템 거버너</h3>
+            <p class="persona-role">운영실장·지점 관리자<br />시스템 관리자</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="workflow" aria-labelledby="workflow-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">03 · WORKFLOW</span>
+            <h2 id="workflow-title">스킬은 이렇게 검토한다</h2>
+          </div>
+          <p class="section-lead">
+            매번 페르소나 문서 전체를 읽지는 않는다. 필요한 카드와 Claim만 먼저
+            보고 근거의 한계까지 확인해야 할 때 Evidence 로그를 연다.
+          </p>
+        </div>
+
+        <ol class="flow">
+          <li>
+            <strong>범위 확인</strong
+            ><span
+              >검토할 화면과 경로, 업무, 바꾸지 말아야 할 범위를 정한다.</span
+            >
+          </li>
+          <li>
+            <strong>페르소나 선택</strong
+            ><span>호출명을 `PER-*` ID와 행동 역할에 맞춘다.</span>
+          </li>
+          <li>
+            <strong>Claim 연결</strong
+            ><span>관련된 주장과 상태, 신뢰도, Evidence만 가져온다.</span>
+          </li>
+          <li>
+            <strong>화면 관찰</strong
+            ><span>화면에 보이는 상태와 해본 행동, 나온 결과를 기록한다.</span>
+          </li>
+          <li>
+            <strong>위험 분리</strong
+            ><span
+              >관찰한 사실, 페르소나 위험, 미확인 사항, 개선안을 나눈다.</span
+            >
+          </li>
+          <li>
+            <strong>검증 질문</strong
+            ><span>실제 사용자에게 묻거나 현장에서 확인할 질문을 남긴다.</span>
+          </li>
+        </ol>
+
+        <div class="section" style="padding-top: 30px">
+          <div class="mode-grid">
+            <article class="mode mode-default">
+              <span class="mode-label">기본</span>
+              <h3>Review mode</h3>
+              <p>
+                화면과 문구, 프로토타입, 구현을 읽기 전용으로 살펴본다. 제품
+                상태는 바꾸지 않는다.
+              </p>
+            </article>
+            <article class="mode mode-compare">
+              <span class="mode-label">필요할 때</span>
+              <h3>Compare mode</h3>
+              <p>
+                2~3명의 목표와 인계 조건을 나란히 보고 함께 필요한 것과 서로
+                충돌하는 지점을 가려낸다.
+              </p>
+            </article>
+            <article class="mode mode-scenario">
+              <span class="mode-label">명시적으로 요청할 때만</span>
+              <h3>Scenario mode</h3>
+              <p>
+                합성 데이터와 허용할 행동, 바꾸면 안 되는 상태, 중단 조건을 먼저
+                정한 뒤 제한된 범위에서 실행한다.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="examples" aria-labelledby="examples-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">04 · QUICK CALLS</span>
+            <h2 id="examples-title">이렇게 요청하면 된다</h2>
+          </div>
+          <p class="section-lead">
+            길게 설명할 필요는 없다. 호출명과 살펴볼 화면이나 흐름, 확인하고
+            싶은 성공 조건을 함께 적으면 된다.
+          </p>
+        </div>
+
+        <div class="examples">
+          <div class="example">
+            <span class="example-persona">서진 · PER-01</span>
+            <code>$persona-qa 서진 관점에서 검사 결과 검토 화면을 QA해줘.</code>
+            <button type="button" data-copy-sibling>복사</button>
+          </div>
+          <div class="example">
+            <span class="example-persona">도윤 · PER-02</span>
+            <code
+              >$persona-qa 도윤이 중단된 진료를 다시 시작하기 쉬운지
+              확인해줘.</code
+            >
+            <button type="button" data-copy-sibling>복사</button>
+          </div>
+          <div class="example">
+            <span class="example-persona">현우 + 수아</span>
+            <code
+              >$persona-qa 현우와 수아 관점에서 입원 처치 흐름을 비교해줘.</code
+            >
+            <button type="button" data-copy-sibling>복사</button>
+          </div>
+          <div class="example">
+            <span class="example-persona">하린 · PER-06</span>
+            <code
+              >$persona-qa 하린이 대기 보호자에게 다음 절차를 설명할 수 있는지
+              봐줘.</code
+            >
+            <button type="button" data-copy-sibling>복사</button>
+          </div>
+          <div class="example">
+            <span class="example-persona">민석 · PER-07</span>
+            <code>$persona-qa 민석 관점에서 지점별 설정 화면을 검토해줘.</code>
+            <button type="button" data-copy-sibling>복사</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="output" aria-labelledby="output-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">05 · OUTPUT</span>
+            <h2 id="output-title">결과를 읽는 법</h2>
+          </div>
+          <p class="section-lead">
+            점수보다 중요한 것은 어디까지 근거로 말할 수 있는지다. 화면에서 직접
+            본 것, Claim으로 짚어낸 위험, 아직 확인하지 못한 내용을 한눈에 나눠
+            본다.
+          </p>
+        </div>
+
+        <div class="report">
+          <div class="report-meta">
+            <span class="section-index">SCOPE</span>
+            <h3>검사 결과 검토 화면</h3>
+            <dl>
+              <dt>Persona</dt>
+              <dd>서진 · PER-01</dd>
+              <dt>Mode</dt>
+              <dd>Review</dd>
+              <dt>Claims</dt>
+              <dd>PER-01-C01, C02</dd>
+              <dt>Boundary</dt>
+              <dd>로컬 · 합성 데이터 · 읽기 전용</dd>
+            </dl>
+          </div>
+          <article class="finding">
+            <div class="finding-top">
+              <span class="finding-id">PQ-01 · PERSONA RISK</span>
+              <span class="severity">높음</span>
+            </div>
+            <h3>검사 결과는 나왔지만 임상 확인 여부를 알 수 없다</h3>
+            <div class="finding-grid">
+              <span class="finding-key">관찰</span
+              ><span
+                >목록에는 결과 완료 시각만 보인다. 누가 확인했는지와 다음 행동
+                상태는 알 수 없다.</span
+              >
+              <span class="finding-key">Claim</span
+              ><span>PER-01-C01 · 지지됨 · 신뢰도 중간</span>
+              <span class="finding-key">영향</span
+              ><span
+                >서진은 아직 검토해야 할 결과와 이미 처리한 결과를 빠르게
+                가려내기 어렵다.</span
+              >
+              <span class="finding-key">제안</span
+              ><span>결과 생성과 임상 확인을 서로 다른 상태로 보여준다.</span>
+              <span class="finding-key">미확인</span
+              ><span
+                >실제 병원의 결과 확인 책임자와 승인 절차는 현장에서 검증해야
+                한다.</span
+              >
+            </div>
+          </article>
+        </div>
+
+        <div class="callout">
+          심각도는 <strong>차단 · 높음 · 중간 · 낮음</strong> 네 단계만 쓴다.
+          근거 없이 그럴듯해 보이는 페르소나·사용성·전환 점수는 만들지 않는다.
+        </div>
+      </section>
+
+      <section class="section" id="safety" aria-labelledby="safety-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">06 · GUARDRAILS</span>
+            <h2 id="safety-title">이 작업은 하지 않는다</h2>
+          </div>
+          <p class="section-lead">
+            페르소나는 행동을 이해하는 모델이지 권한표도, 가상의 직원도 아니다.
+            의료·개인정보·실서비스 경계를 넘는 즉시 검토를 멈춘다. 필요한
+            승인이나 안전한 환경부터 확인한다.
+          </p>
+        </div>
+
+        <ul class="guardrail-list">
+          <li>실제 환자, 보호자, 직원 정보로 테스트하지 않는다.</li>
+          <li>
+            비밀번호, 토큰, 환경 변수 같은 비밀값을 읽거나 기록하지 않는다.
+          </li>
+          <li>
+            저장, 삭제, 처방, 오더 확정, 결제, 권한 변경은 기본 동작으로
+            실행하지 않는다.
+          </li>
+          <li>
+            페르소나 이름만 보고 성별, 나이, 성격, 경력, 권한을 추정하지 않는다.
+          </li>
+          <li>
+            AI가 만든 반응을 실제 사용자 발언이나 조사 Evidence로 남기지 않는다.
+          </li>
+          <li>비공개 화면을 외부 터널이나 서비스에 올려 검토하지 않는다.</li>
+          <li>근거가 없는 부분을 그럴듯한 사용자 이야기로 메우지 않는다.</li>
+          <li>QA 결과만으로 제품 코드를 자동 수정하지 않는다.</li>
+        </ul>
+      </section>
+
+      <section class="section" id="sources" aria-labelledby="sources-title">
+        <div class="section-heading">
+          <div>
+            <span class="section-index">07 · SOURCES</span>
+            <h2 id="sources-title">문서는 이렇게 연결된다</h2>
+          </div>
+          <p class="section-lead">
+            스킬 안에 페르소나 데이터를 따로 복사해 두지 않는다. 프로젝트의 기준
+            Markdown과 Evidence에서 필요한 부분만 읽는다. 정보가 갱신된 뒤에도
+            같은 기준 문서를 이어서 사용한다.
+          </p>
+        </div>
+
+        <div class="source-list">
+          <div class="source-link">
+            <span
+              ><strong>persona-qa / SKILL.md</strong
+              ><span>AI가 실제 검토 때 따르는 규칙과 결과 형식</span></span
+            >
+            <span>현재 원본 없음</span>
+          </div>
+          <div class="source-link">
+            <span
+              ><strong>프로토 페르소나 기준 원본</strong
+              ><span>7개 카드와 Claim, 제품 원칙, 검증 질문</span></span
+            >
+            <span>현재 원본 없음</span>
+          </div>
+          <div class="source-link">
+            <span
+              ><strong>Persona Evidence 로그</strong
+              ><span>비식별 조사 기록과 각 Claim에 미친 영향</span></span
+            >
+            <span>현재 원본 없음</span>
+          </div>
+          <a
+            class="source-link"
+            href="../../product/domain/role-permission-source-map.md"
+          >
+            <span
+              ><strong>Role Permission Source Map</strong
+              ><span
+                >실제 역할과 권한, 접근 범위를 판단하는 별도 기준</span
+              ></span
+            >
+            <span class="source-arrow" aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <section
+        class="section"
+        id="inspiration"
+        aria-labelledby="inspiration-title"
+      >
+        <div class="section-heading">
+          <div>
+            <span class="section-index">08 · DESIGN REFERENCES</span>
+            <h2 id="inspiration-title">무엇을 참고하고 무엇을 뺐나</h2>
+          </div>
+          <p class="section-lead">
+            외부 도구를 그대로 설치하지 않았다. 쓸 만한 구조만 골라 CLAiR의
+            의료·Evidence 경계에 맞는 작은 프로젝트 로컬 스킬로 만들었다.
+          </p>
+        </div>
+
+        <div class="comparison-wrap">
+          <table class="comparison">
+            <tbody>
+              <tr>
+                <th>
+                  <a href="https://github.com/sandeep-selvaraj/hafermilch"
+                    >Hafermilch</a
+                  >
+                  <span class="not-installed">설치 안 함</span>
+                </th>
+                <td>
+                  페르소나별 브라우저 여정과 결과를 구조화하는 방식만 참고했다.
+                </td>
+                <td>
+                  자격증명을 전달하거나 역할극으로 평가하는 방식, 근거 없이 수치
+                  점수를 매기는 방식은 가져오지 않았다.
+                </td>
+              </tr>
+              <tr>
+                <th>
+                  <a href="https://www.mimiqai.com/">Mimiq MCP</a>
+                  <span class="not-installed">설치 안 함</span>
+                </th>
+                <td>
+                  페이지와 흐름, 문구를 사용자 관점별로 나눠 검토하는 호출
+                  방식을 참고했다.
+                </td>
+                <td>
+                  원격 MCP와 외부 터널, 가상 사용자의 독백·감정 서사는 가져오지
+                  않았다.
+                </td>
+              </tr>
+              <tr>
+                <th>
+                  <a href="https://arxiv.org/abs/2601.22288">PersonaCite</a>
+                </th>
+                <td>
+                  답할 때마다 근거를 찾아 연결한다. 출처가 없으면 답을 보류하는
+                  원칙을 참고했다.
+                </td>
+                <td>
+                  논문 속 시스템을 설치한 것은 아니다. 대신 프로젝트의
+                  Claim·Evidence 구조로 원칙을 구현했다.
+                </td>
+              </tr>
+              <tr>
+                <th>CLAiR persona-qa</th>
+                <td>
+                  로컬 Markdown에서 Claim 상태와 Evidence 신뢰도를 읽어 실제
+                  화면에서 확인한 내용과 함께 본다.
+                </td>
+                <td>
+                  기본은 읽기 전용이다. 실제 사용자 조사와 합성 QA도 섞지
+                  않는다.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="page footer-inner">
+        <span>CLAiR persona-qa · project-local skill</span>
+        <span>기준 문서 최종 검토일 2026-08-01 · 외부 라이브러리 없음</span>
+      </div>
+    </footer>
+
+    <script>
+      const copy = async (button, text) => {
+        const original = button.textContent;
+        try {
+          await navigator.clipboard.writeText(text.trim());
+          button.textContent = "완료";
+        } catch {
+          button.textContent = "선택";
+          const selection = window.getSelection();
+          const range = document.createRange();
+          const target = button
+            .closest(".command, .example")
+            ?.querySelector("code");
+          if (selection && target) {
+            range.selectNodeContents(target);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+        window.setTimeout(() => {
+          button.textContent = original;
+        }, 1400);
+      };
+
+      document.querySelectorAll("[data-copy-parent]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const text =
+            button.closest(".command")?.querySelector("code")?.textContent ??
+            "";
+          void copy(button, text);
+        });
+      });
+
+      document.querySelectorAll("[data-copy-sibling]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const text =
+            button.parentElement?.querySelector("code")?.textContent ?? "";
+          void copy(button, text);
+        });
+      });
+    </script>
+  </body>
+</html>

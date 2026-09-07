@@ -29,17 +29,11 @@ For new or substantially touched canonical source docs, add these fields when th
 
 Keep existing repo fields such as `id`, `status`, `area`, `doc_type`, `related_work`, and `last_updated`; they remain the internal source-of-truth lifecycle fields. Treat OKF-style metadata as optional routing help, not authority over product status, security completion, DB/RLS readiness, launch readiness, or work acceptance.
 
-## Default Startup Set
+## Task-Conditional Startup
 
-For most tasks, read only:
+Start at the requested file or active issue. Use `docs/agent-start-here.md` only when choosing a reading path, and `docs/engineering/current-status.md` when product scope, mock/live state, permissions/data, or readiness matters. Already-loaded instructions do not need another read unless changed or incomplete for the task.
 
-1. `AGENTS.md`
-2. `docs/agent-start-here.md`
-3. `docs/engineering/current-status.md`
-4. The active Linear issue or `docs/work/` item; search the work index by keyword/ID first and open only the matching item
-5. The task-specific source docs listed below
-
-Read `docs/README.md`, `docs/_meta/README.md`, and `docs/_meta/intake-rules.md` when the task changes docs, planning, work routing, or durable operating rules.
+For PR-sized work, search the work index and reuse the matching item. For documentation/work-structure changes use `docs/_meta/intake-rules.md`. The table below lists candidate sources: choose the owner and relevant sections, not the entire row.
 
 ## Do Not Read By Default
 
@@ -55,22 +49,22 @@ Skip these unless the active issue explicitly links them or the task needs histo
 
 ## Task-Specific Reading Map
 
-| Task type | Read after startup | Notes |
+| Task type | Candidate sources | Selection rule |
 | --- | --- | --- |
-| Docs or work routing | `docs/README.md`, `docs/_meta/README.md`, `docs/_meta/intake-rules.md`, `docs/_meta/documentation-depth-rules.md`, `docs/work/index.md` | Use for new plans, source-of-truth changes, Linear shaping, and closeouts. |
+| Docs or work routing | `docs/_meta/intake-rules.md`; `docs/_meta/documentation-depth-rules.md` when record depth is unclear; `docs/README.md` for viewer/navigation changes | Search `docs/work/index.md` only for PR-sized work. |
 | System architecture, app/API boundaries, or repo structure | `docs/engineering/architecture/system-architecture-overview.md`, `docs/engineering/architecture/mock-live-boundary-map.md`, `docs/engineering/api-boundaries/api-boundary-integration-guide.md`, `docs/engineering/data-model/README.md`, active work item | Use the overview as the routing map, then open only the specific architecture, API, data, auth/security, or testing contract needed for the task. |
 | Product direction or MVP scope | `docs/product/README.md`, `docs/product/prd/clair-emr-saas-prd.md`, `docs/product/features/legacy-mvp-feature-spec.md`, `docs/product/user-flows/emr-saas-userflow.md` | Humans may use `/docs` as a read-only viewer, but agents should still read the source Markdown paths. |
 | Home 원내 현황 or operations work-status board | `docs/product/features/home/home-operations-work-status-contract-v0.md`, `docs/engineering/data-model/home-operations-work-status-read-model.md`, `docs/product/features/home/home-work-generation-rules-v0.md`, `docs/product/domain/order-fulfillment-handoff.md`, active Home work item | Use the operations contract for hospital-wide `원내 현황`; use the older work-generation rules for the `내 업무` lens only. |
 | Owner study or project learning notes | `docs/study/README.md`, `docs/study/curriculum.md`, relevant `docs/study/sessions/**` lesson note, and source docs linked from the lesson | Study notes are local/internal learning aids. Product, design, engineering, security, DB, and launch truth still belongs in the owning canonical docs. |
 | Role, auth, permission, or workspace policy | `docs/product/domain/workspace-auth-permissions.md`, `docs/engineering/auth-security/mvp-auth-transition-roadmap.md`, `docs/engineering/auth-security/auth-login/README.md`, relevant auth-login status/work-order docs | Do not change role/permission policy without representative approval. |
 | DB, data model, migration, RLS, or persistence | `docs/product/domain/README.md`, `docs/engineering/data-model/README.md`, `docs/engineering/data-model/emr-saas-db-structure-spec.ko.md`, relevant `docs/engineering/auth-security/auth-login/*persistence*` docs, active work item | Scoped synthetic/demo Supabase, migration, RLS, and persistence work may proceed when an active issue includes it. Stop for real data, destructive remote changes, secret/security exposure, or high-cost external effects. |
-| UI or screen work | `docs/design/README.md`, `docs/design/system/DESIGN.md`, `docs/design/reference-screen-index.md`, relevant `docs/design/screens/**` or `docs/design/flows/**`, active screen work item | For Next.js app code, read the relevant `node_modules/next/dist/docs/` guide before coding. |
+| UI or screen work | `docs/design/README.md`, `docs/design/system/DESIGN.md`, `docs/design/reference-screen-index.md`, relevant `docs/design/screens/**` or `docs/design/flows/**`, active screen work item | Read installed Next.js docs only for changes depending on framework APIs, configuration, or behavior. |
 | Design system or shared components | `docs/design/system/DESIGN.md`, `docs/design/system/component-ownership-rules.md`, `docs/design/system/ui-refactor-dod.md`, `docs/design/system/ui-refactor-operating-model.md` | Use existing tokens and shared primitives before adding new patterns. |
 | QA or visual review | `docs/design/qa/README.md`, `docs/design/qa/core-workspace-ui-review-checklist.md`, `docs/design/qa/interaction-accessibility-audit.md`, `docs/design/qa/responsive-dense-layout-audit.md`, relevant Playwright specs | Use screenshots or browser verification when UI quality matters. |
 | Testing, CI, or regression | `docs/engineering/testing/mvp-gap-analysis.md`, active work item verification section, relevant `tests/*.spec.ts` | Prefer narrow verification first, then broaden when risk requires it. |
-| Release, deployment, or operations | `docs/engineering/operations/README.md`, `docs/engineering/operations/release-environment-policy.md`, `docs/engineering/operations/manual-merge-gate-runbook.md`, `docs/engineering/operations/production-release-pr-to-main-runbook.md`, `.agents/skills/release-deployment-ops/SKILL.md`, `docs/engineering/auth-security/auth-login/live-supabase-readiness-execution-mode.md`, `docs/engineering/auth-security/auth-login/auth-db-env-secret-verification-gates.md`, relevant launch readiness docs | Work branches use PR Preview; `main` is both source of truth and Vercel Production. There is no active fixed staging release line. Production and scoped synthetic/demo remote validation remain approval-gated; stop for meaningful cost, secret/security exposure, real external email/payment/provider side effects, real data, destructive remote changes, public launch, or real external-user access. |
-| Linear operations | `docs/engineering/agent-orchestration/manual-linear-operations.md`, active Linear project/issue, `docs/work/index.md` | One issue/branch/PR remains the default; 승욱-approved work bundles may group related issues, while release deployment is routed separately. |
-| Owner OS routing or work packet creation | `docs/product/service/clair-owner-os-product-plan.md`, `.agents/skills/clair-owner-os-router/SKILL.md`, `.agents/skills/subagent-decision/SKILL.md` when subagent use is relevant, active Linear issue or `docs/work/agent-orchestration/OWNER-OS-*.md` | Start with classification, depth, autonomy, approval gates, output shape, and native multi-agent support before editing. |
+| Release, deployment, or operations | `.agents/skills/release-deployment-ops/SKILL.md`; the target-specific release/merge runbook | PR previews use work branches; the active release path is PR to `main`, with no staging integration step. Production and `main` retain exact-candidate approval and verification gates. Read data/env contracts when those boundaries are involved. |
+| Linear operations | `.agents/skills/manual-linear-ops/SKILL.md`, active issue; the full manual for placement, milestones, status ambiguity, or grouped release work | One issue/branch/PR remains the default; approved bundles can group issues. Only perform authorized external updates. |
+| Owner OS routing or work packet creation | `docs/product/service/clair-owner-os-product-plan.md`, `.agents/skills/clair-owner-os-router/SKILL.md`, `.agents/skills/subagent-decision/SKILL.md` when subagent use is relevant, active Linear issue or `docs/work/agent-orchestration/OWNER-OS-*.md` | Use packet/depth detail for broad routing or an explicitly requested packet, not as a prerequisite for a clear local fix. |
 | Owner Safety OS or 안전 점검 게이트 | `docs/_meta/owner-safety-os.md`, `docs/_meta/non-developer-codex-workflow.md`, `.agents/skills/emr-owner-safety-os/SKILL.md` | For explicit Safety OS gate requests, start with lightweight intake and wait for scope approval. Ordinary requested read-only review proceeds directly with relevant checks. `작업 점검 하자` remains a legacy alias. |
 
 ## Reading Depth Rules
@@ -80,18 +74,17 @@ Skip these unless the active issue explicitly links them or the task needs histo
 - If a source doc is too long, search within it for the relevant heading or term first.
 - Prefer `rg` for local search and use exact paths from the active issue whenever available.
 - Treat `docs/work/index.md`, long logs, generated artifacts, and broad test output as high-token surfaces. Query them with `rg` or bounded ranges before opening larger sections.
-- If two documents conflict, treat `docs/engineering/current-status.md` and the most specific approved source-of-truth doc as current.
-- If uncertainty affects product, security, data, or launch policy, stop and ask 승욱 instead of guessing.
+- Use `AGENTS.md` for project operating boundaries, `docs/engineering/current-status.md` for product status, and the most specific approved contract for behavior. A document or generated packet does not grant itself authorization.
+- Ask when unresolved uncertainty materially changes product behavior, security, data, or launch scope. Continue independent authorized preparation.
 
 ## Standard Startup Prompt
 
 승욱 can use this when starting work:
 
 ```text
-루멘, agent-start-here와 current-status만 먼저 읽고,
-이 Linear issue의 source docs와 agent-rag-map 기준으로
-필요한 문서만 추가 확인해서 진행해줘.
-archive/completed/history는 필요할 때만 봐줘.
+루멘, 이 요청과 직접 관련된 코드·문서부터 확인하고 진행해줘.
+범위나 mock/live 상태가 필요하면 current-status를 확인해줘.
+승인된 구현·검증·오류 수정까지 마치고 결과를 알려줘.
 ```
 
 ## Maintenance

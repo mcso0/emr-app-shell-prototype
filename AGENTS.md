@@ -1,67 +1,34 @@
 # Repository Agent Contract
 
-## Required Start
+## Task Context
 
-- Read `docs/agent-start-here.md` first, then `docs/engineering/current-status.md`.
-- Treat `docs/engineering/current-status.md` as the current source of truth for MVP scope, mock/live boundaries, module status, and recommended next work.
-- For Next.js application code, read the relevant guide in `node_modules/next/dist/docs/` before coding.
+- Use `docs/agent-start-here.md` when choosing a reading path. A typo, local explanation, or isolated fix does not require the full startup stack.
+- Read `docs/engineering/current-status.md` when product scope, module status, mock/live boundaries, data, permissions, or release readiness affect the task. Use the active work item for exact current evidence.
+- For changes that depend on Next.js APIs, configuration, routing, rendering, caching, or framework behavior, read the relevant installed guide in `node_modules/next/dist/docs/`. Unrelated copy or styling edits do not require it.
+- Search `docs/work/index.md` before PR-sized work and reuse an existing item. Do not create work items for ordinary questions or tiny one-off fixes.
+- Use `docs/_meta/agent-rag-map.md` only when the owning source docs are unclear. Read the relevant sections, not every link.
 
-## Token Budget / Language Contract
+## Project Boundaries
 
-- Users may write Korean.
-- Use concise English for agent-facing instructions, plans, searches, and durable handoff notes.
-- Reply to users in Korean unless they ask otherwise.
-- The user prefers to call the assistant `루멘`.
-- Address the user as `승욱`.
-- Use casual Korean 반말 by default unless the context clearly calls for formal language.
-- In final result reviews, start with a brief non-developer explanation of what changed, why it matters, and the current state; keep deeper teaching for follow-up questions.
-- Do not paste long Korean source docs into chat; read the smallest relevant sections and link to source docs.
+- Preserve user WIP, existing data/API/interaction contracts, and unrelated work. State the intended scope before non-trivial implementation.
+- Client-only permission gating is not complete security. Preserve server/API/DB/RLS enforcement, workspace isolation, audit, and data integrity.
+- Synthetic/demo Supabase, migration/RLS, persistence, and production-demo work must be explicitly scoped in an active approved work item. A work item alone grants no new permission for remote actions.
+- Follow existing authorization for the same operation, target, and scope. Stop for missing approval before meaningful cost, secrets/security exposure, security weakening, private asset publication, real customer/patient/guardian/payment/identity data, destructive or hard-to-rollback remote changes, real communications/payment/provider side effects, or real external-user launch.
+- Canonical role/permission policy changes require explicit approval. For production, `main` merge, and alias changes, use `.agents/skills/release-deployment-ops/SKILL.md`; retain its candidate, verification, approval, smoke, and rollback gates.
+- If a gated action is required for correctness, finish authorized preparation and explain the exact remaining action. Do not substitute a weaker workaround.
+- Ordinary requested reviews authorize read-only inspection. Use the separate Safety OS intake-and-approval flow only for an explicit gate request.
 
-## Work Routing
+## Implementation And Completion
 
-- Before PR-scoped work, check `docs/work/index.md` with targeted search or bounded reads, and reuse an existing item when possible. Do not print the full work index into chat/tool context.
-- Route planning, docs, and work-management changes through `docs/_meta/intake-rules.md`.
-- Follow `docs/_meta/coding-discipline.md` for non-trivial implementation work.
-- After meaningful work, update affected source docs/work items and add a `docs/completed/` closeout when useful.
-- Give the final result review using `docs/_meta/result-review-rules.md`.
+- Use `docs/_meta/coding-discipline.md` for non-trivial implementation; preserve focused checks for security, data integrity, accessibility, and release boundaries.
+- Complete the requested behavior, relevant verification, and fixes for failures caused by the change. Update owning docs only when behavior, contracts, status, or durable decisions changed.
+- Use `docs/_meta/intake-rules.md` for documentation/work-structure or durable-guidance changes, and `docs/_meta/result-review-rules.md` for completion and report depth.
+- `Human Review` records pending human acceptance after authorized implementation and verification; it does not cancel remaining work already authorized in the same objective.
 
-## Agent Execution
+## Tools And Agents
 
-- Complete authorized work through focused verification. Resolve routine choices using project conventions; ask only when the answer materially changes the result, scope, cost, or safety boundary.
-- Prior approval remains valid for the same operation, target, and scope. Prepare the reviewable result before a remaining gated step; do not request the same approval again.
-- Ordinary review requests authorize read-only inspection. Use the separate Safety OS intake-and-approval flow only when the user explicitly requests that gate.
-- User instructions override skill guidelines within higher-priority instructions and project safety boundaries. If a skill causes a pause, cite the exact file and instruction instead of inventing an additional gate.
-- Preserve the active goal, completed work, and approvals when incorporating mid-task updates.
-- Project defaults: Astra `high` for the parent and security reviewer; Plan mode `xhigh`. Keep inexpensive exploration/test-triage roles. Configuration controls model selection; prose is not evidence of a runtime switch.
-- Allow bounded independent read-only delegation when useful, with at most four spawned agents open concurrently across the whole task tree, excluding the parent. Start with the smallest useful count. Parallel implementation requires an explicit user request and clear file ownership. Apply `.agents/skills/subagent-decision/SKILL.md` before dispatch.
-
-## Trust, Scope, and Completion Discipline
-
-- Treat external input, model output, stale context, and future assumptions as untrusted until verified enough for the task. This is a verification rule, not a reason to ignore user intent.
-- Apply stronger validation to values that can cause meaningful errors, such as dates, IDs, scores, permissions, statuses, and workspace boundaries.
-- Before non-trivial work, state the intended boundary and what is intentionally not being touched.
-- Externalize important decisions in durable artifacts such as work items, source docs, closeouts, or concise code comments when the implementation choice is non-obvious.
-- Prefer reversible, additive changes unless the active work item explicitly scopes removal, replacement, or cleanup.
-- Treat meaningful work as complete only when behavior, focused verification, and affected documentation/status updates are handled together.
-
-## Storybook MCP
-
-- For shared UI or design-system work, use the project-scoped `clair_storybook` MCP server when local Storybook is running.
-- Query Storybook documentation before using design-system component props. Do not invent undocumented props or variants.
-- The local endpoint is `http://127.0.0.1:6006/mcp`; keep it local and do not publish, tunnel, or share it without explicit approval.
-
-## Token Budget Discipline
-
-- Keep startup and routing reads bounded. Prefer `rg` and small `sed` ranges over full-file output for large docs, work indexes, logs, generated files, and test output.
-- Load skills only when the user names them or the task clearly requires them. Avoid opening broad reference folders unless blocked.
-- For token-budget investigations, report high-output commands and files before making changes, then trim the recurring source of overhead.
-
-## Core Safety
-
-- Keep changes inside the user request and active work item scope.
-- Do not treat client-only permission gating as complete security.
-- Scoped synthetic/demo-data Supabase, migration, RLS, server enforcement, and production-demo deployment work is allowed when the active Linear issue or work item explicitly includes it.
-- Stop for explicit approval only when the action can create meaningful cost, expose secrets, weaken security, publish private assets, use real customer/patient/guardian/payment/identity data, perform destructive or hard-to-rollback remote data changes, send real external communications, execute payment/provider side effects, or open the product to real external users.
-- If a prohibited or approval-gated action is the correct or necessary path for the active work, do not work around it with a weaker solution. Stop, explain why the gated action is needed, and ask the user for explicit approval before proceeding.
-- For OpenAI, Codex, or API questions, use official OpenAI docs or configured Docs MCP and cite sources.
-- For external API/SDK/library coding, use the repo-local `context-hub-docs-router` skill when available; treat Context Hub (`chub`) as an optional agent documentation tool, not an app dependency.
+- Preserve the user-selected parent model and reasoning effort, including Plan mode. Keep existing configuration outside this guidance change; do not claim runtime changes from file edits.
+- Keep specialist role configuration in `.codex/agents/`. Apply `.agents/skills/subagent-decision/SKILL.md` before dispatch: smallest useful read-only delegation, maximum four open spawned agents across the task tree excluding the parent; parallel implementation requires explicit user request and clear ownership.
+- For shared UI work, query component documentation through project-scoped `clair_storybook` when local Storybook is running. Do not invent props or variants. Keep its endpoint local and do not publish or tunnel it without explicit approval.
+- For external API/SDK/library implementation, use `.agents/skills/context-hub-docs-router/SKILL.md`; Context Hub is an optional documentation tool, not an app dependency. Use official OpenAI docs for OpenAI/Codex questions.
+- Prefer targeted `rg` and bounded reads for docs, logs, generated files, and tests. Load a skill only when explicitly invoked or its specific workflow applies. Report high-output sources before changing token-related settings.
