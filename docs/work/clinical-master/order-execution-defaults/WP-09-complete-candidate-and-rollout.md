@@ -535,3 +535,56 @@ nothing; the subsequent confirmed save and reload are the verified result.
 pilot synthetic registration/encounter and remaining workspace flow acceptance are
 not yet complete. PR711 remains open and unmerged. Preserve all synthetic QA IDs as
 append-only evidence; do not reset historical results to make fingerprints match.
+
+## Authenticated 974d checkpoint and live-selection correction (2026-09-07)
+
+Exact974d02b3ad512418d4dd2ea1542e9f825b5c7867 Release Check34100400065 passed.
+Preview dpl_4DHfyQvHTNA7GPcLbQM4n5er2Bzq is Ready; immutable irsys5nfk and
+branch alias resolve to the same deployment. Existing login survived reload.
+Three-workspace glucose clinical-default edit/save/reload/field-only master reset
+now passes. Final revisions Cheongdam15/pilot14/clair-demo13 all retain active,
+aliases[], the original four defaults and36012KRW. Revision/audit history remains.
+
+Pilot UI now shows the actual single workspace staff member. Approved synthetic
+patient98812500-1da2-4d2b-9f6d-b9d6608bde88 was registered through the supported UI;
+no real personal data or external communication was used. Registration signature
+controls are prototype state, not evidence of collected consent. Reception correctly
+blocks the closed day: read-only DB confirms no weekly hours or date exceptions.
+No encounter, operating hours, schedule, department, room or role was invented.
+Pilot clinical acceptance requires a separately scoped operational-fixture decision.
+
+Clair-demo actual synthetic Nabi encounter439cb9c0-94df-482b-8d99-00a4cc4525f7
+(May30, patient19421000-0000-4000-8000-000000000002) was selected from the live queue.
+The URL, patient header and five existing orders agree; all five pre/post-addition
+whole-row fingerprints match. New consultationc5eadbad-4fc6-4f34-a058-d2d22a2eac29,
+WBC4b9cbfc8-8336-4e43-969c-06804d4a698f and CT-review38c50fd1-89a9-4f15-b1e2-be06a0f47918
+are additive QA rows. WBC explicit cat manual profiled76b4b21-02b6-55e3-8d66-efc97b89c43f
+and deviceb3d56bba-638c-5953-b974-6197b9608270 persisted with synthetic clinical context.
+WBC and CT confirmed; tasks9d6106b9-4bec-4e54-a3b7-1ec24f1f24fc and
+526ea975-769f-4078-8b79-cc954fe9f159 are pending downstream work. WBC history immediately
+shows revision1 and Task plan retained, validating the974d readback/display fix.
+Results, retest and imaging actual/version acceptance are not yet complete here.
+
+Consultation is intentionally still draft: its clinician policy is runtime_resolved,
+not arbitrary manual input. Client and SQL remove a submitted actor ID and use only
+encounter.primary_veterinarian_id, which is absent on this existing encounter.
+The required-field block is correct. Do not alter the resolver or old encounter just
+to complete QA. The UI's misleading free-text field is now read-only in inline,
+detail and amendment controls, showing its actual value or the missing-vet reason.
+
+First entry into authenticated clair-demo exposed sample Coco despite an empty live
+queue. Existing sample-ID bridging could then show a different live order set.
+No write was made on that phantom selection. Local correction confines all five
+chart fallback consumers and scenario synchronization to mock auth, preserving
+actual UUID selection and existing empty/error handling. Shared work-queue date
+initialization and refresh now use the current operating date in Supabase mode;
+mock fixture dates and explicitly selected dates remain. The pure date helpers,
+server bridge, permissions, clinician resolver, historical rows and DB are unchanged.
+Initial regression reproduced empty/scope/date/scenario failures; two additional
+component tests reproduced the editable clinician defect. All10 focused regressions
+and247 combined contracts pass, including shared-clock initialization/refresh and
+explicit-date preservation. Full typecheck, lint and build pass; the build retains
+the existing unrelated docs-reader NFT warning. Docs1009, secrets4244, UX-copy and
+diff checks pass; the final staged secret scan includes the new test and passes4245.
+Independent selection-boundary and clinician-render reviews found no must-fix issue.
+PR711 remains open; this local delta still needs commit/check/Preview verification.

@@ -4,6 +4,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testMatch: [
+    "chart-live-selection-boundary.spec.ts",
     "chart-order-draft-delta-save.spec.ts",
     "chart-order-confirm-history.spec.ts",
     "lab-live-display-boundary.spec.ts",

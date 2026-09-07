@@ -103,8 +103,17 @@ labels, remove unsaved/mock narratives and media from live lab/imaging surfaces,
 and route pilot live reception through existing real staff sourcing. Focused
 regressions and237 combined contracts, full type/lint/build/docs/UX checks pass.
 Clair-demo Admin alias/default edit/reload/master-reset/use-stop passed and original
-values/status/price were restored. New Preview and remaining workspace flow
-acceptance are pending. Production delivery and the full objective remain open.
+values/status/price were restored. Exact974d Preview and Release Check passed.
+All three Admin clinical-field reset flows now pass with original values restored.
+Pilot actual staff display and one synthetic patient registration pass, but no
+operating-hours configuration exists, so reception correctly blocks creation.
+Clair-demo actual Nabi encounter adds three drafts without changing five old orders;
+WBC and CT-review confirm with revision1 and scoped Task history displayed correctly.
+Consultation remains draft because that encounter has no primary veterinarian;
+runtime-owned clinician resolution is not weakened. A final local delta restricts
+chart sample fallback to mock auth, makes the runtime-owned clinician read-only,
+and uses current queue dates in live auth. New Preview verification and remaining
+workspace flow acceptance are pending. Production delivery and the full objective remain open.
 
 Use the active work item for exact verification commands. Recent relevant verification categories include:
 

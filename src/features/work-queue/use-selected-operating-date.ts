@@ -1,16 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
+import { getCurrentOperatingDate, getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
+import { getAuthRuntimeMode } from "@/lib/supabase/config";
 
 export function useSelectedOperatingDate(workspaceId: string) {
   const [todayDate, setTodayDate] = useState(() =>
-    getWorkspaceOperatingDate(workspaceId),
+    getAuthRuntimeMode().authProvider === "supabase"
+      ? getCurrentOperatingDate()
+      : getWorkspaceOperatingDate(workspaceId),
   );
   const [selectedDate, setSelectedDate] = useState(todayDate);
 
   const refreshTodayDate = useCallback(() => {
-    setTodayDate(getWorkspaceOperatingDate(workspaceId));
+    setTodayDate(getAuthRuntimeMode().authProvider === "supabase"
+      ? getCurrentOperatingDate()
+      : getWorkspaceOperatingDate(workspaceId));
   }, [workspaceId]);
 
   useEffect(() => {

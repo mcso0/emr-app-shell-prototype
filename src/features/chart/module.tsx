@@ -272,6 +272,7 @@ import {
 } from "@/features/reception/data";
 import { getDemoScenarioFromParams } from "@/lib/emr-domain/demo-scenarios";
 import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
+import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
   formatCompactKoreanOperatingDateLabel,
   formatOperatingShortTime,
@@ -1000,7 +1001,9 @@ function useActiveChartBundle(workspaceId: string) {
     (state) => state.selectedEncounterId,
   );
   const { queueScopeMatches, records } = useScopedChartLiveQueue(workspaceId);
-  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
 
   if (!allowMockFallback && !queueScopeMatches) return null;
 
@@ -1172,7 +1175,9 @@ function useChartLiveQueueCoordinator(workspaceId: string) {
   const selectedEncounterIdRef = useRef(selectedEncounterId);
   const explicitEncounterIdRef = useRef(explicitEncounterId);
   const demoScenarioEncounterIdRef = useRef(demoScenarioEncounterId);
-  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const legacySalesDemo =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const scopeMatches =
     liveQueueScope?.workspaceId === workspaceId &&
     liveQueueScope.date === selectedDate;
@@ -1530,7 +1535,10 @@ function useScenarioEncounterSync(workspaceId: string) {
     queryEncounterId !== null && queryEncounterBundle !== null;
 
   useEffect(() => {
-    if (!isLegacySalesDemoWorkspace(workspaceId)) return;
+    if (
+      !isLegacySalesDemoWorkspace(workspaceId) ||
+      getAuthRuntimeMode().authProvider !== "mock"
+    ) return;
     if (liveQueueStatus === "ready" && liveQueueRecords.length === 0) return;
     if (!queryEncounterId || !hasValidQueryEncounter) return;
     if (lastAppliedQueryEncounterId.current === queryEncounterId) return;
@@ -1581,7 +1589,9 @@ export function ChartSidePanel({
   const selectEncounter = useChartStore((state) => state.selectEncounter);
   const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
   const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
-  const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
+  const legacySalesDemo =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const { selectDate, selectedDate, todayDate } =
     useChartOperatingDate(workspaceId);
   const mockItems = useMemo(
@@ -1696,7 +1706,9 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   >(null);
   const { queueScopeMatches, records: liveQueueRecords } =
     useScopedChartLiveQueue(workspaceId);
-  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const activeBundle = getSelectedBundle(
     queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
     liveQueueRecords,
@@ -1940,7 +1952,8 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
     chartHistoryScope.patientId === bundle.patient.id,
   );
   const liveHistoryRows =
-    !isLegacySalesDemoWorkspace(workspaceId) &&
+    (!isLegacySalesDemoWorkspace(workspaceId) ||
+      getAuthRuntimeMode().authProvider === "supabase") &&
     liveHistoryScopeMatches &&
     chartHistoryStatus === "ready"
       ? chartHistoryRecords
@@ -6125,6 +6138,19 @@ function ChartOrderInlineFieldCell({
     return <span aria-label="해당 없음">—</span>;
   }
   const value = getChartOrderFieldValue(row, definition);
+  if (definition.key === "responsibleClinicianId") {
+    const clinicianId = typeof value === "string" ? value.trim() : "";
+    return (
+      <EmrTableCellText
+        mode="one-line"
+        fullText={clinicianId
+          ? `${clinicianId} · 진료 담당 수의사에서 자동 결정돼요.`
+          : "진료 담당 수의사가 미배정되어 있어요. 접수에서 지정한 뒤 다시 불러와 주세요."}
+      >
+        {clinicianId || "담당 수의사 미배정"}
+      </EmrTableCellText>
+    );
+  }
   const editable =
     !writeDisabled &&
     !isChartOrderConfirmedRow(row) &&
@@ -8067,6 +8093,25 @@ function ChartOrderFieldControl({
   value: unknown;
 }) {
   const ariaLabel = `${orderName} ${definition.label}`;
+  if (definition.key === "responsibleClinicianId") {
+    const clinicianId = typeof value === "string" ? value.trim() : "";
+    return (
+      <div className="space-y-1">
+        <Input
+          aria-label={ariaLabel}
+          disabled={disabled}
+          readOnly
+          value={clinicianId}
+          placeholder="담당 수의사 미배정"
+        />
+        <p className="emr-text-metadata text-[var(--emr-text-secondary)]">
+          {clinicianId
+            ? "진료 담당 수의사에서 자동 결정돼요."
+            : "진료 담당 수의사가 미배정되어 있어요. 접수에서 지정한 뒤 다시 불러와 주세요."}
+        </p>
+      </div>
+    );
+  }
   if (definition.key === "linkedMedicationOrderId" && medicationOrders) {
     const selected = typeof value === "string" && value ? value : null;
     return <Select disabled={disabled} value={selected} onValueChange={next => onChange(next === "__clear__" ? undefined : next)}>
@@ -13293,7 +13338,10 @@ export function ChartContent({
   const updateLiveQueueRecord = useChartStore(
     (state) => state.updateLiveQueueRecord,
   );
-  const allowMockFallback = isLegacySalesDemoWorkspace(workspaceId);
+  // A live session must never resolve a sample alias to a real order writer.
+  const allowMockFallback =
+    isLegacySalesDemoWorkspace(workspaceId) &&
+    getAuthRuntimeMode().authProvider === "mock";
   const {
     contentAsideOpen,
     modulePanelOpen,
