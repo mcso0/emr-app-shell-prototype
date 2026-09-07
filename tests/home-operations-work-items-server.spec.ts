@@ -44,7 +44,7 @@ test("home operations core denies board access instead of returning empty work",
   });
 });
 
-test("home operations scope mine keeps personal work and processable team queues", async () => {
+test("home operations scope mine keeps only directly assigned personal work", async () => {
   const personal = createWorkItem({
     id: "lab:personal",
     assigneeUserId: actorUserId,
@@ -92,263 +92,126 @@ test("home operations scope mine keeps personal work and processable team queues
     status: 200,
     sourceStatus: "live",
     summary: {
-      totalVisible: 2,
-      mineCount: 2,
+      totalVisible: 1,
+      mineCount: 1,
     },
   });
   expect(result.ok && result.items.map((item) => item.id)).toEqual([
     "lab:personal",
-    "billing:team",
   ]);
 });
 
-test("supabase home operations gateway calls the aggregate RPC and maps rows", async () => {
+function sourceClient(rows: Record<string, unknown[]> = {}, fulfillment: unknown[] = []) {
   const calls: string[] = [];
-  const gateway = createSupabaseHomeOperationsWorkItemGateway({
-    async rpc(functionName, args) {
-      calls.push(
-        `${functionName}:${args.p_workspace_id}:${args.p_actor_user_id}:${args.p_operating_date}:${args.p_scope}:${args.p_include_completed}:${args.p_include_cancelled}`,
-      );
-      return {
-        error: null,
-        data: {
-          generatedAt: "2026-07-05T09:00:00+09:00",
-          sourceStatus: "live",
-          items: [
-            {
-              id: "appointment:00000000-0000-4000-8000-000000000001",
-              workspaceId,
-              sourceType: "appointment",
-              sourceId: "00000000-0000-4000-8000-000000000001",
-              sourceStatus: "confirmed",
-              title: "나나 예약 확인",
-              progressState: "waiting",
-              attentionSignals: ["team_queue"],
-              requestedAt: "2026-07-05T10:00:00+09:00",
-              operatingDate,
-              sourceHref: `/w/${workspaceId}/reception?appointmentId=00000000-0000-4000-8000-000000000001&modulePanel=open`,
-              permissionMode: "full",
-            },
-          ],
-        },
-      };
+  return {
+    calls,
+    async rpc(name: string, args: Record<string, unknown>) {
+      calls.push(`${name}:${args.p_queue_type}`);
+      if (name === "clair_list_reception_day_calendar") return { error: null, data: { records: [
+        ...(rows.appointments ?? []).map((row) => ({ appointment: { id: (row as { id: string }).id, assignedStaffUserIds: [actorUserId] } })),
+        ...(rows.encounters ?? []).map((row) => ({ encounter: { id: (row as { id: string }).id, assignedStaffUserIds: [actorUserId] } })),
+      ], operatingSchedule: {} } };
+      expect(name).toBe("clair_list_fulfillment_work_items");
+      expect(args.p_workspace_id).toBe(workspaceId);
+      return { error: null, data: fulfillment };
     },
-  });
-
-  const result = await gateway.listHomeOperationsWorkItems({
-    actorUserId,
-    includeCancelled: true,
-    includeCompleted: false,
-    operatingDate,
-    scope: "all",
-    workspaceId,
-  });
-
-  expect(calls).toEqual([
-    `clair_list_home_operations_work_items:${workspaceId}:${actorUserId}:${operatingDate}:all:false:true`,
-  ]);
-  expect(result).toMatchObject({
-    ok: true,
-    sourceStatus: "live",
-    items: [
-      {
-        id: "appointment:00000000-0000-4000-8000-000000000001",
-        sourceType: "appointment",
-        progressState: "waiting",
-      },
-    ],
-  });
+    from(table: string) {
+      return { select() { return { eq(column: string, value: string) {
+        expect(column).toBe("workspace_id"); expect(value).toBe(workspaceId);
+        return { order(column: string) { expect(column).toBe("id"); return { async range(from: number, to: number) {
+          calls.push(`${table}:${from}`);
+          return { error: null, data: (rows[table] ?? []).slice(from, to + 1) };
+        } }; } };
+      } }; } };
+    },
+  };
+}
+const gatewayInput = { actorUserId, includeCancelled: false, includeCompleted: false, operatingDate, scope: "all" as const, workspaceId, allowedSourceTypes: ["reception", "appointment", "consultation", "lab", "billing"] as HomeOperationsWorkItem["sourceType"][] };
+const permissionAdapter = createMockWorkspacePermissionAdapter({
+  users: [{ id: actorUserId, status: "active" }],
+  memberships: [{ id: "member", userId: actorUserId, workspaceId, roles: ["hospital_admin"], status: "active" }],
 });
 
-test("supabase home operations gateway falls back to existing live readers when aggregate RPC is missing", async () => {
-  const calls: string[] = [];
-  const gateway = createSupabaseHomeOperationsWorkItemGateway({
-    async rpc(functionName, args) {
-      calls.push(functionName);
-      if (functionName === "clair_list_home_operations_work_items") {
-        return { data: null, error: { message: "function does not exist" } };
-      }
-      expect(functionName).toBe("clair_list_reception_day_calendar");
-      expect(args).toMatchObject({
-        p_workspace_id: workspaceId,
-        p_day: operatingDate,
-      });
-      return {
-        error: null,
-        data: [
-          {
-            appointment: {
-              id: "00000000-0000-4000-8000-000000000011",
-              workspaceId,
-              patientId: "00000000-0000-4000-8000-000000000021",
-              guardianId: "00000000-0000-4000-8000-000000000031",
-              scheduledStartAt: `${operatingDate}T10:00:00+09:00`,
-              status: "confirmed",
-              visitPurpose: "예방접종",
-            },
-            patient: {
-              id: "00000000-0000-4000-8000-000000000021",
-              name: "나나",
-            },
-            primaryGuardian: {
-              id: "00000000-0000-4000-8000-000000000031",
-              name: "김보호",
-            },
-          },
-        ],
-      };
-    },
-    from(tableName) {
-      const rowsByTable: Record<string, unknown[]> = {
-        order_fulfillment_work_items: [
-          {
-            id: "00000000-0000-4000-8000-000000000041",
-            workspace_id: workspaceId,
-            queue_type: "lab",
-            status: "requested",
-            priority: "normal",
-            encounter_id: "00000000-0000-4000-8000-000000000051",
-            source_snapshot: {
-              orderDisplayName: "CBC 검사",
-              patientName: "나나",
-              guardianName: "김보호",
-            },
-            created_at: `${operatingDate}T10:20:00+09:00`,
-            updated_at: `${operatingDate}T10:20:00+09:00`,
-          },
-          {
-            id: "00000000-0000-4000-8000-000000000042",
-            workspace_id: workspaceId,
-            queue_type: "lab",
-            status: "requested",
-            priority: "normal",
-            encounter_id: "00000000-0000-4000-8000-000000000052",
-            source_snapshot: {
-              orderDisplayName: "미래 검사",
-            },
-            created_at: "2026-07-06T10:20:00+09:00",
-            updated_at: "2026-07-06T10:20:00+09:00",
-          },
-          {
-            id: "00000000-0000-4000-8000-000000000043",
-            workspace_id: workspaceId,
-            queue_type: "lab",
-            status: "completed",
-            priority: "normal",
-            encounter_id: "00000000-0000-4000-8000-000000000053",
-            source_snapshot: {
-              orderDisplayName: "과거 완료 검사",
-            },
-            created_at: "2026-07-04T10:20:00+09:00",
-            updated_at: "2026-07-04T10:20:00+09:00",
-          },
-        ],
-        invoices: [
-          {
-            id: "00000000-0000-4000-8000-000000000061",
-            workspace_id: workspaceId,
-            encounter_id: "00000000-0000-4000-8000-000000000051",
-            guardian_id: "00000000-0000-4000-8000-000000000031",
-            invoice_no: "INV-TEST-001",
-            status: "draft",
-            payment_state: "none",
-            total_amount: 35000,
-            created_at: `${operatingDate}T10:30:00+09:00`,
-          },
-        ],
-        invoice_lines: [
-          {
-            id: "00000000-0000-4000-8000-000000000071",
-            workspace_id: workspaceId,
-            invoice_id: "00000000-0000-4000-8000-000000000061",
-            order_id: "00000000-0000-4000-8000-000000000081",
-            billing_candidate_id: "00000000-0000-4000-8000-000000000091",
-            description: "CBC 검사",
-            quantity: 1,
-            unit_price: 35000,
-            line_total: 35000,
-            created_at: `${operatingDate}T10:30:00+09:00`,
-            updated_at: `${operatingDate}T10:30:00+09:00`,
-          },
-        ],
-        encounters: [
-          {
-            id: "00000000-0000-4000-8000-000000000051",
-            workspace_id: workspaceId,
-            patient_id: "00000000-0000-4000-8000-000000000021",
-            guardian_id: "00000000-0000-4000-8000-000000000031",
-            reception_type: "appointment",
-          },
-        ],
-        patients: [
-          {
-            id: "00000000-0000-4000-8000-000000000021",
-            workspace_id: workspaceId,
-            name: "나나",
-          },
-        ],
-        guardians: [
-          {
-            id: "00000000-0000-4000-8000-000000000031",
-            workspace_id: workspaceId,
-            name: "김보호",
-          },
-        ],
-      };
-      return {
-        select() {
-          return {
-            eq() {
-              return {
-                async limit() {
-                  return {
-                    error: null,
-                    data: rowsByTable[tableName] ?? [],
-                  };
-                },
-              };
-            },
-          };
-        },
-      };
-    },
-  });
+test("home reads authorized sources, scheduled dates, identities, names and exact work targets", async () => {
+  const client = sourceClient({
+    appointments: [{ id: "appointment", patient_id: "patient", guardian_id: "guardian", status: "confirmed", created_at: "2026-06-20T09:00:00+09:00", scheduled_start_at: `${operatingDate}T10:00:00+09:00`, created_by_user_id: actorUserId, assigned_veterinarian_id: actorUserId }],
+    patients: [{ id: "patient", name: "나나" }], guardians: [{ id: "guardian", name: "김보호" }],
+    user_memberships: [{ id: "member", user_id: actorUserId, users: { display_name: "김수의" } }],
+  }, [{ id: "work", workspaceId, patientId: "patient", encounterId: "encounter", queueType: "lab", status: "requested", createdAt: "2026-06-20T09:00:00+09:00", dueAt: `${operatingDate}T11:00:00+09:00`, requestedByUserId: actorUserId, assignedToUserId: actorUserId, sourceSnapshot: { patientName: "나나", orderDisplayName: "CBC" } }]);
+  const response = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems(gatewayInput);
+  expect(response.ok).toBe(true);
+  if (!response.ok) return;
+  const lab = response.items.find((item) => item.sourceType === "lab")!;
+  expect(lab).toMatchObject({ patientId: "patient", operatingDate, requesterUserId: actorUserId, assigneeUserId: actorUserId, assigneeName: "김수의" });
+  expect(lab.sourceHref).toContain("labResultId=live-lab-work");
+  expect(lab.sourceHref).toContain(`date=${operatingDate}`);
+  expect(lab.attentionSignals).not.toContain("long_stay");
+  const appointment = response.items.find((item) => item.sourceType === "appointment")!;
+  expect(appointment.operatingDate).toBe(operatingDate);
+  expect(appointment.assigneeUserIds).toEqual([actorUserId]);
+  expect(appointment.assigneeName).toBe("김수의");
+  expect(response.sourceStatus).toBe("live");
+  expect(appointment.requestedAt).toBe("2026-06-20T09:00:00+09:00");
+  expect(appointment.attentionSignals).not.toContain("long_stay");
+  expect(client.calls.filter((name) => name.startsWith("clair_list_fulfillment"))).toEqual(["clair_list_fulfillment_work_items:lab"]);
+});
 
-  const result = await gateway.listHomeOperationsWorkItems({
-    actorUserId,
-    includeCancelled: false,
-    includeCompleted: false,
-    operatingDate,
-    scope: "all",
-    workspaceId,
-  });
-
-  expect(calls).toEqual([
-    "clair_list_home_operations_work_items",
-    "clair_list_reception_day_calendar",
-  ]);
-  expect(result).toMatchObject({
-    ok: true,
-    sourceStatus: "live",
-    items: [
-      {
-        id: "appointment:00000000-0000-4000-8000-000000000011",
-        sourceType: "appointment",
-        title: "나나 예약 확인",
-      },
-      {
-        id: "lab:00000000-0000-4000-8000-000000000041",
-        sourceType: "lab",
-        title: "CBC 검사",
-      },
-      {
-        id: "billing:00000000-0000-4000-8000-000000000061",
-        sourceType: "billing",
-        title: "INV-TEST-001 수납 요청",
-        queueCardSecondLineText: "오더 1건 · 35,000원",
-      },
+test("home paginates beyond one page and separates current patient counts from selected work date", async () => {
+  const client = sourceClient({
+    appointments: Array.from({ length: 503 }, (_, index) => ({ id: `appointment-${index}`, status: "confirmed", scheduled_start_at: `${operatingDate}T10:00:00+09:00` })),
+    encounters: [
+      { id: "one", patient_id: "patient-a", status: "waiting", checked_in_at: "2026-01-01T09:00:00+09:00" },
+      { id: "two", patient_id: "patient-a", status: "in_consultation", checked_in_at: "2026-01-01T09:00:00+09:00" },
+      { id: "three", patient_id: "patient-b", status: "waiting", checked_in_at: "2026-01-01T09:00:00+09:00" },
+      { id: "four", patient_id: "patient-c", status: "completed", checked_in_at: "2026-01-01T09:00:00+09:00" },
     ],
   });
+  const response = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems(gatewayInput);
+  expect(response).toMatchObject({ ok: true, currentPatients: { present: 2, waiting: 1, inProgress: 1 } });
+  expect(response.ok && response.items.filter((item) => item.sourceType === "appointment")).toHaveLength(503);
+  expect(client.calls).toContain("appointments:500");
+});
+
+test("home excludes future work, old completed work, foreign fulfillment and unanchored invoices", async () => {
+  const work = { workspaceId, patientId: "patient", encounterId: "encounter", queueType: "lab", status: "requested", createdAt: "2026-07-04T09:00:00+09:00" };
+  const client = sourceClient({
+    invoices: [{ id: "invoice", encounter_id: "encounter", created_at: `${operatingDate}T09:00:00+09:00`, status: "draft" }],
+    invoice_lines: [{ id: "line", invoice_id: "invoice", order_id: "order", created_at: `${operatingDate}T09:00:00+09:00` }],
+    orders: [{ id: "order", billing_candidate_id: null }],
+  }, [{ ...work, id: "previous" }, { ...work, id: "future", dueAt: "2026-07-06T09:00:00+09:00" }, { ...work, id: "completed", status: "completed" }, { ...work, id: "foreign", workspaceId: "another" }]);
+  const response = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems({ ...gatewayInput, includeCompleted: true });
+  expect(response.ok && response.items.map((item) => item.id)).toEqual(["lab:previous"]);
+  expect(response.ok && response.items[0].sourceHref).toContain("date=2026-07-04");
+});
+
+test("core derives assigned and requested independently and rejects foreign or unauthorized rows before counts", async () => {
+  const result = await readHomeOperationsWorkItems({ actorUserId, workspaceId, filters: { date: operatingDate }, permissionAdapter,
+    gateway: createMockHomeOperationsWorkItemGateway({ ok: true, generatedAt: "now", sourceStatus: "live", items: [
+      createWorkItem({ id: "assigned", assigneeUserId: actorUserId }),
+      createWorkItem({ id: "requested", requesterUserId: actorUserId }),
+      createWorkItem({ id: "foreign", workspaceId: "another" }),
+      createWorkItem({ id: "hidden", permissionMode: "hidden" }),
+    ] }),
+  });
+  expect(result.ok && result.items.map(({ id, isMyWork, isRequestedWork }) => ({ id, isMyWork, isRequestedWork }))).toEqual([
+    { id: "assigned", isMyWork: true, isRequestedWork: false }, { id: "requested", isMyWork: false, isRequestedWork: true },
+  ]);
+  let sources: string[] = [];
+  await readHomeOperationsWorkItems({ actorUserId, workspaceId, filters: {}, permissionAdapter: {
+    ...permissionAdapter, memberships: [{ ...permissionAdapter.memberships[0], roles: [], permissionRole: { key: "home-only", label: "Home", roleType: "custom", permissionIds: ["reception:view"] } }],
+  }, gateway: { async listHomeOperationsWorkItems(input) { sources = input.allowedSourceTypes; return { ok: true, generatedAt: "now", sourceStatus: "empty", items: [] }; } } });
+  expect(sources).toEqual(["reception", "appointment"]);
+});
+
+test("operational walk-in assignees are personal reception work independently of clinical owner", async () => {
+  const client = sourceClient({
+    encounters: [{ id: "encounter", patient_id: "patient", status: "waiting", checked_in_at: `${operatingDate}T09:00:00+09:00`, primary_veterinarian_id: "another-vet" }],
+    waiting_queue_entries: [{ id: "queue", encounter_id: "encounter", queue_type: "consultation", status: "waiting", entered_at: `${operatingDate}T09:00:00+09:00` }],
+    user_memberships: [{ id: "member", user_id: actorUserId, users: { display_name: "접수 담당" } }],
+  });
+  const result = await readHomeOperationsWorkItems({ actorUserId, workspaceId, filters: { date: operatingDate, scope: "mine" }, permissionAdapter, gateway: createSupabaseHomeOperationsWorkItemGateway(client) });
+  expect(result.ok && result.items.map((item) => item.id)).toEqual(["reception:encounter"]);
+  expect(result.ok && result.items[0]).toMatchObject({ assigneeUserIds: [actorUserId], assigneeName: "접수 담당", sourceHref: `/w/${workspaceId}/reception?encounterId=encounter&modulePanel=open` });
 });
 
 test("home operations migration is additive and exposes read-only aggregate RPC", () => {

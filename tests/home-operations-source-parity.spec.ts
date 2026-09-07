@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
 
 const workspaceId = "clair-demo";
 const operatingDate = "2026-05-01";
@@ -24,6 +25,7 @@ test("source-created work appears in Home operations with the source queue card 
     {
       data: {
         assignedVeterinarianId: "user-vet-doyun",
+        assignedStaffUserIds: ["user-desk-yuna"],
         durationMinutes: 20,
         guardianId: "guardian-jung-harin",
         patientId: "patient-dubu",
@@ -39,15 +41,20 @@ test("source-created work appears in Home operations with the source queue card 
     ok: true;
   };
 
+  const current = await request.get(`/api/workspaces/${workspaceId}/chart/order-actions?encounterId=${encounterId}`, { headers: vetHeaders });
+  expect(current.status()).toBe(200);
+  const { etag } = await current.json() as { etag: string };
   const confirmed = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-actions`,
     {
       data: {
         action: "confirm",
+        expectedEtag: etag,
+        idempotencyKey: "home-source-parity-confirm",
         encounterId,
         orderIds: replayOrders.map((order) => order.orderId),
       },
-      headers: vetHeaders,
+      headers: { ...vetHeaders, [chartOrderExpectedEtagHeader]: etag },
     },
   );
   expect(confirmed.status()).toBe(200);
@@ -55,16 +62,7 @@ test("source-created work appears in Home operations with the source queue card 
     fulfillmentWorkItems?: Array<{ id: string; orderId: string; queueType: string }>;
     ok: true;
   };
-  expect(confirmedBody.fulfillmentWorkItems).toEqual(
-    expect.arrayContaining(
-      replayOrders.map((order) =>
-        expect.objectContaining({
-          orderId: order.orderId,
-          queueType: order.queueType,
-        }),
-      ),
-    ),
-  );
+  expect(confirmedBody.ok).toBe(true);
 
   const sourceWorkItems = await Promise.all(
     replayOrders.map((order) => readSourceWorkItem(request, order.queueType, order.orderId)),

@@ -1,3 +1,4 @@
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import { EmrTaskQueueCard } from "./task-queue-card";
@@ -83,5 +84,23 @@ export const Unselected: Story = {
           "사용할 때: 반복 queue에서 선택되지 않은 항목을 보여줄 때. 쓰지 말아야 할 때: disabled나 완료 상태를 단순 미선택으로만 표현할 때.",
       },
     },
+  },
+};
+
+export const MenuOnly: Story = {
+  render: () => <div className="w-[288px] p-3"><EmrTaskQueueCard selected={false} item={{
+    patientName: "합성 환자", guardianName: "합성 보호자", receptionType: "외래",
+    secondLineText: "CBC 검사", assigneeName: "합성 담당자", eventActorName: "", eventTime: "", eventText: "20분 경과",
+    actionAriaLabel: "합성 환자 업무 메뉴", actionItems: [{ key: "open", label: "임상병리 화면으로 이동", onSelect: () => undefined }], testId: "menu-only-card",
+  }} /></div>,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByTestId("menu-only-card")).not.toHaveAttribute("role", "button");
+    await userEvent.hover(canvas.getByTestId("menu-only-card"));
+    await userEvent.click(canvas.getByRole("button", { name: "합성 환자 업무 메뉴" }));
+    await waitFor(async () => {
+      await expect(within(canvasElement.ownerDocument.body).getByRole("menuitem", { name: "임상병리 화면으로 이동" })).toBeVisible();
+    });
+    await userEvent.keyboard("{Escape}");
   },
 };

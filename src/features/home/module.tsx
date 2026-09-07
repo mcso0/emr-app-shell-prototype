@@ -1,195 +1,60 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  HomeHospitalStatusSidePanel,
-  HomeKanbanWorkspace,
-} from "@/features/home/components/home-kanban-workspace";
+import { HomeKanbanWorkspace, HomeNavigationSidePanel } from "@/features/home/components/home-kanban-workspace";
+import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
 import { mapOperationsResponseToHomeDashboardData } from "@/features/home/home-operations-adapter";
 import { getHomeMockData } from "@/features/home/home.mock";
-import {
-  HOME_ROLE_LABELS,
-  HOME_ROLE_USER_NAMES,
-  mapAuthRoleToHomeRole,
-} from "@/features/home/home.presets";
+import { HOME_ROLE_LABELS, HOME_ROLE_USER_NAMES, mapAuthRoleToHomeRole } from "@/features/home/home.presets";
 import { useAuthClient } from "@/features/auth/auth-client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getWorkspaceOperatingDate } from "@/lib/emr-domain/demo-date";
 import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import type { ShellComponentProps } from "@/types/emr";
-import type {
-  HomeOperationsWorkItemsResponse,
-} from "@/features/home/home.types";
+import type { HomeOperationsWorkItemsResponse } from "@/features/home/home.types";
 
 export function HomeContent({ workspaceId }: ShellComponentProps) {
   const { hydrated, session, hydrate } = useAuthClient();
-  const [includeCompleted, setIncludeCompleted] = useState(false);
-  const [includeCancelled, setIncludeCancelled] = useState(false);
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
-  if (!hydrated) {
-    return <HomeLoadingState />;
-  }
-
-  const role = mapAuthRoleToHomeRole(session?.role);
-  if (isLegacySalesDemoWorkspace(workspaceId)) {
-    const data = getHomeMockData(role, workspaceId);
-
-    return (
-      <HomeKanbanWorkspace
-        data={data}
-        includeCancelled={includeCancelled}
-        includeCompleted={includeCompleted}
-        onIncludeCancelledChange={setIncludeCancelled}
-        onIncludeCompletedChange={setIncludeCompleted}
-        sourceStatus="live"
-      />
-    );
-  }
-
-  return (
-    <HomeOperationsContent
-      includeCancelled={includeCancelled}
-      includeCompleted={includeCompleted}
-      role={role}
-      workspaceId={workspaceId}
-      onIncludeCancelledChange={setIncludeCancelled}
-      onIncludeCompletedChange={setIncludeCompleted}
-    />
-  );
+  const activate = useHomeWorkspaceStore((state) => state.activate);
+  const activeScope = useHomeWorkspaceStore((state) => state.scopeKey);
+  const today = getWorkspaceOperatingDate(workspaceId);
+  const actor = session && "userId" in session ? session.userId : session?.role;
+  const scopeKey = actor ? `${actor}:${workspaceId}` : null;
+  useEffect(() => { hydrate(); }, [hydrate]);
+  useEffect(() => { if (hydrated && scopeKey) activate(scopeKey, today); }, [activate, hydrated, scopeKey, today]);
+  if (!hydrated || !scopeKey || activeScope !== scopeKey) return <HomeLoadingState />;
+  return <HomeOperationsContent key={scopeKey} workspaceId={workspaceId} today={today} role={mapAuthRoleToHomeRole(session?.role)} />;
 }
 
-function HomeOperationsContent({
-  includeCancelled,
-  includeCompleted,
-  onIncludeCancelledChange,
-  onIncludeCompletedChange,
-  role,
-  workspaceId,
-}: {
-  includeCancelled: boolean;
-  includeCompleted: boolean;
-  onIncludeCancelledChange: (value: boolean) => void;
-  onIncludeCompletedChange: (value: boolean) => void;
-  role: ReturnType<typeof mapAuthRoleToHomeRole>;
-  workspaceId: string;
-}) {
-  const operatingDate = getWorkspaceOperatingDate(workspaceId);
-  const { loading, refresh, response } = useHomeOperationsWorkItems({
-    includeCancelled,
-    includeCompleted,
-    operatingDate,
-    workspaceId,
-  });
-  const data = useMemo(
-    () =>
-      mapOperationsResponseToHomeDashboardData({
-        items: response?.ok ? response.items : [],
-        operatingDate: response?.operatingDate ?? operatingDate,
-        role,
-        roleLabel: HOME_ROLE_LABELS[role],
-        userName: HOME_ROLE_USER_NAMES[role],
-      }),
-    [operatingDate, response, role],
-  );
-
-  if (loading && !response) {
-    return <HomeLoadingState />;
-  }
-
-  return (
-    <HomeKanbanWorkspace
-      data={data}
-      errorMessage={!response?.ok ? response?.error.message : undefined}
-      includeCancelled={includeCancelled}
-      includeCompleted={includeCompleted}
-      loading={loading}
-      sourceStatus={response?.sourceStatus ?? "error"}
-      onIncludeCancelledChange={onIncludeCancelledChange}
-      onIncludeCompletedChange={onIncludeCompletedChange}
-      onRefresh={refresh}
-    />
-  );
+function HomeOperationsContent({ workspaceId, today, role }: { workspaceId: string; today: string; role: ReturnType<typeof mapAuthRoleToHomeRole> }) {
+  const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
+  const legacy = isLegacySalesDemoWorkspace(workspaceId);
+  const { loading, refresh, response } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: false, operatingDate: query.date, workspaceId, enabled: !legacy });
+  const data = useMemo(() => {
+    if (legacy) {
+      const mock = getHomeMockData(role, workspaceId);
+      const mine = new Set(mock.tasks.map((task) => task.id));
+      return { ...mock, hospitalTasks: mock.hospitalTasks.map((task) => ({ ...task, isMyWork: mine.has(task.id), isRequestedWork: task.requestedBy === mock.userName })) };
+    }
+    return mapOperationsResponseToHomeDashboardData({ items: response?.ok ? response.items : [], operatingDate: query.date, role, roleLabel: HOME_ROLE_LABELS[role], userName: HOME_ROLE_USER_NAMES[role] });
+  }, [legacy, query.date, response, role, workspaceId]);
+  return <HomeKanbanWorkspace data={data} today={today} loading={!legacy && loading} onRefresh={refresh}
+    sourceStatus={legacy ? "live" : response?.sourceStatus ?? (loading ? "live" : "error")}
+    errorMessage={response && !response.ok ? response.error.message : undefined}
+    patientSummary={response?.ok ? response.currentPatients : null}
+  />;
 }
 
-export function HomeSidePanel({ workspaceId }: ShellComponentProps) {
-  const { hydrated, session, hydrate } = useAuthClient();
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
-  if (!hydrated) {
-    return <HomeSidePanelLoadingState />;
-  }
-
-  const role = mapAuthRoleToHomeRole(session?.role);
-  if (!isLegacySalesDemoWorkspace(workspaceId)) {
-    return (
-      <HomeOperationsSidePanel
-        role={role}
-        workspaceId={workspaceId}
-      />
-    );
-  }
-
-  const data = getHomeMockData(role, workspaceId);
-  const tasks = [...data.tasks, ...data.hospitalTasks]
-    .filter((task, index, allTasks) => allTasks.findIndex((item) => item.id === task.id) === index);
-
-  return <HomeHospitalStatusSidePanel sourceStatus="live" tasks={tasks} />;
-}
-
-function HomeOperationsSidePanel({
-  role,
-  workspaceId,
-}: {
-  role: ReturnType<typeof mapAuthRoleToHomeRole>;
-  workspaceId: string;
-}) {
-  const operatingDate = getWorkspaceOperatingDate(workspaceId);
-  const { loading, refresh, response } = useHomeOperationsWorkItems({
-    includeCancelled: false,
-    includeCompleted: false,
-    operatingDate,
-    workspaceId,
-  });
-  const data = useMemo(
-    () =>
-      mapOperationsResponseToHomeDashboardData({
-        items: response?.ok ? response.items : [],
-        operatingDate: response?.operatingDate ?? operatingDate,
-        role,
-        roleLabel: HOME_ROLE_LABELS[role],
-        userName: HOME_ROLE_USER_NAMES[role],
-      }),
-    [operatingDate, response, role],
-  );
-
-  if (loading && !response) {
-    return <HomeSidePanelLoadingState />;
-  }
-
-  return (
-    <HomeHospitalStatusSidePanel
-      errorMessage={!response?.ok ? response?.error.message : undefined}
-      loading={loading}
-      sourceStatus={response?.sourceStatus ?? "error"}
-      tasks={data.hospitalTasks}
-      onRefresh={refresh}
-    />
-  );
-}
+export function HomeSidePanel() { return <HomeNavigationSidePanel />; }
 
 function useHomeOperationsWorkItems({
   includeCancelled,
   includeCompleted,
   operatingDate,
   workspaceId,
+  enabled = true,
 }: {
+  enabled?: boolean;
   includeCancelled: boolean;
   includeCompleted: boolean;
   operatingDate: string;
@@ -204,6 +69,7 @@ function useHomeOperationsWorkItems({
   const refresh = useCallback(() => setNonce((value) => value + 1), []);
 
   useEffect(() => {
+    if (!enabled) return;
     const controller = new AbortController();
     const params = new URLSearchParams({
       date: operatingDate,
@@ -240,47 +106,16 @@ function useHomeOperationsWorkItems({
       });
 
     return () => controller.abort();
-  }, [includeCancelled, includeCompleted, operatingDate, requestKey, workspaceId]);
+  }, [enabled, includeCancelled, includeCompleted, operatingDate, requestKey, workspaceId]);
 
   return {
     loading: response?.requestKey !== requestKey,
     refresh,
-    response: response?.body ?? null,
+    response: response?.requestKey === requestKey ? response.body : null,
   };
 }
 
-function HomeLoadingState() {
-  return (
-    <div className="grid h-full min-h-0 overflow-hidden bg-[var(--emr-surface-workspace)]">
-      <div className="grid min-h-0 grid-rows-[auto_auto_minmax(0,1fr)] gap-3 p-4">
-        <div className="flex items-start justify-between">
-          <Skeleton className="h-9 w-48 rounded-[var(--clair-radius-sm)]" />
-          <div className="flex gap-2">
-            <Skeleton className="h-12 w-24 rounded-[var(--clair-radius-md)]" />
-            <Skeleton className="h-12 w-24 rounded-[var(--clair-radius-md)]" />
-            <Skeleton className="h-12 w-24 rounded-[var(--clair-radius-md)]" />
-          </div>
-        </div>
-        <Skeleton className="h-20 rounded-[var(--clair-radius-md)]" />
-        <div className="grid grid-flow-col auto-cols-[280px] gap-3 overflow-hidden">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className="h-full rounded-[var(--clair-radius-md)]" />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
-function HomeSidePanelLoadingState() {
-  return (
-    <div className="grid h-full min-h-0 grid-rows-[48px_minmax(0,1fr)] gap-3 bg-[var(--emr-surface-sidepanel)] p-3">
-        <Skeleton className="h-6 w-28 rounded-[var(--clair-radius-sm)]" />
-        <div className="grid content-start gap-2">
-          <Skeleton className="h-28 rounded-[var(--clair-radius-md)]" />
-          <Skeleton className="h-28 rounded-[var(--clair-radius-md)]" />
-          <Skeleton className="h-28 rounded-[var(--clair-radius-md)]" />
-        </div>
-    </div>
-  );
+function HomeLoadingState() {
+  return <div className="flex h-full flex-col gap-5 p-6" role="status" aria-label="홈 불러오는 중"><Skeleton className="h-8 w-40" /><Skeleton className="h-8 w-full" /><Skeleton className="min-h-48 flex-1" /></div>;
 }

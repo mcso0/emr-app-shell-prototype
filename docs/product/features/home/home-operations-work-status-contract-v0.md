@@ -56,7 +56,7 @@ Included:
 - Hospital-wide work status board for the selected operating day.
 - Work cards from reception, appointments, chart/consultation, lab, imaging, dispensing, treatment, and billing.
 - Future inpatient work after a durable inpatient operations source exists.
-- `내 업무 보기` shortcut that includes personal assignments plus team/role queues the user can process.
+- `내 업무 보기` shortcut that includes only work directly assigned to the current user.
 - Common operational status contract shared by Home cards.
 - Source work generation rules for each work type.
 - First DB/API read-model direction before implementation.
@@ -102,9 +102,8 @@ Home is an entry and monitoring surface.
 
 Allowed on Home:
 
-- Open card detail drawer.
-- Open source workflow through a drawer footer action.
-- Use card overflow actions such as `상세보기` and `업무 보러가기`.
+- Keep card bodies noninteractive and open source workflows through card overflow actions.
+- Open the exact source work from list rows or their destination overlay. No Home detail drawer.
 - Filter, sort, and inspect status.
 
 Not allowed on Home:
@@ -123,6 +122,9 @@ Default rule:
 - If one encounter has lab, imaging, dispensing, and billing work, show multiple cards.
 - Patient/encounter grouping can be offered as a future alternate view.
 - Home cards should keep source workflow identity and route back to the authoritative module.
+
+
+Current UI and personal-work semantics are defined in [Home Workspace UI Spec](home-v1-ui-spec.md), updated by HOME-PR-014. Source generation remains governed below.
 
 ## Common Status Contract
 
@@ -154,15 +156,15 @@ Do not use official `지연` language in Home v0 unless a work-type-specific SLA
 | Assignment state | Meaning | Home treatment |
 |---|---|---|
 | Personal assignment | `assigneeUserId` exists. | Visible to assignee and to hospital-wide board. |
-| Team queue | `assigneeUserId` is empty and `teamQueueId` or role queue exists. | Normal queue work; included in `내 업무 보기` if user can process that queue. |
+| Team queue | `assigneeUserId` is empty and `teamQueueId` or role queue exists. | Normal queue work; shown in hospital view; excluded from directly assigned personal work. |
 | Assignment missing | No personal assignee and no team/role queue. | Warning signal; should be rare and treated as data or routing policy problem. |
 
 `내 업무 보기` includes:
 
 - Personal assignments for the current user.
-- Team/role queue work the user is allowed to process.
+- Operational reception/reservation assignments containing the current user ID.
 
-It should visually distinguish `내 담당` from `팀 큐`.
+Unassigned team work remains in hospital view. `내가 요청한 업무` independently uses requester user ID.
 
 ### Default Sort
 
@@ -306,7 +308,7 @@ Remaining follow-up:
 ## Acceptance Criteria
 
 - Home `원내 현황` shows work from all active source workflows that satisfy the operating-date and carry-over rules.
-- `내 업무 보기` includes both personal assignments and processable team queue work, with distinct labels.
+- `내 업무` separates directly assigned and actor-requested work; team availability is not personal assignment.
 - Completed/cancelled work is hidden by default and only shown when expanded or included by filter.
 - `배정 누락` is treated as a warning, not normal unassigned work.
 - Home does not claim, complete, cancel, bill, or mutate source work.

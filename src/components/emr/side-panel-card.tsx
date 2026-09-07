@@ -19,13 +19,13 @@ type EmrSidePanelCardProps = {
   selectionVariant?: "accentBar" | "modulePanel";
   selected: boolean;
   testId?: string;
-  onSelect: () => void;
+  onSelect?: () => void;
 };
 
 const sidePanelBadgeIconClassName =
   "flex size-3 shrink-0 items-center justify-center text-[var(--emr-sidepanel-task-card-chip-icon)] [&_svg]:size-3 [&_svg]:text-[var(--emr-sidepanel-task-card-chip-icon)]";
 export const emrSidePanelCardHoverActionButtonClassName =
-  "size-[var(--emr-sidepanel-task-card-action-size)] shrink-0 rounded-[var(--emr-sidepanel-task-card-action-radius)] border border-[var(--emr-sidepanel-task-card-action-border)] bg-[var(--emr-sidepanel-task-card-action-bg)] p-0 text-[var(--emr-text-secondary)] opacity-0 shadow-[var(--clair-shadow-xs)] transition-opacity hover:!opacity-100 hover:bg-[var(--emr-sidepanel-task-card-action-bg)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-sidepanel-task-card-action-bg)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-[var(--emr-sidepanel-task-card-action-icon-size)]";
+  "size-[var(--emr-sidepanel-task-card-action-size)] shrink-0 rounded-[var(--emr-sidepanel-task-card-action-radius)] border border-[var(--emr-sidepanel-task-card-action-border)] bg-[var(--emr-sidepanel-task-card-action-bg)] p-0 text-[var(--emr-text-secondary)] opacity-0 [@media(hover:none)]:!opacity-100 shadow-[var(--clair-shadow-xs)] transition-opacity hover:!opacity-100 hover:bg-[var(--emr-sidepanel-task-card-action-bg)] focus-visible:!opacity-100 group-hover/emr-side-panel-card:!opacity-100 group-focus-within/emr-side-panel-card:!opacity-100 data-popup-open:!opacity-100 data-popup-open:bg-[var(--emr-sidepanel-task-card-action-bg)] data-popup-open:text-[var(--emr-text-primary)] [&_svg]:size-[var(--emr-sidepanel-task-card-action-icon-size)]";
 export const emrSidePanelCardActionButtonClassName = cn(
   emrSidePanelCardHoverActionButtonClassName,
   "group-data-[selected=true]/emr-side-panel-card:!opacity-100"
@@ -42,14 +42,14 @@ export function EmrSidePanelCard({
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onSelect();
+      onSelect?.();
     }
   };
 
   return (
     <div
-      role="button"
-      tabIndex={0}
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : undefined}
       className={cn(
         "group/emr-side-panel-card relative w-full overflow-hidden text-left outline-none transition-all duration-[var(--clair-motion-duration-fast)] focus-visible:ring-3 focus-visible:ring-ring/50 active:shadow-none",
         selectionVariant === "modulePanel"
@@ -64,9 +64,9 @@ export function EmrSidePanelCard({
       )}
       data-testid={testId}
       data-selected={selected ? "true" : undefined}
-      aria-pressed={selected}
+      aria-pressed={onSelect ? selected : undefined}
       onClick={onSelect}
-      onKeyDown={handleKeyDown}
+      onKeyDown={onSelect ? handleKeyDown : undefined}
     >
       {selected && selectionVariant === "accentBar" ? (
         <span

@@ -83,7 +83,6 @@ export const modules: ModuleDefinition[] = [
     label: "원내 현황",
     icon: HomeIcon,
     sidePanel: HomeSidePanel,
-    contentHeader: FixedEmptyMainContentHeader,
     content: HomeContent,
   },
   {

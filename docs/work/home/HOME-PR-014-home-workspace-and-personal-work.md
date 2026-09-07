@@ -1,0 +1,73 @@
+---
+id: "HOME-PR-014"
+status: in_progress
+area: home
+priority: P0
+target_pr: "User-approved Home implementation and production delivery"
+source_docs:
+  - "docs/product/features/home/home-operations-work-status-contract-v0.md"
+  - "docs/engineering/data-model/home-operations-work-status-read-model.md"
+dependencies:
+  - "HOME-PR-012"
+updated: "2026-09-08"
+---
+
+# Home Workspace And Personal Work
+
+## Goal
+
+Implement the approved Home prototype using existing EMR components: hospital board/list and independent personal assigned/requested views with correct source identity, dates, navigation and user/workspace-scoped UI preferences.
+
+## Approval And Boundaries
+
+승욱 approved implementation, commit, push, PR, merge to origin/main and deployment on 2026-09-07 in this task. Scope is this Home work bundle, existing synthetic/demo source integration, scoped shared-component extension and destination selection. Preserve server permissions and workspace isolation. No real data, source business writes, new reviewer/approval workflow, fixed staging alias/settings changes, external messages or production DB changes are implied. Follow release preflight and exact-candidate gates; this record does not independently grant permission.
+
+Base: origin/main d6ad0664; isolated codex/home-workspace-delivery checkout. Primary checkout and its unrelated WIP are preserved.
+
+## Scope
+
+- Reuse existing header, module sidebar, task card, row menu, data table overlay, date navigator, filter/button/input, state icon and feedback components.
+- Home sidebar: 원내 현황, 내 업무; 인박스/메시지 disabled 예정. Rail tooltip 홈 화면.
+- Hospital board/list, multiselect owners/work types, reset only owner/type, hidden column restoration, collapsible columns/groups and independent personal queries.
+- Card body has no action; overflow source action. Lists show a token-based hover surface and existing gradient action overlay.
+- Date by scheduled processing time, fallback requested time, previous unfinished, latest state, opt-in completed.
+- Personal assignment uses actor identity; team unassigned excluded. Actor-requested work includes unassigned. Include supported personally assigned review/approval work without inventing source tasks.
+- Exact source navigation and return state. Browser-local persistent display preferences keyed by user/workspace, per-session query state.
+- Read contract/source parity and error/partial/permission/empty distinctions. Current patient count must not be inferred from work item counts.
+
+## Out Of Scope
+
+Home business actions, inbox/messages, SLA policy, real external integrations/data, general task assignment/approval authoring, cross-device preferences, unrelated clinical defaults WIP, new UI library.
+
+## Done Criteria And Verification
+
+- Shared components render the accepted interaction; card body noninteractive and existing card consumers unchanged.
+- Server tests cover dates, personal/request identity, team unassigned, read failures, source permissions and exact source identifiers.
+- Browser tests cover both views, filters, hide/collapse/restore, independent queries, keyboard actions, correct task navigation, return/new-session state and workspace/user isolation.
+- Existing Home source parity checks remain meaningful; obsolete detail-panel expectations are replaced with new contract checks.
+- Production candidate passes focused checks, local lint/typecheck/build/docs/secrets, exact Release Check, preview readiness and scoped smoke. Record PR/candidate/merge/deployment/smoke/rollback separately.
+
+## Implementation Evidence
+
+- Uses shared header/sidebar, queue cards, multiselect controls and table action overlay. Shared card selection is optional; existing selected/unselected consumers retain behavior. Disabled sidebar labels can show 예정.
+- Hospital board/list and independent assigned/requested lists use per-user/workspace display preferences and per-session queries; sign-out clears transient Home state.
+- Server computes per-source permissions before reads and rechecks source/workspace before counts. Existing guarded fulfillment/calendar readers and paginated scoped tables replace the application's legacy aggregate call.
+- Reception is projected from the authoritative encounter when its queue already points to consultation. Operational staff assignments remain separate from the primary veterinarian; multiple assignees are supported. Missing assignment readback is labeled unknown.
+- Scheduled/requested dates remain distinct. Carry-over links use the work's own effective date and exact source ID. Billing requires a real billing candidate anchor.
+- Current patient statistics are distinct current encounters, independent of selected work date. No inpatient persistence is invented.
+
+## Local Verification — 2026-09-08
+
+- 19 focused Playwright tests passed: Home UI/session isolation (7), source creation-to-Home parity (1), server identity/date/permission/pagination/current-patient tests (8), and exact overdue lab/imaging/dispensing navigation among work sharing an encounter (3).
+- Three shared queue-card Storybook stories passed with accessibility checks, including menu-only navigation and original selected/unselected modes.
+- TypeScript, ESLint, production build, docs links, UX copy and secret scan passed. Build retains the existing docs-reader/Turbopack tracing warning; compilation and type validation succeeded.
+- Desktop visual inspection confirmed shared controls, removed empty shell header, 예정 labels, card/menu behavior and column scrolling. Browser integration uses synthetic API fixtures; it is not production DB verification.
+- Independent read-only boundary review found no remaining blockers in the corrected source mappings. Reviewer did not inspect remote runtime or independently rerun tests.
+
+## Release And Remaining Boundary
+
+Implementation and local checks are complete. PR Preview, exact Release Check, Production approval packet, merge and Production smoke are tracked separately in the delivery record/PR; do not infer their completion from local tests.
+
+The historical `clair_list_home_operations_work_items` SECURITY DEFINER RPC still exists remotely and has a previously identified membership-only permission boundary. Home no longer invokes it. Revocation/replacement requires separate scoped DB authorization; this change does not claim to remediate that remote function.
+
+No remote database writes, migrations, business mutations, external messages, real data use or private asset publication were performed for this implementation. Primary checkout WIP remains preserved.

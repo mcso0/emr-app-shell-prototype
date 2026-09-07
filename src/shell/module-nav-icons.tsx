@@ -52,7 +52,7 @@ export const workspaceTabIconById: Record<string, { icon: GnbIcon; iconClassName
 };
 
 export const moduleNavLabelById: Partial<Record<string, string>> = {
-  home: "원내 현황",
+  home: "홈 화면",
   treatment: "진료/차트",
   lab: "임상병리검사",
   imaging: "영상검사",

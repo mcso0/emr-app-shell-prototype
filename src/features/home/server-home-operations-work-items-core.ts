@@ -53,6 +53,7 @@ export type HomeOperationsGatewayResult =
       items: HomeOperationsWorkItem[];
       sourceStatus: "empty" | "live" | "partial";
       accessIssues?: HomeOperationsAccessIssue[];
+      currentPatients?: { present: number; waiting: number; inProgress: number } | null;
     }
   | {
       ok: false;
@@ -63,6 +64,7 @@ export type HomeOperationsGatewayResult =
 export type HomeOperationsWorkItemGateway = {
   listHomeOperationsWorkItems(input: {
     actorUserId: string;
+    allowedSourceTypes: HomeOperationsSourceType[];
     includeCancelled: boolean;
     includeCompleted: boolean;
     operatingDate: string;
@@ -178,8 +180,15 @@ export async function readHomeOperationsWorkItems({
     });
   }
 
+  const allowedSourceTypes = sourceTypes.filter((sourceType) => {
+    const requiredPermission = getProcessPermissionForSource(sourceType);
+    return requiredPermission !== null && resolveWorkspacePermission(permissionAdapter, {
+      sessionUserId: actorUserId, workspaceId, requiredPermission,
+    }).allowed;
+  });
   const result = await gateway.listHomeOperationsWorkItems({
     actorUserId,
+    allowedSourceTypes,
     includeCancelled: filters.includeCancelled === true,
     includeCompleted: filters.includeCompleted === true,
     operatingDate,
@@ -200,15 +209,11 @@ export async function readHomeOperationsWorkItems({
   }
 
   const itemsWithMine = result.items
-    .filter((item) => item.permissionMode !== "hidden")
+    .filter((item) => item.workspaceId === workspaceId && allowedSourceTypes.includes(item.sourceType) && item.permissionMode !== "hidden")
     .map((item) => ({
       ...item,
-      isMyWork: isMyOperationsWorkItem({
-        actorUserId,
-        item,
-        permissionAdapter,
-        workspaceId,
-      }),
+      isMyWork: item.assigneeUserId === actorUserId || item.assigneeUserIds?.includes(actorUserId) === true,
+      isRequestedWork: item.requesterUserId === actorUserId,
     }));
   const scopedItems = scope === "mine"
     ? itemsWithMine.filter((item) => item.isMyWork)
@@ -227,6 +232,7 @@ export async function readHomeOperationsWorkItems({
         ? "live"
         : "empty",
     items: scopedItems,
+    currentPatients: result.currentPatients ?? null,
     summary,
     ...(result.accessIssues?.length ? { accessIssues: result.accessIssues } : {}),
     generatedAt: result.generatedAt,
@@ -242,11 +248,11 @@ async function listBillingFallbackItemsFromTables(
     workspaceId: string;
   },
 ): Promise<{ ok: true; items: HomeOperationsWorkItem[] } | { ok: false }> {
-  const [invoices, invoiceLines, encounters, patients, guardians] = await Promise.all([
+  const [invoices, invoiceLines, encounters, patients, guardians, orders] = await Promise.all([
     listWorkspaceRows(
       client,
       "invoices",
-      "id, workspace_id, encounter_id, guardian_id, invoice_no, status, subtotal_amount, discount_amount, tax_amount, total_amount, issued_at, paid_at, payment_state, created_at",
+      "id, workspace_id, encounter_id, guardian_id, invoice_no, status, subtotal_amount, discount_amount, tax_amount, total_amount, issued_at, paid_at, payment_state, billing_requested_at, created_at",
       input.workspaceId,
       200,
     ),
@@ -278,9 +284,10 @@ async function listBillingFallbackItemsFromTables(
       input.workspaceId,
       300,
     ),
+    listWorkspaceRows(client, "orders", "id,workspace_id,billing_candidate_id", input.workspaceId, 500),
   ]);
 
-  if (!invoices.ok || !invoiceLines.ok || !encounters.ok || !patients.ok || !guardians.ok) {
+  if (!invoices.ok || !invoiceLines.ok || !encounters.ok || !patients.ok || !guardians.ok || !orders.ok) {
     return { ok: false };
   }
 
@@ -291,6 +298,7 @@ async function listBillingFallbackItemsFromTables(
       guardians: guardians.rows,
       input,
       invoiceLines: invoiceLines.rows,
+      orders: orders.rows,
       invoices: invoices.rows,
       patients: patients.rows,
     }),
@@ -306,13 +314,15 @@ async function listWorkspaceRows(
 ): Promise<{ ok: true; rows: unknown[] } | { ok: false }> {
   if (!client.from) return { ok: false };
 
-  const { data, error } = await client
-    .from(tableName)
-    .select(columns)
-    .eq("workspace_id", workspaceId)
-    .limit(limit);
-  if (error) return { ok: false };
-  return { ok: true, rows: data ?? [] };
+  const rows: unknown[] = [];
+  const pageSize = Math.min(limit, 500);
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client.from(tableName).select(columns)
+      .eq("workspace_id", workspaceId).order("id").range(offset, offset + pageSize - 1);
+    if (error) return { ok: false };
+    rows.push(...(data ?? []));
+    if (!data || data.length < pageSize) return { ok: true, rows };
+  }
 }
 
 function mapBillingFallbackItemsFromRows({
@@ -320,6 +330,7 @@ function mapBillingFallbackItemsFromRows({
   guardians,
   input,
   invoiceLines,
+  orders,
   invoices,
   patients,
 }: {
@@ -332,6 +343,7 @@ function mapBillingFallbackItemsFromRows({
     workspaceId: string;
   };
   invoiceLines: unknown[];
+  orders: unknown[];
   invoices: unknown[];
   patients: unknown[];
 }): HomeOperationsWorkItem[] {
@@ -344,6 +356,7 @@ function mapBillingFallbackItemsFromRows({
   const guardianById = new Map(
     recordsById(guardians).map((record) => [getString(record.id), record]),
   );
+  const orderById = new Map(recordsById(orders).map((row) => [getString(row.id), row]));
   const linesByInvoiceId = new Map<string, Record<string, unknown>[]>();
 
   for (const line of recordsById(invoiceLines)) {
@@ -364,11 +377,12 @@ function mapBillingFallbackItemsFromRows({
     const hasBillingCandidate = lines.some(
       (line) =>
         Boolean(getString(line.billing_candidate_id) ?? getString(line.billingCandidateId)) ||
-        Boolean(getString(line.order_id) ?? getString(line.orderId)),
+        Boolean(orderById.get(getString(line.order_id) ?? getString(line.orderId))?.billing_candidate_id),
     );
     if (!hasBillingCandidate) continue;
 
     const requestedAt =
+      getString(invoice.billing_requested_at) ??
       getEarliestIso(lines.map((line) => getString(line.created_at) ?? getString(line.createdAt))) ??
       getString(invoice.created_at) ??
       getString(invoice.createdAt);
@@ -429,15 +443,11 @@ function mapBillingFallbackItemsFromRows({
         teamQueueId: "billing",
         operatingDate: input.operatingDate,
       }),
-      requesterName: "수납",
+
       requestedAt,
       stateEnteredAt,
       operatingDate: toSeoulDate(requestedAt),
-      sourceHref: getFallbackSourceHref({
-        encounterId,
-        sourceType: "billing",
-        workspaceId: input.workspaceId,
-      }),
+      sourceHref: `/w/${input.workspaceId}/billing?invoiceId=${invoiceId}&encounterId=${encounterId}`,
       drawerSummary: "청구 후보 또는 수납 진행 상태를 확인합니다.",
       permissionMode: "full",
       teamQueueId: "billing",
@@ -456,7 +466,9 @@ export type SupabaseHomeOperationsWorkItemsRpcClient = {
   from?(tableName: string): {
     select(columns: string): {
       eq(column: string, value: string): {
-        limit(count: number): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
+        order(column: string): {
+          range(from: number, to: number): Promise<{ data: unknown[] | null; error: { message?: string } | null }>;
+        };
       };
     };
   };
@@ -466,36 +478,8 @@ export function createSupabaseHomeOperationsWorkItemGateway(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
 ): HomeOperationsWorkItemGateway {
   return {
-    async listHomeOperationsWorkItems({
-      actorUserId,
-      includeCancelled,
-      includeCompleted,
-      operatingDate,
-      scope,
-      workspaceId,
-    }) {
-      const { data, error } = await client.rpc("clair_list_home_operations_work_items", {
-        p_workspace_id: workspaceId,
-        p_actor_user_id: actorUserId,
-        p_operating_date: operatingDate,
-        p_scope: scope,
-        p_include_completed: includeCompleted,
-        p_include_cancelled: includeCancelled,
-      });
-
-      if (error) {
-        const fallback = await listHomeOperationsWorkItemsFromExistingSources(client, {
-          actorUserId,
-          includeCancelled,
-          includeCompleted,
-          operatingDate,
-          scope,
-          workspaceId,
-        });
-        if (fallback.ok) return fallback;
-        return { ok: false, error: "db_read_failed", retryable: true };
-      }
-      return mapRpcResponse(data);
+    async listHomeOperationsWorkItems(input) {
+      return listHomeOperationsWorkItemsFromExistingSources(client, input);
     },
   };
 }
@@ -598,10 +582,107 @@ export function createDemoHomeOperationsWorkItemGateway(): HomeOperationsWorkIte
   };
 }
 
+async function listCalendarItemsFromTables(
+  client: SupabaseHomeOperationsWorkItemsRpcClient,
+  input: Parameters<HomeOperationsWorkItemGateway["listHomeOperationsWorkItems"]>[0],
+): Promise<{ ok: true; items: HomeOperationsWorkItem[]; currentPatients: { present: number; waiting: number; inProgress: number }; assignmentReadFailed: boolean } | { ok: false }> {
+  const [appointments, encounters, queues, patients, guardians] = await Promise.all([
+    listWorkspaceRows(client, "appointments", "id,workspace_id,patient_id,guardian_id,assigned_veterinarian_id,scheduled_start_at,visit_purpose,symptom_note,status,created_by_user_id,created_at,updated_at", input.workspaceId, 500),
+    listWorkspaceRows(client, "encounters", "id,workspace_id,patient_id,guardian_id,appointment_id,primary_veterinarian_id,reception_type,chief_complaint,visit_purpose,status,checked_in_at,checked_in_by_user_id", input.workspaceId, 500),
+    listWorkspaceRows(client, "waiting_queue_entries", "id,workspace_id,encounter_id,queue_type,status,priority,entered_at,called_at,finished_at", input.workspaceId, 500),
+    listWorkspaceRows(client, "patients", "id,workspace_id,name", input.workspaceId, 500),
+    listWorkspaceRows(client, "guardians", "id,workspace_id,name", input.workspaceId, 500),
+  ]);
+  if (!appointments.ok || !encounters.ok || !queues.ok || !patients.ok || !guardians.ok) return { ok: false };
+  const camel = (value: unknown) => Object.fromEntries(Object.entries(getRecord(value) ?? {}).map(([key, field]) => [key.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase()), field]));
+  const encounterRows = encounters.rows.map(camel);
+  const encounterById = new Map(encounterRows.map((row) => [getString(row.id), row]));
+  const patientById = new Map(patients.rows.map(camel).map((row) => [getString(row.id), row]));
+  const guardianById = new Map(guardians.rows.map(camel).map((row) => [getString(row.id), row]));
+  const context = (row: Record<string, unknown>) => ({
+    patient: patientById.get(getString(row.patientId)),
+    primaryGuardian: guardianById.get(getString(row.guardianId)),
+  });
+  const records: Record<string, unknown>[] = [];
+  if (input.allowedSourceTypes.includes("appointment")) {
+    for (const appointment of appointments.rows.map(camel)) {
+      records.push({ appointment, encounter: encounterRows.find((row) => row.appointmentId === appointment.id), ...context(appointment) });
+    }
+  }
+  for (const queueEntry of queues.rows.map(camel)) {
+    // Treatment and billing are represented by their authoritative work-item readers.
+    if (queueEntry.queueType !== "reception" && queueEntry.queueType !== "consultation") continue;
+    if (!input.allowedSourceTypes.includes(queueEntry.queueType)) continue;
+    const encounter = encounterById.get(getString(queueEntry.encounterId));
+    if (encounter) records.push({ encounter, queueEntry, ...context(encounter) });
+  }
+  if (input.allowedSourceTypes.includes("reception")) {
+    const queuedReception = new Set(queues.rows.map(camel).filter((row) => row.queueType === "reception").map((row) => row.encounterId));
+    for (const encounter of encounterRows) {
+      if (queuedReception.has(encounter.id)) continue;
+      // An encounter is the authoritative reception record even when its queue
+      // has already been routed to consultation. This is a read projection.
+      records.push({ encounter, ...context(encounter), queueEntry: {
+        id: encounter.id, queueType: "reception", enteredAt: encounter.checkedInAt,
+        status: encounter.status === "waiting" ? "waiting" : encounter.status === "cancelled" ? "cancelled" : "done",
+      } });
+    }
+  }
+  const relevant = records.filter((record) => {
+    const appointment = getRecord(record.appointment);
+    const queue = getRecord(record.queueEntry);
+    const at = getString(appointment?.scheduledStartAt) ?? getString(queue?.enteredAt);
+    return at && toSeoulDate(at) <= input.operatingDate && mapCalendarFallbackItems([record], input).length > 0;
+  });
+  const days = [...new Set(relevant.map((record) => {
+    const appointment = getRecord(record.appointment);
+    const encounter = getRecord(record.encounter);
+    return toSeoulDate(getString(appointment?.scheduledStartAt) ?? getString(encounter?.checkedInAt) ?? input.operatingDate);
+  }))];
+  const assignments = new Map<string, string[]>();
+  let assignmentReadFailed = false;
+  for (let offset = 0; offset < days.length; offset += 4) {
+    const results = await Promise.all(days.slice(offset, offset + 4).map((day) => client.rpc("clair_list_reception_day_calendar", { p_workspace_id: input.workspaceId, p_day: day })));
+    for (const result of results) {
+      const calendarRecords = Array.isArray(result.data) ? result.data : getRecord(result.data)?.records;
+      if (result.error || !Array.isArray(calendarRecords)) { assignmentReadFailed = true; continue; }
+      for (const value of calendarRecords) {
+        const record = getRecord(value);
+        for (const type of ["appointment", "encounter"] as const) {
+          const source = getRecord(record?.[type]);
+          const id = getString(source?.id);
+          if (id && Array.isArray(source?.assignedStaffUserIds)) assignments.set(`${type}:${id}`, source.assignedStaffUserIds.filter((value): value is string => typeof value === "string"));
+        }
+      }
+    }
+  }
+  for (const record of records) {
+    for (const type of ["appointment", "encounter"] as const) {
+      const source = getRecord(record[type]);
+      if (source) {
+        source.assignedStaffUserIds = assignments.get(`${type}:${source.id}`);
+        source.assignmentUnknown = !assignments.has(`${type}:${source.id}`);
+      }
+    }
+  }
+  const present = new Map<string, string>();
+  for (const encounter of encounterRows) {
+    const patientId = getString(encounter.patientId);
+    const status = getString(encounter.status);
+    const checkedInAt = getString(encounter.checkedInAt);
+    if (!patientId || !checkedInAt || Date.parse(checkedInAt) > Date.now() || !status || !["waiting", "in_consultation", "ordered", "ready_for_billing"].includes(status)) continue;
+    if (!present.has(patientId) || status === "in_consultation" || status === "ordered") present.set(patientId, status);
+  }
+  const inProgress = [...present.values()].filter((status) => status === "in_consultation" || status === "ordered").length;
+  const waiting = [...present.values()].filter((status) => status === "waiting").length;
+  return { ok: true, items: mapCalendarFallbackItems(records, input), assignmentReadFailed, currentPatients: { present: present.size, waiting, inProgress } };
+}
+
 async function listHomeOperationsWorkItemsFromExistingSources(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
   input: {
     actorUserId: string;
+    allowedSourceTypes: HomeOperationsSourceType[];
     includeCancelled: boolean;
     includeCompleted: boolean;
     operatingDate: string;
@@ -613,57 +694,41 @@ async function listHomeOperationsWorkItemsFromExistingSources(
   const accessIssues: HomeOperationsAccessIssue[] = [];
   const items: HomeOperationsWorkItem[] = [];
 
-  const calendar = await client.rpc("clair_list_reception_day_calendar", {
-    p_workspace_id: input.workspaceId,
-    p_day: input.operatingDate,
-  });
-  if (calendar.error) {
-    accessIssues.push({
-      code: "reception_calendar_read_failed",
-      message: "접수/예약 업무를 불러오지 못했습니다.",
-      sourceType: "reception",
-    });
+  const calendar = await listCalendarItemsFromTables(client, input);
+  if (!calendar.ok) {
+    accessIssues.push({ code: "reception_calendar_read_failed", message: "접수/예약 업무를 불러오지 못했습니다.", sourceType: "reception" });
   } else {
-    items.push(...mapCalendarFallbackItems(calendar.data, input));
+    items.push(...calendar.items);
+    if (calendar.assignmentReadFailed) accessIssues.push({ code: "assignment_read_failed", message: "일부 접수·예약 담당 정보를 불러오지 못했습니다.", sourceType: "reception" });
   }
-
-  if (client.from) {
-    const fulfillment = await client
-      .from("order_fulfillment_work_items")
-      .select("id, workspace_id, queue_type, status, priority, encounter_id, requested_by_user_id, assigned_to_user_id, source_snapshot, created_at, updated_at, returned_at, completed_at, cancelled_at")
-      .eq("workspace_id", input.workspaceId)
-      .limit(200);
-
-    if (fulfillment.error) {
-      accessIssues.push({
-        code: "fulfillment_read_failed",
-        message: "오더 기반 업무를 불러오지 못했습니다.",
-      });
+  for (const queueType of fulfillmentQueueTypes.filter((type) => input.allowedSourceTypes.includes(type))) {
+    const fulfillment = await client.rpc("clair_list_fulfillment_work_items", {
+      p_workspace_id: input.workspaceId, p_queue_type: queueType,
+    });
+    if (fulfillment.error || !Array.isArray(fulfillment.data)) {
+      accessIssues.push({ code: "fulfillment_read_failed", message: "오더 기반 업무를 불러오지 못했습니다.", sourceType: queueType });
     } else {
-      items.push(...mapFulfillmentFallbackItems(fulfillment.data ?? [], input));
+      items.push(...mapFulfillmentFallbackItems(fulfillment.data.map((value) => {
+        const row = getRecord(value) ?? {};
+        return Object.fromEntries(Object.entries(row).map(([key, field]) => [key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`), field]));
+      }), input).filter((item) => item.sourceType === queueType));
     }
-
+  }
+  if (input.allowedSourceTypes.includes("billing")) {
     const billing = await listBillingFallbackItemsFromTables(client, input);
-    if (!billing.ok) {
-      accessIssues.push({
-        code: "billing_read_failed",
-        message: "수납 업무를 불러오지 못했습니다.",
-        sourceType: "billing",
-      });
-    } else {
-      items.push(...billing.items);
-    }
-  } else {
-    accessIssues.push({
-      code: "fulfillment_reader_unavailable",
-      message: "오더 기반 업무 리더를 사용할 수 없습니다.",
-    });
-    accessIssues.push({
-      code: "billing_reader_unavailable",
-      message: "수납 업무 리더를 사용할 수 없습니다.",
-      sourceType: "billing",
-    });
+    if (!billing.ok) accessIssues.push({ code: "billing_read_failed", message: "수납 업무를 불러오지 못했습니다.", sourceType: "billing" });
+    else items.push(...billing.items);
   }
+
+  const memberNames = await listWorkspaceRows(client, "user_memberships", "id,workspace_id,user_id,users!user_memberships_user_id_fkey(display_name)", input.workspaceId, 500);
+  if (memberNames.ok) {
+    const names = new Map(recordsById(memberNames.rows).map((row) => [getString(row.user_id), getString(getRecord(row.users)?.display_name)]));
+    for (const item of items) {
+      item.assigneeNames = (item.assigneeUserIds ?? (item.assigneeUserId ? [item.assigneeUserId] : [])).map((id) => names.get(id) ?? "담당자 지정됨");
+      item.assigneeName = item.assigneeNames.join(", ") || item.assigneeName;
+      item.requesterName = names.get(item.requesterUserId) ?? item.requesterName;
+    }
+  } else accessIssues.push({ code: "member_names_read_failed", message: "담당자 이름을 불러오지 못했습니다." });
 
   if (items.length === 0 && accessIssues.length > 0) {
     return { ok: false, error: "db_read_failed", retryable: true };
@@ -672,6 +737,7 @@ async function listHomeOperationsWorkItemsFromExistingSources(
   return {
     ok: true,
     generatedAt,
+    currentPatients: calendar.ok ? calendar.currentPatients : null,
     items: sortOperationsItems(deduplicateOperationsItems(items)),
     sourceStatus: accessIssues.length > 0 ? "partial" : items.length > 0 ? "live" : "empty",
     ...(accessIssues.length > 0 ? { accessIssues } : {}),
@@ -767,7 +833,8 @@ function mapAppointmentFallbackItem({
 }): HomeOperationsWorkItem | null {
   const sourceId = getString(appointment.id);
   const sourceStatus = getString(appointment.status) ?? "unknown";
-  const requestedAt = getString(appointment.scheduledStartAt) ?? getString(appointment.createdAt);
+  const scheduledAt = getString(appointment.scheduledStartAt);
+  const requestedAt = getString(appointment.createdAt) ?? scheduledAt;
   if (!sourceId || !requestedAt) return null;
 
   const progressState = sourceStatus === "checked_in"
@@ -777,6 +844,7 @@ function mapAppointmentFallbackItem({
       : "waiting";
   if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
 
+  if (!shouldIncludeOperatingDate(progressState, scheduledAt ?? requestedAt, operatingDate)) return null;
   const patientName = getString(patient?.name);
   const teamQueueId = "reception";
   const drawerSummary =
@@ -798,21 +866,25 @@ function mapAppointmentFallbackItem({
     progressState,
     queueCardEventText: progressState === "cancelled"
       ? `${getSeoulShortTime(getString(appointment.updatedAt) ?? requestedAt)} 취소`
-      : `${getSeoulShortTime(requestedAt)} 예약`,
+      : `${getSeoulShortTime(scheduledAt ?? requestedAt)} 예약`,
     queueCardSecondLineBadgeLabel: progressState === "cancelled" ? "취소" : "대기",
     queueCardSecondLineText: drawerSummary,
     receptionType: "예약",
     attentionSignals: getFallbackAttentionSignals({
       priority: "normal",
       progressState,
-      requestedAt,
+      requestedAt: scheduledAt ?? requestedAt,
       sourceStatus,
       teamQueueId,
       operatingDate,
     }),
     requestedAt,
+    scheduledAt,
+    requesterUserId: getString(appointment.createdByUserId),
+    assigneeName: appointment.assignmentUnknown ? "담당 정보 확인 필요" : undefined,
+    assigneeUserIds: Array.isArray(appointment.assignedStaffUserIds) ? appointment.assignedStaffUserIds.filter((value): value is string => typeof value === "string") : [],
     stateEnteredAt: getString(appointment.updatedAt) ?? requestedAt,
-    operatingDate: toSeoulDate(requestedAt),
+    operatingDate: toSeoulDate(scheduledAt ?? requestedAt),
     sourceHref: `/w/${workspaceId}/reception?appointmentId=${sourceId}&modulePanel=open`,
     drawerSummary,
     permissionMode: "full",
@@ -856,6 +928,8 @@ function mapQueueFallbackItem({
         ? "in_progress"
         : "waiting";
   if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
+
+  if (!shouldIncludeOperatingDate(progressState, requestedAt, operatingDate)) return null;
 
   const sourceType = queueType === "billing"
     ? "billing"
@@ -905,7 +979,10 @@ function mapQueueFallbackItem({
       teamQueueId,
       operatingDate,
     }),
+    requesterUserId: getString(encounter.checkedInByUserId),
+    assigneeName: sourceType === "reception" && encounter.assignmentUnknown ? "담당 정보 확인 필요" : undefined,
     assigneeUserId: sourceType === "consultation" ? getString(encounter.primaryVeterinarianId) : undefined,
+    assigneeUserIds: sourceType === "reception" && Array.isArray(encounter.assignedStaffUserIds) ? encounter.assignedStaffUserIds.filter((value): value is string => typeof value === "string") : undefined,
     requestedAt,
     stateEnteredAt: getString(queueEntry.finishedAt) ?? getString(queueEntry.calledAt) ?? requestedAt,
     operatingDate: toSeoulDate(requestedAt),
@@ -959,6 +1036,7 @@ function mapFulfillmentFallbackItem(
 ): HomeOperationsWorkItem | null {
   if (!rowValue || typeof rowValue !== "object") return null;
   const row = rowValue as Record<string, unknown>;
+  if (getString(row.workspace_id) !== workspaceId) return null;
   const sourceId = getString(row.id);
   const queueType = getSourceType(row.queue_type);
   const sourceStatus = getString(row.status) ?? "unknown";
@@ -973,7 +1051,7 @@ function mapFulfillmentFallbackItem(
       : sourceStatus === "in_progress"
         ? "in_progress"
         : "waiting";
-  if (!shouldIncludeOperatingDate(progressState, requestedAt, operatingDate)) return null;
+  if (!shouldIncludeOperatingDate(progressState, getString(row.due_at) ?? requestedAt, operatingDate)) return null;
   if (!shouldIncludeProgress(progressState, includeCompleted, includeCancelled)) return null;
 
   const sourceSnapshot = getRecord(row.source_snapshot);
@@ -994,6 +1072,7 @@ function mapFulfillmentFallbackItem(
     sourceId,
     sourceStatus,
     encounterId,
+    patientId: getString(row.patient_id),
     title,
     patientName: getString(sourceSnapshot?.patientName),
     guardianName: getString(sourceSnapshot?.guardianName),
@@ -1004,12 +1083,14 @@ function mapFulfillmentFallbackItem(
     attentionSignals: getFallbackAttentionSignals({
       priority: getString(row.priority),
       progressState,
-      requestedAt,
+      requestedAt: getString(row.due_at) ?? requestedAt,
       sourceStatus,
       teamQueueId: queueType,
       operatingDate,
     }),
     assigneeUserId: getString(row.assigned_to_user_id),
+    requesterUserId: getString(row.requested_by_user_id),
+    scheduledAt: getString(row.due_at),
     requesterName: getString(sourceSnapshot?.requestingVetName),
     requestedAt,
     stateEnteredAt:
@@ -1018,8 +1099,8 @@ function mapFulfillmentFallbackItem(
       getString(row.cancelled_at) ??
       getString(row.updated_at) ??
       requestedAt,
-    operatingDate: toSeoulDate(requestedAt),
-    sourceHref: getFallbackSourceHref({ encounterId, sourceType: queueType, workspaceId }),
+    operatingDate: toSeoulDate(getString(row.due_at) ?? requestedAt),
+    sourceHref: `${getFallbackSourceHref({ encounterId, sourceType: queueType, workspaceId })}&workItemId=${sourceId}&date=${toSeoulDate(getString(row.due_at) ?? requestedAt)}${queueType === "lab" ? `&labResultId=live-lab-${sourceId}` : queueType === "imaging" ? `&imagingStudyId=live-imaging-${sourceId}` : ""}`,
     drawerSummary: getString(sourceSnapshot?.instruction) ?? "오더 기반 업무 상태를 확인합니다.",
     permissionMode: "full",
     teamQueueId: queueType,
@@ -1478,6 +1559,7 @@ function getFallbackSourceHref({
   sourceType: HomeOperationsSourceType;
   workspaceId: string;
 }) {
+  if (sourceType === "reception") return `/w/${workspaceId}/reception?encounterId=${encounterId}&modulePanel=open`;
   if (sourceType === "lab") return `/w/${workspaceId}/lab?encounterId=${encounterId}&modulePanel=open`;
   if (sourceType === "imaging") return `/w/${workspaceId}/imaging?encounterId=${encounterId}&modulePanel=open`;
   if (sourceType === "dispensing" || sourceType === "treatment") {
@@ -1555,122 +1637,6 @@ export function summarizeOperationsWorkItems(
   };
 }
 
-function mapRpcResponse(value: unknown): HomeOperationsGatewayResult {
-  if (!value || typeof value !== "object") {
-    return {
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      items: [],
-      sourceStatus: "empty",
-    };
-  }
-
-  const row = value as Record<string, unknown>;
-  const items = Array.isArray(row.items)
-    ? row.items.map(mapWorkItem).filter((item): item is HomeOperationsWorkItem => Boolean(item))
-    : [];
-  const sourceStatus = getSourceStatus(row.sourceStatus ?? row.source_status, items.length);
-
-  return {
-    ok: true,
-    generatedAt: getString(row.generatedAt) ?? getString(row.generated_at) ?? new Date().toISOString(),
-    items,
-    sourceStatus,
-  };
-}
-
-function mapWorkItem(value: unknown): HomeOperationsWorkItem | null {
-  if (!value || typeof value !== "object") return null;
-
-  const row = value as Record<string, unknown>;
-  const id = getString(row.id);
-  const workspaceId = getString(row.workspaceId) ?? getString(row.workspace_id);
-  const sourceType = getSourceType(row.sourceType ?? row.source_type);
-  const sourceId = getString(row.sourceId) ?? getString(row.source_id);
-  const sourceStatus = getString(row.sourceStatus) ?? getString(row.source_status);
-  const title = getString(row.title);
-  const progressState = getProgressState(row.progressState ?? row.progress_state);
-  const requestedAt = getString(row.requestedAt) ?? getString(row.requested_at);
-  const operatingDate = getString(row.operatingDate) ?? getString(row.operating_date);
-  const sourceHref = getString(row.sourceHref) ?? getString(row.source_href);
-
-  if (
-    !id ||
-    !workspaceId ||
-    !sourceType ||
-    !sourceId ||
-    !sourceStatus ||
-    !title ||
-    !progressState ||
-    !requestedAt ||
-    !operatingDate ||
-    !sourceHref
-  ) {
-    return null;
-  }
-
-  return {
-    id,
-    workspaceId,
-    sourceType,
-    sourceId,
-    sourceStatus,
-    encounterId: getString(row.encounterId) ?? getString(row.encounter_id),
-    patientId: getString(row.patientId) ?? getString(row.patient_id),
-    guardianId: getString(row.guardianId) ?? getString(row.guardian_id),
-    title,
-    patientName: getString(row.patientName) ?? getString(row.patient_name),
-    guardianName: getString(row.guardianName) ?? getString(row.guardian_name),
-    progressState,
-    queueCardEventText:
-      getString(row.queueCardEventText) ?? getString(row.queue_card_event_text),
-    queueCardSecondLineBadgeLabel:
-      getString(row.queueCardSecondLineBadgeLabel) ??
-      getString(row.queue_card_second_line_badge_label),
-    queueCardSecondLineText:
-      getString(row.queueCardSecondLineText) ?? getString(row.queue_card_second_line_text),
-    receptionType: getReceptionType(row.receptionType ?? row.reception_type),
-    attentionSignals: getAttentionSignals(row.attentionSignals ?? row.attention_signals),
-    assigneeUserId: getString(row.assigneeUserId) ?? getString(row.assignee_user_id),
-    assigneeName: getString(row.assigneeName) ?? getString(row.assignee_name),
-    requesterName: getString(row.requesterName) ?? getString(row.requester_name),
-    teamQueueId: getString(row.teamQueueId) ?? getString(row.team_queue_id),
-    teamQueueLabel: getString(row.teamQueueLabel) ?? getString(row.team_queue_label),
-    requestedAt,
-    stateEnteredAt: getString(row.stateEnteredAt) ?? getString(row.state_entered_at),
-    operatingDate,
-    sourceHref,
-    drawerSummary: getString(row.drawerSummary) ?? getString(row.drawer_summary),
-    permissionMode: getPermissionMode(row.permissionMode ?? row.permission_mode),
-  };
-}
-
-function isMyOperationsWorkItem({
-  actorUserId,
-  item,
-  permissionAdapter,
-  workspaceId,
-}: {
-  actorUserId: string | null;
-  item: HomeOperationsWorkItem;
-  permissionAdapter: WorkspacePermissionAdapter;
-  workspaceId: string;
-}) {
-  if (!actorUserId) return false;
-  if (item.assigneeUserId === actorUserId) return true;
-  if (!item.teamQueueId || item.assigneeUserId) return false;
-
-  const requiredPermission = getProcessPermissionForSource(item.sourceType);
-  if (!requiredPermission) return false;
-
-  const permission = resolveWorkspacePermission(permissionAdapter, {
-    sessionUserId: actorUserId,
-    workspaceId,
-    requiredPermission,
-  });
-  return permission.allowed;
-}
-
 function getProcessPermissionForSource(
   sourceType: HomeOperationsSourceType,
 ): PermissionId | null {
@@ -1746,37 +1712,10 @@ function normalizeScope(scope: string | null | undefined): HomeOperationsScope |
   return null;
 }
 
-function getSourceStatus(value: unknown, itemCount: number): "empty" | "live" | "partial" {
-  if (value === "partial") return "partial";
-  if (value === "live") return "live";
-  if (value === "empty") return "empty";
-  return itemCount > 0 ? "live" : "empty";
-}
-
 function getSourceType(value: unknown): HomeOperationsSourceType | null {
   return typeof value === "string" && sourceTypes.includes(value as HomeOperationsSourceType)
     ? (value as HomeOperationsSourceType)
     : null;
-}
-
-function getProgressState(value: unknown): HomeOperationsProgressState | null {
-  return typeof value === "string" && progressStates.includes(value as HomeOperationsProgressState)
-    ? (value as HomeOperationsProgressState)
-    : null;
-}
-
-function getAttentionSignals(value: unknown): HomeOperationsAttentionSignal[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (signal): signal is HomeOperationsAttentionSignal =>
-      typeof signal === "string" &&
-      attentionSignals.includes(signal as HomeOperationsAttentionSignal),
-  );
-}
-
-function getPermissionMode(value: unknown): HomeOperationsWorkItem["permissionMode"] {
-  if (value === "hidden" || value === "redacted") return value;
-  return "full";
 }
 
 function getReceptionType(value: unknown): HomeOperationsWorkItem["receptionType"] {

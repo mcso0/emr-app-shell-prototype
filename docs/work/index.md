@@ -178,6 +178,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | HOME-PR-011                 | human_review | home                 | P0       | User request / Home operations live work items | `docs/work/home/HOME-PR-011-home-operations-live-work-items.md`                     |
 | HOME-PR-012                 | human_review | home                 | P0       | User request / Home operations source-to-Home parity | `docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md`          |
 | HOME-PR-013                 | implemented  | home                 | P0       | User request / Browser Comment 1 command search | `docs/work/home/HOME-PR-013-global-command-db-backed-search.md`                    |
+| HOME-PR-014 | in_progress | home | P0 | User-approved Home delivery | `docs/work/home/HOME-PR-014-home-workspace-and-personal-work.md` |
 | NOTIFICATION-PR-001         | human_review | notifications        | P0       | Project 20 / DEN-395 | `docs/work/notifications/NOTIFICATION-PR-001-v0-contract-fixture-schema.md`                            |
 | NOTIFICATION-PR-002         | human_review | notifications        | P0       | Project 20 / DEN-396 | `docs/work/notifications/NOTIFICATION-PR-002-event-matrix-ux-badge-toast-policy.md`                    |
 | NOTIFICATION-PR-003         | human_review | notifications        | P0       | Project 20 / DEN-397 | `docs/work/notifications/NOTIFICATION-PR-003-shell-drawer-foundation.md`                               |

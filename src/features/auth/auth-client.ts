@@ -267,6 +267,7 @@ export function useAuthClient(): AuthClient {
       return session;
     },
     signOut: async () => {
+      window.dispatchEvent(new Event("clair:session-ended"));
       mockLogout();
 
       if (useSupabase) {
