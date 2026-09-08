@@ -2,9 +2,9 @@
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
 const chartPlanV2 = process.argv.includes("--chart-plan-v2");
-const medicationLinkMigration = "supabase/migrations/20260908073105_treatment_medication_link_at_execution.sql";
-const chartPlanMigration = "supabase/migrations/20260908062302_order_ready_planning_and_catalog_archive.sql";
-const workspaceDefaultsMigration = "supabase/migrations/20260908065352_ready_orders_synthetic_workspace_normalization.sql";
+const medicationLinkMigration = "supabase/migrations/20260908083048_treatment_medication_link_at_execution.sql";
+const chartPlanMigration = "supabase/migrations/20260908083019_order_ready_planning_and_catalog_archive.sql";
+const workspaceDefaultsMigration = "supabase/migrations/20260908083035_ready_orders_synthetic_workspace_normalization.sql";
 const artifact = "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01b/";
 const payload = JSON.parse(fs.readFileSync("tests/fixtures/clinical-master-execution-preset-release-v1.json", "utf8"));
 payload.releaseKey = "wp01b.taxonomy.local-test.r1";

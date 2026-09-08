@@ -74,6 +74,13 @@ merge/deploy still follows the current exact-candidate release gate. Prepare the
 candidate/checks/rollback before that remaining approval. Do not apply incompatible
 DB lifecycle changes while the old app is still the advertised verification path.
 
+Release sequencing: deploy the compatible app first, verify Production Ready,
+then run the already-authorized fingerprint-bound master/catalog transaction.
+Before that transaction the previous Production deployment is a rollback option.
+After catalog normalization, an app-only rollback must retain chart V2 result
+recording and treatment V3 linkage; an older incompatible app is not a valid
+standalone rollback. Use the compatible Ready candidate or a reviewed forward fix.
+
 ## Evidence
 
 - Base: `origin/main` 2e095d5576b5f916640f7b7df720454280c83609 in isolated worktree.
@@ -129,9 +136,27 @@ DB lifecycle changes while the old app is still the advertised verification path
   keys. Five malformed packet regressions cover extra/missing/duplicate orders,
   wrong retirement state and duplicate prices. Operator results separately record
   master sequence values: row rollback does not undo sequence advancement.
-- All remote Supabase operations so far are read-only. Generated WP-10 artifacts
-  explicitly remain non-applied and the candidate is incomplete while the
-  resource/remote packet has not yet passed complete verification.
+- Remote additive schema migrations were applied on 2026-09-08. Local migration
+  filenames are aligned with the actual remote ledger versions to avoid replay.
+  Master publication/current-catalog normalization has not persisted yet.
+- Remote scalar preflight covers 181 table/workspace entries and 17 clinical-history
+  tables. The first 105-second rehearsal stopped during foreign workspace adoption;
+  a full subsequent fingerprint comparison proved row-state restoration. Target
+  release, application receipt and foreign catalog all remained absent. Release
+  sequence advanced to 89 and was not rewound.
+- A private operator-only rehearsal receipt passed local rollback integration so completed rollback
+  evidence remains queryable if the transport times out. Its schema requires a
+  matching packet hash, rehearsal=true and applied=false; authenticated/service
+  roles receive no access. Receipt absence alone does not prove execution ended.
+- Independent security review confirmed that scalar hashing retains all prior
+  table/workspace coverage and that rehearsal evidence follows successful row
+  restoration. Authenticated access to the new actual-result RPC is intentional
+  and retains actor, workspace and permission checks; the advisor's corresponding
+  SECURITY DEFINER notice does not grant additional access.
+- PR #726 Preview is Ready for source 2bbf10b14cc0bf46224dc2e50a704bcd4cded94f;
+  Release Check 34204781751 passed for that source. The later SQL execution-evidence
+  changes require a fresh final candidate check. Preview browser reaches the real
+  login screen; authenticated remote browser smoke is not yet established.
 
 - Treatment V3 local rollback integration passed: unlinked plan confirmation,
   start denial for missing or unconfirmed medication, V3 downgrade and invalid
@@ -149,3 +174,55 @@ DB lifecycle changes while the old app is still the advertised verification path
 - Independent security review found no remaining concrete blocker after payload
   identity/price binding and V2 billing transport fixes; remote execution evidence
   is still required.
+
+- Remote ledger: 20260908083019 (chart planning/archive), 20260908083035
+  (normalization operator), 20260908083048 (treatment V3), 20260908083938
+  (scalar state comparison), 20260908085242 (rehearsal evidence receipt).
+  20260908092110 (failure diagnostics), 20260908092115 (reused projection plans).
+  20260908093016 (resource diagnostic counts), 20260908094229 (frozen archive IDs).
+  All nine files match applied DDL; no application permissions were expanded.
+- Failure diagnostics are private and run outside the rehearsal subtransaction.
+  A real 50 ms statement cancellation in the local rollback harness proved that
+  the changed probe row restores, one failure diagnostic survives the savepoint,
+  and no success receipt is written. No commit mode is exposed by the wrapper.
+- Repeated source projection planning was measured as a bottleneck. The two
+  exact-source-hash-bound SQL functions now reuse PL/pgSQL plans with their
+  original SELECT bodies, first-row/null semantics and catalog attributes.
+  Remote before/after hashes matched for all 575 orders and one nonexistent ID
+  (576 comparisons, zero differences). Independent security review found no
+  remaining blocker in these two additive migrations.
+- Remote diagnostic rehearsals completed in 341 and 388 seconds. Both rolled
+  back with a resource readback failure; exact diagnosis was `clair-demo` with
+  173 bindings, 31 active sets and one default ward. Full 181-entry plus 17-history
+  fingerprint comparison proved restoration after the failure and narrow probes.
+- A narrow rollback probe reproduced one skipped extra parent during archival:
+  an earlier child's normal invalidation trigger updates the parent while the
+  `FOR UPDATE` cursor is scanning. Freeze extra IDs before mutation, then re-read
+  and lock each current row for archival/audit. The matching fixed rollback probe
+  left zero unarchived extras. No trigger is disabled and immutable revisions
+  remain unchanged. Independent security review found no concrete blocker.
+- Local final packet tests also cover durable failure evidence and real statement
+  cancellation. Transport HTTP 504 does not establish DB completion; inspect
+  active execution and durable receipts before retrying.
+
+- Nested extra-set regression passed through the actual immutable B2 creation
+  core and resource normalizer: a child invalidation updates the parent before
+  its archive, both extras become inactive/archived, canonical active count is
+  30, current revision pins and all original revision/items/ranges/creation
+  requests are byte-identical, clinical history is unchanged, and each extra
+  receives one accurate archive audit with no duplication on retry. Deferred
+  constraints also pass.
+
+- Remote exact-packet rehearsal succeeded at 2026-09-08 09:51:15 UTC after all
+  nine migrations, with `rehearsal=true` and `applied=false`. Packet SHA-256:
+  `19deb45a981824df2c7997835a5bfcb40a604f40c63537b3b27b7e26cabfb833`.
+  Each of the four workspaces passed 524 selectable classified orders, 173
+  profile bindings, 30 active compositions and one active default ward; required
+  planning defaults and clinical-history guards passed. The durable success
+  receipt is operator-only. Release sequence advanced 92 to 93 and action-code
+  sequence 769 to 795; these nontransactional gaps are recorded, not rewound.
+- Post-success readback matched both the frozen preflight and receipt before-state
+  across 181 state entries and 17 clinical-history tables. Clinical history also
+  matched the rehearsal after-state. The proposed release and application receipt
+  are absent: master/current catalogs are still unchanged pending compatible
+  Production delivery and the already-authorized persistent transaction.

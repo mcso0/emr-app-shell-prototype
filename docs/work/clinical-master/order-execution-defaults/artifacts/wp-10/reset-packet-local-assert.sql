@@ -73,7 +73,15 @@ begin
     exception when others then if sqlerrm<>'wp10_packet_identity_scope_invalid' then raise; end if; end;
     if private.clair_wp10_state_fingerprint() is distinct from before_retry then raise exception 'test rejected packet mutated state'; end if;
   end loop;
-  output:=private.clair_apply_wp10_ready_orders(packet,packet_sha,false);
+  output:=private.clair_rehearse_wp10_ready_orders(packet,repeat('0',64));
+  if output->>'errorCode' is distinct from 'P0001' or output->'rehearsal' is distinct from 'false'::jsonb
+    or (select count(*) from private.wp10_ready_orders_rehearsal_failures where packet_sha256=repeat('0',64))<>1
+    or private.clair_wp10_state_fingerprint() is distinct from before_retry then raise exception 'test failed rehearsal evidence boundary'; end if;
+  output:=private.clair_rehearse_wp10_ready_orders(packet,packet_sha);
+  if (select count(*) from private.wp10_ready_orders_rehearsal where packet_sha256=packet_sha)<>1
+    or has_table_privilege('authenticated','private.wp10_ready_orders_rehearsal','SELECT')
+    or has_table_privilege('service_role','private.wp10_ready_orders_rehearsal','INSERT') then
+    raise exception 'test rehearsal durable evidence boundary'; end if;
   if output->'rehearsal' is distinct from 'true'::jsonb or private.clair_wp10_state_fingerprint() is distinct from before_retry then
     raise exception 'test packet rehearsal residue'; end if;
   if exists(select 1 from private.wp10_ready_orders_receipt) then raise exception 'test rehearsal receipt persisted'; end if;
