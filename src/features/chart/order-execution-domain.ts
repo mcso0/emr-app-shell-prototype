@@ -82,7 +82,7 @@ export type ClinicalOrderFieldDefinition = {
 export type ClinicalOrderFieldSchema = {
   clinicalOrderType: ClinicalOrderType;
   label: string;
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   defaultDestinationModule: ClinicalOrderDestinationModule | null;
   defaultExecutionMode: Exclude<ClinicalOrderExecutionMode, "aggregate">;
   fields: readonly ClinicalOrderFieldDefinition[];
@@ -415,9 +415,28 @@ export const TREATMENT_FIELD_SCHEMA_V2: ClinicalOrderFieldSchema = {
   ],
 };
 
+/** V3 preserves V2 planning fields while deferring medication linkage to execution. */
+export const TREATMENT_FIELD_SCHEMA_V3: ClinicalOrderFieldSchema = {
+  ...TREATMENT_FIELD_SCHEMA_V2, version: 3,
+};
+
+/** V2 chart plans have no pre-recorded actual findings. V1 snapshots stay intact. */
+export const CHART_PLAN_FIELD_SCHEMAS: Partial<Record<ClinicalOrderType, ClinicalOrderFieldSchema>> =
+  Object.fromEntries((["consultation", "system_exam", "other"] as const).map(type => [type, {
+    ...CLINICAL_ORDER_FIELD_SCHEMAS[type], version: 2,
+    fields: CLINICAL_ORDER_FIELD_SCHEMAS[type].fields.filter(definition =>
+      type !== "system_exam" || !["findingSummary", "abnormalFindings"].includes(definition.key)),
+  }]));
+
+export function isDeferredChartPlan(type: ClinicalOrderType, version: number): boolean {
+  return version === 2 && Boolean(CHART_PLAN_FIELD_SCHEMAS[type]);
+}
+
 export function getClinicalOrderFieldSchema(type: ClinicalOrderType, version: number = 1): ClinicalOrderFieldSchema | null {
   if (version === 1) return CLINICAL_ORDER_FIELD_SCHEMAS[type];
   if (version === 2 && type === "treatment") return TREATMENT_FIELD_SCHEMA_V2;
+  if (version === 3 && type === "treatment") return TREATMENT_FIELD_SCHEMA_V3;
+  if (version === 2 && CHART_PLAN_FIELD_SCHEMAS[type]) return CHART_PLAN_FIELD_SCHEMAS[type]!;
   return null;
 }
 
@@ -440,7 +459,7 @@ export type ClinicalOrderMasterContract = {
   isExternalLab: boolean;
   destinationModule: ClinicalOrderDestinationModule | null;
   executionMode: Exclude<ClinicalOrderExecutionMode, "aggregate">;
-  detailSchemaVersion: 1 | 2;
+  detailSchemaVersion: 1 | 2 | 3;
   detailFieldSchema: ClinicalOrderFieldSchema;
   billingEligible: boolean;
 };
@@ -552,7 +571,7 @@ export function validateClinicalOrderDetailInputs({
     && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(detailInputs.wardOrCage))) {
     fieldErrors.wardOrCage = "registered_inpatient_location_required";
   }
-  if (clinicalOrderType === "treatment" && schemaVersion === 2) {
+  if (clinicalOrderType === "treatment" && (schemaVersion === 2 || schemaVersion === 3)) {
     const hasAmount = !isEmptyValue(detailInputs.plannedAmount);
     const hasUnit = !isEmptyValue(detailInputs.plannedAmountUnit);
     if (hasAmount !== hasUnit) fieldErrors.plannedAmountUnit = "amount_unit_pair_required";
@@ -561,7 +580,7 @@ export function validateClinicalOrderDetailInputs({
         if (isEmptyValue(detailInputs[key])) fieldErrors[key] = "required";
       }
     }
-    if (requireComplete && detailInputs.administrationPolicy === "separate_medication_order" && isEmptyValue(detailInputs.linkedMedicationOrderId)) fieldErrors.linkedMedicationOrderId = "required";
+    if (schemaVersion === 2 && requireComplete && detailInputs.administrationPolicy === "separate_medication_order" && isEmptyValue(detailInputs.linkedMedicationOrderId)) fieldErrors.linkedMedicationOrderId = "required";
     if (!isEmptyValue(detailInputs.linkedMedicationOrderId) && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(detailInputs.linkedMedicationOrderId))) fieldErrors.linkedMedicationOrderId = "invalid_order_id";
     if (requireComplete && detailInputs.procedureKind === "measurement" && isEmptyValue(detailInputs.measurementUnit)) fieldErrors.measurementUnit = "required";
   }
@@ -649,7 +668,7 @@ function isClinicalOrderFieldSchema(
 ): value is ClinicalOrderFieldSchema {
   return (
     isRecord(value) &&
-    (value.version === 1 || value.version === 2) &&
+    (value.version === 1 || value.version === 2 || (value.version === 3 && value.clinicalOrderType === "treatment")) &&
     isClinicalOrderType(value.clinicalOrderType) &&
     Array.isArray(value.fields)
   );

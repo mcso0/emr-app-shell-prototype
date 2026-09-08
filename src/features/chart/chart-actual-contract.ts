@@ -28,13 +28,14 @@ export function parseChartActualRecords(value: unknown): ChartActualRecords | nu
 export type ChartActualVersion = { id: string; version: number; previousResultId: string | null; payload: Record<string, string>;
   performedByUserId: string; performedAt: string; recordedByUserId: string; recordedAt: string; amendmentReason: string | null };
 export type ChartActualContext = { workspaceId: string; taskId: string; orderId: string; attemptNo: number;
-  clinicalOrderType: ChartActualType; planSha256: string; planSnapshot: Record<string, unknown>; canAmend: boolean; results: ChartActualVersion[] };
+  clinicalOrderType: ChartActualType; planSha256: string; planSnapshot: Record<string, unknown>; canAmend: boolean; canRecord?: boolean; results: ChartActualVersion[] };
 export function parseChartActualContext(value: unknown, workspaceId: string, taskId: string): ChartActualContext | null {
   if (!isExecutionRecord(value) || value.workspaceId !== workspaceId || value.taskId !== taskId
     || !isExecutionUuid(value.orderId) || !isChartActualType(value.clinicalOrderType)
     || !Number.isSafeInteger(value.attemptNo) || Number(value.attemptNo) < 1
     || typeof value.planSha256 !== "string" || !/^[a-f0-9]{64}$/.test(value.planSha256)
-    || !isExecutionRecord(value.planSnapshot) || typeof value.canAmend !== "boolean" || !Array.isArray(value.results)) return null;
+    || !isExecutionRecord(value.planSnapshot) || typeof value.canAmend !== "boolean"
+    || (value.canRecord !== undefined && typeof value.canRecord !== "boolean") || !Array.isArray(value.results)) return null;
   let previous: string | null = null;
   const seen = new Set<string>();
   for (const [index, result] of value.results.entries()) {

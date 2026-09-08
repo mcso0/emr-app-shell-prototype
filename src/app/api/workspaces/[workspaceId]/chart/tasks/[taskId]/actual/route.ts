@@ -1,5 +1,5 @@
 import { readServerSession } from "@/features/auth/server-session-reader";
-import { amendChartActual, readChartActual, type ChartActualRpcClient } from "@/features/chart/server-chart-actual-core";
+import { amendChartActual, recordChartActual, readChartActual, type ChartActualRpcClient } from "@/features/chart/server-chart-actual-core";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -25,5 +25,6 @@ export async function POST(request: Request, { params }: Context) {
   catch { return error(400, "invalid_chart_actual"); }
   const client = await createClient();
   if (!client) return error(503, "chart_actual_unavailable");
-  return response(await amendChartActual({ client: client as unknown as ChartActualRpcClient, actorUserId: session.sessionUserId, workspaceId, taskId, input }));
+  const mutate = input && typeof input === "object" && "action" in input && input.action === "record" ? recordChartActual : amendChartActual;
+  return response(await mutate({ client: client as unknown as ChartActualRpcClient, actorUserId: session.sessionUserId, workspaceId, taskId, input }));
 }

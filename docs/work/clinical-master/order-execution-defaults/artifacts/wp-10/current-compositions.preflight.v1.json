@@ -1,0 +1,142 @@
+[
+  {
+    "master_key": "cm.lab-composition.cbc-erythrocytes",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.lab-composition.cbc-leukocytes",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.lab-composition.cbc-platelets",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.lab-composition.cbc-reticulocytes",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.lab-composition.synthetic-cbc-checkup",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.lab.panel.cbc-basic",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.lab.panel.chemistry-basic",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.lab.panel.fecal",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.lab.panel.urinalysis",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.synthetic.lab-01",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.synthetic.lab-02",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.synthetic.lab-03",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.synthetic.lab-04",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.synthetic.lab-05",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.synthetic.lab-06",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.01",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.02",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.03",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.04",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.05",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.06",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.07",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-panel.08",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.basic-checkup",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.emergency-initial",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.hepatobiliary",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.infectious-workup",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.preanesthetic-expanded",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.pu-pd",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.renal",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.senior-cat",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.senior-dog",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.vomiting-diarrhea",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "cm.order.v4.lab-service.weight-loss",
+    "latest_revision": 1
+  },
+  {
+    "master_key": "phase1.optionb.v1.order.metabolic",
+    "latest_revision": 1
+  }
+]

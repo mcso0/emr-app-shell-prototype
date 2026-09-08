@@ -478,6 +478,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CLINICAL-MASTER-OED-WP-07 | in_progress | clinical-master | P0 | 136 remaining definitions, registered inpatient resources and chart actual locally verified | `docs/work/clinical-master/order-execution-defaults/WP-07-remaining-category-runtime.md` |
 | CLINICAL-MASTER-OED-WP-08 | in_progress | clinical-master | P0 | All-category actual/retry/amendment/history locally verified; authenticated deployment remains | `docs/work/clinical-master/order-execution-defaults/WP-08-actual-execution-results.md` |
 | CLINICAL-MASTER-OED-WP-09 | in_progress | clinical-master | P0 | 522 to524 candidate and exact three-workspace rollback/retry pass; PR Preview and Production delivery in progress | `docs/work/clinical-master/order-execution-defaults/WP-09-complete-candidate-and-rollout.md` |
+| CLINICAL-MASTER-OED-WP-10 | in_progress | clinical-master | P0 | Ready-on-add planning defaults and four-workspace master catalog unification | `docs/work/clinical-master/order-execution-defaults/WP-10-ready-orders-and-workspace-unification.md` |
 
 ## Current Next Work
 

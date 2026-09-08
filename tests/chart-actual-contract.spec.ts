@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { buildChartActualRecords } from "../src/features/chart/chart-actual-confirmation";
 import { parseChartActualRecords, parseChartActualContext, type ChartActualContext } from "../src/features/chart/chart-actual-contract";
-import { amendChartActual, readChartActual, type ChartActualRpcClient } from "../src/features/chart/server-chart-actual-core";
+import { amendChartActual, readChartActual, recordChartActual, type ChartActualRpcClient } from "../src/features/chart/server-chart-actual-core";
 
 const id = "97070000-0000-4000-8000-000000000001";
 const stamp = "2026-09-06T00:00:00.000Z";
@@ -10,6 +10,25 @@ const context: ChartActualContext = { workspaceId: "clair-demo", taskId: id, ord
   clinicalOrderType: "system_exam", planSha256: "a".repeat(64), planSnapshot: { detailInputs: { examMethod: "시진" } }, canAmend: true,
   results: [{ id, version: 1, previousResultId: null, payload: actual.payload, performedByUserId: id, performedAt: stamp,
     recordedByUserId: id, recordedAt: stamp, amendmentReason: null }] };
+
+test("initial actual requires explicit attestation and keeps completed retries DB-authoritative", async () => {
+  const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
+  const client: ChartActualRpcClient = { rpc: async (name, args) => {
+    calls.push({ name, args }); return { data: { ...context, canRecord: false }, error: null };
+  } };
+  const input = { action: "record", commandId: id, expectedPlanSha256: context.planSha256, ...actual };
+  for (const invalid of [{ ...input, selfPerformed: false }, { ...input, actorUserId: id },
+    { ...input, performedAt: "2026-09-06T09:00" }]) {
+    expect(await recordChartActual({ client, actorUserId: id, workspaceId: "clair-demo", taskId: id, input: invalid }))
+      .toMatchObject({ ok: false, status: 400 });
+  }
+  expect(calls).toHaveLength(0);
+  expect(await recordChartActual({ client, actorUserId: id, workspaceId: "clair-demo", taskId: id, input }))
+    .toMatchObject({ ok: true });
+  expect(calls[1]).toMatchObject({ name: "clair_record_chart_actual_result",
+    args: { p_actor_user_id: id, p_self_performed: true, p_payload: actual.payload } });
+  expect(parseChartActualContext({ ...context, canRecord: "yes" }, "clair-demo", id)).toBeNull();
+});
 
 test("chart actual confirmation is blank by default and never borrows planned instructions", () => {
   const rows = [{ orderId: id, name: "Synthetic", type: "system_exam" as const, findingSummary: "Explicit synthetic observation" }];

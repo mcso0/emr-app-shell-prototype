@@ -13,6 +13,7 @@ export default defineConfig({
     "inpatient-location-contract.spec.ts",
     "lab-result-profile-contract.spec.ts",
     "execution-result-contract.spec.ts",
+    "fulfillment-medication-link-contract.spec.ts",
     "treatment-planning-v2.spec.ts",
     "hospital-admin-catalog-scope.spec.ts",
     "hospital-admin-order-catalog-server.spec.ts",

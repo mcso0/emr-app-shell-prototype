@@ -80,3 +80,17 @@ test("writer derives type from context, binds session actor and delegates author
   expect(await recordExecutionResult({ client, actorUserId: id, workspaceId: "clair-demo", workItemId: id, input: { ...command, actorUserId: "spoof" } })).toMatchObject({ ok: false, status: 400 });
   expect(calls).toHaveLength(0);
 });
+
+test("treatment V3 retains explicit actual requirements and actionable dependency failures", async () => {
+  const plan = { detailSchemaVersion: 3, detailInputs: { procedureKind: "administration", administrationPolicy: "separate_medication_order" } };
+  const actual = { performedProcedure: "Synthetic explicit treatment", outcome: "Synthetic explicit outcome", performedCount: 1, performedCountUnit: "session" };
+  expect(parseExecutionPayload("treatment", actual, plan)).toEqual(actual);
+  expect(parseExecutionPayload("treatment", { performedProcedure: "Synthetic", outcome: "Synthetic" }, plan)).toBeNull();
+  for (const error of ["treatment_medication_link_required", "treatment_medication_link_invalid"]) {
+    const client: ExecutionRpcClient = { rpc: async name => name === "clair_get_order_execution_context"
+      ? { data: { ...context, clinicalOrderType: "treatment", planSnapshot: plan }, error: null }
+      : { data: null, error: { message: error } } };
+    expect(await recordExecutionResult({ client, actorUserId: id, workspaceId: "clair-demo", workItemId: id, input: { ...command, payload: actual } }))
+      .toMatchObject({ ok: false, status: 409, error });
+  }
+});
