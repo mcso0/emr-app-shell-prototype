@@ -369,3 +369,31 @@ test("board leading inset scrolls away without clipping at the title alignment",
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   expect((await viewport.boundingBox())!.x).toBe((await heading.boundingBox())!.x);
 });
+
+test("Home lists fill available width across views and with hospital hidden work open", async ({ page }) => {
+  await openHome(page);
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  for (const view of ["hospital", "assigned", "requested"]) {
+    if (view === "assigned") await page.getByRole("button", { name: "내 업무", exact: true }).click();
+    if (view === "requested") await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+    if (view === "hospital") {
+      await page.getByRole("button", { name: "접수 업무 목록 숨기기", exact: true }).click();
+      await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
+    }
+    for (const width of [1280, 1636, 1920]) {
+      await page.setViewportSize({ width, height: 1084 });
+      const viewport = page.getByTestId("home-workspace-scroll");
+      const bounds = (await viewport.boundingBox())!;
+      expect(await viewport.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+      const row = page.getByRole("row", { name: view === "requested" ? "보리 내가 요청한 약" : "나나 CBC 검사", exact: true });
+      await expect(row).toBeVisible();
+      const cells = await row.getByRole("cell").evaluateAll((elements) => elements.map((el) => ({ left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })));
+      expect(cells).toHaveLength(7);
+      for (const cell of cells) {
+        expect(cell.width).toBeGreaterThan(0);
+        expect(cell.left).toBeGreaterThanOrEqual(bounds.x);
+        expect(cell.right).toBeLessThanOrEqual(bounds.x + bounds.width);
+      }
+    }
+  }
+});
