@@ -71,3 +71,17 @@ Handed to human review on 2026-07-05.
 - Follow-up remote DB application on 2026-07-05: applied additive migration `home_operations_work_items_reader` to the approved `clair-emr-staging` Supabase project. Read-only Cheongdam smoke confirmed the aggregate RPC returns `sourceStatus=live`, total 7 active items, including consultation 3, lab 2, imaging 1, and treatment 1.
 - Follow-up production hotfix: when the aggregate RPC is not present in a remote Supabase environment yet, the server read path falls back to existing live reception-calendar and fulfillment readers without restoring Home mock fallback.
 - Follow-up UI correction: Home Kanban cards now use the same queue-card field contract as source modules, carry source card fields through the read model, group billing cards at invoice/work-item grain, and no longer inject Home-only `나`/status-decision labels into the card body.
+
+## 2026-09-08 Selected-date hospital view
+
+User approved separating `원내 현황` from `내 업무`, implementation, tests, commit/push/PR, main merge and production deployment.
+
+- Hospital board/list use source operating-date equality; My Work retains unfinished carry-over.
+- Owner options and task counts use the visible date scope; date navigation resets owner selection.
+- Shared API, patient summary, permissions, source dates/statuses and persistence remain unchanged.
+- Isolated branch: `codex/home-selected-date`. Base: `74dcfe53ab7954a85dccf6390c35edb2d61aaf6d`.
+- Rollback candidate: previous production `dpl_HBSoDE993212uyWtmUTBWVB3Gnct`, or revert this scoped change.
+- Verification: Home UI and server tests, lint, typecheck, build, docs, secrets and exact-candidate Release Check before merge. Stop on required check/preview failure.
+- Production smoke: app/login and Cheongdam home route; distinguish HTTP/unauthenticated checks from authenticated workflow evidence.
+
+Local verification: 12 Home UI tests and 10 Home server tests passed; lint, typecheck, docs, UX copy and secret scan passed. Build and remote release gates are recorded in the PR delivery evidence.

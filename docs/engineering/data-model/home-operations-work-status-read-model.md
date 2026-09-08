@@ -259,3 +259,7 @@ Remaining engineering follow-up:
 2. Add source-owned `stateEnteredAt` where current derivation from source timestamps is too coarse.
 3. Add source-specific `long_stay` thresholds only after product SLA policy is approved.
 4. Add inpatient source mapping after inpatient operations v2 has a durable source.
+
+## Home selected-date presentation
+
+The shared API retains unfinished carry-over for My Work. The hospital board/list filters returned items by source `operatingDate` equality before owner options, search, and task counts. My Work retains its existing today/previous groups. Date navigation resets hospital owner selection. Patient summary remains a separate server aggregate; no source mutation or API/RLS change is introduced.

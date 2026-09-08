@@ -77,7 +77,7 @@ Out of scope:
 MVP rule:
 
 - Use the workspace local date as `selectedOperatingDate`.
-- Include same-day work and unfinished carry-over work.
+- `원내 현황` includes only work whose source operating date equals the selected date. `내 업무` retains today plus unfinished carry-over work.
 - Defer configurable operating-day start/end time until the hospital supports night shifts or 24-hour operations.
 
 ### Default Inclusion
@@ -85,7 +85,7 @@ MVP rule:
 The default board includes:
 
 - Work scheduled for or created on the selected operating day.
-- Unfinished work from earlier operating days.
+- Unfinished work from earlier operating days is retained in `내 업무`, but excluded from the selected-date `원내 현황` board/list.
 - Work assigned to a person or routed to a team/role queue.
 - Attention signals such as urgent, re-request, assignment missing, or long-stay.
 
@@ -307,7 +307,7 @@ Remaining follow-up:
 
 ## Acceptance Criteria
 
-- Home `원내 현황` shows work from all active source workflows that satisfy the operating-date and carry-over rules.
+- Home `원내 현황` shows work from all active source workflows whose operating date matches the selected date.
 - `내 업무` separates directly assigned and actor-requested work; team availability is not personal assignment.
 - Completed/cancelled work is hidden by default and only shown when expanded or included by filter.
 - `배정 누락` is treated as a warning, not normal unassigned work.
@@ -336,3 +336,5 @@ Remaining follow-up:
 ### Personal Work Today-only Follow-up — 2026-09-08
 
 내 업무 has no date navigator. Both assigned and requested tabs query and group work against the current workspace operating day, ignoring any legacy saved personal date. 오늘 할 업무 and 이전 미완료 remain; search, completed inclusion and source navigation are unchanged. 원내 현황 retains its independent selected date and navigator.
+
+Date navigation resets the hospital owner filter to all owners. Owner options and task counts follow the selected-date task scope. Source operating dates and current statuses remain authoritative; selecting a past date does not reconstruct a historical snapshot.
