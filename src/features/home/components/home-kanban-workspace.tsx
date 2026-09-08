@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { CdsFilesGridIcon, CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
@@ -25,6 +25,8 @@ import { useLayoutStore } from "@/stores/layout-store";
 import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
 import type { HomeDashboardData, HomeTask, HomeOperationsProgressState } from "@/features/home/home.types";
 import { cn } from "@/lib/utils";
+import { moduleIconById } from "@/shell/module-nav-icons";
+import { CheckIcon, ListTodoIcon, SendIcon } from "lucide-react";
 
 const workTypes = [
   { id: "waiting", label: "접수" }, { id: "reservation", label: "예약" },
@@ -156,7 +158,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           <span>진료 중 {patientSummary?.inProgress ?? "—"}마리</span>
         </div> : undefined}
       />
-      {view === "mine" && <SegmentedControl aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" items={[{ value: "assigned", label: "내가 할 업무" }, { value: "requested", label: "내가 요청한 업무" }]} />}
+      {view === "mine" && <SegmentedControl aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex shrink-0 items-center gap-2">
           <EmrDateNavigator className="h-8 gap-1.5 px-0 [&>button]:h-8 [&>button]:rounded-lg [&>button[aria-label='이전_날짜']]:order-2 [&>button[aria-label='다음_날짜']]:order-3 [&>button[aria-label$='날짜_선택']]:justify-start [&>button[aria-label$='날짜_선택']]:pl-0" dateLabel={query.date} selectedDate={query.date} todayDate={today}
@@ -167,19 +169,16 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           {query.date !== today && <Button variant="ghost" size="sm" onClick={() => updateQuery(view, { date: today })}>오늘</Button>}
         </div>
         <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
-          <label className="emr-text-body flex cursor-pointer items-center gap-1.5 whitespace-nowrap text-[var(--emr-text-secondary)]">
-            <Checkbox checked={query.includeCompleted} onCheckedChange={(checked) => updateQuery(view, { includeCompleted: checked === true })} />완료 포함
-          </label>
+          <HomeSearch key={view} personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
+          <Button variant="outline" size="sm" aria-pressed={query.includeCompleted} onClick={() => updateQuery(view, { includeCompleted: !query.includeCompleted })}>
+            <CheckIcon aria-hidden="true" />완료 포함
+          </Button>
           {view === "hospital" && <>
             <HomeMultiSelect label="담당자" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
             <HomeMultiSelect label="업무" options={[...workTypes]} values={visibleTypes.map((type) => type.id)} allSelected={hiddenTypes.length === 0}
               onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
           </>}
-          <div className="relative w-52 min-w-0">
-            <Input aria-label={view === "hospital" ? "환자 보호자 업무 검색" : "내 업무 검색"} placeholder={view === "hospital" ? "환자·업무 검색" : "내 업무 검색"} value={query.search} onValueChange={(search) => updateQuery(view, { search })} className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
-            {query.search ? <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label="검색어 지우기" onClick={() => updateQuery(view, { search: "" })}><CircleCloseFillIcon className="size-4" /></Button> : <CdsActionsSearchIcon className="pointer-events-none absolute right-2 top-2 size-4 text-[var(--emr-text-tertiary)]" />}
-          </div>
           {hasFilters && <Button variant="ghost" size="sm" onClick={reset}>필터 해제</Button>}
           {view === "hospital" && <SegmentedControl aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: "보드" }, { value: "list", label: "리스트" }]} />}
         </div>
@@ -201,7 +200,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
               { id: "selected", label: query.date === today ? "오늘 할 업무" : "선택일 업무", items: tasks.filter((task) => !previous(task, query.date)) },
             ] : statusGroups.filter((group) => group.id !== "completed" || query.includeCompleted).map((group) => ({ id: group.id, label: group.label, items: tasks.filter((task) => progress(task) === group.id) }))).map((group) => {
               const key = `list:${view}:${group.id}`;
-              return <EmrSidePanelCollapsibleGroup key={key} label={group.label} accessibleLabel={`${group.label} 업무 목록`} count={group.items.length} collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} indicatorVisible={false} stateIconState={false}
+              return <EmrSidePanelCollapsibleGroup key={key} label={<span className="inline-flex items-center gap-2">{view === "hospital" && <HomeWorkTypeIcon id={group.id} />}{group.label}</span>} accessibleLabel={`${group.label} 업무 목록`} count={group.items.length} collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} indicatorVisible={false} stateIconState={false}
                 className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)]" contentClassName="gap-0">
                 {group.items.length ? <HomeWorkTable tasks={group.items} personal={view === "mine"} date={query.date} onNavigate={navigate} /> : <EmrEmptyState kind={term ? "no-search-results" : scopeTasks.length ? "no-filter-results" : "no-data"} surface="table" density="compact" size="sm" title={term ? "검색 결과가 없습니다" : "해당 업무가 없습니다"} />}
               </EmrSidePanelCollapsibleGroup>;
@@ -214,6 +213,29 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         </section>}
       </div>}
   </section>;
+}
+
+function HomeWorkTypeIcon({ id }: { id: string }) {
+  const moduleId = id === "waiting" || id === "reservation" ? "reception" : id === "chart" ? "treatment" : id;
+  const definition = moduleIconById[moduleId];
+  if (!definition) return null;
+  const Icon = definition.icon;
+  return <span className="inline-flex size-3.5 shrink-0 items-center justify-center" aria-hidden="true"><Icon className={cn("size-3.5", moduleId === "lab" && "rotate-45 !scale-[0.7071]")} /></span>;
+}
+
+function HomeSearch({ personal, value, onChange }: { personal: boolean; value: string; onChange: (value: string) => void }) {
+  const [open, setOpen] = useState(Boolean(value));
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const visible = open || Boolean(value);
+  const close = () => { setOpen(false); requestAnimationFrame(() => buttonRef.current?.focus()); };
+  return visible ? <div className="relative w-52 min-w-0">
+    <Input ref={inputRef} autoFocus aria-label={personal ? "내 업무 검색" : "환자 보호자 업무 검색"} placeholder={personal ? "내 업무 검색" : "환자·업무 검색"} value={value} onValueChange={onChange}
+      onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (value) onChange(""); else close(); } }}
+      className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
+    <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label={value ? "검색어 지우기" : "검색 닫기"}
+      onClick={() => { if (value) { onChange(""); inputRef.current?.focus(); } else close(); }}><CircleCloseFillIcon className="size-4" /></Button>
+  </div> : <Button ref={buttonRef} variant="outline" size="sm" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" />검색</Button>;
 }
 
 function HomeMultiSelect({ label, options, values, allSelected, onChange }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void }) {
@@ -251,7 +273,7 @@ function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, 
   return <section data-testid={`home-kanban-column-${id}`} className={cn("group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)]", collapsed ? "h-fit" : "h-full")}>
     {collapsed ? <div className="flex flex-col items-center gap-3 py-3"><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 펼치기`} aria-expanded={false} onClick={onToggle}><ChevronRightIcon /></Button><h2 className="emr-text-body [writing-mode:vertical-rl]">{label}</h2><span className="emr-text-metadata text-muted-foreground">{tasks.length}</span></div> : <>
       <header className="flex h-12 shrink-0 items-center justify-between gap-1 border-b border-[var(--emr-border-default)] px-3">
-        <h2 className="emr-text-section flex items-center gap-2">{label}<span className="emr-text-metadata text-[var(--emr-text-tertiary)]">{tasks.length}</span></h2>
+        <h2 className="emr-text-section flex items-center gap-2"><HomeWorkTypeIcon id={id} />{label}<span className="emr-text-metadata text-[var(--emr-text-tertiary)]">{tasks.length}</span></h2>
         <div className="flex items-center opacity-0 transition-opacity group-hover/column:opacity-100 group-focus-within/column:opacity-100 has-[[data-popup-open]]:opacity-100 [@media(hover:none)]:opacity-100">
           <Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded={true} onClick={onToggle}><ChevronRightIcon className="rotate-180" /></Button>
           <DropdownMenu>

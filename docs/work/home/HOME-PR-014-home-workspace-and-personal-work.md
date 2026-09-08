@@ -95,3 +95,14 @@ Seven existing Home UI tests passed. Additional temporary browser geometry check
 승욱 requested the Kanban section overflow button match its adjacent collapse chevron, then explicitly requested commit/push/PR/main delivery and approved deployment. Replaced the card-oriented outlined row-menu trigger locally in Home with the same ghost/icon-xs Button used by the chevron. The menu retains its compact content, event propagation handling, accessible label and hide-column action; task-card controls are unchanged.
 
 Seven existing Home UI tests passed, including column hiding/restoration. A temporary browser check verified matching button dimensions, radius, border, shadow and icon width, no hover/open shadow, and menu open/dismiss behavior; its synthetic screenshot was inspected. Release candidate, preflight and deployment evidence are recorded in the follow-up PR.
+
+
+## Approved Prototype Controls Reconciliation — 2026-09-08
+
+승욱 confirmed that the deployed 52px collapsed column with vertical title and menu-only card navigation must remain. This supersedes the separate prototype's 280px header-only collapse and non-modal card detail. The newer Home source reader, requester identity, per-view queries and scoped display preferences are retained; the older aggregate requester migration from the prototype work is not part of this release.
+
+The remaining approved presentation changes are scoped to Home: a Search button reveals the shared Input, Escape clears the query then closes/refocuses the trigger; completed inclusion uses an outlined toggle button; personal tabs have a white selected surface and existing task/request labels; work-type headings use 14px module icons. Saved non-empty searches reopen as inputs, while hospital and personal queries remain independent. Card/source navigation and current personal grouping are unchanged.
+
+User authorization covers scoped commit, push, PR, origin/main merge and Production deployment after passing verification. Delivery uses a clean worktree based on main `2e095d5576b5f916640f7b7df720454280c83609`; original WIP is preserved. No DB migration, permission policy, secret/env or fixed staging change is included.
+
+Preflight: focused Home UI/server/source parity, TypeScript, lint, build, docs, UX copy, secret scan and diff check; exact manual Release Check and Ready Preview before merge. Production smoke: login and Home route plus the scoped Home interaction where authenticated access is available. Stop on candidate drift, failed checks, non-Ready/unexpected deployment or scoped smoke failure. Rollback candidate: existing Ready Production `dpl_5QULkzRQANswyFYdcCQ9N4kkaKPA`; revert only this control change if later unrelated releases have landed. Final hashes/check/deployment evidence will be recorded in the PR.
