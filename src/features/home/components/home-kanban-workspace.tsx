@@ -17,6 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
+import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
+import { filterRowsByEmrTableFilterBuilder, getEmrTableFilterBuilderActiveCount, type EmrTableFilterBuilderField } from "@/components/emr/table-filter-builder-model";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
@@ -98,6 +102,11 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const view = useHomeWorkspaceStore((state) => state.view);
   const personalTab = useHomeWorkspaceStore((state) => state.personalTab);
   const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
+  const filterModel = useHomeWorkspaceStore((state) => state.filters[state.view]);
+  const updateFilter = useHomeWorkspaceStore((state) => state.updateFilter);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterReady, setFilterReady] = useState(false);
+  const [filterAutoOpenConsumed, setFilterAutoOpenConsumed] = useState(false);
   const operatingDate = view === "mine" ? today : query.date;
   const preferences = useHomeWorkspaceStore((state) => state.preferences);
   const updateQuery = useHomeWorkspaceStore((state) => state.updateQuery);
@@ -121,7 +130,12 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     return true;
   });
   const owners = [...new Set(scopeTasks.flatMap(taskOwners))].sort((a, b) => a.localeCompare(b, "ko"));
-  const tasks = scopeTasks.filter((task) =>
+  const filterFields: Array<EmrTableFilterBuilderField<HomeTask>> = [
+    { id: "owner", label: "담당자", getValue: taskOwners, operators: [{ id: "is", label: "같음" }], options: owners.map((owner) => ({ value: owner, label: owner })) },
+    { id: "workType", label: "업무", getValue: (task) => task.kanbanColumn, operators: [{ id: "is", label: "같음" }], options: workTypes.map((type) => ({ value: type.id, label: type.label })) },
+  ];
+  const activeFilterCount = getEmrTableFilterBuilderActiveCount(filterModel, filterFields);
+  const tasks = filterRowsByEmrTableFilterBuilder(scopeTasks, filterModel, filterFields).filter((task) =>
     !hidden.includes(task.kanbanColumn) &&
     (view !== "hospital" || (!preferences.hidden.includes(task.kanbanColumn) && (query.owners === null || taskOwners(task).some((owner) => query.owners?.includes(owner))))) &&
     (!term || [task.patientName, task.clientName, task.title, task.sourceLabel, task.assigneeName].filter(Boolean).join(" ").toLocaleLowerCase().includes(term)),
@@ -158,7 +172,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   }
   function toggleGroup(key: string) { updatePreferences({ collapsed: toggleValue(preferences.collapsed, key) }); }
   const collapsed = (key: string) => preferences.collapsed.includes(key);
-  const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} selectedDate={query.date} todayDate={today}
+  const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} selectedDate={query.date} todayDate={today} todayLabel={query.date === today ? "오늘" : undefined}
     onDateChange={(date) => updateQuery(view, { date, owners: null })}
     onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1), owners: null })}
     onNext={() => updateQuery(view, { date: offsetDate(query.date, 1), owners: null })} />;
@@ -186,8 +200,16 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         {view === "hospital" ? dateControl : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
         <div className={styles.toolbarActions}>
           <HomeSearch key={view} personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
-          <Button variant="outline" size="sm" className={styles.completedButton} aria-pressed={query.includeCompleted} onClick={() => updateQuery(view, { includeCompleted: !query.includeCompleted })}>
-            <CheckIcon aria-hidden="true" />완료 포함
+          <Popover key={`filters-${view}`} open={filterOpen} onOpenChange={(open) => { setFilterOpen(open); if (!open) { setFilterReady(false); setFilterAutoOpenConsumed(false); } }} onOpenChangeComplete={setFilterReady}>
+            <PopoverTrigger render={<EmrTableFilterTrigger activeCount={activeFilterCount} className={styles.filterTrigger} aria-label="업무 필터 설정" />} />
+            <PopoverContent align="end" className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0" initialFocus={false}>
+              <EmrTableFilterBuilder fields={filterFields} model={filterModel} autoOpenFirstField={filterReady && !filterAutoOpenConsumed}
+                onModelChange={(model) => { setFilterAutoOpenConsumed(true); updateFilter(view, model); }}
+                onClose={() => { setFilterOpen(false); setFilterReady(false); setFilterAutoOpenConsumed(false); }} />
+            </PopoverContent>
+          </Popover>
+          <Button variant="outline" size="default" className={styles.completedButton} aria-pressed={query.includeCompleted} onClick={() => updateQuery(view, { includeCompleted: !query.includeCompleted })}>
+            <CheckIcon aria-hidden="true" /><span className="px-0.5">완료 포함</span>
           </Button>
           {view === "hospital" && <>
             <HomeMultiSelect label="담당자" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
@@ -196,7 +218,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
               onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
           </>}
           {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: <><Columns3Icon aria-hidden="true" />칸반</> }, { value: "list", label: <><ListIcon aria-hidden="true" />리스트</> }]} /></> :
-            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="sm"><ArrowDownUpIcon aria-hidden="true" />정렬</Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
+            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default"><ArrowDownUpIcon aria-hidden="true" />정렬</Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
 
         </div>
       </div>
@@ -255,12 +277,12 @@ function HomeSearch({ personal, value, onChange }: { personal: boolean; value: s
       className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pl-8 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
     <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label={value ? "검색어 지우기" : "검색 닫기"}
       onClick={() => { if (value) { onChange(""); inputRef.current?.focus(); } else close(); }}><CircleCloseFillIcon className="size-4" /></Button>
-  </div> : <Button ref={buttonRef} variant="outline" size="sm" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" />검색</Button>;
+  </div> : <Button ref={buttonRef} variant="outline" size="default" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" /><span className="px-0.5">검색</span></Button>;
 }
 
 function HomeMultiSelect({ label, options, values, allSelected, onChange }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void }) {
   const text = allSelected ? `${label} 전체` : values.length === 0 ? `${label} 선택 없음` : values.length === 1 ? options.find((option) => option.id === values[0])?.label || values[0] : `${label} ${values.length}개`;
-  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="sm" className="h-8 min-h-8 min-w-24 gap-1 rounded-lg px-3 py-1.5 shadow-[var(--clair-shadow-xs)]" aria-label={`${label} 다중 선택`}>{text}<ChevronDownIcon className="size-3" /></Button>} />
+  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" aria-label={`${label} 다중 선택`}><span className="px-0.5">{text}</span><ChevronDownIcon /></Button>} />
     <DropdownMenuContent align="end" className="w-52 p-2">
       <div className="flex justify-between border-b border-border pb-1"><Button size="xs" variant="ghost" onClick={() => onChange(options.map((option) => option.id))}>전체 선택</Button><Button size="xs" variant="ghost" onClick={() => onChange([])}>선택 해제</Button></div>
       <div className="max-h-64 overflow-auto" role="group" aria-label={`${label} 선택`}>

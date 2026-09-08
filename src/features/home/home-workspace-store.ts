@@ -1,5 +1,6 @@
 "use client";
 
+import { createInitialEmrTableFilterBuilderModel, type EmrTableFilterBuilderModel } from "@/components/emr/table-filter-builder-model";
 import { create } from "zustand";
 import { isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
 
@@ -25,6 +26,8 @@ type HomeSessionState = {
 };
 type HomeWorkspaceStore = HomeSessionState & {
   scopeKey: string | null;
+  filters: Record<HomeView, EmrTableFilterBuilderModel>;
+  updateFilter: (view: HomeView, model: EmrTableFilterBuilderModel) => void;
   preferences: HomeDisplayPreferences;
   activate: (scopeKey: string, today: string) => void;
   setView: (view: HomeView) => void;
@@ -34,6 +37,9 @@ type HomeWorkspaceStore = HomeSessionState & {
   rememberScroll: (key: string, position: ScrollPosition) => void;
   endSession: () => void;
 };
+
+// Match the shared customer filter builder: runtime-only rules, isolated by view and scope.
+const initialFilters = () => ({ hospital: createInitialEmrTableFilterBuilderModel("home-hospital"), mine: createInitialEmrTableFilterBuilderModel("home-mine") });
 
 const prefix = "clair.home.v2:";
 const defaultPreferences: HomeDisplayPreferences = { layout: "board", hidden: [], collapsed: [] };
@@ -67,7 +73,7 @@ function persist(state: HomeWorkspaceStore) {
 }
 
 export const useHomeWorkspaceStore = create<HomeWorkspaceStore>()((set, get) => ({
-  ...initialSession(""), scopeKey: null, preferences: defaultPreferences,
+  ...initialSession(""), filters: initialFilters(), updateFilter: (view, model) => set((state) => ({ filters: { ...state.filters, [view]: model } })), scopeKey: null, preferences: defaultPreferences,
   activate: (scopeKey, today) => {
     if (get().scopeKey === scopeKey) return;
     let preferences = defaultPreferences;
@@ -93,7 +99,7 @@ export const useHomeWorkspaceStore = create<HomeWorkspaceStore>()((set, get) => 
         }
       } catch { /* Keep defaults if storage is blocked. */ }
     }
-    set({ ...session, scopeKey, preferences });
+    set({ ...session, filters: initialFilters(), scopeKey, preferences });
   },
   setView: (view) => { set({ view }); persist(get()); },
   setPersonalTab: (personalTab) => { set({ personalTab }); persist(get()); },
@@ -111,7 +117,7 @@ export const useHomeWorkspaceStore = create<HomeWorkspaceStore>()((set, get) => 
     if (typeof window !== "undefined") {
       try { Object.keys(sessionStorage).filter((key) => key.startsWith(prefix)).forEach((key) => sessionStorage.removeItem(key)); } catch { /* No stored query to clear. */ }
     }
-    set({ ...initialSession(""), scopeKey: null });
+    set({ ...initialSession(""), filters: initialFilters(), scopeKey: null });
   },
 }));
 

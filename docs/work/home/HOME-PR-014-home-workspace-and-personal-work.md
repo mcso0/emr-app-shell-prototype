@@ -9,7 +9,7 @@ source_docs:
   - "docs/engineering/data-model/home-operations-work-status-read-model.md"
 dependencies:
   - "HOME-PR-012"
-updated: "2026-09-08"
+updated: "2026-09-09"
 ---
 
 # Home Workspace And Personal Work
@@ -158,6 +158,16 @@ Updated shared HomeListGroup styling, metadata icons, work-type presentation, gr
 Validation: existing 10 Home browser regressions passed; an additional synthetic browser test passed across hospital, assigned and requested views, checking balanced padding, hover styling, stable cell geometry, icons and exact source navigation. TypeScript and focused component lint passed. Hover screenshots inspected: `/tmp/home-list-token-hospital-hover.png`, `/tmp/home-list-token-requested-hover.png`. Local implementation only; no push, merge or deployment performed.
 
 Release authorized in this task: commit, push, PR and main/Production deployment. Reconciled with `e1758688`, preserving the empty hidden-work panel and personal balanced-padding changes. Smoke: `/login` and Home list/personal layout where authenticated access is available; rollback by reverting only this UI change through a PR. Stop on candidate drift, failed checks or non-Ready deployment.
+
+## Toolbar sizing and shared filter builder — 2026-09-09
+
+승욱 approved all toolbar discrepancies against Figma `28300:114305`, explicitly selected the customer-management filter UI, and requested commit/push/PR/main merge and Production deployment. Implemented in isolated `codex/home-toolbar-control-sizing` from `3ec938af`, preserving primary-checkout WIP. Reconciled with `7e53f5e3`, retaining selected-day hospital scope, scoped owner choices and date-change owner reset; then reconciled with `fd88bd1e`, preserving the responsive Home-list layout and its regression coverage, and `97dda83a` for the board leading inset.
+
+- Use Button `default` for toolbar actions and remove stretched-sm sizing. Match date-arrow widths, date typography, conditional 오늘 badge and segmented-control insets/icon sizing with existing tokens.
+- Reuse `EmrTableFilterBuilder`/`EmrTableFilterTrigger` for 담당자 and 업무; shared AND/OR semantics combine with existing quick filters. Builder reset changes its rules only. Runtime rules are view-separated, retained during in-app navigation and cleared on reload, scope change or sign-out.
+- No shared component defaults, API, DB, source business actions or authorization policy change.
+- Verification: Home browser and filter-model suites, local lint/typecheck/build/docs/secrets, followed by the exact candidate Release Check and Preview. Record delivery evidence in the PR.
+- Smoke: `/login`, authenticated Home toolbar dimensions, filter open/close, date badge and board/list rendering. Rollback: previous Ready Production deployment or revert this scoped PR. Stop on candidate drift, failed checks or non-Ready deployment.
 
 ## Scrollable Board Leading Inset — 2026-09-08
 
