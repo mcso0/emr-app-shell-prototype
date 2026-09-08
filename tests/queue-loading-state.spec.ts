@@ -161,7 +161,7 @@ test("reception queue loading uses the side-panel body motion state instead of t
   await queueRoute.release();
 });
 
-test("reception queue empty state keeps the icon and copy visually tight", async ({
+test("reception queue empty state uses one-line copy and retains its icon", async ({
   page,
 }) => {
   await grantCheongdamWorkspaceAccess(page);
@@ -187,22 +187,20 @@ test("reception queue empty state keeps the icon and copy visually tight", async
   await expect(
     page.getByText("접수/예약 정보를 불러오는 중입니다"),
   ).toBeVisible();
-  await expectQueueStateSpacing(page, "접수/예약 정보를 불러오는 중입니다");
 
   await queueRoute.release();
-  await expect(page.getByText("접수/예약이 없습니다")).toBeVisible();
-  await expectQueueStateSpacing(page, "접수/예약이 없습니다");
+  await expect(page.getByText("대기 중인 접수/예약이 없습니다")).toBeVisible();
+  await expect(page.getByText("오늘 표시할 접수/예약 업무가 없습니다")).toHaveCount(0);
   await expect
     .poll(async () => getQueueStateIconRootTagName(
       page,
-      "접수/예약이 없습니다",
+      "대기 중인 접수/예약이 없습니다",
     ))
     .toBe("DIV");
 
   await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByRole("searchbox", { name: "대기열 검색" }).fill("검색결과없음");
   await expect(page.getByText("검색 결과가 없습니다", { exact: true })).toBeVisible();
-  await expectQueueStateSpacing(page, "검색 결과가 없습니다");
 });
 
 test("chart queue loading uses the shared side-panel body motion state", async ({
