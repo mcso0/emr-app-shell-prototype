@@ -59,6 +59,53 @@ test("hospital fallback dates respect Seoul midnight and source operating date",
   await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
 });
 
+test("home toolbar uses full-size controls and shared filter builder across board and list", async ({ page }) => {
+  await openHome(page);
+  const search = page.getByRole("button", { name: "검색", exact: true });
+  await expect(search).toHaveCSS("height", "32px");
+  await expect(search).toHaveCSS("font-size", "14px");
+  await expect(search.locator("svg")).toHaveCSS("width", "16px");
+  await expect(page.getByRole("button", { name: "이전 날짜", exact: true })).toHaveCSS("width", "28px");
+  const dateTrigger = page.getByRole("button", { name: /날짜 선택$/ });
+  await expect(dateTrigger).toHaveCSS("width", "160px");
+  await page.evaluate(() => document.fonts.ready);
+  const dateText = dateTrigger.locator("span.truncate");
+  expect(await dateText.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  const viewControl = page.getByRole("group", { name: "업무 보기 방식" });
+  const viewport = page.viewportSize()!;
+  const viewBounds = (await viewControl.boundingBox())!;
+  expect(viewBounds.x + viewBounds.width).toBeLessThanOrEqual(viewport.width);
+  await expect(dateTrigger.getByText("오늘", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
+  await expect(dateTrigger.getByText("오늘", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "다음 날짜", exact: true }).click();
+  await expect(dateTrigger.getByText("오늘", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "칸반", exact: true }).locator("svg")).toHaveCSS("width", "16px");
+  await page.getByRole("button", { name: "업무 필터 설정" }).click();
+  const builder = page.locator('[data-emr-table-filter-builder="true"]');
+  await expect(builder).toBeVisible();
+  await expect(page.getByRole("option", { name: "업무", exact: true })).toBeVisible();
+  await page.screenshot({ path: "/tmp/home-toolbar-filter.png", animations: "disabled" });
+  await page.getByRole("option", { name: "업무", exact: true }).click();
+  await builder.getByRole("combobox", { name: "필터 값" }).click();
+  await page.getByRole("option", { name: "임상병리", exact: true }).click();
+  await expect(builder).toHaveAttribute("data-active-filter-count", "1");
+  await builder.getByRole("button", { name: "필터 닫기" }).click();
+  await expect(page.getByTestId("home-kanban-task-lab:one")).toBeVisible();
+  await expect(page.getByTestId("home-kanban-task-dispensing:one")).toHaveCount(0);
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await expect(page.getByText("내가 요청한 약", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+  await expect(page.getByText("내가 요청한 약", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "원내 현황", exact: true }).click();
+  await page.getByRole("button", { name: "업무 필터 설정" }).click();
+  await builder.getByRole("button", { name: "초기화", exact: true }).click();
+  await expect(builder).toHaveAttribute("data-active-filter-count", "0");
+  await builder.getByRole("button", { name: "필터 닫기" }).click();
+  await expect(page.getByText("내가 요청한 약", { exact: true })).toBeVisible();
+});
+
 test("home uses shared board cards with menu-only navigation and preserves return state", async ({ page }) => {
   await openHome(page);
   await expect(page.getByRole("heading", { name: "원내 현황", exact: true })).toBeVisible();

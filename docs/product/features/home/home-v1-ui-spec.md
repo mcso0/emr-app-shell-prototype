@@ -12,7 +12,7 @@ related_docs:
   - "docs/product/features/notifications/global-notification-center-v0-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-014-home-workspace-and-personal-work.md"
-last_updated: "2026-09-08"
+last_updated: "2026-09-09"
 ---
 
 # Home Workspace UI Spec
@@ -27,14 +27,16 @@ Home is a read and navigation surface. Processing, assignment, approval, result 
 
 Use existing EMR page header, module sidebar, date navigator, task queue card, row menu, table, status icon and feedback components. Keep semantic shared tokens. The title row shows current patient counts as small unboxed text: `원내 N마리 · 진료 대기 N마리 · 진료 중 N마리`. These are distinct patients from current active encounters, independent of selected date and work filters. Read failure displays `—`; task counts never substitute for patients. Billing-ready patients remain present but are not counted as currently in consultation. Inpatient/session-only data is not fabricated into these counts.
 
-Below the title, date is left aligned. Completion inclusion, owner/work multiselects, search, filter reset and board/list controls are right aligned. No separate view-settings menu or title-area sidebar toggle.
+Below the title, date is left aligned. Search, the shared filter builder, completion inclusion, owner/work multiselects and board/list controls are right aligned. No separate view-settings menu or title-area sidebar toggle.
 
 Work order: 접수, 예약, 진료, 임상병리, 영상검사, 조제, 처치, 수납.
 
 - Board columns contain status groups: 대기, 진행 중, optional 완료. Column collapse is approximately 52px wide and hugs content vertically.
 - Column controls appear on hover, keyboard focus or open menu and remain accessible on touch. Overflow hides the column; the work-type multiselect uses the same state.
 - Hidden work stays in a content-height panel fixed to the right outside horizontal board scrolling. `표시` restores one column in original order; `모두 표시` restores all work types.
-- Owner and work-type filters support multiple selections, select all and clear. `필터 해제` resets owner/type only, preserving date and search. Clearing search only clears search.
+- Owner and work-type quick filters support multiple selections, select all and clear. Clearing search only clears search.
+- `필터` reuses the customer-management `EmrTableFilterBuilder` and trigger. Fields are 담당자 (including any assigned staff member) and 업무. Complete rules apply through the shared AND/OR model and combine with date, completion, search and quick filters. `초기화` clears builder rules only; it does not change quick filters or hidden columns.
+- Builder rules are runtime-only and independent between 원내 현황 and 내 업무. They survive in-app navigation and board/list switches, but reset on page reload, user/workspace scope change and sign-out.
 - Board and list render the same filtered work set. Lists group by work type and support collapse.
 - Previous unfinished work is labeled `이전 미완료`, distinct from `긴급 요청` and `재요청`. Previous date alone must not create a delay color or official SLA claim.
 
@@ -48,7 +50,7 @@ Each tab is a list grouped into `오늘 할 업무` and `이전 미완료`. Pers
 
 ## Date And Navigation
 
-Use scheduled processing date when available, otherwise requested date. Selected-date work and older unfinished work are shown with latest current state; this is not a historical snapshot. Completed work is excluded by default and enabled with `완료 포함`. Cancelled work is not shown in this UI.
+Use scheduled processing date when available, otherwise requested date. Hospital view shows selected-day work only; personal work also includes older unfinished assigned/requested work with latest current state; this is not a historical snapshot. Completed work is excluded by default and enabled with `완료 포함`. Cancelled work is not shown in this UI.
 
 Card body is noninteractive. Its overflow action names and opens the source module. List rows use the shared hover surface and gradient action overlay naming the destination. No Home detail drawer or processing action. Source identity is retained: appointment, encounter, fulfillment item or invoice. Date context accompanies fulfillment navigation.
 
@@ -64,3 +66,7 @@ Use [HOME-PR-014](../../../work/home/HOME-PR-014-home-workspace-and-personal-wor
 Hospital list and both personal-work tabs share the Figma `28301:179610` presentation: existing CLAiR tokens for body typography, spacing, neutral colors and corners; 8px row padding, 16px time/assignee icons, plain work-type text, and matching patient/guardian emphasis. Group counts use body sizing. Data text, attention badges, source URLs, keyboard actions, filters and group semantics remain unchanged.
 
 On hover/focus, show the existing outline button in its 24px `xs` size with a trailing chevron, inset 6px from the top/right, over the black-alpha-6 row surface. Do not add a white gradient behind the button or move cells when it appears. Hospital list and personal bodies use the existing 48px spacing token on both sides; Kanban keeps its existing 16px right inset. Shared token definitions and Kanban presentation are unchanged.
+
+## Toolbar Control Parity — 2026-09-08
+
+Figma `28300:114305` uses 32px outline actions with 14px text and 16px icons. Home uses the shared Button `default` size rather than stretching `sm`. The date navigator remains shared: 230×34px outer composition, 28px square arrows, 160×28px date trigger and a conditional 오늘 badge. Board/list uses SegmentedControl `md` with Home-scoped 3px outer padding, 6px icon/text gaps and 16px icons. Shared component defaults remain unchanged.
