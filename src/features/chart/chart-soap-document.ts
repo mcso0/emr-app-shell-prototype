@@ -24,15 +24,12 @@ export type SoapDocumentFieldKind = (typeof soapDocumentFieldKinds)[number];
 
 export type SoapDocumentProjection = Record<SoapDocumentFieldKind, string>;
 
+// New notes start empty; persisted note content is hydrated separately.
 export const defaultSoapWritingPrompts: SoapDocumentProjection = {
-  subjective:
-    "[주호소와 시작 시점] [빈도·지속시간·악화/호전 요인] [식욕·음수·배뇨·배변·활력 변화] [보호자가 오늘 확인하고 싶은 점]",
-  objective:
-    "[체중·체온·심박·호흡·BCS] [이상 소견] [관련 정상 소견] [검사·영상 결과 또는 결과 대기]",
-  assessment:
-    "[문제명과 상태] — [가장 가능성 높은 판단과 근거]. DDx: [핵심 감별 1–3개]. [추가 확인이 필요한 점]",
-  plan:
-    "[검사와 이유] [치료·처방] [보호자 설명 및 동의·보류] [결과 연락·재진 시점·즉시 내원 기준]",
+  subjective: "",
+  objective: "",
+  assessment: "",
+  plan: "",
 };
 
 export type SoapDocumentValidationError =

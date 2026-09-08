@@ -8,7 +8,6 @@ import {
   CdsNavigationChevronLeftIcon,
   CdsNavigationMaximize2Icon,
 } from "@/components/cds-icons/navigation";
-import { defaultSoapWritingPrompts } from "@/features/chart/chart-soap-document";
 
 import {
   createDefaultSoapTemplateBlocks,
@@ -1503,8 +1502,10 @@ export const RepresentativeReview: Story = {
     await expect(canvas.getByTestId("soap-story-frame")).toBeVisible();
     await expect(canvas.getByRole("textbox")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "320px" })).toBeVisible();
-    for (const prompt of Object.values(defaultSoapWritingPrompts)) {
-      await expect(canvas.getByText(prompt)).toBeVisible();
+    await expect(canvasElement.querySelector(".ProseMirror-selectednode")).toBeNull();
+    await expect(canvas.getByRole("textbox")).not.toHaveFocus();
+    for (const paragraph of canvasElement.querySelectorAll('.bn-block-content[data-content-type="paragraph"]')) {
+      await expect(paragraph.textContent?.trim()).toBe("");
     }
 
     const firstParagraph = canvasElement.querySelector<HTMLElement>(
@@ -1608,11 +1609,11 @@ export const RepresentativeReview: Story = {
       });
     }
 
-    const subjectivePrompt = canvas.getByText(defaultSoapWritingPrompts.subjective);
+    const subjectivePrompt = firstParagraph;
     placeCaretAtEnd(subjectivePrompt);
     await userEvent.keyboard(" 수정 가능");
     await expect(subjectivePrompt).toHaveTextContent(
-      `${defaultSoapWritingPrompts.subjective} 수정 가능`,
+      "수정 가능",
     );
   },
 };

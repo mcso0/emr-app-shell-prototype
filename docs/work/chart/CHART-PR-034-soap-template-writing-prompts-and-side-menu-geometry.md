@@ -84,3 +84,14 @@ User-approved geometry supersedes the original 24px grab width and 8px writing-b
 - Editable left padding becomes 56px: 8px outer clearance + 44px controls + 4px block gap.
 - Existing Storybook geometry checks cover the revised width, outer clearance, and paragraph gap, including SOAP sections at 320, 420, 566.5, and 720px.
 - Focused SOAP Storybook suite: 35 passed. Local secret scan, docs links, lint, typecheck, and production build passed. Release evidence belongs in the follow-up PR.
+
+## 2026-09-08 Local Follow-up: Empty Default Template
+
+- User requested the basic S/O template to show only the four section headings and empty input paragraphs, matching the diagnosis-system layout. This supersedes the writing-prompt requirement above for new/reset/default-template content.
+- Default prompt values are now empty. Existing persisted notes and explicitly requested sample templates retain their content; no stored notes are rewritten.
+- On editor initialization, move a leading SOAP section's node selection to its first paragraph using BlockNote 0.54.0 `setTextCursorPosition`, without calling focus. The initialization guard preserves subsequent user selections.
+- Verified: SOAP document tests 11/11, editor Storybook browser tests 35/35, and focused ESLint. Browser coverage includes no initial selected-node highlight or editor focus, empty paragraphs, direct typing, and responsive widths.
+- Release scope approved by the user on 2026-09-08: commit, push, PR, merge to `origin/main`, and Production deployment after passing checks. Candidate contains only this follow-up plus its focused tests.
+- Clean `origin/main` worktree verification: SOAP document/chart tests 20/20; Storybook browser tests 35/35; lint, typecheck, UX copy, docs, and secret checks passed. Initial shared-dependency symlink failed tooling startup; independent `npm ci` resolved it. The toolbar test now explicitly selects paragraph text rather than clicking the editor background.
+- Production smoke: `/login`, scoped Cheongdam chart load and initial selection display. No clinical content is entered or rewritten in Production.
+- Rollback reference: previous main `8df4fc0436f9d81f024cc1faeb54f9943d5f2acf`, Ready deployment `dpl_ExjiykEPAHpiaEeQyuzPT3TkQW1t`. Stop if exact-candidate checks or deployment readiness fail. Exact release SHA, remote checks, and delivery evidence are recorded in the PR.
