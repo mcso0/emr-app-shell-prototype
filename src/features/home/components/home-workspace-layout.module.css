@@ -36,13 +36,13 @@
 .list, .period { display: flex; flex-direction: column; gap: 16px; }
 .periodTitle { display: flex; align-items: center; gap: 4px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--emr-text-secondary); }
 .periodTitle span { font-size: 12px; color: var(--emr-text-tertiary); }
-.listGroup { min-width: 1098px; overflow: hidden; flex-shrink: 0; }
+.listGroup { min-width: 0; width: 100%; overflow: hidden; flex-shrink: 0; }
 .rows { display: flex; flex-direction: column; gap: var(--clair-spacing-8); padding: var(--clair-spacing-8) var(--clair-spacing-16) var(--clair-spacing-12); }
 /* Shared by hospital list and both personal-work tabs. */
 .row {
   position: relative;
   display: grid;
-  grid-template-columns: var(--clair-spacing-80) calc(var(--clair-spacing-40) * 3) var(--clair-spacing-48) var(--clair-spacing-80) minmax(calc(var(--clair-spacing-80) * 3), 1fr) calc(var(--clair-spacing-40) * 3) calc(var(--clair-spacing-40) * 3);
+  grid-template-columns: var(--clair-spacing-80) minmax(0, 1fr) var(--clair-spacing-48) var(--clair-spacing-80) minmax(0, 2fr) calc(var(--clair-spacing-40) * 3) minmax(0, 1fr);
   column-gap: var(--clair-spacing-24);
   align-items: center;
   min-height: var(--clair-control-height-lg);
