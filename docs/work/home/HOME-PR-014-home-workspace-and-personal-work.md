@@ -127,3 +127,10 @@ The existing authorization covers delivery of this omitted approved scope. Base/
 Isolated branch `codex/my-work-today-only` starts at `630d3cd02a31c248401615a33811944dff7c4a7a`; primary WIP is preserved. Verification covers stale saved dates, both personal tabs, previous unfinished work, completion and hospital-date isolation, plus required release preflight and exact Release Check. Production smoke checks login/Home and the personal control where authenticated access is available. Rollback: revert this scoped commit, preserving subsequent releases. Stop on failed checks, candidate drift, unexpected deployment or failed scoped smoke. Final candidate/deployment evidence is recorded in the PR.
 
 Ten Home browser tests passed, including saved-date API assertions and existing geometry/navigation tests. Local secret/docs/UX copy/diff checks and lint passed (five existing unrelated lint warnings); TypeScript passed. Production build passed with the existing docs-reader tracing warning. Remote release evidence follows in the PR. Previous Ready Production rollback deployment: `dpl_2edNzaBrBuj79d3z8FyeZ3h6BxP8`.
+
+
+## Personal Work Balanced Inset — 2026-09-08
+
+승욱 approved matching personal content right padding to the existing 48px left/header inset, followed by commit/push/PR/main and Production delivery. A Home-local class applies only to 내 업무; hospital content retains 16px right padding. No query, data, shared component or dependency change. Base/rollback commit: `077ad7202fb5a2015cceee40869a2190a47dc19e`; previous Ready Production: `dpl_3nAAf7NGL9N6CWXbihza9FjC8Szi`. Verify existing Home tests, personal/hospital inset geometry and release preflight. Stop on failed gates, candidate drift or failed smoke; revert only this change if needed. Exact release evidence belongs to the PR.
+
+Local verification: all 10 existing Home browser tests passed; personal screenshot confirms balanced insets and header alignment. Secrets/docs/UX copy/diff/lint/TypeScript/build passed. Existing five unrelated lint warnings and docs-reader build tracing warning remain. Final remote checks and authenticated Production geometry are recorded in the PR.
