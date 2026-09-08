@@ -1,5 +1,7 @@
 "use client";
 
+import historyStyles from "./chart-history.module.css";
+
 import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import { useChartOrderQuickAddLayout } from "./use-chart-order-quick-add-layout";
 
@@ -2016,10 +2018,11 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   if (!bundle) return null;
 
   return (
-    <EmrContentAsidePanel id="chart-content-aside">
+    <EmrContentAsidePanel id="chart-content-aside" className={historyStyles.panel}>
       <EmrContentAsideHeader
         count={historyCount}
-        label="차트이력"
+        label="차트 이력"
+        className={historyStyles.header}
         collapseAriaLabel="차트 이력 목록 접기"
         onCollapse={() => setContentAsideOpen(false)}
         actions={
@@ -2044,7 +2047,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
           width: "calc(100% + (var(--emr-content-aside-padding-x) * 2))",
         }}
       >
-        <div className="flex flex-col gap-1 px-[var(--emr-content-aside-padding-x)] pb-3">
+        <div className="flex flex-col gap-2 px-[var(--emr-content-aside-padding-x)] pt-2 pb-3">
           {liveHistoryScopeMatches && chartHistoryStatus === "loading" ? (
             <div
               className="flex items-center gap-2 px-2 py-3 emr-text-metadata text-[var(--emr-text-secondary)]"
@@ -2330,6 +2333,44 @@ function ChartHistoryItem({
   const visitPurpose = row.encounter.visitPurpose?.trim() || "방문 목적 미입력";
   const statusLabel = getStatusLabel("encounter", row.encounter.status);
   const isDiagnosisHistory = mode === "diagnosis";
+
+  if (!isDiagnosisHistory) {
+    return (
+      <button
+        type="button"
+        className={historyStyles.entry}
+        data-slot="content-history-item"
+        data-testid={`chart-history-item-${row.encounter.id}`}
+        data-selected={selected ? "true" : undefined}
+        aria-pressed={selected}
+        onClick={onSelect}
+      >
+        <span className={historyStyles.time}>
+          <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
+          <span>{getShortClockTime(eventAt)}</span>
+        </span>
+        <span className={historyStyles.card}>
+          <span className={historyStyles.title}>{visitPurpose}</span>
+          <span className={historyStyles.meta}>
+            <span className={historyStyles.person}>
+              <span className={historyStyles.personLabel}>담당 </span>
+              <span className="truncate">
+                {getChartHistoryVeterinarianName(row, bundle)}
+              </span>
+            </span>
+            <span className={historyStyles.status}>
+              <span
+                aria-hidden="true"
+                className={historyStyles.dot}
+                data-active={row.encounter.status === "in_consultation" ? "true" : undefined}
+              />
+              {statusLabel}
+            </span>
+          </span>
+        </span>
+      </button>
+    );
+  }
 
   return (
     <EmrContentHistoryItem

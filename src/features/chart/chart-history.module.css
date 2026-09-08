@@ -1,0 +1,159 @@
+.panel {
+  --emr-content-aside-padding-x: 16px;
+  --emr-content-aside-header-padding-top: 0px;
+  --emr-content-aside-section-gap: 0px;
+  --emr-content-aside-bg: #fcfcfc;
+  --emr-content-history-timeline-padding-right: 10px;
+}
+
+.header {
+  height: 48px;
+  padding-inline: 4px;
+}
+
+/* Keep the divider inside the 48px row shared with the date and chart bars. */
+.header + div {
+  margin-top: -1px;
+}
+
+.header > div:first-child,
+.panel [data-slot="content-history-group-title"] > div {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0.196px;
+}
+
+.header > div:first-child {
+  color: var(--clair-color-atomic-neutral-700);
+}
+
+.header [data-slot="badge"] {
+  padding-inline: 6px;
+  background: var(--clair-color-atomic-black-alpha-4);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.panel [data-slot="content-history-group-title"] > div {
+  column-gap: 6px;
+}
+
+.panel [data-slot="content-history-group-title"] > div > svg {
+  margin-right: 2px;
+}
+
+/* The shared motion rotates on collapse; invert the base glyph for this design. */
+.panel [data-slot="content-history-group-title"] > span > svg {
+  rotate: 180deg;
+}
+
+.panel [data-slot="content-history-group-list"] {
+  gap: 6px;
+}
+
+.entry {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+  cursor: pointer;
+  outline: none;
+}
+
+.time {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 20.5px;
+  color: var(--clair-color-atomic-neutral-500);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 4px;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entry:hover .card,
+.entry[data-selected="true"] .card {
+  background: var(--clair-color-atomic-black-alpha-6);
+}
+
+.entry:focus-visible .card {
+  outline: 2px solid var(--emr-line-focus);
+  outline-offset: -2px;
+}
+
+.title {
+  width: 100%;
+  min-width: 0;
+  height: 24px;
+  padding: 3px 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--clair-color-atomic-neutral-800);
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  letter-spacing: 0.247px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--clair-color-atomic-neutral-600);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.person,
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  min-width: 0;
+  padding-inline: 8px;
+  border: 1px solid var(--clair-color-atomic-black-alpha-8);
+  border-radius: 6px;
+  background: var(--emr-surface-panel);
+  white-space: nowrap;
+}
+
+.personLabel {
+  flex-shrink: 0;
+  color: var(--clair-color-atomic-neutral-500);
+}
+
+.status {
+  flex-shrink: 0;
+  border-radius: 9999px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  margin-right: 2px;
+  border-radius: 50%;
+  background: var(--clair-color-atomic-neutral-400);
+}
+
+.dot[data-active="true"] {
+  background: var(--emr-content-history-card-status-dot);
+}

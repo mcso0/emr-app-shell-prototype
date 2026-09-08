@@ -722,7 +722,7 @@ test("chart history aside anchors scroll chrome and right-aligns unavailable act
 
   const chartHistoryAside = page.locator("#chart-content-aside");
   await expect(chartHistoryAside).toBeVisible();
-  await expect(chartHistoryAside.getByText("차트이력")).toBeVisible();
+  await expect(chartHistoryAside.getByText("차트 이력")).toBeVisible();
   const historyLayout = await chartHistoryAside.evaluate((aside) => {
     const scrollArea = aside.querySelector<HTMLElement>(
       '[data-slot="scroll-area"]',
@@ -2364,7 +2364,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   const inlineHistoryItem = page.getByTestId(
     `chart-diagnosis-history-item-${oldEncounterId}`,
   );
-  await expect(aside).toContainText("차트이력");
+  await expect(aside).toContainText("차트 이력");
   await expect(currentHistoryItem).toContainText("11:00");
   await expect(currentHistoryItem).toContainText("일반 진료");
   await expect(currentHistoryItem).toContainText("진료중");
