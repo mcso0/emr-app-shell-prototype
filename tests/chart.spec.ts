@@ -2376,75 +2376,109 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(oldHistoryItem).not.toContainText(oldEncounterNo);
   await expect(oldHistoryItem).not.toContainText("26.07.01 15:00");
 
-  await expect(inlineHistoryItem).toContainText("15:00");
-  const diagnosisChips = inlineHistoryItem.locator('[data-slot="badge"]');
-  await expect(diagnosisChips).toHaveCount(3);
+  await expect(inlineHistoryItem).toContainText("26.07.01");
+  await expect(inlineHistoryItem).not.toContainText("15:00");
+  await expect(inlineHistoryItem).not.toContainText("담당");
+  await expect(inlineHistoryItem).not.toHaveAttribute("data-selected");
+  await expect(inlineHistoryItem).toHaveCSS("height", "40px");
+  await expect(inlineHistoryItem).toHaveCSS("border-radius", "8px");
+  const diagnosisChips = inlineHistoryItem.locator('[data-history-diagnosis]');
+  const more = inlineHistoryItem.getByRole("button", { name: /숨겨진 진단/ });
+  const view = inlineHistoryItem.getByRole("button", { name: "차트 보기", exact: true });
+  const search = page.getByLabel("진단 이력 검색");
+  await search.hover();
   await expect(diagnosisChips.first()).toHaveText("슬개골 탈구 의심");
-  await expect(diagnosisChips.first()).toHaveCSS("background-color", "rgb(245, 245, 245)");
-  await expect(diagnosisChips.first()).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
-  await expect(inlineHistoryItem).toHaveCSS("border-bottom-width", "1px");
-  await expect(inlineHistoryItem).toHaveCSS("border-radius", "0px");
-  await expect(inlineHistoryItem).toHaveCSS("box-shadow", "none");
-  await expect(inlineHistoryItem.getByRole("button", { name: "+3개 진단" })).toBeVisible();
-  // Disclosure is keyboard-operable and does not switch the displayed encounter.
-  await inlineHistoryItem.getByRole("button", { name: "+3개 진단" }).focus();
-  await page.keyboard.press("Enter");
-  await expect(diagnosisChips).toHaveCount(6);
-  const collapse = inlineHistoryItem.getByRole("button", { name: "접기", exact: true });
-  await expect(collapse).toBeFocused();
-  await expect(collapse).toHaveAttribute("aria-expanded", "true");
-  await page.getByLabel("진단 이력 검색").hover();
-  await expect(collapse).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const restCount = await diagnosisChips.count();
+  expect(restCount).toBeGreaterThanOrEqual(1);
+  expect(restCount).toBeLessThan(6);
+  await expect(more).toHaveText(`+${6 - restCount}`);
+  await expect(diagnosisChips.first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0.04)");
+  await expect(diagnosisChips.first()).toHaveCSS("font-size", "12px");
+
+  // Action reservation changes the count before the user approaches +N.
+  await inlineHistoryItem.getByText("26.07.01", { exact: true }).hover();
+  await expect(inlineHistoryItem).toHaveAttribute("data-actions-visible", "true");
+  await expect.poll(async () => diagnosisChips.count()).toBeLessThanOrEqual(restCount);
+  const hoverCount = await diagnosisChips.count();
+  await expect(more).toHaveText(`+${6 - hoverCount}`);
+  const counterBox = (await more.boundingBox())!;
+  const viewBox = (await view.boundingBox())!;
+  expect(counterBox.x + counterBox.width).toBeLessThanOrEqual(viewBox.x);
+  await more.hover();
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText("외이염");
+  await tooltip.hover();
+  await page.waitForTimeout(350);
+  await expect(tooltip).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toHaveCount(0);
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(0);
-  const longChip = diagnosisChips.nth(3);
-  expect(await longChip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-  await collapse.click();
-  await expect(diagnosisChips).toHaveCount(3);
+
+  // Keyboard access exposes the action but never paints a selected row.
+  await search.hover();
+  await view.focus();
+  await expect(view).toBeFocused();
+  await expect(inlineHistoryItem).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(view.locator("..")).toHaveCSS("opacity", "1");
+  await search.focus();
+  await expect(view.locator("..")).toHaveCSS("opacity", "0");
 
   const emptyItem = page.getByTestId(`chart-diagnosis-history-item-${emptyEncounterId}`);
   await expect(emptyItem).toContainText("진단 기록 없음");
-  await expect(emptyItem.locator('[data-slot="badge"]')).toHaveCount(0);
-  const textStarts = await emptyItem.evaluate((element) => {
-    const textX = (text: string) => {
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      let node: Node | null;
-      while ((node = walker.nextNode())) {
-        if (node.textContent?.includes(text)) {
-          const range = document.createRange();
-          range.selectNodeContents(node);
-          return range.getBoundingClientRect().x;
-        }
-      }
-      return null;
-    };
-    return [textX("진단 기록 없음"), textX("담당")];
-  });
-  expect(textStarts[0]).not.toBeNull();
-  expect(textStarts[0]).toBe(textStarts[1]);
+  await expect(emptyItem.locator('[data-history-diagnosis]')).toHaveCount(0);
   await expect(page.getByTestId("chart-diagnosis-history-list").locator(":scope > article")).toHaveCount(2);
-  // The original toolbar remains present; no new footer is introduced.
   await expect(page.getByLabel("차트 이력 종류")).toBeVisible();
-  await expect(inlineHistoryItem).toContainText("담당 이수지");
+  await expect(search).toHaveAttribute("placeholder", "키워드 입력");
   await expect(inlineHistoryItem).not.toContainText("완료");
   await expect(inlineHistoryItem).not.toContainText(oldEncounterNo);
-  await expect(
-    page.getByTestId(`chart-diagnosis-history-item-${current.encounter.id}`),
-  ).toHaveCount(0);
+  await expect(page.getByTestId(`chart-diagnosis-history-item-${current.encounter.id}`)).toHaveCount(0);
 
-  const diagnosisHistorySearch = page.getByLabel("진단 이력 검색");
-  await diagnosisHistorySearch.fill("치주염");
-  await expect(inlineHistoryItem).toBeVisible();
-  await expect(diagnosisChips).toHaveCount(6);
-  await expect(inlineHistoryItem.getByText("치주염", { exact: true })).toBeVisible();
-  await diagnosisHistorySearch.fill("이수지");
+  // Hidden matches are promoted on screen and highlighted, without mutating data.
+  await search.fill("치주염");
+  await expect(diagnosisChips.first()).toHaveText("치주염");
+  await expect(diagnosisChips.first().locator("strong")).toHaveText("치주염");
+  await search.fill("만성");
+  await inlineHistoryItem.getByText("26.07.01", { exact: true }).hover();
+  await expect(diagnosisChips).toHaveCount(1);
+  await expect(more).toHaveText("+5");
+  await expect(diagnosisChips.first().locator("strong")).toHaveText("만성");
+  const firstChipText = diagnosisChips.first().locator("span").first();
+  await expect(firstChipText).toHaveCSS("text-overflow", "ellipsis");
+  expect(await diagnosisChips.first().evaluate((el) => el.getBoundingClientRect().width)).toBeGreaterThan(20);
+  await diagnosisChips.first().hover();
+  await expect(tooltip).toContainText("이첨판 점액종성 변성");
+  await page.keyboard.press("Escape");
+
+  await expect(tooltip).toHaveCount(0);
+  await page.mouse.move(0, 0);
+
+  // Coarse-pointer mode reserves the action even without hover.
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+  await search.hover();
+  await search.focus();
+  expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+  await expect(view.locator("..")).toHaveCSS("opacity", "1");
+  const touchMoreBox = (await more.boundingBox())!;
+  const touchViewBox = (await view.boundingBox())!;
+  expect(touchMoreBox.x + touchMoreBox.width).toBeLessThanOrEqual(touchViewBox.x);
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: touchMoreBox.x + touchMoreBox.width / 2, y: touchMoreBox.y + touchMoreBox.height / 2 }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(tooltip).toContainText("치주염");
+  await page.keyboard.press("Escape");
+  await cdp.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await cdp.detach();
+
+  await search.fill("이수지");
   await expect(emptyItem).toBeVisible();
-  await diagnosisHistorySearch.fill(oldEncounterNo);
+  await search.fill(oldEncounterNo);
   await expect(inlineHistoryItem).toHaveCount(0);
-  await expect(page.getByTestId("chart-history-empty-state")).toContainText(
-    "검색 결과가 없습니다",
-  );
-  await diagnosisHistorySearch.clear();
+  await expect(page.getByTestId("chart-history-empty-state")).toContainText("검색 결과가 없습니다");
+  await search.clear();
   await expect(inlineHistoryItem).toBeVisible();
+  await expect(diagnosisChips.first()).toHaveText("슬개골 탈구 의심");
+  await expect(diagnosisChips.locator("strong")).toHaveCount(0);
 
   const soapParagraph = page.getByLabel("SOAP 블록 문서")
     .locator('.bn-block-content[data-content-type="paragraph"]').first();
@@ -2452,6 +2486,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await soapParagraph.click();
   await page.keyboard.press("End");
   await page.keyboard.insertText(" 이력 전환 직전 작성한 기록");
+  await inlineHistoryItem.getByText("26.07.01", { exact: true }).hover();
   await inlineHistoryItem.getByRole("button", { name: "차트 보기", exact: true }).click();
 
   await expect(page).toHaveURL(
