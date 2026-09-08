@@ -67,3 +67,15 @@ SOAP section count or content growth should not push the chart order area out of
 ## Handoff Notes
 
 The first implementation keeps the change layout-only. If long SOAP authoring still feels dense in manual QA, the next small follow-up is per-SOAP collapse/expand inside the SOAP panel.
+
+## 2026-09-08 Plan/Order vertical boundary follow-up
+
+Owner requested investigation, implementation, commit, push, PR, and main merge.
+The isolated change uses existing Base UI vertical overflow attributes to show
+32px maximum panel-surface gradients only where more rows remain. Top fade starts
+below the density-specific sticky header; footer, scrollbars, pinned columns,
+and quick-add controls retain their existing ownership. No data/API changes.
+
+Focused verification: `tests/chart-order-scroll-fade.spec.ts` covers start, middle,
+end, return-to-start, no overflow after resize, sticky header geometry, footer
+geometry, and pointer pass-through. Release preflight results are recorded in the PR.
