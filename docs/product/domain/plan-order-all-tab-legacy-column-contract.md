@@ -1188,6 +1188,8 @@ When an upstream input such as `head/kg당`, `1회당`, or `성분량` changes:
 
 ### Downstream handoff
 
+- After successful single or selected order confirmation, stay on the current chart and encounter. Close the confirmation dialog, clear selection, and refresh confirmed order/work/billing state in place, including retry or response-recovery success. Downstream task creation does not automatically navigate to its work screen; users open that screen explicitly.
+
 - Send the confirmed `실조제량` as the per-administration preparation or administration instruction.
 - Also send the derived full-course amount calculated as `실조제량 × 총횟수` when downstream work needs the total required amount.
 - Dispensing and treatment operators can read these confirmed values but cannot edit them in place.

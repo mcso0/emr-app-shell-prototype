@@ -10159,7 +10159,6 @@ function OrderArea({
   loading,
   onCollapsedChange,
   onNavigateToBilling,
-  onNavigateToDispensing,
   orderGroups,
   writeDisabled,
 }: {
@@ -10170,7 +10169,6 @@ function OrderArea({
   loading: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
   onNavigateToBilling?: (invoiceId: string) => void;
-  onNavigateToDispensing?: () => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
@@ -12026,28 +12024,6 @@ function OrderArea({
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
       toast.success("Order 확정 상태를 저장했어요.");
-      const confirmedOrderIds = new Set([
-        ...confirmedRootOrderIds,
-        ...result.orderActions.map((action) => action.orderId),
-      ]);
-      const hasDispensingTask =
-        result.tasks?.some(
-          (task) =>
-            task.destinationModule === "dispensing" &&
-            typeof task.orderId === "string" &&
-            confirmedOrderIds.has(task.orderId),
-        ) ??
-        false;
-      const hasDispensingOrder =
-        result.rows?.some(
-          (row) =>
-            confirmedOrderIds.has(row.orderId) &&
-            (row.destinationModule === "dispensing" ||
-              row.appliedSnapshot?.destinationModule === "dispensing"),
-        ) ?? false;
-      if (hasDispensingTask || hasDispensingOrder) {
-        onNavigateToDispensing?.();
-      }
       return true;
     };
 
@@ -14754,16 +14730,6 @@ export function ChartContent({
   }
 
   const currentBundle = effectiveBundle;
-  const navigateToDispensing = () => {
-    const href = buildWorkspaceSurfaceRoute({
-      moduleId: "dispensing",
-      params: { encounterId: currentBundle.encounter.id },
-      search: searchParams,
-      workspaceId,
-    });
-
-    onNavigateWorkspaceSurface?.(href, "dispensing");
-  };
   const navigateToBilling = (invoiceId: string) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "billing",
@@ -15499,7 +15465,6 @@ export function ChartContent({
               loading={orderLoading}
               onCollapsedChange={setOrderPanelCollapsed}
               onNavigateToBilling={navigateToBilling}
-              onNavigateToDispensing={navigateToDispensing}
               orderGroups={orderGroups}
               writeDisabled={chartWriteDisabled}
             />
