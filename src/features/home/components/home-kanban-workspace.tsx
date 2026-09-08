@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
-import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon } from "@/components/icons";
+import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, ClockIcon, UserIcon } from "@/components/icons";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { EmrDateNavigator } from "@/components/emr/subpanel";
@@ -203,7 +203,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     </header>
     {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
     {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
-      <div className={cn(styles.workspaceBody, view === "mine" && styles.personalWorkspaceBody)}>
+      <div className={cn(styles.workspaceBody, (view === "mine" || preferences.layout === "list") && styles.listWorkspaceBody)} data-testid="home-workspace-body">
         <div className={styles.scrollFrame}>
         <div ref={scrollRef} onScroll={rememberScroll} className="h-full min-h-0 min-w-0 overflow-auto" data-testid="home-workspace-scroll">
           {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
@@ -347,11 +347,11 @@ function HomeListGroup({ id, label, tasks, date, collapsed, onToggle, onHide, on
         <div role="cell"><HomeTaskState task={task} /></div>
         <div role="cell" className={styles.identity} title={`${task.patientName || "환자 미지정"} · ${task.clientName || "보호자 미지정"}`}><strong>{task.patientName || "환자 미지정"}</strong><span>· {task.clientName || "보호자 미지정"}</span></div>
         <div role="cell"><EmrSidePanelTypeBadge label={task.receptionType || "외래"} /></div>
-        <div role="cell"><EmrSidePanelTypeBadge label={typeLabel(task)} /></div>
+        <div role="cell">{typeLabel(task)}</div>
         <div role="cell" className={styles.taskDescription}><span title={task.queueCardSecondLineText || task.title}>{task.queueCardSecondLineText || task.title}</span><HomeTaskSignals task={task} date={date} /></div>
-        <div role="cell" className={styles.secondary} title={`${task.requestedAt} · ${elapsed(task)} 경과`}>{requestTime(task)}</div>
-        <div role="cell" className={styles.secondary} title={taskOwners(task).join(", ")}>{taskOwners(task).join(", ")}</div>
-        <div className={styles.rowAction}><Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onNavigate(task); }}>업무보러가기</Button></div>
+        <div role="cell" className={styles.secondary} title={`${task.requestedAt} · ${elapsed(task)} 경과`}><ClockIcon aria-hidden="true" /><span>{requestTime(task)}</span></div>
+        <div role="cell" className={styles.secondary} title={taskOwners(task).join(", ")}><UserIcon aria-hidden="true" /><span>{taskOwners(task).join(", ")}</span></div>
+        <div className={styles.rowAction}><Button variant="outline" size="xs" onClick={(event) => { event.stopPropagation(); onNavigate(task); }}>업무보러가기<ChevronRightIcon aria-hidden="true" /></Button></div>
       </div>)}
       {tasks.length === 0 && <p className="emr-text-body py-4 text-muted-foreground">해당 업무가 없습니다</p>}
     </div>}

@@ -17,7 +17,6 @@
 .dateControl { width: 230px; height: 34px; flex-shrink: 0; gap: 4px; border: 1px solid var(--emr-border-default); border-radius: 8px; padding: 2px; background: var(--emr-surface-panel); }
 .dateControl > button { height: 28px; min-height: 28px; }
 .workspaceBody { display: flex; flex: 1; min-height: 0; gap: 16px; padding: 8px 16px 16px 48px; }
-.personalWorkspaceBody { padding-right: 48px; }
 .board { display: grid; height: 100%; min-height: 256px; align-items: start; gap: 16px; }
 .column, .listGroup, .hiddenWork { border: 1px solid var(--emr-border-default); border-radius: 12px; background: var(--emr-surface-panel); }
 .column { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
@@ -38,19 +37,44 @@
 .periodTitle { display: flex; align-items: center; gap: 4px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--emr-text-secondary); }
 .periodTitle span { font-size: 12px; color: var(--emr-text-tertiary); }
 .listGroup { min-width: 1098px; overflow: hidden; flex-shrink: 0; }
-.rows { display: flex; flex-direction: column; gap: 8px; padding: 8px 16px 12px; }
-.row { position: relative; display: grid; grid-template-columns: 80px 120px 48px 80px minmax(240px, 1fr) 120px 120px; column-gap: 24px; align-items: center; height: 36px; flex-shrink: 0; border-radius: 8px; cursor: pointer; font-size: 14px; line-height: 20px; color: var(--emr-text-primary); }
-.row:hover, .row:focus-within { background: var(--emr-state-hover); }
-.row:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: 2px; }
-.row > [role="cell"] { min-width: 0; overflow: hidden; }
-.identity { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
-.identity strong, .identity span { overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
-.identity span, .secondary { color: var(--emr-text-secondary); white-space: nowrap; text-overflow: ellipsis; }
-.taskDescription { display: flex; align-items: center; gap: 6px; }
+.rows { display: flex; flex-direction: column; gap: var(--clair-spacing-8); padding: var(--clair-spacing-8) var(--clair-spacing-16) var(--clair-spacing-12); }
+/* Shared by hospital list and both personal-work tabs. */
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--clair-spacing-80) calc(var(--clair-spacing-40) * 3) var(--clair-spacing-48) var(--clair-spacing-80) minmax(calc(var(--clair-spacing-80) * 3), 1fr) calc(var(--clair-spacing-40) * 3) calc(var(--clair-spacing-40) * 3);
+  column-gap: var(--clair-spacing-24);
+  align-items: center;
+  min-height: var(--clair-control-height-lg);
+  padding: var(--clair-spacing-8);
+  flex-shrink: 0;
+  border-radius: var(--clair-radius-md);
+  cursor: pointer;
+  font-size: var(--clair-typography-body-2-normal-font-size);
+  font-weight: var(--clair-typography-body-2-normal-font-weight);
+  line-height: var(--clair-typography-body-2-normal-line-height);
+  letter-spacing: var(--clair-typography-body-2-normal-letter-spacing);
+  color: var(--clair-color-atomic-neutral-800);
+}
+.row:hover, .row:focus-within { background: var(--clair-color-atomic-black-alpha-6); }
+.row:focus-visible { outline: var(--clair-spacing-2) solid var(--emr-state-selected-border); outline-offset: var(--clair-spacing-2); }
+.row > [role="cell"] { display: flex; align-items: center; min-width: 0; overflow: hidden; }
+.identity { display: flex; align-items: center; gap: var(--clair-spacing-4); white-space: nowrap; color: var(--clair-color-atomic-neutral-700); }
+.identity strong, .identity span { overflow: hidden; text-overflow: ellipsis; font-weight: inherit; }
+.secondary { display: flex; align-items: center; gap: var(--clair-spacing-6); }
+.secondary svg { width: var(--clair-spacing-16); height: var(--clair-spacing-16); flex-shrink: 0; color: var(--clair-color-atomic-neutral-500); }
+.secondary span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.row > [role="cell"]:first-child > span { font-weight: inherit; color: var(--clair-color-atomic-neutral-700); }
+.taskDescription { display: flex; align-items: center; gap: var(--clair-spacing-6); }
 .taskDescription > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .taskDescription > div { flex-shrink: 0; }
-.rowAction { position: absolute; right: 0; top: 0; bottom: 0; display: flex; align-items: center; padding: 0 8px 0 24px; opacity: 0; pointer-events: none; background: linear-gradient(90deg, transparent, var(--emr-surface-panel) 20%); border-radius: 0 8px 8px 0; }
+.rowAction { position: absolute; right: var(--clair-spacing-6); top: var(--clair-spacing-6); display: flex; align-items: center; opacity: 0; pointer-events: none; }
 .row:hover .rowAction, .row:focus-within .rowAction { opacity: 1; pointer-events: auto; }
+.listWorkspaceBody { padding-inline: var(--clair-spacing-48); }
+.listGroup .groupHeader h2 { gap: var(--clair-spacing-6); font-weight: var(--clair-typography-body-2-normal-font-weight); letter-spacing: var(--clair-typography-body-2-normal-letter-spacing); color: var(--clair-color-atomic-neutral-800); }
+.listGroup .groupHeader h2 > span:last-child { font-size: inherit; line-height: inherit; color: var(--clair-color-atomic-neutral-500); }
+.listGroup .groupHeader h2 > span:first-child:not(:last-child) { margin-right: 0; }
+.listGroup .groupActions svg { width: var(--clair-spacing-16); height: var(--clair-spacing-16); }
 .hiddenWork { width: 220px; height: fit-content; flex-shrink: 0; }
 .hiddenHeader { height: 45px; padding-bottom: 1px; }
 .hiddenHeader h2 { font-weight: 500; letter-spacing: 0.196px; color: var(--clair-color-atomic-neutral-800); }
@@ -75,3 +99,5 @@
 .scrollFrame { position: relative; flex: 1; min-width: 0; min-height: 0; }
 .scrollFade { position: absolute; top: 0; right: 0; bottom: 0; width: var(--clair-spacing-32); pointer-events: none; background: linear-gradient(to right, transparent, var(--emr-surface-workspace)); opacity: 0; }
 .scrollFade[data-visible="true"] { opacity: 1; }
+
+.listGroup .groupHeader h2 > span:first-child:not(:last-child), .listGroup .groupHeader h2 > span:first-child svg { width: var(--clair-spacing-16); height: var(--clair-spacing-16); }
