@@ -207,7 +207,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             </section>)}
           </div>}
         </div>
-        {(view === "hospital" || hiddenTypes.length > 0) && <section className={styles.hiddenWork} aria-label="숨김 업무">
+        {hiddenTypes.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 업무">
           <header className={styles.groupHeader}><h2>숨김 업무 <span>{hiddenTypes.length}</span></h2><Button variant="ghost" size="xs" disabled={!hiddenTypes.length} onClick={() => setHidden([])}>모두 표시</Button></header>
           <div className={styles.hiddenRows}>{hiddenTypes.length ? hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><HomeWorkTypeIcon id={type.id} /><span>{type.label}</span><Button variant="ghost" size="icon-xs" aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon /></Button></div>) : <p className="emr-text-metadata py-3 text-muted-foreground">숨긴 업무가 없습니다.</p>}</div>
         </section>}
