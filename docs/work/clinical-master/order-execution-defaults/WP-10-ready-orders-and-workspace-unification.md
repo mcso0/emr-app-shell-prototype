@@ -83,6 +83,46 @@ standalone rollback. Use the compatible Ready candidate or a reviewed forward fi
 
 ## Evidence
 
+### 2026-09-08 production chart-read correction
+
+After PR #726 was merged and the approved normalization packet was applied,
+the user requested actual chart verification and correction of remaining defects.
+The internal browser reproduced `Order 추가` loading failure: all 494 atomic
+RPC rows had null `appliedAmountBasis`, causing the strict application mapper to
+reject the entire 524-row response. Admin reads had masked this because their
+existing compact-pricing rule defaults to `fixed_order_price`.
+
+- Migration `20260908110612_wp10_chart_price_basis_projection` was applied to the
+  same approved synthetic verification project. Three existing chart read
+  functions now project the same effective default while retaining explicitly
+  authored bases such as `unit_price`. The future WP-10 initializer writes its
+  chosen fixed-price basis explicitly. No catalog amount, revision, set pin,
+  stored order snapshot, role or permission was changed by this migration.
+- The exact-packet local rollback harness passed, including all four 524-row
+  chart responses, compact/null/explicit-unit/snake-case pricing, unchanged
+  amounts, row-state preservation, packet rejection, rollback and receipt retry.
+  The app mapper remains strict: missing projected basis still fails closed.
+- Remote before/after fingerprints matched across all 181 covered entries and
+  clinical history. The four changed functions retained ACL, owner, security
+  mode, search path, volatility and parallel attributes. Advisor finding counts
+  were unchanged. Independent bounded review found no blocker.
+- The actual repaired Cheongdam RPC returned 494 atomic rows plus 30 sets with
+  no missing basis; the deployed app mapper accepted all 524. The internal
+  browser showed 479 patient-species-eligible choices rather than a loading error.
+- In the existing synthetic chart, new 초진 and 요화학 비중 검사 candidates both
+  displayed `확정 대기`. Responsible clinician, occurrence, timing, instruction,
+  urine specimen, test item, collection condition and the synthetic result
+  profile resolved. Editing the new consultation's occurrence/instruction saved
+  to the DB. Existing six order rows remained byte-equivalent.
+- Both agent-created candidates were removed through the normal UI and are
+  retained as `cancelled` / `draft_candidate_removed` audit history. The chart
+  returned to its original six visible rows; no confirmation, actual result or
+  billing action was performed. Existing legacy drafts were preserved.
+- Focused app contracts: 58 passed. Type checking, lint (zero errors; five
+  existing warnings), production build, secret scan and docs checks passed.
+  This DB-only runtime correction uses the existing compatible Production app.
+  The repository follow-up PR still follows the exact-candidate merge gate.
+
 - Base: `origin/main` 2e095d5576b5f916640f7b7df720454280c83609 in isolated worktree.
 - Initial remote read: master 575; local-only catalog rows 19/0/12/0 in the four
   listed workspaces; no mutation performed at intake.
