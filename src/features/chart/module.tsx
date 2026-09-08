@@ -177,6 +177,7 @@ import {
   type ChartHistoryRow,
   type ChartOrderGroup,
 } from "@/features/chart/data";
+import { ChartDiagnosisHistoryItem } from "@/features/chart/components/chart-diagnosis-history-item";
 import { ChartPreconsultationContextPanel } from "@/features/chart/preconsultation-context-panel";
 import {
   readChartLiveEncounterHandoff,
@@ -2160,22 +2161,6 @@ function ChartInlineHistoryPanel({
         : priorDiagnosisRows,
     [bundle, normalizedQuery, priorDiagnosisRows],
   );
-  const historyGroups = useMemo(
-    () =>
-      visibleRows.reduce<Array<{ date: string; rows: ChartHistoryRow[] }>>(
-        (groups, row) => {
-          const date = getShortDateTime(
-            row.encounter.checkedInAt ?? row.encounter.createdAt,
-          ).slice(0, 8);
-          const currentGroup = groups.at(-1);
-          if (currentGroup?.date === date) currentGroup.rows.push(row);
-          else groups.push({ date, rows: [row] });
-          return groups;
-        },
-        [],
-      ),
-    [visibleRows],
-  );
 
   return (
     <ChartWorkspacePanel
@@ -2260,27 +2245,24 @@ function ChartInlineHistoryPanel({
                 : "연결 상태를 확인한 뒤 다시 시도해 주세요."}
             </EmrInlineAlert>
           ) : null}
-          {historyGroups.map((group) => (
-            <EmrContentHistoryGroup
-              key={group.date}
-              collapsed={false}
-              count={group.rows.length}
-              dataTestId={`chart-inline-history-group-${group.date}`}
-              label={group.date}
-              onToggle={() => undefined}
-            >
-              {group.rows.map((row) => (
-                <ChartHistoryItem
+          <div data-testid="chart-diagnosis-history-list">
+            {visibleRows.map((row) => {
+              const eventAt = row.encounter.checkedInAt ?? row.encounter.createdAt;
+              return (
+                <ChartDiagnosisHistoryItem
                   key={row.encounter.id}
-                  bundle={bundle}
-                  mode="diagnosis"
-                  row={row}
-                  selected={row.encounter.id === selectedEncounterId}
+                  dateLabel={getShortDateTime(eventAt).slice(0, 8)}
+                  diagnosisNames={row.diagnoses.map((diagnosis) => diagnosis.diagnosisText)}
+                  encounterId={row.encounter.id}
                   onSelect={() => onSelectEncounter(row.encounter.id)}
+                  query={normalizedQuery}
+                  selected={row.encounter.id === selectedEncounterId}
+                  timeLabel={getShortClockTime(eventAt)}
+                  veterinarianName={getChartHistoryVeterinarianName(row, bundle)}
                 />
-              ))}
-            </EmrContentHistoryGroup>
-          ))}
+              );
+            })}
+          </div>
           {!visibleRows.length &&
           historyStatus !== "loading" &&
           historyStatus !== "error" ? (

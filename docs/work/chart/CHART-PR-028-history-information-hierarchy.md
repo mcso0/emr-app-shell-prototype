@@ -1,6 +1,6 @@
 ---
 id: "CHART-PR-028"
-status: "implemented"
+status: "in_progress"
 area: "chart"
 priority: "P0"
 target_pr: "Browser comments / diagnosis and chart history information hierarchy"
@@ -9,7 +9,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
 dependencies:
   - "CHART-PR-025"
-updated: "2026-08-31"
+updated: "2026-09-08"
 ---
 
 # Diagnosis And Chart History Information Hierarchy
@@ -80,3 +80,21 @@ Give the inline `History / 진단이력` panel and the expanded `차트이력` a
 ## Remote Boundary
 
 This work changes only client presentation and focused regression coverage. The existing live history RPC, route permission boundary, database rows, and production deployment remain unchanged until separately authorized delivery work.
+
+
+## 2026-09-08 Approved B Layout Follow-up
+
+This section supersedes the inline diagnosis-summary/date-group presentation above; the completed aside/read-only/data boundary work remains unchanged.
+
+- Approval: user selected the B prototype and explicitly requested implementation, tests, commit/push/PR, merge to origin/main, and production deployment after passing checks.
+- Canonical design: [History B specification](../../design/screens/chart/specs/diagnosis-history-list.md).
+- Scope: per-encounter flat records with clock/date/time, explicit 차트 보기, up to three Neutral 100 secondary diagnosis badges, inline ghost expand/collapse, one real primary veterinarian, and straight 1px dividers.
+- Preserve History title/toolbar, query matching (including hidden diagnoses and veterinarian), active-encounter exclusion, current URL/queue, historical read-only behavior, and all server/DB boundaries.
+- Deferred: multiple participant names/+N명 because the actual history projection exposes only one primary veterinarian; no synthetic names or inferred participants enter app code.
+- Isolation: clean worktree from origin/main; original checkout and unrelated WIP preserved. No migration, role, permission, provider, or remote data writes.
+- Delivery target: production/main for this exact UI scope, using the existing Vercel project/environment configuration without printing values. Stop on failing mandatory checks, preview readiness, scope drift, or smoke failure. Rollback candidate: pre-release origin/main / prior Ready production deployment, to be recorded with the candidate.
+- PASS: focused browser History regression, including three-chip disclosure/collapse, Neutral 100 styling, long/empty diagnoses, hidden-diagnosis/veterinarian search, keyboard access, preserved toolbar, active URL/queue, historical read-only mode, and draft autosave before history transition with restoration on return.
+- PASS: history server and SOAP autosave coordinator tests (13 cases); SOAP response-loss reconciliation and order autosave conflict/failure browser regressions (3 cases).
+- PASS: repository lint, focused lint after test changes, TypeScript, production build, docs links, Korean UX copy, and whitespace checks. Secret scan is required again against staged files before commit.
+- Rollback baseline: origin/main `f35f9a347c0ec9dcdc46c95802b55e048780aa7e`; Ready production deployment `dpl_JDT4WYPsMccbUBD855pywjHuUFev`.
+- Delivery checks pending: exact-candidate Release Check, Ready Preview, protected PR merge, matching Ready Production, `/login` route probe, and available authenticated read-only History smoke. No production clinical writes are part of smoke.

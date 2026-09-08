@@ -2236,6 +2236,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   });
   const oldEncounterId = "encounter-history-old";
   const oldEncounterNo = "E-260701-OLD001";
+  const emptyEncounterId = "encounter-history-empty";
 
   await grantCheongdamWorkspaceAccess(page);
   await page.route(
@@ -2290,13 +2291,60 @@ test("live patient chart history shows every encounter and keeps past charts rea
                 { diagnosisText: "슬개골 탈구 의심" },
                 { diagnosisText: "골관절염" },
                 { diagnosisText: "십자인대 손상 감별" },
+                { diagnosisText: "이첨판 점액종성 변성에 의한 만성 판막 질환과 관련된 추적 관찰" },
+                { diagnosisText: "치주염" },
+                { diagnosisText: "외이염" },
               ],
               soapNote: { assessment: "보행 상태 추적" },
             },
+            {
+              encounter: {
+                ...common,
+                id: emptyEncounterId,
+                encounterNo: "E-260701-EMPTY",
+                visitPurpose: "경과 확인",
+                status: "completed",
+                checkedInAt: "2026-07-01T05:00:00.000Z",
+              },
+              diagnoses: [],
+              veterinarianName: "이수지",
+            },
           ],
           nextCursor: null,
-          totalCount: 2,
+          totalCount: 3,
         }),
+      });
+    },
+  );
+
+  const savedSoapByEncounter = new Map<string, Record<string, unknown>>();
+  const soapWriteEncounterIds: string[] = [];
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/soap-notes**`,
+    async (route) => {
+      const request = route.request();
+      const encounterId = request.method() === "GET"
+        ? new URL(request.url()).searchParams.get("encounterId")!
+        : request.postDataJSON().encounterId;
+      if (request.method() === "PATCH") {
+        soapWriteEncounterIds.push(encounterId);
+        savedSoapByEncounter.set(encounterId, {
+          id: `soap-${encounterId}`,
+          encounterId,
+          authorUserId: "user-vet",
+          subjective: "",
+          objective: "",
+          assessment: "",
+          plan: "",
+          blockDocument: request.postDataJSON().blockDocument,
+          status: "autosaved",
+          createdAt: "2026-07-01T06:00:00.000Z",
+          updatedAt: "2026-07-01T07:00:00.000Z",
+        });
+      }
+      await route.fulfill({
+        status: 200,
+        json: { ok: true, status: 200, auditRecorded: true, soapNote: savedSoapByEncounter.get(encounterId) ?? null },
       });
     },
   );
@@ -2328,7 +2376,53 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(oldHistoryItem).not.toContainText("26.07.01 15:00");
 
   await expect(inlineHistoryItem).toContainText("15:00");
-  await expect(inlineHistoryItem).toContainText("슬개골 탈구 의심 외 2건");
+  const diagnosisChips = inlineHistoryItem.locator('[data-slot="badge"]');
+  await expect(diagnosisChips).toHaveCount(3);
+  await expect(diagnosisChips.first()).toHaveText("슬개골 탈구 의심");
+  await expect(diagnosisChips.first()).toHaveCSS("background-color", "rgb(245, 245, 245)");
+  await expect(diagnosisChips.first()).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
+  await expect(inlineHistoryItem).toHaveCSS("border-bottom-width", "1px");
+  await expect(inlineHistoryItem).toHaveCSS("border-radius", "0px");
+  await expect(inlineHistoryItem).toHaveCSS("box-shadow", "none");
+  await expect(inlineHistoryItem.getByRole("button", { name: "+3개 진단" })).toBeVisible();
+  // Disclosure is keyboard-operable and does not switch the displayed encounter.
+  await inlineHistoryItem.getByRole("button", { name: "+3개 진단" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(diagnosisChips).toHaveCount(6);
+  const collapse = inlineHistoryItem.getByRole("button", { name: "접기", exact: true });
+  await expect(collapse).toBeFocused();
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await page.getByLabel("진단 이력 검색").hover();
+  await expect(collapse).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(0);
+  const longChip = diagnosisChips.nth(3);
+  expect(await longChip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await collapse.click();
+  await expect(diagnosisChips).toHaveCount(3);
+
+  const emptyItem = page.getByTestId(`chart-diagnosis-history-item-${emptyEncounterId}`);
+  await expect(emptyItem).toContainText("진단 기록 없음");
+  await expect(emptyItem.locator('[data-slot="badge"]')).toHaveCount(0);
+  const textStarts = await emptyItem.evaluate((element) => {
+    const textX = (text: string) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        if (node.textContent?.includes(text)) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          return range.getBoundingClientRect().x;
+        }
+      }
+      return null;
+    };
+    return [textX("진단 기록 없음"), textX("담당")];
+  });
+  expect(textStarts[0]).not.toBeNull();
+  expect(textStarts[0]).toBe(textStarts[1]);
+  await expect(page.getByTestId("chart-diagnosis-history-list").locator(":scope > article")).toHaveCount(2);
+  // The original toolbar remains present; no new footer is introduced.
+  await expect(page.getByLabel("차트 이력 종류")).toBeVisible();
   await expect(inlineHistoryItem).toContainText("담당 이수지");
   await expect(inlineHistoryItem).not.toContainText("완료");
   await expect(inlineHistoryItem).not.toContainText(oldEncounterNo);
@@ -2337,8 +2431,12 @@ test("live patient chart history shows every encounter and keeps past charts rea
   ).toHaveCount(0);
 
   const diagnosisHistorySearch = page.getByLabel("진단 이력 검색");
-  await diagnosisHistorySearch.fill("십자인대 손상 감별");
+  await diagnosisHistorySearch.fill("치주염");
   await expect(inlineHistoryItem).toBeVisible();
+  await expect(diagnosisChips).toHaveCount(6);
+  await expect(inlineHistoryItem.getByText("치주염", { exact: true })).toBeVisible();
+  await diagnosisHistorySearch.fill("이수지");
+  await expect(emptyItem).toBeVisible();
   await diagnosisHistorySearch.fill(oldEncounterNo);
   await expect(inlineHistoryItem).toHaveCount(0);
   await expect(page.getByTestId("chart-history-empty-state")).toContainText(
@@ -2347,7 +2445,13 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await diagnosisHistorySearch.clear();
   await expect(inlineHistoryItem).toBeVisible();
 
-  await inlineHistoryItem.click();
+  const soapParagraph = page.getByLabel("SOAP 블록 문서")
+    .locator('.bn-block-content[data-content-type="paragraph"]').first();
+  await expect(page.getByLabel("SOAP 블록 문서").locator('[contenteditable="true"]').first()).toBeEditable();
+  await soapParagraph.click();
+  await page.keyboard.press("End");
+  await page.keyboard.insertText(" 이력 전환 직전 작성한 기록");
+  await inlineHistoryItem.getByRole("button", { name: "차트 보기", exact: true }).click();
 
   await expect(page).toHaveURL(
     new RegExp(`encounterId=${current.encounter.id}`),
@@ -2360,6 +2464,9 @@ test("live patient chart history shows every encounter and keeps past charts rea
   ).toBeVisible();
   await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
 
+  await expect.poll(() => soapWriteEncounterIds.length).toBeGreaterThan(0);
+  expect(soapWriteEncounterIds.every((id) => id === current.encounter.id)).toBe(true);
+  expect(JSON.stringify(savedSoapByEncounter.get(current.encounter.id))).toContain("이력 전환 직전 작성한 기록");
   await currentHistoryItem.click();
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
     0,
@@ -2367,6 +2474,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(
     page.getByText(current.encounter.encounterNo).first(),
   ).toBeVisible();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이력 전환 직전 작성한 기록");
 });
 
 test("active chart context bar previews actual profiles and saves current encounter vitals", async ({
