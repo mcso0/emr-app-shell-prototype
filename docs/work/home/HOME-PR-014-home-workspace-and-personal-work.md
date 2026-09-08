@@ -128,6 +128,13 @@ Isolated branch `codex/my-work-today-only` starts at `630d3cd02a31c248401615a338
 
 Ten Home browser tests passed, including saved-date API assertions and existing geometry/navigation tests. Local secret/docs/UX copy/diff checks and lint passed (five existing unrelated lint warnings); TypeScript passed. Production build passed with the existing docs-reader tracing warning. Remote release evidence follows in the PR. Previous Ready Production rollback deployment: `dpl_2edNzaBrBuj79d3z8FyeZ3h6BxP8`.
 
+
+## Personal Work Balanced Inset — 2026-09-08
+
+승욱 approved matching personal content right padding to the existing 48px left/header inset, followed by commit/push/PR/main and Production delivery. A Home-local class applies only to 내 업무; hospital content retains 16px right padding. No query, data, shared component or dependency change. Base/rollback commit: `077ad7202fb5a2015cceee40869a2190a47dc19e`; previous Ready Production: `dpl_3nAAf7NGL9N6CWXbihza9FjC8Szi`. Verify existing Home tests, personal/hospital inset geometry and release preflight. Stop on failed gates, candidate drift or failed smoke; revert only this change if needed. Exact release evidence belongs to the PR.
+
+Local verification: all 10 existing Home browser tests passed; personal screenshot confirms balanced insets and header alignment. Secrets/docs/UX copy/diff/lint/TypeScript/build passed. Existing five unrelated lint warnings and docs-reader build tracing warning remain. Final remote checks and authenticated Production geometry are recorded in the PR.
+
 ## Empty Hidden Work Panel — 2026-09-08
 
 승욱 requested hiding the entire 숨김 업무 panel when no work types are hidden, then authorized commit/push/PR/origin-main merge and Production deployment. Render the panel only when `hiddenTypes.length > 0`; existing hide/restore preferences and panel geometry remain intact. The flex body reclaims the removed panel space.

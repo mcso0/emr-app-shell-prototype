@@ -188,7 +188,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     </header>
     {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
     {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
-      <div className={styles.workspaceBody}>
+      <div className={cn(styles.workspaceBody, view === "mine" && styles.personalWorkspaceBody)}>
         <div ref={scrollRef} onScroll={rememberScroll} className="min-h-0 min-w-0 flex-1 overflow-auto" data-testid="home-workspace-scroll">
           {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
           view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
