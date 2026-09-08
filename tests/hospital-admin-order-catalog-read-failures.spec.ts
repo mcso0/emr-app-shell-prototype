@@ -286,6 +286,34 @@ test("chart preserves explicit null range basis for non-range sets without accep
   }
 });
 
+test("chart requires a projected price basis while admin resolves compact fixed-price rules", async () => {
+  const admin = createSupabaseOrderCatalogGateway({ async rpc() {
+    return { data: [{ ...persistedRow(), pricing_rule: { priceKrw: 0 } }], error: null };
+  } });
+  const adminResult = await admin.listAdminCatalog({ workspaceId });
+  expect(adminResult).toMatchObject({ ok: true, items: [{
+    pricingRule: { priceBasis: "fixed_order_price", priceKrw: 0 },
+  }] });
+  const fixture = await createMockOrderCatalogGateway().listChartSearch({ workspaceId });
+  if (!fixture.ok) throw new Error(fixture.error);
+  const row = fixture.rows.find(candidate => candidate.rowType === "individual")!;
+  for (const basis of [null, "fixed_order_price", "unit_price"]) {
+    const gateway = createSupabaseOrderCatalogGateway({ async rpc() {
+      return { data: [{ ...row, appliedSnapshot: {
+        ...row.appliedSnapshot, appliedAmountBasis: basis, appliedPriceKrw: 0,
+      } }], error: null };
+    } });
+    const result = await gateway.listChartSearch({ workspaceId });
+    if (basis === null) {
+      expect(result).toEqual({ ok: false, status: 500, error: "catalog_response_invalid" });
+    } else {
+      expect(result).toMatchObject({ ok: true, rows: [{ appliedSnapshot: {
+        appliedAmountBasis: basis, appliedPriceKrw: 0,
+      } }] });
+    }
+  }
+});
+
 test("chart rejects missing or contradictory catalog and preset identities", async () => {
   const fixture = await createMockOrderCatalogGateway().listChartSearch({
     workspaceId,
