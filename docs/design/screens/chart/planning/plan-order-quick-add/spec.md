@@ -6,7 +6,7 @@ status: "implemented"
 area: "chart"
 tags: [chart, plan-order, quick-add, prototype]
 related_work: [CHART-PR-035]
-last_updated: "2026-09-07"
+last_updated: "2026-09-08"
 ---
 
 # Plan/Order Quick Add
@@ -64,37 +64,34 @@ sharing is separately authorized as recorded above.
 ## Layout contract
 
 - With zero orders, hide the entire quick-add composer. Keep the existing empty-state
-  `+ Order` button and open the same catalog dialog as the toolbar `+ Order`.
+  `+ Order` button and open the same catalog dialog as the toolbar `오더 상세`.
   Show quick-add only after the first order is added; hide it again if the last
   order is removed. Use total order count, not the count in the selected category.
-- Idle: a 40px composer row immediately after the last visible order, aligned
-  with the `분류` column. Visible label: `+ Order 추가`, without helper text.
-  Left-align the category header and category values. This placement and copy
-  supersede the initial proposal per 승욱’s review.
-- Open: a 36px search input in the same composer, width measured from the `분류` column start to the right edge of the
-  pinned `Order 명` column (332px in the reviewed prototype), capped by the available panel width.
-  The idle button and result surface share this width. Recompute from actual
-  header geometry on layout/scroll changes, rather than using a 460px cap. The composer is outside the horizontally scrolling
-  column canvas; it never creates a new billable row.
-- Long list: clamp the same composer below the scrollable order viewport and
-  above the billing footer. Exactly one composer is visible. Reserve a band measured from the actual control
-  and shared spacing tokens (the prototype used 54px); keep its height stable when opening
-  so the input never covers visible data; the horizontal scrollbar remains in
-  the data viewport above this band. Rejoin the final row when it is visible.
-- During continuous entry, keep the composer anchor stable where practical.
-  Scroll only the order viewport to reveal the newest appended row in default
-  order. Never scroll the entire chart unexpectedly.
+- Idle: a content-width `+ Order` button aligned 12px inside the `분류` column,
+  following the last visible row and clamped to the order viewport bottom.
+- Open: replace that button with the shared Input and close control. Measure the
+  span from `분류` through pinned `Order 명`, with 12px inset on both sides.
+  Input and popup share this width; recompute from real header geometry.
+- Opening first scrolls only the order table to its bottom, then focuses with
+  `preventScroll`. Keep the input's vertical position fixed while rows scroll.
+  Default-order additions reveal the bottom again; explicit sort remains authoritative.
+- Dense/overflow tables use conditional trailing clearance so the last real row
+  can clear the input. Only while input is open, draw an opaque full-table-width
+  surface beneath it, with a thin top border. Keep the horizontal scrollbar clear.
+  Sparse tables have neither a permanent dock nor reserved bottom band.
+- Cancelling without an addition restores the table's prior scroll position.
+  Detail/set-dialog handoff belongs to the same entry session. After additions,
+  retain the current scroll position when closing.
 - Result heading: `검색 결과` with the count immediately beside it (6px gap),
   e.g. `검색 결과 3건`. Do not separate the count at the far right. Hide the count
   before a query and on lookup error; use `0건` for a successful empty result.
   Hide the entire heading on lookup error too. Before typing, show only
-  `오더명 또는 청구명을 입력해 주세요.` above the detailed-search action.
+  `오더명 또는 청구명을 입력해 주세요.` without a detailed-search footer.
   Omit example terms and a repeated instructional title.
   Fit feedback states to their natural content height without a result scrollbar;
   constrain and scroll only actual result options when they overflow.
 - Results: floating surface aligned to the input, 6 visible candidates maximum
-  (48px each); scroll for more. Prefer below, flip above if it provides more
-  room. Clamp within the viewport. Do not push the billing footer or SOAP panels.
+  (48px each); scroll for more. Prefer above, with the shared popover collision behavior. Clamp within the viewport. Do not push the billing footer or SOAP panels.
 - Narrow workspace: retain the same category-column alignment; results fit the
   available width. Horizontal column scrolling stays independent.
 - Visual sources: Pretendard Variable; current `emr-foundation.css` and
@@ -103,7 +100,7 @@ sharing is separately authorized as recorded above.
 
 ## Search and selection
 
-1. With at least one order, click the quick-add row and focus the input immediately.
+1. With at least one order, click `+ Order`, reveal the table bottom, then focus the input.
    The input placeholder is `오더명·청구명 검색`. Before a query, show
    `오더명 또는 청구명을 입력해 주세요.` without examples or a repeated heading.
    With zero orders, use the existing empty-state catalog button first.
@@ -125,9 +122,9 @@ sharing is separately authorized as recorded above.
 7. Sets open existing configuration/preview before appending. Preserve entered
    search when cancelled; restore the composer focus. Do not invent set expansion
    or skip range/required-field choices.
-8. The `상세 오더 검색` entry uses a trailing right chevron (not an arrow)
+8. The small `상세 검색` ghost button sits at the result heading right and uses a trailing right chevron
    and carries the query into the same existing `ChartOrderCatalogDialog` opened
-   by the upper-right `+ Order` button. 승욱 explicitly confirmed this destination
+   by the upper-right `오더 상세` button. 승욱 explicitly confirmed this destination
    during prototype review; do not build a separate detailed-search dialog. Keep
    its existing multi-select/reconciliation semantics separate from quick append.
 9. If the selected item is hidden by the active table category, preserve the
@@ -135,16 +132,23 @@ sharing is separately authorized as recorded above.
    filters silently. Under sorting, use the existing sort; announce additions
    without claiming the new row is necessarily last.
 
+Catalog reuse is limited to the mounted actor/workspace/encounter scope. Reopen
+revalidates every time; there is no arbitrary TTL or shared global cache. Permission
+failure clears cached candidates; actor/header or encounter scope changes invalidate
+pending responses. A stale candidate cannot append during revalidation or failure.
+
 ## State matrix
 
 | State | Visible feedback | Behavior |
 | --- | --- | --- |
-| Zero orders / first add | Existing empty-state and toolbar `+ Order` | Same catalog dialog; no quick-add composer |
+| Zero orders / first add | Empty-state `+ Order` and toolbar `오더 상세` | Same catalog dialog; no quick-add composer |
 | Last order removed | Existing empty state restored | Close search/popover and hide composer |
 | Empty category, other orders exist | Category-empty guidance + quick-add | Visibility uses total order count |
 | Idle, at least one order | Quiet add row | No blank persisted item |
 | Open, empty query | Name/billing-name guidance | Input focused; no ranking claims |
-| Loading catalog | `오더를 불러오는 중입니다` | No selectable stale results |
+| Cold loading | Compact spinner and preparation text | No selectable results |
+| Warm revalidation | Cached results and compact status | Results remain visible but disabled until refreshed |
+| Refresh failure | Retained results and retry | Adding stays disabled; 401/403 clears cached results |
 | Results | Category, name, price; no secondary description | Click / arrows / Enter |
 | No match | `검색 결과가 없습니다` + full catalog | Preserve query; no create-new action |
 | Lookup error | Error + retry | Retry query; do not label empty |
