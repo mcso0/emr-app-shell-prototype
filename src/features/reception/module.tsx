@@ -4901,8 +4901,6 @@ function ScheduleToolbar({
     staffReadStatus === "idle" ||
     veterinarians.length === 0;
   const showingToday = operatingDate === todayDate;
-  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
 
   return (
     <div
@@ -5060,17 +5058,6 @@ function ScheduleToolbar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {!rightPanelOpen ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="우측 사이드 패널 열기"
-            onClick={() => setRightPanelOpen(true)}
-          >
-            <CdsNavigationSidebarIcon />
-          </Button>
-        ) : null}
       </div>
     </div>
   );

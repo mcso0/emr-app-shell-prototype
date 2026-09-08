@@ -520,7 +520,7 @@ test("reception renders the first-path workspace instead of the placeholder", as
 test("reception calendar toolbar icon actions use square 32px controls", async ({ page }) => {
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
 
-  for (const label of ["더보기", "우측 사이드 패널 열기"]) {
+  for (const label of ["더보기"]) {
     const button = page.getByRole("button", { name: label, exact: true });
 
     await expect(button).toBeVisible();
@@ -4681,7 +4681,7 @@ test("reception side-panel footer actions use the shared 32px control height", a
   }
 });
 
-test("reception detail footer close collapses the side panel while retaining the detail", async ({
+test("reception detail reopens through explicit queue selection after closing", async ({
   page,
 }) => {
   await page.goto(
@@ -4695,9 +4695,10 @@ test("reception detail footer close collapses the side panel while retaining the
   await expect(page).toHaveURL(/right=closed/);
   await expect(rightPanel).toHaveCount(0);
 
-  await page
-    .getByRole("button", { name: "우측 사이드 패널 열기", exact: true })
-    .click();
+  await expect(
+    page.getByRole("button", { name: "우측 사이드 패널 열기", exact: true }),
+  ).toHaveCount(0);
+  await page.getByTestId("patient-card-patient-haru").click();
   await expect(page.getByTestId("reception-right-panel")).toContainText(
     "접수 상세",
   );
