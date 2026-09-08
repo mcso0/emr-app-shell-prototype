@@ -72,7 +72,7 @@ export function ChartCollapsiblePanelGroup({
 
         return collapsedPanels.has(child.props.panelId)
           ? `${COLLAPSED_TRACK_PX}px`
-          : `minmax(${minimumWidth ?? 0}px, ${EXPANDED_TRACK_WEIGHT[child.props.panelId]}fr)`;
+          : `minmax(${minimumWidth ?? (child.props.panelId === "history" ? 305 : 240)}px, ${EXPANDED_TRACK_WEIGHT[child.props.panelId]}fr)`;
       })
       .join(" ");
   const gridTemplateColumns = getGridTemplateColumns(null);

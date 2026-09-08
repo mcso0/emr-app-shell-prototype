@@ -1,0 +1,116 @@
+.row {
+  --history-action-width: 74px;
+  --history-hover-surface: var(--clair-color-atomic-neutral-100);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  height: 40px;
+  min-width: 0;
+  padding: var(--clair-spacing-8);
+  border-radius: var(--clair-radius-atomic-8);
+  margin-bottom: 5px;
+}
+
+.row::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -3px;
+  height: 1px;
+  background: var(--clair-color-atomic-black-alpha-4);
+}
+
+.row:hover { background: var(--history-hover-surface); }
+
+.date {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--clair-spacing-4);
+  width: 68px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--clair-color-atomic-neutral-600);
+}
+
+.date, .badge, .more {
+  font-size: var(--emr-type-size-metadata);
+  font-weight: 500;
+  line-height: 16px;
+  letter-spacing: 0.3px;
+}
+
+.calendar { width: 12px; height: 12px; flex-shrink: 0; }
+.diagnoses {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: var(--clair-spacing-6);
+  height: 24px;
+}
+
+.row[data-actions-visible] .diagnoses,
+.row[data-tooltip-open] .diagnoses { margin-right: var(--history-action-width); }
+
+.row .badge, .measurement .badge {
+  display: inline-flex;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  min-width: 0;
+  height: 24px;
+  padding: var(--clair-spacing-4) var(--clair-spacing-6);
+  border: 0;
+  border-radius: var(--clair-radius-atomic-6);
+  background: var(--clair-color-atomic-black-alpha-4);
+  color: var(--clair-color-atomic-neutral-900);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.badgeText { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .more, .measurement .more {
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 24px;
+  padding: var(--clair-spacing-4) var(--clair-spacing-6);
+  border: 0;
+  border-radius: var(--clair-radius-atomic-8);
+  color: var(--clair-color-atomic-neutral-600);
+  background: var(--clair-color-atomic-black-alpha-4);
+  white-space: nowrap;
+}
+.badge strong, .tooltipList strong, .tooltipText strong { font-weight: 700; }
+.empty { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--emr-text-placeholder); }
+
+.action {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  right: 0;
+  width: calc(var(--history-action-width) + var(--clair-spacing-8));
+  padding-right: var(--clair-spacing-8);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-radius: 0 var(--clair-radius-atomic-8) var(--clair-radius-atomic-8) 0;
+  background: linear-gradient(to right, transparent 0, var(--emr-surface-panel) 8px, var(--emr-surface-panel) 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+.row:hover .action {
+  background: linear-gradient(to right, transparent 0, var(--history-hover-surface) 8px, var(--history-hover-surface) 100%);
+}
+.row[data-actions-visible] .action { opacity: 1; }
+.row[data-actions-visible] .view { pointer-events: auto; }
+.row .view { width: 66px; height: 24px; border-radius: var(--clair-radius-atomic-8); background: var(--emr-surface-panel); }
+.tooltipList { max-height: min(240px, calc(var(--available-height, 280px) - 24px)); max-width: 260px; overflow-y: auto; overscroll-behavior: contain; }
+.tooltipList, .tooltipText { white-space: normal; overflow-wrap: anywhere; }
+.measurement { position: absolute; left: 0; top: 0; display: flex; width: max-content; visibility: hidden; pointer-events: none; }
+
+@media (hover: none), (pointer: coarse) {
+  .row .diagnoses { margin-right: var(--history-action-width); }
+  .row .action { opacity: 1; }
+  .row .view { pointer-events: auto; }
+}

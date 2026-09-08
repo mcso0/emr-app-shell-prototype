@@ -2130,7 +2130,6 @@ function ChartInlineHistoryPanel({
   onCollapse,
   onRetry,
   onSelectEncounter,
-  selectedEncounterId,
 }: {
   activeEncounterId: string;
   bundle: ChartBundle;
@@ -2141,7 +2140,6 @@ function ChartInlineHistoryPanel({
   onCollapse: () => void;
   onRetry: () => void;
   onSelectEncounter: (encounterId: string) => void;
-  selectedEncounterId: string;
 }) {
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLocaleLowerCase("ko-KR");
@@ -2168,6 +2166,7 @@ function ChartInlineHistoryPanel({
 
   return (
     <ChartWorkspacePanel
+      className="[&>div>h2]:text-[var(--clair-color-atomic-neutral-700)]"
       title="History"
       actions={
         <>
@@ -2181,12 +2180,12 @@ function ChartInlineHistoryPanel({
         </>
       }
       toolbar={
-        <div className="flex w-full min-w-0 items-center gap-2">
+        <div className="flex w-full min-w-0 items-center gap-2.5">
           <Select defaultValue="diagnosis">
             <SelectTrigger
               aria-label="차트 이력 종류"
               size="sm"
-              className="w-[92px] shrink-0 rounded-lg bg-card px-2 emr-control-text-compact"
+              className="w-[79px] shrink-0 rounded-lg bg-card px-2 emr-control-text-compact [&_svg]:size-3"
             >
               진단이력
             </SelectTrigger>
@@ -2197,21 +2196,22 @@ function ChartInlineHistoryPanel({
           <div className="relative min-w-0 flex-1">
             <CdsActionsSearchIcon
               aria-hidden="true"
-              className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             />
             <Input
               aria-label="진단 이력 검색"
-              placeholder="키워드를 입력해주세요"
+              placeholder="키워드 입력"
               value={query}
               className="h-7 rounded-lg bg-card px-2 pr-8 emr-control-text-compact"
               onChange={(event) => setQuery(event.target.value)}
             />
           </div>
+          <span aria-hidden="true" className="h-[18px] w-px shrink-0 bg-[var(--emr-border-default)]" />
           <Button
             type="button"
             variant="outline"
             size="xs"
-            className="h-7 rounded-lg bg-card px-2 text-xs"
+            className="h-7 w-[58px] rounded-lg bg-card px-2 text-xs"
             disabled
             title="준비 중"
           >
@@ -2222,7 +2222,7 @@ function ChartInlineHistoryPanel({
       }
     >
       <ScrollArea className="h-full bg-[var(--emr-surface-panel)]">
-        <div className="flex min-h-full flex-col gap-1 p-3">
+        <div className="flex min-h-full flex-col px-3 pt-2 pb-0">
           {historyStatus === "loading" ? (
             <div
               className="flex items-center gap-2 px-2 py-3 emr-text-metadata text-[var(--emr-text-secondary)]"
@@ -2260,9 +2260,6 @@ function ChartInlineHistoryPanel({
                   encounterId={row.encounter.id}
                   onSelect={() => onSelectEncounter(row.encounter.id)}
                   query={normalizedQuery}
-                  selected={row.encounter.id === selectedEncounterId}
-                  timeLabel={getShortClockTime(eventAt)}
-                  veterinarianName={getChartHistoryVeterinarianName(row, bundle)}
                 />
               );
             })}
@@ -14827,8 +14824,6 @@ export function ChartContent({
     : chartHistoryScopeMatches
       ? chartHistoryStatus
       : ("loading" as const);
-  const effectiveSelectedEncounterId =
-    historyViewEncounterId || selectedEncounterId;
   const handleSelectHistoryEncounter = (encounterId: string) => {
     selectHistoryEncounter(
       encounterId === selectedEncounterId ? "" : encounterId,
@@ -15435,7 +15430,6 @@ export function ChartContent({
                 historyStatus={visibleHistoryStatus}
                 onCollapse={() => setClinicalPanelCollapsed("history", true)}
                 onRetry={requestChartHistoryRefresh}
-                selectedEncounterId={effectiveSelectedEncounterId}
                 onSelectEncounter={handleSelectHistoryEncounter}
               />
             </ChartCollapsiblePanel>

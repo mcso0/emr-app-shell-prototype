@@ -98,3 +98,18 @@ This section supersedes the inline diagnosis-summary/date-group presentation abo
 - PASS: repository lint, focused lint after test changes, TypeScript, production build, docs links, Korean UX copy, and whitespace checks. Secret scan is required again against staged files before commit.
 - Rollback baseline: origin/main `f35f9a347c0ec9dcdc46c95802b55e048780aa7e`; Ready production deployment `dpl_JDT4WYPsMccbUBD855pywjHuUFev`.
 - Delivery checks pending: exact-candidate Release Check, Ready Preview, protected PR merge, matching Ready Production, `/login` route probe, and available authenticated read-only History smoke. No production clinical writes are part of smoke.
+
+## 2026-09-08 Compact Figma Follow-up
+
+This supersedes the earlier B-layout visual contract, following the user's reviewed HTML refinements and explicit request to implement, commit, push, create a PR and merge to origin/main.
+
+- Source: Figma `28308:107517` and [compact History specification](../../design/screens/chart/specs/diagnosis-history-list.md).
+- Scope: one-line date/diagnosis rows, adaptive hover action reservation, adjacent `+N` tooltip, matched diagnosis priority/bold emphasis, long-name truncation, keyboard/touch access, and scoped toolbar geometry.
+- Preserve existing history data and veterinarian search, same-day encounters, aside presentation, active URL/queue, autosave and historical read-only guards. No DB, role, environment or shared-component changes.
+- Isolation: branch `codex/history-compact-rows`, clean worktree based on `origin/main` `74dcfe53ab7954a85dccf6390c35edb2d61aaf6d`; original dirty checkout preserved.
+- Target: main / production for this UI scope. Existing Vercel project environment only; no secret values printed. Stop on mandatory check failure, unexpected scope, failed Preview or scoped smoke.
+- Rollback: pre-release main `74dcfe53ab7954a85dccf6390c35edb2d61aaf6d` or revert this PR after verification.
+- PASS: focused History browser regression (date-only rows, adaptive badge/count fit, hover tooltip transfer, long-name tooltip, query emphasis/order, keyboard/coarse-pointer access, same-day and empty records, veterinarian search, historical read-only mode, and draft autosave/restore). Clinical panel collapse regression and five history server/permission cases also pass.
+- PASS: staged secret scan, docs links, Korean UX copy and whitespace checks. Full final-candidate lint/type/build and remote Release Check/Preview evidence are recorded in the PR before production approval.
+- Expanded panel minimums: History 305px and S/O/Assessment 240px to prevent the action area from overlapping and avoid squeezing adjacent panels; existing narrow-screen 360px tracks and internal scrolling remain.
+- Pending: exact-candidate remote checks, Ready Preview, production approval/merge and scoped deployment smoke.
