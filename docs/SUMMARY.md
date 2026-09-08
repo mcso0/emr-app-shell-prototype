@@ -49,6 +49,7 @@
 * [Design Docs](design/README.md)
 * [Design System](design/system/DESIGN.md)
 * [Reference Screen Index](design/reference-screen-index.md)
+* [History Diagnosis List B Specification](design/screens/chart/specs/diagnosis-history-list.md)
 * [UI QA](design/qa/README.md)
 
 ## Engineering
