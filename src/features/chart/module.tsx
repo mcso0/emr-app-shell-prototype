@@ -1,6 +1,7 @@
 "use client";
 
 import historyStyles from "./chart-history.module.css";
+import orderScrollStyles from "./chart-order-scroll.module.css";
 
 import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import { useChartOrderQuickAddLayout } from "./use-chart-order-quick-add-layout";
@@ -7828,7 +7829,7 @@ function ChartOrderTable({
       }}
       className="h-full overflow-hidden bg-[var(--emr-surface-panel)]"
     >
-      <div ref={quickAddSurfaceRef} className="relative h-full min-h-0 min-w-0">
+      <div ref={quickAddSurfaceRef} className={cn("relative h-full min-h-0 min-w-0", orderScrollStyles.surface)}>
         <div className="flex h-full min-h-0">
         <EmrDataTable
           aria-label="처방/오더 테이블"

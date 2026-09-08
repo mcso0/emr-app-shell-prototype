@@ -1,0 +1,38 @@
+/* Keep fades inside the table viewport, below its sticky header and scrollbars. */
+.surface [data-emr-pinned-table-viewport="true"] {
+  --order-scroll-header-height: var(--emr-table-header-height-standard);
+}
+
+.surface [data-emr-pinned-table-viewport="true"]:has([data-emr-density="compact"]) {
+  --order-scroll-header-height: var(--emr-table-header-height-compact);
+}
+
+.surface [data-emr-pinned-table-viewport="true"]:has([data-emr-density="comfortable"]) {
+  --order-scroll-header-height: var(--emr-table-header-height-comfortable);
+}
+
+.surface [data-emr-pinned-table-viewport="true"]::before,
+.surface [data-emr-pinned-table-viewport="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: min(32px, 15%);
+  z-index: 19;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.surface [data-emr-pinned-table-viewport="true"]::before {
+  top: var(--order-scroll-header-height);
+  background: linear-gradient(to bottom, var(--emr-surface-panel), transparent);
+}
+
+.surface [data-emr-pinned-table-viewport="true"]::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--emr-surface-panel), transparent);
+}
+
+.surface [data-emr-pinned-table-viewport="true"][data-overflow-y-start]::before,
+.surface [data-emr-pinned-table-viewport="true"][data-overflow-y-end]::after {
+  opacity: 1;
+}

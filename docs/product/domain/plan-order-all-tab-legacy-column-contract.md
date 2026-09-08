@@ -31,6 +31,14 @@ The current owner-approved delivery goal authorizes the named local and
 synthetic/demo implementation slices. Production database mutation and
 production merge/deployment remain subject to their exact-candidate gates.
 
+## Vertical scroll boundaries
+
+Plan/Order shows a panel-surface fade at each vertical body edge only while more
+content remains in that direction. The top fade starts below the sticky header
+and follows table density. Header, scrollbars, quick-add controls, and billing
+footer remain clear and interactive. No overflow means no fade. This presentation
+does not alter pinned-column, sorting, editing, or persistence contracts.
+
 ## Goal
 
 Replace only the column composition of the current Plan/Order `전체` tab with the legacy CLAiR column order and approved labels, including the explicit `직원` to `담당자` replacement, while preserving the current UI system unless a later decision explicitly changes it.
