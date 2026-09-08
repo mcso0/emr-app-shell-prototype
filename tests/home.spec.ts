@@ -347,6 +347,29 @@ test("list token styling and hover preserve geometry across hospital and persona
 });
 
 
+test("board leading inset scrolls away without clipping at the title alignment", async ({ page }) => {
+  await openHome(page);
+  const viewport = page.getByTestId("home-workspace-scroll");
+  const first = page.getByTestId("home-kanban-column-waiting");
+  const heading = page.getByRole("heading", { name: "원내 현황", exact: true });
+  const start = (await first.boundingBox())!;
+  const edge = (await viewport.boundingBox())!;
+  expect(start.x - edge.x).toBe(48);
+  expect(start.x).toBe((await heading.boundingBox())!.x);
+  await viewport.evaluate((el) => { el.scrollLeft = 32; });
+  await expect.poll(async () => (await first.boundingBox())!.x).toBe(start.x - 32);
+  // The column remains hit-testable inside the area formerly clipped by fixed padding.
+  expect(await first.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return el.contains(document.elementFromPoint(r.x + 4, r.y + 20));
+  })).toBe(true);
+  await page.screenshot({ path: "/tmp/home-leading-inset-scrolled.png" });
+  await viewport.evaluate((el) => { el.scrollLeft = 0; });
+  await expect.poll(async () => (await first.boundingBox())!.x).toBe(start.x);
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  expect((await viewport.boundingBox())!.x).toBe((await heading.boundingBox())!.x);
+});
+
 test("Home lists fill available width across views and with hospital hidden work open", async ({ page }) => {
   await openHome(page);
   await page.getByRole("button", { name: "리스트", exact: true }).click();
