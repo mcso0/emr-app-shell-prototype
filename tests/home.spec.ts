@@ -28,6 +28,7 @@ test("home uses shared board cards with menu-only navigation and preserves retur
   const card = page.getByTestId("home-kanban-task-lab:one");
   await expect(card).not.toHaveAttribute("role", "button");
   await card.click(); await expect(page).toHaveURL(/\/home(?:\?|$)/);
+  if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("CBC");
   await card.hover();
   await card.getByRole("button", { name: "나나 임상병리 업무 메뉴" }).click();
@@ -49,6 +50,7 @@ test("home hides and restores columns in order, resets filters independently of 
   await page.getByRole("menuitem", { name: "이 업무 열 숨기기" }).click();
   await expect(column).toHaveCount(0);
   await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
+  if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("김수의");
   await page.getByRole("button", { name: "필터 해제" }).click();
   await expect(column).toBeVisible();
@@ -60,11 +62,12 @@ test("home hides and restores columns in order, resets filters independently of 
   await page.evaluate(() => { window.dispatchEvent(new Event("clair:session-ended")); });
   await page.reload();
   await expect(page.getByRole("button", { name: "리스트", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("");
+  await expect(page.getByRole("button", { name: "검색", exact: true })).toBeVisible();
 });
 
 test("personal assigned and requested lists are independent of hospital filtering and keep previous work", async ({ page }) => {
   await openHome(page);
+  if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("없는 업무");
   await page.getByRole("button", { name: "내 업무", exact: true }).click();
   await expect(page.getByRole("heading", { name: "내 업무", exact: true })).toBeVisible();
@@ -82,7 +85,7 @@ test("personal assigned and requested lists are independent of hospital filterin
 test("completion is opt-in and board/list show the same filtered tasks", async ({ page }) => {
   await openHome(page);
   await expect(page.getByTestId("home-kanban-task-lab:done")).toHaveCount(0);
-  await page.getByRole("checkbox", { name: "완료 포함" }).check();
+  await page.getByRole("button", { name: "완료 포함", exact: true }).click();
   await expect(page.getByTestId("home-kanban-task-lab:done")).toBeVisible();
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("완료한 검사", { exact: true })).toBeVisible();
@@ -100,10 +103,11 @@ for (const status of ["error", "permission_denied"]) {
 test("new tabs reset transient queries while display preferences stay scoped to user and workspace", async ({ page, context }) => {
   await openHome(page);
   await page.getByRole("button", { name: "리스트", exact: true }).click();
+  if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("CBC");
   const newTab = await context.newPage();
   await openHome(newTab);
-  await expect(newTab.getByLabel("환자 보호자 업무 검색")).toHaveValue("");
+  await expect(newTab.getByRole("button", { name: "검색", exact: true })).toBeVisible();
   await expect(newTab.getByRole("button", { name: "리스트", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.goto("/w/clair-demo/home");
   await expect(page.getByRole("button", { name: "보드", exact: true })).toHaveAttribute("aria-pressed", "true");
@@ -113,5 +117,26 @@ test("new tabs reset transient queries while display preferences stay scoped to 
   });
   await openHome(page);
   await expect(page.getByRole("button", { name: "보드", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("");
+  await expect(page.getByRole("button", { name: "검색", exact: true })).toBeVisible();
+});
+
+
+test("Home search reveals and restores focus without changing source navigation", async ({ page }) => {
+  await openHome(page);
+  const trigger = page.getByRole("button", { name: "검색", exact: true });
+  await trigger.click();
+  const input = page.getByLabel("환자 보호자 업무 검색");
+  await expect(input).toBeFocused();
+  await input.fill("CBC");
+  await expect(page.getByTestId("home-kanban-task-dispensing:one")).toHaveCount(0);
+  await input.press("Escape");
+  await expect(input).toHaveValue("");
+  await expect(page.getByTestId("home-kanban-task-dispensing:one")).toBeVisible();
+  await input.press("Escape");
+  await expect(trigger).toBeFocused();
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await expect(page.getByRole("button", { name: "내가 해야 할 업무", exact: true })).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+  await expect(page.getByRole("button", { name: "내가 요청한 업무", exact: true })).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await page.screenshot({ path: "/tmp/home-final-personal-ui.png" });
 });
