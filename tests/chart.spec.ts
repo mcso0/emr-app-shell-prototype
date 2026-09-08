@@ -4476,9 +4476,10 @@ test("chart SOAP editor keeps one BlockNote document and reveals its provided se
     "보호자 진술상 전날 밤부터 구토 3회",
   );
   await expect(page.locator(".bn-formatting-toolbar")).toHaveCount(0);
+  await expect(soapDocument.locator(".ProseMirror-selectednode")).toHaveCount(0);
+  await expect(soapEditor).not.toBeFocused();
 
-  await soapEditor.click();
-  await page.keyboard.press("ControlOrMeta+A");
+  await soapDocument.locator('.bn-block-content[data-content-type="paragraph"]').first().click({ clickCount: 3 });
   const soapSelectionToolbar = page.locator(".bn-formatting-toolbar");
   await expect(soapSelectionToolbar).toBeVisible();
 });
@@ -4732,6 +4733,8 @@ test("chart SOAP keeps default and diagnosis-system input isolated across save a
     page.getByText("주관적 · 보호자 진술", { exact: true }),
   ).toBeVisible();
 
+  await expect(page.getByLabel("SOAP 블록 문서").locator(".ProseMirror-selectednode")).toHaveCount(0);
+  await expect(page.getByLabel("SOAP 블록 문서").locator('[contenteditable="true"]').first()).not.toBeFocused();
   await typeAndWaitForAutosave(systemText);
   await page.getByRole("tab", { name: "기본 S/O", exact: true }).click();
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText(defaultText);

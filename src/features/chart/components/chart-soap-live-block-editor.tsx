@@ -233,6 +233,18 @@ export function ChartSoapLiveBlockEditor({
     [suggestionItems],
   );
 
+  const initializedSelectionRef = useRef<ChartSoapBlockEditorInstance | null>(null);
+  useLayoutEffect(() => {
+    if (initializedSelectionRef.current === editor) return;
+    initializedSelectionRef.current = editor;
+    const firstBlock = editor.document[0];
+    const firstParagraph = firstBlock?.children[0];
+    if (firstBlock?.type === "soapSection" && firstParagraph?.type === "paragraph") {
+      // Move the initial node selection without focusing the editor or changing content.
+      editor.setTextCursorPosition(firstParagraph, "start");
+    }
+  }, [editor]);
+
   useEffect(() => {
     onReady(editor.document);
   }, [editor, onReady]);
