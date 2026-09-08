@@ -104,6 +104,8 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const updatePreferences = useHomeWorkspaceStore((state) => state.updatePreferences);
   const setPersonalTab = useHomeWorkspaceStore((state) => state.setPersonalTab);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const isBoard = view === "hospital" && preferences.layout === "board";
   const scrollKey = `${view}:${view === "hospital" ? preferences.layout : personalTab}`;
   const term = query.search.trim().toLocaleLowerCase();
   const [personalHidden, setPersonalHidden] = useState<Record<string, string[]>>({ assigned: [], requested: [] });
@@ -132,6 +134,19 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     const saved = useHomeWorkspaceStore.getState().scroll[scrollKey];
     if (saved) { element.scrollLeft = saved.left; element.scrollTop = saved.top; }
   }, [scrollKey, loading]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element || loading || blocked || !isBoard) return;
+    const update = () => setCanScrollRight(element.scrollLeft < element.scrollWidth - element.clientWidth - 2);
+    update();
+    element.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    // Column hiding/collapse changes scrollWidth without necessarily resizing the viewport.
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    return () => { element.removeEventListener("scroll", update); observer.disconnect(); };
+  }, [loading, blocked, isBoard, preferences.hidden, preferences.collapsed]);
 
   function rememberScroll() {
     const element = scrollRef.current;
@@ -188,8 +203,9 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     </header>
     {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
     {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
-      <div className={cn(styles.workspaceBody, (view === "mine" || preferences.layout === "list") && styles.listWorkspaceBody)}>
-        <div ref={scrollRef} onScroll={rememberScroll} className="min-h-0 min-w-0 flex-1 overflow-auto" data-testid="home-workspace-scroll">
+      <div className={cn(styles.workspaceBody, (view === "mine" || preferences.layout === "list") && styles.listWorkspaceBody)} data-testid="home-workspace-body">
+        <div className={styles.scrollFrame}>
+        <div ref={scrollRef} onScroll={rememberScroll} className="h-full min-h-0 min-w-0 overflow-auto" data-testid="home-workspace-scroll">
           {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
           view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
             {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={operatingDate} collapsed={collapsed(`column:${type.id}`)}
@@ -207,9 +223,11 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             </section>)}
           </div>}
         </div>
+        {isBoard && !loading && <div className={styles.scrollFade} data-visible={canScrollRight} data-testid="home-board-scroll-fade" aria-hidden="true" />}
+        </div>
         {hiddenTypes.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 업무">
-          <header className={styles.groupHeader}><h2>숨김 업무 <span>{hiddenTypes.length}</span></h2><Button variant="ghost" size="xs" disabled={!hiddenTypes.length} onClick={() => setHidden([])}>모두 표시</Button></header>
-          <div className={styles.hiddenRows}>{hiddenTypes.length ? hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><HomeWorkTypeIcon id={type.id} /><span>{type.label}</span><Button variant="ghost" size="icon-xs" aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon /></Button></div>) : <p className="emr-text-metadata py-3 text-muted-foreground">숨긴 업무가 없습니다.</p>}</div>
+          <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 업무</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => setHidden([])}><EyeIcon className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
+          <div className={styles.hiddenRows}>{hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><span>{type.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
         </section>}
 
       </div>}

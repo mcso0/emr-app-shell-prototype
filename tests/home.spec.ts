@@ -20,6 +20,45 @@ async function openHome(page: Page, status = "live") {
   await expect(page.getByTestId("home-workspace")).toHaveAttribute("aria-busy", "false");
 }
 
+test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {
+  await openHome(page);
+  await expect(page.getByTestId("home-kanban-task-lab:previous")).toHaveCount(0);
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("2");
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await expect(page.getByText("이전 혈액검사", { exact: true })).toHaveCount(0);
+  await page.getByLabel("담당자 다중 선택").click();
+  await expect(page.getByRole("checkbox", { name: "이전담당 선택", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "선택 해제", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("0");
+  await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
+  await expect(page.getByLabel("담당자 다중 선택")).toHaveText("담당자 전체");
+  await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
+  await expect(page.getByText("CBC 검사", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await expect(page.getByText("CBC 검사", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+  await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
+});
+
+
+test("hospital fallback dates respect Seoul midnight and source operating date", async ({ page }) => {
+  await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
+    const boundaryItems = [
+      { ...items[0], id: "lab:before", title: "자정 전", operatingDate: undefined, requestedAt: `${yesterday}T14:59:59Z` },
+      { ...items[0], id: "lab:midnight", title: "자정 이후", operatingDate: undefined, requestedAt: `${yesterday}T15:00:00Z` },
+      { ...items[0], id: "lab:source-date", title: "원본 날짜 우선", operatingDate: yesterday, requestedAt: `${today}T09:00:00+09:00` },
+    ];
+    await route.fulfill({ json: { ok: true, workspaceId, operatingDate: today, sourceStatus: "live", items: boundaryItems } });
+  });
+  await page.goto(`/w/${workspaceId}/home`);
+  await expect(page.getByTestId("home-kanban-task-lab:midnight")).toBeVisible();
+  await expect(page.getByTestId("home-kanban-task-lab:before")).toHaveCount(0);
+  await expect(page.getByTestId("home-kanban-task-lab:source-date")).toHaveCount(0);
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
+});
+
 test("home uses shared board cards with menu-only navigation and preserves return state", async ({ page }) => {
   await openHome(page);
   await expect(page.getByRole("heading", { name: "원내 현황", exact: true })).toBeVisible();
@@ -53,7 +92,7 @@ test("home hides and restores columns in order, resets filters independently of 
   expect((await page.getByRole("region", { name: "숨김 업무" }).boundingBox())!.width).toBe(220);
   if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("김수의");
-  await page.getByRole("button", { name: "모두 표시" }).click();
+  await page.getByRole("button", { name: "전체 표시" }).click();
   await expect(column).toBeVisible();
   await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
   await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("김수의");
@@ -233,50 +272,50 @@ test("personal work ignores saved dates while hospital date selection remains in
   await expect(page.getByRole("button", { name: /날짜 선택$/ })).toHaveCount(0);
 });
 
-
-test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {
+test("Home hidden panel matches design and board fade follows overflow", async ({ page }) => {
   await openHome(page);
-  await expect(page.getByTestId("home-kanban-task-lab:previous")).toHaveCount(0);
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("2");
+  const viewport = page.getByTestId("home-workspace-scroll");
+  const fade = page.getByTestId("home-board-scroll-fade");
+  await expect(fade).toHaveAttribute("data-visible", "true");
+  await expect(fade).toHaveCSS("pointer-events", "none");
+  await viewport.evaluate((el) => { el.scrollLeft = el.scrollWidth; });
+  await expect(fade).toHaveAttribute("data-visible", "false");
+  await viewport.evaluate((el) => { el.scrollLeft = 100; });
+  await expect(fade).toHaveAttribute("data-visible", "true");
+  await page.setViewportSize({ width: 3000, height: 1080 });
+  await expect(fade).toHaveAttribute("data-visible", "false");
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect(fade).toHaveAttribute("data-visible", "true");
+  await viewport.evaluate((el) => { el.scrollLeft = 0; });
+  await page.getByTestId("home-kanban-column-waiting").hover();
+  await page.getByRole("button", { name: "접수 열 숨기기", exact: true }).click();
+  const panel = page.getByRole("region", { name: "숨김 업무", exact: true });
+  await expect(panel.getByRole("heading")).toHaveText("숨김 업무");
+  const showAll = panel.getByRole("button", { name: "전체 표시", exact: true });
+  await expect(showAll).toHaveCSS("height", "28px");
+  await expect(showAll.locator("svg")).toHaveCount(1);
+  const restore = panel.getByRole("button", { name: "접수 열 표시", exact: true });
+  const row = restore.locator("..");
+  await expect(row).toHaveCSS("height", "32px");
+  await expect(row.locator("svg")).toHaveCount(1);
+  await row.hover();
+  await expect(row).toHaveCSS("background-color", "rgba(0, 0, 0, 0.06)");
+  await expect(restore).toHaveCSS("opacity", "1");
+  await expect(restore.locator("svg")).toHaveCSS("width", "14px");
+  await page.screenshot({ path: "/tmp/home-hidden-panel-fade.png" });
+  await restore.focus();
+  await page.mouse.move(0, 0);
+  await expect(restore).toHaveCSS("opacity", "1");
+  await restore.press("Enter");
+  await expect(panel).toHaveCount(0);
   await page.getByRole("button", { name: "리스트", exact: true }).click();
-  await expect(page.getByText("이전 혈액검사", { exact: true })).toHaveCount(0);
-  await page.getByLabel("담당자 다중 선택").click();
-  await expect(page.getByRole("checkbox", { name: "이전담당 선택", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "선택 해제", exact: true }).click();
-  await page.keyboard.press("Escape");
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("0");
-  await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
-  await expect(page.getByLabel("담당자 다중 선택")).toHaveText("담당자 전체");
-  await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
-  await expect(page.getByText("CBC 검사", { exact: true })).toHaveCount(0);
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
-  await page.getByRole("button", { name: "내 업무", exact: true }).click();
-  await expect(page.getByText("CBC 검사", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
-  await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
-});
-
-
-test("hospital fallback dates respect Seoul midnight and source operating date", async ({ page }) => {
-  await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
-    const boundaryItems = [
-      { ...items[0], id: "lab:before", title: "자정 전", operatingDate: undefined, requestedAt: `${yesterday}T14:59:59Z` },
-      { ...items[0], id: "lab:midnight", title: "자정 이후", operatingDate: undefined, requestedAt: `${yesterday}T15:00:00Z` },
-      { ...items[0], id: "lab:source-date", title: "원본 날짜 우선", operatingDate: yesterday, requestedAt: `${today}T09:00:00+09:00` },
-    ];
-    await route.fulfill({ json: { ok: true, workspaceId, operatingDate: today, sourceStatus: "live", items: boundaryItems } });
-  });
-  await page.goto(`/w/${workspaceId}/home`);
-  await expect(page.getByTestId("home-kanban-task-lab:midnight")).toBeVisible();
-  await expect(page.getByTestId("home-kanban-task-lab:before")).toHaveCount(0);
-  await expect(page.getByTestId("home-kanban-task-lab:source-date")).toHaveCount(0);
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
+  await expect(fade).toHaveCount(0);
 });
 
 test("list token styling and hover preserve geometry across hospital and personal views", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1084 });
   await openHome(page);
-  const body = page.getByTestId("home-workspace-scroll").locator("..");
+  const body = page.getByTestId("home-workspace-body");
   await expect(body).toHaveCSS("padding-right", "16px");
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   for (const view of ["hospital", "assigned", "requested"]) {

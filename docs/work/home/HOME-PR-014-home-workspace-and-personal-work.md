@@ -141,6 +141,14 @@ Local verification: all 10 existing Home browser tests passed; personal screensh
 
 Isolated branch `codex/home-hidden-work-empty` starts at `077ad7202fb5a2015cceee40869a2190a47dc19e`, preserving primary WIP. Ten Home browser tests passed; focused coverage checks initial absence, board hide/all-restore, and list hide/individual-restore. Required release checks and exact candidate/Preview/Production evidence are recorded in the PR. No DB, permissions, environment or shared-component changes. Smoke: login and Cheongdam Home; authenticated interaction evidence is reported separately. Rollback: previous Ready Production `dpl_3nAAf7NGL9N6CWXbihza9FjC8Szi`, or revert only this scoped change if later releases land. Stop on failed checks, candidate drift, unexpected deployment or scoped smoke failure.
 
+## Hidden Panel Fidelity and Board Edge Fade — 2026-09-08
+
+승욱 approved the Figma 28301:181329 panel corrections and a right-edge fade for horizontally overflowing hospital Kanban, followed by commit/push/PR/main merge and Production deployment. Hidden panel title/count, icon-free rows, eye + 전체 표시, 32px rows/4px gaps, 12px body insets, typography and hover styling now follow that reference. Zero hidden types still remove the panel. Keyboard focus and touch restore visibility are preserved.
+
+The Home-only 32px right-edge gradient appears only when more board content exists to the right, with a 2px edge tolerance. It updates on scroll, resize, hide/restore and collapse/expand, does not intercept pointer input, and excludes the toolbar, hidden panel and list views. Existing scroll persistence is retained. No new dependency, shared component, DB, permission or environment changes.
+
+Clean branch `codex/home-hidden-panel-fade` starts at `bf0f63be013ddb9e4ba4ff835f6c4679d0a63569`; primary WIP is preserved. Checks cover Home regression, design geometry/hover/focus, overflow start/middle/end/resize, and release preflight. Exact candidate, Release Check, Ready Preview and Production smoke evidence are recorded in the PR. Smoke: login and authenticated Cheongdam Home panel/fade. Rollback candidate: current Ready Production `dpl_FoQsNVKxpo8twdQ1nSKjvhW1Yj54` or scoped revert if subsequent releases land. Stop on failed checks, candidate drift or unexpected deployment.
+
 ## Token-based List Parity Follow-up — 2026-09-08
 
 User approved UI-only correction against Figma `28301:179610`, explicitly including both personal lists and 48px right body padding only in list mode. Implemented on `codex/home-list-token-parity` from `9cb326e7` in an isolated worktree; the primary checkout's superseded Home WIP remains untouched. No data/API/auth/navigation or shared-token definitions changed.
