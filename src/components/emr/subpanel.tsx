@@ -594,7 +594,7 @@ export function EmrQueueEmptyState({
       {...props}
     >
       <EmrEmptyState
-        description={description}
+        description={placement === "panel-center" ? undefined : description}
         icon={resolvedIcon}
         kind={kind}
         priority="supporting"

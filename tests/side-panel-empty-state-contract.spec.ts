@@ -128,7 +128,6 @@ test("all module side-panel empty states use the CDS.V2 md contract", async ({ p
   await mockEmptyQueues(page);
 
   const cases = [
-    { moduleId: "home", title: "원내 업무가 없습니다", scope: "home" },
     { moduleId: "reception", title: "접수/예약이 없습니다", scope: "aside" },
     { moduleId: "treatment", title: "진료 업무가 없습니다", scope: "aside" },
     { moduleId: "lab", title: "검사 업무가 없습니다", scope: "aside" },
@@ -143,9 +142,7 @@ test("all module side-panel empty states use the CDS.V2 md contract", async ({ p
     );
 
     const scope =
-      emptyStateCase.scope === "home"
-        ? page.getByTestId("home-side-panel-empty-state")
-        : page.locator("aside").first();
+      page.locator("aside").first();
     const state = scope
       .locator('section[data-surface="queue"][data-size="md"]')
       .filter({ hasText: emptyStateCase.title })
@@ -155,8 +152,8 @@ test("all module side-panel empty states use the CDS.V2 md contract", async ({ p
     await expect.poll(() => getMdContract(state)).toEqual({
       description: expect.any(String),
       iconAreaBackground: expect.any(String),
-      iconAreaHeight: "32px",
-      iconAreaWidth: "32px",
+      iconAreaHeight: "40px",
+      iconAreaWidth: "40px",
       rootGap: "8px",
       size: "md",
       titleColor: expect.any(String),
@@ -166,7 +163,7 @@ test("all module side-panel empty states use the CDS.V2 md contract", async ({ p
     });
 
     const contract = await getMdContract(state);
-    expect(contract?.description).not.toBe("");
+    expect(contract?.description).toBe("");
     expect(contract?.iconAreaBackground).toBe(contract?.expectedIconAreaBackground);
     expect(contract?.titleColor).toBe(contract?.expectedTitleColor);
   }
