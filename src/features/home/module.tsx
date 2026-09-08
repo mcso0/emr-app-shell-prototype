@@ -27,17 +27,19 @@ export function HomeContent({ workspaceId }: ShellComponentProps) {
 }
 
 function HomeOperationsContent({ workspaceId, today, role }: { workspaceId: string; today: string; role: ReturnType<typeof mapAuthRoleToHomeRole> }) {
+  const view = useHomeWorkspaceStore((state) => state.view);
   const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
+  const operatingDate = view === "mine" ? today : query.date;
   const legacy = isLegacySalesDemoWorkspace(workspaceId);
-  const { loading, refresh, response } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: false, operatingDate: query.date, workspaceId, enabled: !legacy });
+  const { loading, refresh, response } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: false, operatingDate, workspaceId, enabled: !legacy });
   const data = useMemo(() => {
     if (legacy) {
       const mock = getHomeMockData(role, workspaceId);
       const mine = new Set(mock.tasks.map((task) => task.id));
       return { ...mock, hospitalTasks: mock.hospitalTasks.map((task) => ({ ...task, isMyWork: mine.has(task.id), isRequestedWork: task.requestedBy === mock.userName })) };
     }
-    return mapOperationsResponseToHomeDashboardData({ items: response?.ok ? response.items : [], operatingDate: query.date, role, roleLabel: HOME_ROLE_LABELS[role], userName: HOME_ROLE_USER_NAMES[role] });
-  }, [legacy, query.date, response, role, workspaceId]);
+    return mapOperationsResponseToHomeDashboardData({ items: response?.ok ? response.items : [], operatingDate, role, roleLabel: HOME_ROLE_LABELS[role], userName: HOME_ROLE_USER_NAMES[role] });
+  }, [legacy, operatingDate, response, role, workspaceId]);
   return <HomeKanbanWorkspace data={data} today={today} loading={!legacy && loading} onRefresh={refresh}
     sourceStatus={legacy ? "live" : response?.sourceStatus ?? (loading ? "live" : "error")}
     errorMessage={response && !response.ok ? response.error.message : undefined}

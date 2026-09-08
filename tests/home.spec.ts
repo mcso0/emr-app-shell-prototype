@@ -193,3 +193,34 @@ test("approved Home layout keeps fixed geometry in board and both personal tabs"
   await requested.press("Enter");
   await expect(page).toHaveURL(/dispensing\?workItemId=medicine/);
 });
+
+
+test("personal work ignores saved dates while hospital date selection remains independent", async ({ page }) => {
+  await openHome(page);
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await page.evaluate(({ yesterday }) => {
+    const key = Object.keys(sessionStorage).find((key) => key.startsWith("clair.home.v2:"))!;
+    const saved = JSON.parse(sessionStorage.getItem(key)!);
+    saved.view = "mine";
+    saved.queries.mine.date = yesterday;
+    saved.queries.hospital.date = yesterday;
+    sessionStorage.setItem(key, JSON.stringify(saved));
+  }, { yesterday });
+  const request = page.waitForRequest((request) => request.url().includes("/operations/work-items?"));
+  await page.reload();
+  expect(new URL((await request).url()).searchParams.get("date")).toBe(today);
+  await expect(page.getByRole("button", { name: /날짜 선택$/ })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "오늘 할 업무", exact: true }).getByText("CBC 검사", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "완료 포함", exact: true }).click();
+  await expect(page.getByText("완료한 검사", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+  await expect(page.getByRole("region", { name: "이전 미완료", exact: true }).getByText("이전 혈액검사", { exact: true })).toBeVisible();
+  const hospitalRequest = page.waitForRequest((request) => request.url().includes("/operations/work-items?"));
+  await page.getByRole("button", { name: "원내 현황", exact: true }).click();
+  expect(new URL((await hospitalRequest).url()).searchParams.get("date")).toBe(yesterday);
+  await expect(page.getByRole("button", { name: /날짜 선택$/ })).toBeVisible();
+  const personalRequest = page.waitForRequest((request) => request.url().includes("/operations/work-items?"));
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  expect(new URL((await personalRequest).url()).searchParams.get("date")).toBe(today);
+  await expect(page.getByRole("button", { name: /날짜 선택$/ })).toHaveCount(0);
+});
