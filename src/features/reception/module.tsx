@@ -1986,7 +1986,7 @@ function getReceptionEmptyStateCopy({
 
   if (listMode === "reception") return "현재 진료 대기 중인 접수가 없습니다";
   if (listMode === "appointment") return "현재 접수 전 예약이 없습니다";
-  return "현재 대기 중인 접수/예약이 없습니다";
+  return "대기 중인 접수/예약이 없습니다";
 }
 
 const formatPatientWeightKgInput = (weightKg?: number) =>
@@ -3876,7 +3876,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             onClear={() => setSearchQuery("")}
           />
         ) : (
-          <ReceptionEmptyState description="오늘 표시할 접수/예약 업무가 없습니다">
+          <ReceptionEmptyState>
             {emptyStateCopy}
           </ReceptionEmptyState>
         )}
