@@ -8217,6 +8217,15 @@ test("chart confirmation continues after an ambiguous draft response only when r
     encounterId: kongEncounterId,
   });
   expect(actionBodies[0]?.orderIds).toHaveLength(1);
+  await expect(confirmDialog).not.toBeVisible();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  expect(new URL(page.url()).searchParams.get("encounterId")).toBe(kongEncounterId);
+  const confirmedOrder = page.getByTestId(`chart-order-row-${orderId}`);
+  await expect(confirmedOrder).toHaveAttribute("data-order-confirmation", "confirmed");
+  await expect(confirmedOrder.getByRole("checkbox")).not.toBeChecked();
+
+  // Downstream work stays available when the user explicitly opens dispensing.
+  await page.goto(`/w/clair-demo/dispensing?encounterId=${kongEncounterId}`);
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
   expect(new URL(page.url()).searchParams.get("encounterId")).toBe(
     kongEncounterId,
