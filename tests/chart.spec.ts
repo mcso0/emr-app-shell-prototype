@@ -1485,7 +1485,8 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
     expect(footerAfterFilterBox).not.toBeNull();
     const surfaceBottom = surfaceAfterFilterBox!.y + surfaceAfterFilterBox!.height;
     expect(composerBox).not.toBeNull();
-    const tableBottom = surfaceBottom - composerBox!.height;
+    // Quick entry overlays the viewport; no permanent band shrinks the table.
+    const tableBottom = surfaceBottom;
     expect(
       Math.abs(
         rootAfterFilterBox!.y + rootAfterFilterBox!.height - tableBottom,
@@ -8399,6 +8400,8 @@ test("chart quick-add continuously appends without resending unchanged orders", 
     await expect(input).toHaveValue("");
     await expect(input).toBeFocused();
     await expect(page.getByLabel(`${candidate.displayName} 수량 수정`, { exact: true }).last()).toBeVisible();
+    await expect.poll(() => page.locator('[data-slot="chart-order-table-surface"] [data-emr-pinned-table-scroll-owner="true"]')
+      .evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
   }
   const basoQuantity = page.getByLabel("[CBC 검사] #BASO 수량 수정", { exact: true });
   await expect(basoQuantity).toHaveValue("");
@@ -8430,7 +8433,7 @@ test("chart quick-add preserves query and focus through detailed search and set 
   await restoreKongOrderDraftDefaults(page);
   const input = await openQuickAddForTest(page, "BASO");
   await expect(page.getByRole("option").filter({ hasText: "#BASO" })).toBeVisible();
-  await page.getByRole("button", { name: "상세 오더 검색" }).click();
+  await page.getByRole("button", { name: "상세 검색", exact: true }).click();
   const catalog = page.getByRole("dialog", { name: "오더 추가", exact: true });
   await expect(catalog).toBeVisible();
   await expect(catalog.getByRole("combobox", { name: "전체 오더 검색", exact: true })).toHaveValue("BASO");
@@ -8543,7 +8546,7 @@ test("chart quick-add distinguishes lookup errors and measures the pinned column
     const name = surface.locator('thead [data-column-id="displayName"]');
     await expect.poll(async () => {
       const [anchor, left, right] = await Promise.all([input.boundingBox(), category.boundingBox(), name.boundingBox()]);
-      return Math.abs(anchor!.x - left!.x) + Math.abs(anchor!.width - (right!.x + right!.width - left!.x));
+      return Math.abs(anchor!.x - left!.x - 12) + Math.abs(anchor!.width - (right!.x + right!.width - left!.x - 24));
     }).toBeLessThan(2);
     const popover = page.getByRole("dialog", { name: "오더 빠른 추가", exact: true });
     await expect(popover).toBeVisible();
@@ -8679,6 +8682,95 @@ test("chart quick-add scrolls only long results and keeps its anchor during hori
   await scrollOwner.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
   await expect.poll(async () => Math.abs((await input.boundingBox())!.x - before.x)).toBeLessThan(1);
   await expect(input).toBeFocused();
+});
+
+test("chart quick-add uses no sparse dock and restores dense scroll after cancellation", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  let dense = false;
+  // Synthetic read responses exercise both layouts without persisting fixture rows.
+  await page.route("**/api/workspaces/clair-demo/chart/order-drafts*", async route => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = await response.json();
+    body.rows = dense
+      ? Array.from({ length: 30 }, (_, index) => ({ ...body.rows[0], orderId: `quick-dense-${index}` }))
+      : body.rows.slice(0, 1);
+    await route.fulfill({ response, json: body });
+  });
+  await page.reload();
+  await expect(page.locator('tr[data-testid^="chart-order-row-"]')).toHaveCount(1);
+  const dock = page.getByTestId("chart-order-quick-add-dock");
+  const composer = page.getByTestId("chart-order-quick-add");
+  const owner = page.locator('[data-slot="chart-order-table-surface"] [data-emr-pinned-table-scroll-owner="true"]');
+  await expect(dock).toBeHidden();
+  const idleWidth = (await composer.boundingBox())!.width;
+  let input = await openQuickAddForTest(page);
+  expect((await input.boundingBox())!.width).toBeGreaterThan(idleWidth * 2);
+  await expect(dock).toBeHidden();
+  await expect(page.getByTestId("chart-order-quick-add-clearance")).toHaveCount(0);
+  await input.press("Escape");
+  dense = true;
+  await page.reload();
+  await expect(page.locator('tr[data-testid^="chart-order-row-quick-dense-"]')).toHaveCount(30);
+  await owner.evaluate(element => { element.scrollTop = 80; });
+  const priorScroll = await owner.evaluate(element => element.scrollTop);
+  const windowScroll = await page.evaluate(() => window.scrollY);
+  input = await openQuickAddForTest(page, "BASO");
+  await expect.poll(() => owner.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
+  await expect(dock).toBeVisible();
+  const top = (await input.boundingBox())!.y;
+  await owner.evaluate(element => { element.scrollTop = 0; });
+  await expect.poll(async () => Math.abs((await input.boundingBox())!.y - top)).toBeLessThan(1);
+  expect(await page.evaluate(() => window.scrollY)).toBe(windowScroll);
+  const dockBox = (await dock.boundingBox())!;
+  const viewportBottom = await owner.evaluate(element => element.getBoundingClientRect().top + element.clientHeight);
+  expect(dockBox.y + dockBox.height).toBeLessThanOrEqual(viewportBottom + 1);
+  await page.screenshot({ path: "test-results/quick-add-dense-dock.png" });
+  await input.press("Escape");
+  await expect(dock).toBeHidden();
+  await expect.poll(() => owner.evaluate(element => element.scrollTop)).toBe(priorScroll);
+});
+
+test("chart quick-add reuses warm results but requires fresh authority before adding", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  let input = await openQuickAddForTest(page, "BASO");
+  const option = page.getByRole("option").filter({ hasText: "#BASO" });
+  await expect(option).toBeEnabled();
+  await input.press("Escape");
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let responseStatus = 503;
+  await page.route("**/hospital-admin/order-catalog?mode=chart-search", async route => {
+    if (responseStatus === 200) return route.fallback();
+    await gate;
+    await route.fulfill({ status: responseStatus, json: { ok: false, error: "fixture" } });
+  });
+  try {
+    input = await openQuickAddForTest(page, "BASO");
+    await expect(page.getByText("최신 목록 확인 중")).toBeVisible();
+    await expect(option).toBeVisible();
+    await expect(option).toBeDisabled();
+    const before = await page.locator('tr[data-testid^="chart-order-row-"]').count();
+    await input.press("Enter");
+    await expect(page.locator('tr[data-testid^="chart-order-row-"]')).toHaveCount(before);
+    release();
+    await expect(page.getByText("최신 목록을 확인하지 못했어요.")).toBeVisible();
+    await expect(option).toBeDisabled();
+    responseStatus = 200;
+    await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+    await expect(option).toBeEnabled();
+    await input.press("Escape");
+    responseStatus = 403;
+    await openQuickAddForTest(page, "BASO");
+    await expect(page.getByText("오더 검색 권한이 없습니다.")).toBeVisible();
+    await expect(option).toHaveCount(0);
+  } finally {
+    release();
+  }
 });
 
 test("chart status presentation keeps edits in place until blur and hides unconfirmed work", async ({ page }) => {

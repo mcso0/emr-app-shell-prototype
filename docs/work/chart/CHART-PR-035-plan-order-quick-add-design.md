@@ -7,13 +7,13 @@ status: "implemented"
 area: "chart"
 priority: "P1"
 tags: [chart, design, quick-add, prototype]
-target_pr: "PR to main — user-approved production delivery"
+target_pr: "Refinement PR to main — production delivery approved 2026-09-08"
 source_docs:
   - "docs/design/screens/chart/planning/plan-order-quick-add/spec.md"
   - "docs/work/chart/CHART-PR-027-order-draft-removal-persistence.md"
   - "docs/work/chart/CHART-PR-032-plan-order-legacy-columns.md"
 dependencies: []
-updated: "2026-09-07"
+updated: "2026-09-08"
 ---
 
 # Plan/Order Quick Add
@@ -195,3 +195,71 @@ create or modify remote orders. Current PR711 Production deployment
 before merge. This UI-only slice does not change its DB contract.
 Stop on changed scope/head, failed checks, non-Ready Preview/Production, source
 mismatch or failed scoped smoke. Record failures before any unapproved recovery.
+
+
+## Refinement — 2026-09-08
+
+After reviewing the revised shared-component prototype, 승욱 approved actual app
+implementation: `오케이 좋아. 구현 들어가자`. This refinement is local-only;
+the September 7 predecessor release authorization does not authorize its delivery.
+Work is isolated on `codex/plan-order-quick-add-refinement` from `f35f9a34`, preserving
+the primary checkout and prototype WIP.
+
+The accepted contract now uses a content-width idle button, pinned-column input
+with 12px insets, an upper popup with compact `상세 검색`, and toolbar `오더 상세`.
+Opening reveals only the table bottom and locks the input position. Dense entry
+has a conditional opaque backing that clears the horizontal scrollbar; sparse
+entry has no permanent dock. Cancel without additions restores prior table scroll.
+Warm catalog reuse remains visible but blocks append until revalidation succeeds;
+permission denial clears candidates. Existing scoped persistence, filters, sort,
+set configuration, duplicate and save-conflict behavior remain authoritative.
+
+Implementation uses existing Button, Input, EmrPopoverShell, CDS icons and the
+existing table. A chart-local geometry hook owns placement and session scroll.
+No new shared component API, dependency, backend or permission-policy change.
+
+
+### Refinement verification
+
+- Sixteen distinct browser scenarios verified across focused runs: eleven quick-add
+  scenarios and five related checks (410px pinning/scrollbars, single sort,
+  checkbox totals, historical read-only charts and ETag conflict). Repeated runs
+  are not added to this count. Continuous addition explicitly verifies bottom scroll.
+- The new sparse/dense regression uses synthetic GET-only 1-row and 30-row fixtures:
+  idle width, no sparse dock/clearance, dense opening scroll, fixed input during
+  row scroll, no page scroll, scrollbar clearance and cancellation restoration pass.
+- Warm revalidation verifies retained-but-disabled results, Enter blocked while
+  refreshing, failure/retry, and 403 candidate clearing. Existing tests retain
+  detailed-query/set return, IME, duplicate, save retry and late-response checks.
+- `npx tsc --noEmit --pretty false`, scoped ESLint and
+  `NEXT_PUBLIC_AUTH_MODE=mock npm run build`: passed. Build emitted an NFT tracing
+  warning through unchanged `next.config.mjs` / docs reader; no build failure.
+- Browser screenshot inspected at the narrow default viewport: pinned input and
+  upper result popup align; the opaque backing clears the billing footer.
+- Initial new sparse assertion used four default rows, which overflow that viewport;
+  corrected to an explicit one-row fixture. The prior pinning test assumed a
+  permanent composer band; updated that expectation to the approved full viewport.
+  ETag regression once failed at checkbox selection, then passed on a fresh-server
+  isolated rerun without app changes. No recurrence evidence beyond that rerun.
+- Docs references and whitespace checks passed. Local synthetic verification only;
+  no remote order writes, commit, push, PR, merge or deployment for this refinement.
+
+
+## Refinement release authorization — 2026-09-08
+
+승욱 requested `구현 다하면 테스트-검증하고 통과되면 커밋, 푸시, 피알,오리진-메인에 머지. 배포 승인`.
+This authorizes delivery of the reviewed refinement after successful checks:
+`codex/plan-order-quick-add-refinement` → PR → `main` / Vercel Production.
+The exact candidate, Release Check and deployment evidence are recorded in the PR.
+Scope is the two chart source files, chart browser regressions and these two owning
+docs. The implementation-stage no-delivery statements above are historical.
+
+Baseline `origin/main`: `f35f9a34`. Previous Ready Production deployment:
+`dpl_JDT4WYPsMccbUBD855pywjHuUFev` (verified current alias before release).
+Smoke: `/login` and authenticated read-only quick search, detail-query handoff,
+cancel/focus and input/popup geometry on the existing synthetic Cheongdam encounter.
+Do not append, save, confirm or bill remote orders during this smoke. Synthetic local
+browser tests own append/save/retry evidence. No migration or permission changes.
+Stop on changed candidate/scope, failed exact Release Check/preflight, non-Ready
+Preview/Production, deployment-source mismatch or failed scoped smoke. Rollback
+reference is the previous Ready deployment; executing rollback requires approval.
