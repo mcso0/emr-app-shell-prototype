@@ -41,6 +41,7 @@ test("home uses shared board cards with menu-only navigation and preserves retur
 
 test("home hides and restores columns in order, resets filters independently of search and remembers display", async ({ page }) => {
   await openHome(page);
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
   await page.getByTestId("home-kanban-column-lab").hover();
   await page.getByRole("button", { name: "임상병리 열 접기", exact: true }).click();
   const column = page.getByTestId("home-kanban-column-lab");
@@ -49,12 +50,19 @@ test("home hides and restores columns in order, resets filters independently of 
   await page.getByRole("button", { name: "임상병리 열 숨기기" }).click();
   await expect(column).toHaveCount(0);
   await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
+  expect((await page.getByRole("region", { name: "숨김 업무" }).boundingBox())!.width).toBe(220);
   if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("김수의");
   await page.getByRole("button", { name: "모두 표시" }).click();
   await expect(column).toBeVisible();
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
   await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("김수의");
   await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
+  await page.getByRole("button", { name: "임상병리 업무 목록 숨기기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
+  await page.getByRole("button", { name: "임상병리 열 표시", exact: true }).click();
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("button", { name: "리스트", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("김수의");
@@ -151,7 +159,7 @@ test("approved Home layout keeps fixed geometry in board and both personal tabs"
   await expect(first).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(first).toHaveCSS("border-radius", "12px");
   expect((await first.locator("header").boundingBox())!.height).toBe(44);
-  expect((await page.getByRole("region", { name: "숨김 업무" }).boundingBox())!.width).toBe(220);
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
   expect((await page.getByRole("button", { name: "완료 포함", exact: true }).boundingBox())!.height).toBe(32);
   expect((await page.getByRole("group", { name: "업무 보기 방식" }).boundingBox())!.height).toBe(34);
   const date = page.getByRole("button", { name: /날짜 선택$/ });
