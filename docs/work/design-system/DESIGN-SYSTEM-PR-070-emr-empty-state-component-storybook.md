@@ -106,3 +106,9 @@ This work starts the shared runtime component layer. Screen adoption should be a
 - Standardized source-empty copy as `[업무명] 업무가 없습니다` plus `오늘 표시할 [업무명] 업무가 없습니다.` and kept no-selection guidance distinct.
 - Aligned local refresh/retry actions to the Figma `xl` 32px rounded outline contract without changing request, permission, or persistence behavior.
 - Added route-level assertions that all six operational main-content empty states render `data-size="xl"`.
+
+## Side-panel copy follow-up (2026-09-08)
+
+- User approved hiding redundant secondary copy in reception, chart, dispensing/treatment, lab, imaging, and billing side-panel empty states, then commit/push/PR/main and production delivery.
+- Scope: one shared panel-placement conditional; caller copy, icons, primary messages, and non-panel descriptions are preserved.
+- Release verification and exact candidate/deployment evidence are recorded in the follow-up PR.

@@ -255,3 +255,8 @@ Follow-up implementation issues should satisfy these checks:
 - Apply this contract to patient context memo or no-note states in DEN-437.
 - Apply this contract to SOAP section empty/editing guidance in DEN-438.
 - Revisit shared `EmrEmptyState` only after those implementation issues prove repeated structure.
+
+## Side-panel queue copy (2026-09-08)
+
+- `EmrQueueEmptyState` with `placement="panel-center"` renders the icon and primary message only, including search-empty states. Supplied descriptions remain in callers but are not rendered.
+- Body-centered queues and other `EmrEmptyState` surfaces retain their descriptions.
