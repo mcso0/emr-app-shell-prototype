@@ -117,6 +117,8 @@ Rules:
 - A queue item can be `done` while the encounter remains `ordered` or `ready_for_billing`.
 - Cancelling a queue item does not automatically cancel the encounter unless the transition explicitly says so.
 
+For the approved multi-chart target and individual signing versus encounter finalization, see [Encounter Multi-Chart Contract](encounter-multi-chart-contract.md). Delivery is tracked in CHART-PR-037.
+
 ## Chart And SOAP States
 
 | State | Meaning | Normal next states |

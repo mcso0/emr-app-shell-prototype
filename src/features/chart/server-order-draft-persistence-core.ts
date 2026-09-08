@@ -1,3 +1,4 @@
+import { getMockEncounterCharts } from "@/features/chart/server-soap-note-persistence-core";
 import { readPersistedOrderDefaults } from "@/features/hospital-admin/persisted-order-defaults";
 import {
   createMockWorkspacePermissionAdapter,
@@ -48,6 +49,7 @@ export type ChartOrderReadbackQuantitySource =
   | "actual_dispense_quantity";
 
 export type ChartOrderRuntimeRow = {
+  originChartId?: string | null;
   orderId: string;
   workspaceId?: string;
   encounterId: string;
@@ -126,6 +128,7 @@ export type ChartOrderDraftRowInput =
     } & ChartOrderDraftEditableValues;
 
 export type ChartOrderDraftInput = {
+  chartId?: string;
   encounterId?: string;
   expectedEtag?: string;
   removedOrderIds?: string[];
@@ -133,6 +136,7 @@ export type ChartOrderDraftInput = {
 };
 
 export type ChartOrderDraftLine = {
+  originChartId?: string | null;
   billingDisplayName: string;
   encounterId: string;
   lineTotalSnapshot: number;
@@ -177,6 +181,7 @@ export type ChartOrderDraftGateway = {
     workspaceId: string;
   }): Promise<ChartOrderDraftGatewayResult>;
   saveOrderDraft(input: {
+    chartId?: string;
     actorUserId: string;
     encounterId: string;
     expectedEtag: string;
@@ -364,6 +369,7 @@ export async function saveChartOrderDraft({
   }
 
   const result = await gateway.saveOrderDraft({
+    chartId: normalized.chartId,
     actorUserId: actorUserId ?? "",
     encounterId: normalized.encounterId,
     expectedEtag: normalized.expectedEtag,
@@ -442,7 +448,7 @@ export function createMockChartOrderDraftGateway(
         rows,
       };
     },
-    async saveOrderDraft({ encounterId, removedOrderIds = [], rows: draftRows, expectedEtag, workspaceId }) {
+    async saveOrderDraft({ chartId, encounterId, removedOrderIds = [], rows: draftRows, expectedEtag, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, error: "encounter_unavailable" };
       if (!canMutateChart(encounter)) return { ok: false, status: 409, error: "stale_status" };
@@ -451,6 +457,16 @@ export function createMockChartOrderDraftGateway(
       const currentRows =
         getMockChartOrderDraftRuntimeRows({ encounterId, workspaceId }) ??
         seedDraftLinesToRuntimeRows(seedRows, workspaceId);
+      const charts = getMockEncounterCharts(workspaceId, encounterId);
+      const chart = charts.find((row) => row.id === chartId);
+      if (chartId && (!chart || (chart.status !== "draft" && chart.status !== "autosaved"))) return { ok: false, status: 409, error: "chart_unavailable" };
+      const targetIds = [...draftRows.map((row) => row.orderId), ...removedOrderIds];
+      if (currentRows.some((row) => targetIds.includes(row.orderId) && (row.originChartId ?? null) !== (chartId ?? null))) {
+        return { ok: false, status: 409, error: "order_chart_mismatch" };
+      }
+      if (!chartId && charts.length && draftRows.some((row) => !currentRows.some((existing) => existing.orderId === row.orderId))) {
+        return { ok: false, status: 409, error: "chart_id_required" };
+      }
       if (expectedEtag !== mockChartOrderEtag(currentRows)) {
         return { ok: false, status: 409, error: "revision_conflict" };
       }
@@ -608,7 +624,7 @@ export function createMockChartOrderDraftGateway(
             !removedRootOrderIds.has(row.orderId) &&
             !(row.parentOrderId && removedRootOrderIds.has(row.parentOrderId)),
         ),
-        ...submittedRuntimeRows,
+        ...submittedRuntimeRows.map((row) => ({ ...row, originChartId: chartId ?? null })),
       ];
       mockOrderDraftRuntimeStore.set(
         buildOrderDraftKey(workspaceId, encounterId),
@@ -632,6 +648,7 @@ export function createMockChartOrderDraftGateway(
           id: row.orderId,
           workspaceId,
           encounterId,
+          originChartId: chartId,
           serviceItemId: undefined,
           workspaceCatalogItemId: row.workspaceCatalogItemId,
           sourceMasterRecordId: row.sourceMasterRecordId,
@@ -684,8 +701,9 @@ export type SupabaseChartOrderDraftRpcClient = {
     }
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_save_chart_order_draft",
+    functionName: "clair_save_chart_order_draft" | "clair_save_chart_order_draft_for_chart",
     args: {
+      p_chart_id?: string;
       p_workspace_id: string;
       p_actor_user_id: string;
       p_encounter_id: string;
@@ -709,6 +727,8 @@ export function createSupabaseChartOrderDraftGateway(
       });
 
       if (error) {
+        const chartError = ["order_chart_mismatch", "chart_id_required", "signed_chart_read_only", "chart_unavailable"].find((reason) => error.message?.includes(reason));
+        if (chartError) return { ok: false, status: 409, error: chartError };
         if (error.message?.includes("encounter_unavailable")) return { ok: false, status: 409, error: "encounter_unavailable" };
         return { ok: false, status: 500, error: "db_read_failed" };
       }
@@ -717,8 +737,9 @@ export function createSupabaseChartOrderDraftGateway(
       if (!mapped) return { ok: false, status: 500, error: "db_read_failed" };
       return mapped;
     },
-    async saveOrderDraft({ actorUserId, encounterId, expectedEtag, removedOrderIds = [], rows, workspaceId }) {
-      const { data, error } = await client.rpc("clair_save_chart_order_draft", {
+    async saveOrderDraft({ actorUserId, chartId, encounterId, expectedEtag, removedOrderIds = [], rows, workspaceId }) {
+      const { data, error } = await client.rpc(chartId ? "clair_save_chart_order_draft_for_chart" : "clair_save_chart_order_draft", {
+        ...(chartId ? { p_chart_id: chartId } : {}),
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
@@ -726,6 +747,8 @@ export function createSupabaseChartOrderDraftGateway(
       });
 
       if (error) {
+        const chartError = ["order_chart_mismatch", "chart_id_required", "signed_chart_read_only", "chart_unavailable"].find((reason) => error.message?.includes(reason));
+        if (chartError) return { ok: false, status: 409, error: chartError };
         if (error.message?.includes("encounter_unavailable")) return { ok: false, status: 409, error: "encounter_unavailable" };
         if (error.message?.includes("stale_status")) return { ok: false, status: 409, error: "stale_status" };
         if (error.message?.includes("revision_conflict")) return { ok: false, status: 409, error: "revision_conflict" };
@@ -1022,6 +1045,7 @@ function normalizeOrderDraftInput(input: ChartOrderDraftInput) {
   );
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
+    chartId: trimToUndefined(input.chartId),
     expectedEtag: trimToUndefined(input.expectedEtag) ?? "",
     removedOrderIds: Array.isArray(input.removedOrderIds)
       ? input.removedOrderIds.map((orderId) => trimToUndefined(orderId) ?? "")
@@ -1372,6 +1396,7 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     orderId: row.orderId,
     workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,
     encounterId: row.encounterId,
+    originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     rowType: row.rowType,
     orderType: row.orderType as ChartOrderRuntimeRow["orderType"],
     clinicalOrderType,
@@ -1725,6 +1750,7 @@ function seedDraftLinesToRuntimeRows(rows: ChartOrderDraftLine[], workspaceId: s
     orderId: row.orderId,
     workspaceId,
     encounterId: row.encounterId,
+    originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     rowType: "individual",
     orderType: "treatment",
     clinicalOrderType: row.clinicalOrderType ?? canonical.clinicalOrderType,

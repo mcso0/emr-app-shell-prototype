@@ -784,7 +784,7 @@ test("order action Supabase gateway sends confirmation through one idempotent at
 
   expect(calls).toEqual([
     {
-      functionName: "clair_confirm_chart_order_candidates",
+      functionName: "clair_confirm_chart_order_candidates_with_actual",
       args: {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
@@ -792,6 +792,7 @@ test("order action Supabase gateway sends confirmation through one idempotent at
         p_selected_root_order_ids: [persistedOrderId],
         p_expected_draft_etag: etag,
         p_idempotency_key: idempotencyKey,
+        p_actual_records: {},
       },
     },
   ]);

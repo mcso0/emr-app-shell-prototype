@@ -325,7 +325,8 @@ export type WaitingQueueEntry = {
 export type SoapNote = {
   id: EmrId;
   encounterId: EmrId;
-  authorUserId: EmrId;
+  authorUserId?: EmrId;
+  authorDisplayName?: string;
   subjective?: string;
   objective?: string;
   assessment?: string;
@@ -335,6 +336,7 @@ export type SoapNote = {
   status: SoapNoteStatus;
   autosavedAt?: IsoDateTime;
   signedAt?: IsoDateTime;
+  clinicalAt?: string;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
 };
@@ -472,6 +474,7 @@ export type EmrOrder = {
   id: EmrId;
   orderGroupId?: EmrId;
   workspaceId: EmrId;
+  originChartId?: string;
   encounterId: EmrId;
   serviceItemId?: EmrId;
   workspaceCatalogItemId?: string;

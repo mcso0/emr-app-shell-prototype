@@ -272,6 +272,7 @@ import {
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
+import { useEncounterCharts, encounterChartsRequest, chartLifecycleError } from "@/features/chart/encounter-charts-client";
 import { useChartStore } from "@/features/chart/store";
 import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -447,6 +448,9 @@ type ChartDiagnosisRouteResponse =
       ok: true;
       status: number;
       diagnoses: Diagnosis[];
+      version?: string;
+      assessments?: Diagnosis[];
+      chart?: SoapNote;
     }
   | {
       ok: false;
@@ -1932,6 +1936,17 @@ function getPatientStatusLabel(status: "active" | "inactive" | "deceased") {
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const bundle = useDisplayedChartBundle(workspaceId);
+  const { session } = useAuthClient();
+  const encounterCharts = useChartStore((state) => state.encounterCharts);
+  const encounterChartsScope = useChartStore((state) => state.encounterChartsScope);
+  const encounterChartsStatus = useChartStore((state) => state.encounterChartsStatus);
+  const selectedChartId = useChartStore((state) => state.selectedChartId);
+  const selectChart = useChartStore((state) => state.selectChart);
+  const createChart = useChartStore((state) => state.createEncounterChart);
+  const creatingChart = useChartStore((state) => state.encounterChartCreating);
+  const chartsMatch = encounterChartsScope === `${workspaceId}:${session?.id ?? "signed-out"}:${bundle?.encounter.id ?? ""}`;
+  const canCreateChart = chartsMatch && encounterChartsStatus === "ready"
+    && (bundle?.encounter.status === "in_consultation" || bundle?.encounter.status === "ordered");
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
@@ -2079,6 +2094,26 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
                 : "연결 상태를 확인한 뒤 다시 시도해 주세요."}
             </EmrInlineAlert>
           ) : null}
+          {chartsMatch ? (
+            <div className="grid gap-1" data-testid="encounter-chart-list">
+              <p className="px-2 py-1 emr-text-metadata text-muted-foreground">선택한 접수의 차트 · {encounterCharts.length}건</p>
+              {encounterCharts.map((chart) => (
+                <button key={chart.id} data-chart-id={chart.id} type="button" aria-pressed={selectedChartId === chart.id}
+                  data-testid={`encounter-chart-${chart.id}`}
+                  className={cn("grid gap-1 rounded-lg border px-3 py-2 text-left emr-text-metadata",
+                    selectedChartId === chart.id ? "border-[var(--emr-border-strong)] bg-[var(--emr-state-selected)]" : "border-[var(--emr-border-default)] bg-card")}
+                  onClick={() => void selectChart(chart.id)}>
+                  <span className="font-medium">{getShortDateTime(chart.clinicalAt ?? chart.createdAt)}</span>
+                  <span className="flex items-center justify-between gap-2 text-muted-foreground">
+                    <span>{chart.authorDisplayName ?? getChartStaffName(chart.authorUserId) ?? (chart.authorUserId ? "작성자 이름 미확인" : "작성자 미기록")}</span>
+                    <span>{chart.status === "signed" ? "완료" : chart.status === "amended" ? "수정 완료" : "작성 중"}</span>
+                  </span>
+                </button>
+              ))}
+              <div className="my-2 h-px bg-[var(--emr-border-default)]" />
+              <p className="px-2 py-1 emr-text-metadata text-muted-foreground">접수 이력 · {historyCount}건</p>
+            </div>
+          ) : null}
           {historyGroups.map((group) => (
             <EmrContentHistoryGroup
               key={group.date}
@@ -2112,13 +2147,8 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         className="flex shrink-0 justify-end gap-2 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] py-3"
         data-testid="chart-history-footer-actions"
       >
-        <span className="inline-flex" title="수술 차트는 기능 구현 중입니다.">
-          <Button variant="outline" size="default" className="bg-card" disabled>
-            수술 차트
-            <span className="sr-only">기능 구현 중입니다.</span>
-          </Button>
-        </span>
-        <Button size="default">외래 차트 추가</Button>
+        <Button size="xs" variant="outline" className="bg-card" disabled={!canCreateChart || creatingChart}
+          onClick={() => void createChart?.()}>{creatingChart ? "생성 중" : "+ 새 차트"}</Button>
       </div>
     </EmrContentAsidePanel>
   );
@@ -2440,15 +2470,17 @@ function getDemoActorHeader(session: AuthSession | null) {
 async function loadChartSoapNote({
   actorHeaders,
   encounterId,
+  chartId,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   encounterId: string;
+  chartId?: string;
   workspaceId: string;
 }): Promise<ChartSoapNoteRouteResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/soap-notes?encounterId=${encodeURIComponent(encounterId)}`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/soap-notes?encounterId=${encodeURIComponent(encounterId)}${chartId ? `&chartId=${encodeURIComponent(chartId)}` : ""}`,
       {
         cache: "no-store",
         headers: actorHeaders,
@@ -2471,15 +2503,19 @@ async function saveChartSoapNote({
   actorHeaders,
   blockDocument,
   encounterId,
+  chartId,
   expectedUpdatedAt,
   mode,
+  amendmentReason,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   blockDocument: SoapBlockDocument;
   encounterId: string;
+  chartId?: string;
   expectedUpdatedAt?: string | null;
   mode: "autosave" | "manual_save";
+  amendmentReason?: string;
   workspaceId: string;
 }): Promise<ChartSoapNoteRouteResponse> {
   try {
@@ -2494,8 +2530,10 @@ async function saveChartSoapNote({
         },
         body: JSON.stringify({
           encounterId,
+  chartId,
           expectedUpdatedAt,
           mode,
+          amendmentReason,
           blockDocument,
         }),
       },
@@ -2551,15 +2589,17 @@ async function loadChartCompletion({
 async function loadChartDiagnoses({
   actorHeaders,
   encounterId,
+  chartId,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   encounterId: string;
+  chartId?: string;
   workspaceId: string;
 }): Promise<ChartDiagnosisRouteResponse> {
   try {
     const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/diagnoses?encounterId=${encodeURIComponent(encounterId)}`,
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/diagnoses?encounterId=${encodeURIComponent(encounterId)}${chartId ? `&chartId=${encodeURIComponent(chartId)}` : ""}`,
       {
         cache: "no-store",
         headers: actorHeaders,
@@ -2581,12 +2621,16 @@ async function loadChartDiagnoses({
 async function saveChartDiagnosesRoute({
   actorHeaders,
   diagnoses,
+  expectedVersion,
   encounterId,
+  chartId,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   diagnoses: EditableDiagnosis[];
+  expectedVersion?: string;
   encounterId: string;
+  chartId?: string;
   workspaceId: string;
 }): Promise<ChartDiagnosisRouteResponse> {
   try {
@@ -2600,6 +2644,8 @@ async function saveChartDiagnosesRoute({
         },
         body: JSON.stringify({
           encounterId,
+  chartId,
+          expectedVersion,
           diagnoses: diagnoses.map((diagnosis, index) => ({
             id: diagnosis.id,
             diagnosisCatalogId: diagnosis.diagnosisCatalogId,
@@ -2783,6 +2829,7 @@ function getChartOrderSetSelectionIntentForDraftRow(
 
 async function saveChartOrderDraftRoute({
   actorHeaders,
+  chartId,
   encounterId,
   expectedEtag,
   primaryVeterinarianId,
@@ -2791,6 +2838,7 @@ async function saveChartOrderDraftRoute({
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
+  chartId?: string;
   encounterId: string;
   expectedEtag: string;
   primaryVeterinarianId?: string;
@@ -2933,6 +2981,7 @@ async function saveChartOrderDraftRoute({
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
+          chartId,
           encounterId,
           expectedEtag,
           removedOrderIds,
@@ -3176,6 +3225,7 @@ async function saveChartOrderActionRoute({
   actualRecords,
   action,
   actorHeaders,
+  chartId,
   encounterId,
   expectedEtag,
   idempotencyKey,
@@ -3185,6 +3235,7 @@ async function saveChartOrderActionRoute({
   actualRecords?: ChartActualRecords;
   action: ChartOrderActionKind;
   actorHeaders?: Record<string, string>;
+  chartId?: string;
   encounterId: string;
   expectedEtag?: string;
   idempotencyKey?: string;
@@ -3202,6 +3253,7 @@ async function saveChartOrderActionRoute({
           ...(actorHeaders ?? {}),
         },
         body: JSON.stringify({
+          chartId,
           actualRecords,
           action,
           encounterId,
@@ -3448,6 +3500,7 @@ async function requestChartOrderBillingRoute({
 async function saveChartOrderExecutionMutationRoute({
   action,
   actorHeaders,
+  chartId,
   changes,
   expectedRevisionNo,
   idempotencyKey,
@@ -3457,6 +3510,7 @@ async function saveChartOrderExecutionMutationRoute({
 }: {
   action: ChartOrderExecutionMutationAction;
   actorHeaders?: Record<string, string>;
+  chartId?: string;
   changes: Record<string, unknown>;
   expectedRevisionNo: number;
   idempotencyKey: string;
@@ -3474,6 +3528,7 @@ async function saveChartOrderExecutionMutationRoute({
           ...actorHeaders,
         },
         body: JSON.stringify({
+          chartId,
           action,
           changes,
           expectedRevisionNo,
@@ -3610,17 +3665,19 @@ function SoapPanel({
   collapseContentId,
   diagnoses,
   encounterId,
+  chartId,
   loading,
   onCollapse,
   onPersistedSoapNote,
   soapNote,
-  writeDisabled,
+  writeDisabled: parentWriteDisabled,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   collapseContentId: string;
   diagnoses: Diagnosis[];
   encounterId: string;
+  chartId?: string;
   loading: boolean;
   onCollapse: () => void;
   onPersistedSoapNote: (soapNote: SoapNote) => void;
@@ -3628,6 +3685,11 @@ function SoapPanel({
   writeDisabled: boolean;
   workspaceId: string;
 }) {
+  const [amendmentReason, setAmendmentReason] = useState("");
+  const [amendmentDraft, setAmendmentDraft] = useState("");
+  const [amendmentDialogOpen, setAmendmentDialogOpen] = useState(false);
+  const isSigned = soapNote?.status === "signed" || soapNote?.status === "amended";
+  const writeDisabled = parentWriteDisabled || !chartId || (isSigned && !amendmentReason);
   const [soapDocument, setSoapDocument] = useState<SoapBlockDocumentV2>(() =>
     getSoapInitialDocument(soapNote, diagnoses),
   );
@@ -3714,8 +3776,10 @@ function SoapPanel({
             actorHeaders,
             blockDocument: document,
             encounterId,
+            chartId,
             expectedUpdatedAt,
-            mode,
+            amendmentReason: amendmentReason || undefined,
+            mode: amendmentReason ? "manual_save" : mode,
             workspaceId,
           });
 
@@ -3735,6 +3799,7 @@ function SoapPanel({
           const latest = await loadChartSoapNote({
             actorHeaders,
             encounterId,
+            chartId,
             workspaceId,
           });
           if (
@@ -3754,7 +3819,7 @@ function SoapPanel({
         onPersisted: () => undefined,
         onStateChange: () => undefined,
       }),
-    [actorHeaders, encounterId, workspaceId],
+    [actorHeaders, amendmentReason, chartId, encounterId, workspaceId],
   );
 
   useEffect(() => {
@@ -3779,7 +3844,21 @@ function SoapPanel({
     );
   }, [coordinator, onPersistedSoapNote]);
 
-  useEffect(() => () => coordinator.dispose(), [coordinator]);
+  useEffect(() => {
+    coordinator.attach();
+    const flush = () => coordinator.flushPending();
+    useChartStore.setState({ flushActiveChart: flush });
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!coordinator.hasUnsavedChanges()) return;
+      event.preventDefault(); event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", beforeUnload);
+      if (useChartStore.getState().flushActiveChart === flush) useChartStore.setState({ flushActiveChart: undefined });
+      coordinator.dispose();
+    };
+  }, [coordinator]);
 
   useEffect(() => {
     coordinator.setExpectedUpdatedAt(soapNote?.updatedAt ?? null);
@@ -3896,6 +3975,16 @@ function SoapPanel({
       data-slot="chart-workspace-panel"
       className={chartWorkspacePanelClassName}
     >
+      <Dialog open={amendmentDialogOpen} onOpenChange={setAmendmentDialogOpen}>
+        <EmrDialogShell variant="confirm" title="완료 차트 수정" description="수정 사유와 변경 전 기록이 함께 보존됩니다."
+          primaryAction={<Button size="sm" disabled={!amendmentDraft.trim()} onClick={() => {
+            setAmendmentReason(amendmentDraft.trim()); setAmendmentDraft(""); setAmendmentDialogOpen(false);
+          }}>수정 시작</Button>}
+          secondaryAction={<Button size="sm" variant="outline" onClick={() => setAmendmentDialogOpen(false)}>취소</Button>}>
+          <label htmlFor="chart-amendment-reason">수정 사유</label>
+          <Textarea id="chart-amendment-reason" maxLength={2000} value={amendmentDraft} onChange={(event) => setAmendmentDraft(event.target.value)} />
+        </EmrDialogShell>
+      </Dialog>
       <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2
           aria-label="Subject/Object"
@@ -3910,6 +3999,12 @@ function SoapPanel({
           </span>
         </h2>
         <ChartPanelActionGroup>
+          {isSigned && !parentWriteDisabled ? (
+            <Button size="xs" variant="outline" onClick={() => {
+              if (amendmentReason) void coordinator.flushPending().then((saved) => { if (saved) setAmendmentReason(""); });
+              else setAmendmentDialogOpen(true);
+            }}>{amendmentReason ? "수정 마침" : "완료 차트 수정"}</Button>
+          ) : null}
           <ChartPanelCollapseButton
             contentId={collapseContentId}
             label="S/O"
@@ -4102,6 +4197,7 @@ function AssessmentPanel({
   classificationCatalogStatus,
   classificationCatalogSystems,
   collapseContentId,
+  assessmentSummary,
   diagnosisRows,
   loading,
   onCollapse,
@@ -4119,6 +4215,7 @@ function AssessmentPanel({
   classificationCatalogStatus: AssessmentClassificationCatalogStatus;
   classificationCatalogSystems: AssessmentClassificationCatalogPage["systems"];
   collapseContentId: string;
+  assessmentSummary?: ReactNode;
   diagnosisRows: EditableDiagnosis[];
   loading: boolean;
   onCollapse: () => void;
@@ -4397,6 +4494,7 @@ function AssessmentPanel({
       data-slot="chart-workspace-panel"
       className={chartWorkspacePanelClassName}
     >
+      {assessmentSummary}
       <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Assessment
@@ -5048,6 +5146,7 @@ function buildChartOrderDraftRowFromRuntime(
       (getString("billingCategory") as
         EmrOrder["billingCategory"] | undefined) ??
       fallback?.order.billingCategory,
+    originChartId: snapshot.originChartId ?? undefined,
     unitPriceSnapshot: snapshot.unitPriceSnapshot,
     appliedSnapshot: applied,
     orderType,
@@ -6631,6 +6730,7 @@ function ChartOrderTable({
   selectedOrderIds,
   sortState,
   writeDisabled,
+  draftWriteDisabled,
 }: {
   quickAdd?: ReactNode;
   quickAddOpen: boolean;
@@ -6695,6 +6795,7 @@ function ChartOrderTable({
   selectedOrderIds: Set<string>;
   sortState: ChartOrderSortState;
   writeDisabled: boolean;
+  draftWriteDisabled: boolean;
 }) {
   const tableHeaderHeight =
     emrTableDensityOptions.find((option) => option.value === density)
@@ -6997,7 +7098,7 @@ function ChartOrderTable({
                   className="h-5 shrink-0 rounded-full px-1.5 emr-text-micro"
                   data-row-interactive="true"
                   disabled={
-                    writeDisabled ||
+                    writeDisabled || draftWriteDisabled ||
                     pendingRemovalOrderIdsRef.current.has(row.original.order.id)
                   }
                   size="xs"
@@ -7039,7 +7140,7 @@ function ChartOrderTable({
                 aria-label={`${row.original.order.displayName} 긴급`}
                 checked={row.original.priority === "urgent"}
                 disabled={
-                  writeDisabled ||
+                  writeDisabled || draftWriteDisabled ||
                   confirmed ||
                   pendingRemovalOrderIdsRef.current.has(row.original.order.id)
                 }
@@ -7116,7 +7217,7 @@ function ChartOrderTable({
               }
               row={row.original}
               writeDisabled={
-                writeDisabled ||
+                writeDisabled || draftWriteDisabled ||
                 pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
             />
@@ -7193,7 +7294,7 @@ function ChartOrderTable({
               aria-label={`${row.original.order.displayName} 청구서명 수정`}
               data-row-interactive="true"
               disabled={
-                writeDisabled ||
+                writeDisabled || draftWriteDisabled ||
                 pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
               value={row.original.billingName}
@@ -7287,7 +7388,7 @@ function ChartOrderTable({
               aria-invalid={invalidQuantity}
               data-row-interactive="true"
               disabled={
-                writeDisabled ||
+                writeDisabled || draftWriteDisabled ||
                 pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
               inputMode="decimal"
@@ -7774,6 +7875,7 @@ function ChartOrderTable({
       intendedAssigneeSavingOrderIds,
       prebillingSavingOrderIds,
       writeDisabled,
+      draftWriteDisabled,
     ],
   );
   // TanStack Table owns the controller lifecycle; React Compiler cannot safely memoize it.
@@ -7928,7 +8030,7 @@ function ChartOrderTable({
                     <EmrIconButton
                       aria-label={`${order.displayName} 후보 삭제`}
                       className={cn(iconClassName, "text-destructive")}
-                      disabled={writeDisabled}
+                      disabled={writeDisabled || draftWriteDisabled}
                       onClick={() => onDeleteOrder(order.id)}
                       type="button"
                     >
@@ -7944,7 +8046,7 @@ function ChartOrderTable({
                             {
                               key: "set-membership",
                               label: included ? "세트에서 제외" : "세트에 포함",
-                              disabled: writeDisabled,
+                              disabled: writeDisabled || draftWriteDisabled,
                               onSelect: () => onToggleSetChild(order.id),
                             },
                           ]
@@ -8159,7 +8261,7 @@ function ChartOrderTable({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={writeDisabled}
+                    disabled={writeDisabled || draftWriteDisabled}
                     onClick={onAddOrder}
                   >
                     + Order
@@ -10165,19 +10267,39 @@ type ChartOrderSetPreviewItemState = {
   selected: boolean;
 };
 
+function EncounterOrderArea(props: Omit<React.ComponentProps<typeof OrderArea>, "orderScope" | "onOrderScopeChange">) {
+  const [orderScope, setOrderScope] = useState<"chart" | "legacy" | "encounter">("chart");
+  return <OrderArea {...props} key={`${props.chartId ?? "none"}:${orderScope}`} orderScope={orderScope} onOrderScopeChange={async (scope) => {
+    const flush = useChartStore.getState().flushOrderEdits;
+    if (flush && !await flush()) return;
+    setOrderScope(scope);
+  }} />;
+}
+
+const applyEncounterOrderDrafts = applyPersistedOrderDrafts;
+const applyEncounterOrderActions = applyPersistedOrderActions;
+
 function OrderArea({
   actorHeaders,
   bundle,
+  chartId,
+  draftWriteDisabled,
+  orderScope,
+  onOrderScopeChange,
   collapseContentId,
   collapsed,
   loading,
   onCollapsedChange,
   onNavigateToBilling,
   orderGroups,
-  writeDisabled,
+  writeDisabled: inheritedWriteDisabled,
 }: {
   actorHeaders?: Record<string, string>;
   bundle: ChartBundle;
+  chartId?: string;
+  draftWriteDisabled: boolean;
+  orderScope: "chart" | "legacy" | "encounter";
+  onOrderScopeChange: (scope: "chart" | "legacy" | "encounter") => void;
   collapseContentId: string;
   collapsed: boolean;
   loading: boolean;
@@ -10186,10 +10308,16 @@ function OrderArea({
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
+  const writeDisabled = inheritedWriteDisabled || orderScope === "encounter" || (orderScope === "chart" && !chartId);
+  const mutationChartId = orderScope === "chart" ? chartId : undefined;
+  const inOrderScope = useCallback((row: ChartOrderDraftRow) => orderScope === "encounter" ||
+    (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) === (mutationChartId ?? null), [orderScope, mutationChartId]);
+  const applyPersistedOrderDrafts: typeof applyEncounterOrderDrafts = useCallback((...args) => applyEncounterOrderDrafts(...args).filter(inOrderScope), [inOrderScope]);
+  const applyPersistedOrderActions: typeof applyEncounterOrderActions = useCallback((...args) => applyEncounterOrderActions(...args).filter(inOrderScope), [inOrderScope]);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const initialDraftRows = useMemo(
-    () => getChartOrderDraftRows(orderGroups),
-    [orderGroups],
+    () => getChartOrderDraftRows(orderGroups).filter((row) => orderScope === "encounter" || (row.order.originChartId ?? null) === (mutationChartId ?? null)),
+    [orderGroups, orderScope, mutationChartId],
   );
   const [committedRows, setCommittedRows] =
     useState<ChartOrderDraftRow[]>(initialDraftRows);
@@ -10249,7 +10377,7 @@ function OrderArea({
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
   const [catalogInitialQuery, setCatalogInitialQuery] = useState("");
   const [quickAddRequested, setQuickAddOpen] = useState(false);
-  const quickAddOpen = quickAddRequested && draftRows.length > 0 && !writeDisabled;
+  const quickAddOpen = quickAddRequested && draftRows.length > 0 && !writeDisabled && orderScope === "chart";
   const [quickAddQuery, setQuickAddQuery] = useState("");
   const [quickAddActiveIndex, setQuickAddActiveIndex] = useState(-1);
   const [quickAddedSourceKey, setQuickAddedSourceKey] = useState<string>();
@@ -10650,7 +10778,7 @@ function OrderArea({
       Pick<ChartOrderDraftRow, "billingName" | "quantityInput">
     >,
   ) => {
-    if (writeDisabled) return;
+    if (writeDisabled || draftWriteDisabled) return;
     markDraftTouched();
     setDraftRows((currentRows) => {
       const target = currentRows.find((row) => row.order.id === orderId);
@@ -10698,7 +10826,7 @@ function OrderArea({
     fieldKey: string,
     value: unknown | undefined,
   ) => {
-    if (writeDisabled) return;
+    if (writeDisabled || draftWriteDisabled) return;
     markDraftTouched();
     setDraftRows((currentRows) =>
       currentRows.map((row) => {
@@ -10719,7 +10847,7 @@ function OrderArea({
     orderId: string,
     priority: ClinicalOrderPriority,
   ) => {
-    if (writeDisabled) return;
+    if (writeDisabled || draftWriteDisabled) return;
     markDraftTouched("discrete");
     setDraftRows((currentRows) =>
       currentRows.map((row) =>
@@ -10734,7 +10862,7 @@ function OrderArea({
     );
   };
   const toggleSetChild = (orderId: string) => {
-    if (writeDisabled) return;
+    if (writeDisabled || draftWriteDisabled) return;
     markDraftTouched("discrete");
     setDraftRows((currentRows) => {
       const child = currentRows.find((row) => row.order.id === orderId);
@@ -10805,7 +10933,7 @@ function OrderArea({
     setCatalogSearchStatus("ready");
   };
   const openCatalogDialog = () => {
-    if (writeDisabled) return;
+    if (writeDisabled || draftWriteDisabled || orderScope !== "chart") return;
     setCatalogInitialQuery("");
     setQuickAddReturn(false);
     setQuickAddOpen(false);
@@ -10814,7 +10942,7 @@ function OrderArea({
     void loadCatalogRows();
   };
   const openQuickAdd = () => {
-    if (writeDisabled || !draftRowsRef.current.length || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict") return;
+    if (writeDisabled || draftWriteDisabled || orderScope !== "chart" || !draftRowsRef.current.length || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict") return;
     setQuickAddReturn(false);
     setQuickAddOpen(true);
     setQuickAddActiveIndex(-1);
@@ -10832,6 +10960,7 @@ function OrderArea({
     return quickAddInputRef.current ?? false;
   };
   const openDetailedOrderSearch = () => {
+    if (writeDisabled || draftWriteDisabled || orderScope !== "chart") return;
     setQuickAddReturn(true);
     setCatalogInitialQuery(quickAddQuery);
     setQuickAddOpen(false);
@@ -10965,7 +11094,7 @@ function OrderArea({
     rows: ChartOrderCatalogSearchRow[],
     selectedSourceKeys: Set<string>,
   ) => {
-    if (writeDisabled) return;
+    if (writeDisabled || draftWriteDisabled || orderScope !== "chart") return;
     const currentRows = draftRowsRef.current;
     const childRowsByParentId = new Map<string, ChartOrderDraftRow[]>();
     currentRows.forEach((row) => {
@@ -11258,6 +11387,8 @@ function OrderArea({
     initialDraftRows,
     orderDraftReloadKey,
     setDraftRows,
+    applyPersistedOrderDrafts,
+    applyPersistedOrderActions,
   ]);
   const acceptAuthoritativeBillingSummary = useCallback(
     (summary: ChartOrderBillingSummary) => {
@@ -11435,7 +11566,7 @@ function OrderArea({
     if (inFlightSave) return inFlightSave;
     if (orderDraftSaveInFlightRef.current) return Promise.resolve(false);
     if (
-      writeDisabled ||
+      writeDisabled || draftWriteDisabled ||
       orderDraftSaveState === "loading" ||
       orderDraftSaveState === "saving" ||
       orderDraftSaveState === "conflict"
@@ -11492,6 +11623,7 @@ function OrderArea({
           preparedDraft.rows.map((row) => row.order.id),
         );
         const result = await saveChartOrderDraftRoute({
+          chartId: mutationChartId,
           actorHeaders,
           encounterId: bundle.encounter.id,
           expectedEtag,
@@ -11648,6 +11780,30 @@ function OrderArea({
   useEffect(() => {
     autoSaveDraftRef.current = () => commitDraftRows({ silent: true });
   });
+  const orderSwitchBlockedRef = useRef(false);
+  useLayoutEffect(() => {
+    orderSwitchBlockedRef.current = billingRequesting || Boolean(orderMutationDraft?.saving) || orderDraftSaveState === "saving" && !orderDraftSavePromiseRef.current;
+  }, [billingRequesting, orderMutationDraft?.saving, orderDraftSaveState]);
+  useEffect(() => {
+    const flush = async () => {
+      if (orderSwitchBlockedRef.current || prebillingSavingOrderIdsRef.current.size || actualDispenseSavingOrderIdsRef.current.size || intendedAssigneeSavingOrderIdsRef.current.size) {
+        toast.error("처방 작업이 끝난 뒤 차트를 전환해 주세요."); return false;
+      }
+      const pending = orderDraftSavePromiseRef.current;
+      if (pending && !await pending) return false;
+      return !draftTouchedRef.current || await autoSaveDraftRef.current();
+    };
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!draftTouchedRef.current && !orderDraftSaveInFlightRef.current) return;
+      event.preventDefault(); event.returnValue = "";
+    };
+    useChartStore.setState({ flushOrderEdits: flush });
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => {
+      if (useChartStore.getState().flushOrderEdits === flush) useChartStore.setState({ flushOrderEdits: undefined });
+      window.removeEventListener("beforeunload", beforeUnload);
+    };
+  }, []);
   const loadIntendedAssignees = async (orderId: string) => {
     const row = draftRowsRef.current.find(
       (candidate) => candidate.order.id === orderId,
@@ -12082,6 +12238,7 @@ function OrderArea({
     ) {
       setOrderDraftSaveState("saving");
       let retryResult = await saveChartOrderActionRoute({
+          chartId: mutationChartId,
         action: "confirm",
         actorHeaders,
         encounterId: bundle.encounter.id,
@@ -12160,6 +12317,7 @@ function OrderArea({
 
     if (draftTouchedRef.current) {
       const draftResult = await saveChartOrderDraftRoute({
+          chartId: mutationChartId,
         actorHeaders,
         encounterId: bundle.encounter.id,
         expectedEtag: expectedDraftEtag,
@@ -12285,6 +12443,7 @@ function OrderArea({
       orderIds: [...actionOrderIds].sort(),
     };
     let result = await saveChartOrderActionRoute({
+          chartId: mutationChartId,
       action: "confirm",
       actorHeaders,
       encounterId: bundle.encounter.id,
@@ -12542,6 +12701,7 @@ function OrderArea({
 
     setOrderMutationDraft({ ...draft, error: undefined, saving: true });
     const result = await saveChartOrderExecutionMutationRoute({
+          chartId: mutationChartId,
       action: draft.action,
       actorHeaders,
       changes,
@@ -12816,6 +12976,11 @@ function OrderArea({
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Plan/Order
         </h2>
+        <select aria-label="처방 조회 범위" className="h-7 rounded-md border border-input bg-background px-2 text-xs" value={orderScope} onChange={(event) => onOrderScopeChange(event.target.value as typeof orderScope)}>
+          <option value="chart">이 차트 처방</option>
+          <option value="legacy">기존 접수 처방</option>
+          <option value="encounter">접수 전체 처방 · 조회</option>
+        </select>
         <ChartPanelActionGroup>
           <ChartPanelCollapseButton
             collapsed={collapsed}
@@ -12831,7 +12996,7 @@ function OrderArea({
             size="icon-xs"
             className="size-7 rounded-lg text-[var(--emr-text-secondary)]"
             aria-label="Order 추가"
-            disabled={writeDisabled}
+            disabled={writeDisabled || draftWriteDisabled || orderScope !== "chart"}
             onClick={openCatalogDialog}
           >
             <CdsActionsPlusIcon className="size-3.5" />
@@ -13098,7 +13263,7 @@ function OrderArea({
                     <Button
                       ref={quickAddTriggerRef}
                       aria-label="Order 추가"
-                      disabled={writeDisabled || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict"}
+                      disabled={writeDisabled || draftWriteDisabled || orderScope !== "chart" || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict"}
                       size="sm"
                       variant="outline"
                     >
@@ -13227,6 +13392,7 @@ function OrderArea({
             selectedOrderIds={selectedOrderIds}
             sortState={orderSortState}
             writeDisabled={writeDisabled}
+            draftWriteDisabled={draftWriteDisabled}
           />
         </div>
         <ChartOrderDetailSheet
@@ -13248,7 +13414,7 @@ function OrderArea({
           onUpdatePriority={updateDraftPriority}
           open={detailOrderId !== null}
           row={detailOrderRow}
-          writeDisabled={writeDisabled}
+          writeDisabled={writeDisabled || draftWriteDisabled}
         />
         <ChartOrderHistorySheet
           workspaceId={bundle.encounter.workspaceId}
@@ -13843,7 +14009,6 @@ export function ChartContent({
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
   );
-  const latestSoap = bundle?.soapNotes.at(-1);
   const activeEncounterId = bundle?.encounter.id;
   const activeWorkspaceId = bundle?.encounter.workspaceId;
   const actorHeaders = useMemo(
@@ -13853,6 +14018,7 @@ export function ChartContent({
   const diagnosisCatalogActorKey = authSession?.id ?? "signed-out";
   const [persistedSoapState, setPersistedSoapState] = useState<{
     encounterId?: string;
+    chartId?: string;
     soapNote?: SoapNote | null;
     status: "idle" | "loading" | "error";
   }>({ status: "idle" });
@@ -13861,11 +14027,16 @@ export function ChartContent({
     encounterId?: string;
     status: "idle" | "loading" | "saving" | "saved" | "error";
   }>({ status: "idle" });
-  const effectiveLatestSoap =
-    persistedSoapState.encounterId === activeEncounterId &&
-    persistedSoapState.soapNote
-      ? persistedSoapState.soapNote
-      : latestSoap;
+  const encounterCharts = useEncounterCharts({ workspaceId: activeWorkspaceId, encounterId: activeEncounterId,
+    actorKey: authSession?.id ?? "signed-out", actorHeaders, enabled: authHydrated,
+    requestedChartId: searchParams.get("chartId") });
+  const activeChartId = encounterCharts.selectedChartId;
+  const selectedChart = encounterCharts.charts.find((chart) => chart.id === activeChartId);
+  const effectiveLatestSoap = persistedSoapState.encounterId === activeEncounterId
+    && persistedSoapState.chartId === activeChartId && persistedSoapState.soapNote
+      ? persistedSoapState.soapNote : selectedChart;
+  const chartSigned = effectiveLatestSoap?.status === "signed" || effectiveLatestSoap?.status === "amended";
+  const [chartSigning, setChartSigning] = useState(false);
   const effectiveEncounter =
     bundle &&
     chartCompletionState.encounterId === activeEncounterId &&
@@ -13916,6 +14087,9 @@ export function ChartContent({
         )
       : [],
   }));
+  const [diagnosisContext, setDiagnosisContext] = useState<{ chartId?: string; version?: string; assessments: Diagnosis[] }>({ assessments: [] });
+  const [encounterDiagnosisViewChartId, setEncounterDiagnosisViewChartId] = useState("");
+  const showingRecordedAssessments = chartSigned && encounterDiagnosisViewChartId !== activeChartId;
   const [diagnosisPersistenceState, setDiagnosisPersistenceState] = useState<{
     encounterId?: string;
     status: "idle" | "loading" | "saving" | "saved" | "error";
@@ -13990,13 +14164,15 @@ export function ChartContent({
     Boolean(activeEncounterId && activeWorkspaceId) &&
     !allowMockFallback &&
     (!authHydrated ||
-      persistedSoapState.encounterId !== activeEncounterId ||
-      persistedSoapState.status === "loading");
+      encounterCharts.status === "loading" ||
+      (Boolean(activeChartId) && (persistedSoapState.encounterId !== activeEncounterId ||
+      persistedSoapState.chartId !== activeChartId || persistedSoapState.status === "loading")));
   const diagnosisLoading =
     Boolean(activeEncounterId && activeWorkspaceId) &&
     !allowMockFallback &&
     (!authHydrated ||
       diagnosisPersistenceState.encounterId !== activeEncounterId ||
+      (Boolean(activeChartId) && diagnosisContext.chartId !== activeChartId) ||
       diagnosisPersistenceState.status === "loading");
   const chartCompletionLoading =
     Boolean(activeEncounterId && activeWorkspaceId) &&
@@ -14007,7 +14183,9 @@ export function ChartContent({
   const detailLoading =
     soapLoading || diagnosisLoading || chartCompletionLoading;
   const detailHydrationPending = detailLoading;
-  const chartWriteDisabled = detailHydrationPending || isHistoricalView;
+  const chartWriteDisabled = detailHydrationPending || isHistoricalView || encounterCharts.status !== "ready"
+    || (Boolean(activeChartId) && persistedSoapState.status === "error")
+    || (effectiveEncounter?.status !== "in_consultation" && effectiveEncounter?.status !== "ordered");
   const orderLoading = detailHydrationPending;
   const showDetailPendingIndicator = useDelayedBoolean(
     detailHydrationPending,
@@ -14104,6 +14282,24 @@ export function ChartContent({
       setClampedChartTopPercent(100);
     }
   };
+  const handleIndividualChartSign = async () => {
+    if (chartSigning || chartWriteDisabled || !activeChartId || !activeEncounterId || !activeWorkspaceId) return;
+    setChartSigning(true);
+    try {
+      if (!await useChartStore.getState().flushEditors()) {
+        toast.error("SOAP 저장 오류를 해결한 뒤 차트를 완료해 주세요."); return;
+      }
+      const latest = useChartStore.getState().encounterCharts.find((chart) => chart.id === activeChartId);
+      if (!latest) return;
+      const result = await encounterChartsRequest(activeWorkspaceId, "PATCH", {
+        encounterId: activeEncounterId, chartId: activeChartId, expectedUpdatedAt: latest.updatedAt,
+      }, actorHeaders);
+      if (!result.ok || !result.chart) { toast.error(chartLifecycleError(!result.ok ? result.denialReason : undefined)); return; }
+      useChartStore.getState().updateEncounterChart(encounterCharts.scope, result.chart);
+      setPersistedSoapState((current) => current.chartId === activeChartId ? { ...current, soapNote: result.chart, status: "idle" } : current);
+      toast.success("이 차트를 완료했어요. 접수의 진료 종료는 별도로 진행해 주세요.");
+    } finally { setChartSigning(false); }
+  };
   const handleChartCompletionConfirm = async () => {
     if (chartCompletionState.status === "saving") return;
     if (detailHydrationPending) return;
@@ -14116,6 +14312,12 @@ export function ChartContent({
       return;
     }
 
+    if (!await useChartStore.getState().flushEditors()) {
+      toast.error("현재 차트를 저장한 뒤 진료를 종료해 주세요."); return;
+    }
+    if (useChartStore.getState().encounterCharts.some((chart) => chart.status === "draft" || chart.status === "autosaved")) {
+      toast.error(chartLifecycleError("unfinished_charts")); return;
+    }
     setChartCompletionState((current) => ({
       completion:
         current.encounterId === activeEncounterId ? current.completion : null,
@@ -14139,7 +14341,7 @@ export function ChartContent({
       toast.error(
         result.denialReason === "permission_missing"
           ? "진료 완료 권한이 없어 저장하지 못했어요."
-          : "진료 완료 상태를 저장하지 못했어요.",
+          : chartLifecycleError(result.denialReason),
       );
       return;
     }
@@ -14281,7 +14483,7 @@ export function ChartContent({
     toast.success("진료를 취소했어요.");
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
-    if (detailHydrationPending) return;
+    if (useChartStore.getState().diagnosisSaving || detailHydrationPending || chartSigned || !activeChartId) return;
     if (isHistoricalView) {
       toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
       return;
@@ -14291,18 +14493,27 @@ export function ChartContent({
       return;
     }
 
+    useChartStore.setState({ diagnosisSaving: true });
+    try {
     setDiagnosisPersistenceState({
       encounterId: activeEncounterId,
       status: "saving",
     });
 
+    if (useChartStore.getState().flushActiveChart && !await useChartStore.getState().flushActiveChart!()) {
+      setDiagnosisPersistenceState({ encounterId: activeEncounterId, status: "error" });
+      toast.error("SOAP 저장 오류를 해결한 뒤 진단을 저장해 주세요."); return;
+    }
     const result = await saveChartDiagnosesRoute({
       actorHeaders,
       diagnoses: nextRows,
       encounterId: activeEncounterId,
+      chartId: activeChartId,
+      expectedVersion: diagnosisContext.version,
       workspaceId: activeWorkspaceId,
     });
 
+    if (useChartStore.getState().selectedChartId !== activeChartId || useChartStore.getState().encounterChartsScope !== encounterCharts.scope) return;
     if (!result.ok) {
       setDiagnosisPersistenceState({
         encounterId: activeEncounterId,
@@ -14311,11 +14522,16 @@ export function ChartContent({
       toast.error(
         result.denialReason === "permission_missing"
           ? "진단명 저장 권한이 없어 저장하지 못했어요."
-          : "진단명을 저장하지 못했어요.",
+          : result.denialReason === "diagnoses_conflict" ? "다른 곳에서 진단이 변경됐어요. 차트를 다시 열어 최신 진단을 확인해 주세요." : "진단명을 저장하지 못했어요.",
       );
       return;
     }
 
+    setDiagnosisContext({ chartId: activeChartId, version: result.version, assessments: result.assessments ?? [] });
+    if (result.chart) {
+      useChartStore.getState().updateEncounterChart(encounterCharts.scope, result.chart);
+      setPersistedSoapState({ encounterId: activeEncounterId, chartId: activeChartId, soapNote: result.chart, status: "idle" });
+    }
     setDiagnosisState({
       encounterId: activeEncounterId,
       rows: result.diagnoses.map((diagnosis, index) =>
@@ -14327,6 +14543,7 @@ export function ChartContent({
       status: "saved",
     });
     requestChartHistoryRefresh();
+    } finally { useChartStore.setState({ diagnosisSaving: false }); }
   };
   const handleReturnToQueue = useCallback(() => {
     setSelectedQueueItem("treatment", "");
@@ -14514,39 +14731,16 @@ export function ChartContent({
   ]);
 
   useEffect(() => {
-    if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
-
+    if (!authHydrated || !activeEncounterId || !activeWorkspaceId || !activeChartId) return;
     let cancelled = false;
-
-    async function loadPersistedSoap() {
-      setPersistedSoapState((current) => ({
-        encounterId: activeEncounterId,
-        soapNote:
-          current.encounterId === activeEncounterId ? current.soapNote : null,
-        status: "loading",
-      }));
-
-      const result = await loadChartSoapNote({
-        actorHeaders,
-        encounterId: activeEncounterId!,
-        workspaceId: activeWorkspaceId!,
-      });
-
+    void loadChartSoapNote({ actorHeaders, encounterId: activeEncounterId, chartId: activeChartId, workspaceId: activeWorkspaceId }).then((result) => {
       if (cancelled) return;
-
-      setPersistedSoapState({
-        encounterId: activeEncounterId,
-        soapNote: result.ok ? result.soapNote : null,
-        status: result.ok ? "idle" : "error",
-      });
-    }
-
-    void loadPersistedSoap();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
+      setPersistedSoapState({ encounterId: activeEncounterId, chartId: activeChartId,
+        soapNote: result.ok ? result.soapNote : null, status: result.ok ? "idle" : "error" });
+      if (result.ok && result.soapNote) useChartStore.getState().updateEncounterChart(encounterCharts.scope, result.soapNote);
+    });
+    return () => { cancelled = true; };
+  }, [activeChartId, activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated, encounterCharts.scope]);
 
   useEffect(() => {
     if (!authHydrated || !activeWorkspaceId) return;
@@ -14655,12 +14849,14 @@ export function ChartContent({
       const result = await loadChartDiagnoses({
         actorHeaders,
         encounterId: activeEncounterId!,
+        chartId: activeChartId || undefined,
         workspaceId: activeWorkspaceId!,
       });
 
       if (cancelled) return;
 
       if (result.ok) {
+        setDiagnosisContext({ chartId: activeChartId, version: result.version, assessments: result.assessments ?? [] });
         setDiagnosisState({
           encounterId: activeEncounterId,
           rows: result.diagnoses.map((diagnosis, index) =>
@@ -14685,7 +14881,7 @@ export function ChartContent({
     return () => {
       cancelled = true;
     };
-  }, [activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
+  }, [activeChartId, activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated]);
 
   useEffect(() => {
     if (!authHydrated || !activeEncounterId || !activeWorkspaceId) return;
@@ -14822,7 +15018,7 @@ export function ChartContent({
     diagnosisRows.length > 0 ||
     allOrders.length > 0;
   const primaryActionBusy =
-    chartWriteDisabled ||
+    detailHydrationPending || isHistoricalView ||
     consultationFlowState.status === "saving" ||
     chartCompletionState.status === "saving" ||
     encounterCancelState.status === "saving";
@@ -14844,7 +15040,7 @@ export function ChartContent({
       : "저장 대기";
 
   const chartCheckedInAt =
-    currentBundle.encounter.checkedInAt ?? currentBundle.encounter.createdAt;
+    effectiveLatestSoap?.clinicalAt ?? currentBundle.encounter.checkedInAt ?? currentBundle.encounter.createdAt;
   const chartDate = getShortDateTime(chartCheckedInAt).split(" ")[0] ?? "-";
   const chartStartTime = getShortClockTime(chartCheckedInAt);
   const liveHistoryRows =
@@ -14881,7 +15077,8 @@ export function ChartContent({
         <>
           <ChartActionBar
             chartDate={chartDate}
-            doctorName={getChartBundleVeterinarianName(currentBundle)}
+            doctorName={effectiveLatestSoap ? effectiveLatestSoap.authorDisplayName ?? getChartStaffName(effectiveLatestSoap.authorUserId) ?? (effectiveLatestSoap.authorUserId ? "작성자 이름 미확인" : "작성자 미기록") : getChartBundleVeterinarianName(currentBundle)}
+            timeLabel="차트 일시"
             encounterNo={currentBundle.encounter.encounterNo}
             historyAction={
               <span className="inline-flex [&_button]:size-6">
@@ -14919,14 +15116,17 @@ export function ChartContent({
                   호출하기
                 </Button>
               ) : primaryAction === "complete" ? (
-                <ButtonGroup aria-label="진료 완료 보조 액션">
+                <div className="flex items-center gap-2">
+                <Button size="xs" variant="outline" disabled={chartWriteDisabled || !activeChartId || chartSigning || chartSigned || diagnosisPersistenceState.status === "saving"}
+                  onClick={() => void handleIndividualChartSign()}>{chartSigning ? "완료 중" : chartSigned ? "차트 완료됨" : "차트 완료"}</Button>
+                <ButtonGroup aria-label="진료 종료 보조 액션">
                   <ButtonGroupPrimaryButton
-                    aria-label="진료 완료"
+                    aria-label="진료 종료"
                     className="h-7 rounded-l-lg px-3 text-xs"
                     disabled={primaryActionBusy}
                     onClick={() => setChartCompleteDialogOpen(true)}
                   >
-                    차트 작성 완료
+                    진료 종료
                   </ButtonGroupPrimaryButton>
                   {canUseConsultationSecondaryActions ? (
                     <>
@@ -14974,6 +15174,7 @@ export function ChartContent({
                     </>
                   ) : null}
                 </ButtonGroup>
+                </div>
               ) : null
             }
           />
@@ -15169,6 +15370,15 @@ export function ChartContent({
             </Button>
           }
         >
+          {encounterCharts.charts.some((chart) => chart.status === "draft" || chart.status === "autosaved") ? (
+            <EmrInlineAlert severity="warning" title="미완료 차트가 있어요">
+              {encounterCharts.charts.filter((chart) => chart.status === "draft" || chart.status === "autosaved").map((chart) => (
+                <Button key={chart.id} size="xs" variant="outline" onClick={() => { setChartCompleteDialogOpen(false); void useChartStore.getState().selectChart(chart.id); }}>
+                  {getShortDateTime(chart.clinicalAt ?? chart.createdAt)} 차트 열기
+                </Button>
+              ))}
+            </EmrInlineAlert>
+          ) : null}
           <div className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
             <ChartPreflightLine
               label="환자 / 보호자"
@@ -15287,9 +15497,9 @@ export function ChartContent({
       >
         <EmrDialogShell
           variant="confirm"
-          title="진료 완료 확인"
-          description="진료 기록, 진단명, 오더를 같은 환자 차트 기준으로 확인하고 진료 완료 상태를 저장해 주세요."
-          footerMeta="진료 완료는 local-first/server route 저장 상태만 바꾸며 외부 전송이나 청구 확정은 별도 흐름입니다."
+          title="접수 진료 종료"
+          description="이 접수의 모든 차트를 확인하고 진료를 종료합니다. 미완료 차트는 각각 완료해 주세요."
+          footerMeta="진료 종료 후에는 새 차트를 추가할 수 없습니다. 수납은 기존 접수에 합산됩니다."
           primaryAction={
             <Button
               size="sm"
@@ -15301,7 +15511,7 @@ export function ChartContent({
             >
               {chartCompletionState.status === "saving"
                 ? "저장 중"
-                : "진료 완료 저장"}
+                : "진료 종료"}
             </Button>
           }
           secondaryAction={
@@ -15361,6 +15571,13 @@ export function ChartContent({
           ) : null}
         </EmrDialogShell>
       </Dialog>
+      {!chartStartLocked && encounterCharts.status === "ready" && !activeChartId ? (
+        <EmrInlineAlert severity="info" title="이 접수에 작성된 차트가 없어요" action={<Button size="sm" onClick={() => void encounterCharts.create()} disabled={chartWriteDisabled}>+ 새 차트</Button>}>
+          새 차트를 열어 진료 기록을 작성해 주세요.
+        </EmrInlineAlert>
+      ) : null}
+      {encounterCharts.status === "error" ? <EmrInlineAlert severity="error" title="차트 목록을 불러오지 못했어요"
+        action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.reload()}>다시 시도</Button>} /> : null}
       {chartStartLocked ? (
         <div className="flex min-h-0 flex-1 flex-col py-3">
           <ChartPreconsultationContextPanel
@@ -15399,23 +15616,23 @@ export function ChartContent({
               }
             >
               <SoapPanel
-                key={`chart-soap-${bundle.encounter.id}`}
+                key={`chart-soap-${bundle.encounter.id}-${activeChartId}`}
                 actorHeaders={actorHeaders}
                 collapseContentId="chart-soap-panel-content"
                 diagnoses={diagnosisRows}
                 encounterId={bundle.encounter.id}
+                chartId={activeChartId}
                 loading={soapLoading}
                 onCollapse={() => setClinicalPanelCollapsed("soap", true)}
                 onPersistedSoapNote={(soapNote) => {
-                  setPersistedSoapState({
-                    encounterId: bundle.encounter.id,
-                    soapNote,
-                    status: "idle",
-                  });
+                  useChartStore.getState().updateEncounterChart(encounterCharts.scope, soapNote);
+                  setPersistedSoapState((current) => current.chartId === soapNote.id ? {
+                    encounterId: bundle.encounter.id, chartId: soapNote.id, soapNote, status: "idle",
+                  } : current);
                   requestChartHistoryRefresh();
                 }}
                 soapNote={effectiveLatestSoap}
-                writeDisabled={chartWriteDisabled}
+                writeDisabled={chartWriteDisabled || chartSigning || diagnosisPersistenceState.status === "saving"}
                 workspaceId={bundle.encounter.workspaceId}
               />
             </ChartCollapsiblePanel>
@@ -15428,7 +15645,7 @@ export function ChartContent({
               }
             >
               <AssessmentPanel
-                key={`chart-assessment-${bundle.encounter.id}`}
+                key={`chart-assessment-${bundle.encounter.id}-${activeChartId}`}
                 classificationCatalog={diagnosisCatalogState.page.catalog}
                 classificationCatalogDiseaseGroups={
                   diagnosisCatalogState.page.diseaseGroups
@@ -15442,7 +15659,14 @@ export function ChartContent({
                   diagnosisCatalogState.page.systems
                 }
                 collapseContentId="chart-assessment-panel-content"
-                diagnosisRows={diagnosisRows}
+                diagnosisRows={showingRecordedAssessments ? diagnosisContext.assessments.map((diagnosis, index) => toEditableDiagnosis(diagnosis, index)) : diagnosisRows}
+                assessmentSummary={<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--emr-border-default)] px-3 py-1 emr-text-metadata">
+                  <span>이 차트 평가 {diagnosisContext.chartId === activeChartId ? diagnosisContext.assessments.length : 0}건 · 접수 진단 {diagnosisRows.length}건</span>
+                  {chartSigned ? <Button size="xs" variant="ghost" onClick={() => setEncounterDiagnosisViewChartId(showingRecordedAssessments ? activeChartId : "")}>
+                    {showingRecordedAssessments ? "현재 접수 진단 보기" : "당시 평가 보기"}
+                  </Button> : <Button size="xs" variant="outline" disabled={chartWriteDisabled || !activeChartId || diagnosisPersistenceState.status === "saving"}
+                    onClick={() => void handleDiagnosisRowsChange(diagnosisRows)}>현재 진단 전체를 평가 기록</Button>}
+                </div>}
                 loading={diagnosisLoading}
                 onCollapse={() => setClinicalPanelCollapsed("assessment", true)}
                 onDiagnosisRowsChange={handleDiagnosisRowsChange}
@@ -15450,7 +15674,7 @@ export function ChartContent({
                 searchClassificationCatalog={searchDiagnosisCatalogPage}
                 setDiagnosisRows={setDiagnosisRows}
                 soapNote={effectiveLatestSoap}
-                writeDisabled={chartWriteDisabled}
+                writeDisabled={chartWriteDisabled || !activeChartId || chartSigned}
               />
             </ChartCollapsiblePanel>
             <ChartCollapsiblePanel
@@ -15502,17 +15726,19 @@ export function ChartContent({
             <span className="relative h-1 w-10 rounded-full bg-[var(--clair-color-atomic-neutral-300)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
           </button>
           <div className="min-h-0 min-w-0">
-            <OrderArea
+            <EncounterOrderArea
               key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}`}
               actorHeaders={actorHeaders}
               bundle={bundle}
+              chartId={activeChartId || undefined}
               collapseContentId="chart-order-panel-content"
               collapsed={orderPanelCollapsed}
               loading={orderLoading}
               onCollapsedChange={setOrderPanelCollapsed}
               onNavigateToBilling={navigateToBilling}
               orderGroups={orderGroups}
-              writeDisabled={chartWriteDisabled}
+              draftWriteDisabled={chartWriteDisabled || chartSigned || chartSigning}
+              writeDisabled={detailHydrationPending || isHistoricalView}
             />
           </div>
         </div>

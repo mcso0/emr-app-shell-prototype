@@ -250,3 +250,23 @@ test("disposing a SOAP editor flushes a debounced encounter-scoped pending docum
   await waitForTimer();
   expect(saved).toEqual([document("pending-on-unmount")]);
 });
+
+test("reattaching the same editor after effect cleanup restores failure and retry notifications", async () => {
+  const states: SoapAutosaveState[] = [];
+  let fail = true;
+  const coordinator = new SoapAutosaveCoordinator({ debounceMs: 60_000,
+    request: async () => fail ? { ok: false, status: 500, error: "db_write_failed" }
+      : { ok: true, soapNote: note("retry-after-reattach"), auditRecorded: true },
+    onPersisted: () => undefined, onStateChange: (state) => states.push(state),
+  });
+  coordinator.dispose(); coordinator.attach();
+  coordinator.change(document("preserved-after-failure"));
+  expect(await coordinator.flushPending()).toBe(false);
+  expect(states.at(-1)).toBe("error");
+  expect(coordinator.hasUnsavedChanges()).toBe(true);
+  fail = false; coordinator.retry();
+  expect(await coordinator.flushPending()).toBe(true);
+  expect(states.at(-1)).toBe("saved");
+  expect(coordinator.hasUnsavedChanges()).toBe(false);
+  coordinator.dispose();
+});
