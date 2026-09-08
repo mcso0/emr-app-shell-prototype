@@ -1,6 +1,10 @@
 // Only a named local synthetic Docker PostgreSQL container; every change rolls back.
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
+const chartPlanV2 = process.argv.includes("--chart-plan-v2");
+const medicationLinkMigration = "supabase/migrations/20260908083048_treatment_medication_link_at_execution.sql";
+const chartPlanMigration = "supabase/migrations/20260908083019_order_ready_planning_and_catalog_archive.sql";
+const workspaceDefaultsMigration = "supabase/migrations/20260908083035_ready_orders_synthetic_workspace_normalization.sql";
 const artifact = "docs/work/clinical-master/order-execution-defaults/artifacts/wp-01b/";
 const payload = JSON.parse(fs.readFileSync("tests/fixtures/clinical-master-execution-preset-release-v1.json", "utf8"));
 payload.releaseKey = "wp01b.taxonomy.local-test.r1";
@@ -46,6 +50,8 @@ const sql = "BEGIN;\nSET LOCAL statement_timeout='90s';\n" +
   "\n" + fs.readFileSync("supabase/migrations/20260906124059_clinical_master_inpatient_locations.sql", "utf8") +
   "\n" + fs.readFileSync("supabase/migrations/20260906124122_clinical_master_chart_actual_results.sql", "utf8") +
   "\n" + fs.readFileSync("supabase/migrations/20260906135526_clinical_master_synthetic_dispensing_rebind.sql", "utf8") +
+  (chartPlanV2 ? "\n" + fs.readFileSync(chartPlanMigration, "utf8") : "") +
+  (chartPlanV2 ? "\n" + fs.readFileSync(workspaceDefaultsMigration, "utf8") + "\n" + fs.readFileSync(medicationLinkMigration, "utf8") : "") +
   "\n" + fs.readFileSync(artifact + "slice-03-taxonomy-db-setup.sql", "utf8") + "\nSAVEPOINT package_scenarios;\n" +
   "\nCREATE TEMP TABLE taxonomy_test_payload (payload jsonb);\nINSERT INTO taxonomy_test_payload VALUES ('" + JSON.stringify(payload).replaceAll("'", "''") + "'::jsonb);\n" +
   fs.readFileSync(artifact + "taxonomy-fields-local-assert.sql", "utf8") +
@@ -67,6 +73,8 @@ const sql = "BEGIN;\nSET LOCAL statement_timeout='90s';\n" +
   "\nCREATE TEMP TABLE wp07_remaining_payload(payload jsonb); INSERT INTO wp07_remaining_payload VALUES ('" + JSON.stringify(remainingPayload).replaceAll("'", "''") + "'::jsonb);\n" +
   fs.readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/wp-07/inpatient-local-assert.sql", "utf8") +
   "\n" + fs.readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/wp-07/chart-actual-local-assert.sql", "utf8") +
+  (chartPlanV2 ? "\n" + fs.readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/wp-10/chart-plan-local-assert.sql", "utf8") : "") +
+  (chartPlanV2 ? "\n" + fs.readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/wp-10/treatment-link-local-assert.sql", "utf8") : "") +
   // Package tests deliberately create conflicting r2-r6 versions; the full candidate
   // must be tested against the original seeded source, not those test-only mutations.
   "\nROLLBACK TO SAVEPOINT package_scenarios;\nCREATE TEMP TABLE wp09_complete_payload(payload jsonb); INSERT INTO wp09_complete_payload VALUES ('" + JSON.stringify(completePayload).replaceAll("'", "''") + "'::jsonb);\n" +

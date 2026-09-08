@@ -1,0 +1,3160 @@
+{
+  "schemaVersion": 1,
+  "applied": false,
+  "syntheticOnly": true,
+  "runtimeImportAllowed": false,
+  "workspaceAllowlist": [
+    "clair-demo",
+    "clair-foreign-demo",
+    "workspace-clair-cheongdam",
+    "workspace-clinical-master-pilot-v1"
+  ],
+  "authority": "Common functional-test workspace prices, separate from master. No clinical or production pricing authority.",
+  "entries": [
+    {
+      "orderMasterKey": "cm.order.consult.first-visit",
+      "priceKrw": 28002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.consult.followup",
+      "priceKrw": 28001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.consult.initial",
+      "priceKrw": 34300,
+      "source": "Existing synthetic Cheongdam value read 2026-09-08; chosen uniform test baseline, not master pricing authority.",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.consult.preventive-cat",
+      "priceKrw": 32001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.consult.preventive-dog",
+      "priceKrw": 32002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a000129",
+      "priceKrw": 8500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a001270",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a001642",
+      "priceKrw": 19500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a001709",
+      "priceKrw": 9500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a002457",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a002967",
+      "priceKrw": 8000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a003212",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a003564",
+      "priceKrw": 8000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a006644",
+      "priceKrw": 7000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a006680",
+      "priceKrw": 13000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a006858",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007066",
+      "priceKrw": 9500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007101",
+      "priceKrw": 9000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007654",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007656",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007661",
+      "priceKrw": 8500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007860",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a007863",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008164",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008340",
+      "priceKrw": 13000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008454",
+      "priceKrw": 16500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008547",
+      "priceKrw": 13000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008570",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008873",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008889",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a008970",
+      "priceKrw": 11500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009275",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009753",
+      "priceKrw": 15000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009895",
+      "priceKrw": 17500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009989",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009990",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a009992",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010086",
+      "priceKrw": 22500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010345",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010369",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010528",
+      "priceKrw": 19500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010636",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010697",
+      "priceKrw": 11500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a010709",
+      "priceKrw": 18000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011300",
+      "priceKrw": 17500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011336",
+      "priceKrw": 8500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011385",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011393",
+      "priceKrw": 27000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011395",
+      "priceKrw": 28500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011419",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011451",
+      "priceKrw": 8000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011490",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011516",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011528",
+      "priceKrw": 9500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011579",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011588",
+      "priceKrw": 18500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011594",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011595",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011642",
+      "priceKrw": 21000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011648",
+      "priceKrw": 9500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011677",
+      "priceKrw": 8000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011717",
+      "priceKrw": 10500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011738",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011749",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011769",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011817",
+      "priceKrw": 14500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011819",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a011831",
+      "priceKrw": 15500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012004",
+      "priceKrw": 17500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012044",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012051",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012078",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012088",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012127",
+      "priceKrw": 28000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012147",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012149",
+      "priceKrw": 10500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012217",
+      "priceKrw": 16000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012355",
+      "priceKrw": 13000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012373",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012406",
+      "priceKrw": 20500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012537",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012549",
+      "priceKrw": 15000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012666",
+      "priceKrw": 11500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012686",
+      "priceKrw": 9000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012852",
+      "priceKrw": 17500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012862",
+      "priceKrw": 16500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012911",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a012998",
+      "priceKrw": 17000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013016",
+      "priceKrw": 11500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013034",
+      "priceKrw": 17000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013216",
+      "priceKrw": 9500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013337",
+      "priceKrw": 16500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013391",
+      "priceKrw": 15500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013459",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013551",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013555",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013587",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013597",
+      "priceKrw": 13500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013664",
+      "priceKrw": 13000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013686",
+      "priceKrw": 10500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013695",
+      "priceKrw": 15500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013760",
+      "priceKrw": 17500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013761",
+      "priceKrw": 17000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013835",
+      "priceKrw": 13000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a013840",
+      "priceKrw": 19500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014075",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014092",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014184",
+      "priceKrw": 12500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014340",
+      "priceKrw": 8500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014343",
+      "priceKrw": 11000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014435",
+      "priceKrw": 10500,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a014491",
+      "priceKrw": 8000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-v1-uk-vmd-a05081",
+      "priceKrw": 14000,
+      "source": "docs/work/clinical-master/clinical-master-pr-019/dispensing-service-review-prices.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.caplin-ofloxacin-0-3-percent",
+      "priceKrw": 18000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.cerenia-maropitant-10mg-ml-sc",
+      "priceKrw": 25000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.durvet-chlorhexidine-2-percent",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.epi-otic-za-ear-cleaner",
+      "priceKrw": 25000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.famotidine-20mg-tablet",
+      "priceKrw": 7000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.fortiflora-canine-1g-sachet",
+      "priceKrw": 15000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.humilac-jp-moisturizer-spray",
+      "priceKrw": 25000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.legalon-silymarin-140mg-capsule",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.muricin-mupirocin-2-percent",
+      "priceKrw": 18000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.neurontin-100mg-capsule",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.omeprazole-10mg-delayed-capsule",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.optimmune-ciclosporin-0-2-percent",
+      "priceKrw": 45000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.oralade-advanced-gi-500ml",
+      "priceKrw": 25000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.prilactone-next-10mg-tablet",
+      "priceKrw": 18000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.refresh-tears-cmc-0-5-percent",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.silvadene-silver-sulfadiazine-1-percent",
+      "priceKrw": 18000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.topcare-povidone-iodine-10-percent",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.ursodiol-300mg-capsule",
+      "priceKrw": 15000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.dispensing-wp03.vetmedin-1-25mg-tablet",
+      "priceKrw": 25000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.imaging.abdominal-radiography",
+      "priceKrw": 42001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.imaging.abdominal-ultrasound",
+      "priceKrw": 42002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.imaging.chest-radiography",
+      "priceKrw": 42003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.imaging.echocardiography",
+      "priceKrw": 42004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-03.cm-specimen-serum",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-04.cm-specimen-serum",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-05.cm-specimen-serum",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-06.cm-specimen-serum",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-07.cm-specimen-serum",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-08.cm-specimen-serum",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-09.cm-specimen-serum",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-10.cm-specimen-serum",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-11.cm-specimen-citrate-plasma",
+      "priceKrw": 20000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-12.cm-specimen-citrate-plasma",
+      "priceKrw": 20000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-15.cm-specimen-urine",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.cm-lab-test-synthetic-16.cm-specimen-urine",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.atomic.phase1-optionb-v1-test-glucose.phase1-optionb-v1-specimen-serum",
+      "priceKrw": 8000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.cbc-basic",
+      "priceKrw": 36001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.chemistry-basic",
+      "priceKrw": 36002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.fecal",
+      "priceKrw": 36003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.panel.urinalysis",
+      "priceKrw": 36004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-baso-abs",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-baso-pct",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-eos-abs",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-eos-pct",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-hct",
+      "priceKrw": 36005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-hgb",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-lym-abs",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-lym-pct",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-mch",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-mchc",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-mcv",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-mono-abs",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-mono-pct",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-mpv",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-neu-abs",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-neu-pct",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-pct",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-pdw",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-plt",
+      "priceKrw": 36006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-rbc",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-rdw",
+      "priceKrw": 5000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-retic-abs",
+      "priceKrw": 10000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-retic-hgb",
+      "priceKrw": 12000,
+      "source": "docs/work/clinical-master/order-execution-defaults/artifacts/wp-09/workspace-configuration.non-applied.v1.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.cbc-wbc",
+      "priceKrw": 36007,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-alp",
+      "priceKrw": 36008,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-alt",
+      "priceKrw": 36009,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-bun",
+      "priceKrw": 36010,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-creatinine",
+      "priceKrw": 36011,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-glucose",
+      "priceKrw": 36012,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.chem-total-protein",
+      "priceKrw": 36013,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.fecal-microscopy",
+      "priceKrw": 36014,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.giardia-antigen",
+      "priceKrw": 36015,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.ua-sediment",
+      "priceKrw": 36016,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.lab.test.ua-strip",
+      "priceKrw": 36017,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.certificate-misc-01",
+      "priceKrw": 96001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-01",
+      "priceKrw": 28003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-02",
+      "priceKrw": 28004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-03",
+      "priceKrw": 28005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-04",
+      "priceKrw": 28006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-05",
+      "priceKrw": 28007,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-06",
+      "priceKrw": 28008,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-07",
+      "priceKrw": 28009,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-08",
+      "priceKrw": 28010,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-09",
+      "priceKrw": 28011,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.consultation-10",
+      "priceKrw": 28012,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.dental-01",
+      "priceKrw": 90001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.dental-02",
+      "priceKrw": 90002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.dispensing-13",
+      "priceKrw": 52015,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.dispensing-14",
+      "priceKrw": 52016,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.emergency-01",
+      "priceKrw": 84001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.emergency-02",
+      "priceKrw": 84002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.emergency-03",
+      "priceKrw": 84003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-01",
+      "priceKrw": 42005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-02",
+      "priceKrw": 42006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-03",
+      "priceKrw": 42007,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-04",
+      "priceKrw": 42008,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-05",
+      "priceKrw": 42009,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-06",
+      "priceKrw": 42010,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-07",
+      "priceKrw": 42011,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.imaging-08",
+      "priceKrw": 42012,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.inpatient-01",
+      "priceKrw": 76001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.inpatient-02",
+      "priceKrw": 76002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.inpatient-03",
+      "priceKrw": 76003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.inpatient-04",
+      "priceKrw": 76004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.inpatient-05",
+      "priceKrw": 76005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.inpatient-06",
+      "priceKrw": 76006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-01",
+      "priceKrw": 36018,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-02",
+      "priceKrw": 36019,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-03",
+      "priceKrw": 36020,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-04",
+      "priceKrw": 36021,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-05",
+      "priceKrw": 36022,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-06",
+      "priceKrw": 36023,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-07",
+      "priceKrw": 36024,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-08",
+      "priceKrw": 36025,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-09",
+      "priceKrw": 36026,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-10",
+      "priceKrw": 36027,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-11",
+      "priceKrw": 36028,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-12",
+      "priceKrw": 36029,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.lab-13",
+      "priceKrw": 36030,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-01",
+      "priceKrw": 32003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-02",
+      "priceKrw": 32004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-03",
+      "priceKrw": 32005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-04",
+      "priceKrw": 32006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-05",
+      "priceKrw": 32007,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-06",
+      "priceKrw": 32008,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-07",
+      "priceKrw": 32009,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-08",
+      "priceKrw": 32010,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-09",
+      "priceKrw": 32011,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.preventive-10",
+      "priceKrw": 32012,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-01",
+      "priceKrw": 68001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-02",
+      "priceKrw": 68002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-03",
+      "priceKrw": 68003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-04",
+      "priceKrw": 68004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-05",
+      "priceKrw": 68005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-06",
+      "priceKrw": 68006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-07",
+      "priceKrw": 68007,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.surgery-anesthesia-08",
+      "priceKrw": 68008,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-01",
+      "priceKrw": 48004,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-02",
+      "priceKrw": 48005,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-03",
+      "priceKrw": 48006,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-04",
+      "priceKrw": 48007,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-05",
+      "priceKrw": 48008,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-06",
+      "priceKrw": 48009,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-07",
+      "priceKrw": 48010,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-08",
+      "priceKrw": 48011,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-09",
+      "priceKrw": 48012,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-10",
+      "priceKrw": 48013,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-11",
+      "priceKrw": 48014,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-12",
+      "priceKrw": 48015,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-13",
+      "priceKrw": 48016,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-14",
+      "priceKrw": 48017,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.synthetic.treatment-15",
+      "priceKrw": 48018,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.cardiovascular",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.dermatologic-coat",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.digestive-abdominal",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.general-vitals",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.musculoskeletal",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.neurologic",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.ophthalmic",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.oral-dental",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.otic",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.peripheral-lymphatic",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.respiratory",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.system-exam.urogenital",
+      "priceKrw": null,
+      "source": "Canonical nonbillable order contract.",
+      "billingReflectionEnabled": false
+    },
+    {
+      "orderMasterKey": "cm.order.treatment.ear-cleaning",
+      "priceKrw": 48001,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.treatment.nail-trimming",
+      "priceKrw": 48002,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.treatment.wound-cleaning",
+      "priceKrw": 48003,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.01",
+      "priceKrw": 200200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.02",
+      "priceKrw": 200300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.03",
+      "priceKrw": 200400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.04",
+      "priceKrw": 200500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.05",
+      "priceKrw": 200600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.06",
+      "priceKrw": 200700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.07",
+      "priceKrw": 200800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.08",
+      "priceKrw": 200900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.09",
+      "priceKrw": 201000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.10",
+      "priceKrw": 201100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.11",
+      "priceKrw": 201200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.certificate-misc.12",
+      "priceKrw": 201300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.01",
+      "priceKrw": 29300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.02",
+      "priceKrw": 29400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.03",
+      "priceKrw": 29500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.04",
+      "priceKrw": 29600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.05",
+      "priceKrw": 29700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.06",
+      "priceKrw": 29800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.07",
+      "priceKrw": 29900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.08",
+      "priceKrw": 30000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.09",
+      "priceKrw": 30100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.10",
+      "priceKrw": 30200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.11",
+      "priceKrw": 30300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.12",
+      "priceKrw": 30400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.13",
+      "priceKrw": 30500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.14",
+      "priceKrw": 30600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.15",
+      "priceKrw": 30700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.consultation.16",
+      "priceKrw": 30800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.01",
+      "priceKrw": 180300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.02",
+      "priceKrw": 180400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.03",
+      "priceKrw": 180500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.04",
+      "priceKrw": 180600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.05",
+      "priceKrw": 180700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.06",
+      "priceKrw": 180800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.07",
+      "priceKrw": 180900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.08",
+      "priceKrw": 181000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.09",
+      "priceKrw": 181100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.10",
+      "priceKrw": 181200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.11",
+      "priceKrw": 181300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.12",
+      "priceKrw": 181400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.13",
+      "priceKrw": 181500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.14",
+      "priceKrw": 181600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.15",
+      "priceKrw": 181700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.16",
+      "priceKrw": 181800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.17",
+      "priceKrw": 181900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.18",
+      "priceKrw": 182000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.19",
+      "priceKrw": 182100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.20",
+      "priceKrw": 182200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.21",
+      "priceKrw": 182300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.dental.22",
+      "priceKrw": 182400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.01",
+      "priceKrw": 150400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.02",
+      "priceKrw": 150500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.03",
+      "priceKrw": 150600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.04",
+      "priceKrw": 150700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.05",
+      "priceKrw": 150800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.06",
+      "priceKrw": 150900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.07",
+      "priceKrw": 151000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.08",
+      "priceKrw": 151100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.09",
+      "priceKrw": 151200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.10",
+      "priceKrw": 151300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.11",
+      "priceKrw": 151400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.12",
+      "priceKrw": 151500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.13",
+      "priceKrw": 151600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.14",
+      "priceKrw": 151700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.15",
+      "priceKrw": 151800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.16",
+      "priceKrw": 151900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.17",
+      "priceKrw": 152000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.18",
+      "priceKrw": 152100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.19",
+      "priceKrw": 152200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.20",
+      "priceKrw": 152300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.emergency.21",
+      "priceKrw": 152400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.01",
+      "priceKrw": 51300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.02",
+      "priceKrw": 51400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.03",
+      "priceKrw": 51500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.04",
+      "priceKrw": 51600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.05",
+      "priceKrw": 51700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.06",
+      "priceKrw": 51800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.07",
+      "priceKrw": 51900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.08",
+      "priceKrw": 52000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.09",
+      "priceKrw": 52100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.10",
+      "priceKrw": 52200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.11",
+      "priceKrw": 52300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.12",
+      "priceKrw": 52400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.13",
+      "priceKrw": 52500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.14",
+      "priceKrw": 52600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.15",
+      "priceKrw": 52700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.16",
+      "priceKrw": 52800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.17",
+      "priceKrw": 52900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.imaging.18",
+      "priceKrw": 53000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.01",
+      "priceKrw": 120700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.02",
+      "priceKrw": 120800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.03",
+      "priceKrw": 120900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.04",
+      "priceKrw": 121000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.05",
+      "priceKrw": 121100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.06",
+      "priceKrw": 121200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.07",
+      "priceKrw": 121300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.08",
+      "priceKrw": 121400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.09",
+      "priceKrw": 121500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.10",
+      "priceKrw": 121600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.11",
+      "priceKrw": 121700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.12",
+      "priceKrw": 121800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.13",
+      "priceKrw": 121900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.14",
+      "priceKrw": 122000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.15",
+      "priceKrw": 122100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.16",
+      "priceKrw": 122200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.17",
+      "priceKrw": 122300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.18",
+      "priceKrw": 122400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.19",
+      "priceKrw": 122500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.20",
+      "priceKrw": 122600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.21",
+      "priceKrw": 122700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.22",
+      "priceKrw": 122800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.23",
+      "priceKrw": 122900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.inpatient.24",
+      "priceKrw": 123000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.01",
+      "priceKrw": 42700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.02",
+      "priceKrw": 42800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.03",
+      "priceKrw": 42900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.04",
+      "priceKrw": 43000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.05",
+      "priceKrw": 43100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.06",
+      "priceKrw": 43200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.07",
+      "priceKrw": 43300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-panel.08",
+      "priceKrw": 43400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.basic-checkup",
+      "priceKrw": 43500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.emergency-initial",
+      "priceKrw": 44300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.hepatobiliary",
+      "priceKrw": 44100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.infectious-workup",
+      "priceKrw": 44500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.preanesthetic-expanded",
+      "priceKrw": 44400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.pu-pd",
+      "priceKrw": 44000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.renal",
+      "priceKrw": 44200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.senior-cat",
+      "priceKrw": 43700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.senior-dog",
+      "priceKrw": 43600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.vomiting-diarrhea",
+      "priceKrw": 43800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-service.weight-loss",
+      "priceKrw": 43900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.01",
+      "priceKrw": 39100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.02",
+      "priceKrw": 39200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.03",
+      "priceKrw": 39300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.04",
+      "priceKrw": 39400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.05",
+      "priceKrw": 39500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.06",
+      "priceKrw": 39600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.07",
+      "priceKrw": 39700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.08",
+      "priceKrw": 39800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.09",
+      "priceKrw": 39900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.10",
+      "priceKrw": 40000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.11",
+      "priceKrw": 40100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.12",
+      "priceKrw": 40200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.13",
+      "priceKrw": 40300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.14",
+      "priceKrw": 40400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.15",
+      "priceKrw": 40500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.16",
+      "priceKrw": 40600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.17",
+      "priceKrw": 40700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.18",
+      "priceKrw": 40800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.19",
+      "priceKrw": 40900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.20",
+      "priceKrw": 41000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.21",
+      "priceKrw": 41100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.22",
+      "priceKrw": 41200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.23",
+      "priceKrw": 41300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.24",
+      "priceKrw": 41400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.25",
+      "priceKrw": 41500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.26",
+      "priceKrw": 41600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.27",
+      "priceKrw": 41700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.28",
+      "priceKrw": 41800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.29",
+      "priceKrw": 41900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.30",
+      "priceKrw": 42000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.31",
+      "priceKrw": 42100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.32",
+      "priceKrw": 42200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.33",
+      "priceKrw": 42300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.34",
+      "priceKrw": 42400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.35",
+      "priceKrw": 42500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.lab-test.36",
+      "priceKrw": 42600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.01",
+      "priceKrw": 33300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.02",
+      "priceKrw": 33400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.03",
+      "priceKrw": 33500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.04",
+      "priceKrw": 33600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.05",
+      "priceKrw": 33700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.06",
+      "priceKrw": 33800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.07",
+      "priceKrw": 33900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.08",
+      "priceKrw": 34000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.09",
+      "priceKrw": 34100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.10",
+      "priceKrw": 34200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.11",
+      "priceKrw": 34300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.12",
+      "priceKrw": 34400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.13",
+      "priceKrw": 34500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.preventive.14",
+      "priceKrw": 34600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.01",
+      "priceKrw": 100900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.02",
+      "priceKrw": 101000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.03",
+      "priceKrw": 101100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.04",
+      "priceKrw": 101200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.05",
+      "priceKrw": 101300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.06",
+      "priceKrw": 101400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.07",
+      "priceKrw": 101500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.08",
+      "priceKrw": 101600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.09",
+      "priceKrw": 101700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.10",
+      "priceKrw": 101800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.11",
+      "priceKrw": 101900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.12",
+      "priceKrw": 102000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.13",
+      "priceKrw": 102100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.14",
+      "priceKrw": 102200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.15",
+      "priceKrw": 102300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.16",
+      "priceKrw": 102400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.17",
+      "priceKrw": 102500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.18",
+      "priceKrw": 102600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.19",
+      "priceKrw": 102700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.20",
+      "priceKrw": 102800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.21",
+      "priceKrw": 102900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.22",
+      "priceKrw": 103000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.23",
+      "priceKrw": 103100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.24",
+      "priceKrw": 103200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.25",
+      "priceKrw": 103300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.26",
+      "priceKrw": 103400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.27",
+      "priceKrw": 103500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.28",
+      "priceKrw": 103600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.29",
+      "priceKrw": 103700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.30",
+      "priceKrw": 103800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.31",
+      "priceKrw": 103900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.32",
+      "priceKrw": 104000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.33",
+      "priceKrw": 104100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.surgery-anesthesia.34",
+      "priceKrw": 104200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.01",
+      "priceKrw": 61900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.02",
+      "priceKrw": 62000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.03",
+      "priceKrw": 62100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.04",
+      "priceKrw": 62200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.05",
+      "priceKrw": 62300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.06",
+      "priceKrw": 62400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.07",
+      "priceKrw": 62500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.08",
+      "priceKrw": 62600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.09",
+      "priceKrw": 62700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.10",
+      "priceKrw": 62800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.11",
+      "priceKrw": 62900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.12",
+      "priceKrw": 63000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.13",
+      "priceKrw": 63100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.14",
+      "priceKrw": 63200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.15",
+      "priceKrw": 63300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.16",
+      "priceKrw": 63400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.17",
+      "priceKrw": 63500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.18",
+      "priceKrw": 63600,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.19",
+      "priceKrw": 63700,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.20",
+      "priceKrw": 63800,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.21",
+      "priceKrw": 63900,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.22",
+      "priceKrw": 64000,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.23",
+      "priceKrw": 64100,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.24",
+      "priceKrw": 64200,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.25",
+      "priceKrw": 64300,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.26",
+      "priceKrw": 64400,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "cm.order.v4.treatment.27",
+      "priceKrw": 64500,
+      "source": "tests/fixtures/clinical-master-operational-v4-pricing-adoption.json",
+      "billingReflectionEnabled": true
+    },
+    {
+      "orderMasterKey": "phase1.optionb.v1.order.metabolic",
+      "priceKrw": 35000,
+      "source": "Existing synthetic Cheongdam value read 2026-09-08; chosen uniform test baseline, not master pricing authority.",
+      "billingReflectionEnabled": true
+    }
+  ],
+  "contentSha256": "dca7d60e4dab599363ca189ab69202b1f6b0268dc1bf5da407c6549000b3a206"
+}

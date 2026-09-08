@@ -308,3 +308,24 @@ CSV import implementation is a later project. It would include upload UI, parsin
 - [Hospital Admin Order Catalog Regression Handoff](../../engineering/auth-security/auth-login/hospital-admin-order-catalog-regression-handoff.md)
 - [Order Fulfillment Handoff](order-fulfillment-handoff.md)
 - [Order Fulfillment Handoff Engineering Contract](../../engineering/data-model/order-fulfillment-handoff-contract.md)
+
+## Ready-on-add functional-verification catalog (2026-09-08)
+
+New orders use persisted master defaults, explicit workspace resource defaults,
+and encounter-authoritative runtime values so required planning options are
+already selected at addition. Actual findings and performed facts belong to
+execution completion, never fabricated defaults. Users may change defaults before
+confirmation; invalid edits identify their fields and resolution location.
+
+The four synthetic verification workspaces are reset to the same current master
+identities and equivalent configuration under [WP-10](../../work/clinical-master/order-execution-defaults/WP-10-ready-orders-and-workspace-unification.md).
+Referenced retired catalog identities remain outside current catalogs to preserve
+historical foreign keys. Canonical master still contains no prices; a common
+workspace-owned synthetic pricing fixture initializes the test environments.
+
+Treatment V3 permits plan confirmation before medication linkage. The existing
+pending-order amendment selects a real dispensing order; execution start and
+completion require that reference to be confirmed, noncancelled and in the same
+workspace and encounter. V2 retains its original confirmation rule. No medication
+order, dose or actual administration is generated implicitly. WP-10 records the
+implementation and rollout evidence; this section does not assert remote rollout.

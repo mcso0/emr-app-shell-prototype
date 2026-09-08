@@ -140,6 +140,7 @@ type FulfillmentWorkItem = {
     };
     guardianName?: string;
     detailInputs?: Record<string, unknown>;
+    detailSchemaVersion?: number;
     effectiveDisplayName?: string;
     inHospitalOrderName?: string;
     instruction?: string;
@@ -340,6 +341,7 @@ function getFulfillmentReadFailureStatus(result: {
 }
 
 function useDispensingFulfillmentQueue(selectedDate?: string) {
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const workspaceId = getWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
   const cacheKey = getFulfillmentQueueCacheKey(workspaceId, effectiveDate);
@@ -465,6 +467,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
 
   const updateStatus = useCallback(
     async (workItemId: string, transitions: FulfillmentTransitionCommand[]) => {
+      setMutationError(null);
       let allTransitionsSucceeded = true;
       let expectedRevision = snapshot.workItems.find(
         (item) => item.id === workItemId,
@@ -490,6 +493,9 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
           },
         );
         if (!response.ok) {
+          const failure = await response.json().catch(() => null) as { denialReason?: string } | null;
+          if (failure?.denialReason === "treatment_medication_link_required") setMutationError("수행 전에 처치 계획을 수정해 약품 오더를 연결해 주세요.");
+          if (failure?.denialReason === "treatment_medication_link_invalid") setMutationError("연결 약품 오더가 취소되었거나 확정되지 않았습니다. 같은 진료의 약품 오더를 확인해 주세요.");
           allTransitionsSucceeded = false;
           break;
         }
@@ -509,6 +515,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   return {
     refresh,
     sourceTotalCount: snapshot.sourceTotalCount,
+    mutationError,
     status: snapshot.status,
     updateStatus,
     workItems: snapshot.workItems,
@@ -1989,6 +1996,7 @@ function DispensingFulfillmentQueueNotice({
 }
 
 export function DispensingContent({
+  onNavigateWorkspaceSurface,
   hasRightPanel,
   moduleId,
   workspaceId,
@@ -2023,6 +2031,9 @@ export function DispensingContent({
   return (
     <DispensingContentBody
       fulfillmentQueue={fulfillmentQueue}
+      onOpenChart={onNavigateWorkspaceSurface ? encounterId => onNavigateWorkspaceSurface(
+        buildWorkspaceSurfaceRoute({ moduleId: "treatment", params: { encounterId }, workspaceId }), "treatment",
+      ) : undefined}
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
@@ -2034,6 +2045,7 @@ export function DispensingContent({
 }
 
 function DispensingContentBody({
+  onOpenChart,
   allowLegacyFixtureFallback,
   hasRightPanel,
   fulfillmentQueue,
@@ -2041,6 +2053,7 @@ function DispensingContentBody({
   queueItemCount,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
+  onOpenChart?: (encounterId: string) => void;
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
 }) {
   const {
@@ -2058,6 +2071,11 @@ function DispensingContentBody({
       ),
     [fulfillmentQueue.workItems, selectedQueueItem],
   );
+  const medicationLinkPending = selectedFulfillmentWorkItem?.queueType === "treatment"
+    && selectedFulfillmentWorkItem.sourceSnapshot?.detailSchemaVersion === 3
+    && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
+    && !selectedFulfillmentWorkItem.sourceSnapshot.detailInputs.linkedMedicationOrderId
+    && selectedFulfillmentWorkItem.status === "requested";
   const reviewedMedicationFacts = getReviewedMedicationFacts(
     selectedFulfillmentWorkItem,
   );
@@ -2574,6 +2592,10 @@ function DispensingContentBody({
       />
 
       <div className="mt-3 grid gap-2">
+        {medicationLinkPending && selectedFulfillmentWorkItem ? <EmrInlineAlert severity="warning" title="수행 전 약품 오더 연결이 필요합니다."
+          action={onOpenChart ? <Button size="sm" variant="outline" onClick={() => onOpenChart(selectedFulfillmentWorkItem.encounterId)}>차트에서 약품 오더 연결</Button> : undefined}>
+          차트에서 ‘{selectedFulfillmentWorkItem.sourceSnapshot?.orderDisplayName ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
+        </EmrInlineAlert> : null}
         <DispensingFulfillmentQueueNotice
           status={fulfillmentQueue.status}
           onRetry={fulfillmentQueue.refresh}
@@ -2581,7 +2603,7 @@ function DispensingContentBody({
         {mutationState === "error" ? (
           <EmrInlineAlert
             severity="warning"
-            title="업무 상태를 저장하지 못했습니다."
+            title={fulfillmentQueue.mutationError ?? "업무 상태를 저장하지 못했습니다."}
             action={
               <Button
                 type="button"

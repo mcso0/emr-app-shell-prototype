@@ -17,15 +17,17 @@ const tones = {
   confirmed: "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
 };
 
-export function ChartOrderConfirmationBadge({ state, onOpenDetail, disabled = false }: {
+export function ChartOrderConfirmationBadge({ state, onOpenDetail, disabled = false, issueDescription }: {
   state: ChartOrderConfirmationState;
   onOpenDetail: () => void;
   disabled?: boolean;
+  issueDescription?: string;
 }) {
   const className = cn("inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md border px-2 emr-text-status font-medium", tones[state]);
   return state === "invalid" ? (
     <button type="button" className={cn(className, "focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50")}
-      data-row-interactive="true" disabled={disabled} onClick={onOpenDetail}>
+      data-row-interactive="true" disabled={disabled} onClick={onOpenDetail}
+      title={issueDescription ? `${issueDescription} 상세에서 확인해 주세요.` : undefined}>
       {labels[state]}
     </button>
   ) : <span className={className}>{labels[state]}</span>;

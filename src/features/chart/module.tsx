@@ -318,6 +318,7 @@ import {
   isClinicalOrderType,
   resolveClinicalOrderMasterContract,
   validateClinicalOrderDetailInputs,
+  isDeferredChartPlan,
   type ClinicalOrderFieldDefinition,
 } from "@/features/chart/order-execution-domain";
 import type {
@@ -6883,6 +6884,7 @@ function ChartOrderTable({
           <ChartOrderConfirmationBadge
             state={getChartOrderConfirmationState(row.original, invalidOrderIdsRef.current)}
             disabled={pendingRemovalOrderIdsRef.current.has(row.original.order.id)}
+            issueDescription={getChartOrderInputIssues(row.original).map(issue => `${issue.label}: ${issue.message}`).join(" · ")}
             onOpenDetail={() => editableCallbacksRef.current.openDetail(row.original.order.id)}
           />
         ),
@@ -8306,6 +8308,21 @@ function ChartOrderFieldControl({
   );
 }
 
+function getChartOrderInputIssues(row: ChartOrderDraftRow) {
+  if (isChartOrderConfirmedRow(row) || row.runtimeRow?.rowType === "set") return [];
+  const type = getChartOrderClinicalType(row);
+  const schema = getClinicalOrderFieldSchema(type, row.detailSchemaVersion);
+  const validation = validateClinicalOrderDetailInputs({ clinicalOrderType: type,
+    schemaVersion: row.detailSchemaVersion, detailInputs: row.detailInputs, requireComplete: true });
+  const issues = validation.valid ? [] : Object.entries(validation.fieldErrors).map(([key, code]) => ({
+    key, label: schema?.fields.find(field => field.key === key)?.label ?? "오더 설정",
+    message: code === "required" ? "값을 입력하거나 선택해 주세요." : "입력값과 선택 가능한 옵션을 확인해 주세요.",
+  }));
+  if (getDraftQuantity(row.quantityInput) === null) issues.unshift({ key: "quantity", label: "수량", message: "테이블의 수량을 올바르게 입력해 주세요." });
+  if (!isChartOrderActualDispenseConfirmationValid(row)) issues.push({ key: "actualDispense", label: "조제 수량", message: "테이블에서 실제 조제 수량과 변경 사유를 확인해 주세요." });
+  return issues;
+}
+
 function ChartOrderDetailSheet({
   medicationOrders,
   workspaceId,
@@ -8346,6 +8363,7 @@ function ChartOrderDetailSheet({
   const orderFields = contract.fields;
   const setParent = row.runtimeRow?.rowType === "set";
   const setChild = row.runtimeRow?.rowType === "set_child";
+  const inputIssues = getChartOrderInputIssues(row);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -8360,6 +8378,12 @@ function ChartOrderDetailSheet({
         </SheetHeader>
         <ScrollArea className="min-h-0 flex-1 px-4">
           <div className="grid gap-4 py-4">
+            {inputIssues.length > 0 ? <div role="status" className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 text-sm text-[var(--emr-status-warning-text)]">
+              <p className="font-medium">확정 전에 다음 항목을 확인해 주세요.</p>
+              <ul className="mt-2 grid gap-1">
+                {inputIssues.map(issue => <li key={issue.key}>{issue.label}: {issue.message}</li>)}
+              </ul>
+            </div> : null}
             <div className="grid grid-cols-2 gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-metadata">
               <span>상태</span>
               <strong>{confirmed ? "확정 snapshot" : "공유 Draft"}</strong>
@@ -8440,6 +8464,8 @@ function ChartOrderDetailSheet({
                     orderName={row.order.displayName}
                     value={getChartOrderFieldValue(row, definition)}
                   />}
+                  {inputIssues.filter(issue => issue.key === definition.key).map(issue =>
+                    <p key={issue.key} className="text-sm text-destructive">{issue.message}</p>)}
                 </label>
               ))
             ) : !setParent ? (
@@ -8571,7 +8597,7 @@ function ChartOrderHistorySheet({
                 {isRecordValue(task.effectiveSnapshot.inpatientLocation) && typeof task.effectiveSnapshot.inpatientLocation.label === "string"
                   ? <p className="mt-1 text-sm">확정 입원 위치: {task.effectiveSnapshot.inpatientLocation.label}</p> : null}
                 {open && task.taskRole === "execution" && !task.destinationModule && isChartActualType(task.clinicalOrderType)
-                  ? <ChartActualHistory key={`${workspaceId}:${task.taskId}`} workspaceId={workspaceId} taskId={task.taskId} /> : null}
+                  ? <ChartActualHistory key={`${workspaceId}:${task.taskId}`} workspaceId={workspaceId} taskId={task.taskId} onSaved={onExecutionSaved} /> : null}
                 {open && ["hospitalization", "other"].includes(task.clinicalOrderType) && task.destinationModule
                   ? queues.filter(queue => queue.taskId === task.taskId).map(queue => <ChartRoutedExecutionActions
                     key={`${workspaceId}:${queue.workItemId}:${task.taskId}`} workspaceId={workspaceId} queue={queue} taskId={task.taskId} onSaved={onExecutionSaved} />) : null}
@@ -10485,7 +10511,7 @@ function OrderArea({
     const type = getChartOrderClinicalType(row);
     const selected = selectedOrderIds.has(row.order.id) || (row.runtimeRow?.parentOrderId && selectedOrderIds.has(row.runtimeRow.parentOrderId));
     const destination = row.runtimeRow ? row.runtimeRow.destinationModule : getChartOrderCanonicalDefaults(row.order).destinationModule;
-    return selected && row.runtimeRow?.rowType !== "set" && !isChartOrderConfirmedRow(row) && !destination && isChartActualType(type)
+    return selected && row.runtimeRow?.rowType !== "set" && !isChartOrderConfirmedRow(row) && !destination && isChartActualType(type) && !isDeferredChartPlan(type, row.detailSchemaVersion)
       ? [{ orderId: row.order.id, name: row.order.displayName, type, findingSummary: typeof row.detailInputs.findingSummary === "string" ? row.detailInputs.findingSummary : undefined }] : [];
   });
   const chartActualRecords = buildChartActualRecords(chartActualRows, chartActualDrafts);

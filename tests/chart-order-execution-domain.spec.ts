@@ -126,6 +126,16 @@ test("draft detail validation accepts partial known fields and rejects unknown f
   });
 });
 
+test("system exam V2 is confirmable from a plan without inventing an actual finding", () => {
+  const plan = { bodySystem: "호흡기계", examScope: "호흡기계 평가", examMethod: "시진" };
+  expect(validateClinicalOrderDetailInputs({ clinicalOrderType: "system_exam", schemaVersion: 2, detailInputs: plan }))
+    .toMatchObject({ valid: true, normalized: plan });
+  expect(validateClinicalOrderDetailInputs({ clinicalOrderType: "system_exam", schemaVersion: 1, detailInputs: plan }))
+    .toMatchObject({ valid: false, fieldErrors: { findingSummary: "required" } });
+  expect(validateClinicalOrderDetailInputs({ clinicalOrderType: "system_exam", schemaVersion: 2,
+    detailInputs: { ...plan, findingSummary: "Invented default" } })).toMatchObject({ valid: false });
+});
+
 function hasCompleteFieldDefinition(
   field: ClinicalOrderFieldDefinition,
   schemaVersion: number,

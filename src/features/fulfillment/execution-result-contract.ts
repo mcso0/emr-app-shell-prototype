@@ -78,7 +78,7 @@ export function isExecutionResultType(value: unknown): value is ExecutionResultT
 export function getExecutionResultFields(context: Pick<ExecutionContext, "clinicalOrderType" | "planSnapshot">) {
   const plan = isExecutionRecord(context.planSnapshot.detailInputs) ? context.planSnapshot.detailInputs : {};
   const required = new Set<string>();
-  if (context.clinicalOrderType === "treatment" && context.planSnapshot.detailSchemaVersion === 2) {
+  if (context.clinicalOrderType === "treatment" && [2, 3].includes(Number(context.planSnapshot.detailSchemaVersion))) {
     required.add("performedCount"); required.add("performedCountUnit");
     if (plan.procedureKind === "measurement") { required.add("measurementValue"); required.add("measurementUnit"); }
     if (plan.deviceProtocol && plan.procedureKind !== "monitoring") { required.add("deviceIdentity"); required.add("deviceSettingsPolicy"); }
@@ -114,7 +114,7 @@ export function parseExecutionPayload(type: ExecutionResultType, value: unknown,
     for (const [amount, unit] of [["administeredAmount", "administeredUnit"], ["performedCount", "performedCountUnit"], ["measurementValue", "measurementUnit"]]) {
       if (Object.hasOwn(value, amount) !== Object.hasOwn(value, unit)) return null;
     }
-    if (planSnapshot?.detailSchemaVersion === 2 && isExecutionRecord(planSnapshot.detailInputs)) {
+    if (planSnapshot && [2, 3].includes(Number(planSnapshot.detailSchemaVersion)) && isExecutionRecord(planSnapshot.detailInputs)) {
       const plan = planSnapshot.detailInputs;
       if (!Object.hasOwn(value, "performedCount")) return null;
       if (plan.procedureKind === "measurement" && !Object.hasOwn(value, "measurementValue")) return null;
@@ -161,6 +161,8 @@ export function parseExecutionContext(value: unknown, workspaceId: string, workI
 }
 
 export const executionErrorMessage = (code: string) => ({
+  treatment_medication_link_required: "수행 전에 처치 계획을 수정해 약품 오더를 연결해 주세요.",
+  treatment_medication_link_invalid: "연결 약품 오더가 취소되었거나 확정되지 않았습니다. 같은 진료의 유효한 약품 오더를 확인해 주세요.",
   unauthenticated: "로그인 세션이 필요합니다. 다시 로그인한 뒤 시도해 주세요.",
   permission_missing: "이 업무의 수행기록을 조회하거나 저장할 권한이 없습니다.",
   workspace_membership_missing: "현재 워크스페이스에 접근할 수 없습니다.",

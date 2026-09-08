@@ -1,7 +1,7 @@
 import { isExecutionRecord, isExecutionUuid } from "@/features/fulfillment/execution-result-contract";
 import { isActualTimestamp, parseChartActualContext, parseChartActualPayload, type ChartActualContext } from "./chart-actual-contract";
 
-export type ChartActualRpcClient = { rpc(name: "clair_get_chart_actual_context" | "clair_amend_chart_actual_result", args: Record<string, unknown>):
+export type ChartActualRpcClient = { rpc(name: "clair_get_chart_actual_context" | "clair_amend_chart_actual_result" | "clair_record_chart_actual_result", args: Record<string, unknown>):
   PromiseLike<{ data: unknown; error: { message?: string } | null }> };
 type Result = { ok: true; status: 200; context: ChartActualContext } | { ok: false; status: number; error: string };
 const known = new Set(["actor_mismatch", "permission_missing", "task_unavailable", "invalid_chart_actual", "invalid_performed_at",
@@ -36,6 +36,31 @@ export async function amendChartActual({ client, actorUserId, workspaceId, taskI
       p_workspace_id: workspaceId, p_actor_user_id: actorUserId, p_task_id: taskId,
       p_expected_plan_sha256: input.expectedPlanSha256, p_expected_result_version: input.expectedResultVersion,
       p_command_id: input.commandId, p_performed_at: input.performedAt, p_payload: payload, p_amendment_reason: input.amendmentReason.trim(),
+    });
+    if (error) return fail(error.message);
+    const context = parseChartActualContext(data, workspaceId, taskId);
+    return context ? { ok: true, status: 200, context } : { ok: false, status: 502, error: "invalid_execution_response" };
+  } catch { return fail(); }
+}
+
+export async function recordChartActual({ client, actorUserId, workspaceId, taskId, input }: {
+  client: ChartActualRpcClient; actorUserId: string; workspaceId: string; taskId: string; input: unknown;
+}): Promise<Result> {
+  if (!isExecutionUuid(actorUserId) || !isExecutionRecord(input) || input.action !== "record"
+    || Object.keys(input).some(key => !["action", "commandId", "expectedPlanSha256", "performedAt", "payload", "selfPerformed"].includes(key))
+    || !isExecutionUuid(input.commandId) || input.selfPerformed !== true
+    || typeof input.expectedPlanSha256 !== "string" || !/^[a-f0-9]{64}$/.test(input.expectedPlanSha256)
+    || !isActualTimestamp(input.performedAt)) return { ok: false, status: 400, error: "invalid_chart_actual" };
+  const current = await readChartActual({ client, workspaceId, taskId });
+  if (!current.ok) return current;
+  const payload = parseChartActualPayload(current.context.clinicalOrderType, input.payload);
+  if (!payload) return { ok: false, status: 400, error: "invalid_chart_actual" };
+  // Let the authoritative transaction handle completed-state idempotent retries.
+  try {
+    const { data, error } = await client.rpc("clair_record_chart_actual_result", {
+      p_workspace_id: workspaceId, p_actor_user_id: actorUserId, p_task_id: taskId,
+      p_expected_plan_sha256: input.expectedPlanSha256, p_command_id: input.commandId,
+      p_performed_at: input.performedAt, p_payload: payload, p_self_performed: true,
     });
     if (error) return fail(error.message);
     const context = parseChartActualContext(data, workspaceId, taskId);

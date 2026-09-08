@@ -1,0 +1,4588 @@
+[
+  {
+    "master_key": "cm.order.dispensing.oral",
+    "snapshot": {
+      "names": [
+        {
+          "name": "경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "557e1a73-5314-58ff-9cfe-cc09ee9ac647",
+          "presetKey": "preset:execution:cm.order.dispensing.oral",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "1d732a8d73c13c88c6e84247fb41eb928262972563bab19f06bf8c782cc796ef",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "fd50e67d02ffccf493b9c376c9fc0d3914d23bf450d46acbb270fc97ba87d516",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.dispensing.oral",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.dispensing.topical",
+    "snapshot": {
+      "names": [
+        {
+          "name": "외용제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "981eb318-6d8f-5c6f-9db5-7e89cb301de0",
+          "presetKey": "preset:execution:cm.order.dispensing.topical",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.manual-route.v1",
+            "sourceRecordFingerprint": "6b24f5c4e2a09745eadd0820e6c6b0b1738f1d2813b42985e666bb1e8da4f49b",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "72490db4a66d5d7902ee3299ac599a72797ce0321999a777c39b2f980be2cf48",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "required_manual",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.dispensing.topical",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-01",
+    "snapshot": {
+      "names": [
+        {
+          "name": "경구액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "52a65135-a242-5fc3-bafe-c5252fa571db",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-01",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "f559c0ee34d20b49675bb3e7121a55f9b0327a342c2b1ae4b27c990e330c1162",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "bb134404675c99682026dbd58b855022a67088b395e8c563442ba9a6f27178e6",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-01",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-02",
+    "snapshot": {
+      "names": [
+        {
+          "name": "안약 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "1d6586db-8138-5063-b0ff-56d38bca491d",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-02",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.ophthalmic.shape.v1",
+            "sourceRecordFingerprint": "fa18891dd3585ca01292722298678963d48009dd1908613c077bc7ab3952530e",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "4a29fb954f7259f80e333d51a5f36a0d3b4715918840d770e3de0a2446b16cff",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "ophthalmic",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-02",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-03",
+    "snapshot": {
+      "names": [
+        {
+          "name": "귀약 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "f1c2e354-7333-5b71-aada-0c65b88d4102",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-03",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.otic.shape.v1",
+            "sourceRecordFingerprint": "a87e81620348bc7cf795edb583e70668c3f17436b72973e4fc3827beb32f5092",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "6bb5ca6eab01f9c44a2b95de74c393000a87b5b8a617bd3086fc17b32532a3b1",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "otic",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-03",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-04",
+    "snapshot": {
+      "names": [
+        {
+          "name": "분말 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "684a1555-324a-5d78-a134-f6e9cdeb38ec",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-04",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "b15d534d5cd2ef31720491062539e70a3ae1c6a964a6a025b849735bc4f7a16e",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "04f7069abfcaaf5a3b6c9e5f53d51692a2d9fab1b2dbc62815938f6c138eb19c",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-04",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-05",
+    "snapshot": {
+      "names": [
+        {
+          "name": "정제 분할 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "514d6fe5-b30d-5dba-9336-1de5a4009533",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-05",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "a72bd46b4dae732abcfec583ee5c5c1c2641192ca14aae16aaf7e2b2d71ff8a2",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "78c3ba6f9f73b601461c7c0597d1ffbb7362c747f23472226772cd2c1b48f42a",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-05",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-06",
+    "snapshot": {
+      "names": [
+        {
+          "name": "캡슐 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "7042a58c-ac53-5524-ba4c-a49207b3215b",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-06",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "2582a4fd5cad0845e42f836c0b2c802873eb03084b95c179bf7b6c01b5f848f7",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "bb81d07c6561c83d7c688eff0b8977959fc3fe3e022f8c5c4ee20df4864f3b57",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-06",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-07",
+    "snapshot": {
+      "names": [
+        {
+          "name": "주사제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "a1769fec-477b-5335-a53b-1a25dd00c97c",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-07",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.manual-route.v1",
+            "sourceRecordFingerprint": "e711261a9db8d20d28a49287858f625f50ffeeda5007242c4e85ae4dd4185c9b",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "118ebbfbfde8e8c4d8dfa6a80a389a27bb6716f0b6d843b22e2cd2537c07a380",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "required_manual",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-07",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-08",
+    "snapshot": {
+      "names": [
+        {
+          "name": "외용액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "484b8bf3-8cb7-54c0-961a-4a0f22fcce8a",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-08",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "7b9d002ad2a988fb8e333f3e2ce4ea2f7e51f7125089028e2e06dd0fb5f94918",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "ba28ad18daa72ebce36d55816f92fa6dbc0fc0ff392df99167f9a7e080cce4ee",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-08",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-09",
+    "snapshot": {
+      "names": [
+        {
+          "name": "연고 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "ea6a6bc3-e22a-50ab-93ce-181716505e23",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-09",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "27b29bbadd9afa6314da02af7b64f54622f19b2854be3a9c5da6bed120e777dd",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "7f8d7729eb9396a2dbdb5a6d5c4f44e348257e30a55bef09bb64c36f3274b446",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-09",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-10",
+    "snapshot": {
+      "names": [
+        {
+          "name": "시럽 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "23dab219-d611-55b4-a4c7-49bc7f67b2f7",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-10",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "7058949ec249565bc7dbe22e2dcff6c8d5e28be3f4cb3fb34a1752a91bb5fa95",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "f5557ab9feca10507dc938a5d8f4231f045ecf24ba05d2cc8fcd37ae2cd3a22a",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-10",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-11",
+    "snapshot": {
+      "names": [
+        {
+          "name": "1회 포장 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "ba14001c-b2da-5a73-bb2a-4257db4ca3ed",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-11",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.manual-route.v1",
+            "sourceRecordFingerprint": "a0489cd39da0b06ec091cd952ee04d1616d2285794e5c2894d34c4f812c73c54",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "26a5ccd5593cf681e3eb1eb08f9804e7af4097beab6781fce03334e8028c49dd",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "required_manual",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-11",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.synthetic.dispensing-12",
+    "snapshot": {
+      "names": [
+        {
+          "name": "다회 포장 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "80a24527-8831-5991-a635-24cb74d03990",
+          "presetKey": "preset:execution:cm.order.synthetic.dispensing-12",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.manual-route.v1",
+            "sourceRecordFingerprint": "22e8ee3a799847c39f67e70f33f66b1011cc7cead63049c55219eb768dc2a228",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "3730f0f7b7ae6eefb682cd83a69a618bcdfe6d983a99a150e387a55c32b9c0cb",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "required_manual",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.synthetic.dispensing-12",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.01",
+    "snapshot": {
+      "names": [
+        {
+          "name": "아목시실린 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "97cccf09-6bf6-5b96-b7ad-804e5aa54a22",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.01",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "ae6b99b9adebea0b58758c1d271311dd9a9b7bc7db5033792b33eef6a1197eca",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "b0bbbbb481dd4fa705bbd8aaadeea1cdfc1a6f4d3f7a3419768af97eff6fc1ae",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.01",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.02",
+    "snapshot": {
+      "names": [
+        {
+          "name": "아목시실린·클라불란산 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "17c68215-9a43-5243-9858-d107f1c7f128",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.02",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "04b7d43ab95cf76f4f202973b7f4a8ed8da3291763004c74c35ba63703cd6466",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "d54077fba432e5c055e8ea79457675fa4c31f5e87b1d35788c35e4292a18628b",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.02",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.03",
+    "snapshot": {
+      "names": [
+        {
+          "name": "세팔렉신 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "a17ba275-7ce7-5333-a7db-aae654e73038",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.03",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "a02a18743039a8711c075951584abfce64b17e71ba9f6ab1d00c67da9d261b02",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "1de79b3ca506b3b2a2bcb8f63b3248fa93cb69fa17e9eef54efc34b24655bb2d",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.03",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.04",
+    "snapshot": {
+      "names": [
+        {
+          "name": "독시사이클린 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "9a9d9249-f6e2-5f41-8279-c93c4447500a",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.04",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "39c53ce6c94d827a71712c071c2fba767264d80cdf688fb4263a526a14588f36",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "e656df1f99f8eff6501bf2adc8514c98284b620b66cbc300c5dfd3761e5f5e65",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.04",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.05",
+    "snapshot": {
+      "names": [
+        {
+          "name": "클린다마이신 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "01402ff9-154d-584d-8d70-5bb6298ae210",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.05",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "2419f034c1fb11651edac4b4d8642550e93b3389151393b290a8a62780c40651",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "471cc240cf72a2def43ff61fb46950331694c0ce6a2249774bbcf06338132b25",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.05",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.06",
+    "snapshot": {
+      "names": [
+        {
+          "name": "메트로니다졸 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "4cab3608-7533-5939-833e-6f3c62fbf7d1",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.06",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "1a8b79f76a11ea33c0103b230422c4bdc20f6ed61a583c41e12a861f0d7aad77",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "b56e12bb9f7413629fef6900e93e420e624cb1b74eb2baf8eafd7d3912195902",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.06",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.07",
+    "snapshot": {
+      "names": [
+        {
+          "name": "엔로플록사신 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "87c4e58b-249c-5f68-8304-ff71fe82ee07",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.07",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "018d467c087fee1d08118ccaa301594cb71121536289a56a2fb27fd35b59095a",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "fef25f002197bf1fd538da0b9ef96f119fbe01052dece2b98f716e70bee1388c",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.07",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.08",
+    "snapshot": {
+      "names": [
+        {
+          "name": "마보플록사신 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "e169dd44-6a08-5402-9aeb-99035400acd0",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.08",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "3f5ba2e70747f6ad652e15be1c58369dfebda182cf82ae65cac275653d376745",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "ba74f3e919f7f3aebe92c526ba0955499adf1adfaaea4b5a475a20c725636110",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.08",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.09",
+    "snapshot": {
+      "names": [
+        {
+          "name": "프레드니솔론 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "c45ebae9-aba9-58d4-ad65-84cdd2937fbc",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.09",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "335599af493214dfe1dfdbcc6571e7e2ffa99ba2e7d260f9bf2ec614b5686b00",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "590d52dde1b0e87b71e49e29cbe5a9775fccb3797d49bcf087dd3ec40aab46e0",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.09",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.10",
+    "snapshot": {
+      "names": [
+        {
+          "name": "멜록시캄 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "50e443b5-1ea9-5dae-90f7-7bf56bcd12bd",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.10",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "8cfcc888bee1503712de4d2724045f98dc377f4bece759d6db595a5127f80986",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "55e50d34c0089a86d49e2a01504cd9de3e3044a65d3cf74421015e44cf2b5ce7",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.10",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.11",
+    "snapshot": {
+      "names": [
+        {
+          "name": "카프로펜 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "5357ec60-d314-58b6-874e-0fc8ff1f8eee",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.11",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "4f52031f7b8e205df846a1c4771e2b0e56474fb4eefd2dc8cdc369643092497e",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "fcd26c29813d92505e8b64eadf973288a0aeff87998a888136bef957a628a49d",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.11",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.12",
+    "snapshot": {
+      "names": [
+        {
+          "name": "로베나콕시브 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "87b680b1-a82e-5bd6-b06e-394ae32fd175",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.12",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "36310067caa78d081d76be276d0733367fc0d29d8fae9ae6ea95f6fa7693a0f8",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "b2c0a2ba2484050d13ad398e86fe0b079646deda050a8ef9820d0975a8fc5944",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.12",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.13",
+    "snapshot": {
+      "names": [
+        {
+          "name": "가바펜틴 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "c69c7dd9-e879-5146-95cf-66101ee958d5",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.13",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "6e9d046f2abe751e4fabeec7049ac8d283721b6ac0e6f7f339aa4f6bef1a71b7",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "563191b107fad9cda9183d90eb3104abd54c880d68a1f71ff0fc2e955d111b80",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.13",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.14",
+    "snapshot": {
+      "names": [
+        {
+          "name": "오메프라졸 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "c3c787e1-b3c6-5c2d-aa80-e1509f271166",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.14",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "b13e68f705fff91cb99835248b5aa358a5fe826cc11e2669b69cf60dac6d4155",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "8b8574b9b500c72811e4432e693e61e46282a5b70215d0b16e7d303ebd45011d",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.14",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.15",
+    "snapshot": {
+      "names": [
+        {
+          "name": "파모티딘 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "231e08a4-cb24-5d15-a22f-27c1fe15f963",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.15",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "fe195963e61619cc3e04a8af7c07675e46f7a784c2bf8a9d0c59d671048cc221",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "6ff086ff73d42d60907e3def529d8bcc98ed30794b375e193d889f66c51f0c37",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.15",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.16",
+    "snapshot": {
+      "names": [
+        {
+          "name": "마로피탄트 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "4649c2d9-9083-56a6-b4eb-9e46b450b2e9",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.16",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "1d3b14ff1af186306300682b31070b4c4cf1702e1294798ac0d32156de75ae41",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "d07b1680b624ee81b5699443e273bee16a4c42782c02ab3d4206976746e5ae69",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.16",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.17",
+    "snapshot": {
+      "names": [
+        {
+          "name": "메토클로프라미드 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "a27c9170-a2da-5bd3-aedf-ddec1b4f2a66",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.17",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "f15aba016d180fbec44063fed88ace0678135a30363f70f7120913941d77a857",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "731c29a6244343dc8b04bde17dd1faf416bb6405d2f7c4cf2bfb335c4cc2eea5",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.17",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.18",
+    "snapshot": {
+      "names": [
+        {
+          "name": "우르소데옥시콜산 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "e836be0a-cdcb-544b-b761-ae7a6452f272",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.18",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "a7aab7ac5cc3a12667a56d49882bd56432fb79c66ebb65e3494afeb4abd644d3",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "99456e1502f6907b2c294ed01d5e25852693532b5631d1b13eef9e3979c6950b",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.18",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.19",
+    "snapshot": {
+      "names": [
+        {
+          "name": "실리마린 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "e0505951-2539-51f8-ae73-78476666b305",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.19",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "b0ee4edd3132c4f331ced76f756b7d165940bc1269b6f6b804d86412d93c1fc1",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "d0e50a413ac4576d264be4495687a71f586729fbe5fc8495cf4c26edc4b0bcb5",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.19",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.20",
+    "snapshot": {
+      "names": [
+        {
+          "name": "레보티록신 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "e5b52423-a88a-5465-b0f6-929ff135056b",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.20",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "08c4aa8bf41051c9d9893911a7fc5360ce58e88216b8aea0f492a0580f88621a",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "2d7630f2049ed23203dcfa8bf37b798e4c031683ed858d855f4d4014d1bbb8ba",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.20",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.21",
+    "snapshot": {
+      "names": [
+        {
+          "name": "메티마졸 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "ba03b009-d82d-57cc-97ae-16a4c99c98a1",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.21",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "00e8f37d95051e03fb20cb66362fc0ee74fdd1db5d47d25b6f23a5c5fd969051",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "e4375c8a321c36cf64ad7b6bb94bcb8a1c99c52617df3536408c9be042e7d8cf",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.21",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.22",
+    "snapshot": {
+      "names": [
+        {
+          "name": "베나제프릴 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "6d7a8150-0cad-509f-88ba-8fc42a79b6f1",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.22",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "b1c4d5717cc34cb8d4420478303bbd3905fff481eecdcc0d96e189263311647e",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "c7ceec3bee232256d18d2af208fe61090a7ae03e3a1d5bcf30fecb5a0020c2e2",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.22",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.23",
+    "snapshot": {
+      "names": [
+        {
+          "name": "피모벤단 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "9b7ec034-7b4c-5672-aa80-d05dc0ea962b",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.23",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "4457ed5caf883a68b98c437d528347ac9754f8ac42f2be5ec373e9df1c0c3ccc",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "81db7770fe04959eccd1972e5ac72ec8c4adefa4924afb14ad3015332ebeb8dd",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.23",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.24",
+    "snapshot": {
+      "names": [
+        {
+          "name": "푸로세미드 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "23057c55-3273-5366-898c-ab39a203c1c2",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.24",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "980875ff78f70e75b391986b5468e7a0c1352e931250e28b2ae70f3b704f6b02",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "377344c61daef18137927853830b7c8f7420f21c3cbba101d3df946dfc755f48",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.24",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.25",
+    "snapshot": {
+      "names": [
+        {
+          "name": "스피로노락톤 경구제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "2e1a141b-cf71-5ab2-a49a-e6ac8574af22",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.25",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "4094af8405df32025ca48735cfd55f4dbcfee2267ef92125ce2d7ebe20200d03",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "bd0367bc8ce16bb2ed7a950a1fd729eabadb8eaa13450399ce3045ab1e97400d",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.25",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.26",
+    "snapshot": {
+      "names": [
+        {
+          "name": "락툴로오스 경구액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "0ff50922-a503-5525-bbda-723ed4669e3f",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.26",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "92ca2aba59065aa34f58cb5c07798fff79cc556dab770b90c48de03cc4e89eff",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "1259dda4e4dbb0b04497c17f05f838fd7b9c4c964360c63333042f09a50b451b",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.26",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.27",
+    "snapshot": {
+      "names": [
+        {
+          "name": "프로바이오틱스 분말 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "610fd168-4e5e-5c58-9c77-e62d128818db",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.27",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "ad66202cfbba090e01f3d0059c04ca6900f50be186e5d46bddb1e07a1c3f720d",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "3f8c92f9dbee08339cde41bda6422fefd638005d4ee39a8031e36eb45510b5aa",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.27",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.28",
+    "snapshot": {
+      "names": [
+        {
+          "name": "전해질 경구액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "a91333a0-7cd4-5926-8510-8a4a048d5552",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.28",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.PO.shape.v1",
+            "sourceRecordFingerprint": "a214ca2fa7cd67cca904739161f8fa9645bfc23bce4e432b2fa9ed76a76b3161",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "6351f46d4f5508fa2581e41fa89c786e6887714a8f3ac691b20bfdd33da75e24",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "PO",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.28",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.29",
+    "snapshot": {
+      "names": [
+        {
+          "name": "클로르헥시딘 외용액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "8dd52706-84e7-5403-bc5f-f856ca381127",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.29",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "7c53e617f26f6d9ec57a03f0ab9cfa6d85c0be34fe10d43d081bca656ad624e8",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "574f0c24a7ed34b0c856a07a04c309ea68b8da9d460846008bb33fe76a6a1709",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.29",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.30",
+    "snapshot": {
+      "names": [
+        {
+          "name": "포비돈요오드 외용액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "880ed75b-c262-5d9d-800d-1ebcb5822de6",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.30",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "d744f89a41248b1447d9de134a8ed917a85367d0500d7fb6e99fedbbf52ac314",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "6c52c1ce666205e83dff2554c845d8e92188319cf79a48cd16de29842015f201",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.30",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.31",
+    "snapshot": {
+      "names": [
+        {
+          "name": "무피로신 연고 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "e3443c3b-ef2d-5cb3-9b68-5da79f8f118e",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.31",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "e56c4f004b5fc2c6924152a44d79633f9acc11d3dacd33542397419c56dc28c1",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "c5c55037eaca912aae0fd0639a9589aecc8b12c89591f4d06efe6b6f1295c7a6",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.31",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.32",
+    "snapshot": {
+      "names": [
+        {
+          "name": "실버설파디아진 크림 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "23becdad-c99b-5782-9933-acaaa126f326",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.32",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "fe187ab1df420bab5947cc129d4a9bfec9e9c5fba070d04c352b9195fe36913f",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "f3465d2b1de801e049dd1eb1358579200a484a5f66294272c6abe6f6fc15a9ec",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.32",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.33",
+    "snapshot": {
+      "names": [
+        {
+          "name": "인공눈물 점안액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "fc2bd091-bbdd-59db-88b8-b0f4836165ca",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.33",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.ophthalmic.shape.v1",
+            "sourceRecordFingerprint": "a0c70b338f7c605288993feb0acf7d3f35edaae1c494ef60e8905c5fe10fee21",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "3ec45510e55f4b29bfe7f51f50f9a6dcd40bf38cda93d6019b6f757356257df4",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "ophthalmic",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.33",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.34",
+    "snapshot": {
+      "names": [
+        {
+          "name": "오플록사신 점안액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "9296edb1-0e69-5cd9-93d6-9c2083bc29ed",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.34",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.ophthalmic.shape.v1",
+            "sourceRecordFingerprint": "6db4b9b1512ce48d348b3a01f036343ff68dfbd9bf2c8a46c0d7922da0a80edd",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "277c8ff8e6e5d83dd6a01715bcefcc79b3fda0e4f091fec9a50fbff9e1346879",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "ophthalmic",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.34",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.35",
+    "snapshot": {
+      "names": [
+        {
+          "name": "사이클로스포린 점안액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "9cc8a4f4-8920-5c74-9547-156019e35e9a",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.35",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.ophthalmic.shape.v1",
+            "sourceRecordFingerprint": "3232197289ed37257197303978c953ce9624f360e8fe408639d49081d1127e4f",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "d86cb568b982a9acfa6a051568634be44b59d4766aa10b627b8fdc228c783900",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "ophthalmic",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.35",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.36",
+    "snapshot": {
+      "names": [
+        {
+          "name": "귀 세정액 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "5e03fab2-5dcd-5d6f-affa-7a59597cabda",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.36",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.otic.shape.v1",
+            "sourceRecordFingerprint": "002e8d4c1605fd2915502615353dbd60e43ac9df2e0c1ff6c4720d8fc42f3ff5",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "3cbdd34b49f3513dd7e732b05b7646dc9652dbd1384cec101cf1b65e42494e2d",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "otic",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.36",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  },
+  {
+    "master_key": "cm.order.v4.dispensing.37",
+    "snapshot": {
+      "names": [
+        {
+          "name": "피부 보습제 조제",
+          "nameKind": "preferred",
+          "sortOrder": 0,
+          "searchable": true,
+          "languageCode": "ko"
+        }
+      ],
+      "detail": {
+        "species": [
+          "cat",
+          "dog"
+        ],
+        "defaultQuantity": 1,
+        "executionPreset": {
+          "presetId": "006c38eb-0ef5-553c-9f17-543156155c94",
+          "presetKey": "preset:execution:cm.order.v4.dispensing.37",
+          "provenance": {
+            "sourceType": "synthetic-operational-v4",
+            "sourceNotes": "Synthetic operational master v4; no clinical authority.",
+            "evidenceKeys": [
+              "uk-vmd.product-information"
+            ],
+            "sourceReleaseId": null,
+            "sourceReleaseKey": "cm.release.airtable.operational-master.v4",
+            "clinicalUseNotice": "Synthetic transport preset; veterinarian review is required before clinical use.",
+            "sourceFingerprint": "f961d75afb34b38fabe1cacdfa8c098b8ec3e149deb94b5f2ed0e07d61ab953a",
+            "generatorProfileKey": "dispensing.topical.shape.v1",
+            "sourceRecordFingerprint": "1dd3308e860753245e8694c769d474568091c01200eaa421a311625064af9d75",
+            "unresolvedClinicalAuthority": [
+              "dose, frequency, duration, total quantity, and patient-specific prescribing remain required manual decisions; source label evidence is not a prescription."
+            ]
+          },
+          "presetStatus": "synthetic_unreviewed",
+          "contentSha256": "18592c3692cbba6bb22833cd183c271573b184465951ba50fd87b9d1114bd565",
+          "fieldPolicies": {
+            "dose": "required_manual",
+            "route": "derived_from_profile",
+            "doseUnit": "required_manual",
+            "doseBasis": "derived_from_profile",
+            "frequency": "required_manual",
+            "compoundNote": "required_manual",
+            "durationDays": "required_manual",
+            "guardianNote": "required_manual",
+            "storageMethod": "derived_from_profile",
+            "taperSchedule": "required_manual",
+            "totalQuantity": "required_manual",
+            "totalQuantityUnit": "required_manual",
+            "medicationInstruction": "derived_from_profile",
+            "extraLabelSpeciesReason": "required_manual",
+            "extraLabelSpeciesConfirmed": "schema_default"
+          },
+          "presetRevision": 1,
+          "clinicalOrderType": "dispensing",
+          "clinicalUseAllowed": false,
+          "defaultDetailInputs": {
+            "route": "topical",
+            "doseBasis": "patient",
+            "storageMethod": "room_temp",
+            "medicationInstruction": "any_time",
+            "extraLabelSpeciesConfirmed": false
+          },
+          "detailSchemaVersion": 1,
+          "sourceArtifactSha256": "a3ea174d81325d993aa9cc233d714c4a3eee990392dd7e931f0433bb86c24a25"
+        },
+        "defaultSalesUnitCode": "case",
+        "classificationPathKey": "cm.path.dispensing",
+        "defaultBillingReflectionEnabled": true
+      },
+      "source": {
+        "title": "CLAiR operational pilot fixture",
+        "accessedAt": "2026-08-23",
+        "sourceType": "synthetic",
+        "licenseNotes": "Synthetic structural data; not for clinical use.",
+        "referenceUri": null,
+        "sourceVersion": "v1"
+      },
+      "revision": 2,
+      "masterKey": "cm.order.v4.dispensing.37",
+      "recordType": "order",
+      "safetyReason": null,
+      "safetyStatus": "normal",
+      "lifecycleStatus": "published",
+      "labOrderProfiles": []
+    }
+  }
+]

@@ -264,6 +264,8 @@ export type FulfillmentGatewayResult =
       denialReason:
         | "encounter_unavailable"
         | "invalid_transition"
+        | "treatment_medication_link_required"
+        | "treatment_medication_link_invalid"
         | "order_unavailable"
         | "unsupported_order_type"
         | "work_item_unavailable";
@@ -2725,6 +2727,10 @@ function mapGatewayError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed",
 ): FulfillmentGatewayResult {
+  if (message?.includes("treatment_medication_link_required"))
+    return { ok: false, status: 409, denialReason: "treatment_medication_link_required" };
+  if (message?.includes("treatment_medication_link_invalid"))
+    return { ok: false, status: 409, denialReason: "treatment_medication_link_invalid" };
   if (message?.includes("encounter_unavailable"))
     return { ok: false, status: 409, denialReason: "encounter_unavailable" };
   if (message?.includes("invalid_transition"))

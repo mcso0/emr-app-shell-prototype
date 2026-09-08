@@ -42,3 +42,14 @@ test("database treatment schema literal is the exact canonical TS schema", () =>
   expect(literal).not.toBeNull();
   expect(JSON.parse(literal![1].replaceAll("''", "'"))).toEqual(TREATMENT_FIELD_SCHEMA_V2);
 });
+
+test("V3 confirms the plan before medication linkage without weakening V2 or dose validation", () => {
+  const validateV3 = (detailInputs: unknown) => validateClinicalOrderDetailInputs({ clinicalOrderType: "treatment", schemaVersion: 3, detailInputs, requireComplete: true });
+  const unlinked = { ...plan, administrationPolicy: "separate_medication_order" };
+  expect(validateV3(unlinked)).toMatchObject({ valid: true });
+  expect(validate(unlinked)).toMatchObject({ valid: false });
+  expect(validateV3({ ...unlinked, linkedMedicationOrderId: "invalid" })).toMatchObject({ valid: false });
+  expect(validateV3({ ...plan, administrationPolicy: "direct_quantity" })).toMatchObject({ valid: false });
+  expect(getClinicalOrderFieldSchema("consultation", 3)).toBeNull();
+  expect(resolveClinicalOrderMasterContract({ categoryGroup: "treatment", clinicalOrderType: "treatment", detailSchemaVersion: 3 }).detailSchemaVersion).toBe(3);
+});
