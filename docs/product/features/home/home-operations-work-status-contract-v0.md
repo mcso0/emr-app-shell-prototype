@@ -331,3 +331,8 @@ Remaining follow-up:
 - `docs/product/features/home/home-v1-ui-spec.md`
 - `docs/product/domain/order-fulfillment-handoff.md`
 - `docs/engineering/data-model/order-fulfillment-handoff-contract.md`
+
+
+### Personal Work Today-only Follow-up — 2026-09-08
+
+내 업무 has no date navigator. Both assigned and requested tabs query and group work against the current workspace operating day, ignoring any legacy saved personal date. 오늘 할 업무 and 이전 미완료 remain; search, completed inclusion and source navigation are unchanged. 원내 현황 retains its independent selected date and navigator.

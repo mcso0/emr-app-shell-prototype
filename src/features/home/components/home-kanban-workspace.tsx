@@ -98,6 +98,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const view = useHomeWorkspaceStore((state) => state.view);
   const personalTab = useHomeWorkspaceStore((state) => state.personalTab);
   const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
+  const operatingDate = view === "mine" ? today : query.date;
   const preferences = useHomeWorkspaceStore((state) => state.preferences);
   const updateQuery = useHomeWorkspaceStore((state) => state.updateQuery);
   const updatePreferences = useHomeWorkspaceStore((state) => state.updatePreferences);
@@ -114,7 +115,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const scopeTasks = data.hospitalTasks.filter((task) => {
     if (progress(task) === "cancelled" || (!query.includeCompleted && progress(task) === "completed")) return false;
     const date = task.operatingDate || operatingDay(task.dueAt || task.requestedAt);
-    if (!(date === query.date || previous(task, query.date))) return false;
+    if (!(date === operatingDate || previous(task, operatingDate))) return false;
     if (view === "mine") return personalTab === "assigned" ? task.isMyWork === true : task.isRequestedWork === true;
     return true;
   });
@@ -148,7 +149,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     onNext={() => updateQuery(view, { date: offsetDate(query.date, 1) })} />;
   const renderListGroup = (type: typeof workTypes[number], items: HomeTask[], prefix: string) => {
     const key = `list:${view}:${prefix}:${type.id}`;
-    return <HomeListGroup key={key} id={type.id} label={type.label} tasks={items} date={query.date}
+    return <HomeListGroup key={key} id={type.id} label={type.label} tasks={items} date={operatingDate}
       collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} onHide={() => setHidden([...hidden, type.id])} onNavigate={navigate} />;
   };
 
@@ -164,7 +165,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           <span>원내 {patientSummary?.present ?? "—"}마리</span><span aria-hidden="true">·</span>
           <span>진료 대기 {patientSummary?.waiting ?? "—"}마리</span><span aria-hidden="true">·</span>
           <span>진료 중 {patientSummary?.inProgress ?? "—"}마리</span>
-        </div> : dateControl}
+        </div> : undefined}
       />
       <div className={styles.toolbar}>
         {view === "hospital" ? dateControl : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
@@ -191,14 +192,14 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         <div ref={scrollRef} onScroll={rememberScroll} className="min-h-0 min-w-0 flex-1 overflow-auto" data-testid="home-workspace-scroll">
           {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
           view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
-            {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={query.date} collapsed={collapsed(`column:${type.id}`)}
+            {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={operatingDate} collapsed={collapsed(`column:${type.id}`)}
               onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
               isGroupCollapsed={collapsed} onToggleGroup={toggleGroup} onNavigate={navigate} />)}
             {visibleTypes.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 업무 종류를 선택해 주세요" />}
           </div> : <div className={styles.list} data-testid="home-task-list">
             {view === "hospital" ? visibleTypes.map((type) => renderListGroup(type, tasks.filter((task) => task.kanbanColumn === type.id), "hospital")) : [
-              { id: "selected", label: query.date === today ? "오늘 할 업무" : "선택일 업무", items: tasks.filter((task) => !previous(task, query.date)) },
-              { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, query.date)) },
+              { id: "selected", label: "오늘 할 업무", items: tasks.filter((task) => !previous(task, operatingDate)) },
+              { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, operatingDate)) },
             ].map((period) => <section key={period.id} className={styles.period} aria-label={period.label}>
               <h2 className={styles.periodTitle}>{period.label}<span>{period.items.length}</span></h2>
               {visibleTypes.filter((type) => period.items.some((task) => task.kanbanColumn === type.id)).map((type) => renderListGroup(type, period.items.filter((task) => task.kanbanColumn === type.id), `${personalTab}:${period.id}`))}

@@ -12,7 +12,7 @@ related_docs:
   - "docs/product/features/notifications/global-notification-center-v0-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-014-home-workspace-and-personal-work.md"
-last_updated: "2026-09-07"
+last_updated: "2026-09-08"
 ---
 
 # Home Workspace UI Spec
@@ -44,7 +44,7 @@ Work order: 접수, 예약, 진료, 임상병리, 영상검사, 조제, 처치, 
 
 `내가 요청한 업무` includes records requested by the current user ID, including unassigned requests. Do not infer requester identity from role or matching display names in live reads. No synthetic review/approval tasks are introduced where the source has no assignment model.
 
-Each tab is a list grouped into previous unfinished/current date or source progress groups. Columns include 환자/보호자, 업무 종류 as a neutral badge, 세부 업무, 상태, 담당자 and 경과. Personal queries are independent of hospital search, owner selection, hidden columns and layout.
+Each tab is a list grouped into `오늘 할 업무` and `이전 미완료`. Personal work has no date navigator: API requests and grouping always use the current workspace operating day, ignoring legacy saved personal dates. Hospital date selection remains independent. Columns include 환자/보호자, 업무 종류 as a neutral badge, 세부 업무, 상태, 담당자 and 경과. Personal queries are independent of hospital search, owner selection, hidden columns and layout.
 
 ## Date And Navigation
 
