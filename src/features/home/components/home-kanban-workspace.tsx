@@ -106,7 +106,6 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollKey = `${view}:${view === "hospital" ? preferences.layout : personalTab}`;
   const term = query.search.trim().toLocaleLowerCase();
-  const owners = [...new Set(data.hospitalTasks.flatMap(taskOwners))].sort((a, b) => a.localeCompare(b, "ko"));
   const [personalHidden, setPersonalHidden] = useState<Record<string, string[]>>({ assigned: [], requested: [] });
   const hidden = view === "hospital" ? preferences.hidden : personalHidden[personalTab];
   const setHidden = (values: string[]) => view === "hospital" ? updatePreferences({ hidden: values }) : setPersonalHidden((current) => ({ ...current, [personalTab]: values }));
@@ -115,10 +114,11 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const scopeTasks = data.hospitalTasks.filter((task) => {
     if (progress(task) === "cancelled" || (!query.includeCompleted && progress(task) === "completed")) return false;
     const date = task.operatingDate || operatingDay(task.dueAt || task.requestedAt);
-    if (!(date === operatingDate || previous(task, operatingDate))) return false;
+    if (!(date === operatingDate || (view === "mine" && previous(task, operatingDate)))) return false;
     if (view === "mine") return personalTab === "assigned" ? task.isMyWork === true : task.isRequestedWork === true;
     return true;
   });
+  const owners = [...new Set(scopeTasks.flatMap(taskOwners))].sort((a, b) => a.localeCompare(b, "ko"));
   const tasks = scopeTasks.filter((task) =>
     !hidden.includes(task.kanbanColumn) &&
     (view !== "hospital" || (!preferences.hidden.includes(task.kanbanColumn) && (query.owners === null || taskOwners(task).some((owner) => query.owners?.includes(owner))))) &&
@@ -144,9 +144,9 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   function toggleGroup(key: string) { updatePreferences({ collapsed: toggleValue(preferences.collapsed, key) }); }
   const collapsed = (key: string) => preferences.collapsed.includes(key);
   const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} selectedDate={query.date} todayDate={today}
-    onDateChange={(date) => updateQuery(view, { date })}
-    onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1) })}
-    onNext={() => updateQuery(view, { date: offsetDate(query.date, 1) })} />;
+    onDateChange={(date) => updateQuery(view, { date, owners: null })}
+    onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1), owners: null })}
+    onNext={() => updateQuery(view, { date: offsetDate(query.date, 1), owners: null })} />;
   const renderListGroup = (type: typeof workTypes[number], items: HomeTask[], prefix: string) => {
     const key = `list:${view}:${prefix}:${type.id}`;
     return <HomeListGroup key={key} id={type.id} label={type.label} tasks={items} date={operatingDate}

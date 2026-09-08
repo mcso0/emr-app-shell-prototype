@@ -8,7 +8,7 @@ const yesterday = previous.toISOString().slice(0, 10);
 const base = { workspaceId, sourceStatus: "requested", progressState: "waiting", attentionSignals: [], permissionMode: "full", requestedAt: `${today}T09:00:00+09:00`, operatingDate: today, patientName: "나나", guardianName: "김보호", assigneeName: "김수의" };
 const items = [
   { ...base, id: "lab:one", sourceId: "one", sourceType: "lab", title: "CBC 검사", sourceHref: `/w/${workspaceId}/lab?labResultId=live-lab-one&modulePanel=open`, isMyWork: true, isRequestedWork: false },
-  { ...base, id: "lab:previous", sourceId: "previous", sourceType: "lab", title: "이전 혈액검사", requestedAt: `${yesterday}T09:00:00+09:00`, operatingDate: yesterday, sourceHref: `/w/${workspaceId}/lab?labResultId=live-lab-previous`, isMyWork: false, isRequestedWork: true },
+  { ...base, id: "lab:previous", sourceId: "previous", assigneeName: "이전담당", sourceType: "lab", title: "이전 혈액검사", requestedAt: `${yesterday}T09:00:00+09:00`, operatingDate: yesterday, sourceHref: `/w/${workspaceId}/lab?labResultId=live-lab-previous`, isMyWork: false, isRequestedWork: true },
   { ...base, id: "dispensing:one", sourceId: "medicine", sourceType: "dispensing", title: "내가 요청한 약", patientName: "보리", assigneeName: undefined, sourceHref: `/w/${workspaceId}/dispensing?workItemId=medicine`, isMyWork: false, isRequestedWork: true },
   { ...base, id: "lab:done", sourceId: "done", sourceType: "lab", title: "완료한 검사", progressState: "completed", sourceHref: `/w/${workspaceId}/lab`, isMyWork: true },
 ];
@@ -96,7 +96,7 @@ test("completion is opt-in and board/list show the same filtered tasks", async (
   await expect(page.getByTestId("home-kanban-task-lab:done")).toBeVisible();
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("완료한 검사", { exact: true })).toBeVisible();
-  await expect(page.getByText("이전 미완료", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("이전 미완료", { exact: true })).toHaveCount(0);
 });
 for (const status of ["error", "permission_denied"]) {
   test(`home ${status} does not masquerade as empty work`, async ({ page }) => {
@@ -231,4 +231,44 @@ test("personal work ignores saved dates while hospital date selection remains in
   await page.getByRole("button", { name: "내 업무", exact: true }).click();
   expect(new URL((await personalRequest).url()).searchParams.get("date")).toBe(today);
   await expect(page.getByRole("button", { name: /날짜 선택$/ })).toHaveCount(0);
+});
+
+
+test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {
+  await openHome(page);
+  await expect(page.getByTestId("home-kanban-task-lab:previous")).toHaveCount(0);
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("2");
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await expect(page.getByText("이전 혈액검사", { exact: true })).toHaveCount(0);
+  await page.getByLabel("담당자 다중 선택").click();
+  await expect(page.getByRole("checkbox", { name: "이전담당 선택", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "선택 해제", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("0");
+  await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
+  await expect(page.getByLabel("담당자 다중 선택")).toHaveText("담당자 전체");
+  await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
+  await expect(page.getByText("CBC 검사", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await expect(page.getByText("CBC 검사", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+  await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
+});
+
+
+test("hospital fallback dates respect Seoul midnight and source operating date", async ({ page }) => {
+  await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
+    const boundaryItems = [
+      { ...items[0], id: "lab:before", title: "자정 전", operatingDate: undefined, requestedAt: `${yesterday}T14:59:59Z` },
+      { ...items[0], id: "lab:midnight", title: "자정 이후", operatingDate: undefined, requestedAt: `${yesterday}T15:00:00Z` },
+      { ...items[0], id: "lab:source-date", title: "원본 날짜 우선", operatingDate: yesterday, requestedAt: `${today}T09:00:00+09:00` },
+    ];
+    await route.fulfill({ json: { ok: true, workspaceId, operatingDate: today, sourceStatus: "live", items: boundaryItems } });
+  });
+  await page.goto(`/w/${workspaceId}/home`);
+  await expect(page.getByTestId("home-kanban-task-lab:midnight")).toBeVisible();
+  await expect(page.getByTestId("home-kanban-task-lab:before")).toHaveCount(0);
+  await expect(page.getByTestId("home-kanban-task-lab:source-date")).toHaveCount(0);
+  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
 });
