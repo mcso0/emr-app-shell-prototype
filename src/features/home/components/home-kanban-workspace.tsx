@@ -1,18 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
-import { CdsFilesGridIcon, CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
-import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, MenuIcon } from "@/components/icons";
+import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon } from "@/components/icons";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { EmrDateNavigator } from "@/components/emr/subpanel";
 import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
-import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
+import { EmrSidePanelTypeBadge } from "@/components/emr/side-panel-card";
 import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
-import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrModuleListSidePanel } from "@/components/emr/module-list-side-panel";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +23,8 @@ import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
 import type { HomeDashboardData, HomeTask, HomeOperationsProgressState } from "@/features/home/home.types";
 import { cn } from "@/lib/utils";
 import { moduleIconById } from "@/shell/module-nav-icons";
-import { CheckIcon, ListTodoIcon, SendIcon } from "lucide-react";
+import { CheckIcon, ListTodoIcon, SendIcon, ClipboardListIcon, EyeIcon, EyeOffIcon, ChevronUpIcon, Columns3Icon, ListIcon, ArrowDownUpIcon } from "lucide-react";
+import styles from "./home-workspace-layout.module.css";
 
 const workTypes = [
   { id: "waiting", label: "접수" }, { id: "reservation", label: "예약" },
@@ -35,7 +33,7 @@ const workTypes = [
   { id: "treatment", label: "처치" }, { id: "billing", label: "수납" },
 ] as const;
 const statusGroups: Array<{ id: HomeOperationsProgressState; label: string }> = [
-  { id: "waiting", label: "대기" }, { id: "in_progress", label: "진행 중" }, { id: "completed", label: "완료" },
+  { id: "in_progress", label: "진행 중" }, { id: "waiting", label: "대기" }, { id: "completed", label: "완료" },
 ];
 const typeLabel = (task: HomeTask) => workTypes.find((type) => type.id === task.kanbanColumn)?.label ?? task.sourceLabel;
 const taskOwners = (task: HomeTask) => task.assigneeNames?.length ? task.assigneeNames : [ownerLabel(task)];
@@ -88,10 +86,9 @@ export function HomeNavigationSidePanel() {
     openSectionIds={new Set()}
     onToggleSection={() => undefined}
     items={[
-      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <CdsFilesGridIcon />, onClick: () => setView("hospital") },
-      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <MenuIcon />, onClick: () => setView("mine") },
-      { id: "inbox", type: "button", label: "인박스", disabled: true, disabledBadgeLabel: "예정" },
-      { id: "messages", type: "button", label: "메시지", disabled: true, disabledBadgeLabel: "예정" },
+      { id: "hospital-group", type: "groupLabel", label: "병원현황" },
+      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <ClipboardListIcon />, onClick: () => setView("hospital") },
+      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <ListTodoIcon />, onClick: () => setView("mine") },
     ]}
   />;
 }
@@ -109,8 +106,11 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const scrollKey = `${view}:${view === "hospital" ? preferences.layout : personalTab}`;
   const term = query.search.trim().toLocaleLowerCase();
   const owners = [...new Set(data.hospitalTasks.flatMap(taskOwners))].sort((a, b) => a.localeCompare(b, "ko"));
-  const visibleTypes = workTypes.filter((type) => !preferences.hidden.includes(type.id));
-  const hiddenTypes = workTypes.filter((type) => preferences.hidden.includes(type.id));
+  const [personalHidden, setPersonalHidden] = useState<Record<string, string[]>>({ assigned: [], requested: [] });
+  const hidden = view === "hospital" ? preferences.hidden : personalHidden[personalTab];
+  const setHidden = (values: string[]) => view === "hospital" ? updatePreferences({ hidden: values }) : setPersonalHidden((current) => ({ ...current, [personalTab]: values }));
+  const visibleTypes = workTypes.filter((type) => !hidden.includes(type.id));
+  const hiddenTypes = workTypes.filter((type) => hidden.includes(type.id));
   const scopeTasks = data.hospitalTasks.filter((task) => {
     if (progress(task) === "cancelled" || (!query.includeCompleted && progress(task) === "completed")) return false;
     const date = task.operatingDate || operatingDay(task.dueAt || task.requestedAt);
@@ -119,6 +119,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     return true;
   });
   const tasks = scopeTasks.filter((task) =>
+    !hidden.includes(task.kanbanColumn) &&
     (view !== "hospital" || (!preferences.hidden.includes(task.kanbanColumn) && (query.owners === null || taskOwners(task).some((owner) => query.owners?.includes(owner))))) &&
     (!term || [task.patientName, task.clientName, task.title, task.sourceLabel, task.assigneeName].filter(Boolean).join(" ").toLocaleLowerCase().includes(term)),
   );
@@ -141,12 +142,19 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   }
   function toggleGroup(key: string) { updatePreferences({ collapsed: toggleValue(preferences.collapsed, key) }); }
   const collapsed = (key: string) => preferences.collapsed.includes(key);
-  const reset = () => { updateQuery("hospital", { owners: null }); updatePreferences({ hidden: [] }); };
-  const hasFilters = view === "hospital" && (query.owners !== null || hiddenTypes.length > 0);
+  const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} selectedDate={query.date} todayDate={today}
+    onDateChange={(date) => updateQuery(view, { date })}
+    onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1) })}
+    onNext={() => updateQuery(view, { date: offsetDate(query.date, 1) })} />;
+  const renderListGroup = (type: typeof workTypes[number], items: HomeTask[], prefix: string) => {
+    const key = `list:${view}:${prefix}:${type.id}`;
+    return <HomeListGroup key={key} id={type.id} label={type.label} tasks={items} date={query.date}
+      collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} onHide={() => setHidden([...hidden, type.id])} onNavigate={navigate} />;
+  };
 
   return <section className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="home-workspace" aria-busy={loading}>
-    <EmrMainContentHeader aria-hidden="true" heightMode="adaptive" />
-    <header className="flex min-h-[108px] shrink-0 flex-col gap-3 bg-[var(--emr-surface-workspace)] px-12 py-4">
+    <EmrMainContentHeader aria-hidden="true" heightMode="fixed" style={{ height: 56 }} />
+    <header className={styles.pageHeader}>
       <EmrPageHeader
         className="min-h-8 gap-3"
         titleClassName="text-[24px] font-bold leading-8 tracking-[-0.552px] text-[var(--clair-color-atomic-neutral-900)]"
@@ -156,21 +164,13 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           <span>원내 {patientSummary?.present ?? "—"}마리</span><span aria-hidden="true">·</span>
           <span>진료 대기 {patientSummary?.waiting ?? "—"}마리</span><span aria-hidden="true">·</span>
           <span>진료 중 {patientSummary?.inProgress ?? "—"}마리</span>
-        </div> : undefined}
+        </div> : dateControl}
       />
-      {view === "mine" && <SegmentedControl aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex shrink-0 items-center gap-2">
-          <EmrDateNavigator className="h-8 gap-1.5 px-0 [&>button]:h-8 [&>button]:rounded-lg [&>button[aria-label='이전_날짜']]:order-2 [&>button[aria-label='다음_날짜']]:order-3 [&>button[aria-label$='날짜_선택']]:justify-start [&>button[aria-label$='날짜_선택']]:pl-0" dateLabel={query.date} selectedDate={query.date} todayDate={today}
-            onDateChange={(date) => updateQuery(view, { date })}
-            onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1) })}
-            onNext={() => updateQuery(view, { date: offsetDate(query.date, 1) })}
-          />
-          {query.date !== today && <Button variant="ghost" size="sm" onClick={() => updateQuery(view, { date: today })}>오늘</Button>}
-        </div>
-        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-3">
+      <div className={styles.toolbar}>
+        {view === "hospital" ? dateControl : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
+        <div className={styles.toolbarActions}>
           <HomeSearch key={view} personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
-          <Button variant="outline" size="sm" aria-pressed={query.includeCompleted} onClick={() => updateQuery(view, { includeCompleted: !query.includeCompleted })}>
+          <Button variant="outline" size="sm" className={styles.completedButton} aria-pressed={query.includeCompleted} onClick={() => updateQuery(view, { includeCompleted: !query.includeCompleted })}>
             <CheckIcon aria-hidden="true" />완료 포함
           </Button>
           {view === "hospital" && <>
@@ -179,38 +179,38 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             <HomeMultiSelect label="업무" options={[...workTypes]} values={visibleTypes.map((type) => type.id)} allSelected={hiddenTypes.length === 0}
               onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
           </>}
-          {hasFilters && <Button variant="ghost" size="sm" onClick={reset}>필터 해제</Button>}
-          {view === "hospital" && <SegmentedControl aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: "보드" }, { value: "list", label: "리스트" }]} />}
+          {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: <><Columns3Icon aria-hidden="true" />칸반</> }, { value: "list", label: <><ListIcon aria-hidden="true" />리스트</> }]} /></> :
+            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="sm"><ArrowDownUpIcon aria-hidden="true" />정렬</Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
+
         </div>
       </div>
     </header>
     {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
     {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
-      <div className="flex min-h-0 flex-1 gap-3 p-6">
+      <div className={styles.workspaceBody}>
         <div ref={scrollRef} onScroll={rememberScroll} className="min-h-0 min-w-0 flex-1 overflow-auto" data-testid="home-workspace-scroll">
           {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
-          view === "hospital" && preferences.layout === "board" ? <div className="grid h-full min-h-64 content-stretch items-start gap-3" data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "minmax(240px, 1fr)").join(" ") }}>
+          view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
             {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={query.date} collapsed={collapsed(`column:${type.id}`)}
               onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
               isGroupCollapsed={collapsed} onToggleGroup={toggleGroup} onNavigate={navigate} />)}
             {visibleTypes.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 업무 종류를 선택해 주세요" />}
-          </div> : <div className="space-y-5" data-testid="home-task-list">
-            {(view === "hospital" ? visibleTypes.map((type) => ({ id: type.id, label: type.label, items: tasks.filter((task) => task.kanbanColumn === type.id) })) : personalTab === "assigned" ? [
-              { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, query.date)) },
+          </div> : <div className={styles.list} data-testid="home-task-list">
+            {view === "hospital" ? visibleTypes.map((type) => renderListGroup(type, tasks.filter((task) => task.kanbanColumn === type.id), "hospital")) : [
               { id: "selected", label: query.date === today ? "오늘 할 업무" : "선택일 업무", items: tasks.filter((task) => !previous(task, query.date)) },
-            ] : statusGroups.filter((group) => group.id !== "completed" || query.includeCompleted).map((group) => ({ id: group.id, label: group.label, items: tasks.filter((task) => progress(task) === group.id) }))).map((group) => {
-              const key = `list:${view}:${group.id}`;
-              return <EmrSidePanelCollapsibleGroup key={key} label={<span className="inline-flex items-center gap-2">{view === "hospital" && <HomeWorkTypeIcon id={group.id} />}{group.label}</span>} accessibleLabel={`${group.label} 업무 목록`} count={group.items.length} collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} indicatorVisible={false} stateIconState={false}
-                className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)]" contentClassName="gap-0">
-                {group.items.length ? <HomeWorkTable tasks={group.items} personal={view === "mine"} date={query.date} onNavigate={navigate} /> : <EmrEmptyState kind={term ? "no-search-results" : scopeTasks.length ? "no-filter-results" : "no-data"} surface="table" density="compact" size="sm" title={term ? "검색 결과가 없습니다" : "해당 업무가 없습니다"} />}
-              </EmrSidePanelCollapsibleGroup>;
-            })}
+              { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, query.date)) },
+            ].map((period) => <section key={period.id} className={styles.period} aria-label={period.label}>
+              <h2 className={styles.periodTitle}>{period.label}<span>{period.items.length}</span></h2>
+              {visibleTypes.filter((type) => period.items.some((task) => task.kanbanColumn === type.id)).map((type) => renderListGroup(type, period.items.filter((task) => task.kanbanColumn === type.id), `${personalTab}:${period.id}`))}
+              {period.items.length === 0 && <p className="emr-text-body py-4 text-muted-foreground">{term ? "검색 결과가 없습니다" : "해당 업무가 없습니다"}</p>}
+            </section>)}
           </div>}
         </div>
-        {view === "hospital" && hiddenTypes.length > 0 && <section className="h-fit w-40 shrink-0 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] p-2" aria-label="숨김 업무">
-          <div className="emr-text-metadata flex items-center justify-between gap-1 whitespace-nowrap"><strong>숨김 업무 {hiddenTypes.length}</strong><Button className="px-1" variant="ghost" size="xs" onClick={() => updatePreferences({ hidden: [] })}>모두 표시</Button></div>
-          {hiddenTypes.map((type) => <div key={type.id} className="emr-text-body flex items-center justify-between gap-2 py-1"><span>{type.label}</span><Button variant="ghost" size="xs" aria-label={`${type.label} 열 표시`} onClick={() => updatePreferences({ hidden: preferences.hidden.filter((id) => id !== type.id) })}>표시</Button></div>)}
+        {(view === "hospital" || hiddenTypes.length > 0) && <section className={styles.hiddenWork} aria-label="숨김 업무">
+          <header className={styles.groupHeader}><h2>숨김 업무 <span>{hiddenTypes.length}</span></h2><Button variant="ghost" size="xs" disabled={!hiddenTypes.length} onClick={() => setHidden([])}>모두 표시</Button></header>
+          <div className={styles.hiddenRows}>{hiddenTypes.length ? hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><HomeWorkTypeIcon id={type.id} /><span>{type.label}</span><Button variant="ghost" size="icon-xs" aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon /></Button></div>) : <p className="emr-text-metadata py-3 text-muted-foreground">숨긴 업무가 없습니다.</p>}</div>
         </section>}
+
       </div>}
   </section>;
 }
@@ -229,10 +229,11 @@ function HomeSearch({ personal, value, onChange }: { personal: boolean; value: s
   const inputRef = useRef<HTMLInputElement>(null);
   const visible = open || Boolean(value);
   const close = () => { setOpen(false); requestAnimationFrame(() => buttonRef.current?.focus()); };
-  return visible ? <div className="relative w-52 min-w-0">
+  return visible ? <div className="relative w-[280px] min-w-0">
+    <CdsActionsSearchIcon aria-hidden="true" className="pointer-events-none absolute left-2 top-2 z-10 size-4 text-muted-foreground" />
     <Input ref={inputRef} autoFocus aria-label={personal ? "내 업무 검색" : "환자 보호자 업무 검색"} placeholder={personal ? "내 업무 검색" : "환자·업무 검색"} value={value} onValueChange={onChange}
       onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (value) onChange(""); else close(); } }}
-      className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
+      className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pl-8 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
     <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label={value ? "검색어 지우기" : "검색 닫기"}
       onClick={() => { if (value) { onChange(""); inputRef.current?.focus(); } else close(); }}><CircleCloseFillIcon className="size-4" /></Button>
   </div> : <Button ref={buttonRef} variant="outline" size="sm" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" />검색</Button>;
@@ -270,28 +271,15 @@ function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, 
     const element = scrollRef.current; const saved = useHomeWorkspaceStore.getState().scroll[`column:${id}`];
     if (element && saved) element.scrollTop = saved.top;
   }, [id, collapsed]);
-  return <section data-testid={`home-kanban-column-${id}`} className={cn("group/column flex min-h-0 flex-col overflow-hidden rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)]", collapsed ? "h-fit" : "h-full")}>
+  return <section data-testid={`home-kanban-column-${id}`} className={cn(styles.column, collapsed && styles.collapsedColumn)}>
     {collapsed ? <div className="flex flex-col items-center gap-3 py-3"><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 펼치기`} aria-expanded={false} onClick={onToggle}><ChevronRightIcon /></Button><h2 className="emr-text-body [writing-mode:vertical-rl]">{label}</h2><span className="emr-text-metadata text-muted-foreground">{tasks.length}</span></div> : <>
-      <header className="flex h-12 shrink-0 items-center justify-between gap-1 border-b border-[var(--emr-border-default)] px-3">
-        <h2 className="emr-text-section flex items-center gap-2"><HomeWorkTypeIcon id={id} />{label}<span className="emr-text-metadata text-[var(--emr-text-tertiary)]">{tasks.length}</span></h2>
-        <div className="flex items-center opacity-0 transition-opacity group-hover/column:opacity-100 group-focus-within/column:opacity-100 has-[[data-popup-open]]:opacity-100 [@media(hover:none)]:opacity-100">
-          <Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded={true} onClick={onToggle}><ChevronRightIcon className="rotate-180" /></Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" aria-label={`${label} 열 메뉴`} />} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-              <CdsFilesMoreHorizontalIcon aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem className="h-8 cursor-pointer justify-start px-2.5 py-1.5" onClick={(event) => { event.stopPropagation(); onHide(); }}>
-                <span className="emr-text-dense w-full truncate font-medium">이 업무 열 숨기기</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </header>
-      <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2" onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>
+      <HomeGroupHeader id={id} label={label} count={tasks.length} collapsed={false} onToggle={onToggle} onHide={onHide} column />
+      <div ref={scrollRef} className={styles.columnBody} onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>
         {statusGroups.filter((group) => tasks.some((task) => progress(task) === group.id)).map((group) => {
           const key = `status:${id}:${group.id}`; const items = tasks.filter((task) => progress(task) === group.id);
-          return <EmrSidePanelCollapsibleGroup key={key} label={group.label} accessibleLabel={`${label} ${group.label}`} count={items.length} collapsed={isGroupCollapsed(key)} onToggle={() => onToggleGroup(key)} indicatorVisible={false} stateIconState={false} dataTestId={`home-kanban-status-${id}-${group.id}`}>
+          return <section key={key} data-testid={`home-kanban-status-${id}-${group.id}`}>
+            <button type="button" className={styles.statusHeader} aria-label={`${label} ${group.label}`} aria-expanded={!isGroupCollapsed(key)} onClick={() => onToggleGroup(key)}><EmrSidePanelStateIcon state={group.id === "completed" ? "done" : group.id === "in_progress" ? "in-progress" : "to-do"} /><span>{group.label}</span><span className={styles.count}>{items.length}</span>{isGroupCollapsed(key) ? <ChevronDownIcon /> : <ChevronUpIcon />}</button>
+            {!isGroupCollapsed(key) && <div className={styles.cards}>
             {items.map((task) => <div key={task.id} className="space-y-1">
               <EmrTaskQueueCard selected={false} item={{
                 patientName: task.patientName || "환자 미지정", guardianName: task.clientName || "보호자 미지정", receptionType: task.receptionType || "외래",
@@ -302,7 +290,8 @@ function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, 
               }} />
               <HomeTaskSignals task={task} date={date} />
             </div>)}
-          </EmrSidePanelCollapsibleGroup>;
+            </div>}
+          </section>;
         })}
         {tasks.length === 0 && <p className="emr-text-metadata px-2 py-5 text-center text-muted-foreground">표시할 업무가 없습니다.</p>}
       </div>
@@ -310,21 +299,42 @@ function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, 
   </section>;
 }
 
-function HomeWorkTable({ tasks, personal, date, onNavigate }: { tasks: HomeTask[]; personal: boolean; date: string; onNavigate: (task: HomeTask) => void }) {
-  const columns = useMemo<Array<ColumnDef<HomeTask>>>(() => [
-    { id: "patient", meta: { label: "환자 / 보호자" }, size: 170, cell: ({ row }) => <span className="flex items-center gap-2"><strong>{row.original.patientName || "환자 미지정"}</strong><span className="emr-text-metadata text-muted-foreground">{row.original.clientName}</span></span> },
-    ...(personal ? [{ id: "type", meta: { label: "업무 종류" }, size: 100, cell: ({ row }: { row: { original: HomeTask } }) => <Badge variant="secondary" className="whitespace-nowrap">{typeLabel(row.original)}</Badge> }] : []),
-    { id: "task", meta: { label: personal ? "세부 업무" : "업무" }, size: 300, cell: ({ row }) => <div className="flex flex-wrap items-center gap-2"><span>{row.original.queueCardSecondLineText || row.original.title}</span><HomeTaskSignals task={row.original} date={date} /></div> },
-    { id: "state", meta: { label: "상태" }, size: 110, cell: ({ row }) => <HomeTaskState task={row.original} /> },
-    { id: "owner", meta: { label: "담당자" }, size: 100, cell: ({ row }) => ownerLabel(row.original) },
-    { id: "time", meta: { label: "경과" }, size: 95, cell: ({ row }) => elapsed(row.original) },
-  ], [date, personal]);
-  // TanStack owns mutable table state; React Compiler must not memoize this API.
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({ data: tasks, columns, getCoreRowModel: getCoreRowModel(), getRowId: (task) => task.id, defaultColumn: { enableSorting: false, meta: { resize: "none" } } });
-  return <EmrDataTable table={table} aria-label={personal ? "내 업무 목록" : "원내 업무 목록"} viewportMode="content" density="standard" rowOverlayWidth={200}
-    getRowProps={(row) => ({ onClick: () => onNavigate(row.original), "aria-label": `${row.original.patientName} ${row.original.title}` })}
-    getRowOverlayAriaLabel={(row) => `${row.original.patientName} 업무 이동`}
-    renderRowOverlay={({ row }) => <Button variant="outline" size="sm" onClick={() => onNavigate(row.original)}>{typeLabel(row.original)} 화면으로 이동</Button>}
-  />;
+function HomeGroupHeader({ id, label, count, collapsed, onToggle, onHide, column = false }: {
+  id: string; label: string; count: number; collapsed: boolean; onToggle: () => void; onHide: () => void; column?: boolean;
+}) {
+  return <header className={cn(styles.groupHeader, !collapsed && styles.dividedHeader)}>
+    <h2><HomeWorkTypeIcon id={id} />{label}<span>{count}</span></h2>
+    <div className={styles.groupActions}>
+      <Button variant="ghost" size="icon-xs" aria-label={`${label} ${column ? "열" : "업무 목록"} 숨기기`} onClick={onHide}><EyeOffIcon /></Button>
+      <Button variant="ghost" size="icon-xs" aria-label={`${label} ${column ? `열 ${collapsed ? "펼치기" : "접기"}` : "업무 목록"}`} aria-expanded={!collapsed} onClick={onToggle}>{collapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}</Button>
+    </div>
+  </header>;
+}
+
+function requestTime(task: HomeTask) {
+  const time = new Date(task.requestedAt);
+  return Number.isNaN(time.getTime()) ? "—" : new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit", hour12: true }).format(time);
+}
+
+function HomeListGroup({ id, label, tasks, date, collapsed, onToggle, onHide, onNavigate }: {
+  id: string; label: string; tasks: HomeTask[]; date: string; collapsed: boolean; onToggle: () => void; onHide: () => void; onNavigate: (task: HomeTask) => void;
+}) {
+  return <section className={styles.listGroup} data-testid={`home-list-group-${id}`}>
+    <HomeGroupHeader id={id} label={label} count={tasks.length} collapsed={collapsed} onToggle={onToggle} onHide={onHide} />
+    {!collapsed && <div role="table" aria-label={`${label} 업무 목록`} className={styles.rows}>
+      <div role="row" className="sr-only">{["상태", "환자 / 보호자", "내원 유형", "업무 종류", "세부 업무", "요청 시각", "담당자"].map((heading) => <span key={heading} role="columnheader">{heading}</span>)}</div>
+      {tasks.map((task) => <div role="row" tabIndex={0} key={task.id} className={styles.row} aria-label={`${task.patientName} ${task.title}`}
+        onClick={() => onNavigate(task)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onNavigate(task); } }}>
+        <div role="cell"><HomeTaskState task={task} /></div>
+        <div role="cell" className={styles.identity} title={`${task.patientName || "환자 미지정"} · ${task.clientName || "보호자 미지정"}`}><strong>{task.patientName || "환자 미지정"}</strong><span>· {task.clientName || "보호자 미지정"}</span></div>
+        <div role="cell"><EmrSidePanelTypeBadge label={task.receptionType || "외래"} /></div>
+        <div role="cell"><EmrSidePanelTypeBadge label={typeLabel(task)} /></div>
+        <div role="cell" className={styles.taskDescription}><span title={task.queueCardSecondLineText || task.title}>{task.queueCardSecondLineText || task.title}</span><HomeTaskSignals task={task} date={date} /></div>
+        <div role="cell" className={styles.secondary} title={`${task.requestedAt} · ${elapsed(task)} 경과`}>{requestTime(task)}</div>
+        <div role="cell" className={styles.secondary} title={taskOwners(task).join(", ")}>{taskOwners(task).join(", ")}</div>
+        <div className={styles.rowAction}><Button variant="outline" size="sm" onClick={(event) => { event.stopPropagation(); onNavigate(task); }}>업무보러가기</Button></div>
+      </div>)}
+      {tasks.length === 0 && <p className="emr-text-body py-4 text-muted-foreground">해당 업무가 없습니다</p>}
+    </div>}
+  </section>;
 }
