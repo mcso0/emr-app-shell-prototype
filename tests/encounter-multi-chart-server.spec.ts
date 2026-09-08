@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { createSupabaseEncounterChartsGateway, manageEncounterCharts } from "../src/features/chart/server-encounter-charts-core";
 import { useChartStore } from "../src/features/chart/store";
 import type { SoapNote } from "../src/types/emr-domain";
+import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
@@ -76,4 +77,26 @@ test("chart selection waits for SOAP and orders, and a failed save retains the c
     await store.getState().selectChart("a");
     expect(store.getState().selectedChartId).toBe("b");
   } finally { store.setState(oldState); }
+});
+
+test("chart-specific draft API accepts chartId and preserves origin while rejecting unknown envelope fields", async ({ request }) => {
+  const created = await request.post(`/api/workspaces/${workspaceId}/chart/encounter-charts`, {
+    headers, data: { encounterId, creationRequestId: crypto.randomUUID() },
+  });
+  expect(created.ok()).toBe(true);
+  const chartId = (await created.json()).chart.id;
+  const url = `/api/workspaces/${workspaceId}/chart/order-drafts`;
+  const before = await request.get(`${url}?encounterId=${encounterId}`, { headers });
+  expect(before.ok()).toBe(true);
+  const etag = (await before.json()).etag;
+  const orderId = crypto.randomUUID();
+  const input = { chartId, encounterId, expectedEtag: etag, removedOrderIds: [], rows: [
+    { rowType: "individual", orderId, workspaceCatalogItemId: "ord-lab-cbc-baso", quantity: 1 },
+  ] };
+  const saved = await request.patch(url, { headers: { ...headers, [chartOrderExpectedEtagHeader]: etag }, data: input });
+  expect(await saved.json()).toMatchObject({ ok: true, rows: expect.arrayContaining([
+    expect.objectContaining({ orderId, originChartId: chartId }),
+  ]) });
+  const rejected = await request.patch(url, { headers: { ...headers, [chartOrderExpectedEtagHeader]: etag }, data: { ...input, arbitraryOverride: true } });
+  expect(rejected.status()).toBe(400);
 });

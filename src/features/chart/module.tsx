@@ -3924,8 +3924,11 @@ function SoapPanel({
   const handleDocumentChange = useCallback(
     (blocks: readonly ChartSoapBlock[]) => {
       if (writeDisabled) return;
+      const previousDocument = soapDocumentRef.current;
+      const nextDocument = mergeActiveScope(blocks);
+      if (areSoapBlockDocumentsEqual(previousDocument, nextDocument)) return;
       locallyEditedRef.current = true;
-      coordinator.change(mergeActiveScope(blocks));
+      coordinator.change(nextDocument);
     },
     [coordinator, mergeActiveScope, writeDisabled],
   );

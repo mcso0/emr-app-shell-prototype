@@ -105,3 +105,20 @@ After the separately approved migration, use the existing authenticated syntheti
 ### Authenticated Preview Checkpoint
 
 The synthetic Cheongdam veterinarian login succeeded. Live inspection found the history aside had not hydrated its separate Supabase auth hook, so actor scope differed from the body and disabled chart creation. The aside now invokes the existing hydration method on mount. This issue was hidden by the shared mock session store; authenticated preview retest is required. Existing clinical records were not edited during diagnosis.
+
+### Live Integration Findings and Fixes — 2026-09-09
+
+Authenticated Preview created three synthetic charts beneath the existing approved Cheongdam encounter. Independent A/B/C SOAP text survived fresh reads; A signed while B/C and the encounter stayed open. Recording assessments exposed a redundant BlockNote change event when editability toggled: the document was exactly unchanged, but it queued a SOAP write during the assessment RPC and sent the prior revision. The UI now ignores equal documents. A local copy of the candidate connected to the same remote DB verified diagnosis response revision → identical SOAP expected revision → HTTP 200, then successful chart switch. A delayed-response browser regression covers this ordering.
+
+Live order integration found two narrow request/response issues: the route accepted `chartId` but core envelope validation omitted it; the fixed-price set RPC omitted `priceRanges` while the mapper required an array. Core validation now accepts the documented chart identifier and still rejects unknown keys. Only fixed-price previews default an omitted range list to `[]`; range-price previews still require it. The synthetic lab set and its child saved successfully, each retaining the C chart origin and root/child linkage. One catalog-read attempt returned 503 before a successful retry; no timeout or readiness guard was relaxed.
+
+Remote synthetic smoke records are intentionally retained as evidence:
+
+- Encounter: `de66f185-864d-4d70-b5f6-c51b6e47bbc1` (existing; still `in_consultation`). Chart creation did not create another reception or change the seven-visit history count.
+- A `2ba72407-c6e6-472e-a923-fb0e53f28705`: signed; B `861e1680-2d92-468a-a3fb-8f86ce259cd3` and C `22edf959-7b5a-49bd-a472-22fe6aa5517f`: drafts. Each has its own clearly marked synthetic SOAP text and four recorded diagnosis assessments.
+- C set root `28f2662c-8b4e-472f-bc5a-cdd3439d8373` and child `24665cf0-8048-455f-8d89-43057eb30a69`: saved drafts; neither is a new invoice or completed result. B's current-chart order view remains empty. Encounter-wide read-only viewing includes the C set and existing legacy orders.
+- Existing Cheongdam SOAP fingerprint remains `efa1d0eb74d0964a0421e323429514d5`; existing legacy order fingerprint remains `87ffe1c4a652cd1277d44a034f709507`. Cheongdam counts are now 43 encounters, 10 SOAP, 120 orders, 41 diagnoses. Assessment saves updated only this encounter's diagnosis audit metadata and encounter update time. `clair-demo` and pilot fingerprints remain equal; foreign-demo record count remains zero.
+
+Final Preview/Production smoke must use the updated application candidate. Local authenticated remote-DB evidence is distinct from deployed Preview evidence. Live confirmation/results/billing execution and encounter finalization were not performed against the pre-existing synthetic drafts; those transitions remain covered by the owned PostgreSQL suites. Inherited dispensing-set snapshot incompatibility remains as documented above.
+
+Final live-fix verification: 29 focused browser/API/catalog regressions passed, including delayed diagnosis-response revision ordering, chart envelope acceptance, and fixed-price preview omission. TypeScript and production build passed; lint has zero errors and the same five existing WP10 warnings. Docs, secrets, and diff checks passed. The updated deployed candidate and exact-head Release Check are the remaining delivery checks.

@@ -4131,9 +4131,11 @@ function mapChartOrderSetPreview(value: unknown): ChartOrderSetPreview | null {
   const sourceSetRevisionNo = readNumber(set.sourceSetRevisionNo);
   const amountBasis = readString(set.amountBasis);
   const taxType = readString(set.taxType);
+  const priceRanges = set.priceRanges === undefined && amountBasis === "set_fixed_price"
+    ? [] : set.priceRanges;
   if (!sourceSetId || !sourceSetRevisionId || !sourceSetVersion ||
       sourceSetRevisionNo === undefined || !isOrderSetAmountBasis(amountBasis) ||
-      !isOrderSetTaxType(taxType) || !Array.isArray(set.priceRanges)) return null;
+      !isOrderSetTaxType(taxType) || !Array.isArray(priceRanges)) return null;
   const items = value.items.map(mapChartOrderSetPreviewItem).filter(
     (item): item is ChartOrderSetPreviewItem => Boolean(item),
   );
@@ -4150,7 +4152,7 @@ function mapChartOrderSetPreview(value: unknown): ChartOrderSetPreview | null {
       setPriceKrw: readNullableNumber(set.setPriceKrw),
       rangeBasis: isOrderSetRangeBasis(set.rangeBasis) ? set.rangeBasis : null,
       taxType,
-      priceRanges: mapOrderSetRanges(set.priceRanges),
+      priceRanges: mapOrderSetRanges(priceRanges),
       billingReflectionEnabled: readBoolean(set.billingReflectionEnabled) ?? false,
       displayName: readString(set.displayName),
       billingName: readString(set.billingName),

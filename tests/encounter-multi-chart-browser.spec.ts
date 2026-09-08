@@ -108,3 +108,52 @@ test("failed SOAP save blocks chart creation, preserves text, and explicit retry
   await page.locator(`[data-chart-id="${chartId}"]`).click();
   await expect(editor).toContainText("Synthetic preserved failed-save text");
 });
+
+test("assessment response advances the SOAP token before the next save and chart switch", async ({ page, request }) => {
+  test.setTimeout(90_000);
+  await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&modulePanel=open&aside=history");
+  const create = page.getByRole("button", { name: "+ 새 차트", exact: true }).first();
+  await expect(create).toBeEnabled();
+  const created = page.waitForResponse((r) => r.request().method() === "POST" && r.url().includes("chart/encounter-charts"));
+  await create.click();
+  const chart = (await (await created).json()).chart;
+  await expect(page).toHaveURL(new RegExp(`chartId=${chart.id}`));
+  const paragraph = page.getByLabel("SOAP 블록 문서").locator('.bn-block-content[data-content-type="paragraph"]').first();
+  await paragraph.click();
+  const initialSave = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("chart/soap-notes"));
+  await page.keyboard.type("Synthetic diagnosis revision check");
+  expect((await initialSave).ok()).toBe(true);
+  let assessed = false;
+  const expectedToken = "2026-09-09T07:30:00.123456+00:00";
+  const sentTokens: unknown[] = [];
+  await page.route("**/chart/diagnoses", async (route) => {
+    if (route.request().method() !== "PATCH") return route.continue();
+    const response = await route.fetch();
+    const body = await response.json();
+    expect(body.ok).toBe(true);
+    const soap = await request.get(`/api/workspaces/clair-demo/chart/soap-notes?encounterId=encounter-coco-260501&chartId=${chart.id}`, { headers: { "x-clair-demo-session-user-id": "user-vet" } });
+    const saved = (await soap.json()).soapNote;
+    assessed = true;
+    // The real RPC holds the note lock while recording assessments. A redundant
+    // editable-toggle event must not enqueue a SOAP save with the old revision.
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await route.fulfill({ response, json: { ...body, chart: { ...saved, updatedAt: expectedToken } } });
+  });
+  await page.route("**/chart/soap-notes", async (route) => {
+    if (route.request().method() !== "PATCH" || !assessed) return route.continue();
+    const input = route.request().postDataJSON();
+    sentTokens.push(input.expectedUpdatedAt);
+    await route.fulfill({ json: { ok: true, status: 200, auditRecorded: true, soapNote: { ...chart, blockDocument: input.blockDocument, updatedAt: expectedToken } } });
+  });
+  const assessmentSaved = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("chart/diagnoses"));
+  await page.getByRole("button", { name: "현재 진단 전체를 평가 기록", exact: true }).click();
+  expect((await assessmentSaved).ok()).toBe(true);
+  expect(sentTokens).toEqual([]);
+  await expect(page.getByRole("button", { name: "SOAP 저장", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "SOAP 저장", exact: true }).click();
+  await expect.poll(() => sentTokens.length).toBeGreaterThan(0);
+  expect(sentTokens).toEqual(sentTokens.map(() => expectedToken));
+  await expect(page.getByText("저장 충돌", { exact: true })).toHaveCount(0);
+  await create.click();
+  await expect(page).not.toHaveURL(new RegExp(`chartId=${chart.id}`));
+});

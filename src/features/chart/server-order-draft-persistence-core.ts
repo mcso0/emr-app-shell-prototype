@@ -1041,7 +1041,7 @@ function normalizeOrderDraftInput(input: ChartOrderDraftInput) {
     ? input as Record<string, unknown>
     : {};
   const hasExactEnvelope = Object.keys(record).every((key) =>
-    key === "encounterId" || key === "expectedEtag" || key === "removedOrderIds" || key === "rows",
+    key === "chartId" || key === "encounterId" || key === "expectedEtag" || key === "removedOrderIds" || key === "rows",
   );
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
