@@ -44,7 +44,7 @@ Work order: 접수, 예약, 진료, 임상병리, 영상검사, 조제, 처치, 
 
 `내가 요청한 업무` includes records requested by the current user ID, including unassigned requests. Do not infer requester identity from role or matching display names in live reads. No synthetic review/approval tasks are introduced where the source has no assignment model.
 
-Each tab is a list grouped into `오늘 할 업무` and `이전 미완료`. Personal list content uses equal 48px left/right insets, aligned with its header. Personal work has no date navigator: API requests and grouping always use the current workspace operating day, ignoring legacy saved personal dates. Hospital date selection remains independent. Columns include 환자/보호자, 업무 종류 as a neutral badge, 세부 업무, 상태, 담당자 and 경과. Personal queries are independent of hospital search, owner selection, hidden columns and layout.
+Each tab is a list grouped into `오늘 할 업무` and `이전 미완료`. Personal list content uses equal 48px left/right insets, aligned with its header. Personal work has no date navigator: API requests and grouping always use the current workspace operating day, ignoring legacy saved personal dates. Hospital date selection remains independent. Columns include 환자/보호자, 업무 종류 as plain body text, 세부 업무, 상태, 담당자 and 경과. Personal queries are independent of hospital search, owner selection, hidden columns and layout.
 
 ## Date And Navigation
 
@@ -57,3 +57,10 @@ Returning Home preserves queries, scroll and collapse. Persistent display prefer
 ## Verification Boundary
 
 Use [HOME-PR-014](../../../work/home/HOME-PR-014-home-workspace-and-personal-work.md) for exact implementation, test and delivery evidence. Synthetic fixtures and mocked API browser checks prove UI behavior; they do not prove a production DB read or authenticated deployment smoke.
+
+
+## List Visual Parity — 2026-09-08
+
+Hospital list and both personal-work tabs share the Figma `28301:179610` presentation: existing CLAiR tokens for body typography, spacing, neutral colors and corners; 8px row padding, 16px time/assignee icons, plain work-type text, and matching patient/guardian emphasis. Group counts use body sizing. Data text, attention badges, source URLs, keyboard actions, filters and group semantics remain unchanged.
+
+On hover/focus, show the existing outline button in its 24px `xs` size with a trailing chevron, inset 6px from the top/right, over the black-alpha-6 row surface. Do not add a white gradient behind the button or move cells when it appears. Hospital list and personal bodies use the existing 48px spacing token on both sides; Kanban keeps its existing 16px right inset. Shared token definitions and Kanban presentation are unchanged.

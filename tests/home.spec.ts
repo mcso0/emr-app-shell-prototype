@@ -232,3 +232,37 @@ test("personal work ignores saved dates while hospital date selection remains in
   expect(new URL((await personalRequest).url()).searchParams.get("date")).toBe(today);
   await expect(page.getByRole("button", { name: /날짜 선택$/ })).toHaveCount(0);
 });
+
+test("list token styling and hover preserve geometry across hospital and personal views", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1084 });
+  await openHome(page);
+  const body = page.getByTestId("home-workspace-scroll").locator("..");
+  await expect(body).toHaveCSS("padding-right", "16px");
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  for (const view of ["hospital", "assigned", "requested"]) {
+    if (view === "assigned") await page.getByRole("button", { name: "내 업무", exact: true }).click();
+    if (view === "requested") await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
+    await expect(body).toHaveCSS("padding-left", "48px");
+    await expect(body).toHaveCSS("padding-right", "48px");
+    const row = page.getByRole("row", { name: view === "requested" ? "보리 내가 요청한 약" : "나나 CBC 검사", exact: true });
+    await page.getByRole("heading", { name: view === "hospital" ? "원내 현황" : "내 업무", exact: true }).hover();
+    const action = row.getByRole("button", { name: "업무보러가기", exact: true });
+    await expect(action.locator("..")).toHaveCSS("opacity", "0");
+    const before = await row.getByRole("cell").evaluateAll((cells) => cells.map((cell) => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }));
+    await row.hover();
+    await expect(action.locator("..")).toHaveCSS("opacity", "1");
+    await expect(action.locator("..")).toHaveCSS("background-image", "none");
+    await expect(action).toHaveCSS("height", "24px");
+    await expect(action.locator("svg")).toHaveCount(1);
+    await expect(row).toHaveCSS("background-color", "rgba(0, 0, 0, 0.06)");
+    await expect(row).toHaveCSS("padding", "8px");
+    await expect(row).toHaveCSS("font-weight", "500");
+    await expect(row.getByRole("cell").nth(5).locator("svg")).toHaveCount(1);
+    await expect(row.getByRole("cell").nth(6).locator("svg")).toHaveCount(1);
+    expect(await row.getByRole("cell").evaluateAll((cells) => cells.map((cell) => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }))).toEqual(before);
+    await page.screenshot({ path: `/tmp/home-list-token-${view}-hover.png` });
+  }
+  const action = page.getByRole("row", { name: "보리 내가 요청한 약", exact: true }).getByRole("button", { name: "업무보러가기", exact: true });
+  await action.click();
+  await expect(page).toHaveURL(/dispensing\?workItemId=medicine/);
+});
