@@ -336,7 +336,7 @@
   --emr-sidepanel-task-card-type-text: var(--clair-color-atomic-gray-600);
   --emr-sidepanel-task-card-label-text: var(--clair-color-atomic-neutral-500);
   --emr-sidepanel-task-card-title-text: var(--clair-color-atomic-neutral-700);
-  --emr-sidepanel-task-card-chip-bg: var(--clair-color-atomic-white-alpha-8);
+  --emr-sidepanel-task-card-chip-bg: var(--clair-color-atomic-common-100);
   --emr-sidepanel-task-card-chip-border: var(--clair-color-atomic-black-alpha-8);
   --emr-sidepanel-task-card-chip-text: var(--clair-color-atomic-neutral-600);
   --emr-sidepanel-task-card-chip-icon: var(--clair-color-atomic-neutral-400);
@@ -509,7 +509,7 @@
   --emr-content-history-card-selected-bg: var(--emr-state-selected);
   --emr-content-history-card-title: var(--clair-color-atomic-neutral-800);
   --emr-content-history-card-meta: var(--clair-color-atomic-neutral-400);
-  --emr-content-history-card-chip-bg: var(--emr-sidepanel-task-card-chip-bg);
+  --emr-content-history-card-chip-bg: var(--clair-color-atomic-white-alpha-8);
   --emr-content-history-card-chip-border: var(--emr-sidepanel-task-card-chip-border);
   --emr-content-history-card-chip-text: var(--clair-color-atomic-neutral-600);
   --emr-content-history-card-status-dot: var(--clair-color-atomic-sky-400);
