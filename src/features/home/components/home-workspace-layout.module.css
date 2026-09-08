@@ -76,11 +76,16 @@
 .listGroup .groupHeader h2 > span:first-child:not(:last-child) { margin-right: 0; }
 .listGroup .groupActions svg { width: var(--clair-spacing-16); height: var(--clair-spacing-16); }
 .hiddenWork { width: 220px; height: fit-content; flex-shrink: 0; }
-.hiddenRows { padding: 8px 16px 12px; }
-.hiddenRow { display: flex; align-items: center; gap: 8px; height: 36px; border-radius: 6px; font-size: 14px; line-height: 20px; color: var(--emr-text-secondary); }
-.hiddenRow > span:nth-child(2) { flex: 1; }
+.hiddenHeader { height: 45px; padding-bottom: 1px; }
+.hiddenHeader h2 { font-weight: 500; letter-spacing: 0.196px; color: var(--clair-color-atomic-neutral-800); }
+.showAllButton { height: 28px; border-radius: 8px; color: var(--clair-color-atomic-neutral-900); letter-spacing: 0.3px; }
+.showAllButton > span { padding: 0 2px; }
+.hiddenRows { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px 12px; }
+.hiddenRow { display: flex; align-items: center; justify-content: space-between; height: 32px; padding: 4px; border-radius: 6px; font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: 0.196px; color: var(--clair-color-atomic-neutral-700); }
+.hiddenRow > span { flex: 1; }
 .hiddenRow > button { opacity: 0; }
-.hiddenRow:hover, .hiddenRow:focus-within { background: var(--emr-state-hover); }
+.hiddenRow:hover, .hiddenRow:focus-within { background: var(--clair-color-atomic-black-alpha-6); }
+.restoreButton { border-radius: 6px; }
 .hiddenRow:hover > button, .hiddenRow:focus-within > button { opacity: 1; }
 @media (hover: none) { .hiddenRow > button, .rowAction { opacity: 1; pointer-events: auto; } }
 @media (max-width: 1200px) { .toolbar { flex-wrap: wrap; } .toolbarActions { flex-wrap: wrap; } }
@@ -90,5 +95,9 @@
 .groupActions button:hover { background: var(--emr-state-hover); }
 @media (hover: none) { .groupActions { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .groupActions { transition: none; } }
+
+.scrollFrame { position: relative; flex: 1; min-width: 0; min-height: 0; }
+.scrollFade { position: absolute; top: 0; right: 0; bottom: 0; width: var(--clair-spacing-32); pointer-events: none; background: linear-gradient(to right, transparent, var(--emr-surface-workspace)); opacity: 0; }
+.scrollFade[data-visible="true"] { opacity: 1; }
 
 .listGroup .groupHeader h2 > span:first-child:not(:last-child), .listGroup .groupHeader h2 > span:first-child svg { width: var(--clair-spacing-16); height: var(--clair-spacing-16); }
