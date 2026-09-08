@@ -394,7 +394,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | CHART-PR-025                | implemented  | chart                | P0       | Browser comment / live patient chart history | `docs/work/chart/CHART-PR-025-live-patient-chart-history.md` |
 | CHART-PR-026                | implemented  | chart                | P0       | Production hotfix / SOAP RPC signature drift | `docs/work/chart/CHART-PR-026-soap-rpc-signature-drift-hotfix.md` |
 | CHART-PR-027                | implemented  | chart                | P0       | User request / Plan-Order candidate removal persistence | `docs/work/chart/CHART-PR-027-order-draft-removal-persistence.md` |
-| CHART-PR-028                | implemented  | chart                | P0       | Browser comments / diagnosis and chart history information hierarchy | `docs/work/chart/CHART-PR-028-history-information-hierarchy.md` |
+| CHART-PR-028                | in_progress  | chart                | P0       | Browser comments / diagnosis and chart history information hierarchy | `docs/work/chart/CHART-PR-028-history-information-hierarchy.md` |
 | CHART-PR-029                | human_review | chart                | P0       | User-approved BlockNote SOAP editor prototype | `docs/work/chart/CHART-PR-029-blocknote-soap-editor-prototype.md` |
 | CHART-PR-030                | human_review | chart                | P0       | User-approved live BlockNote SOAP editor replacement | `docs/work/chart/CHART-PR-030-blocknote-soap-live-persistence.md` |
 | CHART-PR-031                | human_review | chart                | P0       | User-approved Plan/Order legacy column contract foundation | `docs/work/chart/CHART-PR-031-plan-order-legacy-column-contract-foundation.md` |

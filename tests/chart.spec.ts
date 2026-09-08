@@ -1485,7 +1485,8 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
     expect(footerAfterFilterBox).not.toBeNull();
     const surfaceBottom = surfaceAfterFilterBox!.y + surfaceAfterFilterBox!.height;
     expect(composerBox).not.toBeNull();
-    const tableBottom = surfaceBottom - composerBox!.height;
+    // Quick entry overlays the viewport; no permanent band shrinks the table.
+    const tableBottom = surfaceBottom;
     expect(
       Math.abs(
         rootAfterFilterBox!.y + rootAfterFilterBox!.height - tableBottom,
@@ -2236,6 +2237,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   });
   const oldEncounterId = "encounter-history-old";
   const oldEncounterNo = "E-260701-OLD001";
+  const emptyEncounterId = "encounter-history-empty";
 
   await grantCheongdamWorkspaceAccess(page);
   await page.route(
@@ -2290,13 +2292,60 @@ test("live patient chart history shows every encounter and keeps past charts rea
                 { diagnosisText: "슬개골 탈구 의심" },
                 { diagnosisText: "골관절염" },
                 { diagnosisText: "십자인대 손상 감별" },
+                { diagnosisText: "이첨판 점액종성 변성에 의한 만성 판막 질환과 관련된 추적 관찰" },
+                { diagnosisText: "치주염" },
+                { diagnosisText: "외이염" },
               ],
               soapNote: { assessment: "보행 상태 추적" },
             },
+            {
+              encounter: {
+                ...common,
+                id: emptyEncounterId,
+                encounterNo: "E-260701-EMPTY",
+                visitPurpose: "경과 확인",
+                status: "completed",
+                checkedInAt: "2026-07-01T05:00:00.000Z",
+              },
+              diagnoses: [],
+              veterinarianName: "이수지",
+            },
           ],
           nextCursor: null,
-          totalCount: 2,
+          totalCount: 3,
         }),
+      });
+    },
+  );
+
+  const savedSoapByEncounter = new Map<string, Record<string, unknown>>();
+  const soapWriteEncounterIds: string[] = [];
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/soap-notes**`,
+    async (route) => {
+      const request = route.request();
+      const encounterId = request.method() === "GET"
+        ? new URL(request.url()).searchParams.get("encounterId")!
+        : request.postDataJSON().encounterId;
+      if (request.method() === "PATCH") {
+        soapWriteEncounterIds.push(encounterId);
+        savedSoapByEncounter.set(encounterId, {
+          id: `soap-${encounterId}`,
+          encounterId,
+          authorUserId: "user-vet",
+          subjective: "",
+          objective: "",
+          assessment: "",
+          plan: "",
+          blockDocument: request.postDataJSON().blockDocument,
+          status: "autosaved",
+          createdAt: "2026-07-01T06:00:00.000Z",
+          updatedAt: "2026-07-01T07:00:00.000Z",
+        });
+      }
+      await route.fulfill({
+        status: 200,
+        json: { ok: true, status: 200, auditRecorded: true, soapNote: savedSoapByEncounter.get(encounterId) ?? null },
       });
     },
   );
@@ -2328,7 +2377,53 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(oldHistoryItem).not.toContainText("26.07.01 15:00");
 
   await expect(inlineHistoryItem).toContainText("15:00");
-  await expect(inlineHistoryItem).toContainText("슬개골 탈구 의심 외 2건");
+  const diagnosisChips = inlineHistoryItem.locator('[data-slot="badge"]');
+  await expect(diagnosisChips).toHaveCount(3);
+  await expect(diagnosisChips.first()).toHaveText("슬개골 탈구 의심");
+  await expect(diagnosisChips.first()).toHaveCSS("background-color", "rgb(245, 245, 245)");
+  await expect(diagnosisChips.first()).toHaveCSS("border-top-color", "rgba(0, 0, 0, 0)");
+  await expect(inlineHistoryItem).toHaveCSS("border-bottom-width", "1px");
+  await expect(inlineHistoryItem).toHaveCSS("border-radius", "0px");
+  await expect(inlineHistoryItem).toHaveCSS("box-shadow", "none");
+  await expect(inlineHistoryItem.getByRole("button", { name: "+3개 진단" })).toBeVisible();
+  // Disclosure is keyboard-operable and does not switch the displayed encounter.
+  await inlineHistoryItem.getByRole("button", { name: "+3개 진단" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(diagnosisChips).toHaveCount(6);
+  const collapse = inlineHistoryItem.getByRole("button", { name: "접기", exact: true });
+  await expect(collapse).toBeFocused();
+  await expect(collapse).toHaveAttribute("aria-expanded", "true");
+  await page.getByLabel("진단 이력 검색").hover();
+  await expect(collapse).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(0);
+  const longChip = diagnosisChips.nth(3);
+  expect(await longChip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await collapse.click();
+  await expect(diagnosisChips).toHaveCount(3);
+
+  const emptyItem = page.getByTestId(`chart-diagnosis-history-item-${emptyEncounterId}`);
+  await expect(emptyItem).toContainText("진단 기록 없음");
+  await expect(emptyItem.locator('[data-slot="badge"]')).toHaveCount(0);
+  const textStarts = await emptyItem.evaluate((element) => {
+    const textX = (text: string) => {
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        if (node.textContent?.includes(text)) {
+          const range = document.createRange();
+          range.selectNodeContents(node);
+          return range.getBoundingClientRect().x;
+        }
+      }
+      return null;
+    };
+    return [textX("진단 기록 없음"), textX("담당")];
+  });
+  expect(textStarts[0]).not.toBeNull();
+  expect(textStarts[0]).toBe(textStarts[1]);
+  await expect(page.getByTestId("chart-diagnosis-history-list").locator(":scope > article")).toHaveCount(2);
+  // The original toolbar remains present; no new footer is introduced.
+  await expect(page.getByLabel("차트 이력 종류")).toBeVisible();
   await expect(inlineHistoryItem).toContainText("담당 이수지");
   await expect(inlineHistoryItem).not.toContainText("완료");
   await expect(inlineHistoryItem).not.toContainText(oldEncounterNo);
@@ -2337,8 +2432,12 @@ test("live patient chart history shows every encounter and keeps past charts rea
   ).toHaveCount(0);
 
   const diagnosisHistorySearch = page.getByLabel("진단 이력 검색");
-  await diagnosisHistorySearch.fill("십자인대 손상 감별");
+  await diagnosisHistorySearch.fill("치주염");
   await expect(inlineHistoryItem).toBeVisible();
+  await expect(diagnosisChips).toHaveCount(6);
+  await expect(inlineHistoryItem.getByText("치주염", { exact: true })).toBeVisible();
+  await diagnosisHistorySearch.fill("이수지");
+  await expect(emptyItem).toBeVisible();
   await diagnosisHistorySearch.fill(oldEncounterNo);
   await expect(inlineHistoryItem).toHaveCount(0);
   await expect(page.getByTestId("chart-history-empty-state")).toContainText(
@@ -2347,7 +2446,13 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await diagnosisHistorySearch.clear();
   await expect(inlineHistoryItem).toBeVisible();
 
-  await inlineHistoryItem.click();
+  const soapParagraph = page.getByLabel("SOAP 블록 문서")
+    .locator('.bn-block-content[data-content-type="paragraph"]').first();
+  await expect(page.getByLabel("SOAP 블록 문서").locator('[contenteditable="true"]').first()).toBeEditable();
+  await soapParagraph.click();
+  await page.keyboard.press("End");
+  await page.keyboard.insertText(" 이력 전환 직전 작성한 기록");
+  await inlineHistoryItem.getByRole("button", { name: "차트 보기", exact: true }).click();
 
   await expect(page).toHaveURL(
     new RegExp(`encounterId=${current.encounter.id}`),
@@ -2360,6 +2465,9 @@ test("live patient chart history shows every encounter and keeps past charts rea
   ).toBeVisible();
   await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
 
+  await expect.poll(() => soapWriteEncounterIds.length).toBeGreaterThan(0);
+  expect(soapWriteEncounterIds.every((id) => id === current.encounter.id)).toBe(true);
+  expect(JSON.stringify(savedSoapByEncounter.get(current.encounter.id))).toContain("이력 전환 직전 작성한 기록");
   await currentHistoryItem.click();
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
     0,
@@ -2367,6 +2475,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(
     page.getByText(current.encounter.encounterNo).first(),
   ).toBeVisible();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이력 전환 직전 작성한 기록");
 });
 
 test("active chart context bar previews actual profiles and saves current encounter vitals", async ({
@@ -8291,6 +8400,8 @@ test("chart quick-add continuously appends without resending unchanged orders", 
     await expect(input).toHaveValue("");
     await expect(input).toBeFocused();
     await expect(page.getByLabel(`${candidate.displayName} 수량 수정`, { exact: true }).last()).toBeVisible();
+    await expect.poll(() => page.locator('[data-slot="chart-order-table-surface"] [data-emr-pinned-table-scroll-owner="true"]')
+      .evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
   }
   const basoQuantity = page.getByLabel("[CBC 검사] #BASO 수량 수정", { exact: true });
   await expect(basoQuantity).toHaveValue("");
@@ -8322,7 +8433,7 @@ test("chart quick-add preserves query and focus through detailed search and set 
   await restoreKongOrderDraftDefaults(page);
   const input = await openQuickAddForTest(page, "BASO");
   await expect(page.getByRole("option").filter({ hasText: "#BASO" })).toBeVisible();
-  await page.getByRole("button", { name: "상세 오더 검색" }).click();
+  await page.getByRole("button", { name: "상세 검색", exact: true }).click();
   const catalog = page.getByRole("dialog", { name: "오더 추가", exact: true });
   await expect(catalog).toBeVisible();
   await expect(catalog.getByRole("combobox", { name: "전체 오더 검색", exact: true })).toHaveValue("BASO");
@@ -8435,7 +8546,7 @@ test("chart quick-add distinguishes lookup errors and measures the pinned column
     const name = surface.locator('thead [data-column-id="displayName"]');
     await expect.poll(async () => {
       const [anchor, left, right] = await Promise.all([input.boundingBox(), category.boundingBox(), name.boundingBox()]);
-      return Math.abs(anchor!.x - left!.x) + Math.abs(anchor!.width - (right!.x + right!.width - left!.x));
+      return Math.abs(anchor!.x - left!.x - 12) + Math.abs(anchor!.width - (right!.x + right!.width - left!.x - 24));
     }).toBeLessThan(2);
     const popover = page.getByRole("dialog", { name: "오더 빠른 추가", exact: true });
     await expect(popover).toBeVisible();
@@ -8571,6 +8682,95 @@ test("chart quick-add scrolls only long results and keeps its anchor during hori
   await scrollOwner.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
   await expect.poll(async () => Math.abs((await input.boundingBox())!.x - before.x)).toBeLessThan(1);
   await expect(input).toBeFocused();
+});
+
+test("chart quick-add uses no sparse dock and restores dense scroll after cancellation", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  let dense = false;
+  // Synthetic read responses exercise both layouts without persisting fixture rows.
+  await page.route("**/api/workspaces/clair-demo/chart/order-drafts*", async route => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const response = await route.fetch();
+    const body = await response.json();
+    body.rows = dense
+      ? Array.from({ length: 30 }, (_, index) => ({ ...body.rows[0], orderId: `quick-dense-${index}` }))
+      : body.rows.slice(0, 1);
+    await route.fulfill({ response, json: body });
+  });
+  await page.reload();
+  await expect(page.locator('tr[data-testid^="chart-order-row-"]')).toHaveCount(1);
+  const dock = page.getByTestId("chart-order-quick-add-dock");
+  const composer = page.getByTestId("chart-order-quick-add");
+  const owner = page.locator('[data-slot="chart-order-table-surface"] [data-emr-pinned-table-scroll-owner="true"]');
+  await expect(dock).toBeHidden();
+  const idleWidth = (await composer.boundingBox())!.width;
+  let input = await openQuickAddForTest(page);
+  expect((await input.boundingBox())!.width).toBeGreaterThan(idleWidth * 2);
+  await expect(dock).toBeHidden();
+  await expect(page.getByTestId("chart-order-quick-add-clearance")).toHaveCount(0);
+  await input.press("Escape");
+  dense = true;
+  await page.reload();
+  await expect(page.locator('tr[data-testid^="chart-order-row-quick-dense-"]')).toHaveCount(30);
+  await owner.evaluate(element => { element.scrollTop = 80; });
+  const priorScroll = await owner.evaluate(element => element.scrollTop);
+  const windowScroll = await page.evaluate(() => window.scrollY);
+  input = await openQuickAddForTest(page, "BASO");
+  await expect.poll(() => owner.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2);
+  await expect(dock).toBeVisible();
+  const top = (await input.boundingBox())!.y;
+  await owner.evaluate(element => { element.scrollTop = 0; });
+  await expect.poll(async () => Math.abs((await input.boundingBox())!.y - top)).toBeLessThan(1);
+  expect(await page.evaluate(() => window.scrollY)).toBe(windowScroll);
+  const dockBox = (await dock.boundingBox())!;
+  const viewportBottom = await owner.evaluate(element => element.getBoundingClientRect().top + element.clientHeight);
+  expect(dockBox.y + dockBox.height).toBeLessThanOrEqual(viewportBottom + 1);
+  await page.screenshot({ path: "test-results/quick-add-dense-dock.png" });
+  await input.press("Escape");
+  await expect(dock).toBeHidden();
+  await expect.poll(() => owner.evaluate(element => element.scrollTop)).toBe(priorScroll);
+});
+
+test("chart quick-add reuses warm results but requires fresh authority before adding", async ({ page }) => {
+  await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  let input = await openQuickAddForTest(page, "BASO");
+  const option = page.getByRole("option").filter({ hasText: "#BASO" });
+  await expect(option).toBeEnabled();
+  await input.press("Escape");
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let responseStatus = 503;
+  await page.route("**/hospital-admin/order-catalog?mode=chart-search", async route => {
+    if (responseStatus === 200) return route.fallback();
+    await gate;
+    await route.fulfill({ status: responseStatus, json: { ok: false, error: "fixture" } });
+  });
+  try {
+    input = await openQuickAddForTest(page, "BASO");
+    await expect(page.getByText("최신 목록 확인 중")).toBeVisible();
+    await expect(option).toBeVisible();
+    await expect(option).toBeDisabled();
+    const before = await page.locator('tr[data-testid^="chart-order-row-"]').count();
+    await input.press("Enter");
+    await expect(page.locator('tr[data-testid^="chart-order-row-"]')).toHaveCount(before);
+    release();
+    await expect(page.getByText("최신 목록을 확인하지 못했어요.")).toBeVisible();
+    await expect(option).toBeDisabled();
+    responseStatus = 200;
+    await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+    await expect(option).toBeEnabled();
+    await input.press("Escape");
+    responseStatus = 403;
+    await openQuickAddForTest(page, "BASO");
+    await expect(page.getByText("오더 검색 권한이 없습니다.")).toBeVisible();
+    await expect(option).toHaveCount(0);
+  } finally {
+    release();
+  }
 });
 
 test("chart status presentation keeps edits in place until blur and hides unconfirmed work", async ({ page }) => {
