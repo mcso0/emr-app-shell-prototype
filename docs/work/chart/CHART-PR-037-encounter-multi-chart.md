@@ -90,14 +90,18 @@ The pre-existing dispensing projection and B3 exact set-snapshot contract are in
 
 ### Remote Migration and Recovery Candidate
 
-- Target: existing synthetic Supabase project `qmerxgzrwaaahpkhjqlc`; DDL/RPC contracts apply project-wide. Latest remote migration rechecked as `20260908110612`; the multi-chart migration has not been applied.
+- Target: existing synthetic Supabase project `qmerxgzrwaaahpkhjqlc`; DDL/RPC contracts apply project-wide. User explicitly approved remote DB writes on 2026-09-09. Applied the reviewed multi-chart SQL successfully; remote ledger version is `20260908211856`.
 - Read-only preflight: [preflight SQL](../../../../scripts/sql/encounter-multi-chart-preflight.sql). Compare existing-field hashes before/after; no clinical row bodies are returned. Current remote counts: Cheongdam 43 encounters / 7 SOAP / 118 orders / 41 diagnoses; `clair-demo` 9 / 6 / 38 / 6; foreign demo 0 / 0 / 0 / 0; clinical-master pilot 1 / 0 / 4 / 0.
-- Candidate: `supabase/migrations/20260908152329_encounter_multi_chart.sql`, reviewed SHA256 above. Apply as one migration transaction only after target/scope authorization. Require preserved-field fingerprints, no fabricated SOAP or reassigned legacy orders, and expected RPC/ACL/metadata readback before application smoke.
+- Candidate: `supabase/migrations/20260908211856_encounter_multi_chart.sql`, reviewed SHA256 above. Applied as one migration transaction after target/scope authorization. All ten existing workspace/table count and preserved-field fingerprint pairs matched immediately before/after. Existing 13 SOAP rows retain their data and receive clinical time from creation time; no legacy orders received guessed origins. Expected indexes, four new columns, SOAP CRUD revokes, authenticated create permission and anonymous denial were verified. Repository filename now matches the generated remote ledger; SQL content hash is unchanged.
 - Containment: [pause new creation](../../../../scripts/sql/encounter-multi-chart-pause-creation.sql), retaining chart-aware reads/writes and all data. The UI may still display the create action, but the database rejects it. Resume creation only after a reviewed fix by restoring authenticated EXECUTE.
 - Do **not** revert to the pre-feature application as normal recovery once multiple notes exist. Keep this chart-aware build and use a forward fix; never restore the old unique index or delete later notes. A previous deployment is only an emergency availability reference, not a data-compatible full rollback.
-- Remote DB mutation remains separately unapproved. Main/deployment preapproval from the user remains recorded; defer dependency-sensitive delivery until the required database candidate is authorized and verified.
+- Remote migration and synthetic Cheongdam smoke are authorized by the user. Main/deployment preapproval remains valid. Complete authenticated smoke and the updated exact-candidate Release Check before merging.
 
 
 ### Planned Scoped Deployment Smoke
 
 After the separately approved migration, use the existing authenticated synthetic Cheongdam workspace to load an active encounter, create three independent timed charts, switch/refresh SOAP, sign one chart without signing the other drafts, and verify diagnosis/order source scopes. Any persisted synthetic smoke records and permitted cleanup must be included in that approval. Compare foreign/demo pilot preserved-field fingerprints after migration and after the scoped smoke; expected mutations must be isolated to the approved synthetic encounter. Probe `/login` separately from authenticated treatment behavior. Do not label mock-browser results as live integration verification.
+
+### Authenticated Preview Checkpoint
+
+The synthetic Cheongdam veterinarian login succeeded. Live inspection found the history aside had not hydrated its separate Supabase auth hook, so actor scope differed from the body and disabled chart creation. The aside now invokes the existing hydration method on mount. This issue was hidden by the shared mock session store; authenticated preview retest is required. Existing clinical records were not edited during diagnosis.

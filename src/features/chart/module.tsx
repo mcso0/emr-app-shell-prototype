@@ -1936,7 +1936,8 @@ function getPatientStatusLabel(status: "active" | "inactive" | "deceased") {
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const bundle = useDisplayedChartBundle(workspaceId);
-  const { session } = useAuthClient();
+  const { session, hydrate } = useAuthClient();
+  useEffect(() => { hydrate(); }, [hydrate]);
   const encounterCharts = useChartStore((state) => state.encounterCharts);
   const encounterChartsScope = useChartStore((state) => state.encounterChartsScope);
   const encounterChartsStatus = useChartStore((state) => state.encounterChartsStatus);

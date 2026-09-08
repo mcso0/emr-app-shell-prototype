@@ -27,7 +27,7 @@ const value = (result) => JSON.parse(result.stdout.split("\n").find((line) => li
 let created = false;
 try {
   sync("postgres", `create database ${database} template ${template};`); created = true;
-  sync(database, `begin; ${readFileSync("supabase/migrations/20260908152329_encounter_multi_chart.sql", "utf8")} commit;`);
+  sync(database, `begin; ${readFileSync("supabase/migrations/20260908211856_encounter_multi_chart.sql", "utf8")} commit;`);
   const fixture = readFileSync("tests/sql/encounter_multi_chart_soap_contract.sql", "utf8").split("set local role authenticated;")[0].replaceAll("96370000", "96372000").replaceAll("MULTI-CHART-037", "MULTI-CHART-CONCURRENT-037");
   sync(database, `${fixture}\ncommit;`);
   const create = (requestId) => `select public.clair_create_encounter_chart('${workspace}','${actor}','${encounter}','${requestId}');`;

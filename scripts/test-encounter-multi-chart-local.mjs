@@ -8,7 +8,7 @@ if (!args.includes("--container") || !args.includes("--database")
   || !/^chart-pr037-[a-z0-9-]+$/.test(container ?? "") || !/^chart_pr037_[a-z0-9_]+$/.test(database ?? "")) {
   throw new Error("Supply explicitly owned --container chart-pr037-* --database chart_pr037_*. Shared DBs are forbidden.");
 }
-const migration = readFileSync(resolve("supabase/migrations/20260908152329_encounter_multi_chart.sql"), "utf8");
+const migration = readFileSync(resolve("supabase/migrations/20260908211856_encounter_multi_chart.sql"), "utf8");
 const fixtures = readdirSync("tests/sql").filter((name) => /^encounter_multi_chart_.*_contract\.sql$/.test(name)).sort();
 for (const fixture of fixtures) {
   const beforePath = resolve("tests/sql", fixture.replace("_contract.sql", ".before.sql"));
