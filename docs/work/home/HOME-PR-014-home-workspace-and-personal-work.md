@@ -140,3 +140,13 @@ Local verification: all 10 existing Home browser tests passed; personal screensh
 승욱 requested hiding the entire 숨김 업무 panel when no work types are hidden, then authorized commit/push/PR/origin-main merge and Production deployment. Render the panel only when `hiddenTypes.length > 0`; existing hide/restore preferences and panel geometry remain intact. The flex body reclaims the removed panel space.
 
 Isolated branch `codex/home-hidden-work-empty` starts at `077ad7202fb5a2015cceee40869a2190a47dc19e`, preserving primary WIP. Ten Home browser tests passed; focused coverage checks initial absence, board hide/all-restore, and list hide/individual-restore. Required release checks and exact candidate/Preview/Production evidence are recorded in the PR. No DB, permissions, environment or shared-component changes. Smoke: login and Cheongdam Home; authenticated interaction evidence is reported separately. Rollback: previous Ready Production `dpl_3nAAf7NGL9N6CWXbihza9FjC8Szi`, or revert only this scoped change if later releases land. Stop on failed checks, candidate drift, unexpected deployment or scoped smoke failure.
+
+## Token-based List Parity Follow-up — 2026-09-08
+
+User approved UI-only correction against Figma `28301:179610`, explicitly including both personal lists and 48px right body padding only in list mode. Implemented on `codex/home-list-token-parity` from `9cb326e7` in an isolated worktree; the primary checkout's superseded Home WIP remains untouched. No data/API/auth/navigation or shared-token definitions changed.
+
+Updated shared HomeListGroup styling, metadata icons, work-type presentation, group typography and xs hover action. All introduced visual values use existing tokens or shared Button variants. Hospital and personal lists share the correction; Kanban spacing remains unchanged.
+
+Validation: existing 10 Home browser regressions passed; an additional synthetic browser test passed across hospital, assigned and requested views, checking balanced padding, hover styling, stable cell geometry, icons and exact source navigation. TypeScript and focused component lint passed. Hover screenshots inspected: `/tmp/home-list-token-hospital-hover.png`, `/tmp/home-list-token-requested-hover.png`. Local implementation only; no push, merge or deployment performed.
+
+Release authorized in this task: commit, push, PR and main/Production deployment. Reconciled with `e1758688`, preserving the empty hidden-work panel and personal balanced-padding changes. Smoke: `/login` and Home list/personal layout where authenticated access is available; rollback by reverting only this UI change through a PR. Stop on candidate drift, failed checks or non-Ready deployment.
