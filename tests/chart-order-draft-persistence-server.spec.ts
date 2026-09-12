@@ -24,6 +24,7 @@ import type {
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
+const chartId = "soap-coco-260501";
 const migrationPath =
   "supabase/migrations/20260519210000_chart_order_draft_persistence_rpc.sql";
 const migration = existsSync(migrationPath)
@@ -182,7 +183,7 @@ test("order draft route requires an actor, saves via mock fallback, and reads af
   const saved = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-drafts`,
     {
-      data: strictDraftInput(currentBody.etag),
+      data: { ...strictDraftInput(currentBody.etag), chartId },
       headers: {
         [chartOrderExpectedEtagHeader]: currentBody.etag,
         "x-clair-demo-session-user-id": "user-vet",
@@ -386,9 +387,12 @@ test("order draft core rejects invalid quantity and enforces permission plus enc
   const allowedVet = await saveChartOrderDraft({
     actorUserId: "user-vet",
     workspaceId,
-    input: strictDraftInput(
-      allowedCurrent.ok ? allowedCurrent.etag : validEtag,
-    ),
+    input: {
+      ...strictDraftInput(
+        allowedCurrent.ok ? allowedCurrent.etag : validEtag,
+      ),
+      chartId,
+    },
     permissionAdapter: createMockWorkspacePermissionAdapter({
       users: [{ id: "user-vet", status: "active" }],
       memberships: [

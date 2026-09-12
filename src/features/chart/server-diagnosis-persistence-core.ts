@@ -109,6 +109,7 @@ export type ChartDiagnosisSaveResult =
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockAssessmentStore = new Map<string, ChartDiagnosisRow[]>();
+const mockAssessmentRevisionStore = new Map<string, number>();
 const mockDiagnosisStore = new Map<string, ChartDiagnosisRow[]>();
 const diagnosisTypes = new Set<DiagnosisType>(["confirmed", "differential", "suspected"]);
 
@@ -256,14 +257,16 @@ export function createMockChartDiagnosisGateway(
       const charts = getMockEncounterCharts(workspaceId, encounterId);
       if (chartId && !charts.some((chart) => chart.id === chartId)) return { ok: false, status: 409, denialReason: "chart_unavailable" };
       const rows = getStoredOrSeedDiagnoses({ encounterId, seedDiagnoses, workspaceId });
+      const assessmentKey = chartId
+        ? buildAssessmentKey(workspaceId, encounterId, chartId)
+        : undefined;
       return {
         ok: true,
-        ...(chartId ? { version: JSON.stringify(rows), assessments: mockAssessmentStore.get(`${workspaceId}:${encounterId}:${chartId}`) ?? [] } : {}),
-        diagnoses: getStoredOrSeedDiagnoses({
-          encounterId,
-          seedDiagnoses,
-          workspaceId,
-        }),
+        ...(assessmentKey ? {
+          version: buildMockDiagnosisVersion(rows, assessmentKey),
+          assessments: mockAssessmentStore.get(assessmentKey) ?? [],
+        } : {}),
+        diagnoses: rows,
       };
     },
     async saveDiagnoses({ actorUserId, diagnoses, encounterId, chartId, expectedVersion, assessedDiagnosisIds, workspaceId }) {
@@ -281,15 +284,28 @@ export function createMockChartDiagnosisGateway(
       if (!chartId && charts.length > 1) return { ok: false, status: 409, denialReason: "chart_id_required" };
       if (chartId && !chart) return { ok: false, status: 409, denialReason: "chart_unavailable" };
       if (chart?.status === "signed" || chart?.status === "amended") return { ok: false, status: 409, denialReason: "signed_chart_read_only" };
-      if (chartId && expectedVersion !== JSON.stringify(existingRows)) return { ok: false, status: 409, denialReason: "diagnoses_conflict" };
+      const assessmentKey = chartId
+        ? buildAssessmentKey(workspaceId, encounterId, chartId)
+        : undefined;
+      if (
+        assessmentKey &&
+        expectedVersion !== buildMockDiagnosisVersion(existingRows, assessmentKey)
+      ) return { ok: false, status: 409, denialReason: "diagnoses_conflict" };
       const timestamp = now();
-      const rows = diagnoses.map((diagnosis, index) => {
+      const submittedRows = diagnoses.map((diagnosis) => {
         const existing = diagnosis.id
           ? existingRows.find((row) => row.id === diagnosis.id)
-          : existingRows.find((row) => row.diagnosisText === diagnosis.diagnosisText);
+          : diagnosis.diagnosisCatalogId
+            ? existingRows.find(
+                (row) =>
+                  row.diagnosisCatalogId === diagnosis.diagnosisCatalogId,
+              )
+            : existingRows.find(
+                (row) => row.diagnosisText === diagnosis.diagnosisText,
+              );
 
         return {
-          id: diagnosis.id ?? existing?.id ?? `diagnosis-${encounterId}-${index + 1}`,
+          id: diagnosis.id ?? existing?.id ?? crypto.randomUUID(),
           encounterId,
           diagnosisCatalogId: diagnosis.diagnosisCatalogId,
           diagnosisText: diagnosis.diagnosisText,
@@ -308,15 +324,55 @@ export function createMockChartDiagnosisGateway(
           updatedAt: timestamp,
         } satisfies ChartDiagnosisRow;
       });
+      const submittedIds = new Set(submittedRows.map((row) => row.id));
+      const submittedCatalogIds = new Set(
+        submittedRows.flatMap((row) =>
+          row.diagnosisCatalogId ? [row.diagnosisCatalogId] : [],
+        ),
+      );
+      const rows = chart
+        ? [
+            ...existingRows.filter(
+              (row) =>
+                !submittedIds.has(row.id) &&
+                (!row.diagnosisCatalogId ||
+                  !submittedCatalogIds.has(row.diagnosisCatalogId)),
+            ),
+            ...submittedRows,
+          ].map((row, index) => ({ ...row, sortOrder: index }))
+        : submittedRows;
 
       mockDiagnosisStore.set(buildDiagnosisKey(workspaceId, encounterId), rows);
 
       if (chart) {
-        const assessments = structuredClone(rows.filter((row) => !assessedDiagnosisIds || assessedDiagnosisIds.includes(row.id)));
-        mockAssessmentStore.set(`${workspaceId}:${encounterId}:${chart.id}`, assessments);
+        const assessmentIds = new Set(
+          assessedDiagnosisIds ?? submittedRows.map((row) => row.id),
+        );
+        const assessments = structuredClone(
+          rows.filter((row) => assessmentIds.has(row.id)),
+        );
+        const chartAssessmentKey = buildAssessmentKey(
+          workspaceId,
+          encounterId,
+          chart.id,
+        );
+        const previousAssessments = mockAssessmentStore.get(chartAssessmentKey) ?? [];
+        if (JSON.stringify(previousAssessments) !== JSON.stringify(assessments)) {
+          mockAssessmentRevisionStore.set(
+            chartAssessmentKey,
+            (mockAssessmentRevisionStore.get(chartAssessmentKey) ?? 0) + 1,
+          );
+        }
+        mockAssessmentStore.set(chartAssessmentKey, assessments);
         const nextChart = { ...chart, updatedAt: new Date(Math.max(Date.parse(timestamp), Date.parse(chart.updatedAt) + 1)).toISOString() };
         putMockEncounterChart(workspaceId, nextChart);
-        return { ok: true, diagnoses: rows, assessments, version: JSON.stringify(rows), chart: nextChart };
+        return {
+          ok: true,
+          diagnoses: rows,
+          assessments,
+          version: buildMockDiagnosisVersion(rows, chartAssessmentKey),
+          chart: nextChart,
+        };
       }
       return { ok: true, diagnoses: rows };
     },
@@ -519,6 +575,24 @@ function getStoredOrSeedDiagnoses({
 
 function buildDiagnosisKey(workspaceId: string, encounterId: string) {
   return `${workspaceId}:${encounterId}`;
+}
+
+function buildAssessmentKey(
+  workspaceId: string,
+  encounterId: string,
+  chartId: string,
+) {
+  return `${workspaceId}:${encounterId}:${chartId}`;
+}
+
+function buildMockDiagnosisVersion(
+  rows: ChartDiagnosisRow[],
+  assessmentKey: string,
+) {
+  return JSON.stringify({
+    assessmentRevision: mockAssessmentRevisionStore.get(assessmentKey) ?? 0,
+    diagnoses: rows,
+  });
 }
 
 function normalizeDiagnosisInput(input: ChartDiagnosisInput) {

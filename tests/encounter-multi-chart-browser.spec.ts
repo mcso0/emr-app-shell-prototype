@@ -68,7 +68,7 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   await expect.poll(() => new URL(page.url()).searchParams.get("chartId")).not.toBe(firstId);
   const secondId = new URL(page.url()).searchParams.get("chartId")!;
   await expect(editor).not.toContainText("Synthetic morning chart note");
-  await expect(page.getByLabel("처방 조회 범위")).toHaveValue("chart");
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   await expect(paragraph).toBeEditable();
   await paragraph.click();
   await page.keyboard.type("Synthetic afternoon chart note");
@@ -102,8 +102,6 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   await page.reload();
   await expect(editor).toContainText("amended");
   await expect(page.locator(`[data-chart-id="${firstId}"]`)).not.toContainText("완료");
-  await page.getByLabel("처방 조회 범위").selectOption("encounter");
-  await expect(page.getByLabel("처방 조회 범위")).toHaveValue("encounter");
   await expect(page.getByRole("button", { name: "Order 추가", exact: true }).first()).toBeDisabled();
   await expect(page.getByText("오더 정보를 불러오는 중", { exact: false })).toHaveCount(0);
   await page.screenshot({ path: "/tmp/chart-pr037-two-charts.png", fullPage: false });
@@ -187,9 +185,20 @@ test("assessment response advances the SOAP token before the next save and chart
     sentTokens.push(input.expectedUpdatedAt);
     await route.fulfill({ json: { ok: true, status: 200, auditRecorded: true, soapNote: { ...chart, blockDocument: input.blockDocument, updatedAt: expectedToken } } });
   });
+  const diagnosisName = "Synthetic diagnosis revision assessment";
+  const diagnosisPanel = page.getByLabel("진단명 관리");
+  const diagnosisSearch = diagnosisPanel.getByRole("textbox", {
+    name: "진단명 검색",
+  });
   const assessmentSaved = page.waitForResponse((r) => r.request().method() === "PATCH" && r.url().includes("chart/diagnoses"));
-  await page.getByRole("button", { name: "현재 진단 전체를 평가 기록", exact: true }).click();
+  await diagnosisSearch.fill(diagnosisName);
+  await page
+    .getByRole("option", { name: new RegExp(`${diagnosisName}.*직접 추가`) })
+    .click();
   expect((await assessmentSaved).ok()).toBe(true);
+  await expect(
+    diagnosisPanel.getByRole("row", { name: new RegExp(diagnosisName) }),
+  ).toBeVisible();
   expect(sentTokens).toEqual([]);
   await expect(page.getByRole("button", { name: "SOAP 저장", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "SOAP 저장", exact: true }).click();
@@ -198,4 +207,10 @@ test("assessment response advances the SOAP token before the next save and chart
   await expect(page.getByText("저장 충돌", { exact: true })).toHaveCount(0);
   await (await createNewChart(page));
   await expect(page).not.toHaveURL(new RegExp(`chartId=${chart.id}`));
+  await expect(diagnosisPanel.getByText(diagnosisName)).toHaveCount(0);
+  await page.locator(`[data-chart-id="${chart.id}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`chartId=${chart.id}`));
+  await expect(
+    diagnosisPanel.getByRole("row", { name: new RegExp(diagnosisName) }),
+  ).toBeVisible();
 });

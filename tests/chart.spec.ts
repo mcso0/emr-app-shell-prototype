@@ -188,6 +188,38 @@ async function routePristineKongSoap(page: Page) {
   );
 }
 
+async function routePopulatedKongCurrentChartAssessment(page: Page) {
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/diagnoses?*",
+    async (route) => {
+      const url = new URL(route.request().url());
+      if (
+        route.request().method() !== "GET" ||
+        url.searchParams.get("encounterId") !== kongEncounterId ||
+        url.searchParams.get("chartId") !== "soap-kong-260501"
+      ) {
+        await route.fallback();
+        return;
+      }
+
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        diagnoses?: Array<{ id?: string }>;
+      };
+      const assessment = body.diagnoses?.find(
+        (diagnosis) => diagnosis.id === "diagnosis-kong-gastroenteritis",
+      );
+      if (!assessment) {
+        throw new Error("Kong diagnosis fixture is missing");
+      }
+      await route.fulfill({
+        response,
+        json: { ...body, assessments: [assessment] },
+      });
+    },
+  );
+}
+
 async function grantCheongdamWorkspaceAccess(page: Page) {
   await page.addInitScript(
     ([storageKey, workspaceId]) => {
@@ -337,7 +369,10 @@ async function routePreconsultationContext(
 async function saveKongOrderDraftRows(
   page: Page,
   rows: ReadonlyArray<Record<string, unknown>>,
-  { removeOmittedTopLevelRows = false } = {},
+  {
+    chartId,
+    removeOmittedTopLevelRows = false,
+  }: { chartId?: string; removeOmittedTopLevelRows?: boolean } = {},
 ) {
   const current = await page.request.get(
     `/api/workspaces/clair-demo/chart/order-drafts?encounterId=${kongEncounterId}`,
@@ -368,6 +403,7 @@ async function saveKongOrderDraftRows(
     "/api/workspaces/clair-demo/chart/order-drafts",
     {
       data: {
+        ...(chartId ? { chartId } : {}),
         encounterId: kongEncounterId,
         expectedEtag: currentBody.etag,
         removedOrderIds,
@@ -384,6 +420,7 @@ async function saveKongOrderDraftRows(
 
 async function restoreKongOrderDraftDefaults(page: Page) {
   await saveKongOrderDraftRows(page, kongDefaultOrderDraftRows, {
+    chartId: "soap-kong-260501",
     removeOmittedTopLevelRows: true,
   });
   await page.reload();
@@ -848,7 +885,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
   await expect(
     page.getByRole("tab", { name: "소화기", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByText(
       "블록 왼쪽의 + 또는 / 명령으로 SOAP 템플릿과 내용을 추가할 수 있습니다.",
@@ -863,7 +900,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   const soapDiagnosisGridMetrics = await page
     .getByTestId("chart-soap-diagnosis-grid")
     .evaluate((element) => {
@@ -891,6 +928,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   const diagnosisPanel = page.getByLabel("진단명 관리");
   await expect(
     diagnosisPanel.getByRole("row", { name: /급성 위장관염 의심/ }),
+  ).toHaveCount(0);
+  await expect(
+    diagnosisPanel.getByTestId("chart-assessment-empty-state"),
   ).toBeVisible();
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
   await expect(orderTable.locator('th:has-text("Order 명")')).toHaveAttribute(
@@ -955,8 +995,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
 test("chart Figma follow-up restores history and panel chrome contracts", async ({
   page,
 }) => {
+  await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
-  await page.goto(chartFigmaVisualFixture.route);
+  await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
 
   const actionBar = page.locator("[data-slot='chart-action-bar']");
   const workspace = page.locator("[data-slot='chart-workspace']");
@@ -1210,7 +1251,6 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const content = page.locator("[data-slot='chart-content']");
   await expect(content).toBeVisible();
@@ -1266,12 +1306,15 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Plan/Order" })).toBeVisible();
+  await expect(page).toHaveURL(/chartId=soap-kong-260501/, {
+    timeout: 10_000,
+  });
   await expect(
     page.getByTestId("chart-order-row-order-kong-fluid"),
-  ).toContainText("피하 수액 처치");
+  ).toContainText("피하 수액 처치", { timeout: 10_000 });
   const orderFooter = page.getByTestId("chart-order-footer");
-  await expect(orderFooter).toContainText("변경 없음");
-  await expect(orderFooter).toContainText("청구 예상 총액");
+  await expect(orderFooter).toContainText("저장됨");
+  await expect(orderFooter).toContainText("이 차트 오더 합계");
   await expect(content).toHaveScreenshot(
     "chart-contents-v2-reference-1540x968.png",
     {
@@ -1287,7 +1330,6 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const chartContent = page.locator("[data-slot='chart-content']");
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
@@ -1514,7 +1556,6 @@ test("chart Order all tab renders the approved order confirmation and work-state
   page,
 }) => {
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const table = page.getByRole("table", { name: "처방/오더 테이블" });
   for (const label of [
@@ -5821,11 +5862,11 @@ test("chart safety context and confirmation dialogs identify the active patient"
   );
   await dismissChartOrderActionMenu(page);
 
-  await page.getByRole("button", { name: "진료 완료" }).click();
+  await page.getByRole("button", { name: "진료 종료", exact: true }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
-    name: "진료 완료 확인",
+    name: "접수 진료 종료",
   });
-  await expect(chartCompleteDialog.getByText("진료 완료 확인")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("접수 진료 종료")).toBeVisible();
   await expect(chartCompleteDialog.getByText("콩이 / 김하늘")).toBeVisible();
   await expect(chartCompleteDialog.getByText("E-260501-0003")).toBeVisible();
   await expect(chartCompleteDialog.getByText(/\d+건 \/ 4건/)).toBeVisible();
@@ -5851,7 +5892,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
 });
 
-test("chart keeps confirmation selection-scoped and billing encounter-scoped", async ({
+test("chart keeps confirmation selection-scoped and routes current-chart billing to checkout", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
@@ -5864,7 +5905,7 @@ test("chart keeps confirmation selection-scoped and billing encounter-scoped", a
   await dismissChartOrderActionMenu(page);
   await expect(
     page.getByTestId("chart-order-footer").getByRole("button", {
-      name: "Order 청구",
+      name: "수납에서 청구",
     }),
   ).toBeVisible();
   await page
@@ -6068,7 +6109,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     "변경 대기 1건",
   );
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 예상/,
   );
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
@@ -6080,7 +6121,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     timeout: 10_000,
   });
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 합계/,
   );
 
   await page
@@ -6105,7 +6146,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     "저장됨",
   );
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 합계/,
   );
 
   await page.reload();
@@ -6122,7 +6163,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await expect(bulkDeleteDialog).toContainText("2개 오더를");
   await bulkDeleteDialog.getByRole("button", { name: "취소" }).click();
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 합계/,
   );
 });
 
@@ -6886,7 +6927,7 @@ test("chart history selection returns to a previous encounter for the patient", 
     page.getByLabel("환자 컨텍스트 정보").getByText("코코"),
   ).toBeVisible();
   await expect(selectedHistoryItem).toHaveAttribute("data-selected", "true");
-  await page.getByLabel("처방 조회 범위").selectOption("encounter");
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 
@@ -8777,7 +8818,10 @@ test("chart quick-add preserves query and focus through detailed search and set 
 test("chart quick-add hides only for total-empty and restores after existing first-add flow", async ({ page }) => {
   await routeQuickAddCatalog(page);
   await page.goto(kongScenarioUrl);
-  await saveKongOrderDraftRows(page, [], { removeOmittedTopLevelRows: true });
+  await saveKongOrderDraftRows(page, [], {
+    chartId: "soap-kong-260501",
+    removeOmittedTopLevelRows: true,
+  });
   await page.reload();
   const composer = page.getByTestId("chart-order-quick-add");
   await expect(composer).toHaveCount(0);

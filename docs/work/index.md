@@ -511,4 +511,4 @@ See `docs/work/inbox.md`.
 
 | CHART-PR-036 | human_review | chart | P1 | Local status presentation implemented and focused checks passed | `docs/work/chart/CHART-PR-036-plan-order-status-presentation.md` |
 
-| CHART-PR-037 | in_progress | chart | P0 | User-approved encounter multi-chart objective | `docs/work/chart/CHART-PR-037-encounter-multi-chart.md` |
+| CHART-PR-037 | in_progress | chart | P0 | PR #743 deployed; current-chart Assessment and Plan/Order isolation follow-up is a release candidate | `docs/work/chart/CHART-PR-037-encounter-multi-chart.md` |

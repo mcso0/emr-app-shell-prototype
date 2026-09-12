@@ -10,7 +10,7 @@ last_updated: 2026-09-12
 
 # Multiple Charts Within One Encounter
 
-This is the target behavior authorized on 2026-09-09; delivery evidence belongs to CHART-PR-037. It does not claim deployed support.
+This is the target behavior authorized on 2026-09-09 and delivered by PR #743. The 2026-09-12 current-record isolation follow-up is tracked in CHART-PR-037 and remains a local candidate until separately delivered.
 
 ## Identity and Time
 
@@ -26,9 +26,11 @@ Within a visit, the oldest active chart is the first record and later charts are
 
 - SOAP content and optimistic revision belong to the selected chart.
 - Signed charts require an amendment reason; retain the prior document and actor/time/reason before accepting a correction. Do not silently reopen a signed chart on autosave.
-- Diagnoses remain encounter-owned with stable IDs. A chart records the diagnoses it assessed and preserves its recorded assessment/status independently of later encounter diagnosis updates/retirement.
+- Diagnoses remain encounter-owned with stable IDs. Assessment renders only the selected chart's recorded diagnosis snapshot. Saving that snapshot merges its rows into the active encounter diagnosis set; removing a row from one chart assessment must not retire a diagnosis still owned by the encounter or rewrite another chart's snapshot.
 - Orders retain encounter ownership for execution and billing and an immutable originating chart. Set descendants inherit their root's origin. Changing details, revisions, assignment, cancellation, or actual execution must not move the origin.
-- A new chart never clones prior orders. The UI distinguishes selected-chart orders from encounter-wide orders; mutation must validate the actual owner regardless of display filtering.
+- A new chart never clones prior orders. The chart workspace renders only orders whose immutable origin is the selected chart; it has no encounter-scope selector. The table, category counts, footer counts, selected totals, and chart amount detail use that same row set. A set counts once at its top level and its price model must not charge both an included-sum parent and its children.
+- Encounter-wide execution and billing ownership remain unchanged. The chart action navigates to the encounter billing workspace without issuing an encounter-wide billing write from the chart screen. Billing/history surfaces own encounter aggregation, tax, prior payments, and cross-chart review.
+- Display filtering is not authorization. Draft save/removal, confirmation, cancellation, assignment, and execution mutations must still validate workspace, encounter, selected chart, immutable order origin, permission, and revision at the server/database boundary.
 - Results remain order-owned. Reviewing a morning result in an afternoon chart does not move the order; the afternoon SOAP can record the interpretation.
 
 ## Completion
@@ -37,6 +39,6 @@ Within a visit, the oldest active chart is the first record and later charts are
 
 ## Persistence and Compatibility
 
-Existing SOAP IDs, documents, authors, timestamps, and revisions remain intact. Do not fabricate notes for encounters without SOAP. Existing orders without provable chart provenance remain labeled as encounter legacy records, never assigned by guessed timestamps. Legacy encounter-only writers must reject ambiguous multi-chart access instead of selecting the newest record. Chart-specific requests validate workspace, encounter, chart, user, permission, and expected revision at the database boundary and record audit atomically.
+Existing SOAP IDs, documents, authors, timestamps, and revisions remain intact. Do not fabricate notes for encounters without SOAP. Existing orders without provable chart provenance remain encounter legacy records, never assigned by guessed timestamps and never shown as if they belonged to the selected chart. They remain available through encounter-owned billing/history paths. Legacy encounter-only writers must reject ambiguous multi-chart access instead of selecting the newest record. Chart-specific requests validate workspace, encounter, chart, user, permission, and expected revision at the database boundary and record audit atomically.
 
 After multiple notes exist, rollback means disabling new creation while preserving chart-aware reads/writes and data. Restoring the old encounter unique index is not an acceptable rollback.

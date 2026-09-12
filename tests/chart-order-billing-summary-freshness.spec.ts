@@ -1,567 +1,333 @@
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ChartOrderBillingSummary } from "../src/features/chart/chart-order-billing-summary-contract";
+const workspaceId = "clair-demo";
+const encounterId = "encounter-coco-260501";
+const defaultChartId = "soap-coco-260501";
+const scenarioUrl = (chartId: string) =>
+  `/w/${workspaceId}/treatment?patientId=patient-coco&encounterId=${encounterId}&chartId=${chartId}&modulePanel=closed&aside=history`;
 
-const scenarioUrl =
-  "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed";
-
-function createSummary({
-  etag,
-  estimatedTotal,
-  requestable = 1,
-}: {
-  etag: string;
-  estimatedTotal: number;
-  requestable?: number;
-}): ChartOrderBillingSummary {
-  return {
-    workspaceId: "clair-demo",
-    encounterId: "encounter-kong-260501",
-    etag,
-    generatedAt: new Date().toISOString(),
-    currency: "KRW",
-    context: null,
-    invoiceId: null,
-    orderCounts: {
-      total: 4,
-      confirmed: 1,
-      draft: 3,
-      recheck: 0,
-      requested: 0,
-      requestable,
-      cancelled: 0,
-    },
-    amounts: {
-      gross: estimatedTotal,
-      confirmed: 45_000,
-      draft: estimatedTotal - 45_000,
-      discount: 0,
-      surcharge: 0,
-      tax: 0,
-      paid: 0,
-      outstanding: 0,
-      estimatedTotal,
-      requestableTotal: requestable ? 45_000 : 0,
-    },
-    requestableOrderIds: requestable ? ["order-kong-maropitant"] : [],
-    unfinishedOrders: [],
-  };
+async function openChart(page: Page, chartId: string) {
+  const chartButton = page.locator(`[data-chart-id="${chartId}"]`);
+  await expect(chartButton).toBeVisible({ timeout: 15_000 });
+  await expect(async () => {
+    if ((await chartButton.getAttribute("aria-pressed")) !== "true") {
+      await chartButton.click();
+    }
+    await expect(chartButton).toHaveAttribute("aria-pressed", "true", {
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 15_000 });
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"), {
+      timeout: 15_000,
+    })
+    .toBe(chartId);
 }
 
-async function fulfillSummary(route: Route, summary: ChartOrderBillingSummary) {
-  await route.fulfill({
-    status: 200,
-    contentType: "application/json",
-    body: JSON.stringify({
-      enforcedBy: "chart-order-billing-summary",
-      ok: true,
-      status: 200,
-      summary,
-    }),
+async function warmChartWorkspace(page: Page) {
+  await page.goto(scenarioUrl(defaultChartId));
+  await expect(
+    page.locator(`[data-chart-id="${defaultChartId}"]`),
+  ).toBeVisible({ timeout: 15_000 });
+}
+
+async function createChart(page: Page) {
+  const create = page
+    .getByRole("button", { name: "+ 새 차트", exact: true })
+    .first();
+  await expect(create).toBeEnabled();
+  await create.click();
+  const dialog = page.getByRole("dialog", {
+    name: "새 차트를 어느 진료에 추가할까요?",
   });
+  await expect(dialog).toBeVisible();
+  const currentVisit = dialog.getByTestId(`new-chart-encounter-${encounterId}`);
+  await expect(currentVisit).toBeEnabled();
+  await currentVisit.click();
+  const created = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("chart/encounter-charts"),
+  );
+  await dialog
+    .getByRole("button", { name: "선택한 진료에 차트 추가", exact: true })
+    .click();
+  const response = await created;
+  expect(response.ok()).toBe(true);
+  const chartId = (await response.json()).chart.id as string;
+  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  await expect(page.locator(`[data-chart-id="${chartId}"]`)).toBeVisible();
+  return chartId;
 }
 
-async function dispatchWindowFocus(page: Page) {
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-}
-
-test("persisted order edits refresh the authoritative footer amount without reload", async ({
-  page,
-}) => {
-  let estimatedTotal = 134_500;
-  let summaryReads = 0;
-  let mutationPersisted = false;
-  let readsAfterMutation = 0;
-  let mutationRequests = 0;
-
+async function installScopedOrderFixture(
+  page: Page,
+  chartAId: string,
+  chartBId: string,
+) {
   await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
+    `**/api/workspaces/${workspaceId}/chart/order-drafts*`,
+    async (route) => {
+      if (route.request().method() !== "GET") {
+        await route.fallback();
+        return;
+      }
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        rows: Array<Record<string, unknown>>;
+      };
+      const rows = body.rows.map((row, index) => ({
+        ...row,
+        originChartId: index === 0 ? chartAId : index === 1 ? chartBId : null,
+      }));
+      await route.fulfill({
+        response,
+        contentType: "application/json",
+        body: JSON.stringify({ ...body, rows }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/order-billing-summary*`,
     async (route) => {
       expect(route.request().method()).toBe("GET");
-      summaryReads += 1;
-      if (mutationPersisted) readsAfterMutation += 1;
-      await fulfillSummary(
-        route,
-        createSummary({
-          etag: `\"billing-${summaryReads}\"`,
-          estimatedTotal,
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-order-billing-summary",
+          summary: {
+            workspaceId,
+            encounterId,
+            etag: '"encounter-wide-summary"',
+            generatedAt: new Date().toISOString(),
+            currency: "KRW",
+            context: null,
+            invoiceId: null,
+            orderCounts: {
+              total: 99,
+              confirmed: 99,
+              draft: 0,
+              recheck: 0,
+              requested: 0,
+              requestable: 0,
+              cancelled: 0,
+            },
+            amounts: {
+              gross: 999_999,
+              confirmed: 999_999,
+              draft: 0,
+              discount: 0,
+              surcharge: 0,
+              tax: 0,
+              paid: 0,
+              outstanding: 999_999,
+              estimatedTotal: 999_999,
+              requestableTotal: 0,
+            },
+            requestableOrderIds: [],
+            unfinishedOrders: [],
+          },
         }),
-      );
+      });
     },
   );
+}
+
+test("Plan/Order rows, counts, and money follow only the active chart", async ({
+  page,
+}) => {
+  await warmChartWorkspace(page);
+  const chartAId = defaultChartId;
+  const chartBId = await createChart(page);
+  await installScopedOrderFixture(page, chartAId, chartBId);
+
+  await openChart(page, chartAId);
+  const footer = page.getByTestId("chart-order-footer");
+  await expect(footer).toContainText("오더 1건");
+  await expect(footer).toContainText("4,500원");
+  await expect(footer).not.toContainText("999,999원");
+  await expect(
+    page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "CBC 검사 선택" }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
+
+  await openChart(page, chartBId);
+  await expect(footer).toContainText("오더 1건");
+  await expect(footer).toContainText("35,000원");
+  await expect(
+    page.getByRole("checkbox", { name: "CBC 검사 선택" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }),
+  ).toHaveCount(0);
+});
+
+test("included-order-sum set counts once and does not double-charge its parent", async ({
+  page,
+}) => {
+  await warmChartWorkspace(page);
+  const chartId = await createChart(page);
+  const parentId = crypto.randomUUID();
+  const childId = crypto.randomUUID();
   await page.route(
-    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    `**/api/workspaces/${workspaceId}/chart/order-drafts*`,
     async (route) => {
-      if (route.request().method() !== "PATCH") {
+      if (route.request().method() !== "GET") {
         await route.fallback();
         return;
       }
       const response = await route.fetch();
-      mutationRequests += 1;
-      const body = route.request().postDataJSON() as {
-        rows?: Array<{ orderId?: string; quantity?: number }>;
+      const body = (await response.json()) as {
+        rows: Array<Record<string, unknown>>;
       };
-      const quantity = body.rows?.find(
-        (row) => row.orderId === "order-kong-maropitant",
-      )?.quantity;
-      if (quantity === 2) {
-        estimatedTotal = 139_000;
-        mutationPersisted = true;
-      }
-      const responseBody = (await response.json()) as Record<string, unknown>;
+      const source = body.rows[0];
+      const rows = [
+        {
+          ...source,
+          appliedSnapshot: {
+            amountBasis: "included_order_sum",
+            billingName: "Synthetic set",
+            displayName: "Synthetic set",
+            items: [],
+          },
+          calculationOutputs: { childSubtotalKrw: 6_000 },
+          billingCandidateStatus: "candidate_created",
+          clinicalOrderType: "other",
+          destinationModule: null,
+          executionMode: "aggregate",
+          lineTotalSnapshot: 6_000,
+          orderId: parentId,
+          orderType: "set",
+          originChartId: chartId,
+          orderConfirmationStatus: "confirmed",
+          parentOrderId: null,
+          rowType: "set",
+          sourceSetId: crypto.randomUUID(),
+          sourceSetRevisionId: crypto.randomUUID(),
+          unitPriceSnapshot: 6_000,
+        },
+        {
+          ...source,
+          appliedSnapshot: {
+            billingName: "Synthetic set child",
+            displayName: "Synthetic set child",
+            selected: true,
+          },
+          billingCandidateStatus: "candidate_created",
+          lineTotalSnapshot: 6_000,
+          orderId: childId,
+          originChartId: chartId,
+          orderConfirmationStatus: "confirmed",
+          parentOrderId: parentId,
+          rowType: "set_child",
+          unitPriceSnapshot: 6_000,
+        },
+      ];
       await route.fulfill({
         response,
         contentType: "application/json",
-        body: JSON.stringify({
-          ...responseBody,
-          billingSummary: createSummary({
-            etag: '"billing-draft-response"',
-            estimatedTotal,
-          }),
-        }),
+        body: JSON.stringify({ ...body, rows }),
       });
     },
   );
-
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("134,500원");
-
-  await page.getByLabel("Maropitant 16mg T 수량 수정").fill("2");
-  await expect(footer).toContainText("오더 예상 총액");
-  await expect(footer).toContainText("예상 · 저장 중");
-  await expect(footer).toContainText("139,000원");
-  await expect(page.getByTestId("chart-order-save-status")).toContainText(
-    "저장됨",
-    { timeout: 10_000 },
-  );
-
-  await expect.poll(() => mutationRequests).toBe(1);
-  expect(readsAfterMutation).toBe(0);
-  await expect(footer).toContainText("139,000원");
-  await expect(footer).toContainText("청구 예상 총액");
-});
-
-test("focus revalidation ignores an older response that finishes last", async ({
-  page,
-}) => {
-  let initialReads = 0;
-  let focusReads = 0;
-  let focusPhase = false;
   await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
+    `**/api/workspaces/${workspaceId}/chart/order-actions*`,
     async (route) => {
-      if (!focusPhase) {
-        initialReads += 1;
-        await fulfillSummary(
-          route,
-          createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
-        );
-        return;
-      }
-      focusReads += 1;
-      if (focusReads === 1) {
-        await new Promise((resolve) => setTimeout(resolve, 350));
-      } else if (focusReads === 2) {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      }
-      const estimatedTotal = focusReads === 1 ? 110_000 : 120_000;
-      await fulfillSummary(
-        route,
-        createSummary({
-          etag: `\"billing-focus-${focusReads}\"`,
-          estimatedTotal,
-        }),
-      );
-    },
-  );
-
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("100,000원");
-  expect(initialReads).toBeGreaterThan(0);
-  focusPhase = true;
-
-  await dispatchWindowFocus(page);
-  await expect.poll(() => focusReads).toBe(1);
-  await dispatchWindowFocus(page);
-  await expect.poll(() => focusReads).toBe(2);
-
-  await expect(footer).toContainText("120,000원");
-  await page.waitForTimeout(450);
-  await expect(footer).toContainText("120,000원");
-  await expect(footer).not.toContainText("110,000원");
-});
-
-test("a billing conflict followed by a failed refresh blocks both billing actions", async ({
-  page,
-}) => {
-  let billingConflict = false;
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    async (route) => {
-      if (route.request().method() === "POST") {
-        billingConflict = true;
-        await route.fulfill({
-          status: 409,
-          contentType: "application/json",
-          body: JSON.stringify({
-            ok: false,
-            status: 409,
-            error: "revision_conflict",
-          }),
-        });
-        return;
-      }
-      if (!billingConflict) {
-        await fulfillSummary(
-          route,
-          createSummary({ etag: '"billing-v1"', estimatedTotal: 100_000 }),
-        );
-        return;
-      }
+      const updatedAt = "2026-09-12T08:00:00.000Z";
+      const orderActions = [parentId, childId].map((orderId) => ({
+        billingCandidateStatus: "candidate_created",
+        encounterId,
+        orderConfirmationStatus: "confirmed",
+        orderId,
+        status: "confirmed",
+        updatedAt,
+      }));
       await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: false, status: 500, error: "db_read_failed" }),
-      });
-    },
-  );
-
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  const footerBilling = footer.getByRole("button", { name: "Order 청구" });
-  await expect(footerBilling).toBeEnabled();
-  await footerBilling.click();
-
-  const aside = page.getByLabel("Plan/Order 금액 상세");
-  await expect(aside).toBeVisible();
-  await expect(footer).toContainText("최신 금액 확인 필요");
-  await expect(footerBilling).toBeDisabled();
-  await expect(
-    aside.getByRole("button", { name: "Order 청구" }),
-  ).toBeDisabled();
-  await expect(aside.getByRole("button", { name: "금액 다시 확인" })).toBeVisible();
-});
-
-test("a delayed GET cannot overwrite a successful billing POST summary", async ({
-  page,
-}) => {
-  let focusPhase = false;
-  let billingRequests = 0;
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    async (route) => {
-      if (route.request().method() === "POST") {
-        billingRequests += 1;
-        await fulfillSummary(
-          route,
-          createSummary({
-            etag: '"billing-post-success"',
-            estimatedTotal: 125_000,
-            requestable: 0,
-          }),
-        );
-        return;
-      }
-      if (!focusPhase) {
-        await fulfillSummary(
-          route,
-          createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
-        );
-        return;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 350));
-      await fulfillSummary(
-        route,
-        createSummary({ etag: '"billing-old-get"', estimatedTotal: 110_000 }),
-      );
-    },
-  );
-
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("100,000원");
-  await expect(
-    footer.getByRole("button", { name: "Order 청구" }),
-  ).toBeEnabled();
-
-  focusPhase = true;
-  await page.evaluate(() => {
-    window.dispatchEvent(new Event("focus"));
-    const billingButton = Array.from(
-      document.querySelectorAll<HTMLButtonElement>(
-        '[data-testid="chart-order-footer"] button',
-      ),
-    ).find((button) => button.textContent?.includes("Order 청구"));
-    billingButton?.click();
-  });
-
-  await expect.poll(() => billingRequests).toBe(1);
-  await expect(footer).toContainText("125,000원");
-  await page.waitForTimeout(450);
-  await expect(footer).toContainText("125,000원");
-  await expect(footer).not.toContainText("110,000원");
-  await expect(
-    footer.getByRole("button", { name: "Order 청구" }),
-  ).toBeDisabled();
-});
-
-test("a delayed GET cannot overwrite the Summary returned by a draft mutation", async ({
-  page,
-}) => {
-  let delayFocusRead = false;
-  let mutationRequests = 0;
-  let releaseDelayedRead!: () => void;
-  const delayedReadGate = new Promise<void>((resolve) => {
-    releaseDelayedRead = resolve;
-  });
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    async (route) => {
-      if (!delayFocusRead) {
-        await fulfillSummary(
-          route,
-          createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
-        );
-        return;
-      }
-      await delayedReadGate;
-      await fulfillSummary(
-        route,
-        createSummary({ etag: '"billing-old-get"', estimatedTotal: 110_000 }),
-      );
-    },
-  );
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-drafts*",
-    async (route) => {
-      if (route.request().method() !== "PATCH") {
-        await route.fallback();
-        return;
-      }
-      mutationRequests += 1;
-      const response = await route.fetch();
-      const body = (await response.json()) as Record<string, unknown>;
-      await route.fulfill({
-        response,
+        status: 200,
         contentType: "application/json",
         body: JSON.stringify({
-          ...body,
-          billingSummary: createSummary({
-            etag: '"billing-draft-success"',
-            estimatedTotal: 120_000,
-          }),
+          ok: true,
+          status: 200,
+          etag: '"included-set-actions"',
+          rows: [],
+          orderActions,
         }),
       });
     },
   );
 
-  await page.goto(scenarioUrl);
+  await openChart(page, defaultChartId);
+  await openChart(page, chartId);
   const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("100,000원");
-
-  delayFocusRead = true;
-  await dispatchWindowFocus(page);
-  await page.getByLabel("Maropitant 16mg T 수량 수정").fill("2");
-  await expect.poll(() => mutationRequests, { timeout: 5_000 }).toBe(1);
-  await expect(footer).toContainText("120,000원");
-
-  releaseDelayedRead();
-  await page.waitForTimeout(100);
-  await expect(footer).toContainText("120,000원");
-  await expect(footer).not.toContainText("110,000원");
+  await expect(footer).toContainText("오더 1건");
+  await expect(footer).toContainText("6,000원");
+  await expect(footer).not.toContainText("12,000원");
+  await footer.getByRole("button", { name: "금액 상세" }).click();
+  const detail = page.getByLabel("Plan/Order 금액 상세");
+  await expect(detail).toContainText("이 차트 청구 가능 1건");
+  await expect(detail).toContainText("이 차트 청구 가능 6,000원");
 });
 
-test("invalid quantity keeps the last server amount and blocks billing", async ({
+test("chart billing action navigates to encounter billing without a billing POST", async ({
   page,
 }) => {
-  let mutationRequests = 0;
+  await warmChartWorkspace(page);
+  await createChart(page);
+  let billingPosts = 0;
   await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    (route) =>
-      fulfillSummary(
-        route,
-        createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
-      ),
-  );
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-drafts*",
+    `**/api/workspaces/${workspaceId}/chart/order-billing-summary*`,
     async (route) => {
-      if (route.request().method() === "PATCH") mutationRequests += 1;
+      if (route.request().method() === "POST") billingPosts += 1;
       await route.fallback();
     },
   );
 
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("100,000원");
-  await page.getByRole("textbox", { name: /수량 수정/ }).first().fill("0");
-
-  await expect(footer).toContainText("입력 확인 필요 · 금액 미반영");
-  await expect(footer).toContainText("100,000원");
-  await expect(
-    footer.getByRole("button", { name: "Order 청구" }),
-  ).toBeDisabled();
-  await page.waitForTimeout(850);
-  expect(mutationRequests).toBe(0);
+  const billingButton = page
+    .getByTestId("chart-order-footer")
+    .getByRole("button", { name: "수납에서 청구" });
+  await expect(billingButton).toBeEnabled();
+  await billingButton.click();
+  await expect(page).toHaveURL(/\/billing\?/);
+  expect(billingPosts).toBe(0);
 });
 
-test("a failed draft save restores the last server amount and blocks billing", async ({
-  page,
-}) => {
-  let mutationRequests = 0;
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    (route) =>
-      fulfillSummary(
-        route,
-        createSummary({ etag: '"billing-initial"', estimatedTotal: 100_000 }),
-      ),
-  );
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-drafts*",
-    async (route) => {
-      if (route.request().method() !== "PATCH") {
-        await route.fallback();
-        return;
-      }
-      mutationRequests += 1;
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: false, status: 500, error: "db_write_failed" }),
-      });
-    },
-  );
-
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await page.getByRole("textbox", { name: /수량 수정/ }).first().fill("2");
-  await expect(footer).toContainText("오더 예상 총액");
-  await expect.poll(() => mutationRequests, { timeout: 5_000 }).toBe(1);
-  await expect(footer).toContainText("저장 실패 · 금액 미반영");
-  await expect(footer).toContainText("100,000원");
-  await expect(
-    footer.getByRole("button", { name: "Order 청구" }),
-  ).toBeDisabled();
-});
-
-test("a persisted draft is reflected when the following confirmation fails", async ({
-  page,
-}) => {
-  let draftPersisted = false;
-  let readsAfterDraft = 0;
-  let confirmationRequests = 0;
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    async (route) => {
-      if (draftPersisted) readsAfterDraft += 1;
-      await fulfillSummary(
-        route,
-        createSummary({
-          etag: draftPersisted ? '"billing-draft-saved"' : '"billing-initial"',
-          estimatedTotal: draftPersisted ? 104_500 : 100_000,
-        }),
-      );
-    },
-  );
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-drafts*",
-    async (route) => {
-      if (route.request().method() !== "PATCH") {
-        await route.fallback();
-        return;
-      }
-      const response = await route.fetch();
-      draftPersisted = true;
-      const responseBody = (await response.json()) as Record<string, unknown>;
-      await route.fulfill({
-        response,
-        contentType: "application/json",
-        body: JSON.stringify({
-          ...responseBody,
-          billingSummary: createSummary({
-            etag: '"billing-draft-saved"',
-            estimatedTotal: 104_500,
-          }),
-        }),
-      });
-    },
-  );
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-actions",
-    async (route) => {
-      if (route.request().method() !== "PATCH") {
-        await route.fallback();
-        return;
-      }
-      confirmationRequests += 1;
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: false, status: 500, error: "db_write_failed" }),
-      });
-    },
-  );
-
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("100,000원");
-  await page.getByLabel("Maropitant 16mg T 수량 수정").fill("3");
-  await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
-  await page
-    .getByRole("toolbar", { name: "선택 행 작업" })
-    .getByRole("button", { name: "선택 확정" })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Order 확정 확인" })
-    .getByRole("button", { name: "Order 확정" })
-    .click();
-
-  await expect.poll(() => confirmationRequests).toBeGreaterThan(0);
-  expect(readsAfterDraft).toBe(0);
-  await expect(footer).toContainText("104,500원");
-});
-
-test("execution revision conflicts invalidate and revalidate billing authority", async () => {
+test("source contract keeps UI scope local while server mutations retain chart ownership", async () => {
   const moduleSource = await readFile(
     path.join(process.cwd(), "src/features/chart/module.tsx"),
     "utf8",
   );
-  const mutationFailure = moduleSource.slice(
-    moduleSource.indexOf("const commitOrderMutation = async () =>"),
-    moduleSource.indexOf("const payload = result.mutation.order"),
+  const draftServerSource = await readFile(
+    path.join(
+      process.cwd(),
+      "src/features/chart/server-order-draft-persistence-core.ts",
+    ),
+    "utf8",
   );
-  expect(mutationFailure).toContain(
-    'if (result.denialReason === "revision_conflict")',
-  );
-  expect(mutationFailure).toContain('setBillingSummaryFreshness("stale")');
-  expect(mutationFailure).toContain("void refreshBillingSummary()");
-});
-
-test("a local estimate never enables a billing POST", async ({ page }) => {
-  let billingRequests = 0;
-  await page.route(
-    "**/api/workspaces/clair-demo/chart/order-billing-summary*",
-    async (route) => {
-      if (route.request().method() === "POST") billingRequests += 1;
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ ok: false, status: 500, error: "db_read_failed" }),
-      });
-    },
+  const actionServerSource = await readFile(
+    path.join(
+      process.cwd(),
+      "src/features/chart/server-order-action-persistence-core.ts",
+    ),
+    "utf8",
   );
 
-  await page.goto(scenarioUrl);
-  const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("서버 확인 전 예상 총액");
-  await expect(footer).toContainText("최신 금액 확인 필요");
-  await expect(
-    footer.getByRole("button", { name: "Order 청구" }),
-  ).toBeDisabled();
-  expect(billingRequests).toBe(0);
+  expect(moduleSource).not.toContain("EncounterOrderArea");
+  expect(moduleSource).not.toContain("처방 조회 범위");
+  expect(moduleSource).toContain(
+    "const effectiveBillingSummary = localBillingSummary",
+  );
+  expect(moduleSource).toContain("onNavigateToBilling?.(");
+  expect(moduleSource).not.toContain("requestChartOrderBillingRoute");
+  expect(draftServerSource).toContain("order_chart_mismatch");
+  expect(actionServerSource).toContain(
+    "(row.originChartId ?? null) !== (chartId ?? null)",
+  );
 });

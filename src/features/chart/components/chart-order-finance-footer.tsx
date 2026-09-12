@@ -120,7 +120,7 @@ export function ChartOrderFinanceFooter({
           disabled={!canRequestBilling || requesting}
           onClick={onRequestBilling}
         >
-          {requesting ? "청구 중" : "Order 청구"}
+          {requesting ? "이동 중" : "수납에서 청구"}
         </Button>
         <span className="sr-only" aria-live="polite">{error}</span>
       </div>
@@ -174,7 +174,7 @@ export function ChartOrderBillingDetailAside({
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--emr-border-default)] px-4">
         <div>
           <p className="text-[10px] font-semibold tracking-wide text-[var(--emr-text-tertiary)]">PLAN/ORDER</p>
-          <h3 className="text-sm font-semibold">청구 금액 상세</h3>
+          <h3 className="text-sm font-semibold">이 차트 금액 상세</h3>
         </div>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>닫기</Button>
       </header>
@@ -184,13 +184,13 @@ export function ChartOrderBillingDetailAside({
             <span>
               {amountLabel}
             </span>
-            <span>청구 가능 {counts.requestable}건</span>
+            <span>이 차트 청구 가능 {counts.requestable}건</span>
           </div>
           <p className="mt-1 text-[28px] font-bold leading-9 tabular-nums text-[var(--emr-text-accent)]">
             {formatWon(amounts.estimatedTotal)}
           </p>
           <p className="mt-1 text-xs text-[var(--emr-text-secondary)]">
-            확정 전 금액은 예상에만 포함되며 현재 청구에서는 제외돼요.
+            확정 전 금액은 예상에만 포함돼요. 접수 전체 청구와 결제는 수납에서 확인해 주세요.
           </p>
           {freshnessText ? (
             <div className="mt-3 flex items-center justify-between gap-3">
@@ -247,9 +247,10 @@ export function ChartOrderBillingDetailAside({
             <MoneyRow label="현재 발생 금액" value={amounts.gross} />
             <MoneyRow label="할인" value={-amounts.discount} tone="success" />
             {amounts.surcharge > 0 ? <MoneyRow label="할증" value={amounts.surcharge} /> : null}
-            {amounts.tax > 0 ? <MoneyRow label="세금" value={amounts.tax} /> : null}
-            {amounts.paid > 0 ? <MoneyRow label="기수납" value={-amounts.paid} tone="success" /> : null}
           </dl>
+          <p className="mt-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
+            세금·기수납·접수 전체 합계는 다른 차트 오더와 섞지 않고 수납 화면에서 계산해요.
+          </p>
         </section>
 
         {summary.unfinishedOrders.length > 0 ? (
@@ -268,14 +269,14 @@ export function ChartOrderBillingDetailAside({
         {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
       </div>
       <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--emr-border-default)] p-3">
-        <p className="text-xs text-[var(--emr-text-secondary)]">현재 청구 {formatWon(amounts.requestableTotal)}</p>
+        <p className="text-xs text-[var(--emr-text-secondary)]">이 차트 청구 가능 {formatWon(amounts.requestableTotal)}</p>
         <Button
           type="button"
           size="sm"
           disabled={!canRequestBilling || requesting}
           onClick={onRequestBilling}
         >
-          {requesting ? "청구 중" : "Order 청구"}
+          {requesting ? "이동 중" : "수납에서 청구"}
         </Button>
       </footer>
     </aside>
@@ -311,8 +312,8 @@ function getBillingAmountLabel(
   displayState: ChartOrderBillingAmountDisplayState,
   hasAuthoritativeSummary: boolean,
 ) {
-  if (displayState === "preview") return "오더 예상 총액";
-  return hasAuthoritativeSummary ? "청구 예상 총액" : "서버 확인 전 예상 총액";
+  if (displayState === "preview") return "이 차트 오더 예상";
+  return hasAuthoritativeSummary ? "이 차트 오더 합계" : "이 차트 오더 예상";
 }
 
 function getBillingStatusText(
@@ -320,7 +321,7 @@ function getBillingStatusText(
   freshness: ChartOrderBillingSummaryFreshness,
 ) {
   if (displayState === "preview") return "예상 · 저장 중";
-  if (displayState === "invalid") return "입력 확인 필요 · 금액 미반영";
-  if (displayState === "save_error") return "저장 실패 · 금액 미반영";
+  if (displayState === "invalid") return "입력 확인 필요 · 예상 금액";
+  if (displayState === "save_error") return "저장 실패 · 예상 금액";
   return getFreshnessText(freshness);
 }

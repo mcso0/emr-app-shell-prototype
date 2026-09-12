@@ -314,6 +314,6 @@ test("live billing UI keeps protected snapshots out of the actor-agnostic global
     "utf8",
   );
   expect(chartModule).toContain(
-    'key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}`}',
+    'key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${activeChartId}`}',
   );
 });

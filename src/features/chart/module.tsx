@@ -4034,49 +4034,6 @@ async function saveChartOrderActualDispenseRoute({
   }
 }
 
-async function requestChartOrderBillingRoute({
-  acknowledgeUnfinished,
-  actorHeaders,
-  encounterId,
-  expectedEtag,
-  idempotencyKey,
-  workspaceId,
-}: {
-  acknowledgeUnfinished: boolean;
-  actorHeaders?: Record<string, string>;
-  encounterId: string;
-  expectedEtag: string;
-  idempotencyKey: string;
-  workspaceId: string;
-}): Promise<ChartOrderBillingSummaryRouteResponse> {
-  try {
-    const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-billing-summary`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "if-match": expectedEtag,
-          ...actorHeaders,
-        },
-        body: JSON.stringify({
-          acknowledgeUnfinished,
-          encounterId,
-          expectedEtag,
-          idempotencyKey,
-        }),
-      },
-    );
-    const body =
-      (await response.json()) as ChartOrderBillingSummaryRouteResponse;
-    return body.ok
-      ? { ...body, status: 200 }
-      : { ...body, status: response.status };
-  } catch {
-    return { ok: false, status: 500, error: "network_error" };
-  }
-}
-
 async function saveChartOrderExecutionMutationRoute({
   action,
   actorHeaders,
@@ -6629,19 +6586,6 @@ const getChartOrderDraftAmountBasis = (row: ChartOrderDraftRow) => {
   return typeof runtimeBasis === "string" ? runtimeBasis : "unit_price";
 };
 
-function getChartOrderDraftBillingProjection(rows: ChartOrderDraftRow[]) {
-  const activeDraftRows = rows.filter(
-    (row) => !isChartOrderConfirmedRow(row) && row.order.status !== "cancelled",
-  );
-  return {
-    amount: activeDraftRows.reduce(
-      (sum, row) => sum + getChartOrderDraftBillableAmount(row),
-      0,
-    ),
-    rootCount: activeDraftRows.filter(isChartOrderTopLevelRow).length,
-  };
-}
-
 function getChartOrderDraftBillableAmount(row: ChartOrderDraftRow) {
   if (
     row.order.status === "cancelled" ||
@@ -6684,36 +6628,14 @@ function getChartOrderDraftBillableAmount(row: ChartOrderDraftRow) {
   }, 0);
 }
 
-function buildChartOrderBillingPreview({
-  authoritative,
-  committedRows,
-  draftRows,
-}: {
-  authoritative: ChartOrderBillingSummary;
-  committedRows: ChartOrderDraftRow[];
-  draftRows: ChartOrderDraftRow[];
-}) {
-  const committed = getChartOrderDraftBillingProjection(committedRows);
-  const current = getChartOrderDraftBillingProjection(draftRows);
-  const amountDelta = current.amount - committed.amount;
-  const rootCountDelta = current.rootCount - committed.rootCount;
-  return {
-    ...authoritative,
-    amounts: {
-      ...authoritative.amounts,
-      draft: Math.max(0, authoritative.amounts.draft + amountDelta),
-      estimatedTotal: Math.max(
-        0,
-        authoritative.amounts.estimatedTotal + amountDelta,
-      ),
-      gross: Math.max(0, authoritative.amounts.gross + amountDelta),
-    },
-    orderCounts: {
-      ...authoritative.orderCounts,
-      draft: Math.max(0, authoritative.orderCounts.draft + rootCountDelta),
-      total: Math.max(0, authoritative.orderCounts.total + rootCountDelta),
-    },
-  } satisfies ChartOrderBillingSummary;
+function getChartOrderScopedChargeAmount(row: ChartOrderDraftRow) {
+  const baseAmount = getChartOrderDraftBillableAmount(row);
+  if (baseAmount <= 0) return 0;
+  const override = getChartOrderBillingOverride(row);
+  return typeof override.chargeAmountKrw === "number" &&
+    Number.isSafeInteger(override.chargeAmountKrw)
+    ? Math.max(0, override.chargeAmountKrw)
+    : Math.max(0, baseAmount + getChartOrderAdjustmentAmount(row));
 }
 
 const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
@@ -9831,16 +9753,6 @@ function createChartOrderConfirmationIdempotencyKey() {
   return `chart-confirm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function createChartOrderBillingIdempotencyKey() {
-  if (
-    typeof crypto !== "undefined" &&
-    typeof crypto.randomUUID === "function"
-  ) {
-    return `chart-billing-${crypto.randomUUID()}`;
-  }
-  return `chart-billing-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
 function createChartOrderPrebillingIdempotencyKey() {
   if (
     typeof crypto !== "undefined" &&
@@ -9892,12 +9804,14 @@ function isCatalogCandidateTargetingPatient(
 
 function buildChartOrderDraftRowFromCatalog({
   bundle,
+  chartId,
   row,
   setSelectionIntent,
   setPreview,
   sortOrder,
 }: {
   bundle: ChartBundle;
+  chartId: string;
   row: ChartOrderCatalogSearchRow;
   setSelectionIntent?: ChartOrderSetSelectionIntent;
   setPreview?: ChartOrderSetPreview;
@@ -9921,6 +9835,7 @@ function buildChartOrderDraftRowFromCatalog({
     workspaceCatalogRevision: row.workspaceCatalogRevision,
     categoryGroup: row.categoryGroup === "set" ? undefined : row.categoryGroup,
     appliedSnapshot: row.appliedSnapshot as Record<string, unknown>,
+    originChartId: chartId,
     orderType,
     displayName: row.displayName,
     status: "requested",
@@ -10850,22 +10765,6 @@ type ChartOrderSetPreviewItemState = {
   selected: boolean;
 };
 
-function EncounterOrderArea({
-  initialOrderScope,
-  ...props
-}: Omit<React.ComponentProps<typeof OrderArea>, "orderScope" | "onOrderScopeChange"> & {
-  initialOrderScope: "chart" | "legacy";
-}) {
-  const [orderScope, setOrderScope] = useState<"chart" | "legacy" | "encounter">(
-    initialOrderScope,
-  );
-  return <OrderArea {...props} key={`${props.chartId ?? "none"}:${orderScope}`} orderScope={orderScope} onOrderScopeChange={async (scope) => {
-    const flush = useChartStore.getState().flushOrderEdits;
-    if (flush && !await flush()) return;
-    setOrderScope(scope);
-  }} />;
-}
-
 const applyEncounterOrderDrafts = applyPersistedOrderDrafts;
 const applyEncounterOrderActions = applyPersistedOrderActions;
 
@@ -10874,13 +10773,12 @@ function OrderArea({
   bundle,
   chartId,
   draftWriteDisabled,
-  orderScope,
-  onOrderScopeChange,
   collapseContentId,
   collapsed,
   loading,
   onCollapsedChange,
   onNavigateToBilling,
+  onOrderCountChange,
   orderGroups,
   writeDisabled: inheritedWriteDisabled,
 }: {
@@ -10888,26 +10786,50 @@ function OrderArea({
   bundle: ChartBundle;
   chartId?: string;
   draftWriteDisabled: boolean;
-  orderScope: "chart" | "legacy" | "encounter";
-  onOrderScopeChange: (scope: "chart" | "legacy" | "encounter") => void;
   collapseContentId: string;
   collapsed: boolean;
   loading: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  onNavigateToBilling?: (invoiceId: string) => void;
+  onNavigateToBilling?: (invoiceId?: string) => void;
+  onOrderCountChange?: (count: number) => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
-  const writeDisabled = inheritedWriteDisabled || orderScope === "encounter" || (orderScope === "chart" && !chartId);
-  const mutationChartId = orderScope === "chart" ? chartId : undefined;
-  const inOrderScope = useCallback((row: ChartOrderDraftRow) => orderScope === "encounter" ||
-    (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) === (mutationChartId ?? null), [orderScope, mutationChartId]);
-  const applyPersistedOrderDrafts: typeof applyEncounterOrderDrafts = useCallback((...args) => applyEncounterOrderDrafts(...args).filter(inOrderScope), [inOrderScope]);
+  const writeDisabled = inheritedWriteDisabled || !chartId;
+  const mutationChartId = chartId;
+  const inOrderScope = useCallback(
+    (row: ChartOrderDraftRow) =>
+      Boolean(mutationChartId) &&
+      (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) ===
+        mutationChartId,
+    [mutationChartId],
+  );
+  const orderFallbackRows = useMemo(
+    () => getChartOrderDraftRows(orderGroups),
+    [orderGroups],
+  );
+  const applyPersistedOrderDrafts: typeof applyEncounterOrderDrafts =
+    useCallback(
+      (rows, snapshots, workspaceId, options) => {
+        const rowIds = new Set(rows.map((row) => row.order.id));
+        const fallbackRows = [
+          ...rows,
+          ...orderFallbackRows.filter((row) => !rowIds.has(row.order.id)),
+        ];
+        return applyEncounterOrderDrafts(
+          fallbackRows,
+          snapshots,
+          workspaceId,
+          options,
+        ).filter(inOrderScope);
+      },
+      [inOrderScope, orderFallbackRows],
+    );
   const applyPersistedOrderActions: typeof applyEncounterOrderActions = useCallback((...args) => applyEncounterOrderActions(...args).filter(inOrderScope), [inOrderScope]);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const initialDraftRows = useMemo(
-    () => getChartOrderDraftRows(orderGroups).filter((row) => orderScope === "encounter" || (row.order.originChartId ?? null) === (mutationChartId ?? null)),
-    [orderGroups, orderScope, mutationChartId],
+    () => orderFallbackRows.filter(inOrderScope),
+    [inOrderScope, orderFallbackRows],
   );
   const [committedRows, setCommittedRows] =
     useState<ChartOrderDraftRow[]>(initialDraftRows);
@@ -10941,11 +10863,10 @@ function OrderArea({
     undefined,
   );
   const billingSummaryRequestSequenceRef = useRef(0);
-  const [billingSummaryFreshness, setBillingSummaryFreshness] =
+  const [, setBillingSummaryFreshness] =
     useState<ChartOrderBillingSummaryFreshness>("loading");
   const [billingDrawerOpen, setBillingDrawerOpen] = useState(false);
-  const [billingRequesting, setBillingRequesting] = useState(false);
-  const [billingSummaryError, setBillingSummaryError] = useState<string>();
+  const [, setBillingSummaryError] = useState<string>();
   const [billingRequestError, setBillingRequestError] = useState<string>();
   const [prebillingSavingOrderIds, setPrebillingSavingOrderIds] = useState<
     Set<string>
@@ -10967,7 +10888,7 @@ function OrderArea({
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
   const [catalogInitialQuery, setCatalogInitialQuery] = useState("");
   const [quickAddRequested, setQuickAddOpen] = useState(false);
-  const quickAddOpen = quickAddRequested && draftRows.length > 0 && !writeDisabled && orderScope === "chart";
+  const quickAddOpen = quickAddRequested && draftRows.length > 0 && !writeDisabled;
   const [quickAddQuery, setQuickAddQuery] = useState("");
   const [quickAddActiveIndex, setQuickAddActiveIndex] = useState(-1);
   const [quickAddedSourceKey, setQuickAddedSourceKey] = useState<string>();
@@ -11061,10 +10982,6 @@ function OrderArea({
     idempotencyKey: string;
     orderIds: string[];
   } | null>(null);
-  const pendingBillingRequestRef = useRef<{
-    expectedEtag: string;
-    idempotencyKey: string;
-  } | null>(null);
   const orderLoading = loading || orderDraftSaveState === "loading";
   const pendingRemovalOrderIds = useMemo(
     () =>
@@ -11082,8 +10999,8 @@ function OrderArea({
       ),
     [draftRows, pendingRemovedRootOrderIds],
   );
-  const allOrders = useMemo(
-    () => draftRows.map(({ order }) => order),
+  const topLevelOrderRows = useMemo(
+    () => draftRows.filter(isChartOrderTopLevelRow),
     [draftRows],
   );
   const catalogDialogSelection = useMemo(() => {
@@ -11109,31 +11026,41 @@ function OrderArea({
       lockedSourceKeys,
     };
   }, [draftRows]);
-  const orderCountByType = draftRows.reduce<Record<ClinicalOrderType, number>>(
-    (counts, row) => ({
-      ...counts,
-      [getChartOrderClinicalType(row)]:
-        counts[getChartOrderClinicalType(row)] + 1,
-    }),
+  const orderRootId = useCallback(
+    (row: ChartOrderDraftRow) =>
+      row.runtimeRow?.parentOrderId ?? row.order.id,
+    [],
+  );
+  const orderCountByType = draftRows.reduce<Record<ClinicalOrderType, Set<string>>>(
+    (counts, row) => {
+      counts[getChartOrderClinicalType(row)].add(orderRootId(row));
+      return counts;
+    },
     {
-      clinical_lab: 0,
-      consultation: 0,
-      dispensing: 0,
-      external_lab: 0,
-      hospitalization: 0,
-      imaging: 0,
-      other: 0,
-      system_exam: 0,
-      treatment: 0,
+      clinical_lab: new Set(),
+      consultation: new Set(),
+      dispensing: new Set(),
+      external_lab: new Set(),
+      hospitalization: new Set(),
+      imaging: new Set(),
+      other: new Set(),
+      system_exam: new Set(),
+      treatment: new Set(),
     },
   );
   const orderTabItems = chartOrderTabs.map((tab) => ({
     ...tab,
-    count: tab.value === "all" ? allOrders.length : orderCountByType[tab.value],
+    count:
+      tab.value === "all"
+        ? topLevelOrderRows.length
+        : orderCountByType[tab.value].size,
   }));
+  const filteredRootIds =
+    orderFilter === "all"
+      ? null
+      : orderCountByType[orderFilter];
   const filteredOrderRows = draftRows.filter(
-    (row) =>
-      orderFilter === "all" || getChartOrderClinicalType(row) === orderFilter,
+    (row) => !filteredRootIds || filteredRootIds.has(orderRootId(row)),
   );
   const visibleOrderRows = filteredOrderRows;
   const quickAddedRow = draftRows.find((row) => getChartDraftRowCatalogSourceKey(row) === quickAddedSourceKey);
@@ -11188,7 +11115,7 @@ function OrderArea({
   const selectedAmount = draftRows.reduce((sum, row) => {
     if (!selectedOrderIds.has(row.order.id)) return sum;
 
-    return sum + (getDraftLineTotal(row) ?? 0);
+    return sum + getChartOrderScopedChargeAmount(row);
   }, 0);
   const localBillingSummary = useMemo<ChartOrderBillingSummary>(() => {
     const activeRows = draftRows.filter(
@@ -11206,19 +11133,36 @@ function OrderArea({
       (row) => !isChartOrderConfirmedRow(row),
     );
     const confirmedAmount = confirmedRows.reduce(
-      (sum, row) => sum + getChartOrderDraftBillableAmount(row),
+      (sum, row) => sum + getChartOrderScopedChargeAmount(row),
       0,
     );
     const draftAmount = draftOnlyRows.reduce(
-      (sum, row) => sum + getChartOrderDraftBillableAmount(row),
+      (sum, row) => sum + getChartOrderScopedChargeAmount(row),
+      0,
+    );
+    const billableRows = activeRows.filter(
+      (row) => getChartOrderDraftBillableAmount(row) > 0,
+    );
+    const discount = billableRows.reduce(
+      (sum, row) => sum + Math.max(0, -getChartOrderAdjustmentAmount(row)),
+      0,
+    );
+    const surcharge = billableRows.reduce(
+      (sum, row) => sum + Math.max(0, getChartOrderAdjustmentAmount(row)),
       0,
     );
     const requestableRows = confirmedRows.filter(
-      (row) => row.billingCandidateStatus === "candidate_created",
+      (row) =>
+        row.billingCandidateStatus === "candidate_created" &&
+        getChartOrderScopedChargeAmount(row) > 0,
     );
-    const requestedRows = confirmedRows.filter(
+    const requestableRootIds = new Set(
+      requestableRows.map((row) => orderRootId(row)),
+    );
+    const requestedRows = confirmedTopLevelRows.filter(
       (row) => row.billingCandidateStatus === "invoice_linked",
     );
+    const gross = confirmedAmount + draftAmount + discount - surcharge;
     return {
       workspaceId: bundle.encounter.workspaceId,
       encounterId: bundle.encounter.id,
@@ -11235,31 +11179,34 @@ function OrderArea({
           (row) => row.order.status === "re_requested",
         ).length,
         requested: requestedRows.length,
-        requestable: requestableRows.length,
+        requestable: requestableRootIds.size,
         cancelled: draftRows.filter(
           (row) =>
             row.order.status === "cancelled" && isChartOrderTopLevelRow(row),
         ).length,
       },
       amounts: {
-        gross: confirmedAmount + draftAmount,
+        gross,
         confirmed: confirmedAmount,
         draft: draftAmount,
-        discount: 0,
-        surcharge: 0,
+        discount,
+        surcharge,
         tax: 0,
         paid: 0,
         outstanding: 0,
         estimatedTotal: confirmedAmount + draftAmount,
         requestableTotal: requestableRows.reduce(
-          (sum, row) => sum + getChartOrderDraftBillableAmount(row),
+          (sum, row) => sum + getChartOrderScopedChargeAmount(row),
           0,
         ),
       },
       requestableOrderIds: requestableRows.map((row) => row.order.id),
       unfinishedOrders: [],
     };
-  }, [bundle.encounter.id, bundle.encounter.workspaceId, draftRows]);
+  }, [bundle.encounter.id, bundle.encounter.workspaceId, draftRows, orderRootId]);
+  useEffect(() => {
+    onOrderCountChange?.(localBillingSummary.orderCounts.total);
+  }, [localBillingSummary.orderCounts.total, onOrderCountChange]);
   const selectedOrderRows = draftRows.filter(({ order }) =>
     selectedOrderIds.has(order.id),
   );
@@ -11523,7 +11470,7 @@ function OrderArea({
     setCatalogSearchStatus("ready");
   };
   const openCatalogDialog = () => {
-    if (writeDisabled || draftWriteDisabled || orderScope !== "chart") return;
+    if (writeDisabled || draftWriteDisabled) return;
     setCatalogInitialQuery("");
     setQuickAddReturn(false);
     setQuickAddOpen(false);
@@ -11532,7 +11479,7 @@ function OrderArea({
     void loadCatalogRows();
   };
   const openQuickAdd = () => {
-    if (writeDisabled || draftWriteDisabled || orderScope !== "chart" || !draftRowsRef.current.length || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict") return;
+    if (writeDisabled || draftWriteDisabled || !draftRowsRef.current.length || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict") return;
     setQuickAddReturn(false);
     setQuickAddOpen(true);
     setQuickAddActiveIndex(-1);
@@ -11550,7 +11497,7 @@ function OrderArea({
     return quickAddInputRef.current ?? false;
   };
   const openDetailedOrderSearch = () => {
-    if (writeDisabled || draftWriteDisabled || orderScope !== "chart") return;
+    if (writeDisabled || draftWriteDisabled) return;
     setQuickAddReturn(true);
     setCatalogInitialQuery(quickAddQuery);
     setQuickAddOpen(false);
@@ -11614,6 +11561,7 @@ function OrderArea({
     const appendedRows = rows.map((row, index) =>
       buildChartOrderDraftRowFromCatalog({
         bundle,
+        chartId: mutationChartId!,
         row,
         sortOrder: (firstSortOrder + index) * 10,
       }),
@@ -11684,7 +11632,7 @@ function OrderArea({
     rows: ChartOrderCatalogSearchRow[],
     selectedSourceKeys: Set<string>,
   ) => {
-    if (writeDisabled || draftWriteDisabled || orderScope !== "chart") return;
+    if (writeDisabled || draftWriteDisabled) return;
     const currentRows = draftRowsRef.current;
     const childRowsByParentId = new Map<string, ChartOrderDraftRow[]>();
     currentRows.forEach((row) => {
@@ -11814,6 +11762,7 @@ function OrderArea({
 
     const appendedSetRow = buildChartOrderDraftRowFromCatalog({
       bundle,
+      chartId: mutationChartId!,
       row: setCandidate,
       setPreview: preview,
       setSelectionIntent: selectionIntent,
@@ -12034,7 +11983,6 @@ function OrderArea({
     hasUnsavedEdits: hasDraftChanges,
     mutationInFlight:
       orderDraftSaveState === "saving" ||
-      billingRequesting ||
       Boolean(orderMutationDraft?.saving),
     onInvalidated: refreshBillingSummary,
     workspaceId: bundle.encounter.workspaceId,
@@ -12372,8 +12320,8 @@ function OrderArea({
   });
   const orderSwitchBlockedRef = useRef(false);
   useLayoutEffect(() => {
-    orderSwitchBlockedRef.current = billingRequesting || Boolean(orderMutationDraft?.saving) || orderDraftSaveState === "saving" && !orderDraftSavePromiseRef.current;
-  }, [billingRequesting, orderMutationDraft?.saving, orderDraftSaveState]);
+    orderSwitchBlockedRef.current = Boolean(orderMutationDraft?.saving) || orderDraftSaveState === "saving" && !orderDraftSavePromiseRef.current;
+  }, [orderMutationDraft?.saving, orderDraftSaveState]);
   useEffect(() => {
     const flush = async () => {
       if (orderSwitchBlockedRef.current || prebillingSavingOrderIdsRef.current.size || actualDispenseSavingOrderIdsRef.current.size || intendedAssigneeSavingOrderIdsRef.current.size) {
@@ -13303,7 +13251,6 @@ function OrderArea({
     });
     if (!result.ok) {
       if (result.denialReason === "revision_conflict") {
-        pendingBillingRequestRef.current = null;
         setBillingSummaryFreshness("stale");
         setBillingSummaryError(
           "다른 사용자가 오더를 변경했어요. 최신 금액을 다시 확인해 주세요.",
@@ -13421,10 +13368,8 @@ function OrderArea({
           ? "충돌 해결 필요"
           : hasDraftChanges
             ? `변경 대기 ${changedDraftOrderCount}건${draftSaveInvalidOrderIds.size ? ` · 입력 확인 필요 ${draftSaveInvalidOrderIds.size}건` : ""}`
-            : orderDraftSaveState === "saved"
-              ? "저장됨"
-              : "변경 없음";
-  const hasAuthoritativeBillingSummary = Boolean(billingSummary);
+            : "저장됨";
+  const hasAuthoritativeBillingSummary = orderDraftSaveState !== "loading";
   const billingAmountDisplayState: ChartOrderBillingAmountDisplayState =
     hasDraftChanges && draftSaveInvalidOrderIds.size > 0
       ? "invalid"
@@ -13433,22 +13378,10 @@ function OrderArea({
         : hasDraftChanges
           ? "preview"
           : "authoritative";
-  const effectiveBillingSummary =
-    billingSummary && billingAmountDisplayState === "preview"
-      ? buildChartOrderBillingPreview({
-          authoritative: billingSummary,
-          committedRows,
-          draftRows,
-        })
-      : (billingSummary ?? localBillingSummary);
-  const billingError = billingRequestError ?? billingSummaryError;
+  const effectiveBillingSummary = localBillingSummary;
+  const billingError = billingRequestError;
   const canRequestBilling =
-    billingAmountDisplayState === "authoritative" &&
-    billingSummaryFreshness === "fresh" &&
-    hasAuthoritativeBillingSummary &&
-    !hasDraftChanges &&
-    !billingRequesting &&
-    effectiveBillingSummary.orderCounts.requestable > 0;
+    Boolean(onNavigateToBilling) && orderDraftSaveState !== "loading";
   const orderFooterAccessibilitySummary = [
     `선택 오더 ${selectedOrderIds.size}건`,
     `선택 오더 합계 ${selectedAmount.toLocaleString()}원`,
@@ -13456,94 +13389,9 @@ function OrderArea({
   ]
     .filter(Boolean)
     .join(" · ");
-  const requestEncounterBilling = async (acknowledgeUnfinished: boolean) => {
-    if (hasDraftChanges) {
-      setBillingRequestError("변경한 오더를 먼저 업데이트한 뒤 청구해 주세요.");
-      setBillingDrawerOpen(true);
-      return;
-    }
-    const authoritativeSummary = billingSummaryRef.current;
-    if (billingSummaryFreshness !== "fresh" || !authoritativeSummary) {
-      setBillingRequestError("최신 금액을 확인한 뒤 다시 청구해 주세요.");
-      setBillingDrawerOpen(true);
-      if (
-        billingSummaryFreshness !== "loading" &&
-        billingSummaryFreshness !== "refreshing"
-      ) {
-        void refreshBillingSummary();
-      }
-      return;
-    }
-    if (
-      authoritativeSummary.unfinishedOrders.length > 0 &&
-      !acknowledgeUnfinished
-    ) {
-      setBillingDrawerOpen(true);
-      setBillingRequestError(
-        "진행 중 오더를 확인한 뒤 중간 정산으로 청구해 주세요.",
-      );
-      return;
-    }
-    setBillingRequesting(true);
+  const openEncounterBilling = () => {
     setBillingRequestError(undefined);
-    const pendingRequest =
-      pendingBillingRequestRef.current?.expectedEtag ===
-      authoritativeSummary.etag
-        ? pendingBillingRequestRef.current
-        : {
-            expectedEtag: authoritativeSummary.etag,
-            idempotencyKey: createChartOrderBillingIdempotencyKey(),
-          };
-    pendingBillingRequestRef.current = pendingRequest;
-    const result = await requestChartOrderBillingRoute({
-      acknowledgeUnfinished,
-      actorHeaders,
-      encounterId: bundle.encounter.id,
-      expectedEtag: authoritativeSummary.etag,
-      idempotencyKey: pendingRequest.idempotencyKey,
-      workspaceId: bundle.encounter.workspaceId,
-    });
-    setBillingRequesting(false);
-    if (!result.ok) {
-      setBillingDrawerOpen(true);
-      setBillingRequestError(
-        result.error === "revision_conflict"
-          ? "금액이 변경됐어요. 최신 금액을 다시 확인해 주세요."
-          : result.error === "unfinished_ack_required"
-            ? "진행 중 오더를 확인한 뒤 다시 청구해 주세요."
-            : result.error === "no_billable_orders"
-              ? "현재 청구할 수 있는 확정 오더가 없습니다."
-              : result.error === "billing_authority_incomplete"
-                ? "가격 기준·청구 단위·과세 설정이 완전한 오더만 청구할 수 있어요."
-                : result.error === "vat_calculation_policy_missing"
-                  ? "병원 청구 설정에서 VAT 계산 방식을 먼저 정해 주세요."
-                  : result.error === "returned_work_blocks_billing"
-                    ? "반려된 업무를 수정·재확정하거나 취소한 뒤 청구해 주세요."
-              : result.denialReason === "permission_missing"
-                ? "Order 청구 권한이 없습니다."
-                : "Order 청구를 완료하지 못했어요.",
-      );
-      if (result.error === "revision_conflict") {
-        pendingBillingRequestRef.current = null;
-        setBillingSummaryFreshness("stale");
-        setBillingSummaryError(
-          "최신 금액을 불러오지 못했어요. 다시 확인해 주세요.",
-        );
-        setOrderDraftReloadKey((key) => key + 1);
-        void refreshBillingSummary();
-      }
-      return;
-    }
-    pendingBillingRequestRef.current = null;
-    if (!acceptAuthoritativeBillingSummary(result.summary)) {
-      setBillingRequestError("청구 결과의 금액 범위를 확인하지 못했어요.");
-      setBillingDrawerOpen(true);
-      return;
-    }
-    setBillingRequestError(undefined);
-    toast.success("확정된 오더를 청구 화면으로 보냈어요.");
-    if (result.summary.invoiceId)
-      onNavigateToBilling?.(result.summary.invoiceId);
+    onNavigateToBilling?.(billingSummaryRef.current?.invoiceId ?? undefined);
   };
   useEffect(() => {
     if (!billingDrawerOpen) return;
@@ -13566,11 +13414,6 @@ function OrderArea({
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Plan/Order
         </h2>
-        <select aria-label="처방 조회 범위" className="h-7 rounded-md border border-input bg-background px-2 text-xs" value={orderScope} onChange={(event) => onOrderScopeChange(event.target.value as typeof orderScope)}>
-          <option value="chart">이 차트 처방</option>
-          <option value="legacy">기존 접수 처방</option>
-          <option value="encounter">접수 전체 처방 · 조회</option>
-        </select>
         <ChartPanelActionGroup>
           <ChartPanelCollapseButton
             collapsed={collapsed}
@@ -13586,7 +13429,7 @@ function OrderArea({
             size="icon-xs"
             className="size-7 rounded-lg text-[var(--emr-text-secondary)]"
             aria-label="Order 추가"
-            disabled={writeDisabled || draftWriteDisabled || orderScope !== "chart"}
+            disabled={writeDisabled || draftWriteDisabled}
             onClick={openCatalogDialog}
           >
             <CdsActionsPlusIcon className="size-3.5" />
@@ -13853,7 +13696,7 @@ function OrderArea({
                     <Button
                       ref={quickAddTriggerRef}
                       aria-label="Order 추가"
-                      disabled={writeDisabled || draftWriteDisabled || orderScope !== "chart" || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict"}
+                      disabled={writeDisabled || draftWriteDisabled || orderDraftSaveState === "loading" || orderDraftSaveState === "conflict"}
                       size="sm"
                       variant="outline"
                     >
@@ -14069,29 +13912,29 @@ function OrderArea({
           drawerOpen={billingDrawerOpen}
           displayState={billingAmountDisplayState}
           error={billingError}
-          freshness={billingSummaryFreshness}
+          freshness="fresh"
           hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
-          requesting={billingRequesting}
+          requesting={false}
           saveStatusText={draftStatusText}
           summary={effectiveBillingSummary}
           onOpenDetails={() => {
             setBillingDrawerOpen((open) => !open);
             setBillingRequestError(undefined);
           }}
-          onRequestBilling={() => void requestEncounterBilling(false)}
+          onRequestBilling={openEncounterBilling}
         />
         <ChartOrderBillingDetailAside
           canRequestBilling={canRequestBilling}
           displayState={billingAmountDisplayState}
           error={billingError}
-          freshness={billingSummaryFreshness}
+          freshness="fresh"
           hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
           open={billingDrawerOpen}
-          requesting={billingRequesting}
+          requesting={false}
           summary={effectiveBillingSummary}
           onClose={() => setBillingDrawerOpen(false)}
-          onRetry={() => void refreshBillingSummary()}
-          onRequestBilling={() => void requestEncounterBilling(true)}
+          onRetry={() => setOrderDraftReloadKey((key) => key + 1)}
+          onRequestBilling={openEncounterBilling}
         />
         <Dialog
           open={orderActionDialog !== null}
@@ -14669,20 +14512,13 @@ export function ChartContent({
     status: "idle" | "saving" | "error";
     message?: string;
   }>({ status: "idle" });
-  const [diagnosisState, setDiagnosisState] = useState<{
-    encounterId?: string;
-    rows: EditableDiagnosis[];
-  }>(() => ({
-    encounterId: bundle?.encounter.id,
-    rows: bundle
-      ? bundle.diagnoses.map((diagnosis, index) =>
-          toEditableDiagnosis(diagnosis, index),
-        )
-      : [],
-  }));
-  const [diagnosisContext, setDiagnosisContext] = useState<{ chartId?: string; version?: string; assessments: Diagnosis[] }>({ assessments: [] });
-  const [encounterDiagnosisViewChartId, setEncounterDiagnosisViewChartId] = useState("");
-  const showingRecordedAssessments = chartSigned && encounterDiagnosisViewChartId !== activeChartId;
+  const [diagnosisContext, setDiagnosisContext] = useState<{
+    chartId?: string;
+    version?: string;
+    assessments: EditableDiagnosis[];
+  }>({ assessments: [] });
+  const [currentChartOrderCountState, setCurrentChartOrderCountState] =
+    useState<{ chartId?: string; count: number }>({ count: 0 });
   const [diagnosisPersistenceState, setDiagnosisPersistenceState] = useState<{
     encounterId?: string;
     status: "idle" | "loading" | "saving" | "saved" | "error";
@@ -14702,42 +14538,27 @@ export function ChartContent({
     status: "loading",
   });
 
-  if (diagnosisState.encounterId !== activeEncounterId) {
-    setDiagnosisState({
-      encounterId: activeEncounterId,
-      rows: bundle
-        ? bundle.diagnoses.map((diagnosis, index) =>
-            toEditableDiagnosis(diagnosis, index),
-          )
-        : [],
-    });
-  }
-
-  const rawDiagnosisRows = diagnosisState.rows;
-  const diagnosisRows =
-    diagnosisState.encounterId === activeEncounterId
-      ? rawDiagnosisRows
-      : bundle
-        ? bundle.diagnoses.map((diagnosis, index) =>
-            toEditableDiagnosis(diagnosis, index),
-          )
-        : [];
-  const setDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>> = (
+  const chartDiagnosisRows =
+    diagnosisContext.chartId === activeChartId
+      ? diagnosisContext.assessments
+      : [];
+  const setChartDiagnosisRows: Dispatch<SetStateAction<EditableDiagnosis[]>> = (
     nextRows,
   ) => {
-    setDiagnosisState((current) => {
+    setDiagnosisContext((current) => {
+      if (current.chartId !== activeChartId) return current;
       const rows =
         typeof nextRows === "function"
           ? (
               nextRows as (
                 currentRows: EditableDiagnosis[],
               ) => EditableDiagnosis[]
-            )(current.rows)
+            )(current.assessments)
           : nextRows;
 
       return {
         ...current,
-        rows,
+        assessments: rows,
       };
     });
   };
@@ -14746,9 +14567,19 @@ export function ChartContent({
     () => (bundleEncounterId ? getChartOrderGroups(bundleEncounterId) : []),
     [bundleEncounterId],
   );
-  const allOrders = useMemo(
-    () => orderGroups.flatMap(({ orders }) => orders),
-    [orderGroups],
+  const currentChartOrderCount =
+    currentChartOrderCountState.chartId === activeChartId
+      ? currentChartOrderCountState.count
+      : 0;
+  const handleCurrentChartOrderCountChange = useCallback(
+    (count: number) => {
+      setCurrentChartOrderCountState((current) =>
+        current.chartId === activeChartId && current.count === count
+          ? current
+          : { chartId: activeChartId, count },
+      );
+    },
+    [activeChartId],
   );
   const effectiveQueueEntry = isHistoricalView
     ? undefined
@@ -15120,17 +14951,17 @@ export function ChartContent({
       return;
     }
 
-    setDiagnosisContext({ chartId: activeChartId, version: result.version, assessments: result.assessments ?? [] });
+    setDiagnosisContext({
+      chartId: activeChartId,
+      version: result.version,
+      assessments: (result.assessments ?? []).map((diagnosis, index) =>
+        toEditableDiagnosis(diagnosis, index),
+      ),
+    });
     if (result.chart) {
       useChartStore.getState().updateEncounterChart(encounterCharts.scope, result.chart);
       setPersistedSoapState({ encounterId: activeEncounterId, chartId: activeChartId, soapNote: result.chart, status: "idle" });
     }
-    setDiagnosisState({
-      encounterId: activeEncounterId,
-      rows: result.diagnoses.map((diagnosis, index) =>
-        toEditableDiagnosis(diagnosis, index),
-      ),
-    });
     setDiagnosisPersistenceState({
       encounterId: activeEncounterId,
       status: "saved",
@@ -15483,10 +15314,10 @@ export function ChartContent({
       if (cancelled) return;
 
       if (result.ok) {
-        setDiagnosisContext({ chartId: activeChartId, version: result.version, assessments: result.assessments ?? [] });
-        setDiagnosisState({
-          encounterId: activeEncounterId,
-          rows: result.diagnoses.map((diagnosis, index) =>
+        setDiagnosisContext({
+          chartId: activeChartId,
+          version: result.version,
+          assessments: (result.assessments ?? []).map((diagnosis, index) =>
             toEditableDiagnosis(diagnosis, index),
           ),
         });
@@ -15602,12 +15433,12 @@ export function ChartContent({
   }
 
   const currentBundle = effectiveBundle;
-  const navigateToBilling = (invoiceId: string) => {
+  const navigateToBilling = (invoiceId?: string) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "billing",
       params: {
         encounterId: currentBundle.encounter.id,
-        invoiceId,
+        ...(invoiceId ? { invoiceId } : {}),
       },
       removeParams: ["orderId", "taskId", "historyEncounterId"],
       search: searchParams,
@@ -15642,8 +15473,8 @@ export function ChartContent({
       effectiveQueueEntry?.status === "called");
   const hasChartWorkContent =
     hasSavedSoapContent(effectiveLatestSoap) ||
-    diagnosisRows.length > 0 ||
-    allOrders.length > 0;
+    chartDiagnosisRows.length > 0 ||
+    currentChartOrderCount > 0;
   const primaryActionBusy =
     detailHydrationPending || isHistoricalView ||
     consultationFlowState.status === "saving" ||
@@ -15697,23 +15528,6 @@ export function ChartContent({
   const activeChartIsAdditional = Boolean(
     activeChartId && additionalChartIds.has(activeChartId),
   );
-  const orderRows = getChartOrderDraftRows(orderGroups);
-  const hasActiveChartOrders = Boolean(
-    activeChartId &&
-      orderRows.some(
-        (row) =>
-          (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) ===
-          activeChartId,
-      ),
-  );
-  const hasLegacyOrders = orderRows.some(
-    (row) =>
-      (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) === null,
-  );
-  const initialOrderScope: "chart" | "legacy" =
-    !activeChartIsAdditional && !hasActiveChartOrders && hasLegacyOrders
-      ? "legacy"
-      : "chart";
   const chartCreatedDate = effectiveLatestSoap
     ? getShortDateTime(effectiveLatestSoap.createdAt).slice(0, 8)
     : "";
@@ -16075,7 +15889,7 @@ export function ChartContent({
             />
             <ChartPreflightLine
               label="작성물"
-              value={`${hasSavedSoapContent(effectiveLatestSoap) ? "SOAP 있음" : "SOAP 없음"} · 진단 ${diagnosisRows.length}건 · 오더 ${allOrders.length}건`}
+              value={`${hasSavedSoapContent(effectiveLatestSoap) ? "SOAP 있음" : "SOAP 없음"} · 진단 ${chartDiagnosisRows.length}건 · 오더 ${currentChartOrderCount}건`}
             />
           </div>
           {consultationFlowState.status === "error" &&
@@ -16221,7 +16035,7 @@ export function ChartContent({
             />
             <ChartPreflightLine
               label="진단명 / 오더"
-              value={`${diagnosisRows.length}건 / ${allOrders.length}건`}
+              value={`${chartDiagnosisRows.length}건 / ${currentChartOrderCount}건`}
             />
             <ChartPreflightLine
               label="차트 상태"
@@ -16319,7 +16133,7 @@ export function ChartContent({
                 key={`chart-soap-${bundle.encounter.id}-${activeChartId}`}
                 actorHeaders={actorHeaders}
                 collapseContentId="chart-soap-panel-content"
-                diagnoses={diagnosisRows}
+                diagnoses={chartDiagnosisRows}
                 encounterId={bundle.encounter.id}
                 chartId={activeChartId}
                 loading={soapLoading}
@@ -16359,20 +16173,13 @@ export function ChartContent({
                   diagnosisCatalogState.page.systems
                 }
                 collapseContentId="chart-assessment-panel-content"
-                diagnosisRows={showingRecordedAssessments ? diagnosisContext.assessments.map((diagnosis, index) => toEditableDiagnosis(diagnosis, index)) : diagnosisRows}
-                assessmentSummary={<div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-[var(--emr-border-default)] px-3 py-1 emr-text-metadata">
-                  <span>이 차트 평가 {diagnosisContext.chartId === activeChartId ? diagnosisContext.assessments.length : 0}건 · 접수 진단 {diagnosisRows.length}건</span>
-                  {chartSigned ? <Button size="xs" variant="ghost" onClick={() => setEncounterDiagnosisViewChartId(showingRecordedAssessments ? activeChartId : "")}>
-                    {showingRecordedAssessments ? "현재 접수 진단 보기" : "당시 평가 보기"}
-                  </Button> : <Button size="xs" variant="outline" disabled={chartWriteDisabled || !activeChartId || diagnosisPersistenceState.status === "saving"}
-                    onClick={() => void handleDiagnosisRowsChange(diagnosisRows)}>현재 진단 전체를 평가 기록</Button>}
-                </div>}
+                diagnosisRows={chartDiagnosisRows}
                 loading={diagnosisLoading}
                 onCollapse={() => setClinicalPanelCollapsed("assessment", true)}
                 onDiagnosisRowsChange={handleDiagnosisRowsChange}
                 saveStatusText={diagnosisSaveStatusText}
                 searchClassificationCatalog={searchDiagnosisCatalogPage}
-                setDiagnosisRows={setDiagnosisRows}
+                setDiagnosisRows={setChartDiagnosisRows}
                 soapNote={effectiveLatestSoap}
                 writeDisabled={chartWriteDisabled || !activeChartId || chartSigned}
               />
@@ -16426,17 +16233,17 @@ export function ChartContent({
             <span className="relative h-1 w-10 rounded-full bg-[var(--clair-color-atomic-neutral-300)] transition-colors group-hover:bg-[var(--emr-state-drag)]" />
           </button>
           <div className="min-h-0 min-w-0">
-            <EncounterOrderArea
+            <OrderArea
               key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${activeChartId}`}
               actorHeaders={actorHeaders}
               bundle={bundle}
               chartId={activeChartId || undefined}
-              initialOrderScope={initialOrderScope}
               collapseContentId="chart-order-panel-content"
               collapsed={orderPanelCollapsed}
               loading={orderLoading}
               onCollapsedChange={setOrderPanelCollapsed}
               onNavigateToBilling={navigateToBilling}
+              onOrderCountChange={handleCurrentChartOrderCountChange}
               orderGroups={orderGroups}
               draftWriteDisabled={chartWriteDisabled || chartSigned || chartSigning}
               writeDisabled={detailHydrationPending || isHistoricalView}
