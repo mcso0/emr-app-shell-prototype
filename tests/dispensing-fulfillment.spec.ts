@@ -18,8 +18,9 @@ test("actual execution UI starts empty, records completion, reloads history and 
     await route.fulfill({ json: { ok: true, workItems: queueType === "dispensing" ? [{ workspaceId, id, orderId: id, encounterId: id,
       taskId: id, taskAttemptNo: 1, requestCycle: 1, rowRevision: context.workItemRevision, status: context.status,
       queueType: "dispensing", assignedToUserId: id, requestedByUserId: id,
+      patientName: "합성 수행 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
       createdAt: "2026-09-06T00:00:00.000Z", updatedAt: "2026-09-06T00:00:00.000Z",
-      sourceSnapshot: { patientName: "합성 수행 환자", guardianName: "합성 보호자", orderDisplayName: "합성 조제 작업", instruction: "합성 테스트", requestingVetName: "합성 수의사" },
+      sourceSnapshot: { orderDisplayName: "합성 조제 작업", instruction: "합성 테스트" },
     }] : [] } });
   });
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, async route => {
@@ -35,6 +36,20 @@ test("actual execution UI starts empty, records completion, reloads history and 
   });
   await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
   await page.getByTestId(`order-queue-item-live-fulfillment-${id}`).click();
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return {
+      date: url.searchParams.get("date"),
+      encounterId: url.searchParams.get("encounterId"),
+      workItemId: url.searchParams.get("workItemId"),
+    };
+  }).toMatchObject({
+    date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    encounterId: id,
+    workItemId: id,
+  });
+  await expect(page.getByText("합성 수행 환자").first()).toBeVisible();
+  await expect(page.getByText("합성 수의사").first()).toBeVisible();
   await page.getByRole("button", { name: "수행기록·이력" }).click();
   const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
   await expect(dialog.getByLabel("실제 준비수량", { exact: false })).toHaveValue("");
@@ -189,6 +204,56 @@ test("dispensing no-work empty state hides history aside", async ({ page }) => {
   await expect(
     emptyState.getByRole("heading", { name: "조제/처치 업무가 없습니다" }),
   ).toBeVisible();
+});
+
+test("dispensing keeps the exact work item when one encounter has multiple queue rows", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const encounterId = "97090000-0000-4000-8000-000000000001";
+  const firstId = "97090000-0000-4000-8000-000000000011";
+  const secondId = "97090000-0000-4000-8000-000000000012";
+  const createItem = (id: string, orderName: string) => ({
+    workspaceId,
+    id,
+    orderId: id,
+    encounterId,
+    requestCycle: 1,
+    rowRevision: 1,
+    status: "requested",
+    queueType: "dispensing",
+    requestedByUserId: "97090000-0000-4000-8000-000000000002",
+    patientName: "합성 동일 진료 환자",
+    guardianName: "합성 보호자",
+    requesterName: "합성 요청 수의사",
+    createdAt: "2026-09-12T00:01:00.000Z",
+    updatedAt: "2026-09-12T00:01:00.000Z",
+    sourceSnapshot: { orderDisplayName: orderName, instruction: `${orderName} 수행` },
+  });
+
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async (route) => {
+    const queueType = new URL(route.request().url()).searchParams.get("queueType");
+    await route.fulfill({
+      json: {
+        ok: true,
+        workItems:
+          queueType === "dispensing"
+            ? [createItem(firstId, "첫 번째 합성 조제"), createItem(secondId, "두 번째 합성 조제")]
+            : [],
+      },
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
+  await page.getByTestId(`order-queue-item-live-fulfillment-${secondId}`).click();
+
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return {
+      encounterId: url.searchParams.get("encounterId"),
+      workItemId: url.searchParams.get("workItemId"),
+    };
+  }).toEqual({ encounterId, workItemId: secondId });
+  await expect(page.getByText("두 번째 합성 조제", { exact: true }).first()).toBeVisible();
 });
 
 type FulfillmentWorkItemStatus =

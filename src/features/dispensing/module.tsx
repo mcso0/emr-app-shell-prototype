@@ -81,6 +81,10 @@ import {
   isLegacySalesDemoWorkspace,
   resolveWorkspacePathname,
 } from "@/lib/emr-domain/demo-workspaces";
+import {
+  formatOperatingShortTime,
+  getOperatingDateFromIso,
+} from "@/lib/emr-domain/demo-date";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import {
@@ -122,11 +126,14 @@ type FulfillmentWorkItem = {
   completedAt?: string | null;
   createdAt?: string;
   encounterId: string;
+  guardianName?: string | null;
   id: string;
   orderId: string;
   patientId?: string | null;
+  patientName?: string | null;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
+  requesterName?: string | null;
   requestCycle: number;
   rowRevision: number;
   sourceSnapshot?: {
@@ -718,13 +725,17 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
   const timestamp =
     workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
-  const time = timestamp.slice(11, 16) || "00:00";
+  const time = formatOperatingShortTime(timestamp);
 
   return {
     id: `live-fulfillment-${workItem.id}`,
     instructionId: `${isTreatment ? "TR" : "RX"}-${workItem.id.slice(0, 8).toUpperCase()}`,
-    patientName: workItem.sourceSnapshot?.patientName ?? "환자 미상",
-    guardianName: workItem.sourceSnapshot?.guardianName ?? "보호자 미지정",
+    patientName:
+      workItem.patientName ?? workItem.sourceSnapshot?.patientName ?? "환자 미상",
+    guardianName:
+      workItem.guardianName ??
+      workItem.sourceSnapshot?.guardianName ??
+      "보호자 미지정",
     patientAge: "나이 미상",
     patientBreed: "품종 미상",
     patientSex: "성별 미상",
@@ -791,6 +802,7 @@ function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
 
 function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
   return (
+    workItem.requesterName ??
     workItem.sourceSnapshot?.requestingVetName ??
     mockStaffUsers.find((user) => user.id === workItem.requestedByUserId)
       ?.name ??
@@ -862,13 +874,10 @@ function createLiveOrderTableGroups(
   const medicationFacts = getReviewedMedicationFacts(workItem);
   const quantityFacts = getDispensingQuantityFacts(workItem);
   const prescriptionFacts = getDispensingPrescriptionFacts(workItem);
-  const requestedDate = (
-    workItem.createdAt ??
-    workItem.updatedAt ??
-    new Date().toISOString()
-  )
-    .slice(0, 10)
-    .replaceAll("-", ".");
+  const requestedDate =
+    getOperatingDateFromIso(
+      workItem.createdAt ?? workItem.updatedAt ?? new Date().toISOString(),
+    )?.replaceAll("-", ".") ?? "날짜 미상";
 
   return [
     {
@@ -1159,16 +1168,21 @@ export function DispensingSidePanel({
 
   function handleSelectQueueItem(itemId: string) {
     const item = items.find((candidate) => candidate.id === itemId) ?? null;
-    const encounterId = getQueueItemEncounterId(
+    const workItem = findFulfillmentForQueueItem(
       item,
       fulfillmentQueue.workItems,
     );
 
-    if (encounterId && onNavigateWorkspaceSurface) {
+    if (workItem && onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
         buildWorkspaceSurfaceRoute({
           moduleId: "dispensing",
-          params: { encounterId },
+          params: {
+            date: selectedDate,
+            encounterId: workItem.encounterId,
+            workItemId: workItem.id,
+          },
+          removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1178,6 +1192,29 @@ export function DispensingSidePanel({
     }
 
     setSelectedQueueItem("dispensing", itemId);
+  }
+  function handleSelectDate(date: string) {
+    selectDate(date);
+    setSelectedQueueItem("dispensing", "");
+    setSelectedQueueItem("treatment", "");
+    if (!onNavigateWorkspaceSurface) return;
+    onNavigateWorkspaceSurface(
+      buildWorkspaceSurfaceRoute({
+        moduleId: "dispensing",
+        params: { date },
+        removeParams: [
+          "encounterId",
+          "imagingStudyId",
+          "invoiceId",
+          "labResultId",
+          "patientId",
+          "workItemId",
+        ],
+        search: searchParams,
+        workspaceId,
+      }),
+      "dispensing",
+    );
   }
 
   return (
@@ -1196,11 +1233,7 @@ export function DispensingSidePanel({
       todayDate={todayDate}
       typeFilterPlacement="list-header"
       onCollapse={() => setModulePanelOpen(false)}
-      onDateChange={(date) => {
-        selectDate(date);
-        setSelectedQueueItem("dispensing", "");
-        setSelectedQueueItem("treatment", "");
-      }}
+      onDateChange={handleSelectDate}
       onSelectItem={handleSelectQueueItem}
     />
   );
@@ -1559,7 +1592,7 @@ function groupFulfillmentHistoryEvents(
     { date: string; label: string; items: FulfillmentWorkItemHistoryEvent[] }
   >();
   for (const event of [...events].reverse()) {
-    const date = event.createdAt.slice(0, 10);
+    const date = getOperatingDateFromIso(event.createdAt) ?? "날짜 미상";
     const group = groups.get(date) ?? {
       date,
       label: date.replaceAll("-", "."),
@@ -1585,7 +1618,7 @@ function FulfillmentHistoryItem({
   const previousStatusLabel = item.previousStatus
     ? getFulfillmentHistoryStatusLabel(instructionType, item.previousStatus)
     : null;
-  const time = item.createdAt.slice(11, 16) || "시간 미상";
+  const time = formatOperatingShortTime(item.createdAt);
 
   return (
     <EmrContentHistoryItem

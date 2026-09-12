@@ -1,6 +1,12 @@
 # MVP Current Status
 
-Updated: 2026-09-07
+Updated: 2026-09-12
+
+Latest local fulfillment-queue remediation restores separate workspace-scoped
+patient/guardian/requester display context, URL-owned operating dates, exact
+queue selection ids, and Asia/Seoul timestamps across lab, imaging,
+dispensing, and treatment. Migration `20260912121342` is a local candidate;
+no remote apply, merge, deployment, or production acceptance is recorded.
 
 Latest WP09 checkpoint: application1dd8965 passed248 contracts, full type/lint/build,
 Release Check34103715994 and Ready Preview. Three-workspace Admin and authenticated

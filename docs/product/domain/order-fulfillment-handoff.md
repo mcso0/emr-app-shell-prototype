@@ -128,6 +128,9 @@ Fulfillment work item states are intentionally operational. They do not replace 
 * If selected orders include unfinished work, the UI must ask: `아직 완료되지 않은 오더가 있습니다. 수납을 진행할까요?` and show each unfinished order name with its current status badge.
 * Vet result review and re-request remain clinical/result workflow actions. They must not be treated as the default billing gate.
 * Workspace catalog confirmations can create fulfillment work items from the applied snapshot even when the selected catalog row does not yet exist in the legacy mock `orders` fixture. The fulfillment source snapshot remains minimal and should contain display, billing, instruction, routing, and service item context only.
+* Queue readback may add current patient, guardian, and requester labels as a separate workspace-scoped presentation projection. It must not rewrite the frozen source snapshot.
+* Lab, imaging, dispensing, and treatment operating-date navigation writes `date` to the URL so the queue, header, content, and history surfaces read one date boundary.
+* A selected queue row writes its exact result/study/work-item id together with the matching encounter and date. Date changes clear that selection, and cross-module navigation drops module-owned selection ids.
 * Every mutation must be workspace-scoped and actor-scoped.
 * Unauthorized, cross-workspace, invalid transition, and duplicate mutation attempts must keep state unchanged and return safe errors.
 

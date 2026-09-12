@@ -18,7 +18,7 @@ test("live lab enables persisted result rows even in clair-demo; mock keeps its 
     const result = runInNewContext(script, {
       isLegacySalesDemoWorkspace: () => true,
       isLiveAuthRuntime: () => live,
-      useSearchParams: () => ({}),
+      useSearchParams: () => ({ get: () => null }),
       useLabImagingStore: () => undefined,
       useLayoutStore: () => undefined,
       useSelectedOperatingDate: () => ({ selectedDate: "2026-09-07" }),

@@ -80,7 +80,7 @@ test("lab no-work empty state hides history aside", async ({ page }) => {
   );
 
   await page.goto(
-    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=history&right=closed`
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=history&right=closed&labResultId=live-lab-stale&encounterId=stale-encounter`
   );
 
   await expect(page.locator("#lab-content-aside")).toHaveCount(0);
@@ -90,6 +90,7 @@ test("lab no-work empty state hides history aside", async ({ page }) => {
       .getByTestId("workspace-main-content")
       .getByRole("heading", { name: "검사 업무가 없습니다" }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toHaveCount(0);
 });
 
 test("imaging no-work empty state hides history aside", async ({ page }) => {
@@ -112,7 +113,7 @@ test("imaging no-work empty state hides history aside", async ({ page }) => {
   );
 
   await page.goto(
-    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/imaging?modulePanel=open&aside=history&right=closed`
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/imaging?modulePanel=open&aside=history&right=closed&imagingStudyId=live-imaging-stale&encounterId=stale-encounter`
   );
 
   await expect(page.locator("#imaging-content-aside")).toHaveCount(0);
@@ -122,6 +123,7 @@ test("imaging no-work empty state hides history aside", async ({ page }) => {
       .getByTestId("workspace-main-content")
       .getByRole("heading", { name: "영상 업무가 없습니다" }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toHaveCount(0);
 });
 
 test("lab workspace renders result input, equipment receipts, and attachments", async ({ page }) => {
@@ -190,17 +192,17 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
     assignedToUserId: null,
     createdAt: "2026-06-14T01:20:00.000Z",
     encounterId: "encounter-cheongdam-live-lab-001",
+    guardianName: "정보호",
     id: "work-cheongdam-lab-001",
     orderId: "order-cheongdam-lab-001",
+    patientName: "모카",
     queueType: "lab",
     requestedByUserId: "user-vet",
+    requesterName: "김민준",
     sourceSnapshot: {
       detail: { breed: "푸들", age: "3세" },
-      guardianName: "정보호",
       instruction: "CBC 우선 확인",
       orderDisplayName: "CBC 검사",
-      patientName: "모카",
-      requestingVetName: "김민준",
       serviceItemId: "svc-live-cbc",
     },
     status: "requested",
@@ -231,9 +233,39 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("모카");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("CBC 검사");
+  await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("김민준");
+  await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("10:20");
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await expect(page.getByText("모카").first()).toBeVisible();
+
+  await sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`).click();
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return {
+      date: url.searchParams.get("date"),
+      encounterId: url.searchParams.get("encounterId"),
+      labResultId: url.searchParams.get("labResultId"),
+    };
+  }).toMatchObject({
+    date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    encounterId: liveWorkItem.encounterId,
+    labResultId: `live-lab-${liveWorkItem.id}`,
+  });
+
+  await sidePanel.getByRole("button", { name: "이전 날짜" }).click();
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return {
+      date: url.searchParams.get("date"),
+      encounterId: url.searchParams.get("encounterId"),
+      labResultId: url.searchParams.get("labResultId"),
+    };
+  }).toEqual({
+    date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    encounterId: null,
+    labResultId: null,
+  });
 });
 
 test("lab workspace renders shared empty state for true-empty live result rows", async ({
@@ -582,17 +614,17 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
     assignedToUserId: null,
     createdAt: "2026-06-14T01:25:00.000Z",
     encounterId: "encounter-cheongdam-live-imaging-001",
+    guardianName: "한보호",
     id: "work-cheongdam-imaging-001",
     orderId: "order-cheongdam-imaging-001",
+    patientName: "하늘",
     queueType: "imaging",
     requestedByUserId: "user-vet",
+    requesterName: "김민준",
     sourceSnapshot: {
       detail: { bodyPart: "복부", modality: "초음파" },
-      guardianName: "한보호",
       instruction: "복부 통증 평가",
       orderDisplayName: "복부 초음파",
-      patientName: "하늘",
-      requestingVetName: "김민준",
       serviceItemId: "svc-live-us",
     },
     status: "requested",
@@ -623,9 +655,25 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("하늘");
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("복부 초음파");
+  await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("김민준");
+  await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("10:25");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("하늘").first()).toBeVisible();
+
+  await sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`).click();
+  await expect.poll(() => {
+    const url = new URL(page.url());
+    return {
+      date: url.searchParams.get("date"),
+      encounterId: url.searchParams.get("encounterId"),
+      imagingStudyId: url.searchParams.get("imagingStudyId"),
+    };
+  }).toMatchObject({
+    date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+    encounterId: liveWorkItem.encounterId,
+    imagingStudyId: `live-imaging-${liveWorkItem.id}`,
+  });
 });
 
 test("imaging workspace prioritizes Kong abdomen study from demo query", async ({ page }) => {

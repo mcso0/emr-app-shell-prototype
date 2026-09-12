@@ -1527,7 +1527,7 @@ test("home normalizes a collapsed module panel before navigating back to modules
 });
 
 test("shell navigation keeps demo query context across modules", async ({ page }) => {
-  await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
+  await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}&date=2026-05-01`);
   await expect(page.getByLabel("환자 컨텍스트 정보").getByText("콩이")).toBeVisible();
 
   await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
@@ -1536,6 +1536,7 @@ test("shell navigation keeps demo query context across modules", async ({ page }
     scenario: "kong-vomit",
     patientId: "patient-kong",
     encounterId: "encounter-kong-260501",
+    date: "2026-05-01",
     labResultId: "lab-result-kong-cbc",
     imagingStudyId: "imaging-kong-abdomen",
     invoiceId: "invoice-kong-260501",
@@ -1548,10 +1549,11 @@ test("shell navigation keeps demo query context across modules", async ({ page }
     scenario: "kong-vomit",
     patientId: "patient-kong",
     encounterId: "encounter-kong-260501",
-    labResultId: "lab-result-kong-cbc",
-    imagingStudyId: "imaging-kong-abdomen",
-    invoiceId: "invoice-kong-260501",
+    date: "2026-05-01",
   });
+  expect(new URL(page.url()).searchParams.get("labResultId")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("imagingStudyId")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("invoiceId")).toBeNull();
 });
 
 test("module side panel order type segmented control filters side orders", async ({ page }) => {
