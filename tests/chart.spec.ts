@@ -188,6 +188,38 @@ async function routePristineKongSoap(page: Page) {
   );
 }
 
+async function routePopulatedKongCurrentChartAssessment(page: Page) {
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/diagnoses?*",
+    async (route) => {
+      const url = new URL(route.request().url());
+      if (
+        route.request().method() !== "GET" ||
+        url.searchParams.get("encounterId") !== kongEncounterId ||
+        url.searchParams.get("chartId") !== "soap-kong-260501"
+      ) {
+        await route.fallback();
+        return;
+      }
+
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        diagnoses?: Array<{ id?: string }>;
+      };
+      const assessment = body.diagnoses?.find(
+        (diagnosis) => diagnosis.id === "diagnosis-kong-gastroenteritis",
+      );
+      if (!assessment) {
+        throw new Error("Kong diagnosis fixture is missing");
+      }
+      await route.fulfill({
+        response,
+        json: { ...body, assessments: [assessment] },
+      });
+    },
+  );
+}
+
 async function grantCheongdamWorkspaceAccess(page: Page) {
   await page.addInitScript(
     ([storageKey, workspaceId]) => {
@@ -963,8 +995,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
 test("chart Figma follow-up restores history and panel chrome contracts", async ({
   page,
 }) => {
+  await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
-  await page.goto(chartFigmaVisualFixture.route);
+  await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
 
   const actionBar = page.locator("[data-slot='chart-action-bar']");
   const workspace = page.locator("[data-slot='chart-workspace']");
