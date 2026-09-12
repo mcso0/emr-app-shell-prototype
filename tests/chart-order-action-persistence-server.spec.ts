@@ -738,6 +738,62 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
   });
 });
 
+test("order action readback restores a non-billable set parent with a null stored total", async () => {
+  const parentOrderId = "00000000-0000-4000-8000-000000000701";
+  const runtimeRow = {
+    billingReflectionEnabled: false,
+    encounterId,
+    lineTotalSnapshot: null,
+    orderId: parentOrderId,
+    orderConfirmationStatus: "confirmed",
+    orderType: "set",
+    parentOrderId: null,
+    quantity: 1,
+    quantitySource: "fixed_one",
+    rowType: "set",
+    status: "confirmed",
+    updatedAt: "2026-09-12T14:39:38.453Z",
+  };
+  const createGateway = (rowType: "set" | "individual") =>
+    createSupabaseChartOrderActionGateway({
+      async rpc() {
+        return {
+          data: {
+            etag: `"${"e".repeat(64)}"`,
+            rows: [{ ...runtimeRow, orderType: rowType, rowType }],
+          },
+          error: null,
+        };
+      },
+    });
+
+  const restored = await createGateway("set").readOrderActions({
+    encounterId,
+    workspaceId,
+  });
+  expect(restored).toMatchObject({
+    ok: true,
+    rows: [
+      {
+        billingReflectionEnabled: false,
+        lineTotalSnapshot: 0,
+        orderId: parentOrderId,
+        rowType: "set",
+      },
+    ],
+  });
+
+  const invalidIndividual = await createGateway("individual").readOrderActions({
+    encounterId,
+    workspaceId,
+  });
+  expect(invalidIndividual).toMatchObject({
+    ok: false,
+    status: 500,
+    error: "db_read_failed",
+  });
+});
+
 test("order action Supabase gateway sends confirmation through one idempotent atomic RPC", async () => {
   const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
   const etag = `"${"d".repeat(64)}"`;

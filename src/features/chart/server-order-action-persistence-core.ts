@@ -1293,10 +1293,14 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
   const rowType = row.rowType;
+  const lineTotalSnapshot =
+    rowType === "set" && row.lineTotalSnapshot === null
+      ? 0
+      : row.lineTotalSnapshot;
   if (typeof row.orderId !== "string" || typeof row.encounterId !== "string" ||
       (rowType !== "individual" && rowType !== "set" && rowType !== "set_child") ||
       typeof row.orderType !== "string" || typeof row.quantity !== "number" ||
-      typeof row.lineTotalSnapshot !== "number" || typeof row.updatedAt !== "string") return null;
+      typeof lineTotalSnapshot !== "number" || typeof row.updatedAt !== "string") return null;
   const objectOf = (key: string) => row[key] && typeof row[key] === "object" && !Array.isArray(row[key]) ? row[key] as Record<string, unknown> : {};
   const quantitySource = String(row.quantitySource);
   if (!["fixed_one", "preset_quantity", "manual_at_apply", "manual", "days", "total_count", "dispense_quantity", "actual_dispense_quantity"].includes(quantitySource)) return null;
@@ -1360,7 +1364,7 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
     quantity: row.quantity,
     quantitySource: quantitySource as ChartOrderRuntimeRow["quantitySource"],
     unitPriceSnapshot: row.unitPriceSnapshot === null ? null : typeof row.unitPriceSnapshot === "number" ? row.unitPriceSnapshot : null,
-    lineTotalSnapshot: row.lineTotalSnapshot,
+    lineTotalSnapshot,
     snapshotSchemaVersion: row.snapshotSchemaVersion === 1 ? 1 : 0,
     snapshotHash: typeof row.snapshotHash === "string" ? row.snapshotHash : null,
     appliedSnapshot: objectOf("appliedSnapshot"),
