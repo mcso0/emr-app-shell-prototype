@@ -4131,7 +4131,8 @@ function mapChartOrderSetPreview(value: unknown): ChartOrderSetPreview | null {
   const sourceSetRevisionNo = readNumber(set.sourceSetRevisionNo);
   const amountBasis = readString(set.amountBasis);
   const taxType = readString(set.taxType);
-  const priceRanges = set.priceRanges === undefined && amountBasis === "set_fixed_price"
+  const priceRanges = set.priceRanges === undefined &&
+      (amountBasis === "included_order_sum" || amountBasis === "set_fixed_price")
     ? [] : set.priceRanges;
   if (!sourceSetId || !sourceSetRevisionId || !sourceSetVersion ||
       sourceSetRevisionNo === undefined || !isOrderSetAmountBasis(amountBasis) ||

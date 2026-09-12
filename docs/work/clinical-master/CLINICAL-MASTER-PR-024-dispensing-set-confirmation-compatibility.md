@@ -29,7 +29,10 @@ local implementation, self-test, and reviewable candidate, followed by an
 independent review request to the original Codex task. The user later expanded
 delivery through commit, push, PR, exact-candidate review, and a requested
 Production release. The exact `main`/Production approval packet and any remote
-Supabase migration apply remain separate gates under the release runbook.
+Supabase migration apply remain separate gates under the release runbook. The
+original compatibility migration has since been applied to the approved shared
+project; the forward billing-handoff correction added after authenticated smoke
+is a new candidate and has not been applied remotely.
 
 Work on branch `codex/dispensing-set-confirmation-compat` in the isolated
 `34bb` worktree. Preserve the primary checkout and the separate current-chart UI
@@ -73,6 +76,10 @@ Both operations invalidate the exact composition/hash contract.
 - Teach billing authority capture and confirmation quantity projection to read
   the dedicated authority, so per-product-unit quantity, unit, and amount stay
   correct without changing the B3 hash input.
+- On dispensing execution, link an existing frozen billing candidate through
+  the candidate-authoritative invoice writer. Retain the prior fulfillment sync
+  only as a compatibility fallback when no eligible unlinked candidate exists;
+  never rewrite an already-linked invoice or its audit history.
 - Preserve an existing manual actual-dispense override on a harmless set save;
   on a clinically relevant edit, retain it and require explicit reconfirmation.
 - Preserve the old applied-snapshot lineage representation for individual
@@ -112,19 +119,27 @@ mutable, active dispensing set children and one for their root lineage maps.
 These are business-row DML even when they affect zero rows. They must not be
 described as additive DDL only.
 
+The forward migration
+`20260912230700_dispensing_execution_billing_candidate_handoff.sql` patches the
+single billing call inside `clair_record_order_execution_result` with an exact
+text-anchor guard. It selects
+`private.clair_link_chart_order_billing_candidates_internal` only when an
+unlinked candidate exists, otherwise preserving the existing fulfillment
+compatibility function. It contains no historical invoice/candidate repair DML.
+
 ## Acceptance evidence
 
 | Requirement | Local evidence | Remaining boundary |
 | --- | --- | --- |
-| Dispensing child save no longer conflicts with B3 | Baseline failure above; a mixed dispensing + clinical-lab set saves and passes `SET CONSTRAINTS ALL IMMEDIATE` | Independent review |
-| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and clean ready dispensing projection asserted | Remote migration apply gated |
-| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial | Authenticated remote smoke gated |
-| Set edit/removal semantics remain valid | Dispensing-child deselection while lab stays selected, full-root removal, semantic deselection retry, and rejected repeated removal asserted | Preview smoke pending |
-| Override/reconfirmation semantics remain valid | Exact override retry, harmless resave preservation, dose `1` to `2` recalculation, stale confirmation denial, explicit reconfirmation, and reconfirm retry asserted | Preview smoke pending |
-| Fail-closed boundaries remain valid | Missing authority blocks confirmation; invalid authority is rejected; cross-chart mutation is denied | Remote state remains unchanged |
+| Dispensing child save no longer conflicts with B3 | Baseline failure above; a mixed dispensing + clinical-lab set saves and passes `SET CONSTRAINTS ALL IMMEDIATE` | Changed candidate review |
+| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and clean ready dispensing projection asserted locally and through authenticated remote save/reload | Changed-candidate regression pending |
+| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial; original remote apply and authenticated save/reload/confirm smoke completed | New forward migration pending |
+| Set edit/removal semantics remain valid | Dispensing-child deselection while lab stays selected, full-root removal, semantic deselection retry, and rejected repeated removal asserted | Changed-candidate Preview smoke pending |
+| Override/reconfirmation semantics remain valid | Exact override retry, harmless resave preservation, dose `1` to `2` recalculation, stale confirmation denial, explicit reconfirmation, and reconfirm retry asserted remotely | Changed-candidate Preview smoke pending |
+| Fail-closed boundaries remain valid | Missing authority blocks confirmation; invalid authority is rejected; cross-chart mutation is denied | Revalidate after forward apply |
 | Confirmation/source snapshots are complete | Confirmed order, Task, fulfillment work item, billing candidate, execution result/amendment, and linked attempt-2 re-request contracts asserted | Production gated |
-| Billing uses the dedicated authority | Per-product-unit candidate freezes quantity `3`, unit price `1000`, amount `3000`, and unit `tablet` | Remote migration apply gated |
-| Client readback uses the dedicated authority | Both server mappers retain the field; local route-intercepted browser smoke covers the preserved individual-order path and a set-child path that exposes and saves the constrained `준비 예정량` control without an applied-snapshot authority copy | Authenticated mixed-set Preview/Production smoke gated |
+| Billing uses the dedicated authority | Per-product-unit candidate freezes quantity `3`, unit price `1000`, amount `3000`, and unit `tablet`; a cloned candidate DB now also proves execution creates a draft, unpaid invoice line with the same quantity and amount through candidate authority | Forward migration remote apply and authenticated re-smoke gated |
+| Client readback uses the dedicated authority | Authenticated exact-Preview smoke exposed two fail-closed mapper gaps: omitted non-range `priceRanges` and nullable non-billable set-parent total. Narrow local normalizers and regression tests now cover both without accepting nullable billable child totals | Changed-candidate Preview/Production smoke gated |
 | Individual/legacy compatibility | Existing preparation V2 direct calculator suite passes; unconfigured legacy child remains fail-closed | Broader historical replay is stale under multi-chart lifecycle |
 | Foreign workspace isolation | Foreign active member cannot read the candidate catalog or set through RLS | No remote foreign workspace mutation |
 | Existing persisted rows preserved | Baseline/candidate order count `12/12`; existing-field fingerprint `817cec76e9ff37ba12c601c847572d87` equal after excluding three additive columns | Remote preflight required before any future apply |
@@ -142,12 +157,17 @@ unused-variable warning is identical in the baseline database. Repository docs a
 ESLint (five pre-existing warnings), and a webpack production build including
 TypeScript all pass.
 
-The route-intercepted browser checks prove only client readback and the
-actual-dispense override interaction. They are not a real database-backed
-mixed-set save/reload/confirm/downstream E2E. Likewise, the asserted billing
-output is a billing candidate projection, not an issued invoice, payment, or
-collection result. Those boundaries remain in the remote Preview/Production
-gate and are not claimed as local completion evidence.
+The authenticated exact-Preview check reached the shared database and proved
+set save, reload, override/reconfirmation, confirmation, execution, and
+idempotency. It also exposed that the completion path created a draft invoice
+line from legacy order quantity `1` even though the frozen candidate was
+quantity `3`. The forward migration fixes only future candidate-backed links.
+The historical synthetic draft invoice and confirmed audit are intentionally
+unchanged, and no payment or collection action occurred. The new invoice
+assertion has passed twice in a rollback-only cloned-database rehearsal; it is
+not yet remote evidence. The same rehearsal also proves the no-candidate legacy
+fallback in a rolled-back subtransaction and proves that an execution amendment
+does not duplicate or mutate the candidate-authoritative invoice line.
 
 The pre-use rollback artifact was applied to a clone of the candidate database.
 It restored all eight predecessor function definitions to their baseline
@@ -181,9 +201,9 @@ triggers and private helpers, and drop the three columns. Never drop populated
 columns or restore the old functions after candidate-written dispensing-set
 rows exist.
 
-## Exact remote apply preparation
+## Remote apply evidence and forward correction
 
-Read-only preflight on `clair-emr-staging / qmerxgzrwaaahpkhjqlc` found the
+The original read-only preflight on `clair-emr-staging / qmerxgzrwaaahpkhjqlc` found the
 project healthy and the latest remote migration at `20260908211856`. The
 current Vercel Production environment uses this same shared Supabase project.
 The exact migration SHA-256 is
@@ -193,15 +213,44 @@ The release-only preflight, postflight, and pre-use rollback SHA-256 values are
 `356d77980209a808d3186e5c635cdb4947ed21666cad4d820c65c05d0bc0caa7`,
 and `8a150ecdfc3b32a4ab078a79b06e42dc9c0f9a44dd88859ac1d01c5ac4ceb274`.
 
-The remote `orders` baseline is 162 rows with existing-field fingerprint
+That exact original packet was applied and is recorded remotely as migration
+ledger version `20260912132531`. Post-smoke cleanup archived the synthetic set
+and catalog item and completed its consultation queue while retaining the
+confirmed/execution/invoice audit history. Non-fixture orders remained at 162
+with the same existing-field fingerprint
+`3dae85d3e90453ba69e681eb4129681a`; the foreign workspace remained unchanged.
+Do not reapply or rewrite the original migration.
+
+The forward billing-handoff migration is locally validated only. It must receive
+a fresh exact-SHA review/apply packet and remote postflight before the workflow
+can claim candidate-to-invoice billing consistency. The historical synthetic
+invoice discrepancy is evidence and is not a cleanup target.
+
+The forward migration, preflight, postflight, and strengthened rehearsal
+SHA-256 values are respectively
+`6739b19a967b6c2623341b9355f159607bb45d9e73c00b3efc23de38d374547b`,
+`c8e3924720bc5e0ebee655461f247f769a61863e559b4eba09a677d6ba7dab14`,
+`241cb6648589cd0640e79bf6959346b5ee19461ef70ddf432a5a1a14a4358a03`,
+and `5e3e5ea331f5708fcc45017b6e8846590f49e11bd87d94e904b5fdb757848f5b`.
+The packet fixes the current remote execution-function SHA-256
+`33763f9994cc60979c301435793c7c71207e5b41f4400a7c24d40d34340c4a7b`
+to candidate SHA-256
+`dbd9321c23391fce6e559e01139fba53c1cfeea431fa2208513062ec4b982a18`
+while pinning the existing candidate linker SHA-256
+`6e5ca8e3e043cb653cb0049c2d6864a8420a4bd1df47c0753c8d11f905b57ccc`.
+On a cloned database, the whole preflight/migration/postflight transaction
+passed, the strengthened rollback rehearsal passed twice, and replaying the
+preflight against the already-patched definition failed closed as drift.
+
+At the original preflight, the remote `orders` baseline was 162 rows with existing-field fingerprint
 `3dae85d3e90453ba69e681eb4129681a`. Candidate columns, helpers, and triggers
-are absent. There is one set child, but zero dispensing set children and zero
+were absent. There was one set child, but zero dispensing set children and zero
 confirmed dispensing set children, so the two repair statements currently
-expect `UPDATE 0`. The predecessor anchor counts are `3 / 31 / 1 / 2 / 1 / 4`
+expected `UPDATE 0`. The predecessor anchor counts were `3 / 31 / 1 / 2 / 1 / 4`
 for the writer, B3 constraint, authority, base calls, confirmation snapshot,
 and billing projection respectively.
 
-Remote application must concatenate, in one transaction, the exact preflight
+The original remote application concatenated, in one transaction, the exact preflight
 snippet, the exact migration, and the exact postflight snippet. The preflight
 takes an `ACCESS EXCLUSIVE` lock and stops if the 162-row fingerprint, zero
 dispensing-set-child assumption, absent-object state, or predecessor anchors
@@ -224,11 +273,13 @@ The captured predecessor and candidate function SHA-256 values are:
 
 ## Remaining gates
 
-- Independent review by the original parent Codex task and exact candidate SHA.
-- Push, PR Preview Ready, exact-head manual Release Check, and scoped Preview
-  smoke under the expanded delivery request.
-- A separate, explicit remote Supabase migration apply packet with target,
-  preserved-data preflight, apply order, verification, and forward recovery.
+- Reconcile the changed branch with current `origin/main`, then obtain a fresh
+  independent review and exact candidate SHA.
+- Push the changed PR head, wait for Preview Ready and exact-head Release Check,
+  then repeat the authenticated mixed-set smoke.
+- Prepare and approve a separate forward-migration apply packet with target,
+  preserved-data preflight, exact SHA, postflight, and forward recovery. Do not
+  alter the historical confirmed/invoice audit.
 - Exact-candidate `main`/Production approval after PR, checks, Preview,
   Production comparison, smoke path, rollback candidate, and stop conditions
   are all known. A changed PR head invalidates that approval packet.

@@ -743,6 +743,64 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
   expect(catalogDraftMigration).toContain("'workspace_catalog'");
 });
 
+test("order draft Supabase gateway normalizes only nonbillable set parent null totals", async () => {
+  const gatewayFor = (row: Record<string, unknown>) =>
+    createSupabaseChartOrderDraftGateway({
+      async rpc() {
+        return {
+          data: {
+            etag: validEtag,
+            rows: [
+              {
+                orderId: "00000000-0000-4000-8000-000000000201",
+                encounterId,
+                orderType: "set",
+                quantity: 1,
+                quantitySource: "fixed_one",
+                updatedAt: "2026-09-12T13:50:38.352906Z",
+                ...row,
+              },
+            ],
+          },
+          error: null,
+        };
+      },
+    });
+
+  const nonbillableParent = await gatewayFor({
+    rowType: "set",
+    billingReflectionEnabled: false,
+    lineTotalSnapshot: null,
+  }).readOrderDraft({ workspaceId, encounterId });
+  expect(nonbillableParent).toMatchObject({
+    ok: true,
+    rows: [
+      {
+        rowType: "set",
+        billingReflectionEnabled: false,
+        lineTotalSnapshot: 0,
+      },
+    ],
+  });
+
+  for (const invalidRow of [
+    {
+      rowType: "set",
+      billingReflectionEnabled: true,
+      lineTotalSnapshot: null,
+    },
+    {
+      rowType: "set_child",
+      billingReflectionEnabled: false,
+      lineTotalSnapshot: null,
+    },
+  ]) {
+    await expect(
+      gatewayFor(invalidRow).readOrderDraft({ workspaceId, encounterId }),
+    ).resolves.toEqual({ ok: false, status: 500, error: "db_read_failed" });
+  }
+});
+
 test("order draft route bridge resolves demo encounter IDs before Supabase RPC calls", async () => {
   const calls: string[] = [];
   const resolvedEncounterId = "00000000-0000-4000-8000-000000002601";

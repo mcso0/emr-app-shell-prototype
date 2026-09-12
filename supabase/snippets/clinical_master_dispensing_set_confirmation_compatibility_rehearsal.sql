@@ -382,6 +382,7 @@ declare
   v_performed jsonb;
   v_performed_retry jsonb;
   v_amended jsonb;
+  v_invoice_line_id uuid;
   v_rerequested jsonb;
   v_rerequested_retry jsonb;
   v_state text;
@@ -918,6 +919,78 @@ begin
     raise exception 'dispensing_set_confirmation_retry_failed';
   end if;
 
+  -- A historical confirmed order may have no candidate row. Prove the exact
+  -- execution RPC retains its legacy fulfillment-to-invoice fallback, then
+  -- roll the entire probe back before exercising the candidate authority.
+  begin
+    execute 'reset role';
+    delete from public.order_billing_candidates candidate
+    where candidate.workspace_id = 'clair-demo'
+      and candidate.order_id = (v_child ->> 'orderId')::uuid;
+    if not found then
+      raise exception 'dispensing_set_legacy_candidate_probe_missing';
+    end if;
+    select work_item.* into strict v_work_item
+    from public.order_fulfillment_work_items work_item
+    where work_item.order_id = (v_child ->> 'orderId')::uuid;
+    execute 'set local role authenticated';
+    perform public.clair_transition_fulfillment_work_item(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      v_work_item.id,
+      'start',
+      v_work_item.row_revision,
+      '02493000-0000-4000-8000-00000000000a',
+      null,
+      null,
+      null
+    );
+    execute 'reset role';
+    select * into strict v_work_item
+    from public.order_fulfillment_work_items
+    where id = v_work_item.id;
+    execute 'set local role authenticated';
+    v_execution_context := public.clair_get_order_execution_context(
+      'clair-demo', v_work_item.id
+    );
+    perform public.clair_record_order_execution_result(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      v_work_item.id,
+      v_work_item.row_revision,
+      v_execution_context ->> 'planSha256',
+      0,
+      '02493000-0000-4000-8000-00000000000b',
+      v_performed_at,
+      jsonb_build_object(
+        'preparedQuantity', 3,
+        'preparedUnit', 'tablet'
+      ),
+      null,
+      null
+    );
+    execute 'reset role';
+    if not exists (
+      select 1
+      from public.invoice_lines invoice_line
+      where invoice_line.workspace_id = 'clair-demo'
+        and invoice_line.order_id = (v_child ->> 'orderId')::uuid
+        and invoice_line.quantity = 1
+        and invoice_line.line_total = 1000
+        and not (
+          invoice_line.source_order_snapshot ? 'billingAuthority'
+        )
+    ) then
+      raise exception 'dispensing_set_legacy_invoice_fallback_failed';
+    end if;
+    raise exception 'rollback_legacy_invoice_fallback_probe'
+      using errcode = 'P0001';
+  exception when sqlstate 'P0001' then
+    if sqlerrm <> 'rollback_legacy_invoice_fallback_probe' then
+      raise;
+    end if;
+  end;
+
   execute 'reset role';
   select work_item.* into strict v_work_item
   from public.order_fulfillment_work_items work_item
@@ -980,6 +1053,41 @@ begin
     raise exception 'dispensing_set_performance_retry_failed';
   end if;
 
+  execute 'reset role';
+  if not exists (
+    select 1
+    from public.order_billing_candidates candidate
+    join public.invoice_lines invoice_line
+      on invoice_line.workspace_id = candidate.workspace_id
+     and invoice_line.id = candidate.invoice_line_id
+     and invoice_line.order_id = candidate.order_id
+     and invoice_line.billing_candidate_id = candidate.id
+    join public.invoices invoice
+      on invoice.workspace_id = invoice_line.workspace_id
+     and invoice.id = invoice_line.invoice_id
+    where candidate.workspace_id = 'clair-demo'
+      and candidate.order_id = (v_child ->> 'orderId')::uuid
+      and candidate.status = 'invoice_linked'
+      and candidate.quantity = 3
+      and candidate.unit_price = 1000
+      and candidate.amount = 3000
+      and invoice.status = 'draft'
+      and invoice.payment_state = 'none'
+      and invoice_line.quantity = candidate.quantity
+      and invoice_line.line_total = candidate.amount
+      and invoice_line.source_order_snapshot ->> 'billingAuthority'
+        = 'order_billing_candidates'
+      and invoice_line.source_order_snapshot ->> 'billingCandidateId'
+        = candidate.id
+  ) then
+    raise exception 'dispensing_set_execution_invoice_candidate_mismatch';
+  end if;
+  select invoice_line.id into strict v_invoice_line_id
+  from public.invoice_lines invoice_line
+  where invoice_line.workspace_id = 'clair-demo'
+    and invoice_line.order_id = (v_child ->> 'orderId')::uuid;
+  execute 'set local role authenticated';
+
   v_amended := public.clair_record_order_execution_result(
     'clair-demo',
     '00000000-0000-4000-8000-000000000002',
@@ -1001,6 +1109,25 @@ begin
   end if;
 
   execute 'reset role';
+  if (
+      select count(*)
+      from public.invoice_lines invoice_line
+      where invoice_line.workspace_id = 'clair-demo'
+        and invoice_line.order_id = (v_child ->> 'orderId')::uuid
+    ) <> 1
+    or not exists (
+      select 1
+      from public.invoice_lines invoice_line
+      where invoice_line.workspace_id = 'clair-demo'
+        and invoice_line.id = v_invoice_line_id
+        and invoice_line.order_id = (v_child ->> 'orderId')::uuid
+        and invoice_line.quantity = 3
+        and invoice_line.line_total = 3000
+    )
+  then
+    raise exception 'dispensing_set_execution_invoice_amendment_mutated';
+  end if;
+
   update public.order_tasks task
   set status = 'returned',
       returned_at = now(),
