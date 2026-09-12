@@ -7,7 +7,7 @@ status: "human_review"
 area: "clinical-fulfillment"
 priority: "P0"
 tags: [plan-order, fulfillment, rls, rpc, assignment]
-target_pr: "GitHub PR #698"
+target_pr: "GitHub PR #698; regression remediation PR #746"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
@@ -150,6 +150,9 @@ and completed lab/imaging/dispensing/treatment read and amendment contracts.
   unapplied remotely. Commit, push, and PR preparation are authorized; merge,
   Production deployment, and remote migration still require their exact
   candidate packets and approvals.
+- Regression remediation PR #746 targets `main` from
+  `codex/fulfillment-queue-context-selection`. Its exact final head, Preview,
+  and manually dispatched Release Check are recorded at the release gate.
 - A broader changed-file browser run reached 24 passes before it was stopped
   after six failures outside the focused scope. Three representative failures
   reproduced unchanged on the `origin/main` parent: a date-stale dispensing
