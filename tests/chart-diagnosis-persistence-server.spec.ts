@@ -525,14 +525,23 @@ test("diagnosis persistence migration defines local-first RPC boundary without s
   expect(currentRecordScopeMigration).toContain(
     "create or replace function public.clair_save_chart_diagnoses_v2",
   );
+  expect(currentRecordScopeMigration).not.toContain(
+    "private.clair_save_encounter_diagnoses_stable(",
+  );
   expect(currentRecordScopeMigration).toContain(
-    "private.clair_save_encounter_diagnoses_stable",
+    "pg_catalog.jsonb_array_length(coalesce(p_diagnoses, '[]'::jsonb)) > 30",
   );
   expect(currentRecordScopeMigration).toContain(
     "'id', coalesce(existing.id, extensions.gen_random_uuid())",
   );
   expect(currentRecordScopeMigration).toContain(
     "diagnosis.retired_at is null",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "Only selected-chart input rows are written",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "from pg_catalog.jsonb_array_elements(v_assessment_input)",
   );
   expect(currentRecordScopeMigration).toContain(
     "delete from public.chart_diagnosis_assessments",

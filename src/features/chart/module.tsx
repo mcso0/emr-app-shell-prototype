@@ -11151,8 +11151,13 @@ function OrderArea({
       (sum, row) => sum + Math.max(0, getChartOrderAdjustmentAmount(row)),
       0,
     );
-    const requestableRows = confirmedTopLevelRows.filter(
-      (row) => row.billingCandidateStatus === "candidate_created",
+    const requestableRows = confirmedRows.filter(
+      (row) =>
+        row.billingCandidateStatus === "candidate_created" &&
+        getChartOrderScopedChargeAmount(row) > 0,
+    );
+    const requestableRootIds = new Set(
+      requestableRows.map((row) => orderRootId(row)),
     );
     const requestedRows = confirmedTopLevelRows.filter(
       (row) => row.billingCandidateStatus === "invoice_linked",
@@ -11174,7 +11179,7 @@ function OrderArea({
           (row) => row.order.status === "re_requested",
         ).length,
         requested: requestedRows.length,
-        requestable: requestableRows.length,
+        requestable: requestableRootIds.size,
         cancelled: draftRows.filter(
           (row) =>
             row.order.status === "cancelled" && isChartOrderTopLevelRow(row),
@@ -11198,7 +11203,7 @@ function OrderArea({
       requestableOrderIds: requestableRows.map((row) => row.order.id),
       unfinishedOrders: [],
     };
-  }, [bundle.encounter.id, bundle.encounter.workspaceId, draftRows]);
+  }, [bundle.encounter.id, bundle.encounter.workspaceId, draftRows, orderRootId]);
   useEffect(() => {
     onOrderCountChange?.(localBillingSummary.orderCounts.total);
   }, [localBillingSummary.orderCounts.total, onOrderCountChange]);

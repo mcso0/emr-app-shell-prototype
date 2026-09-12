@@ -1,32 +1,63 @@
 import {
   expect,
   test,
-  type APIRequestContext,
   type Page,
 } from "@playwright/test";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
-const actorHeaders = { "x-clair-demo-session-user-id": "user-vet" };
+const defaultChartId = "soap-coco-260501";
+const scenarioUrl = (chartId: string) =>
+  `/w/${workspaceId}/treatment?patientId=patient-coco&encounterId=${encounterId}&chartId=${chartId}&modulePanel=closed&aside=history`;
 
-async function createChart(request: APIRequestContext) {
-  const response = await request.post(
-    `/api/workspaces/${workspaceId}/chart/encounter-charts`,
-    {
-      data: { encounterId, creationRequestId: crypto.randomUUID() },
-      headers: actorHeaders,
-    },
-  );
-  expect(response.ok()).toBe(true);
-  return (await response.json()).chart.id as string;
+async function warmChartWorkspace(page: Page) {
+  await page.goto(scenarioUrl(defaultChartId));
+  await expect(
+    page.locator(`[data-chart-id="${defaultChartId}"]`),
+  ).toBeVisible({ timeout: 15_000 });
 }
 
-test("Assessment renders only the selected chart snapshot", async ({
-  page,
-  request,
-}) => {
-  const chartAId = await createChart(request);
-  const chartBId = await createChart(request);
+async function createChart(page: Page) {
+  const create = page
+    .getByRole("button", { name: "+ 새 차트", exact: true })
+    .first();
+  await expect(create).toBeEnabled();
+  const created = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("chart/encounter-charts"),
+  );
+  await create.click();
+  const response = await created;
+  expect(response.ok()).toBe(true);
+  const chartId = (await response.json()).chart.id as string;
+  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  await expect(page.locator(`[data-chart-id="${chartId}"]`)).toBeVisible();
+  return chartId;
+}
+
+async function openChart(page: Page, chartId: string) {
+  const chartButton = page.locator(`[data-chart-id="${chartId}"]`);
+  await expect(chartButton).toBeVisible({ timeout: 15_000 });
+  await expect(async () => {
+    if ((await chartButton.getAttribute("aria-pressed")) !== "true") {
+      await chartButton.click();
+    }
+    await expect(chartButton).toHaveAttribute("aria-pressed", "true", {
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 15_000 });
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"), {
+      timeout: 15_000,
+    })
+    .toBe(chartId);
+}
+
+test("Assessment renders only the selected chart snapshot", async ({ page }) => {
+  await warmChartWorkspace(page);
+  const chartAId = defaultChartId;
+  const chartBId = await createChart(page);
   const createdAt = "2026-09-12T08:00:00.000Z";
   const diagnoses = [
     {
@@ -68,16 +99,6 @@ test("Assessment renders only the selected chart snapshot", async ({
       }),
     });
   });
-
-  const scenarioUrl = (chartId: string) =>
-    `/w/${workspaceId}/treatment?patientId=patient-coco&encounterId=${encounterId}&chartId=${chartId}&modulePanel=closed&aside=history`;
-  const openChart = async (targetPage: Page, chartId: string) => {
-    await targetPage.goto(scenarioUrl(chartId));
-    const chartButton = targetPage.locator(`[data-chart-id="${chartId}"]`);
-    await expect(chartButton).toBeVisible();
-    await chartButton.click();
-    await expect(targetPage).toHaveURL(new RegExp(`chartId=${chartId}`));
-  };
 
   await openChart(page, chartAId);
   await expect(

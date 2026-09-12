@@ -23,8 +23,15 @@ declare
   v_note public.soap_notes;
   v_member uuid;
   v_assessment_input jsonb;
-  v_merged_input jsonb;
   v_assessment_ids uuid[];
+  v_actor_user_id uuid := nullif(p_actor_user_id, '')::uuid;
+  v_now timestamptz := pg_catalog.clock_timestamp();
+  v_input jsonb;
+  v_existing_state jsonb := '{}'::jsonb;
+  v_patient_id uuid;
+  v_guardian_id uuid;
+  v_before_diagnoses_audit jsonb;
+  v_after_diagnoses_audit jsonb;
 begin
   perform private.clair_require_chart_encounter(
     p_workspace_id,
@@ -55,6 +62,110 @@ begin
   if pg_catalog.jsonb_typeof(coalesce(p_diagnoses, '[]'::jsonb)) <> 'array' then
     raise exception 'invalid_diagnosis_rows' using errcode = '22023';
   end if;
+  if pg_catalog.jsonb_array_length(coalesce(p_diagnoses, '[]'::jsonb)) > 30 then
+    raise exception 'too_many_diagnosis_rows' using errcode = '22023';
+  end if;
+
+  -- Validate only the selected chart's rows. Other charts can take the
+  -- encounter above 30 diagnoses without consuming this chart's own limit.
+  for v_input in
+    select value
+    from pg_catalog.jsonb_array_elements(coalesce(p_diagnoses, '[]'::jsonb)) rows(value)
+  loop
+    if pg_catalog.jsonb_typeof(v_input) <> 'object'
+      or exists (
+        select 1
+        from pg_catalog.jsonb_object_keys(v_input) key
+        where key not in (
+          'id',
+          'diagnosisCatalogId',
+          'diagnosisText',
+          'diagnosisType',
+          'isClosed',
+          'isPrimary',
+          'sortOrder'
+        )
+      )
+    then
+      raise exception 'invalid_diagnosis_row_contract' using errcode = '22023';
+    end if;
+    if coalesce(nullif(v_input->>'diagnosisType', ''), 'suspected') not in (
+      'suspected',
+      'confirmed',
+      'differential'
+    ) then
+      raise exception 'invalid_diagnosis_type' using errcode = '22023';
+    end if;
+    if nullif(v_input->>'diagnosisCatalogId', '') is null
+      and (
+        pg_catalog.length(pg_catalog.btrim(coalesce(v_input->>'diagnosisText', ''))) < 1
+        or pg_catalog.length(pg_catalog.btrim(coalesce(v_input->>'diagnosisText', ''))) > 500
+      )
+    then
+      raise exception 'invalid_free_text_diagnosis' using errcode = '22023';
+    end if;
+    if nullif(v_input->>'id', '') is not null and exists (
+      select 1
+      from public.diagnoses existing
+      where existing.id = (v_input->>'id')::uuid
+        and (
+          existing.workspace_id <> p_workspace_id
+          or existing.encounter_id <> p_encounter_id
+        )
+    ) then
+      raise exception 'diagnosis_id_outside_target_encounter' using errcode = '42501';
+    end if;
+  end loop;
+
+  if exists (
+    select 1
+    from (
+      select value->>'id' as id
+      from pg_catalog.jsonb_array_elements(coalesce(p_diagnoses, '[]'::jsonb)) rows(value)
+      where nullif(value->>'id', '') is not null
+      group by value->>'id'
+      having count(*) > 1
+    ) duplicates
+  ) then
+    raise exception 'duplicate_diagnosis_id' using errcode = '23505';
+  end if;
+  if exists (
+    select 1
+    from (
+      select value->>'diagnosisCatalogId' as catalog_id
+      from pg_catalog.jsonb_array_elements(coalesce(p_diagnoses, '[]'::jsonb)) rows(value)
+      where nullif(value->>'diagnosisCatalogId', '') is not null
+      group by value->>'diagnosisCatalogId'
+      having count(*) > 1
+    ) duplicates
+  ) then
+    raise exception 'duplicate_diagnosis_catalog_id' using errcode = '23505';
+  end if;
+
+  select patient_id, guardian_id
+  into v_patient_id, v_guardian_id
+  from public.encounters
+  where workspace_id = p_workspace_id
+    and id = p_encounter_id;
+
+  -- Serialize catalog availability with the adopter before validating, then
+  -- lock the encounter diagnosis identities before assigning reused IDs.
+  perform catalog.id
+  from public.diagnosis_catalog catalog
+  join (
+    select distinct (value->>'diagnosisCatalogId')::uuid as id
+    from pg_catalog.jsonb_array_elements(coalesce(p_diagnoses, '[]'::jsonb)) rows(value)
+    where nullif(value->>'diagnosisCatalogId', '') is not null
+  ) requested on requested.id = catalog.id
+  where catalog.workspace_id = p_workspace_id
+  order by catalog.id
+  for update of catalog;
+
+  perform 1
+  from public.diagnoses
+  where workspace_id = p_workspace_id
+    and encounter_id = p_encounter_id
+  for update;
 
   -- Assign identity before merging so a chart-local addition can be selected
   -- for its snapshot without guessing from text or timestamps. Reuse the
@@ -82,81 +193,297 @@ begin
     and existing.diagnosis_catalog_id =
       nullif(input.value->>'diagnosisCatalogId', '')::uuid;
 
-  -- The stable encounter writer is intentionally still the authority for
-  -- catalog snapshots, closure metadata, permissions and audit. Supply a full
-  -- active encounter set so removing a diagnosis from one chart assessment
-  -- never retires diagnoses owned by another chart.
-  with incoming as (
-    select
-      input.value,
-      input.ordinality,
-      nullif(input.value->>'id', '')::uuid as id,
-      nullif(input.value->>'diagnosisCatalogId', '')::uuid as catalog_id
-    from pg_catalog.jsonb_array_elements(v_assessment_input)
-      with ordinality input(value, ordinality)
-  ), merged as (
-    select
-      pg_catalog.jsonb_build_object(
-        'id', diagnosis.id,
-        'diagnosisCatalogId', diagnosis.diagnosis_catalog_id,
-        'diagnosisText', diagnosis.diagnosis_text,
-        'diagnosisType', diagnosis.diagnosis_type,
-        'isClosed', diagnosis.closed_at is not null,
-        'isPrimary', diagnosis.is_primary,
-        'sortOrder', diagnosis.sort_order
-      ) as value,
-      diagnosis.sort_order::bigint as sort_key,
-      0 as source_rank,
-      diagnosis.id::text as tie_breaker
-    from public.diagnoses diagnosis
-    where diagnosis.workspace_id = p_workspace_id
-      and diagnosis.encounter_id = p_encounter_id
-      and diagnosis.retired_at is null
+  if exists (
+    select 1
+    from pg_catalog.jsonb_array_elements(v_assessment_input) rows(value)
+    where nullif(value->>'diagnosisCatalogId', '') is not null
       and not exists (
         select 1
-        from incoming
-        where incoming.id = diagnosis.id
-          or (
-            incoming.catalog_id is not null
-            and incoming.catalog_id = diagnosis.diagnosis_catalog_id
-          )
+        from public.diagnosis_catalog catalog
+        where catalog.id = (rows.value->>'diagnosisCatalogId')::uuid
+          and catalog.workspace_id = p_workspace_id
+          and catalog.is_active
+          and catalog.availability_state = 'active'
       )
+      and not exists (
+        select 1
+        from public.diagnoses existing
+        where existing.workspace_id = p_workspace_id
+          and existing.encounter_id = p_encounter_id
+          and existing.id = nullif(rows.value->>'id', '')::uuid
+          and existing.diagnosis_catalog_id =
+            (rows.value->>'diagnosisCatalogId')::uuid
+      )
+  ) then
+    raise exception 'diagnosis_catalog_item_unavailable' using errcode = '23503';
+  end if;
 
-    union all
+  if exists (
+    select 1
+    from pg_catalog.jsonb_array_elements(v_assessment_input) rows(value)
+    join public.diagnoses existing
+      on existing.workspace_id = p_workspace_id
+      and existing.encounter_id = p_encounter_id
+      and existing.id = nullif(rows.value->>'id', '')::uuid
+    where existing.diagnosis_catalog_id is distinct from
+      nullif(rows.value->>'diagnosisCatalogId', '')::uuid
+  ) then
+    raise exception 'diagnosis_catalog_identity_immutable' using errcode = '23514';
+  end if;
 
-    select
-      incoming.value,
-      coalesce(
-        existing_by_id.sort_order,
-        existing_by_catalog.sort_order,
-        1000000 + incoming.ordinality
-      )::bigint as sort_key,
-      1 as source_rank,
-      incoming.ordinality::text as tie_breaker
-    from incoming
-    left join public.diagnoses existing_by_id
-      on existing_by_id.workspace_id = p_workspace_id
-      and existing_by_id.encounter_id = p_encounter_id
-      and existing_by_id.id = incoming.id
-    left join public.diagnoses existing_by_catalog
-      on existing_by_catalog.workspace_id = p_workspace_id
-      and existing_by_catalog.encounter_id = p_encounter_id
-      and incoming.catalog_id is not null
-      and existing_by_catalog.diagnosis_catalog_id = incoming.catalog_id
-  )
   select coalesce(
-    pg_catalog.jsonb_agg(value order by sort_key, source_rank, tie_breaker),
-    '[]'::jsonb
+    pg_catalog.jsonb_object_agg(
+      id::text,
+      pg_catalog.jsonb_build_object(
+        'catalogId', diagnosis_catalog_id,
+        'catalogRevision', diagnosis_catalog_revision,
+        'snapshot', diagnosis_snapshot,
+        'closedAt', closed_at,
+        'closedByUserId', closed_by_user_id,
+        'createdAt', created_at,
+        'createdByUserId', created_by_user_id
+      )
+    ),
+    '{}'::jsonb
   )
-  into v_merged_input
-  from merged;
+  into v_existing_state
+  from public.diagnoses
+  where workspace_id = p_workspace_id
+    and encounter_id = p_encounter_id;
 
-  v_rows := private.clair_save_encounter_diagnoses_stable(
+  select pg_catalog.jsonb_build_object(
+    'count', count(*),
+    'rows', coalesce(
+      pg_catalog.jsonb_agg(
+        pg_catalog.jsonb_build_object(
+          'id', id,
+          'catalogId', diagnosis_catalog_id,
+          'catalogRevision', diagnosis_catalog_revision,
+          'diagnosisMode', case
+            when diagnosis_catalog_id is null then 'free_text'
+            else 'catalog'
+          end,
+          'diagnosisTextFingerprint', pg_catalog.encode(
+            extensions.digest(coalesce(diagnosis_text, ''), 'sha256'),
+            'hex'
+          ),
+          'diagnosisType', diagnosis_type,
+          'isClosed', closed_at is not null,
+          'retiredAt', retired_at,
+          'isPrimary', is_primary,
+          'sortOrder', sort_order
+        )
+        order by sort_order, id
+      ),
+      '[]'::jsonb
+    )
+  )
+  into v_before_diagnoses_audit
+  from public.diagnoses
+  where workspace_id = p_workspace_id
+    and encounter_id = p_encounter_id;
+
+  -- Only selected-chart input rows are written. Existing rows absent from this
+  -- input keep their updater, timestamps, closure state and retirement state.
+  insert into public.diagnoses(
+    id,
+    workspace_id,
+    encounter_id,
+    diagnosis_catalog_id,
+    diagnosis_catalog_revision,
+    diagnosis_snapshot,
+    diagnosis_text,
+    diagnosis_type,
+    closed_at,
+    closed_by_user_id,
+    is_primary,
+    sort_order,
+    created_by_user_id,
+    updated_by_user_id,
+    created_at,
+    updated_at
+  )
+  select
+    (input.value->>'id')::uuid,
     p_workspace_id,
-    p_actor_user_id,
     p_encounter_id,
-    v_merged_input
+    catalog.id,
+    case
+      when catalog.id is not null
+        and v_existing_state -> (input.value->>'id') ->> 'catalogId' = catalog.id::text
+      then (v_existing_state -> (input.value->>'id') ->> 'catalogRevision')::integer
+      else catalog.catalog_revision
+    end,
+    case
+      when catalog.id is null then null
+      when v_existing_state -> (input.value->>'id') ->> 'catalogId' = catalog.id::text
+      then v_existing_state -> (input.value->>'id') -> 'snapshot'
+      else pg_catalog.jsonb_build_object(
+        'catalogId', catalog.id,
+        'catalogRevision', catalog.catalog_revision,
+        'sourceMasterRevision', catalog.last_applied_revision,
+        'diagnosisName', catalog.name,
+        'systemId', catalog.system_master_record_id,
+        'systemLabel', catalog.system_name,
+        'diseaseGroupId', catalog.disease_group_master_record_id,
+        'diseaseGroupLabel', catalog.disease_group_name,
+        'sourceMasterRecordId', catalog.source_master_record_id
+      )
+    end,
+    case
+      when catalog.id is null then pg_catalog.btrim(input.value->>'diagnosisText')
+      when v_existing_state -> (input.value->>'id') ->> 'catalogId' = catalog.id::text
+      then coalesce(
+        v_existing_state -> (input.value->>'id') -> 'snapshot' ->> 'diagnosisName',
+        catalog.name
+      )
+      else catalog.name
+    end,
+    coalesce(nullif(input.value->>'diagnosisType', ''), 'suspected'),
+    case
+      when coalesce((input.value->>'isClosed')::boolean, false)
+      then coalesce(
+        nullif(v_existing_state -> (input.value->>'id') ->> 'closedAt', '')::timestamptz,
+        v_now
+      )
+      else null
+    end,
+    case
+      when coalesce((input.value->>'isClosed')::boolean, false)
+      then coalesce(
+        nullif(v_existing_state -> (input.value->>'id') ->> 'closedByUserId', '')::uuid,
+        v_actor_user_id
+      )
+      else null
+    end,
+    coalesce((input.value->>'isPrimary')::boolean, false),
+    input.ordinality::integer - 1,
+    coalesce(
+      nullif(v_existing_state -> (input.value->>'id') ->> 'createdByUserId', '')::uuid,
+      v_actor_user_id
+    ),
+    v_actor_user_id,
+    coalesce(
+      nullif(v_existing_state -> (input.value->>'id') ->> 'createdAt', '')::timestamptz,
+      v_now
+    ),
+    v_now
+  from pg_catalog.jsonb_array_elements(v_assessment_input)
+    with ordinality input(value, ordinality)
+  left join public.diagnosis_catalog catalog
+    on catalog.id = nullif(input.value->>'diagnosisCatalogId', '')::uuid
+    and catalog.workspace_id = p_workspace_id
+    and (
+      (catalog.is_active and catalog.availability_state = 'active')
+      or v_existing_state -> (input.value->>'id') ->> 'catalogId' = catalog.id::text
+    )
+  on conflict (id) do update set
+    diagnosis_text = excluded.diagnosis_text,
+    diagnosis_type = excluded.diagnosis_type,
+    closed_at = excluded.closed_at,
+    closed_by_user_id = excluded.closed_by_user_id,
+    is_primary = excluded.is_primary,
+    sort_order = excluded.sort_order,
+    updated_by_user_id = excluded.updated_by_user_id,
+    updated_at = excluded.updated_at,
+    retired_at = null
+  where public.diagnoses.workspace_id = p_workspace_id
+    and public.diagnoses.encounter_id = p_encounter_id;
+
+  update public.encounters
+  set updated_at = v_now
+  where workspace_id = p_workspace_id
+    and id = p_encounter_id
+    and status <> 'cancelled';
+
+  select pg_catalog.jsonb_build_object(
+    'count', count(*),
+    'rows', coalesce(
+      pg_catalog.jsonb_agg(
+        pg_catalog.jsonb_build_object(
+          'id', id,
+          'catalogId', diagnosis_catalog_id,
+          'catalogRevision', diagnosis_catalog_revision,
+          'diagnosisMode', case
+            when diagnosis_catalog_id is null then 'free_text'
+            else 'catalog'
+          end,
+          'diagnosisTextFingerprint', pg_catalog.encode(
+            extensions.digest(coalesce(diagnosis_text, ''), 'sha256'),
+            'hex'
+          ),
+          'diagnosisType', diagnosis_type,
+          'isClosed', closed_at is not null,
+          'retiredAt', retired_at,
+          'isPrimary', is_primary,
+          'sortOrder', sort_order
+        )
+        order by sort_order, id
+      ),
+      '[]'::jsonb
+    )
+  )
+  into v_after_diagnoses_audit
+  from public.diagnoses
+  where workspace_id = p_workspace_id
+    and encounter_id = p_encounter_id;
+
+  select id
+  into v_member
+  from public.user_memberships
+  where workspace_id = p_workspace_id
+    and user_id = v_actor_user_id
+    and status = 'active'
+  order by created_at
+  limit 1;
+
+  insert into public.audit_events(
+    id,
+    workspace_id,
+    actor_user_id,
+    actor_membership_id,
+    event_type,
+    target_type,
+    target_id,
+    encounter_id,
+    patient_id,
+    guardian_id,
+    before_snapshot,
+    after_snapshot,
+    metadata,
+    occurred_at,
+    created_at
+  ) values (
+    'audit_rpc_diagnosis_' || pg_catalog.substr(
+      pg_catalog.encode(
+        extensions.digest(
+          p_workspace_id || ':' || p_encounter_id::text || ':' || v_now::text || ':' ||
+            extensions.gen_random_uuid()::text,
+          'sha256'
+        ),
+        'hex'
+      ),
+      1,
+      24
+    ),
+    p_workspace_id,
+    v_actor_user_id,
+    v_member,
+    'diagnosis.changed',
+    'encounter_diagnoses',
+    p_encounter_id::text,
+    p_encounter_id,
+    v_patient_id,
+    v_guardian_id,
+    v_before_diagnoses_audit,
+    v_after_diagnoses_audit,
+    pg_catalog.jsonb_build_object('rpc', 'clair_save_chart_diagnoses'),
+    v_now,
+    v_now
   );
+
+  select public.clair_get_chart_diagnoses(p_workspace_id, p_encounter_id)
+  into v_rows;
 
   if p_assessed_diagnosis_ids is null then
     select coalesce(
@@ -262,15 +589,6 @@ begin
   where assessment.workspace_id = p_workspace_id
     and assessment.encounter_id = p_encounter_id
     and assessment.chart_id = p_chart_id;
-
-  select id
-  into v_member
-  from public.user_memberships
-  where workspace_id = p_workspace_id
-    and user_id = auth.uid()
-    and status = 'active'
-  order by created_at
-  limit 1;
 
   perform public.clair_append_audit_event(
     p_id => 'chart-assessment-' || extensions.gen_random_uuid()::text,

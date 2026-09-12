@@ -1,31 +1,55 @@
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
-const actorHeaders = { "x-clair-demo-session-user-id": "user-vet" };
+const defaultChartId = "soap-coco-260501";
 const scenarioUrl = (chartId: string) =>
   `/w/${workspaceId}/treatment?patientId=patient-coco&encounterId=${encounterId}&chartId=${chartId}&modulePanel=closed&aside=history`;
 
 async function openChart(page: Page, chartId: string) {
-  await page.goto(scenarioUrl(chartId));
   const chartButton = page.locator(`[data-chart-id="${chartId}"]`);
-  await expect(chartButton).toBeVisible();
-  await chartButton.click();
-  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  await expect(chartButton).toBeVisible({ timeout: 15_000 });
+  await expect(async () => {
+    if ((await chartButton.getAttribute("aria-pressed")) !== "true") {
+      await chartButton.click();
+    }
+    await expect(chartButton).toHaveAttribute("aria-pressed", "true", {
+      timeout: 2_000,
+    });
+  }).toPass({ timeout: 15_000 });
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"), {
+      timeout: 15_000,
+    })
+    .toBe(chartId);
 }
 
-async function createChart(request: APIRequestContext) {
-  const response = await request.post(
-    `/api/workspaces/${workspaceId}/chart/encounter-charts`,
-    {
-      data: { encounterId, creationRequestId: crypto.randomUUID() },
-      headers: actorHeaders,
-    },
+async function warmChartWorkspace(page: Page) {
+  await page.goto(scenarioUrl(defaultChartId));
+  await expect(
+    page.locator(`[data-chart-id="${defaultChartId}"]`),
+  ).toBeVisible({ timeout: 15_000 });
+}
+
+async function createChart(page: Page) {
+  const create = page
+    .getByRole("button", { name: "+ 새 차트", exact: true })
+    .first();
+  await expect(create).toBeEnabled();
+  const created = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("chart/encounter-charts"),
   );
+  await create.click();
+  const response = await created;
   expect(response.ok()).toBe(true);
-  return (await response.json()).chart.id as string;
+  const chartId = (await response.json()).chart.id as string;
+  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  await expect(page.locator(`[data-chart-id="${chartId}"]`)).toBeVisible();
+  return chartId;
 }
 
 async function installScopedOrderFixture(
@@ -106,10 +130,10 @@ async function installScopedOrderFixture(
 
 test("Plan/Order rows, counts, and money follow only the active chart", async ({
   page,
-  request,
 }) => {
-  const chartAId = await createChart(request);
-  const chartBId = await createChart(request);
+  await warmChartWorkspace(page);
+  const chartAId = defaultChartId;
+  const chartBId = await createChart(page);
   await installScopedOrderFixture(page, chartAId, chartBId);
 
   await openChart(page, chartAId);
@@ -138,9 +162,11 @@ test("Plan/Order rows, counts, and money follow only the active chart", async ({
 
 test("included-order-sum set counts once and does not double-charge its parent", async ({
   page,
-  request,
 }) => {
-  const chartId = await createChart(request);
+  await warmChartWorkspace(page);
+  const chartId = await createChart(page);
+  const parentId = crypto.randomUUID();
+  const childId = crypto.randomUUID();
   await page.route(
     `**/api/workspaces/${workspaceId}/chart/order-drafts*`,
     async (route) => {
@@ -153,8 +179,6 @@ test("included-order-sum set counts once and does not double-charge its parent",
         rows: Array<Record<string, unknown>>;
       };
       const source = body.rows[0];
-      const parentId = crypto.randomUUID();
-      const childId = crypto.randomUUID();
       const rows = [
         {
           ...source,
@@ -165,6 +189,7 @@ test("included-order-sum set counts once and does not double-charge its parent",
             items: [],
           },
           calculationOutputs: { childSubtotalKrw: 6_000 },
+          billingCandidateStatus: "candidate_created",
           clinicalOrderType: "other",
           destinationModule: null,
           executionMode: "aggregate",
@@ -172,6 +197,7 @@ test("included-order-sum set counts once and does not double-charge its parent",
           orderId: parentId,
           orderType: "set",
           originChartId: chartId,
+          orderConfirmationStatus: "confirmed",
           parentOrderId: null,
           rowType: "set",
           sourceSetId: crypto.randomUUID(),
@@ -185,9 +211,11 @@ test("included-order-sum set counts once and does not double-charge its parent",
             displayName: "Synthetic set child",
             selected: true,
           },
+          billingCandidateStatus: "candidate_created",
           lineTotalSnapshot: 6_000,
           orderId: childId,
           originChartId: chartId,
+          orderConfirmationStatus: "confirmed",
           parentOrderId: parentId,
           rowType: "set_child",
           unitPriceSnapshot: 6_000,
@@ -200,19 +228,49 @@ test("included-order-sum set counts once and does not double-charge its parent",
       });
     },
   );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/order-actions*`,
+    async (route) => {
+      const updatedAt = "2026-09-12T08:00:00.000Z";
+      const orderActions = [parentId, childId].map((orderId) => ({
+        billingCandidateStatus: "candidate_created",
+        encounterId,
+        orderConfirmationStatus: "confirmed",
+        orderId,
+        status: "confirmed",
+        updatedAt,
+      }));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          etag: '"included-set-actions"',
+          rows: [],
+          orderActions,
+        }),
+      });
+    },
+  );
 
+  await openChart(page, defaultChartId);
   await openChart(page, chartId);
   const footer = page.getByTestId("chart-order-footer");
   await expect(footer).toContainText("오더 1건");
   await expect(footer).toContainText("6,000원");
   await expect(footer).not.toContainText("12,000원");
+  await footer.getByRole("button", { name: "금액 상세" }).click();
+  const detail = page.getByLabel("Plan/Order 금액 상세");
+  await expect(detail).toContainText("이 차트 청구 가능 1건");
+  await expect(detail).toContainText("이 차트 청구 가능 6,000원");
 });
 
 test("chart billing action navigates to encounter billing without a billing POST", async ({
   page,
-  request,
 }) => {
-  const chartId = await createChart(request);
+  await warmChartWorkspace(page);
+  await createChart(page);
   let billingPosts = 0;
   await page.route(
     `**/api/workspaces/${workspaceId}/chart/order-billing-summary*`,
@@ -222,7 +280,6 @@ test("chart billing action navigates to encounter billing without a billing POST
     },
   );
 
-  await openChart(page, chartId);
   const billingButton = page
     .getByTestId("chart-order-footer")
     .getByRole("button", { name: "수납에서 청구" });
