@@ -378,6 +378,22 @@ test("chart assessment saves preserve other charts and encounter diagnosis ident
     throw new Error("chart diagnosis fixture did not load");
   }
 
+  const initialEmptyB = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: [],
+      encounterId,
+      expectedVersion: chartBInitial.version,
+    },
+    workspaceId,
+  });
+  if (!initialEmptyB.ok) {
+    throw new Error(`initial chart B clear failed: ${initialEmptyB.status}`);
+  }
+  expect(initialEmptyB.version).toBe(chartBInitial.version);
+
   const savedA = await saveChartDiagnoses({
     actorUserId: "user-vet",
     gateway,
@@ -406,19 +422,20 @@ test("chart assessment saves preserve other charts and encounter diagnosis ident
     workspaceId,
   });
   if (!chartBAfterA.ok) throw new Error("chart B refresh failed");
+  const chartBDiagnoses = [
+    {
+      diagnosisText: "Synthetic chart B diagnosis",
+      diagnosisType: "confirmed" as const,
+      isClosed: true,
+      isPrimary: false,
+    },
+  ];
   const savedB = await saveChartDiagnoses({
     actorUserId: "user-vet",
     gateway,
     input: {
       chartId: chartB.id,
-      diagnoses: [
-        {
-          diagnosisText: "Synthetic chart B diagnosis",
-          diagnosisType: "confirmed",
-          isClosed: true,
-          isPrimary: false,
-        },
-      ],
+      diagnoses: chartBDiagnoses,
       encounterId,
       expectedVersion: chartBAfterA.version,
     },
@@ -452,6 +469,85 @@ test("chart assessment saves preserve other charts and encounter diagnosis ident
   expect(clearedB.diagnoses.map((row) => row.diagnosisText)).toContain(
     "Synthetic chart A diagnosis",
   );
+  expect(clearedB.version).not.toBe(savedB.version);
+
+  const staleRestoreB = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: chartBDiagnoses,
+      encounterId,
+      expectedVersion: savedB.version,
+    },
+    workspaceId,
+  });
+  expect(staleRestoreB).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "diagnoses_conflict",
+  });
+
+  const restoredB = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: chartBDiagnoses,
+      encounterId,
+      expectedVersion: clearedB.version,
+    },
+    workspaceId,
+  });
+  if (!restoredB.ok) throw new Error(`chart B restore failed: ${restoredB.status}`);
+  const clearedBAgain = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: [],
+      encounterId,
+      expectedVersion: restoredB.version,
+    },
+    workspaceId,
+  });
+  if (!clearedBAgain.ok) {
+    throw new Error(`second chart B clear failed: ${clearedBAgain.status}`);
+  }
+  expect(clearedBAgain.version).not.toBe(clearedB.version);
+
+  const staleAfterAba = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: chartBDiagnoses,
+      encounterId,
+      expectedVersion: clearedB.version,
+    },
+    workspaceId,
+  });
+  expect(staleAfterAba).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "diagnoses_conflict",
+  });
+
+  const repeatedClearB = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: [],
+      encounterId,
+      expectedVersion: clearedBAgain.version,
+    },
+    workspaceId,
+  });
+  if (!repeatedClearB.ok) {
+    throw new Error(`repeated chart B clear failed: ${repeatedClearB.status}`);
+  }
+  expect(repeatedClearB.version).toBe(clearedBAgain.version);
 
   const chartAAfterB = await readChartDiagnoses({
     actorUserId: "user-vet",
@@ -524,6 +620,21 @@ test("diagnosis persistence migration defines local-first RPC boundary without s
 
   expect(currentRecordScopeMigration).toContain(
     "create or replace function public.clair_save_chart_diagnoses_v2",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "add column if not exists diagnosis_assessment_revision",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "create or replace function private.clair_chart_diagnoses_version",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "create or replace function public.clair_get_chart_diagnosis_assessments",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "diagnosis_assessment_revision = diagnosis_assessment_revision +",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "case when v_before is distinct from v_after then 1 else 0 end",
   );
   expect(currentRecordScopeMigration).not.toContain(
     "private.clair_save_encounter_diagnoses_stable(",

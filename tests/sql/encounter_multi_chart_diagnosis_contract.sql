@@ -41,7 +41,9 @@ declare
   e uuid := '96370000-0000-4000-8000-000000000002';
   e_limit uuid := '96370000-0000-4000-8000-000000000102';
   a jsonb; b jsonb; state jsonb; first_snapshot jsonb; diagnosis_id text;
-  limit_a jsonb; limit_b jsonb; limit_state jsonb;
+  b_input jsonb; stale_b_version text; cleared_b_version text;
+  restored_b_version text; repeated_clear jsonb; initial_empty jsonb;
+  limit_a jsonb; limit_b jsonb; limit_state jsonb; limit_empty jsonb;
   rows_20 jsonb; rows_11 jsonb; rows_31 jsonb;
   preserved_diagnosis_id uuid; preserved_updater uuid; preserved_updated_at timestamptz;
   after_updater uuid; after_updated_at timestamptz;
@@ -49,6 +51,20 @@ declare
 begin
   a := public.clair_create_encounter_chart(w,actor,e,gen_random_uuid());
   b := public.clair_create_encounter_chart(w,actor,e,gen_random_uuid());
+  initial_empty := public.clair_get_chart_diagnosis_assessments(
+    w,e,(b->>'id')::uuid
+  );
+  state := public.clair_save_chart_diagnoses_v2(
+    w,actor,e,(b->>'id')::uuid,'[]',initial_empty->>'version'
+  );
+  if state->>'version' <> initial_empty->>'version' then
+    raise exception 'initial_empty_submission_advanced_version'; end if;
+  repeated_clear := public.clair_save_chart_diagnoses_v2(
+    w,actor,e,(b->>'id')::uuid,'[]',state->>'version'
+  );
+  if repeated_clear->>'version' <> state->>'version' then
+    raise exception 'repeated_initial_empty_advanced_version'; end if;
+
   state := public.clair_get_chart_diagnosis_assessments(w,e,(a->>'id')::uuid);
   state := public.clair_save_chart_diagnoses_v2(w,actor,e,(a->>'id')::uuid,
     jsonb_build_array(jsonb_build_object('diagnosisCatalogId',catalog_id,
@@ -61,9 +77,16 @@ begin
   if not denied then raise exception 'sign_accepted_stale_assessment'; end if;
   a := state->'chart';
   perform public.clair_sign_encounter_chart(w,actor,e,(a->>'id')::uuid,(a->>'updatedAt')::timestamptz);
+  state := public.clair_get_chart_diagnosis_assessments(w,e,(b->>'id')::uuid);
+  b_input := jsonb_build_array(jsonb_build_object(
+    'diagnosisCatalogId',catalog_id,
+    'diagnosisType','confirmed',
+    'isClosed',true,
+    'isPrimary',true
+  ));
   state := public.clair_save_chart_diagnoses_v2(w,actor,e,(b->>'id')::uuid,
-    jsonb_build_array(jsonb_build_object('diagnosisCatalogId',catalog_id,
-      'diagnosisType','confirmed','isClosed',true,'isPrimary',true)),state->>'version');
+    b_input,state->>'version');
+  stale_b_version := state->>'version';
   if state->'diagnoses'->0->>'id' <> diagnosis_id then raise exception 'diagnosis_identity_changed'; end if;
   if public.clair_get_chart_diagnosis_assessments(w,e,(a->>'id')::uuid)->'assessments' <> first_snapshot then
     raise exception 'historical_assessment_rewritten'; end if;
@@ -76,16 +99,60 @@ begin
   exception when others then if sqlerrm = 'diagnoses_conflict' then denied := true; else raise; end if; end;
   if not denied then raise exception 'stale_diagnoses_accepted'; end if;
   state := public.clair_save_chart_diagnoses_v2(w,actor,e,(b->>'id')::uuid,'[]',state->>'version');
+  cleared_b_version := state->>'version';
+  if cleared_b_version = stale_b_version then
+    raise exception 'assessment_clear_version_unchanged'; end if;
   if jsonb_array_length(state->'diagnoses') <> 1 then raise exception 'other_chart_diagnosis_removed'; end if;
   if state->'assessments' <> '[]'::jsonb then raise exception 'selected_chart_assessment_not_cleared'; end if;
   if public.clair_get_chart_diagnosis_assessments(w,e,(a->>'id')::uuid)->'assessments' <> first_snapshot then
     raise exception 'assessment_clear_removed_history'; end if;
+  denied := false;
+  begin
+    perform public.clair_save_chart_diagnoses_v2(
+      w,actor,e,(b->>'id')::uuid,b_input,stale_b_version
+    );
+  exception when others then
+    if sqlerrm = 'diagnoses_conflict' then denied := true; else raise; end if;
+  end;
+  if not denied then raise exception 'stale_clear_overwrite_accepted'; end if;
+
+  state := public.clair_save_chart_diagnoses_v2(
+    w,actor,e,(b->>'id')::uuid,b_input,cleared_b_version
+  );
+  restored_b_version := state->>'version';
+  state := public.clair_save_chart_diagnoses_v2(
+    w,actor,e,(b->>'id')::uuid,'[]',restored_b_version
+  );
+  if state->>'version' = cleared_b_version then
+    raise exception 'assessment_version_aba'; end if;
+  denied := false;
+  begin
+    perform public.clair_save_chart_diagnoses_v2(
+      w,actor,e,(b->>'id')::uuid,b_input,cleared_b_version
+    );
+  exception when others then
+    if sqlerrm = 'diagnoses_conflict' then denied := true; else raise; end if;
+  end;
+  if not denied then raise exception 'stale_aba_overwrite_accepted'; end if;
+  repeated_clear := public.clair_save_chart_diagnoses_v2(
+    w,actor,e,(b->>'id')::uuid,'[]',state->>'version'
+  );
+  if repeated_clear->>'version' <> state->>'version' then
+    raise exception 'repeated_clear_advanced_version'; end if;
 
   -- The 30-row contract belongs to each selected chart input, not to the
   -- encounter aggregate. Saving chart B must not update chart A's untouched
   -- diagnosis attribution while the encounter grows beyond 30 active rows.
   limit_a := public.clair_create_encounter_chart(w,actor,e_limit,gen_random_uuid());
   limit_b := public.clair_create_encounter_chart(w,actor,e_limit,gen_random_uuid());
+  limit_empty := public.clair_get_chart_diagnosis_assessments(
+    w,e_limit,(limit_b->>'id')::uuid
+  );
+  limit_state := public.clair_save_chart_diagnoses_v2(
+    w,actor,e_limit,(limit_b->>'id')::uuid,'[]',limit_empty->>'version'
+  );
+  if limit_state->>'version' <> limit_empty->>'version' then
+    raise exception 'second_initial_empty_submission_advanced_version'; end if;
   limit_state := public.clair_get_chart_diagnosis_assessments(
     w,e_limit,(limit_a->>'id')::uuid
   );
@@ -108,6 +175,9 @@ begin
   where row.value->>'diagnosisText' = 'Synthetic chart A diagnosis 1';
 
   perform set_config('request.jwt.claim.sub',second_actor,true);
+  limit_state := public.clair_get_chart_diagnosis_assessments(
+    w,e_limit,(limit_b->>'id')::uuid
+  );
   select jsonb_agg(jsonb_build_object(
     'diagnosisText', 'Synthetic chart B diagnosis ' || item_no,
     'diagnosisType', 'suspected',

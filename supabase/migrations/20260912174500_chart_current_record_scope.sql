@@ -1,6 +1,117 @@
 -- Keep chart assessment edits scoped to the selected chart while preserving
 -- encounter-owned diagnosis identities and historical chart snapshots.
 
+alter table public.soap_notes
+  add column if not exists diagnosis_assessment_revision bigint not null default 0;
+
+comment on column public.soap_notes.diagnosis_assessment_revision is
+  'Monotonic revision for this chart diagnosis assessment snapshot.';
+
+create or replace function private.clair_chart_diagnoses_version(
+  p_workspace_id text,
+  p_encounter_id uuid,
+  p_chart_id uuid
+)
+returns text
+language sql
+stable
+set search_path = ''
+as $$
+  select pg_catalog.encode(
+    extensions.digest(
+      p_workspace_id || ':' ||
+      p_encounter_id::text || ':' ||
+      p_chart_id::text || ':' ||
+      private.clair_encounter_diagnoses_version(
+        p_workspace_id,
+        p_encounter_id
+      ) || ':' ||
+      coalesce(
+        (
+          select note.diagnosis_assessment_revision::text
+          from public.soap_notes note
+          where note.workspace_id = p_workspace_id
+            and note.encounter_id = p_encounter_id
+            and note.id = p_chart_id
+            and note.status <> 'voided'
+        ),
+        'missing'
+      ),
+      'sha256'
+    ),
+    'hex'
+  );
+$$;
+
+revoke all on function private.clair_chart_diagnoses_version(
+  text,
+  uuid,
+  uuid
+) from public, anon, authenticated;
+
+comment on function private.clair_chart_diagnoses_version(text, uuid, uuid) is
+  'Opaque concurrency token for encounter diagnoses and one chart assessment revision.';
+
+create or replace function public.clair_get_chart_diagnosis_assessments(
+  p_workspace_id text,
+  p_encounter_id uuid,
+  p_chart_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_assessments jsonb;
+begin
+  perform public.clair_get_chart_soap_note_by_id(
+    p_workspace_id,
+    p_encounter_id,
+    p_chart_id
+  );
+
+  select coalesce(
+    pg_catalog.jsonb_agg(
+      assessment.assessment_snapshot
+      order by
+        coalesce((assessment.assessment_snapshot->>'sortOrder')::integer, 0),
+        assessment.diagnosis_id
+    ),
+    '[]'::jsonb
+  )
+  into v_assessments
+  from public.chart_diagnosis_assessments assessment
+  where assessment.workspace_id = p_workspace_id
+    and assessment.encounter_id = p_encounter_id
+    and assessment.chart_id = p_chart_id;
+
+  return pg_catalog.jsonb_build_object(
+    'diagnoses', public.clair_get_chart_diagnoses(
+      p_workspace_id,
+      p_encounter_id
+    ),
+    'assessments', v_assessments,
+    'version', private.clair_chart_diagnoses_version(
+      p_workspace_id,
+      p_encounter_id,
+      p_chart_id
+    )
+  );
+end;
+$$;
+
+revoke all on function public.clair_get_chart_diagnosis_assessments(
+  text,
+  uuid,
+  uuid
+) from public, anon;
+grant execute on function public.clair_get_chart_diagnosis_assessments(
+  text,
+  uuid,
+  uuid
+) to authenticated;
+
 create or replace function public.clair_save_chart_diagnoses_v2(
   p_workspace_id text,
   p_actor_user_id text,
@@ -20,6 +131,7 @@ declare
   v_rows jsonb;
   v_result jsonb;
   v_before jsonb;
+  v_after jsonb;
   v_note public.soap_notes;
   v_member uuid;
   v_assessment_input jsonb;
@@ -55,7 +167,11 @@ begin
     raise exception 'signed_chart_read_only';
   end if;
   if p_expected_version is distinct from
-    private.clair_encounter_diagnoses_version(p_workspace_id, p_encounter_id)
+    private.clair_chart_diagnoses_version(
+      p_workspace_id,
+      p_encounter_id,
+      p_chart_id
+    )
   then
     raise exception 'diagnoses_conflict';
   end if;
@@ -560,8 +676,25 @@ begin
   ) input_row on true
   where (saved.value->>'id')::uuid = any(v_assessment_ids);
 
+  select coalesce(
+    pg_catalog.jsonb_agg(
+      assessment.assessment_snapshot
+      order by
+        coalesce((assessment.assessment_snapshot->>'sortOrder')::integer, 0),
+        assessment.diagnosis_id
+    ),
+    '[]'::jsonb
+  )
+  into v_after
+  from public.chart_diagnosis_assessments assessment
+  where assessment.workspace_id = p_workspace_id
+    and assessment.encounter_id = p_encounter_id
+    and assessment.chart_id = p_chart_id;
+
   update public.soap_notes
-  set updated_at = pg_catalog.clock_timestamp()
+  set diagnosis_assessment_revision = diagnosis_assessment_revision +
+        case when v_before is distinct from v_after then 1 else 0 end,
+      updated_at = pg_catalog.clock_timestamp()
   where workspace_id = p_workspace_id
     and encounter_id = p_encounter_id
     and id = p_chart_id
@@ -579,9 +712,10 @@ begin
       '[]'::jsonb
     ),
     'chart', private.clair_chart_note_json(v_note),
-    'version', private.clair_encounter_diagnoses_version(
+    'version', private.clair_chart_diagnoses_version(
       p_workspace_id,
-      p_encounter_id
+      p_encounter_id,
+      p_chart_id
     )
   )
   into v_result
