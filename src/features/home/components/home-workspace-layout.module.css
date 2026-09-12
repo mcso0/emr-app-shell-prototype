@@ -19,7 +19,7 @@
 .dateControl > button[aria-haspopup] { padding-inline: var(--clair-spacing-8); font-size: var(--clair-typography-body-2-normal-font-size); line-height: var(--clair-typography-body-2-normal-line-height); letter-spacing: var(--clair-typography-body-2-normal-letter-spacing); color: var(--clair-color-atomic-neutral-800); font-variant-numeric: normal; }
 .dateControl [data-slot="badge"] { border-width: 0; }
 .filterTrigger > span { padding-inline: var(--clair-spacing-2); }
-.workspaceBody { display: flex; flex: 1; min-height: 0; gap: 16px; padding: 8px 16px 16px 48px; }
+.workspaceBody { display: flex; flex: 1; min-height: 0; gap: 16px; padding: 8px 16px 0 48px; }
 .board { padding-left: var(--clair-spacing-48); display: grid; height: 100%; min-height: 256px; align-items: start; gap: 16px; }
 .column, .listGroup, .hiddenWork { border: 1px solid var(--emr-border-default); border-radius: 12px; background: var(--emr-surface-panel); }
 .column { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }

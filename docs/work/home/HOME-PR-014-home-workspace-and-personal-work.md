@@ -9,7 +9,7 @@ source_docs:
   - "docs/engineering/data-model/home-operations-work-status-read-model.md"
 dependencies:
   - "HOME-PR-012"
-updated: "2026-09-09"
+updated: "2026-09-12"
 ---
 
 # Home Workspace And Personal Work
@@ -174,3 +174,11 @@ Release authorized in this task: commit, push, PR and main/Production deployment
 승욱 clarified that the left side should reveal scrolling columns through the 48px inset, not add a left fade, and approved implementation, checks, commit/push/PR/main merge and Production deployment. Extend only the board scroll frame 48px left and move the starting inset inside the board. Initial title/first-column alignment, list/personal spacing, right fade, hidden panel and scroll persistence remain intact.
 
 Clean branch `codex/home-board-leading-inset` starts at `7e53f5e377149bc440c1b7218b44d51890bd7a34`. Scope: Home component/CSS and focused geometry/hit-testing regression. No data, permissions, environment or shared-component changes. Preflight: Home tests, secrets/docs/UX copy/lint/typecheck/build/diff, exact Release Check and Ready Preview. Smoke: login and authenticated Home horizontal scrolling. Stop on failed checks, candidate drift or unexpected deployment; rollback via scoped revert, preserving later releases. Final candidate and deployment evidence is recorded in the PR.
+
+## Bottom-aligned Borderless Board Scrollbar — 2026-09-12
+
+승욱 approved removing the Home Kanban bottom gap and placing its horizontal scrollbar at the workspace bottom, while preserving a small padded track without a separating border. The Home scroll owner reuses the existing Base UI scrollbar primitive as an overlay; the shared scrollbar defaults and pinned-table geometry remain unchanged. Existing scroll persistence, board edge fade, column scrolling, list views, data, permissions and navigation contracts remain in scope and unchanged.
+
+Clean branch `codex/home-kanban-bottom-scrollbar` starts at `82b7c21d3254e88ed012637d9f828eba1803314f`. Verification covers open and collapsed module panels at the reported `1327×880` viewport, exact bottom-edge alignment, zero native scrollbar gutter, zero horizontal scrollbar top border, retained track padding, Home regressions and production preflight. Smoke: `/login` and authenticated Cheongdam Home horizontal scrolling without business mutation. Rollback: the previous Ready Production deployment or a scoped revert. Stop on failed checks, candidate drift, non-Ready deployment or failed scoped smoke.
+
+Local verification passed: the focused bottom-edge check and all 18 Home browser regressions passed. At `1327×880`, both open and collapsed module-panel states place the workspace body, scroll viewport, first Kanban column and horizontal scrollbar on the same bottom coordinate; the native gutter and scrollbar top border are `0px`, while `2px` top and `1px` bottom track padding remain. The empty-board screenshot was visually inspected. Secret, docs, Korean UX copy, diff, lint, TypeScript and Production build checks passed; lint retains five unrelated warnings and the build retains the existing docs-reader tracing warning. Two related filter/source suites passed. The separate source-navigation suite remains blocked by its pre-existing `queueType: module` circular-JSON fixture error in all three destinations and was not changed in this release.
