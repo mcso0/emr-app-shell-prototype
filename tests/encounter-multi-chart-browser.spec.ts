@@ -1,4 +1,29 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+const createButton = (page: Page) =>
+  page.getByRole("button", { name: "+ 새 차트", exact: true }).first();
+
+async function openNewChartDialog(page: Page) {
+  await createButton(page).click();
+  const dialog = page.getByRole("dialog", {
+    name: "새 차트를 어느 진료에 추가할까요?",
+  });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+async function createNewChart(page: Page) {
+  const dialog = await openNewChartDialog(page);
+  const created = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      response.url().includes("chart/encounter-charts"),
+  );
+  await dialog
+    .getByRole("button", { name: "선택한 진료에 차트 추가", exact: true })
+    .click();
+  return created;
+}
 
 test("new charts isolate SOAP, preserve saves across switches and refresh, and sign individually", async ({ page }) => {
   test.setTimeout(90_000);
@@ -7,14 +32,29 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&patientId=patient-coco&modulePanel=open&aside=history");
   await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
-  const create = page.getByRole("button", { name: "+ 새 차트", exact: true }).first();
+  const create = createButton(page);
   await expect(create).toBeEnabled();
+  const firstDialog = await openNewChartDialog(page);
+  await expect(firstDialog).toContainText("현재 보고 있는 진료");
+  await expect(firstDialog).toContainText("새 차트 담당자: 송민재 · 오늘 작성");
   const created = page.waitForResponse((response) => response.request().method() === "POST" && response.url().includes("chart/encounter-charts"));
-  await create.click();
+  await firstDialog.getByRole("button", { name: "선택한 진료에 차트 추가", exact: true }).click();
   const createdResponse = await created;
   expect(createdResponse.ok()).toBe(true);
-  const createdId = (await createdResponse.json()).chart.id;
+  const createdChart = (await createdResponse.json()).chart;
+  const createdId = createdChart.id;
+  expect(createdChart).toMatchObject({
+    authorUserId: "user-admin",
+    authorDisplayName: "송민재",
+  });
   await expect(page).toHaveURL(new RegExp(`chartId=${createdId}`));
+  await expect(page.locator(`[data-chart-id="${createdId}"]`)).toContainText(
+    "담당 송민재",
+  );
+  await expect(page.getByTestId("chart-additional-record-badge")).toBeVisible();
+  await expect(page.getByTestId("chart-additional-record-info")).toContainText(
+    "진료에 포함됩니다",
+  );
   const firstId = new URL(page.url()).searchParams.get("chartId")!;
   const editor = page.getByLabel("SOAP 블록 문서");
   const paragraph = editor.locator('.bn-block-content[data-content-type="paragraph"]').first();
@@ -23,7 +63,7 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   await page.keyboard.type("Synthetic morning chart note");
   const saved = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes("chart/soap-notes") && response.request().postDataJSON()?.chartId === firstId);
   // Creation must flush the original chart, even while its debounce is pending.
-  await create.click();
+  await (await createNewChart(page));
   expect((await saved).ok()).toBe(true);
   await expect.poll(() => new URL(page.url()).searchParams.get("chartId")).not.toBe(firstId);
   const secondId = new URL(page.url()).searchParams.get("chartId")!;
@@ -74,11 +114,9 @@ test("failed SOAP save blocks chart creation, preserves text, and explicit retry
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&patientId=patient-coco&modulePanel=open&aside=history");
-  const create = page.getByRole("button", { name: "+ 새 차트", exact: true }).first();
+  const create = createButton(page);
   await expect(create).toBeEnabled();
-  const created = page.waitForResponse((response) => response.request().method() === "POST" && response.url().includes("chart/encounter-charts"));
-  await create.click();
-  const createdResponse = await created;
+  const createdResponse = await createNewChart(page);
   expect(createdResponse.ok()).toBe(true);
   const createdId = (await createdResponse.json()).chart.id;
   await expect(page).toHaveURL(new RegExp(`chartId=${createdId}`));
@@ -94,16 +132,22 @@ test("failed SOAP save blocks chart creation, preserves text, and explicit retry
   const paragraph = editor.locator('.bn-block-content[data-content-type="paragraph"]').first();
   await expect(paragraph).toBeEditable();
   await paragraph.click(); await page.keyboard.type("Synthetic preserved failed-save text");
-  await create.click();
+  const failedDialog = await openNewChartDialog(page);
+  await failedDialog.getByRole("button", { name: "선택한 진료에 차트 추가", exact: true }).click();
   await expect.poll(() => failNext).toBe(false);
-  await expect(page.getByRole("heading", { name: "Subject/Object", exact: true })).toContainText("저장 실패");
+  await expect(failedDialog).toBeVisible();
+  await expect(page.locator('h2[aria-label="Subject/Object"]')).toContainText("저장 실패");
   await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
   await expect(editor).toContainText("Synthetic preserved failed-save text");
+  await failedDialog.getByRole("button", { name: "취소" }).click();
   const retry = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes("chart/soap-notes") && response.request().postDataJSON()?.chartId === chartId);
   await page.getByRole("button", { name: "SOAP 저장", exact: true }).click();
   expect((await retry).ok()).toBe(true);
   await expect(page.getByRole("heading", { name: "Subject/Object", exact: true })).not.toContainText("저장 실패");
-  await create.click();
+  const recoveredDialog = await openNewChartDialog(page);
+  const recoveredCreate = page.waitForResponse((response) => response.request().method() === "POST" && response.url().includes("chart/encounter-charts"));
+  await recoveredDialog.getByRole("button", { name: "선택한 진료에 차트 추가", exact: true }).click();
+  expect((await recoveredCreate).ok()).toBe(true);
   await expect.poll(() => new URL(page.url()).searchParams.get("chartId")).not.toBe(chartId);
   await page.locator(`[data-chart-id="${chartId}"]`).click();
   await expect(editor).toContainText("Synthetic preserved failed-save text");
@@ -112,11 +156,9 @@ test("failed SOAP save blocks chart creation, preserves text, and explicit retry
 test("assessment response advances the SOAP token before the next save and chart switch", async ({ page, request }) => {
   test.setTimeout(90_000);
   await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&modulePanel=open&aside=history");
-  const create = page.getByRole("button", { name: "+ 새 차트", exact: true }).first();
+  const create = createButton(page);
   await expect(create).toBeEnabled();
-  const created = page.waitForResponse((r) => r.request().method() === "POST" && r.url().includes("chart/encounter-charts"));
-  await create.click();
-  const chart = (await (await created).json()).chart;
+  const chart = (await (await createNewChart(page)).json()).chart;
   await expect(page).toHaveURL(new RegExp(`chartId=${chart.id}`));
   const paragraph = page.getByLabel("SOAP 블록 문서").locator('.bn-block-content[data-content-type="paragraph"]').first();
   await paragraph.click();
@@ -154,6 +196,6 @@ test("assessment response advances the SOAP token before the next save and chart
   await expect.poll(() => sentTokens.length).toBeGreaterThan(0);
   expect(sentTokens).toEqual(sentTokens.map(() => expectedToken));
   await expect(page.getByText("저장 충돌", { exact: true })).toHaveCount(0);
-  await create.click();
+  await (await createNewChart(page));
   await expect(page).not.toHaveURL(new RegExp(`chartId=${chart.id}`));
 });

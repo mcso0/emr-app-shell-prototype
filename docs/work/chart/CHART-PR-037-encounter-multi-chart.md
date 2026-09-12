@@ -10,7 +10,7 @@ source_docs:
   - docs/engineering/current-status.md
 dependencies:
   - CHART-PR-033
-updated: 2026-09-09
+updated: 2026-09-12
 ---
 
 # Encounter Multi-Chart
@@ -52,6 +52,7 @@ Current order draft uses explicit removed IDs, not implicit deletion of omitted 
 | Individual sign/encounter finish | SQL rejects unfinished notes; browser sign leaves other draft | Authenticated remote finish smoke |
 | Legacy/foreign data and old writers | Migration before/after fingerprints; author/ACL/foreign SQL | Remote pre/post fingerprints |
 | Visit/chart counts and overnight dates | Separate encounter-count source; three-time API/SQL | Visual human acceptance |
+| Patient-wide individual chart history | Local RPC/parser/UI/browser regression, `진료일`/`작성일` views, additional-record cues, stable chart-ID cursor, exact encounter+chart restoration, no empty-encounter row | Remote migration and authenticated smoke |
 | PR/main/Ready deployment/alias/smoke/recovery | Local release checks prepared | Exact remote candidate and migration approval |
 
 ## Verification Plan
@@ -122,3 +123,11 @@ Remote synthetic smoke records are intentionally retained as evidence:
 Final Preview/Production smoke must use the updated application candidate. Local authenticated remote-DB evidence is distinct from deployed Preview evidence. Live confirmation/results/billing execution and encounter finalization were not performed against the pre-existing synthetic drafts; those transitions remain covered by the owned PostgreSQL suites. Inherited dispensing-set snapshot incompatibility remains as documented above.
 
 Final live-fix verification: 29 focused browser/API/catalog regressions passed, including delayed diagnosis-response revision ordering, chart envelope acceptance, and fixed-price preview omission. TypeScript and production build passed; lint has zero errors and the same five existing WP10 warnings. Docs, secrets, and diff checks passed. The updated deployed candidate and exact-head Release Check are the remaining delivery checks.
+
+### Patient Chart History Correction — 2026-09-12
+
+The side history was still encounter-based: its RPC paged by encounter check-in time and returned at most one SOAP summary per encounter, while the UI rendered a second selected-encounter chart list. The local correction replaces that projection with one patient-wide row per non-voided chart and uses immutable chart creation time plus chart ID for cursor order. The side panel now has one grouped chart list with a `진료일 | 작성일` segmented view; the default visit-date view uses encounter check-in/creation dates, while the created-date view exposes later additions without changing the selected chart or total count. The oldest active chart in an encounter is the first record, later charts are marked `추가 기록`, and a cross-date addition shows its source visit in history and a neutral relation notice above the clinical panels. A row carries and restores its exact encounter and chart IDs; deep links survive reload, historical charts remain read-only, and encounters without charts do not create display rows. Inline diagnosis history stays encounter-deduplicated because it is a separate encounter-owned diagnosis surface.
+
+`+ 새 차트` now opens a target-visit dialog instead of silently inheriting the chart currently on screen. Rows identify visits by purpose, date/time, veterinarian, status, and existing chart count without an encounter/chart number. The current active visit is the default. Completed visits remain visible but disabled with an always-visible `차트 추가 불가` state and hover/focus guidance; the server continues to accept creation only for `in_consultation` and `ordered`. The creator is persisted and displayed as the new chart 담당자. A failed editor flush keeps the dialog open and creates nothing.
+
+The browser regression uses mocked API responses and deliberately separates chart `created_at` from clinical time, update time, and encounter check-in time; it also covers two same-minute charts, stable ordering, exact past-chart selection, reload restoration, current-chart return, and distinct loading/error/empty states. Six focused `chart.spec.ts` browser cases passed. A separate 17-case run passed all patient-history server, encounter multi-chart server, and multi-chart browser tests, including failed-save retention and save-on-switch. Existing first-chart encounters whose orders predate origin tracking now open the explicit legacy-order scope by default, while additional charts open their own chart scope; a representative legacy mutation regression passed after this compatibility correction. The owned local PostgreSQL runner passed all eight contract suites with explicit rollback, including the new history suite for patient scope, no empty/voided rows, same-timestamp tie order, and lossless two-page cursors. TypeScript, production build, docs, secrets, Korean UX copy, diff whitespace, and full lint passed; lint retained only five pre-existing WP10 unused-variable warnings, and the build retained the pre-existing broad NFT trace warning for the docs reader. These are local synthetic checks, not an authenticated live database result. The new migration `20260912103000_chart_patient_history_by_created_at.sql` has not been applied remotely, and no commit, push, PR, merge, or deployment is part of this checkpoint.

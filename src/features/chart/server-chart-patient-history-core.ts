@@ -7,7 +7,12 @@ import type {
   ChartPatientHistoryPage,
   ChartPatientHistoryRecord,
 } from "@/features/chart/chart-patient-history";
-import type { EncounterStatus, Guardian } from "@/types/emr-domain";
+import { mapSoapNote } from "@/features/chart/server-soap-note-persistence-core";
+import type {
+  EncounterStatus,
+  Guardian,
+  SoapNoteStatus,
+} from "@/types/emr-domain";
 
 export type ChartPatientHistoryGateway = {
   listHistory(input: {
@@ -196,7 +201,15 @@ function parseChartPatientHistoryRecord(
 ): ChartPatientHistoryRecord | null {
   if (!isRecord(value)) return null;
   const encounter = parseEncounter(value.encounter);
-  if (!encounter) return null;
+  const chart = mapSoapNote(value.chart);
+  if (
+    !encounter ||
+    !chart ||
+    chart.encounterId !== encounter.id ||
+    !historyChartStatuses.has(chart.status)
+  ) {
+    return null;
+  }
 
   const diagnoses = Array.isArray(value.diagnoses)
     ? value.diagnoses.flatMap((diagnosis) => {
@@ -206,17 +219,23 @@ function parseChartPatientHistoryRecord(
       })
     : [];
   const primaryGuardian = parseGuardian(value.primaryGuardian);
-  const soapNote = parseSoapNote(value.soapNote);
   const veterinarianName = getString(value.veterinarianName);
 
   return {
+    chart,
     diagnoses,
     encounter,
     ...(primaryGuardian ? { primaryGuardian } : {}),
-    ...(soapNote ? { soapNote } : {}),
     ...(veterinarianName ? { veterinarianName } : {}),
   };
 }
+
+const historyChartStatuses = new Set<SoapNoteStatus>([
+  "draft",
+  "autosaved",
+  "signed",
+  "amended",
+]);
 
 const encounterStatuses = new Set<EncounterStatus>([
   "waiting",
@@ -313,12 +332,6 @@ function parseGuardian(value: unknown): Guardian | undefined {
       "memo",
     ]),
   };
-}
-
-function parseSoapNote(value: unknown): { assessment?: string } | undefined {
-  if (!isRecord(value)) return undefined;
-  const assessment = getString(value.assessment);
-  return assessment ? { assessment } : undefined;
 }
 
 function optionalStringFields<T extends string>(

@@ -23,6 +23,7 @@ type ChartGatewayInput = {
   operation: ChartOperation;
   workspaceId: string;
   actorUserId: string;
+  actorDisplayName?: string;
   encounterId: string;
   chartId?: string;
   creationRequestId?: string;
@@ -64,6 +65,7 @@ export async function manageEncounterCharts({
     denialReason: permission.denialReason ?? "permission_missing",
   };
   const result = await gateway.execute({ operation, workspaceId, actorUserId, encounterId,
+    actorDisplayName: permissionAdapter.users.find((user) => user.id === actorUserId)?.displayName,
     chartId, creationRequestId, clinicalAt, expectedUpdatedAt, requestId: auditRequestId });
   if (!result.ok || operation === "list") return result;
   if (!result.chart) return { ok: false, status: 500, error: "db_write_failed" };
@@ -129,7 +131,7 @@ export function createMockEncounterChartsGateway(): EncounterChartsGateway {
     if (input.operation === "list") return { ok: true, status: 200, charts };
     if (encounter.status !== "in_consultation" && encounter.status !== "ordered") return { ok: false, status: 409, denialReason: "stale_status" };
     if (input.operation === "create") {
-      const chart = createMockEncounterChart(input.workspaceId, input.encounterId, input.actorUserId, input.creationRequestId!, input.clinicalAt);
+      const chart = createMockEncounterChart(input.workspaceId, input.encounterId, input.actorUserId, input.creationRequestId!, input.clinicalAt, input.actorDisplayName);
       if (chart.authorUserId !== input.actorUserId) return { ok: false, status: 403, denialReason: "actor_mismatch" };
       return { ok: true, status: 200, chart };
     }

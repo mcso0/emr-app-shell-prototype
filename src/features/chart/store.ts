@@ -11,7 +11,7 @@ type ChartStore = {
   encounterChartsScope?: string;
   encounterChartsStatus: "idle" | "loading" | "ready" | "error";
   encounterChartCreating: boolean;
-  createEncounterChart?: () => Promise<void>;
+  createEncounterChart?: (encounterId?: EmrId) => Promise<boolean>;
   diagnosisSaving: boolean;
   flushEditors: () => Promise<boolean>;
   flushOrderEdits?: () => Promise<boolean>;
@@ -29,7 +29,9 @@ type ChartStore = {
   };
   chartHistoryStatus: "idle" | "loading" | "ready" | "error";
   chartHistoryTotalCount: number;
+  historyViewChartId: EmrId;
   historyViewEncounterId: EmrId;
+  newChartDialogOpen: boolean;
   liveQueueError?: string;
   liveQueueRecords: ChartLiveQueueRecord[];
   liveQueueScope?: {
@@ -44,7 +46,13 @@ type ChartStore = {
   clearPendingConsultationCall: () => void;
   requestChartHistoryRefresh: () => void;
   requestConsultationCall: (encounterId: EmrId) => void;
+  setNewChartDialogOpen: (open: boolean) => void;
   selectEncounter: (encounterId: EmrId) => void;
+  selectHistoryChart: (
+    encounterId: EmrId,
+    chartId: EmrId,
+    beforeSelect?: () => void,
+  ) => Promise<boolean>;
   selectHistoryEncounter: (encounterId: EmrId) => void;
   selectOperatingDate: (workspaceId: EmrId, date: string) => void;
   setChartHistoryState: (state: {
@@ -79,7 +87,9 @@ export const useChartStore = create<ChartStore>()((set, get) => ({
     if (get().selectedChartId === selectedChartId) return;
     const scope = get().encounterChartsScope;
     if (!await get().flushEditors()) return;
-    if (get().encounterChartsScope === scope && get().encounterCharts.some((chart) => chart.id === selectedChartId)) set({ selectedChartId });
+    if (get().encounterChartsScope === scope && get().encounterCharts.some((chart) => chart.id === selectedChartId)) {
+      set({ historyViewChartId: selectedChartId, selectedChartId });
+    }
   },
   setEncounterCharts: (scope, charts, status, preferredChartId) => set((current) => ({
     encounterChartsScope: scope, encounterCharts: charts, encounterChartsStatus: status,
@@ -97,7 +107,9 @@ export const useChartStore = create<ChartStore>()((set, get) => ({
   chartHistoryScope: undefined,
   chartHistoryStatus: "idle",
   chartHistoryTotalCount: 0,
+  historyViewChartId: "",
   historyViewEncounterId: "",
+  newChartDialogOpen: false,
   liveQueueError: undefined,
   liveQueueRecords: [],
   liveQueueScope: undefined,
@@ -113,18 +125,42 @@ export const useChartStore = create<ChartStore>()((set, get) => ({
     })),
   requestConsultationCall: (pendingConsultationCallEncounterId) =>
     set({ pendingConsultationCallEncounterId }),
+  setNewChartDialogOpen: (newChartDialogOpen) => set({ newChartDialogOpen }),
   selectEncounter: async (selectedEncounterId) => {
     if (get().selectedEncounterId === selectedEncounterId && !get().historyViewEncounterId) return;
     if (!await get().flushEditors()) return;
-    set({ historyViewEncounterId: "", selectedEncounterId, selectedChartId: "" });
+    set({ historyViewChartId: "", historyViewEncounterId: "", selectedEncounterId, selectedChartId: "" });
+  },
+  selectHistoryChart: async (encounterId, chartId, beforeSelect) => {
+    if (
+      get().historyViewEncounterId === encounterId &&
+      get().historyViewChartId === chartId
+    ) {
+      beforeSelect?.();
+      return true;
+    }
+    if (!await get().flushEditors()) return false;
+    beforeSelect?.();
+    const selectingCurrentEncounter = encounterId === get().selectedEncounterId;
+    set({
+      historyViewChartId: chartId,
+      historyViewEncounterId: selectingCurrentEncounter ? "" : encounterId,
+      selectedChartId:
+        selectingCurrentEncounter &&
+        get().encounterCharts.some((chart) => chart.id === chartId)
+          ? chartId
+          : "",
+    });
+    return true;
   },
   selectHistoryEncounter: async (historyViewEncounterId) => {
     if (get().historyViewEncounterId === historyViewEncounterId) return;
     if (!await get().flushEditors()) return;
-    set({ historyViewEncounterId, selectedChartId: "" });
+    set({ historyViewChartId: "", historyViewEncounterId, selectedChartId: "" });
   },
   selectOperatingDate: (workspaceId, date) =>
     set((current) => ({
+      historyViewChartId: "",
       historyViewEncounterId: "",
       selectedOperatingDateByWorkspace: {
         ...current.selectedOperatingDateByWorkspace,

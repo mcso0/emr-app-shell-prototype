@@ -29,10 +29,10 @@ export type ChartQueueRow = {
 };
 
 export type ChartHistoryRow = {
+  chart: SoapNote;
   diagnoses: Array<Pick<Diagnosis, "diagnosisText">>;
   encounter: Encounter;
   primaryGuardian?: Guardian;
-  soapNote?: Pick<SoapNote, "assessment">;
   veterinarianName?: string;
 };
 
@@ -227,13 +227,26 @@ export const getChartHistoryRows = (patientId: EmrId): ChartHistoryRow[] => {
 
   if (!bundle) return [];
 
-  return [...bundle.encounters]
-    .sort((a, b) => (b.checkedInAt ?? b.createdAt).localeCompare(a.checkedInAt ?? a.createdAt))
-    .map((encounter) => ({
-      diagnoses: bundle.diagnoses.filter((diagnosis) => diagnosis.encounterId === encounter.id),
-      encounter,
-      soapNote: bundle.soapNotes.find((soapNote) => soapNote.encounterId === encounter.id),
-    }));
+  return bundle.encounters
+    .flatMap((encounter) =>
+      bundle.soapNotes
+        .filter(
+          (chart) =>
+            chart.encounterId === encounter.id && chart.status !== "voided",
+        )
+        .map((chart) => ({
+          chart,
+          diagnoses: bundle.diagnoses.filter(
+            (diagnosis) => diagnosis.encounterId === encounter.id,
+          ),
+          encounter,
+        })),
+    )
+    .sort(
+      (a, b) =>
+        b.chart.createdAt.localeCompare(a.chart.createdAt) ||
+        b.chart.id.localeCompare(a.chart.id),
+    );
 };
 
 export const getChartOrderGroups = (encounterId: EmrId): ChartOrderGroup[] => {

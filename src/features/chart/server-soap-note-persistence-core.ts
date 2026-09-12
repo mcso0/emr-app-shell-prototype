@@ -111,13 +111,14 @@ export function getMockEncounterCharts(workspaceId: string, encounterId: string,
 export function putMockEncounterChart(workspaceId: string, note: SoapNote) {
   mockSoapNoteStore.set(`${workspaceId}:${note.encounterId}:${note.id}`, note);
 }
-export function createMockEncounterChart(workspaceId: string, encounterId: string, actorUserId: string, requestId: string, clinicalAt?: string): SoapNote {
+export function createMockEncounterChart(workspaceId: string, encounterId: string, actorUserId: string, requestId: string, clinicalAt?: string, actorDisplayName?: string): SoapNote {
   const key = `${workspaceId}:${encounterId}:${requestId}`;
   const existingId = mockChartCreationRequests.get(key);
   const existing = getMockEncounterCharts(workspaceId, encounterId).find((note) => note.id === existingId);
   if (existing) return existing;
   const timestamp = new Date().toISOString();
   const note: SoapNote = { id: crypto.randomUUID(), encounterId, authorUserId: actorUserId,
+    authorDisplayName: actorDisplayName,
     status: "draft", clinicalAt: clinicalAt ?? timestamp, createdAt: timestamp, updatedAt: timestamp };
   putMockEncounterChart(workspaceId, note);
   mockChartCreationRequests.set(key, note.id);
