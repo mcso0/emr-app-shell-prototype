@@ -18,6 +18,30 @@ test("chart creation rejects anonymous and foreign workspace requests", async ({
   expect(foreign.status()).toBe(403);
 });
 
+test("chart creation rejects completed, billing-ready, and waiting visits", async ({ request }) => {
+  for (const blockedEncounterId of [
+    "encounter-nabi-260414",
+    "encounter-dubu-260501",
+    "encounter-haru-260430",
+  ]) {
+    const response = await request.post(
+      `/api/workspaces/${workspaceId}/chart/encounter-charts`,
+      {
+        headers,
+        data: {
+          encounterId: blockedEncounterId,
+          creationRequestId: crypto.randomUUID(),
+        },
+      },
+    );
+    expect(response.status()).toBe(409);
+    expect(await response.json()).toMatchObject({
+      ok: false,
+      denialReason: "stale_status",
+    });
+  }
+});
+
 test("three API chart creates preserve distinct clinical times and idempotent retries", async ({ request }) => {
   const ids: string[] = [];
   for (const clinicalAt of ["2026-09-09T00:00:00Z", "2026-09-09T07:00:00Z", "2026-09-09T16:00:00Z"]) {
@@ -27,6 +51,10 @@ test("three API chart creates preserve distinct clinical times and idempotent re
     const body = await first.json();
     expect(body.chart.clinicalAt).toBe(clinicalAt);
     expect(body.chart.status).toBe("draft");
+    expect(body.chart).toMatchObject({
+      authorUserId: actor,
+      authorDisplayName: "이수지",
+    });
     expect(body.chart.subjective ?? "").toBe("");
     const retry = await request.post(`/api/workspaces/${workspaceId}/chart/encounter-charts`, { headers, data: input });
     expect(retry.status()).toBe(200);

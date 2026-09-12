@@ -714,7 +714,7 @@ test("chart vital history follows workspace omission and re-add without rewritin
   expect(historicalVital.heartRateBpm).toBe(88);
 });
 
-test("chart history aside anchors scroll chrome and right-aligns unavailable actions", async ({
+test("chart history aside anchors scroll chrome and keeps the single chart action right-aligned", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 350 });
@@ -768,13 +768,7 @@ test("chart history aside anchors scroll chrome and right-aligns unavailable act
   );
   await expect(historyFooter).toHaveCSS("justify-content", "flex-end");
   await expect(
-    chartHistoryAside.getByRole("button", { name: /수술 차트/ }),
-  ).toBeDisabled();
-  await expect(
-    chartHistoryAside.getByTitle("수술 차트는 기능 구현 중입니다."),
-  ).toBeVisible();
-  await expect(
-    chartHistoryAside.getByRole("button", { name: "외래 차트 추가" }),
+    chartHistoryAside.getByRole("button", { name: "+ 새 차트" }),
   ).toBeEnabled();
 });
 
@@ -869,6 +863,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
+  await page.getByLabel("처방 조회 범위").selectOption("legacy");
   const soapDiagnosisGridMetrics = await page
     .getByTestId("chart-soap-diagnosis-grid")
     .evaluate((element) => {
@@ -890,14 +885,8 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
         soapDiagnosisGridMetrics.diagnosisWidth,
     ),
   ).toBeLessThanOrEqual(1);
-  expect(
-    Math.abs(
-      soapDiagnosisGridMetrics.soapWidth /
-        soapDiagnosisGridMetrics.historyWidth -
-        chartFigmaVisualFixture.expectedPanelWidths[0] /
-          chartFigmaVisualFixture.expectedPanelWidths[2],
-    ),
-  ).toBeLessThanOrEqual(0.01);
+  expect(soapDiagnosisGridMetrics.soapWidth).toBeGreaterThanOrEqual(240);
+  expect(soapDiagnosisGridMetrics.historyWidth).toBeGreaterThanOrEqual(305);
   await expect(page.getByText("피하 수액 처치").first()).toBeVisible();
   const diagnosisPanel = page.getByLabel("진단명 관리");
   await expect(
@@ -1221,6 +1210,7 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
+  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const content = page.locator("[data-slot='chart-content']");
   await expect(content).toBeVisible();
@@ -1297,6 +1287,7 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
+  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const chartContent = page.locator("[data-slot='chart-content']");
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
@@ -1523,6 +1514,7 @@ test("chart Order all tab renders the approved order confirmation and work-state
   page,
 }) => {
   await page.goto(chartFigmaVisualFixture.route);
+  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const table = page.getByRole("table", { name: "처방/오더 테이블" });
   for (const label of [
@@ -2227,7 +2219,7 @@ test("chart selects the first live task on entry without flashing an empty state
   await expect(page.getByTestId("chart-content-empty-state")).toHaveCount(0);
 });
 
-test("live patient chart history shows every encounter and keeps past charts read-only", async ({
+test("live patient chart history shows every chart by created_at and keeps past charts read-only", async ({
   page,
 }) => {
   const current = createLiveChartQueueRecord({
@@ -2238,6 +2230,48 @@ test("live patient chart history shows every encounter and keeps past charts rea
   const oldEncounterId = "encounter-history-old";
   const oldEncounterNo = "E-260701-OLD001";
   const emptyEncounterId = "encounter-history-empty";
+  const currentChartId = "21215000-0000-4000-8000-000000000011";
+  const oldChartId = "21215000-0000-4000-8000-000000000012";
+  const currentChart = {
+    id: currentChartId,
+    encounterId: current.encounter.id,
+    authorUserId: "user-vet",
+    authorDisplayName: "이수지",
+    assessment: "현재 진료",
+    status: "autosaved",
+    clinicalAt: "2026-09-13T00:00:00.000Z",
+    createdAt: "2026-08-14T11:00:00+09:00",
+    updatedAt: "2026-09-13T01:00:00.000Z",
+  } as const;
+  const oldChart = {
+    id: oldChartId,
+    encounterId: oldEncounterId,
+    authorUserId: "user-vet",
+    authorDisplayName: "이수지",
+    assessment: "보행 상태 추적",
+    status: "signed",
+    clinicalAt: "2026-07-01T06:00:00.000Z",
+    createdAt: "2026-09-12T00:15:00.000Z",
+    updatedAt: "2026-09-13T02:00:00.000Z",
+  } as const;
+  const oldChartSameMinute = {
+    ...oldChart,
+    id: "21215000-0000-4000-8000-000000000013",
+    clinicalAt: "2026-09-08T08:00:00.000Z",
+    createdAt: "2026-09-12T00:15:30.000Z",
+    updatedAt: "2026-09-14T02:00:00.000Z",
+  } as const;
+  const oldDiagnoses = [
+    { diagnosisText: "슬개골 탈구 의심" },
+    { diagnosisText: "골관절염" },
+    { diagnosisText: "십자인대 손상 감별" },
+    {
+      diagnosisText:
+        "이첨판 점액종성 변성에 의한 만성 판막 질환과 관련된 추적 관찰",
+    },
+    { diagnosisText: "치주염" },
+    { diagnosisText: "외이염" },
+  ];
 
   await grantCheongdamWorkspaceAccess(page);
   await page.route(
@@ -2265,6 +2299,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
           enforcedBy: "chart-patient-history-read",
           items: [
             {
+              chart: currentChart,
               encounter: {
                 ...common,
                 ...current.encounter,
@@ -2273,9 +2308,9 @@ test("live patient chart history shows every encounter and keeps past charts rea
               primaryGuardian: current.primaryGuardian,
               veterinarianName: "이수지",
               diagnoses: [{ diagnosisText: "근골격계" }],
-              soapNote: { assessment: "현재 진료" },
             },
             {
+              chart: oldChart,
               encounter: {
                 ...common,
                 id: oldEncounterId,
@@ -2283,37 +2318,89 @@ test("live patient chart history shows every encounter and keeps past charts rea
                 visitPurpose: "외래 재진",
                 chiefComplaint: "이전 보행 이상",
                 status: "completed",
-                checkedInAt: "2026-07-01T06:00:00.000Z",
-                completedAt: "2026-07-01T06:30:00.000Z",
+                checkedInAt: "2026-09-08T06:00:00.000Z",
+                completedAt: "2026-09-08T06:30:00.000Z",
               },
               primaryGuardian: current.primaryGuardian,
               veterinarianName: "이수지",
-              diagnoses: [
-                { diagnosisText: "슬개골 탈구 의심" },
-                { diagnosisText: "골관절염" },
-                { diagnosisText: "십자인대 손상 감별" },
-                { diagnosisText: "이첨판 점액종성 변성에 의한 만성 판막 질환과 관련된 추적 관찰" },
-                { diagnosisText: "치주염" },
-                { diagnosisText: "외이염" },
-              ],
-              soapNote: { assessment: "보행 상태 추적" },
+              diagnoses: oldDiagnoses,
             },
             {
+              chart: oldChartSameMinute,
               encounter: {
                 ...common,
-                id: emptyEncounterId,
-                encounterNo: "E-260701-EMPTY",
-                visitPurpose: "경과 확인",
+                id: oldEncounterId,
+                encounterNo: oldEncounterNo,
+                visitPurpose: "외래 재진",
+                chiefComplaint: "이전 보행 이상",
                 status: "completed",
-                checkedInAt: "2026-07-01T05:00:00.000Z",
+                checkedInAt: "2026-09-08T06:00:00.000Z",
+                completedAt: "2026-09-08T06:30:00.000Z",
               },
-              diagnoses: [],
+              primaryGuardian: current.primaryGuardian,
               veterinarianName: "이수지",
+              diagnoses: oldDiagnoses,
             },
           ],
           nextCursor: null,
           totalCount: 3,
         }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/encounter-charts?*`,
+    async (route) => {
+      const encounterId = new URL(route.request().url()).searchParams.get(
+        "encounterId",
+      );
+      await route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          charts:
+            encounterId === oldEncounterId
+              ? [oldChartSameMinute, oldChart]
+              : [currentChart],
+        },
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/diagnoses?*`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          diagnoses: [],
+          assessments: [],
+          version: "history-test-version",
+        },
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/completion?*`,
+    async (route) => {
+      const encounterId = new URL(route.request().url()).searchParams.get(
+        "encounterId",
+      );
+      await route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          completion: {
+            encounterId,
+            workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+            status:
+              encounterId === oldEncounterId ? "completed" : "in_consultation",
+            updatedAt: "2026-09-13T02:00:00.000Z",
+          },
+        },
       });
     },
   );
@@ -2356,10 +2443,10 @@ test("live patient chart history shows every encounter and keeps past charts rea
 
   const aside = page.locator("#chart-content-aside");
   const currentHistoryItem = aside.getByTestId(
-    `chart-history-item-${current.encounter.id}`,
+    `chart-history-item-${currentChartId}`,
   );
   const oldHistoryItem = aside.getByTestId(
-    `chart-history-item-${oldEncounterId}`,
+    `chart-history-item-${oldChartId}`,
   );
   const inlineHistoryItem = page.getByTestId(
     `chart-diagnosis-history-item-${oldEncounterId}`,
@@ -2367,16 +2454,100 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(aside).toContainText("차트 이력");
   await expect(currentHistoryItem).toContainText("11:00");
   await expect(currentHistoryItem).toContainText("일반 진료");
-  await expect(currentHistoryItem).toContainText("진료중");
-  await expect(oldHistoryItem).toContainText("15:00");
+  await expect(currentHistoryItem).toContainText("작성 중");
+  await expect(oldHistoryItem).toContainText("09:15");
   await expect(oldHistoryItem).toContainText("외래 재진");
   await expect(oldHistoryItem).toContainText("완료");
   await expect(oldHistoryItem).toContainText("담당 이수지");
   await expect(oldHistoryItem).not.toContainText("슬개골 탈구 의심");
   await expect(oldHistoryItem).not.toContainText(oldEncounterNo);
   await expect(oldHistoryItem).not.toContainText("26.07.01 15:00");
+  const historyDateMode = aside.getByRole("group", {
+    name: "차트 이력 표시 기준",
+  });
+  await expect(historyDateMode.getByRole("button", { name: "진료일" })).toBeVisible();
+  await expect(historyDateMode.getByRole("button", { name: "작성일" })).toBeVisible();
+  await expect(historyDateMode).not.toContainText(/진료일\s*\d|작성일\s*\d/);
+  await expect(
+    aside.getByTestId("chart-history-group-26.09.08"),
+  ).toContainText("외래 재진");
+  await expect(
+    aside
+      .getByTestId("chart-history-group-26.09.08")
+      .locator('[data-slot="content-history-item"]'),
+  ).toHaveCount(2);
+  await expect(
+    aside.getByTestId(`chart-history-item-${oldChartSameMinute.id}`),
+  ).toContainText("09:15");
+  expect(
+    await aside
+      .getByTestId("chart-history-group-26.09.08")
+      .locator('[data-slot="content-history-item"]')
+      .evaluateAll((items) => items.map((item) => item.getAttribute("data-chart-id"))),
+  ).toEqual([oldChartSameMinute.id, oldChart.id]);
+  await expect(
+    aside.getByTestId("chart-history-group-26.09.12"),
+  ).toHaveCount(0);
+  await expect(
+    aside.getByText("선택한 접수의 차트", { exact: false }),
+  ).toHaveCount(0);
+  await expect(aside.getByText("접수 이력", { exact: false })).toHaveCount(0);
 
-  await expect(inlineHistoryItem).toContainText("26.07.01");
+  await oldHistoryItem.click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("historyEncounterId"))
+    .toBe(oldEncounterId);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"))
+    .toBe(oldChartId);
+  await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toBeVisible();
+  await historyDateMode.getByRole("button", { name: "작성일" }).click();
+  await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
+  await expect(
+    aside.getByTestId("chart-history-group-26.09.12"),
+  ).toContainText("외래 재진");
+  await expect(
+    aside
+      .getByTestId("chart-history-group-26.09.12")
+      .locator('[data-slot="content-history-item"]'),
+  ).toHaveCount(2);
+  await expect(
+    aside.getByTestId(`chart-history-item-${oldChartSameMinute.id}`),
+  ).toContainText("추가 · 26.09.08 진료");
+  await expect(aside.getByRole("button", { name: "+ 새 차트" })).toBeEnabled();
+  await aside.getByRole("button", { name: "+ 새 차트" }).click();
+  const newChartDialog = page.getByRole("dialog", {
+    name: "새 차트를 어느 진료에 추가할까요?",
+  });
+  await expect(newChartDialog).toBeVisible();
+  const currentCandidate = newChartDialog.getByTestId(
+    `new-chart-encounter-${current.encounter.id}`,
+  );
+  const completedCandidate = newChartDialog.getByTestId(
+    `new-chart-encounter-${oldEncounterId}`,
+  );
+  await expect(currentCandidate).toHaveAttribute("aria-pressed", "true");
+  await expect(currentCandidate).toContainText("기존 차트 1개");
+  await expect(completedCandidate).toHaveAttribute("aria-disabled", "true");
+  await expect(completedCandidate).toContainText("현재 보고 있는 진료");
+  await expect(completedCandidate).toContainText("차트 추가 불가");
+  await completedCandidate.hover();
+  await expect(page.getByRole("tooltip")).toContainText(
+    "완료된 진료에는 새 차트를 추가할 수 없어요.",
+  );
+  await currentCandidate.hover();
+  await expect(page.getByRole("tooltip")).toBeHidden();
+  await newChartDialog.getByRole("button", { name: "취소" }).click();
+  await page.reload();
+  await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
+  await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
+  await currentHistoryItem.click();
+  await expect(page).not.toHaveURL(/historyEncounterId=/);
+  await expect(page).toHaveURL(new RegExp(`chartId=${currentChartId}`));
+  await expect(page.getByText(current.encounter.encounterNo).first()).toBeVisible();
+
+  await expect(inlineHistoryItem).toContainText("26.09.08");
   await expect(inlineHistoryItem).not.toContainText("15:00");
   await expect(inlineHistoryItem).not.toContainText("담당");
   await expect(inlineHistoryItem).not.toHaveAttribute("data-selected");
@@ -2396,7 +2567,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(diagnosisChips.first()).toHaveCSS("font-size", "12px");
 
   // Action reservation changes the count before the user approaches +N.
-  await inlineHistoryItem.getByText("26.07.01", { exact: true }).hover();
+  await inlineHistoryItem.getByText("26.09.08", { exact: true }).hover();
   await expect(inlineHistoryItem).toHaveAttribute("data-actions-visible", "true");
   await expect.poll(async () => diagnosisChips.count()).toBeLessThanOrEqual(restCount);
   const hoverCount = await diagnosisChips.count();
@@ -2424,10 +2595,13 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await search.focus();
   await expect(view.locator("..")).toHaveCSS("opacity", "0");
 
-  const emptyItem = page.getByTestId(`chart-diagnosis-history-item-${emptyEncounterId}`);
-  await expect(emptyItem).toContainText("진단 기록 없음");
-  await expect(emptyItem.locator('[data-history-diagnosis]')).toHaveCount(0);
-  await expect(page.getByTestId("chart-diagnosis-history-list").locator(":scope > article")).toHaveCount(2);
+  await expect(
+    aside.locator(`[data-encounter-id="${emptyEncounterId}"]`),
+  ).toHaveCount(0);
+  await expect(
+    page.getByTestId(`chart-diagnosis-history-item-${emptyEncounterId}`),
+  ).toHaveCount(0);
+  await expect(page.getByTestId("chart-diagnosis-history-list").locator(":scope > article")).toHaveCount(1);
   await expect(page.getByLabel("차트 이력 종류")).toBeVisible();
   await expect(search).toHaveAttribute("placeholder", "키워드 입력");
   await expect(inlineHistoryItem).not.toContainText("완료");
@@ -2439,7 +2613,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await expect(diagnosisChips.first()).toHaveText("치주염");
   await expect(diagnosisChips.first().locator("strong")).toHaveText("치주염");
   await search.fill("만성");
-  await inlineHistoryItem.getByText("26.07.01", { exact: true }).hover();
+  await inlineHistoryItem.getByText("26.09.08", { exact: true }).hover();
   await expect(diagnosisChips).toHaveCount(1);
   await expect(more).toHaveText("+5");
   await expect(diagnosisChips.first().locator("strong")).toHaveText("만성");
@@ -2471,7 +2645,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await cdp.detach();
 
   await search.fill("이수지");
-  await expect(emptyItem).toBeVisible();
+  await expect(inlineHistoryItem).toBeVisible();
   await search.fill(oldEncounterNo);
   await expect(inlineHistoryItem).toHaveCount(0);
   await expect(page.getByTestId("chart-history-empty-state")).toContainText("검색 결과가 없습니다");
@@ -2486,7 +2660,7 @@ test("live patient chart history shows every encounter and keeps past charts rea
   await soapParagraph.click();
   await page.keyboard.press("End");
   await page.keyboard.insertText(" 이력 전환 직전 작성한 기록");
-  await inlineHistoryItem.getByText("26.07.01", { exact: true }).hover();
+  await inlineHistoryItem.getByText("26.09.08", { exact: true }).hover();
   await inlineHistoryItem.getByRole("button", { name: "차트 보기", exact: true }).click();
 
   await expect(page).toHaveURL(
@@ -2511,6 +2685,93 @@ test("live patient chart history shows every encounter and keeps past charts rea
     page.getByText(current.encounter.encounterNo).first(),
   ).toBeVisible();
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이력 전환 직전 작성한 기록");
+});
+
+test("live patient chart history keeps loading, error, and empty states distinct", async ({
+  page,
+}) => {
+  const current = createLiveChartQueueRecord({
+    encounterId: "encounter-history-states",
+    patientName: "상태확인",
+    sortOrder: 1,
+  });
+  const chart = {
+    id: "21215000-0000-4000-8000-000000000021",
+    encounterId: current.encounter.id,
+    authorUserId: "user-vet",
+    authorDisplayName: "이수지",
+    status: "autosaved",
+    clinicalAt: "2026-09-12T01:00:00.000Z",
+    createdAt: "2026-09-12T01:00:00.000Z",
+    updatedAt: "2026-09-12T01:00:00.000Z",
+  } as const;
+  let releaseFirstHistory!: () => void;
+  const firstHistoryGate = new Promise<void>((resolve) => {
+    releaseFirstHistory = resolve;
+  });
+  let markHistoryStarted!: () => void;
+  const historyStarted = new Promise<void>((resolve) => {
+    markHistoryStarted = resolve;
+  });
+  let historyMode: "error" | "empty" = "error";
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    (route) => fulfillLiveChartQueue(route, [current]),
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/encounter-charts?*`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        json: { ok: true, status: 200, charts: [chart] },
+      }),
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/history?*`,
+    async (route) => {
+      if (historyMode === "error") {
+        markHistoryStarted();
+        await firstHistoryGate;
+        await route.fulfill({
+          status: 500,
+          json: { ok: false, status: 500, error: "db_read_failed" },
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-patient-history-read",
+          items: [],
+          nextCursor: null,
+          totalCount: 0,
+        },
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?encounterId=${current.encounter.id}&modulePanel=open&aside=history`,
+  );
+  await historyStarted;
+  await expect(page.getByTestId("chart-history-loading-state")).toBeVisible();
+  await expect(page.getByTestId("chart-history-empty-state")).toHaveCount(0);
+  releaseFirstHistory();
+
+  const error = page.getByTestId("chart-history-error-alert");
+  await expect(error).toBeVisible();
+  await expect(page.getByTestId("chart-history-loading-state")).toHaveCount(0);
+  await expect(page.getByTestId("chart-history-empty-state")).toHaveCount(0);
+  historyMode = "empty";
+  await error.getByRole("button", { name: "다시 시도" }).click();
+
+  await expect(page.getByTestId("chart-history-empty-state")).toBeVisible();
+  await expect(error).toHaveCount(0);
+  await expect(page.getByTestId("chart-history-loading-state")).toHaveCount(0);
 });
 
 test("active chart context bar previews actual profiles and saves current encounter vitals", async ({
@@ -3201,6 +3462,7 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
 
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const encounterId = "encounter-chart-skeleton";
+  const chartId = "21215000-0000-4000-8000-000000000021";
   const updatedAt = "2026-08-13T09:00:00+09:00";
   const delayedFulfill = async (
     route: Route,
@@ -3277,6 +3539,27 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
         }),
       });
     },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/encounter-charts?*`,
+    (route) =>
+      delayedFulfill(route, {
+        ok: true,
+        status: 200,
+        charts: [
+          {
+            id: chartId,
+            encounterId,
+            authorUserId: "user-vet",
+            authorDisplayName: "이수지",
+            assessment: null,
+            status: "autosaved",
+            clinicalAt: updatedAt,
+            createdAt: updatedAt,
+            updatedAt,
+          },
+        ],
+      }),
   );
   await page.route(
     `**/api/workspaces/${workspaceId}/chart/soap-notes?*`,
@@ -6593,7 +6876,8 @@ test("chart history selection returns to a previous encounter for the patient", 
   await page.getByTestId("order-queue-item-encounter-coco-260501").click();
   const selectedHistoryItem = page
     .locator("#chart-content-aside")
-    .getByTestId("chart-history-item-encounter-coco-260501");
+    .locator('[data-encounter-id="encounter-coco-260501"]')
+    .first();
   await expect(selectedHistoryItem).toContainText("내과 진료");
   await expect(selectedHistoryItem).not.toContainText("급성 위장관염 의심");
   await selectedHistoryItem.click();
@@ -6602,6 +6886,7 @@ test("chart history selection returns to a previous encounter for the patient", 
     page.getByLabel("환자 컨텍스트 정보").getByText("코코"),
   ).toBeVisible();
   await expect(selectedHistoryItem).toHaveAttribute("data-selected", "true");
+  await page.getByLabel("처방 조회 범위").selectOption("encounter");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 

@@ -94,11 +94,19 @@
   outline-offset: -2px;
 }
 
-.title {
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   width: 100%;
   min-width: 0;
   height: 24px;
   padding: 3px 4px;
+}
+
+.title {
+  min-width: 0;
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -107,6 +115,16 @@
   line-height: 18px;
   font-weight: 500;
   letter-spacing: 0.247px;
+}
+
+.relation {
+  flex-shrink: 0;
+  color: var(--clair-color-atomic-neutral-500);
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.22px;
+  white-space: nowrap;
 }
 
 .meta {

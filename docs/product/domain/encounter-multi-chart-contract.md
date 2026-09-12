@@ -5,7 +5,7 @@ area: product
 doc_type: domain-contract
 related_work:
   - CHART-PR-037
-last_updated: 2026-09-09
+last_updated: 2026-09-12
 ---
 
 # Multiple Charts Within One Encounter
@@ -16,7 +16,11 @@ This is the target behavior authorized on 2026-09-09; delivery evidence belongs 
 
 An encounter remains one reception/visit episode. A chart is an independently authored SOAP note within that encounter. Reuse `soap_notes.id` as chart identity; retain the canonical V2 system scopes inside each note. A system scope is not another chart.
 
-`+ 새 차트` creates a blank draft and selects it without creating an encounter, queue entry, order, or invoice. Creation is allowed only for `in_consultation` and `ordered` encounters. A retry with the same creation request ID returns the same note. The clinical timestamp defaults to now and is stored separately from immutable creation time. Crossing midnight does not change encounter identity. Display times in the workspace timezone (existing Korean workspace convention); visit counts remain encounter counts.
+`+ 새 차트` opens a target-visit chooser before it creates anything. Identify each visit with its purpose, visit date/time, veterinarian, status, and existing chart count; do not expose the encounter or chart number as a selection aid. The current active visit is selected by default. Completed and other ineligible visits remain visible but disabled with an explanation, while only `in_consultation` and `ordered` visits are selectable. The confirmed action creates a blank draft under that visit and selects it without creating another encounter, queue entry, order, or invoice. The logged-in creator becomes the new chart's author/담당자. A retry with the same creation request ID returns the same note. The clinical timestamp defaults to now and is stored separately from immutable creation time. Crossing midnight does not change encounter identity. Display times in the workspace timezone (existing Korean workspace convention); visit counts remain encounter counts.
+
+Patient chart history is a list of individual, non-voided charts across the patient, not a list of encounters with one representative SOAP note. Its default `진료일` view groups the same chart rows by encounter check-in/creation date; the `작성일` view groups them by immutable chart `created_at`. Switching the segmented control never changes the selected chart and never changes the total shown only in the `차트 이력` header. Within either view, chart creation time plus chart ID provides stable descending order. `clinical_at` and `updated_at` never define the group. Selecting a row restores its actual encounter and chart identities; an encounter without a chart contributes no synthetic row. History pagination must return every chart exactly once even when multiple charts share a minute.
+
+Within a visit, the oldest active chart is the first record and later charts are `추가 기록`. The first record needs no relation marker. An additional chart written on a later date shows its source visit date in `작성일` history and a neutral relation notice above the clinical panels; this is context, not a warning or a new encounter.
 
 ## Clinical Records
 

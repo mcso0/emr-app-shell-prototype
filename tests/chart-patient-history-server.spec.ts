@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 
 import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permission-resolver";
 import type { ChartPatientHistoryPage } from "../src/features/chart/chart-patient-history";
+import { loadCompleteChartPatientHistory } from "../src/features/chart/chart-patient-history-client";
 import {
   createSupabaseChartPatientHistoryGateway,
   parseChartPatientHistoryPage,
@@ -14,12 +15,25 @@ import type { PermissionId } from "../src/types/emr-domain";
 const workspaceId = "workspace-clair-cheongdam";
 const patientId = "21212000-0000-4000-8000-000000000001";
 const actorUserId = "21210000-0000-4000-8000-000000000001";
+const encounterId = "21213000-0000-4000-8000-000000000001";
+const chartId = "21215000-0000-4000-8000-000000000001";
 
 const livePage = {
   items: [
     {
+      chart: {
+        id: chartId,
+        encounterId,
+        authorUserId: actorUserId,
+        authorDisplayName: "이수지",
+        assessment: "구토 빈도 추적",
+        status: "autosaved",
+        clinicalAt: "2026-09-08T06:30:00.000Z",
+        createdAt: "2026-09-12T14:59:00.000Z",
+        updatedAt: "2026-09-13T01:30:00.000Z",
+      },
       encounter: {
-        id: "21213000-0000-4000-8000-000000000001",
+        id: encounterId,
         workspaceId,
         patientId,
         guardianId: "21214000-0000-4000-8000-000000000001",
@@ -42,7 +56,6 @@ const livePage = {
       },
       veterinarianName: "이수지",
       diagnoses: [{ diagnosisText: "급성 위장관염 의심" }],
-      soapNote: { assessment: "구토 빈도 추적" },
     },
   ],
   nextCursor: "eyJhdCI6IjIwMjYtMDgtMzBUMDY6MzA6MDAuMDAwWiJ9",
@@ -145,11 +158,136 @@ test("patient chart history parser rejects incomplete records and invalid status
       items: [
         {
           ...livePage.items[0],
+          chart: { ...livePage.items[0].chart, status: "unknown" },
+        },
+      ],
+    }),
+  ).toBeNull();
+  expect(
+    parseChartPatientHistoryPage({
+      ...livePage,
+      items: [
+        {
+          ...livePage.items[0],
           encounter: { ...livePage.items[0].encounter, status: "unknown" },
         },
       ],
     }),
   ).toBeNull();
+  expect(
+    parseChartPatientHistoryPage({
+      ...livePage,
+      items: [
+        {
+          ...livePage.items[0],
+          chart: { ...livePage.items[0].chart, encounterId: crypto.randomUUID() },
+        },
+      ],
+    }),
+  ).toBeNull();
+  expect(
+    parseChartPatientHistoryPage({
+      ...livePage,
+      items: [
+        {
+          ...livePage.items[0],
+          chart: { ...livePage.items[0].chart, status: "voided" },
+        },
+      ],
+    }),
+  ).toBeNull();
+});
+
+test("patient chart history keeps immutable creation time separate from clinical and update times", () => {
+  const parsed = parseChartPatientHistoryPage(livePage);
+  expect(parsed?.items[0].chart).toMatchObject({
+    id: chartId,
+    encounterId,
+    clinicalAt: "2026-09-08T06:30:00.000Z",
+    createdAt: "2026-09-12T14:59:00.000Z",
+    updatedAt: "2026-09-13T01:30:00.000Z",
+  });
+});
+
+test("complete patient chart history loads every page and sorts same-minute charts stably", async () => {
+  const firstChart = livePage.items[0];
+  const secondChart = {
+    ...firstChart,
+    chart: {
+      ...firstChart.chart,
+      id: "21215000-0000-4000-8000-000000000002",
+      createdAt: "2026-09-12T14:59:30.000Z",
+    },
+  };
+  const cursors: Array<string | undefined> = [];
+  const result = await loadCompleteChartPatientHistory({
+    patientId,
+    workspaceId,
+    loadPage: async ({ cursor }) => {
+      cursors.push(cursor);
+      return cursor
+        ? {
+            ...livePage,
+            items: [firstChart],
+            nextCursor: null,
+            totalCount: 2,
+            ok: true,
+            status: 200,
+            enforcedBy: "chart-patient-history-read",
+          }
+        : {
+            ...livePage,
+            items: [secondChart],
+            nextCursor: "page-2",
+            totalCount: 2,
+            ok: true,
+            status: 200,
+            enforcedBy: "chart-patient-history-read",
+          };
+    },
+  });
+
+  expect(cursors).toEqual([undefined, "page-2"]);
+  expect(result.ok && result.items.map((item) => item.chart.id)).toEqual([
+    secondChart.chart.id,
+    firstChart.chart.id,
+  ]);
+});
+
+test("complete patient chart history retries a page set that would omit a chart", async () => {
+  const firstChart = livePage.items[0];
+  const secondChart = {
+    ...firstChart,
+    chart: {
+      ...firstChart.chart,
+      id: "21215000-0000-4000-8000-000000000002",
+      createdAt: "2026-09-12T15:00:00.000Z",
+    },
+  };
+  const cursors: Array<string | undefined> = [];
+  const result = await loadCompleteChartPatientHistory({
+    patientId,
+    workspaceId,
+    loadPage: async ({ cursor }) => {
+      cursors.push(cursor);
+      const retrying = cursors.length > 2;
+      return {
+        ...livePage,
+        items: cursor && retrying ? [firstChart] : [secondChart],
+        nextCursor: cursor ? null : "page-2",
+        totalCount: 2,
+        ok: true,
+        status: 200,
+        enforcedBy: "chart-patient-history-read",
+      };
+    },
+  });
+
+  expect(cursors).toEqual([undefined, "page-2", undefined, "page-2"]);
+  expect(result.ok && result.items.map((item) => item.chart.id)).toEqual([
+    secondChart.chart.id,
+    firstChart.chart.id,
+  ]);
 });
 
 test("patient chart history route and migration preserve the server-owned workspace boundary", () => {
@@ -162,7 +300,7 @@ test("patient chart history route and migration preserve the server-owned worksp
     "utf8",
   );
   const migration = readFileSync(
-    "supabase/migrations/20260830082412_chart_patient_history_read_model.sql",
+    "supabase/migrations/20260912103000_chart_patient_history_by_created_at.sql",
     "utf8",
   );
 
@@ -177,6 +315,11 @@ test("patient chart history route and migration preserve the server-owned worksp
   expect(migration).toContain("clair_is_active_workspace_member");
   expect(migration).toContain("clair_current_user_has_workspace_permission");
   expect(migration).toContain("'chart:view'");
+  expect(migration).toContain("private.clair_chart_note_json(s) as chart");
+  expect(migration).toContain("order by chart_created_at desc, chart_id desc");
+  expect(migration).toContain("'totalCount', (select count(*) from base)");
+  expect(migration).toContain("and s.status <> 'voided'");
+  expect(migration).not.toContain("order by checked_in_at desc");
   expect(migration).toMatch(/revoke all[\s\S]*from public, anon/);
   expect(migration).toMatch(/grant execute[\s\S]*to authenticated/);
   expect(migration).not.toMatch(/\b(insert|update|delete|truncate)\b/i);

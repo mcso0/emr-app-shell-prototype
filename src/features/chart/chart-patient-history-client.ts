@@ -41,3 +41,67 @@ export async function loadChartPatientHistoryPage({
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 }
+
+export async function loadCompleteChartPatientHistory({
+  actorHeaders,
+  patientId,
+  workspaceId,
+  loadPage = loadChartPatientHistoryPage,
+}: {
+  actorHeaders?: Record<string, string>;
+  patientId: string;
+  workspaceId: string;
+  loadPage?: typeof loadChartPatientHistoryPage;
+}): Promise<ChartPatientHistoryResponse> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const recordsByChartId = new Map<
+      string,
+      Extract<ChartPatientHistoryResponse, { ok: true }>["items"][number]
+    >();
+    const seenCursors = new Set<string>();
+    let cursor: string | undefined;
+    let totalCount = 0;
+
+    while (true) {
+      const result = await loadPage({
+        actorHeaders,
+        cursor,
+        patientId,
+        workspaceId,
+      });
+      if (!result.ok) return result;
+
+      for (const record of result.items) {
+        if (!record.chart?.id) {
+          return { ok: false, status: 500, error: "db_read_failed" };
+        }
+        recordsByChartId.set(record.chart.id, record);
+      }
+      totalCount = result.totalCount;
+
+      if (!result.nextCursor) break;
+      if (seenCursors.has(result.nextCursor)) {
+        return { ok: false, status: 500, error: "db_read_failed" };
+      }
+      seenCursors.add(result.nextCursor);
+      cursor = result.nextCursor;
+    }
+
+    if (recordsByChartId.size === totalCount) {
+      return {
+        enforcedBy: "chart-patient-history-read",
+        items: [...recordsByChartId.values()].sort(
+          (a, b) =>
+            b.chart.createdAt.localeCompare(a.chart.createdAt) ||
+            b.chart.id.localeCompare(a.chart.id),
+        ),
+        nextCursor: null,
+        ok: true,
+        status: 200,
+        totalCount,
+      };
+    }
+  }
+
+  return { ok: false, status: 500, error: "db_read_failed" };
+}
