@@ -1,10 +1,10 @@
-import type { Encounter, Guardian } from "@/types/emr-domain";
+import type { Encounter, Guardian, SoapNote } from "@/types/emr-domain";
 
 export type ChartPatientHistoryRecord = {
+  chart: SoapNote;
   diagnoses: Array<{ diagnosisText: string }>;
   encounter: Encounter;
   primaryGuardian?: Guardian;
-  soapNote?: { assessment?: string };
   veterinarianName?: string;
 };
 

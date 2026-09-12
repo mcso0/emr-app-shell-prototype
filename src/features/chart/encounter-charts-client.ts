@@ -55,28 +55,41 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     void reload(controller.signal);
     return () => controller.abort();
   }, [enabled, encounterId, reload, scope, setCharts, workspaceId]);
-  const create = useCallback(async () => {
-    if (!enabled || !workspaceId || !encounterId || creatingRef.current) return;
+  const create = useCallback(async (targetEncounterId = encounterId) => {
+    if (!enabled || !workspaceId || !targetEncounterId || creatingRef.current) return false;
+    const targetScope = `${workspaceId}:${actorKey}:${targetEncounterId}`;
     creatingRef.current = true;
     useChartStore.setState({ encounterChartCreating: true });
     try {
       if (!await useChartStore.getState().flushEditors()) {
-        toast.error("현재 차트를 저장하지 못했어요. 저장 오류를 해결한 뒤 새 차트를 추가해 주세요."); return;
+        toast.error("현재 차트를 저장하지 못했어요. 저장 오류를 해결한 뒤 새 차트를 추가해 주세요."); return false;
       }
-      if (activeScopeRef.current !== scope) return;
-      if (createRequestRef.current?.scope !== scope) createRequestRef.current = { scope, id: crypto.randomUUID() };
-      const result = await encounterChartsRequest(workspaceId, "POST", { encounterId, creationRequestId: createRequestRef.current!.id }, actorHeaders);
-      if (activeScopeRef.current !== scope) return;
-      if (!result.ok || !result.chart) { toast.error(chartLifecycleError(!result.ok ? result.denialReason : undefined)); return; }
+      if (activeScopeRef.current !== scope) return false;
+      if (createRequestRef.current?.scope !== targetScope) createRequestRef.current = { scope: targetScope, id: crypto.randomUUID() };
+      const result = await encounterChartsRequest(workspaceId, "POST", { encounterId: targetEncounterId, creationRequestId: createRequestRef.current!.id }, actorHeaders);
+      if (activeScopeRef.current !== scope) return false;
+      if (!result.ok || !result.chart) { toast.error(chartLifecycleError(!result.ok ? result.denialReason : undefined)); return false; }
       createRequestRef.current = null;
-      updateChart(scope, result.chart);
-      useChartStore.setState({ selectedChartId: result.chart.id });
+      if (targetEncounterId === encounterId) updateChart(scope, result.chart);
+      useChartStore.setState({
+        historyViewEncounterId: "",
+        historyViewChartId: result.chart.id,
+        selectedChartId: targetEncounterId === encounterId ? result.chart.id : "",
+        selectedEncounterId: targetEncounterId,
+      });
+      const url = new URL(window.location.href);
+      url.searchParams.set("encounterId", targetEncounterId);
+      url.searchParams.delete("historyEncounterId");
+      url.searchParams.set("chartId", result.chart.id);
+      window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}`);
+      useChartStore.getState().requestChartHistoryRefresh();
       toast.success("새 차트를 열었어요.");
+      return true;
     } finally {
       creatingRef.current = false;
       useChartStore.setState({ encounterChartCreating: false });
     }
-  }, [actorHeaders, enabled, encounterId, scope, updateChart, workspaceId]);
+  }, [actorHeaders, actorKey, enabled, encounterId, scope, updateChart, workspaceId]);
   useEffect(() => {
     useChartStore.setState({ createEncounterChart: create });
     return () => { if (useChartStore.getState().createEncounterChart === create) useChartStore.setState({ createEncounterChart: undefined }); };
@@ -84,6 +97,14 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
   useEffect(() => {
     if (storedScope !== scope || !selectedChartId) return;
     const url = new URL(window.location.href);
+    if (url.searchParams.has("historyEncounterId")) return;
+    const requestedHistoryChartId = useChartStore.getState().historyViewChartId;
+    if (
+      requestedHistoryChartId &&
+      requestedHistoryChartId !== selectedChartId
+    ) {
+      return;
+    }
     if (url.searchParams.get("chartId") === selectedChartId) return;
     url.searchParams.set("chartId", selectedChartId);
     window.history.replaceState(window.history.state, "", url);
