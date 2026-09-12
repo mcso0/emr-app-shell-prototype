@@ -9,7 +9,9 @@ import {
   mapChartOrderBillingSummary,
   type ChartOrderBillingSummary,
 } from "@/features/chart/chart-order-billing-summary-contract";
-import { mockOrders } from "@/mocks/emr-domain";
+import { getMockChartOrderDraftRuntimeRows } from "@/features/chart/server-order-draft-persistence-core";
+import { getMockEncounterCharts } from "@/features/chart/server-soap-note-persistence-core";
+import { mockEncounters, mockOrders } from "@/mocks/emr-domain";
 
 export const chartOrderExecutionMutationActions = [
   "amend",
@@ -22,6 +24,7 @@ export type ChartOrderExecutionMutationAction =
   (typeof chartOrderExecutionMutationActions)[number];
 
 export type ChartOrderExecutionMutationInput = {
+  chartId?: string;
   action?: ChartOrderExecutionMutationAction;
   changes?: Record<string, unknown>;
   expectedRevisionNo?: number;
@@ -50,6 +53,9 @@ export type ChartOrderExecutionMutationResult = {
 };
 
 export type ChartOrderExecutionMutationDenialReason =
+  | "order_chart_mismatch"
+  | "chart_unavailable"
+  | "chart_id_required"
   | "aggregate_direct_mutation_forbidden"
   | "amendment_requires_pending"
   | "actual_dispense_out_of_policy"
@@ -88,6 +94,7 @@ export type ChartOrderExecutionMutationGatewayResult =
 
 export type ChartOrderExecutionMutationGateway = {
   mutateOrderExecution(input: {
+    chartId?: string;
     action: ChartOrderExecutionMutationAction;
     actorUserId: string;
     changes: Record<string, unknown>;
@@ -190,6 +197,7 @@ export async function mutateChartOrderExecution({
   }
 
   const result = await gateway.mutateOrderExecution({
+    chartId: typeof input.chartId === "string" ? input.chartId.trim() || undefined : undefined,
     action: validInput.action,
     actorUserId: actorUserId ?? "",
     changes: validInput.changes,
@@ -217,8 +225,9 @@ export async function mutateChartOrderExecution({
 
 export type SupabaseChartOrderExecutionMutationRpcClient = {
   rpc(
-    functionName: "clair_mutate_chart_order_execution",
+    functionName: "clair_mutate_chart_order_execution" | "clair_mutate_chart_order_execution_for_chart",
     args: {
+      p_chart_id?: string;
       p_action: ChartOrderExecutionMutationAction;
       p_actor_user_id: string;
       p_changes: Record<string, unknown>;
@@ -237,8 +246,9 @@ export function createSupabaseChartOrderExecutionMutationGateway(
   return {
     async mutateOrderExecution(input) {
       const { data, error } = await client.rpc(
-        "clair_mutate_chart_order_execution",
+        input.chartId ? "clair_mutate_chart_order_execution_for_chart" : "clair_mutate_chart_order_execution",
         {
+          ...(input.chartId ? { p_chart_id: input.chartId } : {}),
           p_action: input.action,
           p_actor_user_id: input.actorUserId,
           p_changes: input.changes,
@@ -271,8 +281,18 @@ export function createMockChartOrderExecutionMutationGateway(
 
   return {
     async mutateOrderExecution(input) {
+      const runtime = mockEncounters.filter((encounter) => encounter.workspaceId === input.workspaceId)
+        .flatMap((encounter) => getMockChartOrderDraftRuntimeRows({ workspaceId: input.workspaceId, encounterId: encounter.id }) ?? [])
+        .find((row) => row.orderId === input.orderId);
+      const seeded = mockOrders.find((row) => row.workspaceId === input.workspaceId && row.id === input.orderId);
+      const origin = runtime?.originChartId ?? seeded?.originChartId ?? null;
+      if (origin !== (input.chartId ?? null)) return { ok: false, status: 409, denialReason: "order_chart_mismatch" };
+      if (input.chartId && !getMockEncounterCharts(input.workspaceId, runtime?.encounterId ?? seeded?.encounterId ?? "").some((chart) => chart.id === input.chartId)) {
+        return { ok: false, status: 409, denialReason: "chart_unavailable" };
+      }
       const key = `${input.workspaceId}:${input.idempotencyKey}`;
       const request = JSON.stringify({
+        chartId: input.chartId,
         action: input.action,
         changes: input.changes,
         expectedRevisionNo: input.expectedRevisionNo,
@@ -514,6 +534,7 @@ function mapMutationError(message?: string): ChartOrderExecutionMutationGatewayR
     return { ok: false, status: 403, denialReason: "permission_missing" };
   }
   const reasons: ChartOrderExecutionMutationDenialReason[] = [
+    "order_chart_mismatch", "chart_unavailable", "chart_id_required",
     "aggregate_direct_mutation_forbidden",
     "amendment_requires_pending",
     "actual_dispense_out_of_policy",

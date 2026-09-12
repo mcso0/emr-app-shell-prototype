@@ -37,6 +37,7 @@
 * [Legacy MVP Feature Spec](product/features/legacy-mvp-feature-spec.md)
 * [Product User Flow](product/user-flows/emr-saas-userflow.md)
 * [Outpatient Workflow State Model](product/domain/outpatient-workflow-state-model.md)
+* [Encounter Multi-Chart Contract](product/domain/encounter-multi-chart-contract.md)
 * [EMR Domain Entity Map](product/domain/emr-domain-entity-map.md)
 * [Order Fulfillment Handoff](product/domain/order-fulfillment-handoff.md)
 * [Workspace Auth and Permissions](product/domain/workspace-auth-permissions.md)

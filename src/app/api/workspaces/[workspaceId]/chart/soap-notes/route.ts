@@ -65,6 +65,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     actorUserId: identity.actorUserId,
     workspaceId,
     encounterId,
+    chartId: url.searchParams.get("chartId"),
     permissionAdapter,
     gateway: client
       ? createSupabaseChartSoapNoteGateway(

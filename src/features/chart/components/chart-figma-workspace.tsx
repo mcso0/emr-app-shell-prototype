@@ -130,6 +130,7 @@ export function ChartActionBar({
   historyAction,
   pendingIndicator,
   startTime,
+  timeLabel = "진료 시작",
   visitLabel,
 }: {
   chartDate: string;
@@ -139,6 +140,7 @@ export function ChartActionBar({
   historyAction: ReactNode;
   pendingIndicator?: ReactNode;
   startTime: string;
+  timeLabel?: string;
   visitLabel: string;
 }) {
   return (
@@ -167,7 +169,7 @@ export function ChartActionBar({
       <div className="flex shrink-0 items-center gap-2">
         {pendingIndicator}
         <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
-          진료 시작 {startTime}
+          {timeLabel} {startTime}
         </span>
         <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
           <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />

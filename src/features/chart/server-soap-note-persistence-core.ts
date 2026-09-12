@@ -19,6 +19,8 @@ export type ChartSoapSaveMode = "autosave" | "manual_save";
 
 export type ChartSoapNoteInput = {
   encounterId?: string;
+  chartId?: string;
+  amendmentReason?: string;
   expectedUpdatedAt?: string | null;
   blockDocument?: unknown;
   subjective?: string;
@@ -28,6 +30,8 @@ export type ChartSoapNoteInput = {
   mode?: ChartSoapSaveMode;
 };
 
+export type ChartSoapConflictReason = "encounter_unavailable" | "soap_note_conflict" | "stale_status" | "chart_unavailable" | "chart_id_required" | "amendment_reason_required" | "unfinished_charts";
+
 export type ChartSoapNoteGatewayResult =
   | {
       ok: true;
@@ -36,16 +40,19 @@ export type ChartSoapNoteGatewayResult =
       auditRecorded?: boolean;
       auditEventId?: string;
     }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" | "stale_status" }
+  | { ok: false; status: 409; denialReason: ChartSoapConflictReason }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartSoapNoteGateway = {
   readSoapNote(input: {
     encounterId: string;
+    chartId?: string;
     workspaceId: string;
   }): Promise<ChartSoapNoteGatewayResult>;
   saveSoapNote(input: {
     actorUserId: string;
+    chartId?: string;
+    amendmentReason?: string;
     blockDocument: SoapBlockDocument;
     fields: SoapDocumentProjection;
     encounterId: string;
@@ -70,7 +77,7 @@ export type ChartSoapNoteReadResult =
       fieldErrors: Partial<Record<"encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" }
+  | { ok: false; status: 409; denialReason: ChartSoapConflictReason }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type ChartSoapNoteSaveResult =
@@ -88,20 +95,47 @@ export type ChartSoapNoteSaveResult =
       fieldErrors: Partial<Record<keyof ChartSoapNoteInput, string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "soap_note_conflict" | "stale_status" }
+  | { ok: false; status: 409; denialReason: ChartSoapConflictReason }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
 const mockSoapNoteStore = new Map<string, SoapNote>();
+const mockChartCreationRequests = new Map<string, string>();
+export function getMockEncounterCharts(workspaceId: string, encounterId: string, seedSoapNotes = mockSoapNotes): SoapNote[] {
+  const rows = new Map(seedSoapNotes.filter((note) => note.encounterId === encounterId).map((note) => [note.id, note]));
+  for (const [key, note] of mockSoapNoteStore) {
+    if (key.startsWith(`${workspaceId}:${encounterId}:`)) rows.set(note.id, note);
+  }
+  return [...rows.values()].filter((note) => note.status !== "voided")
+    .sort((a, b) => (b.clinicalAt ?? b.createdAt).localeCompare(a.clinicalAt ?? a.createdAt) || b.id.localeCompare(a.id));
+}
+export function putMockEncounterChart(workspaceId: string, note: SoapNote) {
+  mockSoapNoteStore.set(`${workspaceId}:${note.encounterId}:${note.id}`, note);
+}
+export function createMockEncounterChart(workspaceId: string, encounterId: string, actorUserId: string, requestId: string, clinicalAt?: string): SoapNote {
+  const key = `${workspaceId}:${encounterId}:${requestId}`;
+  const existingId = mockChartCreationRequests.get(key);
+  const existing = getMockEncounterCharts(workspaceId, encounterId).find((note) => note.id === existingId);
+  if (existing) return existing;
+  const timestamp = new Date().toISOString();
+  const note: SoapNote = { id: crypto.randomUUID(), encounterId, authorUserId: actorUserId,
+    status: "draft", clinicalAt: clinicalAt ?? timestamp, createdAt: timestamp, updatedAt: timestamp };
+  putMockEncounterChart(workspaceId, note);
+  mockChartCreationRequests.set(key, note.id);
+  return note;
+}
+
 
 export async function readChartSoapNote({
   actorUserId,
   encounterId,
+  chartId,
   gateway = createMockChartSoapNoteGateway(),
   permissionAdapter = createDemoChartSoapPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
   encounterId: string | null | undefined;
+  chartId?: string | null;
   gateway?: Pick<ChartSoapNoteGateway, "readSoapNote">;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
@@ -132,14 +166,13 @@ export async function readChartSoapNote({
   }
 
   const result = await gateway.readSoapNote({
+    chartId: trimToUndefined(chartId),
     encounterId: normalizedEncounterId,
     workspaceId,
   });
 
   if (!result.ok) {
-    if (result.status === 409 && result.denialReason === "encounter_unavailable") {
-      return { ok: false, status: 409, denialReason: "encounter_unavailable" };
-    }
+    if (result.status === 409) return result;
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -198,6 +231,8 @@ export async function saveChartSoapNote({
 
   const result = await gateway.saveSoapNote({
     actorUserId: actorUserId ?? "",
+    chartId: normalized.chartId,
+    amendmentReason: normalized.amendmentReason,
     blockDocument: validation.blockDocument,
     encounterId: normalized.encounterId,
     expectedUpdatedAt: normalized.expectedUpdatedAt,
@@ -272,29 +307,30 @@ export function createMockChartSoapNoteGateway(
   const seedSoapNotes = dataset.soapNotes ?? [];
 
   return {
-    async readSoapNote({ encounterId, workspaceId }) {
+    async readSoapNote({ encounterId, chartId, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
 
-      return {
-        ok: true,
-        soapNote: getStoredOrSeedSoapNote({
-          encounterId,
-          seedSoapNotes,
-          workspaceId,
-        }),
-      };
+      const rows = getMockEncounterCharts(workspaceId, encounterId, seedSoapNotes);
+      if (!chartId && rows.length > 1) return { ok: false, status: 409, denialReason: "chart_id_required" };
+      const note = chartId ? rows.find((note) => note.id === chartId) ?? null : rows[0] ?? null;
+      if (chartId && !note) return { ok: false, status: 409, denialReason: "chart_unavailable" };
+      return { ok: true, soapNote: note };
     },
-    async saveSoapNote({ actorUserId, blockDocument, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
+    async saveSoapNote({ actorUserId, chartId, amendmentReason, blockDocument, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
       if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
 
-      const stored = getStoredOrSeedSoapNote({
-        encounterId,
-        seedSoapNotes,
-        workspaceId,
-      });
+      const rows = getMockEncounterCharts(workspaceId, encounterId, seedSoapNotes);
+      if (!chartId && rows.length > 1) return { ok: false, status: 409, denialReason: "chart_id_required" };
+      const stored = chartId ? rows.find((note) => note.id === chartId) : rows[0];
+      if (chartId && !stored) return { ok: false, status: 409, denialReason: "chart_unavailable" };
+      const isAmendment = stored?.status === "signed" || stored?.status === "amended";
+      if (isAmendment && (mode !== "manual_save" || !amendmentReason?.trim())) {
+        return { ok: false, status: 409, denialReason: "amendment_reason_required" };
+      }
+      if (chartId && expectedUpdatedAt === undefined) return { ok: false, status: 409, denialReason: "soap_note_conflict" };
       if (expectedUpdatedAt !== undefined) {
         if (stored && expectedUpdatedAt !== stored.updatedAt) {
           return { ok: false, status: 409, denialReason: "soap_note_conflict" };
@@ -303,7 +339,8 @@ export function createMockChartSoapNoteGateway(
           return { ok: false, status: 409, denialReason: "soap_note_conflict" };
         }
       }
-      const timestamp = now();
+      const timestamp = chartId && stored
+        ? new Date(Math.max(Date.parse(now()), Date.parse(stored.updatedAt) + 1)).toISOString() : now();
       const soapNote: SoapNote = {
         id: stored?.id ?? `soap-${encounterId}`,
         encounterId,
@@ -313,14 +350,15 @@ export function createMockChartSoapNoteGateway(
         assessment: fields.assessment,
         plan: fields.plan,
         blockDocument,
-        status: mode === "autosave" ? "autosaved" : "draft",
+        status: isAmendment ? "amended" : mode === "autosave" ? "autosaved" : "draft",
         autosavedAt: mode === "autosave" ? timestamp : stored?.autosavedAt,
         signedAt: stored?.signedAt,
+        clinicalAt: stored?.clinicalAt ?? stored?.createdAt ?? timestamp,
         createdAt: stored?.createdAt ?? timestamp,
         updatedAt: timestamp,
       };
 
-      mockSoapNoteStore.set(buildSoapKey(workspaceId, encounterId), soapNote);
+      putMockEncounterChart(workspaceId, soapNote);
 
       return { ok: true, soapNote };
     },
@@ -328,6 +366,15 @@ export function createMockChartSoapNoteGateway(
 }
 
 export type SupabaseChartSoapNoteRpcClient = {
+  rpc(functionName: "clair_get_chart_soap_note_by_id", args: {
+    p_workspace_id: string; p_encounter_id: string; p_chart_id: string;
+  }): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(functionName: "clair_save_chart_soap_note_v4", args: {
+    p_workspace_id: string; p_actor_user_id: string; p_encounter_id: string; p_chart_id: string;
+    p_note: SoapDocumentProjection & { blockDocument: SoapBlockDocument };
+    p_expected_updated_at: string | null; p_mode: ChartSoapSaveMode;
+    p_request_id: string | null; p_amendment_reason: string | null;
+  }): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_get_chart_soap_note",
     args: {
@@ -353,13 +400,17 @@ export function createSupabaseChartSoapNoteGateway(
   client: SupabaseChartSoapNoteRpcClient
 ): ChartSoapNoteGateway {
   return {
-    async readSoapNote({ encounterId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_get_chart_soap_note", {
+    async readSoapNote({ encounterId, chartId, workspaceId }) {
+      const { data, error } = chartId
+        ? await client.rpc("clair_get_chart_soap_note_by_id", { p_workspace_id: workspaceId, p_encounter_id: encounterId, p_chart_id: chartId })
+        : await client.rpc("clair_get_chart_soap_note", {
         p_workspace_id: workspaceId,
         p_encounter_id: encounterId,
       });
 
       if (error) {
+        const conflict = mapChartSoapConflict(error.message);
+        if (conflict) return { ok: false, status: 409, denialReason: conflict };
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
@@ -368,8 +419,8 @@ export function createSupabaseChartSoapNoteGateway(
 
       return { ok: true, soapNote: mapSoapNote(data) };
     },
-    async saveSoapNote({ actorUserId, blockDocument, encounterId, expectedUpdatedAt, fields, mode, requestId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_save_chart_soap_note_v3", {
+    async saveSoapNote({ actorUserId, chartId, amendmentReason, blockDocument, encounterId, expectedUpdatedAt, fields, mode, requestId, workspaceId }) {
+      const args = {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
@@ -380,9 +431,14 @@ export function createSupabaseChartSoapNoteGateway(
         p_expected_updated_at: expectedUpdatedAt ?? null,
         p_mode: mode,
         p_request_id: requestId ?? null,
-      });
+      };
+      const { data, error } = chartId
+        ? await client.rpc("clair_save_chart_soap_note_v4", { ...args, p_chart_id: chartId, p_amendment_reason: amendmentReason ?? null })
+        : await client.rpc("clair_save_chart_soap_note_v3", args);
 
       if (error) {
+        const conflict = mapChartSoapConflict(error.message);
+        if (conflict) return { ok: false, status: 409, denialReason: conflict };
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
@@ -470,28 +526,11 @@ function canMutateChart(encounter: Encounter) {
   return encounter.status === "in_consultation" || encounter.status === "ordered";
 }
 
-function getStoredOrSeedSoapNote({
-  encounterId,
-  seedSoapNotes,
-  workspaceId,
-}: {
-  encounterId: string;
-  seedSoapNotes: SoapNote[];
-  workspaceId: string;
-}) {
-  const stored = mockSoapNoteStore.get(buildSoapKey(workspaceId, encounterId));
-  if (stored) return stored;
-
-  return seedSoapNotes.find((soapNote) => soapNote.encounterId === encounterId) ?? null;
-}
-
-function buildSoapKey(workspaceId: string, encounterId: string) {
-  return `${workspaceId}:${encounterId}`;
-}
-
 function normalizeSoapInput(input: ChartSoapNoteInput) {
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
+    chartId: trimToUndefined(input.chartId),
+    amendmentReason: trimToUndefined(input.amendmentReason),
     expectedUpdatedAt: normalizeExpectedUpdatedAt(input.expectedUpdatedAt),
     blockDocument: input.blockDocument,
     subjective: normalizeField(input.subjective),
@@ -513,6 +552,7 @@ function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
   let blockDocument: SoapBlockDocument | undefined;
   let blockCount: number | undefined;
 
+  if (input.amendmentReason && input.amendmentReason.length > 2000) fieldErrors.amendmentReason = "수정 사유는 2,000자 이내로 입력해 주세요.";
   if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (input.expectedUpdatedAt !== undefined && input.expectedUpdatedAt !== null && Number.isNaN(Date.parse(input.expectedUpdatedAt))) {
     fieldErrors.expectedUpdatedAt = "SOAP 기준 저장 시각이 올바르지 않습니다.";
@@ -573,14 +613,13 @@ function projectionToUndefined(value?: string | null) {
   return normalized || undefined;
 }
 
-function mapSoapNote(value: unknown): SoapNote | null {
+export function mapSoapNote(value: unknown): SoapNote | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Partial<SoapNote>;
 
   if (
     typeof row.id !== "string" ||
     typeof row.encounterId !== "string" ||
-    typeof row.authorUserId !== "string" ||
     typeof row.status !== "string" ||
     typeof row.createdAt !== "string" ||
     typeof row.updatedAt !== "string"
@@ -591,7 +630,8 @@ function mapSoapNote(value: unknown): SoapNote | null {
   const mapped: SoapNote = {
     id: row.id,
     encounterId: row.encounterId,
-    authorUserId: row.authorUserId,
+    authorUserId: trimToUndefined(row.authorUserId),
+    authorDisplayName: trimToUndefined(row.authorDisplayName),
     subjective: projectionToUndefined(row.subjective),
     objective: projectionToUndefined(row.objective),
     assessment: projectionToUndefined(row.assessment),
@@ -600,6 +640,7 @@ function mapSoapNote(value: unknown): SoapNote | null {
     autosavedAt: trimToUndefined(row.autosavedAt),
     signedAt: trimToUndefined(row.signedAt),
     createdAt: row.createdAt,
+    clinicalAt: trimToUndefined(row.clinicalAt) ?? row.createdAt,
     updatedAt: row.updatedAt,
   };
 
@@ -639,4 +680,9 @@ function mapTransactionalSoapAudit(value: unknown) {
       ? { auditEventId: eventId.trim() }
       : {}),
   };
+}
+
+export function mapChartSoapConflict(message?: string): ChartSoapConflictReason | undefined {
+  return (["encounter_unavailable", "soap_note_conflict", "stale_status", "chart_unavailable", "chart_id_required", "amendment_reason_required", "unfinished_charts"] as const)
+    .find((reason) => message?.includes(reason));
 }

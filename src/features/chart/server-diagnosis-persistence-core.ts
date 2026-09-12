@@ -1,3 +1,4 @@
+import { getMockEncounterCharts, putMockEncounterChart, mapSoapNote } from "@/features/chart/server-soap-note-persistence-core";
 import {
   createMockWorkspacePermissionAdapter,
   resolveWorkspacePermission,
@@ -5,7 +6,7 @@ import {
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
 import { mockDiagnoses, mockEncounters } from "@/mocks/emr-domain";
-import type { Diagnosis, DiagnosisType, Encounter } from "@/types/emr-domain";
+import type { Diagnosis, DiagnosisType, Encounter, SoapNote } from "@/types/emr-domain";
 
 export type ChartDiagnosisRowInput = {
   id?: string;
@@ -19,6 +20,9 @@ export type ChartDiagnosisRowInput = {
 
 export type ChartDiagnosisInput = {
   encounterId?: string;
+  chartId?: string;
+  expectedVersion?: string;
+  assessedDiagnosisIds?: string[];
   diagnoses?: ChartDiagnosisRowInput[];
 };
 
@@ -32,20 +36,26 @@ export type ChartDiagnosisRow = Diagnosis & {
   updatedAt: string;
 };
 
+export type ChartDiagnosisContext = { version?: string; assessments?: ChartDiagnosisRow[]; chart?: SoapNote };
+export type ChartDiagnosisConflict = "encounter_unavailable" | "stale_status" | "chart_unavailable" | "chart_id_required" | "signed_chart_read_only" | "diagnoses_conflict";
 export type ChartDiagnosisGatewayResult =
-  | { ok: true; diagnoses: ChartDiagnosisRow[] }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
+  | ({ ok: true; diagnoses: ChartDiagnosisRow[] } & ChartDiagnosisContext)
+  | { ok: false; status: 409; denialReason: ChartDiagnosisConflict }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
 export type ChartDiagnosisGateway = {
   readDiagnoses(input: {
     encounterId: string;
+    chartId?: string;
     workspaceId: string;
   }): Promise<ChartDiagnosisGatewayResult>;
   saveDiagnoses(input: {
     actorUserId: string;
     diagnoses: NormalizedDiagnosisRowInput[];
     encounterId: string;
+    chartId?: string;
+    expectedVersion?: string;
+    assessedDiagnosisIds?: string[];
     workspaceId: string;
   }): Promise<ChartDiagnosisGatewayResult>;
 };
@@ -63,6 +73,9 @@ export type ChartDiagnosisReadResult =
       ok: true;
       status: 200;
       diagnoses: ChartDiagnosisRow[];
+      version?: string;
+      assessments?: ChartDiagnosisRow[];
+      chart?: SoapNote;
       enforcedBy: "chart-diagnosis-persistence";
     }
   | {
@@ -72,7 +85,7 @@ export type ChartDiagnosisReadResult =
       fieldErrors: Partial<Record<"encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
+  | { ok: false; status: 409; denialReason: ChartDiagnosisConflict }
   | { ok: false; status: 500; error: "db_read_failed" | "supabase_client_missing" };
 
 export type ChartDiagnosisSaveResult =
@@ -80,6 +93,9 @@ export type ChartDiagnosisSaveResult =
       ok: true;
       status: 200;
       diagnoses: ChartDiagnosisRow[];
+      version?: string;
+      assessments?: ChartDiagnosisRow[];
+      chart?: SoapNote;
       enforcedBy: "chart-diagnosis-persistence";
     }
   | {
@@ -89,21 +105,24 @@ export type ChartDiagnosisSaveResult =
       fieldErrors: Partial<Record<"diagnoses" | "encounterId", string>>;
     }
   | { ok: false; status: 401 | 403; denialReason: WorkspacePermissionDenialReason }
-  | { ok: false; status: 409; denialReason: "encounter_unavailable" | "stale_status" }
+  | { ok: false; status: 409; denialReason: ChartDiagnosisConflict }
   | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
 
+const mockAssessmentStore = new Map<string, ChartDiagnosisRow[]>();
 const mockDiagnosisStore = new Map<string, ChartDiagnosisRow[]>();
 const diagnosisTypes = new Set<DiagnosisType>(["confirmed", "differential", "suspected"]);
 
 export async function readChartDiagnoses({
   actorUserId,
   encounterId,
+  chartId,
   gateway = createMockChartDiagnosisGateway(),
   permissionAdapter = createDemoChartDiagnosisPermissionAdapter(),
   workspaceId,
 }: {
   actorUserId: string | null;
   encounterId: string | null | undefined;
+  chartId?: string | null;
   gateway?: Pick<ChartDiagnosisGateway, "readDiagnoses">;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
@@ -134,6 +153,7 @@ export async function readChartDiagnoses({
   }
 
   const result = await gateway.readDiagnoses({
+    chartId: trimToUndefined(chartId),
     encounterId: normalizedEncounterId,
     workspaceId,
   });
@@ -149,6 +169,7 @@ export async function readChartDiagnoses({
     ok: true,
     status: 200,
     diagnoses: result.diagnoses,
+    version: result.version, assessments: result.assessments, chart: result.chart,
     enforcedBy: "chart-diagnosis-persistence",
   };
 }
@@ -195,6 +216,7 @@ export async function saveChartDiagnoses({
   const result = await gateway.saveDiagnoses({
     actorUserId: actorUserId ?? "",
     diagnoses: normalized.diagnoses,
+    chartId: normalized.chartId, expectedVersion: normalized.expectedVersion, assessedDiagnosisIds: normalized.assessedDiagnosisIds,
     encounterId: normalized.encounterId,
     workspaceId,
   });
@@ -208,6 +230,7 @@ export async function saveChartDiagnoses({
     ok: true,
     status: 200,
     diagnoses: result.diagnoses,
+    version: result.version, assessments: result.assessments, chart: result.chart,
     enforcedBy: "chart-diagnosis-persistence",
   };
 }
@@ -226,12 +249,16 @@ export function createMockChartDiagnosisGateway(
   const seedDiagnoses = dataset.diagnoses ?? [];
 
   return {
-    async readDiagnoses({ encounterId, workspaceId }) {
+    async readDiagnoses({ encounterId, chartId, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
 
+      const charts = getMockEncounterCharts(workspaceId, encounterId);
+      if (chartId && !charts.some((chart) => chart.id === chartId)) return { ok: false, status: 409, denialReason: "chart_unavailable" };
+      const rows = getStoredOrSeedDiagnoses({ encounterId, seedDiagnoses, workspaceId });
       return {
         ok: true,
+        ...(chartId ? { version: JSON.stringify(rows), assessments: mockAssessmentStore.get(`${workspaceId}:${encounterId}:${chartId}`) ?? [] } : {}),
         diagnoses: getStoredOrSeedDiagnoses({
           encounterId,
           seedDiagnoses,
@@ -239,7 +266,7 @@ export function createMockChartDiagnosisGateway(
         }),
       };
     },
-    async saveDiagnoses({ actorUserId, diagnoses, encounterId, workspaceId }) {
+    async saveDiagnoses({ actorUserId, diagnoses, encounterId, chartId, expectedVersion, assessedDiagnosisIds, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
       if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
@@ -249,6 +276,12 @@ export function createMockChartDiagnosisGateway(
         seedDiagnoses,
         workspaceId,
       });
+      const charts = getMockEncounterCharts(workspaceId, encounterId);
+      const chart = charts.find((row) => row.id === chartId);
+      if (!chartId && charts.length > 1) return { ok: false, status: 409, denialReason: "chart_id_required" };
+      if (chartId && !chart) return { ok: false, status: 409, denialReason: "chart_unavailable" };
+      if (chart?.status === "signed" || chart?.status === "amended") return { ok: false, status: 409, denialReason: "signed_chart_read_only" };
+      if (chartId && expectedVersion !== JSON.stringify(existingRows)) return { ok: false, status: 409, denialReason: "diagnoses_conflict" };
       const timestamp = now();
       const rows = diagnoses.map((diagnosis, index) => {
         const existing = diagnosis.id
@@ -278,12 +311,24 @@ export function createMockChartDiagnosisGateway(
 
       mockDiagnosisStore.set(buildDiagnosisKey(workspaceId, encounterId), rows);
 
+      if (chart) {
+        const assessments = structuredClone(rows.filter((row) => !assessedDiagnosisIds || assessedDiagnosisIds.includes(row.id)));
+        mockAssessmentStore.set(`${workspaceId}:${encounterId}:${chart.id}`, assessments);
+        const nextChart = { ...chart, updatedAt: new Date(Math.max(Date.parse(timestamp), Date.parse(chart.updatedAt) + 1)).toISOString() };
+        putMockEncounterChart(workspaceId, nextChart);
+        return { ok: true, diagnoses: rows, assessments, version: JSON.stringify(rows), chart: nextChart };
+      }
       return { ok: true, diagnoses: rows };
     },
   };
 }
 
 export type SupabaseChartDiagnosisRpcClient = {
+  rpc(functionName: "clair_get_chart_diagnosis_assessments", args: { p_workspace_id: string; p_encounter_id: string; p_chart_id: string }): Promise<{ data: unknown; error: { message?: string } | null }>;
+  rpc(functionName: "clair_save_chart_diagnoses_v2", args: {
+    p_workspace_id: string; p_actor_user_id: string; p_encounter_id: string; p_chart_id: string;
+    p_diagnoses: NormalizedDiagnosisRowInput[]; p_expected_version: string | null; p_assessed_diagnosis_ids: string[] | null;
+  }): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_get_chart_diagnoses",
     args: {
@@ -314,23 +359,35 @@ export function createSupabaseChartDiagnosisGateway(
   client: SupabaseChartDiagnosisRpcClient
 ): ChartDiagnosisGateway {
   return {
-    async readDiagnoses({ encounterId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_get_chart_diagnoses", {
+    async readDiagnoses({ encounterId, chartId, workspaceId }) {
+      const { data, error } = chartId
+        ? await client.rpc("clair_get_chart_diagnosis_assessments", { p_workspace_id: workspaceId, p_encounter_id: encounterId, p_chart_id: chartId })
+        : await client.rpc("clair_get_chart_diagnoses", {
         p_workspace_id: workspaceId,
         p_encounter_id: encounterId,
       });
 
       if (error) {
+        const conflict = (["encounter_unavailable", "stale_status", "chart_unavailable", "chart_id_required", "signed_chart_read_only", "diagnoses_conflict"] as const).find((reason) => error.message?.includes(reason));
+        if (conflict) return { ok: false, status: 409, denialReason: conflict };
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
         return { ok: false, status: 500, error: "db_read_failed" };
       }
 
+      if (chartId) {
+        const context = data as { diagnoses?: unknown; assessments?: unknown; version?: unknown; chart?: unknown } | null;
+        if (!context || !Array.isArray(context.diagnoses) || !Array.isArray(context.assessments) || typeof context.version !== "string") {
+          return { ok: false, status: 500, error: "db_read_failed" };
+        }
+        return { ok: true, diagnoses: mapDiagnosisRows(context.diagnoses), assessments: mapDiagnosisRows(context.assessments),
+          version: context.version, chart: mapSoapNote(context.chart) ?? undefined };
+      }
       return { ok: true, diagnoses: mapDiagnosisRows(data) };
     },
-    async saveDiagnoses({ actorUserId, diagnoses, encounterId, workspaceId }) {
-      const { data, error } = await client.rpc("clair_save_chart_diagnoses", {
+    async saveDiagnoses({ actorUserId, diagnoses, encounterId, chartId, expectedVersion, assessedDiagnosisIds, workspaceId }) {
+      const args = {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
         p_encounter_id: encounterId,
@@ -343,9 +400,15 @@ export function createSupabaseChartDiagnosisGateway(
           isPrimary: diagnosis.isPrimary,
           sortOrder: diagnosis.sortOrder,
         })),
-      });
+      };
+      const { data, error } = chartId
+        ? await client.rpc("clair_save_chart_diagnoses_v2", { ...args, p_chart_id: chartId,
+          p_expected_version: expectedVersion ?? null, p_assessed_diagnosis_ids: assessedDiagnosisIds ?? null })
+        : await client.rpc("clair_save_chart_diagnoses", args);
 
       if (error) {
+        const conflict = (["encounter_unavailable", "stale_status", "chart_unavailable", "chart_id_required", "signed_chart_read_only", "diagnoses_conflict"] as const).find((reason) => error.message?.includes(reason));
+        if (conflict) return { ok: false, status: 409, denialReason: conflict };
         if (error.message?.includes("encounter_unavailable")) {
           return { ok: false, status: 409, denialReason: "encounter_unavailable" };
         }
@@ -355,6 +418,14 @@ export function createSupabaseChartDiagnosisGateway(
         return { ok: false, status: 500, error: "db_write_failed" };
       }
 
+      if (chartId) {
+        const context = data as { diagnoses?: unknown; assessments?: unknown; version?: unknown; chart?: unknown } | null;
+        if (!context || !Array.isArray(context.diagnoses) || !Array.isArray(context.assessments) || typeof context.version !== "string") {
+          return { ok: false, status: 500, error: "db_read_failed" };
+        }
+        return { ok: true, diagnoses: mapDiagnosisRows(context.diagnoses), assessments: mapDiagnosisRows(context.assessments),
+          version: context.version, chart: mapSoapNote(context.chart) ?? undefined };
+      }
       return { ok: true, diagnoses: mapDiagnosisRows(data) };
     },
   };
@@ -453,6 +524,9 @@ function buildDiagnosisKey(workspaceId: string, encounterId: string) {
 function normalizeDiagnosisInput(input: ChartDiagnosisInput) {
   return {
     encounterId: trimToUndefined(input.encounterId) ?? "",
+    chartId: trimToUndefined(input.chartId),
+    expectedVersion: trimToUndefined(input.expectedVersion),
+    assessedDiagnosisIds: Array.isArray(input.assessedDiagnosisIds) ? input.assessedDiagnosisIds.filter((id): id is string => typeof id === "string") : undefined,
     diagnoses: Array.isArray(input.diagnoses)
       ? input.diagnoses.map((row, index) => ({
           id: trimToUndefined(row.id),

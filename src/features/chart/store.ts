@@ -3,9 +3,23 @@
 import { create } from "zustand";
 import type { ChartLiveQueueRecord } from "@/features/chart/chart-live-queue";
 import type { ChartPatientHistoryRecord } from "@/features/chart/chart-patient-history";
-import type { EmrId } from "@/types/emr-domain";
+import type { EmrId, SoapNote } from "@/types/emr-domain";
 
 type ChartStore = {
+  selectedChartId: string;
+  encounterCharts: SoapNote[];
+  encounterChartsScope?: string;
+  encounterChartsStatus: "idle" | "loading" | "ready" | "error";
+  encounterChartCreating: boolean;
+  createEncounterChart?: () => Promise<void>;
+  diagnosisSaving: boolean;
+  flushEditors: () => Promise<boolean>;
+  flushOrderEdits?: () => Promise<boolean>;
+  flushActiveChart?: () => Promise<boolean>;
+  selectChart: (chartId: string) => Promise<void>;
+  setEncounterCharts: (scope: string, charts: SoapNote[], status: "loading" | "ready" | "error", preferredChartId?: string) => void;
+  updateEncounterChart: (scope: string, chart: SoapNote) => void;
+
   chartHistoryError?: string;
   chartHistoryRecords: ChartPatientHistoryRecord[];
   chartHistoryRefreshNonce: number;
@@ -49,7 +63,34 @@ type ChartStore = {
   updateLiveQueueRecord: (record: ChartLiveQueueRecord) => void;
 };
 
-export const useChartStore = create<ChartStore>()((set) => ({
+export const useChartStore = create<ChartStore>()((set, get) => ({
+  diagnosisSaving: false,
+  flushEditors: async () => {
+    if (get().diagnosisSaving) return false;
+    if (get().flushActiveChart && !await get().flushActiveChart!()) return false;
+    if (get().flushOrderEdits && !await get().flushOrderEdits!()) return false;
+    return !get().diagnosisSaving;
+  },
+  selectedChartId: "",
+  encounterCharts: [],
+  encounterChartsStatus: "idle",
+  encounterChartCreating: false,
+  selectChart: async (selectedChartId) => {
+    if (get().selectedChartId === selectedChartId) return;
+    const scope = get().encounterChartsScope;
+    if (!await get().flushEditors()) return;
+    if (get().encounterChartsScope === scope && get().encounterCharts.some((chart) => chart.id === selectedChartId)) set({ selectedChartId });
+  },
+  setEncounterCharts: (scope, charts, status, preferredChartId) => set((current) => ({
+    encounterChartsScope: scope, encounterCharts: charts, encounterChartsStatus: status,
+    selectedChartId: charts.some((chart) => chart.id === preferredChartId) ? preferredChartId!
+      : scope === current.encounterChartsScope && charts.some((chart) => chart.id === current.selectedChartId)
+        ? current.selectedChartId : charts[0]?.id ?? "",
+  })),
+  updateEncounterChart: (scope, chart) => set((current) => current.encounterChartsScope !== scope ? {} : ({
+    encounterCharts: [...current.encounterCharts.filter((row) => row.id !== chart.id), chart]
+      .sort((a, b) => (b.clinicalAt ?? b.createdAt).localeCompare(a.clinicalAt ?? a.createdAt) || b.id.localeCompare(a.id)),
+  })),
   chartHistoryError: undefined,
   chartHistoryRecords: [],
   chartHistoryRefreshNonce: 0,
@@ -72,10 +113,16 @@ export const useChartStore = create<ChartStore>()((set) => ({
     })),
   requestConsultationCall: (pendingConsultationCallEncounterId) =>
     set({ pendingConsultationCallEncounterId }),
-  selectEncounter: (selectedEncounterId) =>
-    set({ historyViewEncounterId: "", selectedEncounterId }),
-  selectHistoryEncounter: (historyViewEncounterId) =>
-    set({ historyViewEncounterId }),
+  selectEncounter: async (selectedEncounterId) => {
+    if (get().selectedEncounterId === selectedEncounterId && !get().historyViewEncounterId) return;
+    if (!await get().flushEditors()) return;
+    set({ historyViewEncounterId: "", selectedEncounterId, selectedChartId: "" });
+  },
+  selectHistoryEncounter: async (historyViewEncounterId) => {
+    if (get().historyViewEncounterId === historyViewEncounterId) return;
+    if (!await get().flushEditors()) return;
+    set({ historyViewEncounterId, selectedChartId: "" });
+  },
   selectOperatingDate: (workspaceId, date) =>
     set((current) => ({
       historyViewEncounterId: "",

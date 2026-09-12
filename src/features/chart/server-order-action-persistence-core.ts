@@ -83,6 +83,7 @@ export function mapCatalogCategoryToBillingCategory(
 export type ChartOrderCatalogSelectionInput = Record<string, unknown>;
 
 export type ChartOrderActionInput = {
+  chartId?: string;
   actualRecords?: ChartActualRecords;
   action?: ChartOrderActionKind;
   /** @deprecated Replaced by persisted draft rows and server-owned snapshots. */
@@ -132,6 +133,7 @@ export type ChartOrderAppliedSnapshot = {
 };
 
 export type ChartOrderActionLine = {
+  originChartId?: string | null;
   rowType?: "individual" | "set" | "set_child";
   orderType?: "set" | EmrOrderType;
   parentOrderId?: string | null;
@@ -210,6 +212,7 @@ export type ChartOrderActionGateway = {
     workspaceId: string;
   }): Promise<ChartOrderActionGatewayResult>;
   saveOrderAction(input: {
+    chartId?: string;
     actualRecords?: ChartActualRecords;
     action: ChartOrderActionKind;
     actorUserId: string;
@@ -451,6 +454,7 @@ export async function saveChartOrderAction({
   }
 
   const result = await gateway.saveOrderAction({
+    chartId: normalized.chartId,
     actualRecords: normalized.actualRecords ?? undefined,
     action: normalized.action as ChartOrderActionKind,
     actorUserId: actorUserId ?? "",
@@ -593,6 +597,7 @@ export function createMockChartOrderActionGateway(
       };
     },
     async saveOrderAction({
+      chartId,
       action,
       actorUserId,
       encounterId,
@@ -610,6 +615,9 @@ export function createMockChartOrderActionGateway(
 
       const seedRows = getStoredOrSeedOrderActions({ encounterId, orders, workspaceId });
       const currentRows = actionLinesToRuntimeRows(seedRows, workspaceId);
+      if (currentRows.some((row) => orderIds.includes(row.orderId) && (row.originChartId ?? null) !== (chartId ?? null))) {
+        return { ok: false, status: 409, error: "order_unavailable" };
+      }
       const acceptedEtags = new Set([
         mockChartActionEtag(currentRows),
         getMockChartOrderDraftEtag({ encounterId, workspaceId }),
@@ -689,7 +697,8 @@ export function createMockChartOrderActionGateway(
                   row.appliedSnapshot?.billingName ?? `Order ${row.orderId}`,
                 invoiceId: "",
                 lineTotal: row.lineTotalSnapshot ?? 0,
-                orderId: row.orderId,
+                originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
+    orderId: row.orderId,
                 quantity: row.quantity ?? 1,
                 syncedAt: timestamp,
                 unitPrice: row.unitPriceSnapshot ?? 0,
@@ -741,8 +750,9 @@ export type SupabaseChartOrderActionRpcClient = {
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_confirm_chart_order_candidates_with_actual",
+    functionName: "clair_confirm_chart_order_candidates_with_actual" | "clair_confirm_chart_order_candidates_with_actual_for_chart",
     args: {
+      p_chart_id?: string;
       p_workspace_id: string;
       p_actor_user_id: string;
       p_encounter_id: string;
@@ -779,6 +789,7 @@ export function createSupabaseChartOrderActionGateway(
       return mapped;
     },
     async saveOrderAction({
+      chartId,
       actualRecords,
       action,
       actorUserId,
@@ -790,8 +801,9 @@ export function createSupabaseChartOrderActionGateway(
     }) {
       if (action === "confirm") {
         const { data, error } = await client.rpc(
-          "clair_confirm_chart_order_candidates_with_actual",
+          chartId ? "clair_confirm_chart_order_candidates_with_actual_for_chart" : "clair_confirm_chart_order_candidates_with_actual",
           {
+            ...(chartId ? { p_chart_id: chartId } : {}),
             p_workspace_id: workspaceId,
             p_actor_user_id: actorUserId,
             p_encounter_id: encounterId,
@@ -984,6 +996,7 @@ function orderToActionLine(order: EmrOrder): ChartOrderActionLine {
     lineTotalSnapshot,
     orderConfirmationStatus:
       order.status === "completed" ? "confirmed" : "draft",
+    originChartId: order.originChartId,
     orderId: order.id,
     orderType:
       appliedSnapshot?.orderType === "set"
@@ -1009,6 +1022,7 @@ function buildOrderActionKey(workspaceId: string, encounterId: string) {
 function normalizeOrderActionInput(input: ChartOrderActionInput) {
   return {
     actualRecords: parseChartActualRecords(input.actualRecords),
+    chartId: trimToUndefined(input.chartId),
     action:
       input.action === "bill" || input.action === "confirm"
         ? input.action
@@ -1246,6 +1260,7 @@ function mapAtomicConfirmationRpcError(
     if (message.includes(error)) return { ok: false, status: 422, error };
   }
   for (const error of [
+    "order_chart_mismatch", "chart_unavailable", "chart_id_required",
     "encounter_unavailable",
     "order_unavailable",
     "revision_conflict",
@@ -1302,6 +1317,7 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
       ? (row.destinationModule as ClinicalOrderDestinationModule | null)
       : canonical.destinationModule;
   return {
+    originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     orderId: row.orderId,
     workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,
     encounterId: row.encounterId,
@@ -1386,6 +1402,7 @@ function runtimeRowToActionLine(row: ChartOrderRuntimeRow): ChartOrderActionLine
     confirmedByUserId: null,
     encounterId: row.encounterId,
     orderConfirmationStatus: row.orderConfirmationStatus ?? "draft",
+    originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     orderId: row.orderId,
     workspaceCatalogItemId: row.workspaceCatalogItemId ?? undefined,
     dispensingLineage: row.dispensingLineage ?? undefined,
@@ -1401,6 +1418,7 @@ function actionLinesToRuntimeRows(rows: ChartOrderActionLine[], workspaceId: str
       orderType: row.orderType,
     });
     return {
+    originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     orderId: row.orderId,
     workspaceId,
     encounterId: row.encounterId,
@@ -1574,6 +1592,7 @@ function mapOrderActionRow(value: unknown): ChartOrderActionLine | null {
     confirmedByUserId: row.confirmedByUserId ?? null,
     encounterId: row.encounterId,
     orderConfirmationStatus: row.orderConfirmationStatus,
+    originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     orderId: row.orderId,
     serviceItemId: typeof row.serviceItemId === "string" ? row.serviceItemId : undefined,
     workspaceCatalogItemId:

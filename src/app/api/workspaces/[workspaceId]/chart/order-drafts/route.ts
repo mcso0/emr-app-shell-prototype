@@ -144,6 +144,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (
     inputKeys.some(
       (key) =>
+        key !== "chartId" &&
         key !== "encounterId" &&
         key !== "expectedEtag" &&
         key !== "removedOrderIds" &&

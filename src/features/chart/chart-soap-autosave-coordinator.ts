@@ -54,6 +54,7 @@ export class SoapAutosaveCoordinator {
   private pendingReady = false;
   private blocked = false;
   private disposed = false;
+  private flushWaiters: Array<(saved: boolean) => void> = [];
   private ambiguousDocument: SoapBlockDocument | null = null;
 
   constructor(options: SoapAutosaveCoordinatorOptions) {
@@ -110,6 +111,27 @@ export class SoapAutosaveCoordinator {
     this.saveNow();
   }
 
+  hasUnsavedChanges() { return this.inFlight || Boolean(this.pendingDocument); }
+
+  async flushPending(): Promise<boolean> {
+    this.clearTimer();
+    if (this.blocked) return false;
+    this.pendingReady = true;
+    if (!this.inFlight && !this.pendingDocument) return true;
+    const done = new Promise<boolean>((resolve) => this.flushWaiters.push(resolve));
+    void this.flush();
+    return done;
+  }
+
+  private settleFlushWaiters() {
+    if (this.inFlight || (!this.blocked && this.pendingDocument)) return;
+    for (const resolve of this.flushWaiters.splice(0)) resolve(!this.blocked);
+  }
+
+  attach() {
+    this.disposed = false;
+  }
+
   dispose() {
     this.disposed = true;
     this.clearTimer();
@@ -147,6 +169,7 @@ export class SoapAutosaveCoordinator {
       }
       this.blocked = true;
       this.inFlight = false;
+      this.settleFlushWaiters();
       this.notify("error", {
         ok: false,
         status: 0,
@@ -190,6 +213,7 @@ export class SoapAutosaveCoordinator {
     }
 
     this.inFlight = false;
+    this.settleFlushWaiters();
     if (!this.blocked && this.pendingDocument && this.pendingReady) {
       void this.flush();
     }
