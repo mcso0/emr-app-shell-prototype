@@ -137,6 +137,12 @@ type FulfillmentWorkItem = {
   requestCycle: number;
   rowRevision: number;
   sourceSnapshot?: {
+    actualDispenseQuantity?: number;
+    actualDispenseUnit?: string;
+    billingName?: string;
+    calculationOutputs?: Record<string, unknown>;
+    displayName?: string;
+    dispensingAuthoritySnapshot?: Record<string, unknown>;
     dispensingLineage?: {
       clinicalUseAllowed: boolean;
       serviceReviewOnly?: true;
@@ -157,6 +163,8 @@ type FulfillmentWorkItem = {
     quantity?: number;
     salesUnit?: string;
     appliedSalesUnit?: string;
+    standardOrderName?: string;
+    totalRequiredDispenseQuantity?: number;
   };
   status: FulfillmentWorkItemStatus;
   taskAttemptNo?: number | null;
@@ -652,7 +660,7 @@ function findFulfillmentForQueueItem(
 
   return (
     queueItems.find((workItem) => {
-      const displayName = workItem.sourceSnapshot?.orderDisplayName;
+      const displayName = getFulfillmentDisplayName(workItem);
       return displayName && item.orderName.includes(displayName);
     }) ??
     queueItems.find((workItem) => {
@@ -697,7 +705,7 @@ function applyFulfillmentToQueueItems(
       .filter((candidate) => !usedWorkItemIds.has(candidate.id))
       .find((candidate) => {
         if (item.id === `live-fulfillment-${candidate.id}`) return true;
-        const displayName = candidate.sourceSnapshot?.orderDisplayName;
+        const displayName = getFulfillmentDisplayName(candidate);
         return Boolean(displayName && item.orderName.includes(displayName));
       });
     if (!workItem) return item;
@@ -747,12 +755,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
     receptionType: "외래",
     orderType: isTreatment ? "처치" : "조제",
     orderTypeCategory: workItem.queueType,
-    orderName:
-      readNonEmptyString(
-        workItem.sourceSnapshot?.orderDisplayName,
-        workItem.sourceSnapshot?.effectiveDisplayName,
-        workItem.sourceSnapshot?.inHospitalOrderName,
-      ) ?? "Live order",
+    orderName: getFulfillmentDisplayName(workItem) ?? "Live order",
     requesterName: getFulfillmentRequesterName(workItem),
     assigneeName: getFulfillmentAssigneeName(workItem),
     startedAt:
@@ -896,11 +899,7 @@ function createLiveOrderTableGroups(
           id: `live-order-row-${workItem.id}`,
           category: instructionType,
           name:
-            readNonEmptyString(
-              workItem.sourceSnapshot?.orderDisplayName,
-              workItem.sourceSnapshot?.effectiveDisplayName,
-              workItem.sourceSnapshot?.inHospitalOrderName,
-            ) ?? selectedQueueItem.orderName,
+            getFulfillmentDisplayName(workItem) ?? selectedQueueItem.orderName,
           route:
             workItem.queueType === "dispensing"
               ? (medicationFacts?.routes.join(", ") ?? "-")
@@ -975,9 +974,27 @@ function getDispensingQuantityFacts(
   if (workItem?.queueType !== "dispensing") return undefined;
   const snapshot = workItem.sourceSnapshot;
   const detailInputs = snapshot?.detailInputs;
+  const calculationOutputs = snapshot?.calculationOutputs;
+  const dispensingAuthority = snapshot?.dispensingAuthoritySnapshot;
   const prescribedTotal = readNonNegativeNumber(detailInputs?.totalQuantity);
-  const billingQuantity = readNonNegativeNumber(snapshot?.quantity);
+  const confirmedDispenseQuantity = readNonNegativeNumber(
+    snapshot?.actualDispenseQuantity,
+    calculationOutputs?.actualDispenseQuantity,
+    calculationOutputs?.plannedPracticalTotalQuantity,
+    snapshot?.totalRequiredDispenseQuantity,
+    calculationOutputs?.totalRequiredDispenseQuantity,
+  );
+  const billingQuantity = readNonNegativeNumber(
+    dispensingAuthority?.priceBasis === "per_product_unit"
+      ? confirmedDispenseQuantity
+      : undefined,
+    snapshot?.quantity,
+  );
   const billingUnit = readNonEmptyString(
+    dispensingAuthority?.billingUnit,
+    snapshot?.actualDispenseUnit,
+    calculationOutputs?.actualDispenseUnit,
+    calculationOutputs?.dispenseUnit,
     snapshot?.salesUnit,
     snapshot?.appliedSalesUnit,
   );
@@ -1069,10 +1086,25 @@ function readStringArray(value: unknown) {
     : [];
 }
 
-function readNonNegativeNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0
-    ? value
-    : undefined;
+function readNonNegativeNumber(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function getFulfillmentDisplayName(workItem?: FulfillmentWorkItem) {
+  const snapshot = workItem?.sourceSnapshot;
+  return readNonEmptyString(
+    snapshot?.orderDisplayName,
+    snapshot?.displayName,
+    snapshot?.effectiveDisplayName,
+    snapshot?.inHospitalOrderName,
+    snapshot?.standardOrderName,
+    snapshot?.billingName,
+  );
 }
 
 function formatStrengthSnapshot(value: unknown) {
@@ -2632,7 +2664,7 @@ function DispensingContentBody({
       <div className="mt-3 grid gap-2">
         {medicationLinkPending && selectedFulfillmentWorkItem ? <EmrInlineAlert severity="warning" title="수행 전 약품 오더 연결이 필요합니다."
           action={onOpenChart ? <Button size="sm" variant="outline" onClick={() => onOpenChart(selectedFulfillmentWorkItem.encounterId)}>차트에서 약품 오더 연결</Button> : undefined}>
-          차트에서 ‘{selectedFulfillmentWorkItem.sourceSnapshot?.orderDisplayName ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
+          차트에서 ‘{getFulfillmentDisplayName(selectedFulfillmentWorkItem) ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
         </EmrInlineAlert> : null}
         <DispensingFulfillmentQueueNotice
           status={fulfillmentQueue.status}

@@ -148,10 +148,22 @@ and completed lab/imaging/dispensing/treatment read and amendment contracts.
   Focused coverage verifies same-name rows in the same and different encounters,
   URL/detail selection, execution-history reads, assignment commands, and the
   missing-ID denial path.
+- The authenticated PR-024 set rehearsal exposed a separate presentation
+  mismatch in the retained work-item snapshot: the queue fell back to
+  `Live order` and rendered `1 per_each` even though the frozen display name and
+  product-unit authority recorded a confirmed candidate quantity of `3 tablet`.
+  The queue now reads those frozen fields for display and product-unit billing
+  projection while preserving the distinct prescribed total of `2`.
+- The same rehearsal produced an actual draft invoice line with quantity `1`
+  while its billing candidate held quantity `3`. That billing handoff mismatch
+  remains a separate blocker owned by the predecessor remediation; this
+  read-only queue projection neither changes nor claims to repair the invoice.
 - Fulfillment lifecycle, execution-result, and lab-result persistence contracts
-  passed 37 focused tests. Imaging immutable completion/amendment history passed
-  its dedicated browser check; dispensing and treatment completion/amendment
-  flows passed the focused execution checks.
+  passed 38 focused tests. The complete dispensing fulfillment browser file
+  passed 14 tests, including the retained set snapshot projection and corrected
+  Asia/Seoul timestamp expectation. Imaging immutable completion/amendment
+  history passed its dedicated browser check; dispensing and treatment
+  completion/amendment flows passed the focused execution checks.
 - This local candidate is ready for human review. The migration remains
   unapplied remotely. Commit, push, and PR preparation are authorized; merge,
   Production deployment, and remote migration still require their exact

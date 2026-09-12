@@ -745,7 +745,7 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await liveQueueItem.click();
   await expect(
     page.locator("[data-slot='instruction-header-order-info']"),
-  ).toContainText("2026.06.14 01:30");
+  ).toContainText("2026.06.14 10:30");
   await page
     .getByRole("button", { name: "조제 이력 패널 열기" })
     .click();
@@ -1111,6 +1111,99 @@ test("dispensing readback shows only reviewed immutable medication facts and no 
     "식후에 1회 0.5mL씩 하루 2회, 7일간 투여하세요.",
   );
   await expect(readback).not.toContainText(/lot|expiry|BUD|로트|유효기간/i);
+});
+
+test("dispensing projects frozen set display and confirmed product-unit billing without changing prescribed total", async ({
+  page,
+}) => {
+  const sourceSnapshot = {
+    displayName: "조제 세트 리허설 제품",
+    patientName: "과거 환자명",
+    guardianName: "과거 보호자명",
+    requestingVetName: "과거 요청자명",
+    quantity: 1,
+    salesUnit: "per_each",
+    detailInputs: {
+      dose: 2,
+      doseUnit: "tablet",
+      totalQuantity: 2,
+      totalQuantityUnit: "tablet",
+    },
+    calculationOutputs: {
+      actualDispenseQuantity: 3,
+      actualDispenseUnit: "tablet",
+      plannedPracticalTotalQuantity: 3,
+      totalRequiredDispenseQuantity: 3,
+    },
+    dispensingAuthoritySnapshot: {
+      billingUnit: "tablet",
+      dispenseUnit: "tablet",
+      priceBasis: "per_product_unit",
+    },
+  };
+  const workItem = {
+    workspaceId,
+    id: "work-dispensing-set-confirmed-quantity",
+    orderId: "order-dispensing-set-confirmed-quantity",
+    encounterId: "encounter-dispensing-set-confirmed-quantity",
+    patientId: "patient-dispensing-set-confirmed-quantity",
+    patientName: "현재 환자명",
+    guardianName: "현재 보호자명",
+    requesterName: "현재 요청자명",
+    requestCycle: 1,
+    rowRevision: 1,
+    status: "requested",
+    queueType: "dispensing",
+    requestedByUserId: "user-vet-current",
+    createdAt: "2026-09-12T01:30:00.000Z",
+    updatedAt: "2026-09-12T01:30:00.000Z",
+    sourceSnapshot,
+  };
+
+  await page.route(
+    new RegExp(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items\\?queueType=(dispensing|treatment)(?:&.*)?$`,
+    ),
+    async (route) => {
+      const queueType = new URL(route.request().url()).searchParams.get(
+        "queueType",
+      );
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          ok: true,
+          workItems: queueType === "dispensing" ? [workItem] : [],
+        },
+      });
+    },
+  );
+
+  await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
+  const queueItem = page.getByTestId(
+    `order-queue-item-live-fulfillment-${workItem.id}`,
+  );
+  await expect(queueItem).toContainText("조제 세트 리허설 제품");
+  await expect(queueItem).toContainText("현재 환자명");
+  await expect(queueItem).toContainText("현재 보호자명");
+  await expect(queueItem).toContainText("현재 요청자명");
+  await queueItem.click();
+
+  const readback = page.getByTestId("dispensing-fulfillment-readback");
+  await expect(readback).toContainText("처방 총량 2");
+  await expect(readback).toContainText("청구 수량 3");
+  await expect(readback).toContainText("청구 단위 tablet");
+  await expect(readback).not.toContainText("청구 수량 1");
+  await expect(readback).not.toContainText("청구 단위 per_each");
+  await expect(
+    page.getByTestId(
+      `order-row-section-0-live-order-row-${workItem.id}`,
+    ),
+  ).toContainText("조제 세트 리허설 제품");
+  expect(sourceSnapshot).toMatchObject({
+    quantity: 1,
+    salesUnit: "per_each",
+    detailInputs: { totalQuantity: 2 },
+  });
 });
 
 test("dispensing treatment workspace surfaces fulfillment read permission denial", async ({
