@@ -7,7 +7,7 @@ status: "human_review"
 area: "clinical-master"
 priority: "P0"
 tags: [clinical-master, order-set, dispensing, confirmation, billing]
-target_pr: "Local review candidate"
+target_pr: "#747"
 source_docs:
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-006-phase-1b-3-chart-set-runtime.md"
   - "docs/work/clinical-master/CLINICAL-MASTER-PR-023-plan-order-authority-enrichment.md"
@@ -78,6 +78,36 @@ Both operations invalidate the exact composition/hash contract.
 - Preserve the old applied-snapshot lineage representation for individual
   orders. Existing calculator behavior and API fields remain compatible.
 
+## Migration object inventory
+
+The migration adds three `orders` columns and their object checks, plus these
+eight private helpers:
+
+- `clair_is_set_pricing_calculation_outputs`
+- `clair_b3_pricing_calculation_outputs`
+- `clair_order_dispensing_authority`
+- `clair_order_dispensing_lineage`
+- `clair_capture_set_dispensing_contracts`
+- `clair_sync_set_dispensing_lineage_copy`
+- `clair_sync_set_dispensing_lineage_after`
+- `clair_assert_dispensing_set_contract_copy`
+
+It adds the capture, lineage-copy, and deferred contract-copy triggers. It also
+patches or replaces these eight existing functions behind exact text-anchor
+drift guards: `clair_save_chart_order_draft_phase2_base`,
+`clair_b3_assert_set_child_lineage`,
+`clair_compute_plan_order_dispense_projection`,
+`clair_set_dispensing_order_lineage`,
+`clair_confirm_chart_order_candidates_billing_summary_base`,
+`clair_snapshot_order_billing_authority`,
+`clair_confirm_chart_order_candidates_origin_base`, and
+`clair_b3_runtime_row_json`.
+
+The migration ends with two scoped `UPDATE public.orders` repairs: one for
+mutable, active dispensing set children and one for their root lineage maps.
+These are business-row DML even when they affect zero rows. They must not be
+described as additive DDL only.
+
 ## Acceptance evidence
 
 | Requirement | Local evidence | Remaining boundary |
@@ -115,6 +145,13 @@ output is a billing candidate projection, not an issued invoice, payment, or
 collection result. Those boundaries remain in the remote Preview/Production
 gate and are not claimed as local completion evidence.
 
+The pre-use rollback artifact was applied to a clone of the candidate database.
+It restored all eight predecessor function definitions to their baseline
+SHA-256 values, removed all candidate objects, and preserved the exact 12-row
+baseline fingerprint. A separate denial clone with one nonempty candidate
+snapshot stopped at `dispensing_set_compatibility_rollback_after_use_denied`
+and retained all three columns, proving the fail-closed after-use guard.
+
 ## Verification and recovery
 
 Primary replay:
@@ -129,10 +166,53 @@ Recovery is forward-only after persistent use: stop new dispensing-set saves at
 the application/RPC boundary, keep the additive columns and all confirmed
 snapshots, and ship a reviewed corrective migration. Before any adoption, when
 all three new columns are still empty and no candidate code has written them,
-the migration can be reverted by restoring the captured function definitions,
-dropping the three new triggers and private helpers, then dropping the three
-columns. Never drop populated columns or restore the old functions after
-confirmed dispensing-set rows exist.
+the reviewed
+`clinical_master_dispensing_set_confirmation_compatibility_preuse_rollback.sql`
+artifact can restore the captured function definitions, drop the three new
+triggers and private helpers, and drop the three columns. Never drop populated
+columns or restore the old functions after candidate-written dispensing-set
+rows exist.
+
+## Exact remote apply preparation
+
+Read-only preflight on `clair-emr-staging / qmerxgzrwaaahpkhjqlc` found the
+project healthy and the latest remote migration at `20260908211856`. The
+current Vercel Production environment uses this same shared Supabase project.
+The exact migration SHA-256 is
+`84d955b3c881121cd91d6172b9ccf31599614ab67cc8d612156f119885141432`.
+The release-only preflight, postflight, and pre-use rollback SHA-256 values are
+`dc03dadebd316fb6d24e6e35184d02390898c1a27778477bfdd67af9c3177e27`,
+`f3c4b585560693dd95c229dce0520218baf080e4dc938752b6a987e124a6dc92`,
+and `eece8a7172cb14dadd71a62f4948458ba57b9da27d0f3e8b82109f83f5e6a34b`.
+
+The remote `orders` baseline is 162 rows with existing-field fingerprint
+`3dae85d3e90453ba69e681eb4129681a`. Candidate columns, helpers, and triggers
+are absent. There is one set child, but zero dispensing set children and zero
+confirmed dispensing set children, so the two repair statements currently
+expect `UPDATE 0`. The predecessor anchor counts are `3 / 31 / 1 / 2 / 1 / 4`
+for the writer, B3 constraint, authority, base calls, confirmation snapshot,
+and billing projection respectively.
+
+Remote application must concatenate, in one transaction, the exact preflight
+snippet, the exact migration, and the exact postflight snippet. The preflight
+takes an `ACCESS EXCLUSIVE` lock and stops if the 162-row fingerprint, zero
+dispensing-set-child assumption, absent-object state, or predecessor anchors
+change. The postflight requires the same 162-row fingerprint, zero nonempty new
+snapshots on preexisting rows, all columns/constraints/triggers/helpers, patched
+anchors, and private helper grant denial before committing.
+
+The captured predecessor function SHA-256 values are:
+
+| Function | SHA-256 |
+| --- | --- |
+| `clair_save_chart_order_draft_phase2_base` | `bff6b9f029576b690267bfa3b4903f739c616ecd6e7b02526f1c3980d9d92415` |
+| `clair_b3_assert_set_child_lineage` | `fc9276157eb42ddf3df01f28d748036526dc73c88fa26b79a4f9a451adf98832` |
+| `clair_compute_plan_order_dispense_projection` | `45e7d833c3aac8fd6a95838c8b10d141ade4e5debdaab6b51602db53a0ed0ec7` |
+| `clair_set_dispensing_order_lineage` | `a7bdc73f260867a90f72bbfcb06cb02e2c8e1ff0242fc962ec7561151980cb02` |
+| `clair_confirm_chart_order_candidates_billing_summary_base` | `ef199a2e9df94783a7065a7d295ddf307f9281c31552b86ef03b5b93aa7749c0` |
+| `clair_snapshot_order_billing_authority` | `6a2ac1b735567d116932b20c8b9816557bcd1b20e7f9112112a55cdfc1bfb7cf` |
+| `clair_confirm_chart_order_candidates_origin_base` | `06d6e61c633bee382dd53db84ccb8c2a5a2c0db1534918a9362ef35d78a7b683` |
+| `clair_b3_runtime_row_json` | `42b0427da929c84ae9b012de0c05b2717ed9c2d3c179c5a5c3e9c48049b47bb5` |
 
 ## Remaining gates
 

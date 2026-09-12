@@ -1,0 +1,151 @@
+-- Release-only prefix for the approved remote application of
+-- 20260912113946_dispensing_set_confirmation_compatibility.sql.
+-- Concatenate this file, the exact migration, and the matching postflight file
+-- into one apply_migration query. Do not run the three parts separately.
+
+begin;
+
+lock table public.orders in access exclusive mode;
+
+do $remote_apply_preflight$
+declare
+  v_order_count bigint;
+  v_existing_field_fingerprint text;
+  v_dispensing_set_child_count bigint;
+  v_candidate_column_count bigint;
+  v_candidate_trigger_count bigint;
+  v_candidate_helper_count bigint;
+  v_writer text;
+  v_b3_constraint text;
+  v_projection text;
+  v_confirmation_snapshot text;
+  v_confirmation_billing text;
+begin
+  select count(*),
+    md5(coalesce(jsonb_agg(to_jsonb(orders) order by orders.id)::text, '[]')),
+    count(*) filter (
+      where orders.row_type = 'set_child'
+        and orders.clinical_order_type = 'dispensing'
+    )
+  into v_order_count,
+    v_existing_field_fingerprint,
+    v_dispensing_set_child_count
+  from public.orders;
+
+  select count(*)
+  into v_candidate_column_count
+  from information_schema.columns
+  where table_schema = 'public'
+    and table_name = 'orders'
+    and column_name in (
+      'set_pricing_calculation_outputs',
+      'dispensing_authority_snapshot',
+      'dispensing_lineage_snapshot'
+    );
+
+  select count(*)
+  into v_candidate_trigger_count
+  from pg_trigger trigger_row
+  join pg_class table_row on table_row.oid = trigger_row.tgrelid
+  join pg_namespace schema_row on schema_row.oid = table_row.relnamespace
+  where schema_row.nspname = 'public'
+    and table_row.relname = 'orders'
+    and not trigger_row.tgisinternal
+    and trigger_row.tgname in (
+      'orders_execution_contract_zz_set_dispensing_capture_trg',
+      'orders_zz_dispensing_set_lineage_copy_trg',
+      'orders_dispensing_set_contract_copy_trg'
+    );
+
+  select count(*)
+  into v_candidate_helper_count
+  from pg_proc function_row
+  join pg_namespace schema_row on schema_row.oid = function_row.pronamespace
+  where schema_row.nspname = 'private'
+    and function_row.proname in (
+      'clair_is_set_pricing_calculation_outputs',
+      'clair_b3_pricing_calculation_outputs',
+      'clair_order_dispensing_authority',
+      'clair_order_dispensing_lineage',
+      'clair_capture_set_dispensing_contracts',
+      'clair_sync_set_dispensing_lineage_copy',
+      'clair_sync_set_dispensing_lineage_after',
+      'clair_assert_dispensing_set_contract_copy'
+    );
+
+  if v_order_count <> 162
+    or v_existing_field_fingerprint
+      is distinct from '3dae85d3e90453ba69e681eb4129681a'
+    or v_dispensing_set_child_count <> 0
+    or v_candidate_column_count <> 0
+    or v_candidate_trigger_count <> 0
+    or v_candidate_helper_count <> 0
+  then
+    raise exception 'dispensing_set_compatibility_remote_preflight_drift'
+      using detail = jsonb_build_object(
+        'orderCount', v_order_count,
+        'existingFieldFingerprint', v_existing_field_fingerprint,
+        'dispensingSetChildCount', v_dispensing_set_child_count,
+        'candidateColumnCount', v_candidate_column_count,
+        'candidateTriggerCount', v_candidate_trigger_count,
+        'candidateHelperCount', v_candidate_helper_count
+      )::text;
+  end if;
+
+  v_writer := pg_get_functiondef(
+    'public.clair_save_chart_order_draft_phase2_base(text,text,uuid,jsonb)'::regprocedure
+  );
+  v_b3_constraint := pg_get_functiondef(
+    'private.clair_b3_assert_set_child_lineage()'::regprocedure
+  );
+  v_projection := pg_get_functiondef(
+    'private.clair_compute_plan_order_dispense_projection(public.orders,timestamptz)'::regprocedure
+  );
+  v_confirmation_snapshot := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_billing_summary_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  v_confirmation_billing := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_origin_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+
+  if (length(v_writer) - length(replace(
+      v_writer,
+      'calculation_outputs = excluded.calculation_outputs,',
+      ''
+    ))) / length('calculation_outputs = excluded.calculation_outputs,') <> 3
+    or (length(v_b3_constraint) - length(replace(
+      v_b3_constraint,
+      'new.calculation_outputs',
+      ''
+    ))) / length('new.calculation_outputs') <> 31
+    or (length(v_projection) - length(replace(
+      v_projection,
+      'a jsonb:=p_order.applied_snapshot->''planOrderAuthority'';',
+      ''
+    ))) / length(
+      'a jsonb:=p_order.applied_snapshot->''planOrderAuthority'';'
+    ) <> 1
+    or (length(v_projection) - length(replace(
+      v_projection,
+      'private.clair_compute_dispense_before_preparation_v2(p_order,p_effective_at)',
+      ''
+    ))) / length(
+      'private.clair_compute_dispense_before_preparation_v2(p_order,p_effective_at)'
+    ) <> 2
+    or (length(v_confirmation_snapshot) - length(replace(
+      v_confirmation_snapshot,
+      '''confirmedByUserId'', p_actor_user_id,',
+      ''
+    ))) / length('''confirmedByUserId'', p_actor_user_id,') <> 1
+    or (length(v_confirmation_billing) - length(replace(
+      v_confirmation_billing,
+      'orders.applied_snapshot #>> ''{planOrderAuthority,priceBasis}''',
+      ''
+    ))) / length(
+      'orders.applied_snapshot #>> ''{planOrderAuthority,priceBasis}'''
+    ) <> 4
+  then
+    raise exception 'dispensing_set_compatibility_remote_anchor_drift';
+  end if;
+end;
+$remote_apply_preflight$;
