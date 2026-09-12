@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
 import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, ClockIcon, UserIcon } from "@/components/icons";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
@@ -21,6 +22,7 @@ import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import { filterRowsByEmrTableFilterBuilder, getEmrTableFilterBuilderActiveCount, type EmrTableFilterBuilderField } from "@/components/emr/table-filter-builder-model";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollBar } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
@@ -226,27 +228,32 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
     {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
       <div className={cn(styles.workspaceBody, (view === "mine" || preferences.layout === "list") && styles.listWorkspaceBody)} data-testid="home-workspace-body">
-        <div className={cn(styles.scrollFrame, isBoard && styles.boardScrollFrame)}>
-        <div ref={scrollRef} onScroll={rememberScroll} className="h-full min-h-0 min-w-0 overflow-auto" data-testid="home-workspace-scroll">
-          {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
-          view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
-            {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={operatingDate} collapsed={collapsed(`column:${type.id}`)}
-              onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
-              isGroupCollapsed={collapsed} onToggleGroup={toggleGroup} onNavigate={navigate} />)}
-            {visibleTypes.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 업무 종류를 선택해 주세요" />}
-          </div> : <div className={styles.list} data-testid="home-task-list">
-            {view === "hospital" ? visibleTypes.map((type) => renderListGroup(type, tasks.filter((task) => task.kanbanColumn === type.id), "hospital")) : [
-              { id: "selected", label: "오늘 할 업무", items: tasks.filter((task) => !previous(task, operatingDate)) },
-              { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, operatingDate)) },
-            ].map((period) => <section key={period.id} className={styles.period} aria-label={period.label}>
-              <h2 className={styles.periodTitle}>{period.label}<span>{period.items.length}</span></h2>
-              {visibleTypes.filter((type) => period.items.some((task) => task.kanbanColumn === type.id)).map((type) => renderListGroup(type, period.items.filter((task) => task.kanbanColumn === type.id), `${personalTab}:${period.id}`))}
-              {period.items.length === 0 && <p className="emr-text-body py-4 text-muted-foreground">{term ? "검색 결과가 없습니다" : "해당 업무가 없습니다"}</p>}
-            </section>)}
-          </div>}
-        </div>
-        {isBoard && !loading && <div className={styles.scrollFade} data-visible={canScrollRight} data-testid="home-board-scroll-fade" aria-hidden="true" />}
-        </div>
+        <ScrollAreaPrimitive.Root className={cn(styles.scrollFrame, "overflow-hidden", isBoard && styles.boardScrollFrame)} data-testid="home-workspace-scroll-area">
+          <ScrollAreaPrimitive.Viewport ref={scrollRef} onScroll={rememberScroll} className="size-full min-h-0 min-w-0 rounded-[inherit] outline-none focus-visible:outline-1 focus-visible:ring-[3px] focus-visible:ring-ring/50" data-slot="scroll-area-viewport" data-testid="home-workspace-scroll">
+            <ScrollAreaPrimitive.Content className="h-full">
+              {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
+              view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
+                {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={operatingDate} collapsed={collapsed(`column:${type.id}`)}
+                  onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
+                  isGroupCollapsed={collapsed} onToggleGroup={toggleGroup} onNavigate={navigate} />)}
+                {visibleTypes.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 업무 종류를 선택해 주세요" />}
+              </div> : <div className={styles.list} data-testid="home-task-list">
+                {view === "hospital" ? visibleTypes.map((type) => renderListGroup(type, tasks.filter((task) => task.kanbanColumn === type.id), "hospital")) : [
+                  { id: "selected", label: "오늘 할 업무", items: tasks.filter((task) => !previous(task, operatingDate)) },
+                  { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, operatingDate)) },
+                ].map((period) => <section key={period.id} className={styles.period} aria-label={period.label}>
+                  <h2 className={styles.periodTitle}>{period.label}<span>{period.items.length}</span></h2>
+                  {visibleTypes.filter((type) => period.items.some((task) => task.kanbanColumn === type.id)).map((type) => renderListGroup(type, period.items.filter((task) => task.kanbanColumn === type.id), `${personalTab}:${period.id}`))}
+                  {period.items.length === 0 && <p className="emr-text-body py-4 text-muted-foreground">{term ? "검색 결과가 없습니다" : "해당 업무가 없습니다"}</p>}
+                </section>)}
+              </div>}
+            </ScrollAreaPrimitive.Content>
+          </ScrollAreaPrimitive.Viewport>
+          <ScrollBar orientation="horizontal" className="z-10 data-horizontal:border-t-0 data-horizontal:pt-0.5" data-testid="home-workspace-horizontal-scrollbar" />
+          <ScrollBar orientation="vertical" className="z-10 data-vertical:border-l-0 data-vertical:pl-0.5" data-testid="home-workspace-vertical-scrollbar" />
+          <ScrollAreaPrimitive.Corner />
+          {isBoard && !loading && <div className={styles.scrollFade} data-visible={canScrollRight} data-testid="home-board-scroll-fade" aria-hidden="true" />}
+        </ScrollAreaPrimitive.Root>
         {hiddenTypes.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 업무">
           <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 업무</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => setHidden([])}><EyeIcon className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
           <div className={styles.hiddenRows}>{hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><span>{type.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon className="size-3.5" aria-hidden="true" /></Button></div>)}</div>

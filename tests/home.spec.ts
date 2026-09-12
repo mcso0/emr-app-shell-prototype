@@ -359,6 +359,78 @@ test("Home hidden panel matches design and board fade follows overflow", async (
   await expect(fade).toHaveCount(0);
 });
 
+test("Home board and borderless scrollbar reach the workspace bottom edge", async ({ page }) => {
+  await page.setViewportSize({ width: 1327, height: 880 });
+  await openHome(page);
+
+  const assertBottomEdge = async () => {
+    const body = page.getByTestId("home-workspace-body");
+    const scrollArea = page.getByTestId("home-workspace-scroll-area");
+    const viewport = page.getByTestId("home-workspace-scroll");
+    const scrollbar = page.getByTestId("home-workspace-horizontal-scrollbar");
+
+    await expect(scrollbar).toBeVisible();
+    const geometry = await body.evaluate((element) => {
+      const scrollAreaElement = element.querySelector<HTMLElement>(
+        '[data-testid="home-workspace-scroll-area"]',
+      );
+      const viewportElement = element.querySelector<HTMLElement>(
+        '[data-testid="home-workspace-scroll"]',
+      );
+      const scrollbarElement = element.querySelector<HTMLElement>(
+        '[data-testid="home-workspace-horizontal-scrollbar"]',
+      );
+      const columnElement = element.querySelector<HTMLElement>(
+        '[data-testid="home-kanban-column-waiting"]',
+      );
+      if (
+        !scrollAreaElement ||
+        !viewportElement ||
+        !scrollbarElement ||
+        !columnElement
+      ) {
+        throw new Error("Home board scroll geometry is incomplete");
+      }
+
+      const bodyRect = element.getBoundingClientRect();
+      const scrollAreaRect = scrollAreaElement.getBoundingClientRect();
+      const viewportRect = viewportElement.getBoundingClientRect();
+      const scrollbarRect = scrollbarElement.getBoundingClientRect();
+      const columnRect = columnElement.getBoundingClientRect();
+      const scrollbarStyle = getComputedStyle(scrollbarElement);
+
+      return {
+        bodyBottom: bodyRect.bottom,
+        scrollAreaBottom: scrollAreaRect.bottom,
+        viewportBottom: viewportRect.bottom,
+        scrollbarBottom: scrollbarRect.bottom,
+        columnBottom: columnRect.bottom,
+        nativeScrollbarGutter:
+          viewportElement.offsetHeight - viewportElement.clientHeight,
+        scrollbarBorderTop: scrollbarStyle.borderTopWidth,
+        scrollbarPaddingTop: scrollbarStyle.paddingTop,
+        scrollbarPaddingBottom: scrollbarStyle.paddingBottom,
+      };
+    });
+
+    expect(Math.abs(geometry.bodyBottom - geometry.scrollAreaBottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.scrollAreaBottom - geometry.viewportBottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.scrollAreaBottom - geometry.scrollbarBottom)).toBeLessThanOrEqual(1);
+    expect(Math.abs(geometry.viewportBottom - geometry.columnBottom)).toBeLessThanOrEqual(1);
+    expect(geometry.nativeScrollbarGutter).toBe(0);
+    expect(geometry.scrollbarBorderTop).toBe("0px");
+    expect(geometry.scrollbarPaddingTop).toBe("2px");
+    expect(geometry.scrollbarPaddingBottom).toBe("1px");
+
+    await expect(scrollArea).toBeVisible();
+    await expect(viewport).toBeVisible();
+  };
+
+  await assertBottomEdge();
+  await page.getByRole("button", { name: "홈 패널 접기", exact: true }).click();
+  await assertBottomEdge();
+});
+
 test("list token styling and hover preserve geometry across hospital and personal views", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1084 });
   await openHome(page);
