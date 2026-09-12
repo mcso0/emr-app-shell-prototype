@@ -1,0 +1,123 @@
+---
+id: "CLINICAL-MASTER-PR-024"
+type: "Work Item"
+title: "Dispensing Set Confirmation Compatibility"
+description: "Separates immutable B3 set pricing from dispensing calculation, authority, and lineage snapshots so a dispensing set child can save and confirm without weakening either contract."
+status: "human_review"
+area: "clinical-master"
+priority: "P0"
+tags: [clinical-master, order-set, dispensing, confirmation, billing]
+target_pr: "Local review candidate"
+source_docs:
+  - "docs/work/clinical-master/CLINICAL-MASTER-PR-006-phase-1b-3-chart-set-runtime.md"
+  - "docs/work/clinical-master/CLINICAL-MASTER-PR-023-plan-order-authority-enrichment.md"
+  - "docs/work/chart/CHART-PR-037-encounter-multi-chart.md"
+dependencies:
+  - "CLINICAL-MASTER-PR-006"
+  - "CLINICAL-MASTER-PR-023"
+  - "CHART-PR-037"
+updated: "2026-09-12"
+---
+
+# Dispensing Set Confirmation Compatibility
+
+## Goal and authorization
+
+Repair the inherited incompatibility between the exact B3 set-child snapshot
+contract and the dispensing projection/lineage contract. The user authorized a
+local implementation, self-test, and reviewable candidate, followed by an
+independent review request to the original Codex task. No remote database,
+deployment, merge, or production mutation is authorized by this work item.
+
+Work on branch `codex/dispensing-set-confirmation-compat` in the isolated
+`34bb` worktree. Preserve the primary checkout and the separate current-chart UI
+worktree. The current-chart task owns Assessment and Plan/Order chart scoping;
+this item owns only dispensing-set storage, calculation, and confirmation.
+
+## Reproduced defect
+
+On the current `origin/main` migration chain through
+`20260908211856_encounter_multi_chart`, a chart-scoped save of the synthetic
+`den194-set-kong-vomit-compact` set with its dispensing child reached the write
+path but failed when deferred constraints were forced immediate:
+
+- SQLSTATE: `P0001`
+- message: `order_set_snapshot_hash_invalid`
+- source: `private.clair_b3_assert_set_child_lineage()`
+
+The B3 writer hashes a literal nine-key price calculation as part of the set
+composition envelope. The plan-order BEFORE trigger then replaces
+`calculation_outputs` with the dispensing projection. A master-backed
+dispensing-lineage trigger also appends a non-B3 key to `applied_snapshot`.
+Both operations invalidate the exact composition/hash contract.
+
+## Implemented representation
+
+- Keep operational dispensing results in the existing `calculation_outputs` so
+  confirmation, overrides, re-request, fulfillment, and billing readers retain
+  their existing contract.
+- Capture the exact B3 price object in
+  `orders.set_pricing_calculation_outputs` before the dispensing projection.
+- Freeze the server-authored catalog authority in
+  `orders.dispensing_authority_snapshot`, outside the literal B3 composition
+  object, and feed that copy to the existing V1/V2 calculator.
+- Store a master-backed child lineage object in
+  `orders.dispensing_lineage_snapshot`; atomically maintain a revision-item keyed
+  copy on the set root.
+- Validate B3 schema/hash against the pricing copy, validate parent/child
+  lineage equality with a deferred constraint, and freeze all three separated
+  values into the confirmation/task/billing source snapshot.
+- Preserve the old applied-snapshot lineage representation for individual
+  orders. Existing calculator behavior and API fields remain compatible.
+
+## Acceptance evidence
+
+| Requirement | Local evidence | Remaining boundary |
+| --- | --- | --- |
+| Dispensing child save no longer conflicts with B3 | Baseline failure above; candidate save passes `SET CONSTRAINTS ALL IMMEDIATE` | Independent review |
+| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and clean ready dispensing projection asserted | Remote migration not authorized |
+| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial | Authenticated remote smoke not authorized |
+| Relevant input edits recalculate before confirmation | Dose `1` to `2` rehearsal updates actual dispense `1` to `2` and preserves pricing | UI acceptance outside this slice |
+| Confirmation/source snapshots are complete | Confirmed order, task effective snapshot, and billing candidate source snapshot equality asserted | Deployment not authorized |
+| Individual/legacy compatibility | Existing preparation V2 direct calculator suite passes; unconfigured legacy child remains fail-closed | Broader historical replay is stale under multi-chart lifecycle |
+| Foreign workspace isolation | Foreign active member cannot read the candidate catalog or set through RLS | No remote foreign workspace mutation |
+| Existing persisted rows preserved | Baseline/candidate order count `12/12`; existing-field fingerprint `e9ebf19739e90576c3ece6bdaeba4408` equal after excluding three additive columns | Remote preflight required before any future apply |
+
+The owned local PostgreSQL database is cloned from the documented
+`chart_pr037_perf_rehearsal` schema-only/synthetic source, then applies
+`20260908211856` and the candidate migration. The new rehearsal creates only
+synthetic master/catalog/set/chart rows inside one transaction and always rolls
+back. Running it twice passes without residue. This is not remote integration
+evidence and does not include real clinical records.
+
+Static PL/pgSQL checks report no new errors or warnings in the changed trigger
+and calculation functions; the confirmation-base function's one unused-variable
+warning is identical in the baseline database. Repository docs and secret checks,
+ESLint (five pre-existing warnings), and a webpack production build including
+TypeScript all pass.
+
+## Verification and recovery
+
+Primary replay:
+
+```sh
+docker exec -i chart-pr037-postgres psql -U supabase_admin \
+  -d dispensing_set_compat_20260912 -X \
+  < supabase/snippets/clinical_master_dispensing_set_confirmation_compatibility_rehearsal.sql
+```
+
+Recovery is forward-only after persistent use: stop new dispensing-set saves at
+the application/RPC boundary, keep the additive columns and all confirmed
+snapshots, and ship a reviewed corrective migration. Before any adoption, when
+all three new columns are still empty and no candidate code has written them,
+the migration can be reverted by restoring the captured function definitions,
+dropping the two new triggers and private helpers, then dropping the three
+columns. Never drop populated columns or restore the old functions after
+confirmed dispensing-set rows exist.
+
+## Remaining gates
+
+- Independent review by the original parent Codex task.
+- Exact candidate commit and content SHA.
+- Any push, PR, remote Supabase apply, deployment, or authenticated remote smoke
+  requires a separate authorization and the repository release gates.
