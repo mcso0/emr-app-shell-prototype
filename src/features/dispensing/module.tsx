@@ -644,9 +644,14 @@ function findFulfillmentForQueueItem(
   if (!queueItems.length) return undefined;
   if (!item) return queueItems[0];
 
+  const liveItemPrefix = "live-fulfillment-";
+  if (item.id.startsWith(liveItemPrefix)) {
+    const workItemId = item.id.slice(liveItemPrefix.length);
+    return queueItems.find((workItem) => workItem.id === workItemId);
+  }
+
   return (
     queueItems.find((workItem) => {
-      if (item.id === `live-fulfillment-${workItem.id}`) return true;
       const displayName = workItem.sourceSnapshot?.orderDisplayName;
       return displayName && item.orderName.includes(displayName);
     }) ??

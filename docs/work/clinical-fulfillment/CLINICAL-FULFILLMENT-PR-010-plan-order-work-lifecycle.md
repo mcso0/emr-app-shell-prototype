@@ -142,6 +142,12 @@ and completed lab/imaging/dispensing/treatment read and amendment contracts.
   patient/requester and Asia/Seoul display context, shared operating-date URL
   state, cross-module selection cleanup, and exact `workItemId` selection when
   an encounter has multiple queue rows.
+- Independent review found that a live dispensing row could still fall through
+  to display-name matching when two work items had the same name. Live rows now
+  resolve only by their exact `workItemId`; an unknown live ID fails closed.
+  Focused coverage verifies same-name rows in the same and different encounters,
+  URL/detail selection, execution-history reads, assignment commands, and the
+  missing-ID denial path.
 - Fulfillment lifecycle, execution-result, and lab-result persistence contracts
   passed 37 focused tests. Imaging immutable completion/amendment history passed
   its dedicated browser check; dispensing and treatment completion/amendment
