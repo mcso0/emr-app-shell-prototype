@@ -853,7 +853,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
   await expect(
     page.getByRole("tab", { name: "소화기", exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     page.getByText(
       "블록 왼쪽의 + 또는 / 명령으로 SOAP 템플릿과 내용을 추가할 수 있습니다.",
@@ -868,7 +868,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByRole("button", { name: "초안 저장" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /진단명/ })).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "전체오더" })).toBeVisible();
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   const soapDiagnosisGridMetrics = await page
     .getByTestId("chart-soap-diagnosis-grid")
     .evaluate((element) => {
@@ -896,6 +896,9 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   const diagnosisPanel = page.getByLabel("진단명 관리");
   await expect(
     diagnosisPanel.getByRole("row", { name: /급성 위장관염 의심/ }),
+  ).toHaveCount(0);
+  await expect(
+    diagnosisPanel.getByTestId("chart-assessment-empty-state"),
   ).toBeVisible();
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
   await expect(orderTable.locator('th:has-text("Order 명")')).toHaveAttribute(
@@ -1215,7 +1218,6 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const content = page.locator("[data-slot='chart-content']");
   await expect(content).toBeVisible();
@@ -1295,7 +1297,6 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const chartContent = page.locator("[data-slot='chart-content']");
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
@@ -1522,7 +1523,6 @@ test("chart Order all tab renders the approved order confirmation and work-state
   page,
 }) => {
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByLabel("처방 조회 범위").selectOption("legacy");
 
   const table = page.getByRole("table", { name: "처방/오더 테이블" });
   for (const label of [
@@ -6894,7 +6894,7 @@ test("chart history selection returns to a previous encounter for the patient", 
     page.getByLabel("환자 컨텍스트 정보").getByText("코코"),
   ).toBeVisible();
   await expect(selectedHistoryItem).toHaveAttribute("data-selected", "true");
-  await page.getByLabel("처방 조회 범위").selectOption("encounter");
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
 });
 

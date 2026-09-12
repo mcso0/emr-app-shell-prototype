@@ -68,7 +68,7 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   await expect.poll(() => new URL(page.url()).searchParams.get("chartId")).not.toBe(firstId);
   const secondId = new URL(page.url()).searchParams.get("chartId")!;
   await expect(editor).not.toContainText("Synthetic morning chart note");
-  await expect(page.getByLabel("처방 조회 범위")).toHaveValue("chart");
+  await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
   await expect(paragraph).toBeEditable();
   await paragraph.click();
   await page.keyboard.type("Synthetic afternoon chart note");
@@ -102,8 +102,6 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   await page.reload();
   await expect(editor).toContainText("amended");
   await expect(page.locator(`[data-chart-id="${firstId}"]`)).not.toContainText("완료");
-  await page.getByLabel("처방 조회 범위").selectOption("encounter");
-  await expect(page.getByLabel("처방 조회 범위")).toHaveValue("encounter");
   await expect(page.getByRole("button", { name: "Order 추가", exact: true }).first()).toBeDisabled();
   await expect(page.getByText("오더 정보를 불러오는 중", { exact: false })).toHaveCount(0);
   await page.screenshot({ path: "/tmp/chart-pr037-two-charts.png", fullPage: false });

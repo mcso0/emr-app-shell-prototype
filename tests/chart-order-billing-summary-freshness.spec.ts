@@ -38,12 +38,22 @@ async function createChart(page: Page) {
     .getByRole("button", { name: "+ 새 차트", exact: true })
     .first();
   await expect(create).toBeEnabled();
+  await create.click();
+  const dialog = page.getByRole("dialog", {
+    name: "새 차트를 어느 진료에 추가할까요?",
+  });
+  await expect(dialog).toBeVisible();
+  const currentVisit = dialog.getByTestId(`new-chart-encounter-${encounterId}`);
+  await expect(currentVisit).toBeEnabled();
+  await currentVisit.click();
   const created = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       response.url().includes("chart/encounter-charts"),
   );
-  await create.click();
+  await dialog
+    .getByRole("button", { name: "선택한 진료에 차트 추가", exact: true })
+    .click();
   const response = await created;
   expect(response.ok()).toBe(true);
   const chartId = (await response.json()).chart.id as string;

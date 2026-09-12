@@ -15528,23 +15528,6 @@ export function ChartContent({
   const activeChartIsAdditional = Boolean(
     activeChartId && additionalChartIds.has(activeChartId),
   );
-  const orderRows = getChartOrderDraftRows(orderGroups);
-  const hasActiveChartOrders = Boolean(
-    activeChartId &&
-      orderRows.some(
-        (row) =>
-          (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) ===
-          activeChartId,
-      ),
-  );
-  const hasLegacyOrders = orderRows.some(
-    (row) =>
-      (row.runtimeRow?.originChartId ?? row.order.originChartId ?? null) === null,
-  );
-  const initialOrderScope: "chart" | "legacy" =
-    !activeChartIsAdditional && !hasActiveChartOrders && hasLegacyOrders
-      ? "legacy"
-      : "chart";
   const chartCreatedDate = effectiveLatestSoap
     ? getShortDateTime(effectiveLatestSoap.createdAt).slice(0, 8)
     : "";
@@ -16255,7 +16238,6 @@ export function ChartContent({
               actorHeaders={actorHeaders}
               bundle={bundle}
               chartId={activeChartId || undefined}
-              initialOrderScope={initialOrderScope}
               collapseContentId="chart-order-panel-content"
               collapsed={orderPanelCollapsed}
               loading={orderLoading}
