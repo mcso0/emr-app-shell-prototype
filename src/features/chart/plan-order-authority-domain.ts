@@ -320,6 +320,23 @@ export function parsePlanOrderAuthority(
   };
 }
 
+export function resolvePlanOrderAuthority({
+  appliedSnapshot,
+  dedicatedSnapshot,
+}: {
+  appliedSnapshot: unknown;
+  dedicatedSnapshot?: unknown;
+}): PlanOrderAuthorityConfig | null {
+  const source = isRecord(dedicatedSnapshot) &&
+      Object.keys(dedicatedSnapshot).length > 0
+    ? dedicatedSnapshot
+    : isRecord(appliedSnapshot)
+      ? appliedSnapshot.planOrderAuthority
+      : undefined;
+  const parsed = parsePlanOrderAuthority(source);
+  return parsed.valid ? parsed.value : null;
+}
+
 export type PlanOrderWeightSnapshot = {
   valueKg: number;
   measuredAt: string;

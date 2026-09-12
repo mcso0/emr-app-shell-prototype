@@ -86,7 +86,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { ChartOrderConfirmationBadge, ChartOrderWorkStatus } from "./components/chart-order-status";
-import { chartOrderConfirmationRank, getChartOrderConfirmationState, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
+import { chartOrderConfirmationRank, getChartOrderConfirmationState, getChartOrderProjectedLineTotal, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
@@ -349,7 +349,7 @@ import type {
 } from "@/features/chart/server-order-actual-dispense-core";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
 import {
-  parsePlanOrderAuthority,
+  resolvePlanOrderAuthority,
   type PlanOrderAuthorityConfig,
 } from "@/features/chart/plan-order-authority-domain";
 import type {
@@ -6150,10 +6150,10 @@ function getChartOrderAppliedSnapshot(row: ChartOrderDraftRow) {
 function getChartOrderAuthority(
   row: ChartOrderDraftRow,
 ): PlanOrderAuthorityConfig | null {
-  const parsed = parsePlanOrderAuthority(
-    getChartOrderAppliedSnapshot(row).planOrderAuthority,
-  );
-  return parsed.valid ? parsed.value : null;
+  return resolvePlanOrderAuthority({
+    appliedSnapshot: getChartOrderAppliedSnapshot(row),
+    dedicatedSnapshot: row.runtimeRow?.dispensingAuthoritySnapshot,
+  });
 }
 
 function getChartOrderDetailNumber(row: ChartOrderDraftRow, key: string) {
@@ -6564,17 +6564,15 @@ const getDraftQuantity = (quantityInput: string) => {
 
 const getDraftLineTotal = (row: ChartOrderDraftRow) => {
   const quantity = getDraftQuantity(row.quantityInput);
-
-  if (
-    quantity === null ||
-    row.unitPrice === undefined ||
-    row.unitPrice === null
-  )
-    return undefined;
-
-  return getChartOrderDraftAmountBasis(row) === "fixed_order_price"
-    ? row.unitPrice
-    : quantity * row.unitPrice;
+  const authority = getChartOrderAuthority(row);
+  return getChartOrderProjectedLineTotal({
+    amountBasis: getChartOrderDraftAmountBasis(row),
+    draftQuantity: quantity,
+    priceBasis: authority?.priceBasis,
+    totalRequiredDispenseQuantity:
+      row.runtimeRow?.calculationOutputs.totalRequiredDispenseQuantity,
+    unitPrice: row.unitPrice,
+  });
 };
 
 const getChartOrderDraftAmountBasis = (row: ChartOrderDraftRow) => {

@@ -71,6 +71,7 @@ export type ChartOrderRuntimeRow = {
   sourceSetRevisionItemId: string | null;
   workspaceCatalogItemId: string | null;
   workspaceCatalogRevision: number | null;
+  dispensingAuthoritySnapshot?: Record<string, unknown>;
   dispensingLineage: DispensingOrderLineageSnapshot | null;
   quantity: number;
   quantitySource: ChartOrderReadbackQuantitySource;
@@ -1359,10 +1360,17 @@ function mapOrderDraftResponse(value: unknown): ChartOrderDraftGatewayResult | n
 function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const row = value as Record<string, unknown>;
+  const lineTotalSnapshot = typeof row.lineTotalSnapshot === "number"
+    ? row.lineTotalSnapshot
+    : row.rowType === "set" &&
+        row.billingReflectionEnabled === false &&
+        row.lineTotalSnapshot === null
+      ? 0
+      : undefined;
   if (typeof row.orderId !== "string" || typeof row.encounterId !== "string" ||
       (row.rowType !== "individual" && row.rowType !== "set" && row.rowType !== "set_child") ||
       typeof row.orderType !== "string" || typeof row.quantity !== "number" ||
-      typeof row.lineTotalSnapshot !== "number" || typeof row.updatedAt !== "string") return null;
+      lineTotalSnapshot === undefined || typeof row.updatedAt !== "string") return null;
   const quantitySource = row.quantitySource;
   if (!["fixed_one", "preset_quantity", "manual_at_apply", "manual", "days", "total_count", "dispense_quantity", "actual_dispense_quantity"].includes(String(quantitySource))) return null;
   const objectValue = (key: string) =>
@@ -1423,13 +1431,14 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     sourceSetRevisionItemId: row.sourceSetRevisionItemId === null ? null : typeof row.sourceSetRevisionItemId === "string" ? row.sourceSetRevisionItemId : null,
     workspaceCatalogItemId: row.workspaceCatalogItemId === null ? null : typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : null,
     workspaceCatalogRevision: typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : null,
+    dispensingAuthoritySnapshot: objectValue("dispensingAuthoritySnapshot"),
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? objectValue("appliedSnapshot").dispensingLineage,
     ) ?? null,
     quantity: row.quantity,
     quantitySource: quantitySource as ChartOrderReadbackQuantitySource,
     unitPriceSnapshot: row.unitPriceSnapshot === null ? null : typeof row.unitPriceSnapshot === "number" ? row.unitPriceSnapshot : null,
-    lineTotalSnapshot: row.lineTotalSnapshot,
+    lineTotalSnapshot,
     snapshotSchemaVersion: row.snapshotSchemaVersion === 1 ? 1 : 0,
     snapshotHash: row.snapshotHash === null ? null : typeof row.snapshotHash === "string" ? row.snapshotHash : null,
     appliedSnapshot: objectValue("appliedSnapshot"),

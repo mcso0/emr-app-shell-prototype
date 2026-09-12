@@ -2,10 +2,35 @@ import { expect, test } from "@playwright/test";
 import {
   chartOrderConfirmationRank,
   getChartOrderConfirmationState,
+  getChartOrderProjectedLineTotal,
   getChartOrderWorkPresentation,
   sortChartOrderGroups,
   type ChartOrderPresentationRow,
 } from "../src/features/chart/chart-order-table-presentation";
+
+test("pre-confirmation product-unit totals use the required dispense quantity", () => {
+  expect(getChartOrderProjectedLineTotal({
+    amountBasis: "unit_price",
+    draftQuantity: 1,
+    priceBasis: "per_product_unit",
+    totalRequiredDispenseQuantity: 3,
+    unitPrice: 1000,
+  })).toBe(3000);
+  expect(getChartOrderProjectedLineTotal({
+    amountBasis: "unit_price",
+    draftQuantity: 1,
+    priceBasis: "per_product_unit",
+    totalRequiredDispenseQuantity: null,
+    unitPrice: 1000,
+  })).toBe(1000);
+  expect(getChartOrderProjectedLineTotal({
+    amountBasis: "fixed_order_price",
+    draftQuantity: 1,
+    priceBasis: "per_product_unit",
+    totalRequiredDispenseQuantity: 3,
+    unitPrice: 1000,
+  })).toBe(1000);
+});
 
 function row(id: string, status = "confirmed", taskStatus?: "complete" | "returned" | "pending" | "paused"): ChartOrderPresentationRow {
   return {

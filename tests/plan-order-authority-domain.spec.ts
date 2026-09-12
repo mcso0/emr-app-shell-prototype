@@ -8,6 +8,7 @@ import {
   parsePlanOrderAuthority,
   proposePlanOrderActualDispenseQuantity,
   proposePlanOrderPreparation,
+  resolvePlanOrderAuthority,
   type PlanOrderAuthorityConfig,
 } from "@/features/chart/plan-order-authority-domain";
 
@@ -59,6 +60,21 @@ test("V2 product units follow edited order dose and never infer drops to mL", ()
   expect(calculatePlanOrderDispenseQuantity(input)).toMatchObject({ ok: true, quantity: 0.5, formula: "product_unit" });
   expect(calculatePlanOrderDispenseQuantity({ ...input, dosePerAdministration: 1 })).toMatchObject({ ok: true, quantity: 1 });
   expect(calculatePlanOrderDispenseQuantity({ ...input, doseUnit: "drop" })).toEqual({ ok: false, reason: "unit_conversion_missing" });
+});
+
+test("dedicated set-child authority wins without changing the B3 applied snapshot", () => {
+  expect(resolvePlanOrderAuthority({
+    appliedSnapshot: {},
+    dedicatedSnapshot: productUnitV2,
+  })).toEqual(productUnitV2);
+  expect(resolvePlanOrderAuthority({
+    appliedSnapshot: { planOrderAuthority: ingredientConfig },
+    dedicatedSnapshot: {},
+  })).toEqual(ingredientConfig);
+  expect(resolvePlanOrderAuthority({
+    appliedSnapshot: { planOrderAuthority: ingredientConfig },
+    dedicatedSnapshot: { schemaVersion: 2 },
+  })).toBeNull();
 });
 
 test("V2 requires scope, rejects V1 ambiguity and incomplete occurrence plans", () => {

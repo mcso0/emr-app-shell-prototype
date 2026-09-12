@@ -664,6 +664,17 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
               billingReflectionEnabled: true,
               calculationInputs: {},
               calculationOutputs: {},
+              dispensingAuthoritySnapshot: {
+                schemaVersion: 2,
+                calculationMode: "product_unit",
+                dispenseUnit: "tablet",
+                preparationPolicy: {
+                  quantityScope: "course_total",
+                  increment: 1,
+                  roundingMode: "up",
+                  displayPrecision: 0,
+                },
+              },
               encounterId,
               lineTotalSnapshot: 33000,
               orderId: "00000000-0000-4000-8000-000000000301",
@@ -714,6 +725,14 @@ test("order action Supabase gateway keeps action, actor, workspace, encounter, a
           sourcePresetId: "std-den-304-billing",
         },
         billingCandidateStatus: "not_requested",
+      },
+    ],
+    rows: [
+      {
+        dispensingAuthoritySnapshot: {
+          calculationMode: "product_unit",
+          dispenseUnit: "tablet",
+        },
       },
     ],
   });

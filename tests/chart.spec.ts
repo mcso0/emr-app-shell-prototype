@@ -1647,9 +1647,23 @@ test("chart Order all tab renders the approved order confirmation and work-state
   ).toBeLessThanOrEqual(2);
 });
 
-test("chart saves a constrained actual dispense override with an anchored reason", async ({
-  page,
-}) => {
+const actualDispenseUiCases = [
+  {
+    title: "chart saves a constrained actual dispense override with an anchored reason",
+    authoritySource: "applied",
+    rowType: "individual",
+  },
+  {
+    title: "chart saves a set-child constrained actual dispense override from dedicated authority",
+    authoritySource: "dedicated",
+    rowType: "set_child",
+  },
+] as const;
+
+async function verifyActualDispenseUiCase(
+  page: Page,
+  actualDispenseUiCase: (typeof actualDispenseUiCases)[number],
+) {
   const orderId = "order-kong-maropitant";
   const firstUpdatedAt = "2026-09-02T09:00:00.000Z";
   const savedUpdatedAt = "2026-09-02T09:01:00.000Z";
@@ -1687,7 +1701,8 @@ test("chart saves a constrained actual dispense override with an anchored reason
     orderId,
     workspaceId: "clair-demo",
     encounterId: kongEncounterId,
-    rowType: "individual",
+    originChartId: "soap-kong-260501",
+    rowType: actualDispenseUiCase.rowType,
     orderType: "dispensing",
     clinicalOrderType: "dispensing",
     destinationModule: "dispensing",
@@ -1697,14 +1712,27 @@ test("chart saves a constrained actual dispense override with an anchored reason
     priority: "normal",
     billingEligible: true,
     revisionNo: 0,
-    parentOrderId: null,
-    sourceSetId: null,
-    sourceSetRevisionId: null,
-    sourceSetRevisionNo: null,
-    sourceSetVersion: null,
-    sourceSetRevisionItemId: null,
+    parentOrderId: actualDispenseUiCase.rowType === "set_child"
+      ? "02491000-0000-4000-8000-000000000001"
+      : null,
+    sourceSetId: actualDispenseUiCase.rowType === "set_child"
+      ? "pr024-dispensing-set"
+      : null,
+    sourceSetRevisionId: actualDispenseUiCase.rowType === "set_child"
+      ? "02470000-0000-4000-8000-000000000001"
+      : null,
+    sourceSetRevisionNo: actualDispenseUiCase.rowType === "set_child" ? 1 : null,
+    sourceSetVersion: actualDispenseUiCase.rowType === "set_child"
+      ? "order-set-revision-1"
+      : null,
+    sourceSetRevisionItemId: actualDispenseUiCase.rowType === "set_child"
+      ? "02480000-0000-4000-8000-000000000001"
+      : null,
     workspaceCatalogItemId: "svc-med-maropitant",
     workspaceCatalogRevision: 1,
+    ...(actualDispenseUiCase.authoritySource === "dedicated"
+      ? { dispensingAuthoritySnapshot: authority }
+      : {}),
     dispensingLineage: null,
     quantity: 1,
     quantitySource: "manual",
@@ -1724,10 +1752,12 @@ test("chart saves a constrained actual dispense override with an anchored reason
       inHospitalOrderName: "Maropitant 16mg T",
       lineTotalSnapshot: 4500,
       orderType: "dispensing",
-      planOrderAuthority: authority,
+      ...(actualDispenseUiCase.authoritySource === "applied"
+        ? { planOrderAuthority: authority }
+        : {}),
       priceKrw: 4500,
       quantity: 1,
-      rowType: "individual",
+      rowType: actualDispenseUiCase.rowType,
       standardOrderName: "Maropitant 16mg T",
       workspaceCatalogItemId: "svc-med-maropitant",
       workspaceCatalogRevision: 1,
@@ -1756,6 +1786,30 @@ test("chart saves a constrained actual dispense override with an anchored reason
     updatedAt: firstUpdatedAt,
   };
   const patchBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/encounter-charts?*",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        json: {
+          charts: [
+            {
+              id: "soap-kong-260501",
+              encounterId: kongEncounterId,
+              authorUserId: "user-vet-suji",
+              ...kongSoapFields,
+              status: "autosaved",
+              createdAt: "2026-05-01T09:40:00+09:00",
+              updatedAt: "2026-05-01T10:16:00+09:00",
+            },
+          ],
+          ok: true,
+          status: 200,
+        },
+      });
+    },
+  );
   await page.route(
     "**/api/workspaces/clair-demo/chart/order-drafts*",
     async (route) => {
@@ -1822,10 +1876,16 @@ test("chart saves a constrained actual dispense override with an anchored reason
   );
 
   await page.goto(kongScenarioUrl);
+  const kongQueueItem = page
+    .getByRole("button", { name: /^예약 콩이 · 김하늘/ })
+    .first();
+  await kongQueueItem.click();
+  await expect(kongQueueItem).toHaveAttribute("aria-pressed", "true");
+  await expect(page).toHaveURL(/chartId=soap-kong-260501/);
   const input = page.getByRole("spinbutton", {
     name: "Maropitant 16mg T 준비 예정량",
   });
-  await expect(input).toHaveValue("1");
+  await expect(input).toHaveValue("1", { timeout: 20_000 });
   await input.fill("1.2");
   await page
     .getByRole("button", { name: "Maropitant 16mg T 준비 예정량 저장" })
@@ -1846,7 +1906,13 @@ test("chart saves a constrained actual dispense override with an anchored reason
       name: "Maropitant 16mg T 준비 예정량 변경 사유",
     }),
   ).toBeVisible();
-});
+}
+
+for (const actualDispenseUiCase of actualDispenseUiCases) {
+  test(actualDispenseUiCase.title, async ({ page }) => {
+    await verifyActualDispenseUiCase(page, actualDispenseUiCase);
+  });
+}
 
 test("chart Order draft autosaves Field Matrix values and enables explicit confirmation", async ({
   page,

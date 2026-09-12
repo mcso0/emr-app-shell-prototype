@@ -1222,8 +1222,12 @@ function camelToSnake(value: string) {
   return value.replace(/[A-Z]/g, (character) => `_${character.toLowerCase()}`);
 }
 
-test("fixed-price preview accepts legacy omitted ranges but range pricing still requires them", async () => {
-  for (const amountBasis of ["set_fixed_price", "range_price"] as const) {
+test("non-range previews accept omitted ranges but range pricing still requires them", async () => {
+  for (const amountBasis of [
+    "included_order_sum",
+    "set_fixed_price",
+    "range_price",
+  ] as const) {
     const gateway = createSupabaseOrderCatalogGateway({
       from() { throw new Error("preview uses its RPC only"); },
       async rpc() {
@@ -1231,14 +1235,14 @@ test("fixed-price preview accepts legacy omitted ranges but range pricing still 
           schemaVersion: 1, operation: "preview", selectionFingerprint: "synthetic-fingerprint",
           set: { sourceSetId: "synthetic-set", sourceSetRevisionId: "synthetic-revision",
             sourceSetRevisionNo: 1, sourceSetVersion: "order-set-revision-1", amountBasis,
-            taxType: "taxable", setPriceKrw: 35000 },
+            taxType: "taxable", setPriceKrw: amountBasis === "included_order_sum" ? null : 35000 },
           items: [], pricing: { finalTotalKrw: 35000 },
         } };
       },
     });
     const result = await gateway.previewOrderSet!({ workspaceId: "clair-demo", encounterId: "synthetic-encounter",
       orderSetId: "synthetic-set", revisionId: "synthetic-revision", selectionIntent: { items: [] } });
-    expect(result).toMatchObject(amountBasis === "set_fixed_price"
+    expect(result).toMatchObject(amountBasis !== "range_price"
       ? { ok: true, preview: { set: { priceRanges: [] }, pricing: { finalTotalKrw: 35000 } } }
       : { ok: false, status: 500, error: "invalid_preview_response" });
   }
