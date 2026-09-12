@@ -566,7 +566,7 @@ test("customer workspace renders animal master list and opens the common patient
     "스케줄 관리",
   );
   const inpatientNavBox = await page
-    .getByRole("link", { name: "입원" })
+    .getByRole("button", { name: "입원(작업 중)" })
     .boundingBox();
   const customerNavBox = await page
     .getByRole("link", { name: "고객관리" })

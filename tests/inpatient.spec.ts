@@ -4,7 +4,8 @@ test("inpatient workspace renders ward table and opens admission detail drawer",
   await page.goto("/w/clair-demo/inpatient?modulePanel=open&right=open");
 
   await expect(page.getByText("inpatient workspace")).toHaveCount(0);
-  await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "입원");
+  await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-label", "입원(작업 중)");
+  await expect(page.getByTestId("nav-rail-active-item")).toHaveAttribute("aria-disabled", "true");
   await expect(page.getByText("입원 환자")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "26.05.06 (수) 입원 기준일 선택" })).toBeVisible();
   await expect(page.getByRole("button", { name: "입실 추가" })).toBeVisible();
