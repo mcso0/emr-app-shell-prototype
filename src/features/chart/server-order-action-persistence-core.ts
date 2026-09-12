@@ -1353,6 +1353,7 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
     sourceSetRevisionItemId: typeof row.sourceSetRevisionItemId === "string" ? row.sourceSetRevisionItemId : null,
     workspaceCatalogItemId: typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : null,
     workspaceCatalogRevision: typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : null,
+    dispensingAuthoritySnapshot: objectOf("dispensingAuthoritySnapshot"),
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? objectOf("appliedSnapshot").dispensingLineage,
     ) ?? null,

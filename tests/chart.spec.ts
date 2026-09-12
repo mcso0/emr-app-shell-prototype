@@ -1614,7 +1614,7 @@ test("chart Order all tab renders the approved order confirmation and work-state
   ).toBeLessThanOrEqual(2);
 });
 
-test("chart saves a constrained actual dispense override with an anchored reason", async ({
+test("chart saves a set-child constrained actual dispense override with an anchored reason", async ({
   page,
 }) => {
   const orderId = "order-kong-maropitant";
@@ -1654,7 +1654,8 @@ test("chart saves a constrained actual dispense override with an anchored reason
     orderId,
     workspaceId: "clair-demo",
     encounterId: kongEncounterId,
-    rowType: "individual",
+    originChartId: "soap-kong-260501",
+    rowType: "set_child",
     orderType: "dispensing",
     clinicalOrderType: "dispensing",
     destinationModule: "dispensing",
@@ -1664,14 +1665,15 @@ test("chart saves a constrained actual dispense override with an anchored reason
     priority: "normal",
     billingEligible: true,
     revisionNo: 0,
-    parentOrderId: null,
-    sourceSetId: null,
-    sourceSetRevisionId: null,
-    sourceSetRevisionNo: null,
-    sourceSetVersion: null,
-    sourceSetRevisionItemId: null,
+    parentOrderId: "02491000-0000-4000-8000-000000000001",
+    sourceSetId: "pr024-dispensing-set",
+    sourceSetRevisionId: "02470000-0000-4000-8000-000000000001",
+    sourceSetRevisionNo: 1,
+    sourceSetVersion: "order-set-revision-1",
+    sourceSetRevisionItemId: "02480000-0000-4000-8000-000000000001",
     workspaceCatalogItemId: "svc-med-maropitant",
     workspaceCatalogRevision: 1,
+    dispensingAuthoritySnapshot: authority,
     dispensingLineage: null,
     quantity: 1,
     quantitySource: "manual",
@@ -1691,10 +1693,9 @@ test("chart saves a constrained actual dispense override with an anchored reason
       inHospitalOrderName: "Maropitant 16mg T",
       lineTotalSnapshot: 4500,
       orderType: "dispensing",
-      planOrderAuthority: authority,
       priceKrw: 4500,
       quantity: 1,
-      rowType: "individual",
+      rowType: "set_child",
       standardOrderName: "Maropitant 16mg T",
       workspaceCatalogItemId: "svc-med-maropitant",
       workspaceCatalogRevision: 1,
@@ -1723,6 +1724,30 @@ test("chart saves a constrained actual dispense override with an anchored reason
     updatedAt: firstUpdatedAt,
   };
   const patchBodies: Array<Record<string, unknown>> = [];
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/encounter-charts?*",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        status: 200,
+        json: {
+          charts: [
+            {
+              id: "soap-kong-260501",
+              encounterId: kongEncounterId,
+              authorUserId: "user-vet-suji",
+              ...kongSoapFields,
+              status: "autosaved",
+              createdAt: "2026-05-01T09:40:00+09:00",
+              updatedAt: "2026-05-01T10:16:00+09:00",
+            },
+          ],
+          ok: true,
+          status: 200,
+        },
+      });
+    },
+  );
   await page.route(
     "**/api/workspaces/clair-demo/chart/order-drafts*",
     async (route) => {

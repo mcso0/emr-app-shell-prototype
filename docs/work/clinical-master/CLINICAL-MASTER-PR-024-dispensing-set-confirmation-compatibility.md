@@ -26,8 +26,10 @@ updated: "2026-09-12"
 Repair the inherited incompatibility between the exact B3 set-child snapshot
 contract and the dispensing projection/lineage contract. The user authorized a
 local implementation, self-test, and reviewable candidate, followed by an
-independent review request to the original Codex task. No remote database,
-deployment, merge, or production mutation is authorized by this work item.
+independent review request to the original Codex task. The user later expanded
+delivery through commit, push, PR, exact-candidate review, and a requested
+Production release. The exact `main`/Production approval packet and any remote
+Supabase migration apply remain separate gates under the release runbook.
 
 Work on branch `codex/dispensing-set-confirmation-compat` in the isolated
 `34bb` worktree. Preserve the primary checkout and the separate current-chart UI
@@ -63,10 +65,16 @@ Both operations invalidate the exact composition/hash contract.
   object, and feed that copy to the existing V1/V2 calculator.
 - Store a master-backed child lineage object in
   `orders.dispensing_lineage_snapshot`; atomically maintain a revision-item keyed
-  copy on the set root.
+  copy on the set root from an AFTER trigger so one B3 removal statement can
+  cancel both root and children without a PostgreSQL self-update conflict.
 - Validate B3 schema/hash against the pricing copy, validate parent/child
   lineage equality with a deferred constraint, and freeze all three separated
   values into the confirmation/task/billing source snapshot.
+- Teach billing authority capture and confirmation quantity projection to read
+  the dedicated authority, so per-product-unit quantity, unit, and amount stay
+  correct without changing the B3 hash input.
+- Preserve an existing manual actual-dispense override on a harmless set save;
+  on a clinically relevant edit, retain it and require explicit reconfirmation.
 - Preserve the old applied-snapshot lineage representation for individual
   orders. Existing calculator behavior and API fields remain compatible.
 
@@ -74,14 +82,18 @@ Both operations invalidate the exact composition/hash contract.
 
 | Requirement | Local evidence | Remaining boundary |
 | --- | --- | --- |
-| Dispensing child save no longer conflicts with B3 | Baseline failure above; candidate save passes `SET CONSTRAINTS ALL IMMEDIATE` | Independent review |
-| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and clean ready dispensing projection asserted | Remote migration not authorized |
-| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial | Authenticated remote smoke not authorized |
-| Relevant input edits recalculate before confirmation | Dose `1` to `2` rehearsal updates actual dispense `1` to `2` and preserves pricing | UI acceptance outside this slice |
-| Confirmation/source snapshots are complete | Confirmed order, task effective snapshot, and billing candidate source snapshot equality asserted | Deployment not authorized |
+| Dispensing child save no longer conflicts with B3 | Baseline failure above; a mixed dispensing + clinical-lab set saves and passes `SET CONSTRAINTS ALL IMMEDIATE` | Independent review |
+| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and clean ready dispensing projection asserted | Remote migration apply gated |
+| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial | Authenticated remote smoke gated |
+| Set edit/removal semantics remain valid | Dispensing-child deselection while lab stays selected, full-root removal, semantic deselection retry, and rejected repeated removal asserted | Preview smoke pending |
+| Override/reconfirmation semantics remain valid | Exact override retry, harmless resave preservation, dose `1` to `2` recalculation, stale confirmation denial, explicit reconfirmation, and reconfirm retry asserted | Preview smoke pending |
+| Fail-closed boundaries remain valid | Missing authority blocks confirmation; invalid authority is rejected; cross-chart mutation is denied | Remote state remains unchanged |
+| Confirmation/source snapshots are complete | Confirmed order, Task, fulfillment work item, billing candidate, execution result/amendment, and linked attempt-2 re-request contracts asserted | Production gated |
+| Billing uses the dedicated authority | Per-product-unit candidate freezes quantity `3`, unit price `1000`, amount `3000`, and unit `tablet` | Remote migration apply gated |
+| Client readback uses the dedicated authority | Both server mappers retain the field; local route-intercepted browser smoke exposes and saves the constrained `준비 예정량` control without an applied-snapshot authority copy | Authenticated Production smoke gated |
 | Individual/legacy compatibility | Existing preparation V2 direct calculator suite passes; unconfigured legacy child remains fail-closed | Broader historical replay is stale under multi-chart lifecycle |
 | Foreign workspace isolation | Foreign active member cannot read the candidate catalog or set through RLS | No remote foreign workspace mutation |
-| Existing persisted rows preserved | Baseline/candidate order count `12/12`; existing-field fingerprint `e9ebf19739e90576c3ece6bdaeba4408` equal after excluding three additive columns | Remote preflight required before any future apply |
+| Existing persisted rows preserved | Baseline/candidate order count `12/12`; existing-field fingerprint `817cec76e9ff37ba12c601c847572d87` equal after excluding three additive columns | Remote preflight required before any future apply |
 
 The owned local PostgreSQL database is cloned from the documented
 `chart_pr037_perf_rehearsal` schema-only/synthetic source, then applies
@@ -90,9 +102,9 @@ synthetic master/catalog/set/chart rows inside one transaction and always rolls
 back. Running it twice passes without residue. This is not remote integration
 evidence and does not include real clinical records.
 
-Static PL/pgSQL checks report no new errors or warnings in the changed trigger
-and calculation functions; the confirmation-base function's one unused-variable
-warning is identical in the baseline database. Repository docs and secret checks,
+Static PL/pgSQL checks report no new errors or warnings in the changed trigger,
+calculation, confirmation, and billing functions; the B3 writer's one
+unused-variable warning is identical in the baseline database. Repository docs and secret checks,
 ESLint (five pre-existing warnings), and a webpack production build including
 TypeScript all pass.
 
@@ -111,13 +123,17 @@ the application/RPC boundary, keep the additive columns and all confirmed
 snapshots, and ship a reviewed corrective migration. Before any adoption, when
 all three new columns are still empty and no candidate code has written them,
 the migration can be reverted by restoring the captured function definitions,
-dropping the two new triggers and private helpers, then dropping the three
+dropping the three new triggers and private helpers, then dropping the three
 columns. Never drop populated columns or restore the old functions after
 confirmed dispensing-set rows exist.
 
 ## Remaining gates
 
-- Independent review by the original parent Codex task.
-- Exact candidate commit and content SHA.
-- Any push, PR, remote Supabase apply, deployment, or authenticated remote smoke
-  requires a separate authorization and the repository release gates.
+- Independent review by the original parent Codex task and exact candidate SHA.
+- Push, PR Preview Ready, exact-head manual Release Check, and scoped Preview
+  smoke under the expanded delivery request.
+- A separate, explicit remote Supabase migration apply packet with target,
+  preserved-data preflight, apply order, verification, and forward recovery.
+- Exact-candidate `main`/Production approval after PR, checks, Preview,
+  Production comparison, smoke path, rollback candidate, and stop conditions
+  are all known. A changed PR head invalidates that approval packet.

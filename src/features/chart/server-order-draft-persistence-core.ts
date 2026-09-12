@@ -71,6 +71,7 @@ export type ChartOrderRuntimeRow = {
   sourceSetRevisionItemId: string | null;
   workspaceCatalogItemId: string | null;
   workspaceCatalogRevision: number | null;
+  dispensingAuthoritySnapshot?: Record<string, unknown>;
   dispensingLineage: DispensingOrderLineageSnapshot | null;
   quantity: number;
   quantitySource: ChartOrderReadbackQuantitySource;
@@ -1422,6 +1423,7 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     sourceSetRevisionItemId: row.sourceSetRevisionItemId === null ? null : typeof row.sourceSetRevisionItemId === "string" ? row.sourceSetRevisionItemId : null,
     workspaceCatalogItemId: row.workspaceCatalogItemId === null ? null : typeof row.workspaceCatalogItemId === "string" ? row.workspaceCatalogItemId : null,
     workspaceCatalogRevision: typeof row.workspaceCatalogRevision === "number" ? row.workspaceCatalogRevision : null,
+    dispensingAuthoritySnapshot: objectValue("dispensingAuthoritySnapshot"),
     dispensingLineage: mapDispensingOrderLineageSnapshot(
       row.dispensingLineage ?? objectValue("appliedSnapshot").dispensingLineage,
     ) ?? null,

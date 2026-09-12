@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { CLINICAL_ORDER_FIELD_SCHEMAS } from "../src/features/chart/order-execution-domain";
+import { createSupabaseChartOrderDraftGateway } from "../src/features/chart/server-order-draft-persistence-core";
 import {
   createMockOrderCatalogGateway,
   createOrderPricingSnapshot,
@@ -207,4 +208,55 @@ test("dispensing detail contract requires clinician-entered prescription values 
   expect(required.every((field) => field.defaultValue === null)).toBe(true);
   expect(schema.defaultDestinationModule).toBe("dispensing");
   expect(schema.defaultExecutionMode).toBe("routed");
+});
+
+test("server draft readback retains dedicated set-child dispensing authority", async () => {
+  const authority = {
+    schemaVersion: 2,
+    calculationMode: "product_unit",
+    dispenseUnit: "tablet",
+    preparationPolicy: {
+      quantityScope: "course_total",
+      increment: 1,
+      roundingMode: "up",
+      displayPrecision: 0,
+    },
+  };
+  const gateway = createSupabaseChartOrderDraftGateway({
+    rpc: async () => ({
+      data: {
+        etag: "pr024-etag",
+        rows: [{
+          orderId: "02494000-0000-4000-8000-000000000001",
+          encounterId: "02490000-0000-4000-8000-000000000001",
+          rowType: "set_child",
+          orderType: "dispensing",
+          clinicalOrderType: "dispensing",
+          quantity: 1,
+          quantitySource: "fixed_one",
+          lineTotalSnapshot: 1000,
+          appliedSnapshot: {},
+          calculationOutputs: {
+            calculationStatus: "ready",
+            calculatedDispenseQuantity: 1,
+          },
+          dispensingAuthoritySnapshot: authority,
+          updatedAt: "2026-09-12T00:00:00.000Z",
+        }],
+      },
+      error: null,
+    }),
+  } as Parameters<typeof createSupabaseChartOrderDraftGateway>[0]);
+
+  const result = await gateway.readOrderDraft({
+    workspaceId: "clair-demo",
+    encounterId: "02490000-0000-4000-8000-000000000001",
+  });
+
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.rows[0]?.dispensingAuthoritySnapshot).toEqual(authority);
+  expect(result.rows[0]?.appliedSnapshot).not.toHaveProperty(
+    "planOrderAuthority",
+  );
 });

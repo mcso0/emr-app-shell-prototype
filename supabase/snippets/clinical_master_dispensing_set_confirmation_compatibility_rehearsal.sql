@@ -290,6 +290,11 @@ begin
     'pr024-dispensing-set', '02470000-0000-4000-8000-000000000001',
     'atomic', 'pr024-dispensing-set-compatible', 1, 1, true, true, 1,
     'fixed_one'
+  ), (
+    '02480000-0000-4000-8000-000000000002', 'clair-demo',
+    'pr024-dispensing-set', '02470000-0000-4000-8000-000000000001',
+    'atomic', 'den194-catalog-cbc', 1, 2, true, true, 1,
+    'fixed_one'
   );
 
   insert into public.encounters (
@@ -310,6 +315,10 @@ begin
     clinical_at
   ) values (
     '02492000-0000-4000-8000-000000000001', 'clair-demo',
+    '02490000-0000-4000-8000-000000000001',
+    '00000000-0000-4000-8000-000000000002', 'autosaved', now(), now()
+  ), (
+    '02492000-0000-4000-8000-000000000002', 'clair-demo',
     '02490000-0000-4000-8000-000000000001',
     '00000000-0000-4000-8000-000000000002', 'autosaved', now(), now()
   );
@@ -354,11 +363,32 @@ reset role;
 do $rpc_rehearsal$
 declare
   v_current jsonb;
+  v_base_payload jsonb;
   v_saved jsonb;
+  v_harmless jsonb;
+  v_missing_authority jsonb;
+  v_deselected jsonb;
+  v_removed jsonb;
   v_resaved jsonb;
+  v_reconfirmed jsonb;
+  v_reconfirmed_retry jsonb;
   v_confirmed jsonb;
+  v_confirmed_retry jsonb;
   v_child jsonb;
-  v_first_actual numeric;
+  v_override jsonb;
+  v_override_retry jsonb;
+  v_work_item public.order_fulfillment_work_items%rowtype;
+  v_execution_context jsonb;
+  v_performed jsonb;
+  v_performed_retry jsonb;
+  v_amended jsonb;
+  v_rerequested jsonb;
+  v_rerequested_retry jsonb;
+  v_state text;
+  v_message text;
+  v_constraint text;
+  v_performed_at timestamptz := now();
+  v_parent_revision integer;
 begin
   perform set_config(
     'request.jwt.claim.sub',
@@ -375,28 +405,30 @@ begin
   v_current := public.clair_get_chart_order_draft(
     'clair-demo', '02490000-0000-4000-8000-000000000001'
   );
-  v_saved := public.clair_save_chart_order_draft_for_chart(
-    'clair-demo',
-    '00000000-0000-4000-8000-000000000002',
-    '02490000-0000-4000-8000-000000000001',
-    '02492000-0000-4000-8000-000000000001',
-    jsonb_build_object(
-      'expectedEtag', v_current ->> 'etag',
-      'removedOrderIds', '[]'::jsonb,
-      'rows', jsonb_build_array(jsonb_build_object(
-        'rowType', 'set',
-        'orderId', '02491000-0000-4000-8000-000000000001',
-        'sourceSetId', 'pr024-dispensing-set',
-        'sourceSetRevisionId', '02470000-0000-4000-8000-000000000001',
-        'sourceSetRevisionNo', 1,
-        'selectionIntent', jsonb_build_object(
-          'items', jsonb_build_array(jsonb_build_object(
+  v_base_payload := jsonb_build_object(
+    'removedOrderIds', '[]'::jsonb,
+    'rows', jsonb_build_array(jsonb_build_object(
+      'rowType', 'set',
+      'orderId', '02491000-0000-4000-8000-000000000001',
+      'sourceSetId', 'pr024-dispensing-set',
+      'sourceSetRevisionId', '02470000-0000-4000-8000-000000000001',
+      'sourceSetRevisionNo', 1,
+      'selectionIntent', jsonb_build_object(
+        'items', jsonb_build_array(
+          jsonb_build_object(
             'revisionItemId', '02480000-0000-4000-8000-000000000001',
             'selected', true,
             'quantity', 1
-          ))
-        ),
-        'childInputs', jsonb_build_array(jsonb_build_object(
+          ),
+          jsonb_build_object(
+            'revisionItemId', '02480000-0000-4000-8000-000000000002',
+            'selected', true,
+            'quantity', 1
+          )
+        )
+      ),
+      'childInputs', jsonb_build_array(
+        jsonb_build_object(
           'revisionItemId', '02480000-0000-4000-8000-000000000001',
           'detailInputs', jsonb_build_object(
             'doseBasis', 'patient',
@@ -410,17 +442,35 @@ begin
           ),
           'detailSchemaVersion', 1,
           'priority', 'normal'
-        )),
-        'detailInputs', '{}'::jsonb,
-        'detailSchemaVersion', 1,
-        'priority', 'normal'
-      ))
-    )
+        ),
+        jsonb_build_object(
+          'revisionItemId', '02480000-0000-4000-8000-000000000002',
+          'detailInputs', jsonb_build_object(
+            'specimenType', 'blood',
+            'testPanel', 'PR-024 synthetic CBC',
+            'collectionCondition', 'PR-024 synthetic collection'
+          ),
+          'detailSchemaVersion', 1,
+          'priority', 'normal'
+        )
+      ),
+      'detailInputs', '{}'::jsonb,
+      'detailSchemaVersion', 1,
+      'priority', 'normal'
+    ))
+  );
+  v_saved := public.clair_save_chart_order_draft_for_chart(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    '02490000-0000-4000-8000-000000000001',
+    '02492000-0000-4000-8000-000000000001',
+    v_base_payload || jsonb_build_object('expectedEtag', v_current ->> 'etag')
   );
 
   select row.value into strict v_child
   from jsonb_array_elements(v_saved -> 'rows') row(value)
-  where row.value ->> 'rowType' = 'set_child';
+  where row.value ->> 'rowType' = 'set_child'
+    and row.value ->> 'clinicalOrderType' = 'dispensing';
 
   if v_child #>> '{calculationOutputs,calculationStatus}' <> 'ready'
     or v_child #>> '{calculationOutputs,actualDispenseQuantity}' <> '1'
@@ -430,9 +480,278 @@ begin
   then
     raise exception 'dispensing_set_initial_save_contract_failed';
   end if;
-  v_first_actual := (
-    v_child #>> '{calculationOutputs,actualDispenseQuantity}'
-  )::numeric;
+  v_override := public.clair_save_order_actual_dispense_override(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    (v_child ->> 'orderId')::uuid,
+    (v_child ->> 'updatedAt')::timestamptz,
+    3,
+    'PR-024 synthetic manual dispense override',
+    'pr024-dispensing-override-v1'
+  );
+  v_override_retry := public.clair_save_order_actual_dispense_override(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    (v_child ->> 'orderId')::uuid,
+    (v_child ->> 'updatedAt')::timestamptz,
+    3,
+    'PR-024 synthetic manual dispense override',
+    'pr024-dispensing-override-v1'
+  );
+  if v_override is distinct from v_override_retry then
+    raise exception 'dispensing_set_override_retry_not_idempotent';
+  end if;
+
+  v_current := public.clair_get_chart_order_draft(
+    'clair-demo', '02490000-0000-4000-8000-000000000001'
+  );
+  select row.value into strict v_child
+  from jsonb_array_elements(v_current -> 'rows') row(value)
+  where row.value ->> 'rowType' = 'set_child'
+    and row.value ->> 'clinicalOrderType' = 'dispensing';
+  if v_child #>> '{calculationOutputs,actualDispenseQuantity}' <> '3'
+    or v_child #>> '{calculationOutputs,actualDispenseSource}'
+      <> 'manual_override'
+  then
+    raise exception 'dispensing_set_override_not_persisted: %',
+      v_child -> 'calculationOutputs';
+  end if;
+
+  v_harmless := public.clair_save_chart_order_draft_for_chart(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    '02490000-0000-4000-8000-000000000001',
+    '02492000-0000-4000-8000-000000000001',
+    v_base_payload || jsonb_build_object('expectedEtag', v_current ->> 'etag')
+  );
+  select row.value into strict v_child
+  from jsonb_array_elements(v_harmless -> 'rows') row(value)
+  where row.value ->> 'rowType' = 'set_child'
+    and row.value ->> 'clinicalOrderType' = 'dispensing';
+  if v_child #>> '{calculationOutputs,actualDispenseQuantity}' <> '3'
+    or v_child #>> '{calculationOutputs,actualDispenseSource}'
+      <> 'manual_override'
+    or coalesce(
+      (v_child #>> '{calculationOutputs,requiresReconfirmation}')::boolean,
+      false
+    )
+  then
+    raise exception 'dispensing_set_harmless_resave_lost_override: %',
+      v_child -> 'calculationOutputs';
+  end if;
+
+  begin
+    perform public.clair_save_chart_order_draft_for_chart(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      '02490000-0000-4000-8000-000000000001',
+      '02492000-0000-4000-8000-000000000002',
+      v_base_payload || jsonb_build_object(
+        'expectedEtag', v_harmless ->> 'etag'
+      )
+    );
+    raise exception 'dispensing_set_cross_chart_mutation_allowed';
+  exception when others then
+    get stacked diagnostics
+      v_state = returned_sqlstate,
+      v_message = message_text;
+    if v_state <> 'P0001' or v_message <> 'order_chart_mismatch' then
+      raise;
+    end if;
+  end;
+
+  begin
+    execute 'reset role';
+    update public.order_catalog_items
+    set default_detail_inputs = default_detail_inputs - 'planOrderAuthority'
+    where workspace_id = 'clair-demo'
+      and id = 'pr024-dispensing-set-compatible';
+    execute 'set local role authenticated';
+    v_missing_authority := public.clair_save_chart_order_draft_for_chart(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      '02490000-0000-4000-8000-000000000001',
+      '02492000-0000-4000-8000-000000000001',
+      v_base_payload || jsonb_build_object(
+        'expectedEtag', v_harmless ->> 'etag'
+      )
+    );
+    select row.value into strict v_child
+    from jsonb_array_elements(v_missing_authority -> 'rows') row(value)
+    where row.value ->> 'clinicalOrderType' = 'dispensing';
+    if v_child #>> '{calculationOutputs,calculationError}'
+        <> 'configuration_missing'
+    then
+      raise exception 'dispensing_set_missing_authority_not_blocked';
+    end if;
+    begin
+      perform public.clair_confirm_chart_order_candidates_for_chart(
+        'clair-demo',
+        '00000000-0000-4000-8000-000000000002',
+        '02490000-0000-4000-8000-000000000001',
+        '02492000-0000-4000-8000-000000000001',
+        array['02491000-0000-4000-8000-000000000001'::uuid],
+        v_missing_authority ->> 'etag',
+        'pr024-missing-authority-confirm'
+      );
+      raise exception 'dispensing_set_missing_authority_confirmed';
+    exception when others then
+      get stacked diagnostics
+        v_state = returned_sqlstate,
+        v_message = message_text;
+      if v_state <> 'P0001'
+        or v_message <> 'actual_dispense_confirmation_blocked'
+      then
+        raise;
+      end if;
+    end;
+    raise exception 'rollback_missing_authority_probe' using errcode = 'P0001';
+  exception when sqlstate 'P0001' then
+    if sqlerrm <> 'rollback_missing_authority_probe' then
+      raise;
+    end if;
+  end;
+
+  begin
+    execute 'reset role';
+    begin
+      update public.order_catalog_items
+      set default_detail_inputs = jsonb_set(
+        default_detail_inputs,
+        '{planOrderAuthority}',
+        '{"schemaVersion":2}'::jsonb,
+        true
+      )
+      where workspace_id = 'clair-demo'
+        and id = 'pr024-dispensing-set-compatible';
+      raise exception 'dispensing_set_invalid_authority_accepted';
+    exception when check_violation then
+      get stacked diagnostics v_constraint = constraint_name;
+      if v_constraint <> 'order_catalog_items_default_detail_inputs_object_check'
+      then
+        raise;
+      end if;
+    end;
+    execute 'set local role authenticated';
+    raise exception 'rollback_invalid_authority_probe' using errcode = 'P0001';
+  exception when sqlstate 'P0001' then
+    if sqlerrm <> 'rollback_invalid_authority_probe' then
+      raise;
+    end if;
+  end;
+
+  -- A deselected child and a removed root both cancel root/child rows in one
+  -- B3 statement. Each probe rolls itself back so the main confirmation path
+  -- continues from the same saved draft.
+  begin
+    v_deselected := public.clair_save_chart_order_draft_for_chart(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      '02490000-0000-4000-8000-000000000001',
+      '02492000-0000-4000-8000-000000000001',
+      jsonb_set(
+        jsonb_set(
+          v_base_payload,
+          '{rows,0,selectionIntent,items,0,selected}',
+          'false'::jsonb
+        ),
+        '{rows,0,childInputs}',
+        jsonb_build_array(v_base_payload #> '{rows,0,childInputs,1}')
+      ) || jsonb_build_object('expectedEtag', v_harmless ->> 'etag')
+    );
+    if exists (
+      select 1
+      from jsonb_array_elements(v_deselected -> 'rows') row(value)
+      where row.value ->> 'clinicalOrderType' = 'dispensing'
+    ) or not exists (
+      select 1
+      from jsonb_array_elements(v_deselected -> 'rows') row(value)
+      where row.value ->> 'clinicalOrderType' = 'clinical_lab'
+    ) or exists (
+      select 1
+      from jsonb_array_elements(v_deselected -> 'rows') row(value)
+      where row.value ->> 'rowType' = 'set'
+        and row.value -> 'dispensingLineage' <> '{}'::jsonb
+    ) then
+      raise exception 'dispensing_set_deselection_contract_failed: %',
+        v_deselected -> 'rows';
+    end if;
+    perform public.clair_save_chart_order_draft_for_chart(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      '02490000-0000-4000-8000-000000000001',
+      '02492000-0000-4000-8000-000000000001',
+      jsonb_set(
+        jsonb_set(
+          v_base_payload,
+          '{rows,0,selectionIntent,items,0,selected}',
+          'false'::jsonb
+        ),
+        '{rows,0,childInputs}',
+        jsonb_build_array(v_base_payload #> '{rows,0,childInputs,1}')
+      ) || jsonb_build_object('expectedEtag', v_deselected ->> 'etag')
+    );
+    raise exception 'rollback_deselection_probe' using errcode = 'P0001';
+  exception when sqlstate 'P0001' then
+    if sqlerrm <> 'rollback_deselection_probe' then
+      raise;
+    end if;
+  end;
+
+  begin
+    v_removed := public.clair_save_chart_order_draft_for_chart(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      '02490000-0000-4000-8000-000000000001',
+      '02492000-0000-4000-8000-000000000001',
+      jsonb_build_object(
+        'expectedEtag', v_harmless ->> 'etag',
+        'removedOrderIds', jsonb_build_array(
+          '02491000-0000-4000-8000-000000000001'
+        ),
+        'rows', '[]'::jsonb
+      )
+    );
+    if exists (
+      select 1
+      from jsonb_array_elements(v_removed -> 'rows') row(value)
+      where row.value ->> 'orderId' =
+          '02491000-0000-4000-8000-000000000001'
+        or row.value ->> 'parentOrderId' =
+          '02491000-0000-4000-8000-000000000001'
+    ) then
+      raise exception 'dispensing_set_removal_contract_failed: %',
+        v_removed -> 'rows';
+    end if;
+    begin
+      perform public.clair_save_chart_order_draft_for_chart(
+        'clair-demo',
+        '00000000-0000-4000-8000-000000000002',
+        '02490000-0000-4000-8000-000000000001',
+        '02492000-0000-4000-8000-000000000001',
+        jsonb_build_object(
+          'expectedEtag', v_removed ->> 'etag',
+          'removedOrderIds', jsonb_build_array(
+            '02491000-0000-4000-8000-000000000001'
+          ),
+          'rows', '[]'::jsonb
+        )
+      );
+      raise exception 'dispensing_set_removal_retry_unexpectedly_applied';
+    exception when others then
+      get stacked diagnostics
+        v_state = returned_sqlstate,
+        v_message = message_text;
+      if v_state <> 'P0001' or v_message <> 'order_removal_unavailable' then
+        raise;
+      end if;
+    end;
+    raise exception 'rollback_removal_probe' using errcode = 'P0001';
+  exception when sqlstate 'P0001' then
+    if sqlerrm <> 'rollback_removal_probe' then
+      raise;
+    end if;
+  end;
 
   v_resaved := public.clair_save_chart_order_draft_for_chart(
     'clair-demo',
@@ -440,7 +759,7 @@ begin
     '02490000-0000-4000-8000-000000000001',
     '02492000-0000-4000-8000-000000000001',
     jsonb_build_object(
-      'expectedEtag', v_saved ->> 'etag',
+      'expectedEtag', v_harmless ->> 'etag',
       'removedOrderIds', '[]'::jsonb,
       'rows', jsonb_build_array(jsonb_build_object(
         'rowType', 'set',
@@ -449,27 +768,46 @@ begin
         'sourceSetRevisionId', '02470000-0000-4000-8000-000000000001',
         'sourceSetRevisionNo', 1,
         'selectionIntent', jsonb_build_object(
-          'items', jsonb_build_array(jsonb_build_object(
-            'revisionItemId', '02480000-0000-4000-8000-000000000001',
-            'selected', true,
-            'quantity', 1
-          ))
+          'items', jsonb_build_array(
+            jsonb_build_object(
+              'revisionItemId', '02480000-0000-4000-8000-000000000001',
+              'selected', true,
+              'quantity', 1
+            ),
+            jsonb_build_object(
+              'revisionItemId', '02480000-0000-4000-8000-000000000002',
+              'selected', true,
+              'quantity', 1
+            )
+          )
         ),
-        'childInputs', jsonb_build_array(jsonb_build_object(
-          'revisionItemId', '02480000-0000-4000-8000-000000000001',
-          'detailInputs', jsonb_build_object(
-            'doseBasis', 'patient',
-            'dose', 2,
-            'doseUnit', 'tablet',
-            'route', 'PO',
-            'frequency', 'once',
-            'durationDays', 1,
-            'totalQuantity', 2,
-            'totalQuantityUnit', 'tablet'
+        'childInputs', jsonb_build_array(
+          jsonb_build_object(
+            'revisionItemId', '02480000-0000-4000-8000-000000000001',
+            'detailInputs', jsonb_build_object(
+              'doseBasis', 'patient',
+              'dose', 2,
+              'doseUnit', 'tablet',
+              'route', 'PO',
+              'frequency', 'once',
+              'durationDays', 1,
+              'totalQuantity', 2,
+              'totalQuantityUnit', 'tablet'
+            ),
+            'detailSchemaVersion', 1,
+            'priority', 'normal'
           ),
-          'detailSchemaVersion', 1,
-          'priority', 'normal'
-        )),
+          jsonb_build_object(
+            'revisionItemId', '02480000-0000-4000-8000-000000000002',
+            'detailInputs', jsonb_build_object(
+              'specimenType', 'blood',
+              'testPanel', 'PR-024 synthetic CBC',
+              'collectionCondition', 'PR-024 synthetic collection'
+            ),
+            'detailSchemaVersion', 1,
+            'priority', 'normal'
+          )
+        ),
         'detailInputs', '{}'::jsonb,
         'detailSchemaVersion', 1,
         'priority', 'normal'
@@ -479,19 +817,76 @@ begin
 
   select row.value into strict v_child
   from jsonb_array_elements(v_resaved -> 'rows') row(value)
-  where row.value ->> 'rowType' = 'set_child';
+  where row.value ->> 'rowType' = 'set_child'
+    and row.value ->> 'clinicalOrderType' = 'dispensing';
 
   if (v_child #>> '{calculationOutputs,actualDispenseQuantity}')::numeric
-      is distinct from v_first_actual * 2
+      is distinct from 3
+    or v_child #>> '{calculationOutputs,actualDispenseSource}'
+      <> 'manual_override'
+    or coalesce(
+      (v_child #>> '{calculationOutputs,requiresReconfirmation}')::boolean,
+      false
+    ) is not true
     or (v_child -> 'setPricingCalculationOutputs')
       is distinct from (
         select row.value -> 'setPricingCalculationOutputs'
         from jsonb_array_elements(v_saved -> 'rows') row(value)
         where row.value ->> 'rowType' = 'set_child'
+          and row.value ->> 'clinicalOrderType' = 'dispensing'
       )
   then
     raise exception 'dispensing_set_recalculation_contract_failed';
   end if;
+
+  begin
+    perform public.clair_confirm_chart_order_candidates_for_chart(
+      'clair-demo',
+      '00000000-0000-4000-8000-000000000002',
+      '02490000-0000-4000-8000-000000000001',
+      '02492000-0000-4000-8000-000000000001',
+      array['02491000-0000-4000-8000-000000000001'::uuid],
+      v_resaved ->> 'etag',
+      'pr024-stale-dispense-confirm'
+    );
+    raise exception 'dispensing_set_stale_override_confirmed';
+  exception when others then
+    get stacked diagnostics
+      v_state = returned_sqlstate,
+      v_message = message_text;
+    if v_state <> 'P0001'
+      or v_message <> 'actual_dispense_confirmation_blocked'
+    then
+      raise;
+    end if;
+  end;
+
+  v_reconfirmed := public.clair_save_order_actual_dispense_override(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    (v_child ->> 'orderId')::uuid,
+    (v_child ->> 'updatedAt')::timestamptz,
+    3,
+    'PR-024 synthetic override reconfirmation',
+    'pr024-dispensing-reconfirm-v1'
+  );
+  v_reconfirmed_retry := public.clair_save_order_actual_dispense_override(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    (v_child ->> 'orderId')::uuid,
+    (v_child ->> 'updatedAt')::timestamptz,
+    3,
+    'PR-024 synthetic override reconfirmation',
+    'pr024-dispensing-reconfirm-v1'
+  );
+  if v_reconfirmed is distinct from v_reconfirmed_retry
+    or coalesce((v_reconfirmed ->> 'requiresReconfirmation')::boolean, true)
+  then
+    raise exception 'dispensing_set_override_reconfirmation_failed';
+  end if;
+  v_resaved := public.clair_get_chart_order_draft(
+    'clair-demo', '02490000-0000-4000-8000-000000000001'
+  );
 
   v_confirmed := public.clair_confirm_chart_order_candidates_for_chart(
     'clair-demo',
@@ -507,6 +902,160 @@ begin
     and v_confirmed ->> 'status' not in ('applied', 'already_applied')
   then
     raise exception 'dispensing_set_confirmation_rpc_failed';
+  end if;
+  v_confirmed_retry := public.clair_confirm_chart_order_candidates_for_chart(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    '02490000-0000-4000-8000-000000000001',
+    '02492000-0000-4000-8000-000000000001',
+    array['02491000-0000-4000-8000-000000000001'::uuid],
+    v_resaved ->> 'etag',
+    'pr024-dispensing-set-confirm-v1'
+  );
+  if v_confirmed_retry ->> 'commandStatus' not in ('applied', 'already_applied')
+    and v_confirmed_retry ->> 'status' not in ('applied', 'already_applied')
+  then
+    raise exception 'dispensing_set_confirmation_retry_failed';
+  end if;
+
+  execute 'reset role';
+  select work_item.* into strict v_work_item
+  from public.order_fulfillment_work_items work_item
+  where work_item.order_id = (v_child ->> 'orderId')::uuid;
+  execute 'set local role authenticated';
+  perform public.clair_transition_fulfillment_work_item(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    v_work_item.id,
+    'start',
+    v_work_item.row_revision,
+    '02493000-0000-4000-8000-000000000001',
+    null,
+    null,
+    null
+  );
+  execute 'reset role';
+  select * into strict v_work_item
+  from public.order_fulfillment_work_items
+  where id = v_work_item.id;
+  execute 'set local role authenticated';
+  v_execution_context := public.clair_get_order_execution_context(
+    'clair-demo', v_work_item.id
+  );
+  v_performed := public.clair_record_order_execution_result(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    v_work_item.id,
+    v_work_item.row_revision,
+    v_execution_context ->> 'planSha256',
+    0,
+    '02493000-0000-4000-8000-000000000002',
+    v_performed_at,
+    jsonb_build_object(
+      'preparedQuantity', 3,
+      'preparedUnit', 'tablet'
+    ),
+    null,
+    null
+  );
+  v_performed_retry := public.clair_record_order_execution_result(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    v_work_item.id,
+    v_work_item.row_revision,
+    v_execution_context ->> 'planSha256',
+    0,
+    '02493000-0000-4000-8000-000000000002',
+    v_performed_at,
+    jsonb_build_object(
+      'preparedQuantity', 3,
+      'preparedUnit', 'tablet'
+    ),
+    null,
+    null
+  );
+  if v_performed is distinct from v_performed_retry
+    or v_performed ->> 'status' <> 'completed'
+  then
+    raise exception 'dispensing_set_performance_retry_failed';
+  end if;
+
+  v_amended := public.clair_record_order_execution_result(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    v_work_item.id,
+    (v_performed ->> 'workItemRevision')::bigint,
+    v_execution_context ->> 'planSha256',
+    1,
+    '02493000-0000-4000-8000-000000000003',
+    v_performed_at + interval '1 second',
+    jsonb_build_object(
+      'preparedQuantity', 3,
+      'preparedUnit', 'tablet'
+    ),
+    null,
+    'PR-024 synthetic result amendment'
+  );
+  if jsonb_array_length(v_amended -> 'results') <> 2 then
+    raise exception 'dispensing_set_execution_amendment_failed';
+  end if;
+
+  execute 'reset role';
+  update public.order_tasks task
+  set status = 'returned',
+      returned_at = now(),
+      row_revision = row_revision + 1,
+      updated_at = now()
+  from public.orders child
+  where task.workspace_id = child.workspace_id
+    and task.order_id = child.id
+    and task.attempt_no = 1
+    and child.parent_chart_order_line_id =
+      '02491000-0000-4000-8000-000000000001'
+    and child.clinical_order_type = 'clinical_lab'
+    and task.status not in ('complete', 'returned', 'cancelled');
+  update public.order_fulfillment_work_items work_item
+  set status = 'returned',
+      returned_at = now(),
+      reason = 'PR-024 synthetic re-request setup',
+      row_revision = row_revision + 1,
+      updated_at = now()
+  from public.orders child
+  where work_item.workspace_id = child.workspace_id
+    and work_item.order_id = child.id
+    and work_item.task_attempt_no = 1
+    and child.parent_chart_order_line_id =
+      '02491000-0000-4000-8000-000000000001'
+    and child.clinical_order_type = 'clinical_lab'
+    and work_item.status not in ('completed', 'returned', 'cancelled');
+  select revision_no into strict v_parent_revision
+  from public.orders
+  where id = '02491000-0000-4000-8000-000000000001';
+  execute 'set local role authenticated';
+  v_rerequested := public.clair_mutate_chart_order_execution_for_chart(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    '02492000-0000-4000-8000-000000000001',
+    '02491000-0000-4000-8000-000000000001',
+    're_request',
+    'PR-024 synthetic set re-request',
+    v_parent_revision,
+    '{}'::jsonb,
+    'pr024-dispensing-set-rerequest-v1'
+  );
+  v_rerequested_retry := public.clair_mutate_chart_order_execution_for_chart(
+    'clair-demo',
+    '00000000-0000-4000-8000-000000000002',
+    '02492000-0000-4000-8000-000000000001',
+    '02491000-0000-4000-8000-000000000001',
+    're_request',
+    'PR-024 synthetic set re-request',
+    v_parent_revision,
+    '{}'::jsonb,
+    'pr024-dispensing-set-rerequest-v1'
+  );
+  if v_rerequested is distinct from v_rerequested_retry then
+    raise exception 'dispensing_set_rerequest_retry_failed';
   end if;
 end;
 $rpc_rehearsal$;
@@ -528,6 +1077,7 @@ begin
   select * into strict v_child
   from public.orders
   where parent_chart_order_line_id = v_parent.id
+    and clinical_order_type = 'dispensing'
     and status <> 'cancelled';
 
   if not private.clair_is_set_pricing_calculation_outputs(
@@ -564,17 +1114,82 @@ begin
       from public.order_tasks task
       where task.workspace_id = v_child.workspace_id
         and task.order_id = v_child.id
-        and task.effective_snapshot is not distinct from v_child.confirmed_snapshot
+        and task.attempt_no = 2
+        and task.effective_snapshot -> 'setPricingCalculationOutputs'
+          is not distinct from
+            v_child.confirmed_snapshot -> 'setPricingCalculationOutputs'
+        and task.effective_snapshot -> 'dispensingAuthoritySnapshot'
+          is not distinct from
+            v_child.confirmed_snapshot -> 'dispensingAuthoritySnapshot'
+        and task.effective_snapshot -> 'dispensingLineage'
+          is not distinct from v_child.confirmed_snapshot -> 'dispensingLineage'
+        and task.effective_snapshot -> 'calculationOutputs'
+          is not distinct from
+            v_child.confirmed_snapshot -> 'calculationOutputs'
+    )
+    or not exists (
+      select 1
+      from public.order_fulfillment_work_items work_item
+      join public.order_tasks task
+        on task.workspace_id = work_item.workspace_id
+       and task.id = work_item.task_id
+       and task.attempt_no = work_item.task_attempt_no
+      where work_item.workspace_id = v_child.workspace_id
+        and work_item.order_id = v_child.id
+        and work_item.task_attempt_no = 2
+        and work_item.source_snapshot is not distinct from task.effective_snapshot
     )
     or not exists (
       select 1
       from public.order_billing_candidates candidate
       where candidate.workspace_id = v_child.workspace_id
         and candidate.order_id = v_child.id
+        and candidate.quantity = 3
+        and candidate.unit_price = 1000
+        and candidate.amount = 3000
+        and candidate.billing_unit_snapshot = 'tablet'
         and candidate.source_snapshot is not distinct from v_child.confirmed_snapshot
     )
   then
-    raise exception 'dispensing_set_confirmation_snapshot_failed';
+    raise exception 'dispensing_set_confirmation_snapshot_failed: tasks=%, work_items=%, candidates=%',
+      (
+        select jsonb_agg(jsonb_build_object(
+          'attemptNo', task.attempt_no,
+          'status', task.status,
+          'authorityMatches', task.effective_snapshot
+            -> 'dispensingAuthoritySnapshot' is not distinct from
+              v_child.confirmed_snapshot -> 'dispensingAuthoritySnapshot'
+        ) order by task.attempt_no)
+        from public.order_tasks task
+        where task.workspace_id = v_child.workspace_id
+          and task.order_id = v_child.id
+      ),
+      (
+        select jsonb_agg(jsonb_build_object(
+          'attemptNo', work_item.task_attempt_no,
+          'status', work_item.status,
+          'sourceKeys', (
+            select jsonb_agg(key order by key)
+            from jsonb_object_keys(work_item.source_snapshot) key
+          )
+        ) order by work_item.task_attempt_no)
+        from public.order_fulfillment_work_items work_item
+        where work_item.workspace_id = v_child.workspace_id
+          and work_item.order_id = v_child.id
+      ),
+      (
+        select jsonb_agg(jsonb_build_object(
+          'quantity', candidate.quantity,
+          'unitPrice', candidate.unit_price,
+          'amount', candidate.amount,
+          'billingUnit', candidate.billing_unit_snapshot,
+          'snapshotMatches',
+            candidate.source_snapshot is not distinct from v_child.confirmed_snapshot
+        ))
+        from public.order_billing_candidates candidate
+        where candidate.workspace_id = v_child.workspace_id
+          and candidate.order_id = v_child.id
+      );
   end if;
 
   begin

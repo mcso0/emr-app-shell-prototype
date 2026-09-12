@@ -91,6 +91,51 @@ revoke all on function private.clair_b3_pricing_calculation_outputs(public.order
   private.clair_order_dispensing_lineage(public.orders)
   from public, anon, authenticated, service_role;
 
+-- The B3 writer uses INSERT ... ON CONFLICT. Its BEFORE INSERT projection has
+-- already replaced the excluded child's nine-key price object by the time the
+-- conflict UPDATE runs. Preserve the target's operational calculation for the
+-- UPDATE triggers, while carrying the server-captured source contracts from
+-- the excluded row. The row-type guards leave individual and root writes exact.
+do $patch_b3_writer_conflict_update$
+declare
+  v_definition text;
+  v_anchor text := 'calculation_outputs = excluded.calculation_outputs,';
+begin
+  v_definition := pg_get_functiondef(
+    'public.clair_save_chart_order_draft_phase2_base(text,text,uuid,jsonb)'::regprocedure
+  );
+  if (
+    length(v_definition) - length(replace(v_definition, v_anchor, ''))
+  ) / length(v_anchor) <> 3 then
+    raise exception 'dispensing_set_b3_writer_anchor_drift';
+  end if;
+  execute replace(v_definition, v_anchor, $replacement$calculation_outputs = case
+          when excluded.row_type = 'set_child'
+            and excluded.clinical_order_type = 'dispensing'
+            and not private.clair_is_set_pricing_calculation_outputs(
+              orders.calculation_outputs
+            )
+            then orders.calculation_outputs
+          else excluded.calculation_outputs
+        end,
+        set_pricing_calculation_outputs = case
+          when excluded.row_type = 'set_child'
+            then excluded.set_pricing_calculation_outputs
+          else orders.set_pricing_calculation_outputs
+        end,
+        dispensing_authority_snapshot = case
+          when excluded.row_type = 'set_child'
+            then excluded.dispensing_authority_snapshot
+          else orders.dispensing_authority_snapshot
+        end,
+        dispensing_lineage_snapshot = case
+          when excluded.row_type = 'set_child'
+            then excluded.dispensing_lineage_snapshot
+          else orders.dispensing_lineage_snapshot
+        end,$replacement$);
+end;
+$patch_b3_writer_conflict_update$;
+
 create function private.clair_capture_set_dispensing_contracts()
 returns trigger
 language plpgsql
@@ -100,21 +145,6 @@ as $function$
 declare
   v_authority jsonb;
 begin
-  if tg_op = 'UPDATE'
-    and old.order_confirmation_status not in ('draft', 'pending')
-    and (
-      new.set_pricing_calculation_outputs
-        is distinct from old.set_pricing_calculation_outputs
-      or new.dispensing_authority_snapshot
-        is distinct from old.dispensing_authority_snapshot
-      or new.dispensing_lineage_snapshot
-        is distinct from old.dispensing_lineage_snapshot
-    )
-  then
-    raise exception 'confirmed_dispensing_set_contract_immutable'
-      using errcode = '55000';
-  end if;
-
   if new.row_type = 'set_child'
     and new.applied_snapshot_schema_version = 1
     and private.clair_is_set_pricing_calculation_outputs(
@@ -136,7 +166,42 @@ begin
         raise exception 'catalog_authority_invalid' using errcode = '22023';
       end if;
       new.dispensing_authority_snapshot := coalesce(v_authority, '{}'::jsonb);
+      if tg_op = 'UPDATE'
+        and not private.clair_is_set_pricing_calculation_outputs(
+          old.calculation_outputs
+        )
+      then
+        -- The B3 writer supplies a fresh price envelope on every set save.
+        -- Preserve the prior operational result so its fingerprint logic can
+        -- retain a harmless manual override or require reconfirmation after a
+        -- clinically relevant input change.
+        new.calculation_outputs := old.calculation_outputs;
+      end if;
     end if;
+  end if;
+
+  if tg_op = 'UPDATE'
+    and old.order_confirmation_status not in ('draft', 'pending')
+    and (
+      new.set_pricing_calculation_outputs
+        is distinct from old.set_pricing_calculation_outputs
+      or new.dispensing_authority_snapshot
+        is distinct from old.dispensing_authority_snapshot
+      or new.dispensing_lineage_snapshot
+        is distinct from old.dispensing_lineage_snapshot
+    )
+    and not (
+      old.row_type = 'set'
+      and old.order_confirmation_status = 'cancelled'
+      and old.confirmed_snapshot = '{}'::jsonb
+      and new.set_pricing_calculation_outputs
+        is not distinct from old.set_pricing_calculation_outputs
+      and new.dispensing_authority_snapshot
+        is not distinct from old.dispensing_authority_snapshot
+    )
+  then
+    raise exception 'confirmed_dispensing_set_contract_immutable'
+      using errcode = '55000';
   end if;
 
   return new;
@@ -340,13 +405,6 @@ begin
 
   v_definition := replace(v_definition, v_clear_anchor, $replacement$      if new.row_type = 'set_child' then
         new.dispensing_lineage_snapshot := '{}'::jsonb;
-        perform private.clair_sync_set_dispensing_lineage_copy(
-          new.workspace_id,
-          new.parent_chart_order_line_id,
-          new.source_set_revision_item_id,
-          '{}'::jsonb,
-          new.status
-        );
       else
         new.applied_snapshot := coalesce(new.applied_snapshot, '{}'::jsonb)
           - 'dispensingLineage';
@@ -354,13 +412,6 @@ begin
 
   v_definition := replace(v_definition, v_write_anchor, $replacement$    if new.row_type = 'set_child' then
       new.dispensing_lineage_snapshot := v_lineage;
-      perform private.clair_sync_set_dispensing_lineage_copy(
-        new.workspace_id,
-        new.parent_chart_order_line_id,
-        new.source_set_revision_item_id,
-        v_lineage,
-        new.status
-      );
     else
       new.applied_snapshot := coalesce(new.applied_snapshot, '{}'::jsonb)
         || jsonb_build_object('dispensingLineage', v_lineage);
@@ -394,6 +445,79 @@ begin
   execute v_definition;
 end;
 $patch_dispensing_lineage$;
+
+-- Propagate the child copy only after the outer statement finishes updating
+-- its root and children. Updating a sibling target from the child BEFORE
+-- trigger conflicts with the B3 set-removal CTE when both rows are cancelled.
+create function private.clair_sync_set_dispensing_lineage_after()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+declare
+  v_old_active boolean := false;
+  v_new_active boolean := false;
+  v_source_changed boolean := false;
+begin
+  if tg_op = 'UPDATE' then
+    v_old_active := old.row_type = 'set_child'
+      and old.clinical_order_type = 'dispensing'
+      and old.status <> 'cancelled';
+    v_source_changed := new.workspace_id is distinct from old.workspace_id
+      or new.parent_chart_order_line_id
+        is distinct from old.parent_chart_order_line_id
+      or new.source_set_revision_item_id
+        is distinct from old.source_set_revision_item_id;
+  end if;
+
+  v_new_active := new.row_type = 'set_child'
+    and new.clinical_order_type = 'dispensing'
+    and new.status <> 'cancelled';
+
+  -- A confirmed/cancelled order retains the source copy frozen at confirmation.
+  -- Only a mutable draft can remove or move its root-map entry.
+  if v_old_active
+    and old.order_confirmation_status in ('draft', 'pending')
+    and (not v_new_active or v_source_changed)
+  then
+    perform private.clair_sync_set_dispensing_lineage_copy(
+      old.workspace_id,
+      old.parent_chart_order_line_id,
+      old.source_set_revision_item_id,
+      '{}'::jsonb,
+      'cancelled'
+    );
+  end if;
+
+  if v_new_active
+    and (
+      tg_op = 'INSERT'
+      or not v_old_active
+      or v_source_changed
+      or new.dispensing_lineage_snapshot
+        is distinct from old.dispensing_lineage_snapshot
+    )
+  then
+    perform private.clair_sync_set_dispensing_lineage_copy(
+      new.workspace_id,
+      new.parent_chart_order_line_id,
+      new.source_set_revision_item_id,
+      new.dispensing_lineage_snapshot,
+      new.status
+    );
+  end if;
+
+  return new;
+end;
+$function$;
+
+revoke all on function private.clair_sync_set_dispensing_lineage_after()
+  from public, anon, authenticated, service_role;
+
+create trigger orders_zz_dispensing_set_lineage_copy_trg
+after insert or update on public.orders
+for each row execute function private.clair_sync_set_dispensing_lineage_after();
 
 -- Freeze both source contracts into the same confirmation snapshot consumed by
 -- tasks, fulfillment work items, billing candidates, and audit events.
@@ -434,6 +558,85 @@ begin
     end$replacement$);
 end;
 $patch_confirmation_snapshot$;
+
+-- Candidate billing is derived after the base confirmation has frozen the
+-- child source snapshot. Teach both the candidate trigger and the plan-order
+-- confirmation wrapper to read the dedicated set-child authority without
+-- copying it back into the exact B3 applied snapshot.
+create or replace function private.clair_snapshot_order_billing_authority()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, private
+as $function$
+declare
+  v_authority jsonb := coalesce(
+    new.source_snapshot -> 'dispensingAuthoritySnapshot',
+    new.source_snapshot -> 'planOrderAuthority',
+    new.source_snapshot #> '{appliedSnapshot,planOrderAuthority}',
+    '{}'::jsonb
+  );
+  v_legacy_amount_basis text := coalesce(
+    nullif(new.source_snapshot ->> 'appliedAmountBasis', ''),
+    nullif(new.source_snapshot ->> 'amountBasis', '')
+  );
+begin
+  new.price_basis_snapshot := coalesce(
+    new.price_basis_snapshot,
+    nullif(v_authority ->> 'priceBasis', ''),
+    case v_legacy_amount_basis
+      when 'fixed_order_price' then 'per_order'
+      when 'per_frequency' then 'per_administration'
+      when 'per_kg' then 'per_kg'
+      when 'set_fixed_price' then 'fixed_set'
+      else null
+    end
+  );
+  new.billing_unit_snapshot := coalesce(
+    new.billing_unit_snapshot,
+    nullif(v_authority ->> 'billingUnit', '')
+  );
+  new.tax_class_snapshot := coalesce(
+    new.tax_class_snapshot,
+    nullif(v_authority ->> 'taxClass', ''),
+    nullif(new.source_snapshot ->> 'taxType', '')
+  );
+  new.set_billing_owner_snapshot := coalesce(
+    new.set_billing_owner_snapshot,
+    nullif(v_authority ->> 'setBillingOwner', '')
+  );
+  new.set_amount_strategy_snapshot := coalesce(
+    new.set_amount_strategy_snapshot,
+    nullif(v_authority ->> 'setAmountStrategy', '')
+  );
+  return new;
+end;
+$function$;
+
+revoke all on function private.clair_snapshot_order_billing_authority()
+  from public, anon, authenticated, service_role;
+
+do $patch_confirmation_billing_authority$
+declare
+  v_definition text;
+  v_anchor text :=
+    'orders.applied_snapshot #>> ''{planOrderAuthority,priceBasis}''';
+begin
+  v_definition := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_origin_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  if (
+    length(v_definition) - length(replace(v_definition, v_anchor, ''))
+  ) / length(v_anchor) <> 4 then
+    raise exception 'dispensing_set_confirmation_billing_anchor_drift';
+  end if;
+  execute replace(
+    v_definition,
+    v_anchor,
+    'private.clair_order_dispensing_authority(orders) ->> ''priceBasis'''
+  );
+end;
+$patch_confirmation_billing_authority$;
 
 create or replace function private.clair_b3_runtime_row_json(p_order public.orders)
 returns jsonb

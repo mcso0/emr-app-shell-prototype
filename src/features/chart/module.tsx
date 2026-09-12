@@ -347,7 +347,7 @@ import type {
 } from "@/features/chart/server-order-actual-dispense-core";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
 import {
-  parsePlanOrderAuthority,
+  resolvePlanOrderAuthority,
   type PlanOrderAuthorityConfig,
 } from "@/features/chart/plan-order-authority-domain";
 import type {
@@ -5614,10 +5614,10 @@ function getChartOrderAppliedSnapshot(row: ChartOrderDraftRow) {
 function getChartOrderAuthority(
   row: ChartOrderDraftRow,
 ): PlanOrderAuthorityConfig | null {
-  const parsed = parsePlanOrderAuthority(
-    getChartOrderAppliedSnapshot(row).planOrderAuthority,
-  );
-  return parsed.valid ? parsed.value : null;
+  return resolvePlanOrderAuthority({
+    appliedSnapshot: getChartOrderAppliedSnapshot(row),
+    dedicatedSnapshot: row.runtimeRow?.dispensingAuthoritySnapshot,
+  });
 }
 
 function getChartOrderDetailNumber(row: ChartOrderDraftRow, key: string) {
