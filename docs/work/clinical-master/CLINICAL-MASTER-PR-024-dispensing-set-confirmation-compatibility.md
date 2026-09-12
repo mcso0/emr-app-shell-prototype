@@ -90,7 +90,7 @@ Both operations invalidate the exact composition/hash contract.
 | Fail-closed boundaries remain valid | Missing authority blocks confirmation; invalid authority is rejected; cross-chart mutation is denied | Remote state remains unchanged |
 | Confirmation/source snapshots are complete | Confirmed order, Task, fulfillment work item, billing candidate, execution result/amendment, and linked attempt-2 re-request contracts asserted | Production gated |
 | Billing uses the dedicated authority | Per-product-unit candidate freezes quantity `3`, unit price `1000`, amount `3000`, and unit `tablet` | Remote migration apply gated |
-| Client readback uses the dedicated authority | Both server mappers retain the field; local route-intercepted browser smoke exposes and saves the constrained `준비 예정량` control without an applied-snapshot authority copy | Authenticated Production smoke gated |
+| Client readback uses the dedicated authority | Both server mappers retain the field; local route-intercepted browser smoke covers the preserved individual-order path and a set-child path that exposes and saves the constrained `준비 예정량` control without an applied-snapshot authority copy | Authenticated mixed-set Preview/Production smoke gated |
 | Individual/legacy compatibility | Existing preparation V2 direct calculator suite passes; unconfigured legacy child remains fail-closed | Broader historical replay is stale under multi-chart lifecycle |
 | Foreign workspace isolation | Foreign active member cannot read the candidate catalog or set through RLS | No remote foreign workspace mutation |
 | Existing persisted rows preserved | Baseline/candidate order count `12/12`; existing-field fingerprint `817cec76e9ff37ba12c601c847572d87` equal after excluding three additive columns | Remote preflight required before any future apply |
@@ -107,6 +107,13 @@ calculation, confirmation, and billing functions; the B3 writer's one
 unused-variable warning is identical in the baseline database. Repository docs and secret checks,
 ESLint (five pre-existing warnings), and a webpack production build including
 TypeScript all pass.
+
+The route-intercepted browser checks prove only client readback and the
+actual-dispense override interaction. They are not a real database-backed
+mixed-set save/reload/confirm/downstream E2E. Likewise, the asserted billing
+output is a billing candidate projection, not an issued invoice, payment, or
+collection result. Those boundaries remain in the remote Preview/Production
+gate and are not claimed as local completion evidence.
 
 ## Verification and recovery
 
