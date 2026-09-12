@@ -18,6 +18,7 @@ import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
 const encounterId = "encounter-kong-260501";
+const chartId = "soap-kong-260501";
 const orderId = "order-kong-maropitant";
 const migrationPath =
   "supabase/migrations/20260519220000_chart_order_action_persistence_rpc.sql";
@@ -109,7 +110,11 @@ test("order action route confirms selected orders via mock fallback and reads af
   const saved = await request.patch(
     `/api/workspaces/${workspaceId}/chart/order-actions`,
     {
-      data: { ...validConfirmInput, expectedEtag: currentBody.etag },
+      data: {
+        ...validConfirmInput,
+        chartId,
+        expectedEtag: currentBody.etag,
+      },
       headers: {
         [chartOrderExpectedEtagHeader]: currentBody.etag,
         "x-clair-demo-session-user-id": "user-vet",
@@ -183,6 +188,7 @@ test("order action core submits billing candidates separately from confirmation"
     workspaceId,
     input: {
       action: "bill",
+      chartId,
       encounterId,
       orderIds: [orderId],
     },
@@ -235,6 +241,7 @@ test("mock order action keeps nonbillable set children out of candidate lifecycl
     workspaceId,
     input: {
       action: "bill",
+      chartId,
       encounterId,
       orderIds: [nonBillableSetChildId],
     },
@@ -279,6 +286,7 @@ test("atomic mock confirmation keeps fixed and range set parent-once parity", as
     ...templateOrder,
     id,
     encounterId: mockEncounterId,
+    originChartId: undefined,
     appliedSnapshot: {
       ...(templateOrder.appliedSnapshot ?? {}),
       amountBasis,
@@ -333,6 +341,7 @@ test("order action downstream billing receives persisted order IDs", async () =>
     workspaceId,
     input: {
       action: "bill",
+      chartId,
       encounterId,
       orderIds: [orderId],
     },

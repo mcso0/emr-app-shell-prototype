@@ -283,13 +283,20 @@ export function createMockChartDiagnosisGateway(
       if (chart?.status === "signed" || chart?.status === "amended") return { ok: false, status: 409, denialReason: "signed_chart_read_only" };
       if (chartId && expectedVersion !== JSON.stringify(existingRows)) return { ok: false, status: 409, denialReason: "diagnoses_conflict" };
       const timestamp = now();
-      const rows = diagnoses.map((diagnosis, index) => {
+      const submittedRows = diagnoses.map((diagnosis) => {
         const existing = diagnosis.id
           ? existingRows.find((row) => row.id === diagnosis.id)
-          : existingRows.find((row) => row.diagnosisText === diagnosis.diagnosisText);
+          : diagnosis.diagnosisCatalogId
+            ? existingRows.find(
+                (row) =>
+                  row.diagnosisCatalogId === diagnosis.diagnosisCatalogId,
+              )
+            : existingRows.find(
+                (row) => row.diagnosisText === diagnosis.diagnosisText,
+              );
 
         return {
-          id: diagnosis.id ?? existing?.id ?? `diagnosis-${encounterId}-${index + 1}`,
+          id: diagnosis.id ?? existing?.id ?? crypto.randomUUID(),
           encounterId,
           diagnosisCatalogId: diagnosis.diagnosisCatalogId,
           diagnosisText: diagnosis.diagnosisText,
@@ -308,11 +315,33 @@ export function createMockChartDiagnosisGateway(
           updatedAt: timestamp,
         } satisfies ChartDiagnosisRow;
       });
+      const submittedIds = new Set(submittedRows.map((row) => row.id));
+      const submittedCatalogIds = new Set(
+        submittedRows.flatMap((row) =>
+          row.diagnosisCatalogId ? [row.diagnosisCatalogId] : [],
+        ),
+      );
+      const rows = chart
+        ? [
+            ...existingRows.filter(
+              (row) =>
+                !submittedIds.has(row.id) &&
+                (!row.diagnosisCatalogId ||
+                  !submittedCatalogIds.has(row.diagnosisCatalogId)),
+            ),
+            ...submittedRows,
+          ].map((row, index) => ({ ...row, sortOrder: index }))
+        : submittedRows;
 
       mockDiagnosisStore.set(buildDiagnosisKey(workspaceId, encounterId), rows);
 
       if (chart) {
-        const assessments = structuredClone(rows.filter((row) => !assessedDiagnosisIds || assessedDiagnosisIds.includes(row.id)));
+        const assessmentIds = new Set(
+          assessedDiagnosisIds ?? submittedRows.map((row) => row.id),
+        );
+        const assessments = structuredClone(
+          rows.filter((row) => assessmentIds.has(row.id)),
+        );
         mockAssessmentStore.set(`${workspaceId}:${encounterId}:${chart.id}`, assessments);
         const nextChart = { ...chart, updatedAt: new Date(Math.max(Date.parse(timestamp), Date.parse(chart.updatedAt) + 1)).toISOString() };
         putMockEncounterChart(workspaceId, nextChart);

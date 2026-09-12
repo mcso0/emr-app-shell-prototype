@@ -337,7 +337,10 @@ async function routePreconsultationContext(
 async function saveKongOrderDraftRows(
   page: Page,
   rows: ReadonlyArray<Record<string, unknown>>,
-  { removeOmittedTopLevelRows = false } = {},
+  {
+    chartId,
+    removeOmittedTopLevelRows = false,
+  }: { chartId?: string; removeOmittedTopLevelRows?: boolean } = {},
 ) {
   const current = await page.request.get(
     `/api/workspaces/clair-demo/chart/order-drafts?encounterId=${kongEncounterId}`,
@@ -368,6 +371,7 @@ async function saveKongOrderDraftRows(
     "/api/workspaces/clair-demo/chart/order-drafts",
     {
       data: {
+        ...(chartId ? { chartId } : {}),
         encounterId: kongEncounterId,
         expectedEtag: currentBody.etag,
         removedOrderIds,
@@ -384,6 +388,7 @@ async function saveKongOrderDraftRows(
 
 async function restoreKongOrderDraftDefaults(page: Page) {
   await saveKongOrderDraftRows(page, kongDefaultOrderDraftRows, {
+    chartId: "soap-kong-260501",
     removeOmittedTopLevelRows: true,
   });
   await page.reload();
@@ -1266,12 +1271,15 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
   await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "History" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Plan/Order" })).toBeVisible();
+  await expect(page).toHaveURL(/chartId=soap-kong-260501/, {
+    timeout: 10_000,
+  });
   await expect(
     page.getByTestId("chart-order-row-order-kong-fluid"),
-  ).toContainText("피하 수액 처치");
+  ).toContainText("피하 수액 처치", { timeout: 10_000 });
   const orderFooter = page.getByTestId("chart-order-footer");
-  await expect(orderFooter).toContainText("변경 없음");
-  await expect(orderFooter).toContainText("청구 예상 총액");
+  await expect(orderFooter).toContainText("저장됨");
+  await expect(orderFooter).toContainText("이 차트 오더 합계");
   await expect(content).toHaveScreenshot(
     "chart-contents-v2-reference-1540x968.png",
     {
@@ -5821,11 +5829,11 @@ test("chart safety context and confirmation dialogs identify the active patient"
   );
   await dismissChartOrderActionMenu(page);
 
-  await page.getByRole("button", { name: "진료 완료" }).click();
+  await page.getByRole("button", { name: "진료 종료", exact: true }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
-    name: "진료 완료 확인",
+    name: "접수 진료 종료",
   });
-  await expect(chartCompleteDialog.getByText("진료 완료 확인")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("접수 진료 종료")).toBeVisible();
   await expect(chartCompleteDialog.getByText("콩이 / 김하늘")).toBeVisible();
   await expect(chartCompleteDialog.getByText("E-260501-0003")).toBeVisible();
   await expect(chartCompleteDialog.getByText(/\d+건 \/ 4건/)).toBeVisible();
@@ -5851,7 +5859,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
 });
 
-test("chart keeps confirmation selection-scoped and billing encounter-scoped", async ({
+test("chart keeps confirmation selection-scoped and routes current-chart billing to checkout", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
@@ -5864,7 +5872,7 @@ test("chart keeps confirmation selection-scoped and billing encounter-scoped", a
   await dismissChartOrderActionMenu(page);
   await expect(
     page.getByTestId("chart-order-footer").getByRole("button", {
-      name: "Order 청구",
+      name: "수납에서 청구",
     }),
   ).toBeVisible();
   await page
@@ -6068,7 +6076,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     "변경 대기 1건",
   );
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 예상/,
   );
 
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
@@ -6080,7 +6088,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     timeout: 10_000,
   });
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 합계/,
   );
 
   await page
@@ -6105,7 +6113,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
     "저장됨",
   );
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 합계/,
   );
 
   await page.reload();
@@ -6122,7 +6130,7 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await expect(bulkDeleteDialog).toContainText("2개 오더를");
   await bulkDeleteDialog.getByRole("button", { name: "취소" }).click();
   await expect(page.getByTestId("chart-order-footer")).toContainText(
-    /청구 예상 총액/,
+    /이 차트 오더 합계/,
   );
 });
 
@@ -8777,7 +8785,10 @@ test("chart quick-add preserves query and focus through detailed search and set 
 test("chart quick-add hides only for total-empty and restores after existing first-add flow", async ({ page }) => {
   await routeQuickAddCatalog(page);
   await page.goto(kongScenarioUrl);
-  await saveKongOrderDraftRows(page, [], { removeOmittedTopLevelRows: true });
+  await saveKongOrderDraftRows(page, [], {
+    chartId: "soap-kong-260501",
+    removeOmittedTopLevelRows: true,
+  });
   await page.reload();
   const composer = page.getByTestId("chart-order-quick-add");
   await expect(composer).toHaveCount(0);

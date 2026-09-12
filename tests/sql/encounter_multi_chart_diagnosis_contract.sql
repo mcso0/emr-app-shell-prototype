@@ -11,6 +11,9 @@ insert into public.encounters(id, workspace_id, patient_id, primary_veterinarian
 values ('96370000-0000-4000-8000-000000000002', 'workspace-clair-cheongdam',
   '96370000-0000-4000-8000-000000000001', '49110000-0000-4000-8000-000000000003',
   'MULTI-CHART-037', 'walk_in', 'in_consultation', now());
+insert into public.diagnosis_catalog(id, workspace_id, name)
+values ('96370000-0000-4000-8000-000000000003', 'workspace-clair-cheongdam',
+  'Synthetic stable diagnosis');
 update public.workspace_permission_roles role
 set permissions = '{"allowed":["chart:view","chart:update"]}'::jsonb
 from public.workspace_membership_permission_role_assignments assignment
@@ -27,13 +30,15 @@ declare
   w text := 'workspace-clair-cheongdam';
   actor text := '49110000-0000-4000-8000-000000000003';
   e uuid := '96370000-0000-4000-8000-000000000002';
-  a jsonb; b jsonb; state jsonb; first_snapshot jsonb; diagnosis_id text; denied boolean;
+  a jsonb; b jsonb; state jsonb; first_snapshot jsonb; diagnosis_id text;
+  catalog_id uuid := '96370000-0000-4000-8000-000000000003'; denied boolean;
 begin
   a := public.clair_create_encounter_chart(w,actor,e,gen_random_uuid());
   b := public.clair_create_encounter_chart(w,actor,e,gen_random_uuid());
   state := public.clair_get_chart_diagnosis_assessments(w,e,(a->>'id')::uuid);
   state := public.clair_save_chart_diagnoses_v2(w,actor,e,(a->>'id')::uuid,
-    '[{"diagnosisText":"Synthetic diagnosis","diagnosisType":"suspected","isPrimary":true}]',state->>'version');
+    jsonb_build_array(jsonb_build_object('diagnosisCatalogId',catalog_id,
+      'diagnosisType','suspected','isPrimary',true)),state->>'version');
   diagnosis_id := state->'diagnoses'->0->>'id';
   first_snapshot := state->'assessments';
   denied := false;
@@ -43,7 +48,7 @@ begin
   a := state->'chart';
   perform public.clair_sign_encounter_chart(w,actor,e,(a->>'id')::uuid,(a->>'updatedAt')::timestamptz);
   state := public.clair_save_chart_diagnoses_v2(w,actor,e,(b->>'id')::uuid,
-    jsonb_build_array(jsonb_build_object('id',diagnosis_id,'diagnosisText','Synthetic diagnosis revised',
+    jsonb_build_array(jsonb_build_object('diagnosisCatalogId',catalog_id,
       'diagnosisType','confirmed','isClosed',true,'isPrimary',true)),state->>'version');
   if state->'diagnoses'->0->>'id' <> diagnosis_id then raise exception 'diagnosis_identity_changed'; end if;
   if public.clair_get_chart_diagnosis_assessments(w,e,(a->>'id')::uuid)->'assessments' <> first_snapshot then
@@ -57,9 +62,10 @@ begin
   exception when others then if sqlerrm = 'diagnoses_conflict' then denied := true; else raise; end if; end;
   if not denied then raise exception 'stale_diagnoses_accepted'; end if;
   state := public.clair_save_chart_diagnoses_v2(w,actor,e,(b->>'id')::uuid,'[]',state->>'version');
-  if state->'diagnoses' <> '[]'::jsonb then raise exception 'diagnosis_not_retired'; end if;
+  if jsonb_array_length(state->'diagnoses') <> 1 then raise exception 'other_chart_diagnosis_removed'; end if;
+  if state->'assessments' <> '[]'::jsonb then raise exception 'selected_chart_assessment_not_cleared'; end if;
   if public.clair_get_chart_diagnosis_assessments(w,e,(a->>'id')::uuid)->'assessments' <> first_snapshot then
-    raise exception 'retirement_removed_history'; end if;
+    raise exception 'assessment_clear_removed_history'; end if;
 end;
 $test$;
 reset role;
@@ -68,8 +74,8 @@ begin
   if (select count(*) from public.diagnoses where encounter_id = '96370000-0000-4000-8000-000000000002') <> 1 then
     raise exception 'diagnosis_deleted_or_duplicated'; end if;
   if not exists(select 1 from public.diagnoses where encounter_id = '96370000-0000-4000-8000-000000000002'
-    and retired_at is not null and diagnosis_type = 'confirmed' and closed_at is not null) then
-    raise exception 'retired_diagnosis_not_preserved'; end if;
+    and retired_at is null and diagnosis_type = 'confirmed' and closed_at is not null) then
+    raise exception 'active_encounter_diagnosis_not_preserved'; end if;
 end;
 $assert$;
 select 'PASS encounter_multi_chart_diagnosis_contract' as result;

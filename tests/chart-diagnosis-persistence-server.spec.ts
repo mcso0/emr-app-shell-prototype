@@ -5,8 +5,10 @@ import { createMockWorkspacePermissionAdapter } from "../src/features/auth/permi
 import {
   createMockChartDiagnosisGateway,
   createSupabaseChartDiagnosisGateway,
+  readChartDiagnoses,
   saveChartDiagnoses,
 } from "../src/features/chart/server-diagnosis-persistence-core";
+import { createMockEncounterChart } from "../src/features/chart/server-soap-note-persistence-core";
 import type { Encounter } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
@@ -25,6 +27,11 @@ const multiPrimaryMigrationPath =
   "supabase/migrations/20260825135815_chart_multi_primary_diagnoses.sql";
 const multiPrimaryMigration = existsSync(multiPrimaryMigrationPath)
   ? readFileSync(multiPrimaryMigrationPath, "utf8")
+  : "";
+const currentRecordScopeMigrationPath =
+  "supabase/migrations/20260912174500_chart_current_record_scope.sql";
+const currentRecordScopeMigration = existsSync(currentRecordScopeMigrationPath)
+  ? readFileSync(currentRecordScopeMigrationPath, "utf8")
   : "";
 
 const validDiagnosisInput = {
@@ -336,6 +343,129 @@ test("diagnosis core preserves more than one primary diagnosis", async () => {
   });
 });
 
+test("chart assessment saves preserve other charts and encounter diagnosis identities", async () => {
+  const chartA = createMockEncounterChart(
+    workspaceId,
+    encounterId,
+    "user-vet",
+    crypto.randomUUID(),
+  );
+  const chartB = createMockEncounterChart(
+    workspaceId,
+    encounterId,
+    "user-vet",
+    crypto.randomUUID(),
+  );
+  const gateway = createMockChartDiagnosisGateway(
+    undefined,
+    () => "2026-09-12T08:00:00.000Z",
+  );
+  const chartAInitial = await readChartDiagnoses({
+    actorUserId: "user-vet",
+    chartId: chartA.id,
+    encounterId,
+    gateway,
+    workspaceId,
+  });
+  const chartBInitial = await readChartDiagnoses({
+    actorUserId: "user-vet",
+    chartId: chartB.id,
+    encounterId,
+    gateway,
+    workspaceId,
+  });
+  if (!chartAInitial.ok || !chartBInitial.ok) {
+    throw new Error("chart diagnosis fixture did not load");
+  }
+
+  const savedA = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartA.id,
+      diagnoses: [
+        {
+          diagnosisText: "Synthetic chart A diagnosis",
+          diagnosisType: "suspected",
+          isClosed: false,
+          isPrimary: true,
+        },
+      ],
+      encounterId,
+      expectedVersion: chartAInitial.version,
+    },
+    workspaceId,
+  });
+  if (!savedA.ok) throw new Error(`chart A save failed: ${savedA.status}`);
+
+  const chartBAfterA = await readChartDiagnoses({
+    actorUserId: "user-vet",
+    chartId: chartB.id,
+    encounterId,
+    gateway,
+    workspaceId,
+  });
+  if (!chartBAfterA.ok) throw new Error("chart B refresh failed");
+  const savedB = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: [
+        {
+          diagnosisText: "Synthetic chart B diagnosis",
+          diagnosisType: "confirmed",
+          isClosed: true,
+          isPrimary: false,
+        },
+      ],
+      encounterId,
+      expectedVersion: chartBAfterA.version,
+    },
+    workspaceId,
+  });
+  if (!savedB.ok) throw new Error(`chart B save failed: ${savedB.status}`);
+
+  expect(savedB.diagnoses.map((row) => row.diagnosisText)).toEqual(
+    expect.arrayContaining([
+      "Synthetic chart A diagnosis",
+      "Synthetic chart B diagnosis",
+    ]),
+  );
+  expect(savedB.assessments?.map((row) => row.diagnosisText)).toEqual([
+    "Synthetic chart B diagnosis",
+  ]);
+
+  const clearedB = await saveChartDiagnoses({
+    actorUserId: "user-vet",
+    gateway,
+    input: {
+      chartId: chartB.id,
+      diagnoses: [],
+      encounterId,
+      expectedVersion: savedB.version,
+    },
+    workspaceId,
+  });
+  if (!clearedB.ok) throw new Error(`chart B clear failed: ${clearedB.status}`);
+  expect(clearedB.assessments).toEqual([]);
+  expect(clearedB.diagnoses.map((row) => row.diagnosisText)).toContain(
+    "Synthetic chart A diagnosis",
+  );
+
+  const chartAAfterB = await readChartDiagnoses({
+    actorUserId: "user-vet",
+    chartId: chartA.id,
+    encounterId,
+    gateway,
+    workspaceId,
+  });
+  if (!chartAAfterB.ok) throw new Error("chart A refresh failed");
+  expect(chartAAfterB.assessments?.map((row) => row.diagnosisText)).toEqual([
+    "Synthetic chart A diagnosis",
+  ]);
+});
+
 test("diagnosis persistence migration defines local-first RPC boundary without secrets", () => {
   expect(migration).toContain(
     "create or replace function public.clair_get_chart_diagnoses",
@@ -389,6 +519,31 @@ test("diagnosis persistence migration defines local-first RPC boundary without s
     "grant execute on function public.clair_save_chart_diagnoses",
   );
   expect(multiPrimaryMigration).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
+
+  expect(currentRecordScopeMigration).toContain(
+    "create or replace function public.clair_save_chart_diagnoses_v2",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "private.clair_save_encounter_diagnoses_stable",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "'id', coalesce(existing.id, extensions.gen_random_uuid())",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "diagnosis.retired_at is null",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "delete from public.chart_diagnosis_assessments",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "and chart_id = p_chart_id",
+  );
+  expect(currentRecordScopeMigration).toContain(
+    "grant execute on function public.clair_save_chart_diagnoses_v2",
+  );
+  expect(currentRecordScopeMigration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
   );
 });

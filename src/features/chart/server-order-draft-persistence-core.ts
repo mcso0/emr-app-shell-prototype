@@ -898,6 +898,7 @@ function getStoredOrSeedOrderDrafts({
       return {
         billingDisplayName: invoiceLine?.description ?? order.displayName,
         encounterId,
+        originChartId: order.originChartId ?? null,
         lineTotalSnapshot: calculateMockCatalogLineTotal({
           appliedSnapshot: order.appliedSnapshot,
           quantity,
