@@ -1,4 +1,5 @@
 import type { EmrSidePanelStateIconState } from "@/components/emr/side-panel-state-icon";
+import type { PlanOrderPriceBasis } from "./plan-order-authority-domain";
 import type { ChartOrderExecutionTask } from "./server-order-execution-read-model-core";
 
 export type ChartOrderPresentationRow = {
@@ -73,6 +74,34 @@ export function getChartOrderWorkPresentation(row: ChartOrderPresentationRow): {
 }
 
 export const chartOrderConfirmationRank = { ready: 0, invalid: 1, confirmed: 2 } as const;
+
+export function getChartOrderProjectedLineTotal({
+  amountBasis,
+  draftQuantity,
+  priceBasis,
+  totalRequiredDispenseQuantity,
+  unitPrice,
+}: {
+  amountBasis: string;
+  draftQuantity: number | null;
+  priceBasis?: PlanOrderPriceBasis | null;
+  totalRequiredDispenseQuantity?: unknown;
+  unitPrice?: number | null;
+}) {
+  if (draftQuantity === null || unitPrice === undefined || unitPrice === null) {
+    return undefined;
+  }
+  if (amountBasis === "fixed_order_price") return unitPrice;
+
+  const projectedQuantity =
+    priceBasis === "per_product_unit" &&
+    typeof totalRequiredDispenseQuantity === "number" &&
+    Number.isFinite(totalRequiredDispenseQuantity) &&
+    totalRequiredDispenseQuantity > 0
+      ? totalRequiredDispenseQuantity
+      : draftQuantity;
+  return projectedQuantity * unitPrice;
+}
 
 /** Sort complete sets, never individual children away from their parent. */
 export function sortChartOrderGroups<T extends ChartOrderPresentationRow>(

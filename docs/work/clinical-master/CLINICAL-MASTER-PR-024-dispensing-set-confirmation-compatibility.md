@@ -30,9 +30,9 @@ independent review request to the original Codex task. The user later expanded
 delivery through commit, push, PR, exact-candidate review, and a requested
 Production release. The exact `main`/Production approval packet and any remote
 Supabase migration apply remain separate gates under the release runbook. The
-original compatibility migration has since been applied to the approved shared
-project; the forward billing-handoff correction added after authenticated smoke
-is a new candidate and has not been applied remotely.
+original compatibility migration and the forward billing-handoff correction
+added after authenticated smoke have both since been applied to the approved
+shared project through separately guarded packets.
 
 Work on branch `codex/dispensing-set-confirmation-compat` in the isolated
 `34bb` worktree. Preserve the primary checkout and the separate current-chart UI
@@ -132,14 +132,14 @@ compatibility function. It contains no historical invoice/candidate repair DML.
 | Requirement | Local evidence | Remaining boundary |
 | --- | --- | --- |
 | Dispensing child save no longer conflicts with B3 | Baseline failure above; a mixed dispensing + clinical-lab set saves and passes `SET CONSTRAINTS ALL IMMEDIATE` | Changed candidate review |
-| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and clean ready dispensing projection asserted locally and through authenticated remote save/reload | Changed-candidate regression pending |
-| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial; original remote apply and authenticated save/reload/confirm smoke completed | New forward migration pending |
-| Set edit/removal semantics remain valid | Dispensing-child deselection while lab stays selected, full-root removal, semantic deselection retry, and rejected repeated removal asserted | Changed-candidate Preview smoke pending |
-| Override/reconfirmation semantics remain valid | Exact override retry, harmless resave preservation, dose `1` to `2` recalculation, stale confirmation denial, explicit reconfirmation, and reconfirm retry asserted remotely | Changed-candidate Preview smoke pending |
-| Fail-closed boundaries remain valid | Missing authority blocks confirmation; invalid authority is rejected; cross-chart mutation is denied | Revalidate after forward apply |
+| Price and dispensing calculations do not overwrite each other | Exact nine-key pricing copy and ready dispensing projection asserted locally and through fresh exact-Preview save/reload/confirm; the subsequent focused UI regression proves a quantity-1 stored set child displays the quantity-3 required dispense total without changing its snapshot | Exact changed-head Release Check and Production gate |
+| Authority and lineage are server-authored and frozen | Catalog-revision authority capture, child lineage, root keyed copy, post-confirm mutation denial; original and forward remote applies plus fresh lineage-backed exact-Preview smoke completed | Production gated |
+| Set edit/removal semantics remain valid | Dispensing-child deselection while lab stays selected, full-root removal, semantic deselection retry, rejected repeated removal, and fresh exact-Preview mixed-set save/reload asserted | Production gated |
+| Override/reconfirmation semantics remain valid | Exact override retry, harmless resave preservation, dose `1` to `2` recalculation, stale confirmation denial, explicit reconfirmation, reconfirm retry, and fresh exact-Preview confirmation asserted | Production gated |
+| Fail-closed boundaries remain valid | Missing authority blocks confirmation; invalid authority is rejected; cross-chart mutation is denied; forward postflight preserved function grants and all guarded business-row fingerprints | Production gated |
 | Confirmation/source snapshots are complete | Confirmed order, Task, fulfillment work item, billing candidate, execution result/amendment, and linked attempt-2 re-request contracts asserted | Production gated |
-| Billing uses the dedicated authority | Per-product-unit candidate freezes quantity `3`, unit price `1000`, amount `3000`, and unit `tablet`; a cloned candidate DB now also proves execution creates a draft, unpaid invoice line with the same quantity and amount through candidate authority | Forward migration remote apply and authenticated re-smoke gated |
-| Client readback uses the dedicated authority | Authenticated exact-Preview smoke exposed two fail-closed mapper gaps: omitted non-range `priceRanges` and nullable non-billable set-parent total. Narrow local normalizers and regression tests now cover both without accepting nullable billable child totals | Changed-candidate Preview/Production smoke gated |
+| Billing uses the dedicated authority | Per-product-unit candidate froze quantity `3`, unit price `1000`, amount `3000`, and unit `tablet`; fresh exact-Preview execution linked that same candidate to one draft, unpaid invoice line with quantity `3` and amount `3000` through candidate authority | Production gated |
+| Client readback uses the dedicated authority | The fresh exact-Preview loaded an omitted non-range `priceRanges` catalog item and a nullable non-billable set parent, saved and reloaded the parent plus both children, and reached confirmation without accepting nullable billable child totals | Production gated |
 | Individual/legacy compatibility | Existing preparation V2 direct calculator suite passes; unconfigured legacy child remains fail-closed | Broader historical replay is stale under multi-chart lifecycle |
 | Foreign workspace isolation | Foreign active member cannot read the candidate catalog or set through RLS | No remote foreign workspace mutation |
 | Existing persisted rows preserved | Baseline/candidate order count `12/12`; existing-field fingerprint `817cec76e9ff37ba12c601c847572d87` equal after excluding three additive columns | Remote preflight required before any future apply |
@@ -168,6 +168,68 @@ assertion has passed twice in a rollback-only cloned-database rehearsal; it is
 not yet remote evidence. The same rehearsal also proves the no-candidate legacy
 fallback in a rolled-back subtransaction and proves that an execution amendment
 does not duplicate or mutate the candidate-authoritative invoice line.
+
+## Fresh exact-Preview regression evidence
+
+Exact application head `923af5b013563e432cb02e444c39449240fd95e6` was
+re-tested on the Ready Preview deployment `6410614270`. In the isolated
+synthetic encounter `02490000-0000-4000-8000-000000000102` and chart
+`02492000-0000-4000-8000-000000000102`, the authenticated UI:
+
+- found `PR-024B dispensing set`, loaded both the dispensing and clinical-lab
+  revision items, and saved parent `a6883158-5263-4f57-949e-9265ab9bb939`;
+- saved dispensing child `6c2d35a6-d103-484d-8a3d-ed4ea44ac85a` with
+  `patient / 1 tablet / PO / SID / 3 days / 3 tablets`, producing ready
+  course-total preparation quantity `3`, and saved clinical-lab child
+  `1ffac5bd-4d5c-4961-a8c9-14ea1d1e6f8a` with `serum / AST / routine`;
+- reloaded the page and restored the parent plus both children before confirming
+  the set atomically;
+- created dispensing work item `b991e02c-a303-4f57-8099-f3b5043bb1f9`
+  and lab work item `211e7fd8-0524-49f4-a1f0-e87bf3239e02`;
+- assigned, started, and completed the dispensing item through the normal UI,
+  recording execution result `2608144e-9fc2-4ef8-9b49-0245533c006f`
+  version 1 with actual prepared quantity `3 tablet`; and
+- linked the already-frozen candidate
+  `billcand-6c2d35a6-d103-484d-8a3d-ed4ea44ac85a` to invoice line
+  `1da6a664-5332-414a-99c3-a9df0ebd7dcc`, quantity `3`, unit price `1000`,
+  line total `3000`, with `billingAuthority=order_billing_candidates`.
+
+Invoice `f484a406-6010-43e6-9a5c-994965cf7cd8` remains `draft` with
+`payment_state=none`; the UI showed 3,000 won due and zero collected. No payment,
+collection, or billing-assignment action was taken. Readback found exactly one
+fulfillment work item, one execution-result version, one billing candidate, and
+one invoice line for the dispensing child. The completed UI exposes no second
+completion action, so command-level replay was not forced through an alternate
+API; the strengthened rollback rehearsal remains the duplicate/amendment retry
+evidence.
+
+Before confirmation, the chart table showed 13,000 won because its immutable
+set-child price snapshot still displayed the dispensing catalog quantity `1`
+plus the 12,000-won lab item. Confirmation correctly used the dispensing
+authority's course-total quantity `3`, and the confirmed aggregate became
+15,000 won. The 3,000-won dispensing invoice is correct; the 13,000-won
+pre-confirm estimate is a UI/read-model discrepancy and is not represented as
+full pricing-parity proof.
+
+The subsequent narrow UI correction projects only a `per_product_unit` row's
+displayed line total from `totalRequiredDispenseQuantity` when that positive
+calculation output exists. It preserves the immutable stored set-child quantity,
+all other price bases, and fixed-order pricing. The focused presentation
+regression proves the observed quantity `1` / required dispense quantity `3` /
+unit price `1000` case displays `3000`, with fallback and fixed-price behavior
+unchanged.
+
+The first browser attempt used the same synthetic set before its full CLAiR
+master lineage was attached. It is intentionally retained as three draft rows
+in encounter `02490000-0000-4000-8000-000000000101`: parent
+`95a3bc98-9db3-4c39-acfb-9d530add127d`, dispensing child
+`9dd62852-b574-486b-94a6-4c293c40f85e`, and lab child
+`bc2476b3-ff00-4cf3-94f9-042a3a0c7625`. The successful encounter's lab work
+item remains requested with its 12,000-won candidate unlinked. The older
+historical requested lab work item `205be3e4-d38e-4af8-bfa4-6ad87b177be5`
+and wrong quantity-1 draft invoice `1f705f8a-13fd-4ace-b2b7-bf0b80b86239`
+with line `df081525-c64b-4ff2-9988-3029bcc53078` also remain unchanged. These
+records are explicit retained audit/test inventory, not cleanup targets.
 
 The pre-use rollback artifact was applied to a clone of the candidate database.
 It restored all eight predecessor function definitions to their baseline
@@ -221,10 +283,12 @@ with the same existing-field fingerprint
 `3dae85d3e90453ba69e681eb4129681a`; the foreign workspace remained unchanged.
 Do not reapply or rewrite the original migration.
 
-The forward billing-handoff migration is locally validated only. It must receive
-a fresh exact-SHA review/apply packet and remote postflight before the workflow
-can claim candidate-to-invoice billing consistency. The historical synthetic
-invoice discrepancy is evidence and is not a cleanup target.
+The forward billing-handoff packet was applied once and is recorded remotely as
+migration ledger version `20260912142240`. Postflight readback matched the exact
+candidate function SHA, one candidate-authority call, one legacy fallback call,
+the expected security-definer search path and grants, and the preserved 162-row
+non-fixture fingerprint. The historical synthetic invoice discrepancy remains
+evidence and is not a cleanup target.
 
 The forward migration, preflight, postflight, and strengthened rehearsal
 SHA-256 values are respectively
@@ -273,13 +337,9 @@ The captured predecessor and candidate function SHA-256 values are:
 
 ## Remaining gates
 
-- Reconcile the changed branch with current `origin/main`, then obtain a fresh
-  independent review and exact candidate SHA.
-- Push the changed PR head, wait for Preview Ready and exact-head Release Check,
-  then repeat the authenticated mixed-set smoke.
-- Prepare and approve a separate forward-migration apply packet with target,
-  preserved-data preflight, exact SHA, postflight, and forward recovery. Do not
-  alter the historical confirmed/invoice audit.
+- Push the final changed head and pass its exact-head Release Check once. The
+  completed authenticated Preview smoke remains the lifecycle evidence; the
+  focused presentation regression covers the isolated display delta.
 - Exact-candidate `main`/Production approval after PR, checks, Preview,
   Production comparison, smoke path, rollback candidate, and stop conditions
   are all known. A changed PR head invalidates that approval packet.

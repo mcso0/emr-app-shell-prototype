@@ -86,7 +86,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { ChartOrderConfirmationBadge, ChartOrderWorkStatus } from "./components/chart-order-status";
-import { chartOrderConfirmationRank, getChartOrderConfirmationState, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
+import { chartOrderConfirmationRank, getChartOrderConfirmationState, getChartOrderProjectedLineTotal, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
@@ -6607,17 +6607,15 @@ const getDraftQuantity = (quantityInput: string) => {
 
 const getDraftLineTotal = (row: ChartOrderDraftRow) => {
   const quantity = getDraftQuantity(row.quantityInput);
-
-  if (
-    quantity === null ||
-    row.unitPrice === undefined ||
-    row.unitPrice === null
-  )
-    return undefined;
-
-  return getChartOrderDraftAmountBasis(row) === "fixed_order_price"
-    ? row.unitPrice
-    : quantity * row.unitPrice;
+  const authority = getChartOrderAuthority(row);
+  return getChartOrderProjectedLineTotal({
+    amountBasis: getChartOrderDraftAmountBasis(row),
+    draftQuantity: quantity,
+    priceBasis: authority?.priceBasis,
+    totalRequiredDispenseQuantity:
+      row.runtimeRow?.calculationOutputs.totalRequiredDispenseQuantity,
+    unitPrice: row.unitPrice,
+  });
 };
 
 const getChartOrderDraftAmountBasis = (row: ChartOrderDraftRow) => {
