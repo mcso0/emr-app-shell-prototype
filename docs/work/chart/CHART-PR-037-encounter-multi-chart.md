@@ -10,7 +10,7 @@ source_docs:
   - docs/engineering/current-status.md
 dependencies:
   - CHART-PR-033
-updated: 2026-09-12
+updated: 2026-09-13
 ---
 
 # Encounter Multi-Chart
@@ -150,3 +150,7 @@ Local evidence on branch `codex/chart-current-record-scope`, based on `origin/ma
 - The updated diagnosis SQL contract passes in an owned temporary clone of `chart_pr037_verified`; the temporary database is dropped after rollback. It proves that a repeated catalog selection keeps the stable diagnosis ID, chart A with 20 rows plus chart B with 11 rows is accepted, the chart A author/timestamp remains unchanged after chart B saves, one selected chart with 31 rows is rejected, and clearing chart B leaves chart A's snapshot and the active encounter diagnosis unchanged. It also proves that initial-empty and repeated-clear no-ops keep their token, a real clear advances it, and stale pre-clear plus ABA restore attempts are rejected.
 
 Remote DB application and production-data mutation are excluded from this repository candidate and require separate explicit approval. Repository delivery follows the exact PR candidate, Preview, Release Check, Production approval, merge, and smoke gates; PR #743's deployed state remains the baseline until those gates complete.
+
+### Confirmed Set Readback Hotfix — 2026-09-13
+
+Production smoke found that a confirmed included-order-sum set disappeared from Plan/Order because its non-billable parent projected `lineTotalSnapshot: null`; the action mapper rejected the entire three-row response. The mapper now normalizes only a set parent's null total to zero while retaining `billingReflectionEnabled: false`. Individual and set-child null totals remain invalid, and no database rows or RPCs change.
