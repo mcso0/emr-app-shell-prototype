@@ -46,6 +46,10 @@ const lifecycleMigration = readFileSync(
   "supabase/migrations/20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql",
   "utf8",
 );
+const displayContextMigration = readFileSync(
+  "supabase/migrations/20260912121342_fulfillment_queue_display_context_readback.sql",
+  "utf8",
+);
 
 let fulfillmentCommandSequence = 1000;
 
@@ -1556,6 +1560,9 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
             id: "00000000-0000-4000-8000-000000000901",
             workspaceId,
             patientId: "00000000-0000-4000-8000-000000000111",
+            patientName: "모카",
+            guardianName: "정보호",
+            requesterName: "김민준",
             encounterId,
             orderId: "00000000-0000-4000-8000-000000000301",
             taskId: "00000000-0000-4000-8000-000000000801",
@@ -1635,6 +1642,9 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
         destinationModule: "lab",
         queueType: "lab",
         patientId: "00000000-0000-4000-8000-000000000111",
+        patientName: "모카",
+        guardianName: "정보호",
+        requesterName: "김민준",
         taskAttemptNo: 1,
         taskId: "00000000-0000-4000-8000-000000000801",
         taskStatus: "paused",
@@ -1647,6 +1657,12 @@ test("fulfillment Supabase gateway preserves actor, workspace, encounter, select
       },
     ],
   });
+  expect(synced.ok && synced.workItems[0]?.sourceSnapshot).not.toHaveProperty(
+    "patientName",
+  );
+  expect(synced.ok && synced.workItems[0]?.sourceSnapshot).not.toHaveProperty(
+    "requestingVetName",
+  );
   expect(updated).toMatchObject({
     ok: true,
     workItems: [{ status: "requested" }],
@@ -1809,6 +1825,25 @@ test("fulfillment migration defines local-first schema/RPC boundary without secr
     "create or replace function public.clair_enrich_fulfillment_work_item_snapshots",
   );
   expect(batchMigration).toContain("jsonb_to_recordset");
+});
+
+test("fulfillment queue display context stays workspace-scoped and separate from the frozen snapshot", () => {
+  expect(displayContextMigration).toContain("'patientId', encounter.patient_id");
+  expect(displayContextMigration).toContain("'patientName', patient.name");
+  expect(displayContextMigration).toContain("'guardianName', guardian.name");
+  expect(displayContextMigration).toContain("'requesterName', requester.display_name");
+  expect(displayContextMigration).toContain("'sourceSnapshot', item.source_snapshot");
+  expect(displayContextMigration).toContain(
+    "requester_membership.workspace_id = item.workspace_id",
+  );
+  expect(displayContextMigration).toContain(
+    "requester_membership.status = 'active'",
+  );
+  expect(displayContextMigration).toContain(
+    "revoke all on function public.clair_list_fulfillment_work_items",
+  );
+  expect(displayContextMigration).toContain("from public, anon, service_role");
+  expect(displayContextMigration).toContain("to authenticated");
 });
 
 async function expectJson(

@@ -151,14 +151,17 @@ export type FulfillmentWorkItem = {
   detailedPhase?: string | null;
   destinationModule?: ClinicalOrderDestinationModule | null;
   encounterId: string;
+  guardianName?: string | null;
   id: string;
   orderId: string;
   orderType: FulfillmentQueueType;
   patientId?: string | null;
+  patientName?: string | null;
   priority: OrderPriority;
   queueType: FulfillmentQueueType;
   reason?: string | null;
   requestedByUserId: string;
+  requesterName?: string | null;
   requestCycle: number;
   returnedAt?: string | null;
   rowRevision: number;
@@ -3075,6 +3078,15 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     (row.patientId !== undefined &&
       row.patientId !== null &&
       typeof row.patientId !== "string") ||
+    (row.patientName !== undefined &&
+      row.patientName !== null &&
+      typeof row.patientName !== "string") ||
+    (row.guardianName !== undefined &&
+      row.guardianName !== null &&
+      typeof row.guardianName !== "string") ||
+    (row.requesterName !== undefined &&
+      row.requesterName !== null &&
+      typeof row.requesterName !== "string") ||
     (row.taskStatus !== undefined &&
       row.taskStatus !== null &&
       !isUniversalOrderTaskStatus(row.taskStatus)) ||

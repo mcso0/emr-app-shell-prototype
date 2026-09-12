@@ -3,11 +3,11 @@ id: "CLINICAL-FULFILLMENT-PR-010"
 type: "Work Item"
 title: "Plan/Order Work Lifecycle And RPC Boundary"
 description: "Separates assignment from work state and implements the target task lifecycle with DB-enforced permissions."
-status: "completed"
+status: "human_review"
 area: "clinical-fulfillment"
 priority: "P0"
 tags: [plan-order, fulfillment, rls, rpc, assignment]
-target_pr: "GitHub PR #698"
+target_pr: "GitHub PR #698; regression remediation PR #746"
 source_docs:
   - "docs/product/domain/plan-order-all-tab-legacy-column-contract.md"
   - "docs/engineering/data-model/order-fulfillment-handoff-contract.md"
@@ -15,7 +15,7 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-09-03"
+updated: "2026-09-12"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
@@ -100,3 +100,79 @@ Remote inspection found no current `accepted` or `returned` queue rows, but the
 schema and RPC still permit both. Preserve the four historical
 `ready_for_billing`/draft compatibility rows untouched unless a separately
 reviewed deterministic migration covers them.
+
+## Approved Regression Remediation — 2026-09-12
+
+승욱 approved a local-only correction for fulfillment queue regressions found
+after the lifecycle RPC replacement. The bounded scope is:
+
+- Restore workspace-scoped patient, guardian, requester, and Task display
+  context in `clair_list_fulfillment_work_items` while returning the stored
+  `source_snapshot` unchanged.
+- Use the hospital operating timezone for live queue and history timestamps.
+- Make the URL `date` the shared operating-date boundary across each module's
+  queue, header, content, and history surfaces.
+- Persist the exact lab result, imaging study, or fulfillment work item together
+  with its encounter and date; clear stale selection parameters on date or
+  cross-module navigation.
+- Keep terminal work readable through the existing immutable result/history and
+  explicit amendment path. This checkpoint does not authorize a remote
+  migration or business-row mutation.
+
+After the local implementation and focused verification completed, 승욱
+authorized commit, push, and PR creation and requested preparation through the
+`main`/Production release path. The exact-candidate Production approval gate
+and the separate remote Supabase migration gate remain required before those
+actions.
+
+Verification must cover the RPC permission boundary and snapshot separation,
+stale URL fail-closed behavior, exact multi-item selection, Asia/Seoul display,
+and completed lab/imaging/dispensing/treatment read and amendment contracts.
+
+## Regression Remediation Verification — 2026-09-12
+
+- The replacement queue RPC migration applied cleanly to an isolated local
+  clone. Readback confirmed the workspace-scoped requester join, unchanged
+  `source_snapshot`, authenticated execute grant, and anonymous denial; the
+  temporary database was removed after verification.
+- TypeScript, focused ESLint, documentation links, secret scanning,
+  `git diff --check`, and the production build passed. The build retained the
+  existing Turbopack NFT trace warning from the docs reader path.
+- Focused browser checks passed for stale-selection fail-closed behavior, live
+  patient/requester and Asia/Seoul display context, shared operating-date URL
+  state, cross-module selection cleanup, and exact `workItemId` selection when
+  an encounter has multiple queue rows.
+- Independent review found that a live dispensing row could still fall through
+  to display-name matching when two work items had the same name. Live rows now
+  resolve only by their exact `workItemId`; an unknown live ID fails closed.
+  Focused coverage verifies same-name rows in the same and different encounters,
+  URL/detail selection, execution-history reads, assignment commands, and the
+  missing-ID denial path.
+- The authenticated PR-024 set rehearsal exposed a separate presentation
+  mismatch in the retained work-item snapshot: the queue fell back to
+  `Live order` and rendered `1 per_each` even though the frozen display name and
+  product-unit authority recorded a confirmed candidate quantity of `3 tablet`.
+  The queue now reads those frozen fields for display and product-unit billing
+  projection while preserving the distinct prescribed total of `2`.
+- The same rehearsal produced an actual draft invoice line with quantity `1`
+  while its billing candidate held quantity `3`. That billing handoff mismatch
+  remains a separate blocker owned by the predecessor remediation; this
+  read-only queue projection neither changes nor claims to repair the invoice.
+- Fulfillment lifecycle, execution-result, and lab-result persistence contracts
+  passed 38 focused tests. The complete dispensing fulfillment browser file
+  passed 14 tests, including the retained set snapshot projection and corrected
+  Asia/Seoul timestamp expectation. Imaging immutable completion/amendment
+  history passed its dedicated browser check; dispensing and treatment
+  completion/amendment flows passed the focused execution checks.
+- This local candidate is ready for human review. The migration remains
+  unapplied remotely. Commit, push, and PR preparation are authorized; merge,
+  Production deployment, and remote migration still require their exact
+  candidate packets and approvals.
+- Regression remediation PR #746 targets `main` from
+  `codex/fulfillment-queue-context-selection`. Its exact final head, Preview,
+  and manually dispatched Release Check are recorded at the release gate.
+- A broader changed-file browser run reached 24 passes before it was stopped
+  after six failures outside the focused scope. Three representative failures
+  reproduced unchanged on the `origin/main` parent: a date-stale dispensing
+  fixture and a pre-existing strict-locator ambiguity. They are recorded as
+  baseline limitations rather than candidate regressions.

@@ -79,19 +79,22 @@ Route naming can change during `DEN-236` if implementation finds a better local 
 | `cancelledAt` | nullable cancellation timestamp |
 | `returnedAt` | nullable returned timestamp |
 | `reason` | nullable cancellation/return reason |
-| `sourceSnapshot` | safe JSON snapshot for display fields |
+| `patientId` / `patientName` | workspace-scoped current queue display context |
+| `guardianName` | workspace-scoped current queue display context |
+| `requesterName` | active same-workspace requester display name |
+| `sourceSnapshot` | server-frozen source facts; read projections must not overwrite it |
 | `createdAt` / `updatedAt` | required history fields |
 
-`sourceSnapshot` must not contain raw SOAP text, secrets, provider payloads, tokens, or unnecessary personal data.
+`sourceSnapshot` must not contain raw SOAP text, secrets, provider payloads, tokens, or unnecessary personal data. Patient, guardian, and requester names already frozen into older snapshots remain valid historical facts, but live queue display uses the separate workspace-scoped projection fields above.
 
 ## Minimal Source Snapshot
 
 | Field | Use |
 | --- | --- |
-| `patientName` | queue display |
-| `guardianName` | queue display where already visible in existing workflow |
+| `patientName` | optional historical label frozen at request time |
+| `guardianName` | optional historical label frozen at request time |
 | `orderDisplayName` | queue row title |
-| `requestingVetName` | queue context |
+| `requestingVetName` | optional historical requester label frozen at request time |
 | `serviceItemId` | billing/order catalog trace |
 | `billingReflectionEnabled` | candidate sync decision |
 | `instruction` | operational instruction |

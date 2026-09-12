@@ -81,6 +81,10 @@ import {
   isLegacySalesDemoWorkspace,
   resolveWorkspacePathname,
 } from "@/lib/emr-domain/demo-workspaces";
+import {
+  formatOperatingShortTime,
+  getOperatingDateFromIso,
+} from "@/lib/emr-domain/demo-date";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import {
@@ -122,14 +126,23 @@ type FulfillmentWorkItem = {
   completedAt?: string | null;
   createdAt?: string;
   encounterId: string;
+  guardianName?: string | null;
   id: string;
   orderId: string;
   patientId?: string | null;
+  patientName?: string | null;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
+  requesterName?: string | null;
   requestCycle: number;
   rowRevision: number;
   sourceSnapshot?: {
+    actualDispenseQuantity?: number;
+    actualDispenseUnit?: string;
+    billingName?: string;
+    calculationOutputs?: Record<string, unknown>;
+    displayName?: string;
+    dispensingAuthoritySnapshot?: Record<string, unknown>;
     dispensingLineage?: {
       clinicalUseAllowed: boolean;
       serviceReviewOnly?: true;
@@ -150,6 +163,8 @@ type FulfillmentWorkItem = {
     quantity?: number;
     salesUnit?: string;
     appliedSalesUnit?: string;
+    standardOrderName?: string;
+    totalRequiredDispenseQuantity?: number;
   };
   status: FulfillmentWorkItemStatus;
   taskAttemptNo?: number | null;
@@ -637,10 +652,15 @@ function findFulfillmentForQueueItem(
   if (!queueItems.length) return undefined;
   if (!item) return queueItems[0];
 
+  const liveItemPrefix = "live-fulfillment-";
+  if (item.id.startsWith(liveItemPrefix)) {
+    const workItemId = item.id.slice(liveItemPrefix.length);
+    return queueItems.find((workItem) => workItem.id === workItemId);
+  }
+
   return (
     queueItems.find((workItem) => {
-      if (item.id === `live-fulfillment-${workItem.id}`) return true;
-      const displayName = workItem.sourceSnapshot?.orderDisplayName;
+      const displayName = getFulfillmentDisplayName(workItem);
       return displayName && item.orderName.includes(displayName);
     }) ??
     queueItems.find((workItem) => {
@@ -685,7 +705,7 @@ function applyFulfillmentToQueueItems(
       .filter((candidate) => !usedWorkItemIds.has(candidate.id))
       .find((candidate) => {
         if (item.id === `live-fulfillment-${candidate.id}`) return true;
-        const displayName = candidate.sourceSnapshot?.orderDisplayName;
+        const displayName = getFulfillmentDisplayName(candidate);
         return Boolean(displayName && item.orderName.includes(displayName));
       });
     if (!workItem) return item;
@@ -718,25 +738,24 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
   const timestamp =
     workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
-  const time = timestamp.slice(11, 16) || "00:00";
+  const time = formatOperatingShortTime(timestamp);
 
   return {
     id: `live-fulfillment-${workItem.id}`,
     instructionId: `${isTreatment ? "TR" : "RX"}-${workItem.id.slice(0, 8).toUpperCase()}`,
-    patientName: workItem.sourceSnapshot?.patientName ?? "환자 미상",
-    guardianName: workItem.sourceSnapshot?.guardianName ?? "보호자 미지정",
+    patientName:
+      workItem.patientName ?? workItem.sourceSnapshot?.patientName ?? "환자 미상",
+    guardianName:
+      workItem.guardianName ??
+      workItem.sourceSnapshot?.guardianName ??
+      "보호자 미지정",
     patientAge: "나이 미상",
     patientBreed: "품종 미상",
     patientSex: "성별 미상",
     receptionType: "외래",
     orderType: isTreatment ? "처치" : "조제",
     orderTypeCategory: workItem.queueType,
-    orderName:
-      readNonEmptyString(
-        workItem.sourceSnapshot?.orderDisplayName,
-        workItem.sourceSnapshot?.effectiveDisplayName,
-        workItem.sourceSnapshot?.inHospitalOrderName,
-      ) ?? "Live order",
+    orderName: getFulfillmentDisplayName(workItem) ?? "Live order",
     requesterName: getFulfillmentRequesterName(workItem),
     assigneeName: getFulfillmentAssigneeName(workItem),
     startedAt:
@@ -791,6 +810,7 @@ function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
 
 function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
   return (
+    workItem.requesterName ??
     workItem.sourceSnapshot?.requestingVetName ??
     mockStaffUsers.find((user) => user.id === workItem.requestedByUserId)
       ?.name ??
@@ -862,13 +882,10 @@ function createLiveOrderTableGroups(
   const medicationFacts = getReviewedMedicationFacts(workItem);
   const quantityFacts = getDispensingQuantityFacts(workItem);
   const prescriptionFacts = getDispensingPrescriptionFacts(workItem);
-  const requestedDate = (
-    workItem.createdAt ??
-    workItem.updatedAt ??
-    new Date().toISOString()
-  )
-    .slice(0, 10)
-    .replaceAll("-", ".");
+  const requestedDate =
+    getOperatingDateFromIso(
+      workItem.createdAt ?? workItem.updatedAt ?? new Date().toISOString(),
+    )?.replaceAll("-", ".") ?? "날짜 미상";
 
   return [
     {
@@ -882,11 +899,7 @@ function createLiveOrderTableGroups(
           id: `live-order-row-${workItem.id}`,
           category: instructionType,
           name:
-            readNonEmptyString(
-              workItem.sourceSnapshot?.orderDisplayName,
-              workItem.sourceSnapshot?.effectiveDisplayName,
-              workItem.sourceSnapshot?.inHospitalOrderName,
-            ) ?? selectedQueueItem.orderName,
+            getFulfillmentDisplayName(workItem) ?? selectedQueueItem.orderName,
           route:
             workItem.queueType === "dispensing"
               ? (medicationFacts?.routes.join(", ") ?? "-")
@@ -961,9 +974,27 @@ function getDispensingQuantityFacts(
   if (workItem?.queueType !== "dispensing") return undefined;
   const snapshot = workItem.sourceSnapshot;
   const detailInputs = snapshot?.detailInputs;
+  const calculationOutputs = snapshot?.calculationOutputs;
+  const dispensingAuthority = snapshot?.dispensingAuthoritySnapshot;
   const prescribedTotal = readNonNegativeNumber(detailInputs?.totalQuantity);
-  const billingQuantity = readNonNegativeNumber(snapshot?.quantity);
+  const confirmedDispenseQuantity = readNonNegativeNumber(
+    snapshot?.actualDispenseQuantity,
+    calculationOutputs?.actualDispenseQuantity,
+    calculationOutputs?.plannedPracticalTotalQuantity,
+    snapshot?.totalRequiredDispenseQuantity,
+    calculationOutputs?.totalRequiredDispenseQuantity,
+  );
+  const billingQuantity = readNonNegativeNumber(
+    dispensingAuthority?.priceBasis === "per_product_unit"
+      ? confirmedDispenseQuantity
+      : undefined,
+    snapshot?.quantity,
+  );
   const billingUnit = readNonEmptyString(
+    dispensingAuthority?.billingUnit,
+    snapshot?.actualDispenseUnit,
+    calculationOutputs?.actualDispenseUnit,
+    calculationOutputs?.dispenseUnit,
     snapshot?.salesUnit,
     snapshot?.appliedSalesUnit,
   );
@@ -1055,10 +1086,25 @@ function readStringArray(value: unknown) {
     : [];
 }
 
-function readNonNegativeNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0
-    ? value
-    : undefined;
+function readNonNegativeNumber(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function getFulfillmentDisplayName(workItem?: FulfillmentWorkItem) {
+  const snapshot = workItem?.sourceSnapshot;
+  return readNonEmptyString(
+    snapshot?.orderDisplayName,
+    snapshot?.displayName,
+    snapshot?.effectiveDisplayName,
+    snapshot?.inHospitalOrderName,
+    snapshot?.standardOrderName,
+    snapshot?.billingName,
+  );
 }
 
 function formatStrengthSnapshot(value: unknown) {
@@ -1159,16 +1205,21 @@ export function DispensingSidePanel({
 
   function handleSelectQueueItem(itemId: string) {
     const item = items.find((candidate) => candidate.id === itemId) ?? null;
-    const encounterId = getQueueItemEncounterId(
+    const workItem = findFulfillmentForQueueItem(
       item,
       fulfillmentQueue.workItems,
     );
 
-    if (encounterId && onNavigateWorkspaceSurface) {
+    if (workItem && onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
         buildWorkspaceSurfaceRoute({
           moduleId: "dispensing",
-          params: { encounterId },
+          params: {
+            date: selectedDate,
+            encounterId: workItem.encounterId,
+            workItemId: workItem.id,
+          },
+          removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1178,6 +1229,29 @@ export function DispensingSidePanel({
     }
 
     setSelectedQueueItem("dispensing", itemId);
+  }
+  function handleSelectDate(date: string) {
+    selectDate(date);
+    setSelectedQueueItem("dispensing", "");
+    setSelectedQueueItem("treatment", "");
+    if (!onNavigateWorkspaceSurface) return;
+    onNavigateWorkspaceSurface(
+      buildWorkspaceSurfaceRoute({
+        moduleId: "dispensing",
+        params: { date },
+        removeParams: [
+          "encounterId",
+          "imagingStudyId",
+          "invoiceId",
+          "labResultId",
+          "patientId",
+          "workItemId",
+        ],
+        search: searchParams,
+        workspaceId,
+      }),
+      "dispensing",
+    );
   }
 
   return (
@@ -1196,11 +1270,7 @@ export function DispensingSidePanel({
       todayDate={todayDate}
       typeFilterPlacement="list-header"
       onCollapse={() => setModulePanelOpen(false)}
-      onDateChange={(date) => {
-        selectDate(date);
-        setSelectedQueueItem("dispensing", "");
-        setSelectedQueueItem("treatment", "");
-      }}
+      onDateChange={handleSelectDate}
       onSelectItem={handleSelectQueueItem}
     />
   );
@@ -1559,7 +1629,7 @@ function groupFulfillmentHistoryEvents(
     { date: string; label: string; items: FulfillmentWorkItemHistoryEvent[] }
   >();
   for (const event of [...events].reverse()) {
-    const date = event.createdAt.slice(0, 10);
+    const date = getOperatingDateFromIso(event.createdAt) ?? "날짜 미상";
     const group = groups.get(date) ?? {
       date,
       label: date.replaceAll("-", "."),
@@ -1585,7 +1655,7 @@ function FulfillmentHistoryItem({
   const previousStatusLabel = item.previousStatus
     ? getFulfillmentHistoryStatusLabel(instructionType, item.previousStatus)
     : null;
-  const time = item.createdAt.slice(11, 16) || "시간 미상";
+  const time = formatOperatingShortTime(item.createdAt);
 
   return (
     <EmrContentHistoryItem
@@ -2594,7 +2664,7 @@ function DispensingContentBody({
       <div className="mt-3 grid gap-2">
         {medicationLinkPending && selectedFulfillmentWorkItem ? <EmrInlineAlert severity="warning" title="수행 전 약품 오더 연결이 필요합니다."
           action={onOpenChart ? <Button size="sm" variant="outline" onClick={() => onOpenChart(selectedFulfillmentWorkItem.encounterId)}>차트에서 약품 오더 연결</Button> : undefined}>
-          차트에서 ‘{selectedFulfillmentWorkItem.sourceSnapshot?.orderDisplayName ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
+          차트에서 ‘{getFulfillmentDisplayName(selectedFulfillmentWorkItem) ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
         </EmrInlineAlert> : null}
         <DispensingFulfillmentQueueNotice
           status={fulfillmentQueue.status}

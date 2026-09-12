@@ -130,7 +130,10 @@ import {
 } from "@/lib/emr-domain/demo-workspaces";
 import {
   addDaysToIsoDate,
+  formatOperatingShortTime,
   formatKoreanOperatingDateLabel,
+  formatShortOperatingDate,
+  getOperatingDateFromIso,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -151,8 +154,13 @@ import type {
   Patient,
 } from "@/types/emr-domain";
 
-const formatShortDateTime = (dateTime?: string) =>
-  dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
+const formatShortDateTime = (dateTime?: string) => {
+  const operatingDate = getOperatingDateFromIso(dateTime);
+  const operatingTime = formatOperatingShortTime(dateTime);
+  return operatingDate && operatingTime !== "-"
+    ? `${formatShortOperatingDate(operatingDate)} ${operatingTime}`
+    : "-";
+};
 
 const formatFileSize = (bytes?: number) => {
   if (!bytes) return "-";
@@ -166,10 +174,13 @@ const getReceptionTypeLabel = (encounter: Encounter) =>
 
 const getTaskQueueClockTime = (dateTime?: string) =>
   formatShortDateTime(dateTime).slice(9).trim() || "-";
-const getOrderRequesterName = (order?: EmrOrder) =>
-  order && (!isLegacySalesDemoWorkspace(order.workspaceId) || isLiveAuthRuntime())
+type QueueOrder = EmrOrder & { requesterName?: string };
+
+const getOrderRequesterName = (order?: QueueOrder) =>
+  order?.requesterName ??
+  (order && (!isLegacySalesDemoWorkspace(order.workspaceId) || isLiveAuthRuntime())
     ? "정보 없음"
-    : getStaffName(order?.requestedByUserId) ?? "이수지";
+    : getStaffName(order?.requestedByUserId) ?? "이수지");
 const getOrderEventTime = (order?: EmrOrder, fallbackDateTime?: string) =>
   getTaskQueueClockTime(order?.requestedAt ?? fallbackDateTime);
 
@@ -394,10 +405,13 @@ type FulfillmentWorkItem = {
   completedAt?: string | null;
   createdAt?: string;
   encounterId: string;
+  guardianName?: string | null;
   id: string;
   orderId: string;
+  patientName?: string | null;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
+  requesterName?: string | null;
   requestCycle: number;
   rowRevision: number;
   sourceSnapshot?: {
@@ -586,11 +600,9 @@ function getLivePatientFromWorkItem(workItem: FulfillmentWorkItem): Patient {
     id: `live-patient-${workItem.id}`,
     patientNo: `LIVE-${workItem.id.slice(0, 8)}`,
     workspaceId: workItem.workspaceId,
-    name: getSnapshotString(
-      workItem.sourceSnapshot,
-      "patientName",
-      "환자 미상",
-    ),
+    name:
+      workItem.patientName ??
+      getSnapshotString(workItem.sourceSnapshot, "patientName", "환자 미상"),
     species: "cat",
     breed: getSnapshotDetailString(
       workItem.sourceSnapshot,
@@ -622,11 +634,9 @@ function getLiveGuardianFromWorkItem(
     getStagingBridgeChartBundle(workItem)?.primaryGuardian;
   if (bridgedGuardian) return bridgedGuardian;
 
-  const guardianName = getSnapshotString(
-    workItem.sourceSnapshot,
-    "guardianName",
-    "",
-  );
+  const guardianName =
+    workItem.guardianName ??
+    getSnapshotString(workItem.sourceSnapshot, "guardianName", "");
   if (!guardianName) return undefined;
 
   const now =
@@ -666,7 +676,7 @@ function getLiveEncounterFromWorkItem(
   };
 }
 
-function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): EmrOrder {
+function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): QueueOrder {
   const now =
     workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
   return {
@@ -701,6 +711,7 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): EmrOrder {
     workStatus: workItem.status === "completed" ? "completed" : "pending",
     priority: "normal",
     requestedByUserId: workItem.requestedByUserId ?? "",
+    requesterName: workItem.requesterName ?? undefined,
     requestedAt: workItem.createdAt ?? now,
     currentAssigneeUserId: workItem.assignedToUserId ?? undefined,
     instruction: workItem.sourceSnapshot?.instruction,
@@ -1745,11 +1756,19 @@ export function LabSidePanel({
     selectLabResult("");
   }, [items, queryLabResultId, selectLabResult, selectedLabResultId]);
   function handleSelectLabResult(resultId: string) {
+    const item = items.find((candidate) => candidate.result.id === resultId);
+    if (!item) return;
+
     if (onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
         buildWorkspaceSurfaceRoute({
           moduleId: "lab",
-          params: { labResultId: resultId },
+          params: {
+            date: selectedDate,
+            encounterId: item.encounter.id,
+            labResultId: resultId,
+          },
+          removeParams: ["imagingStudyId", "invoiceId", "workItemId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1759,6 +1778,28 @@ export function LabSidePanel({
     }
 
     selectLabResult(resultId);
+  }
+  function handleSelectDate(date: string) {
+    selectDate(date);
+    selectLabResult("");
+    if (!onNavigateWorkspaceSurface) return;
+    onNavigateWorkspaceSurface(
+      buildWorkspaceSurfaceRoute({
+        moduleId: "lab",
+        params: { date },
+        removeParams: [
+          "encounterId",
+          "imagingStudyId",
+          "invoiceId",
+          "labResultId",
+          "patientId",
+          "workItemId",
+        ],
+        search: searchParams,
+        workspaceId,
+      }),
+      "lab",
+    );
   }
   const effectiveSelectedLabResultId = items.some(
     (item) => item.result.id === selectedLabResultId,
@@ -1824,12 +1865,9 @@ export function LabSidePanel({
         selectedDate={selectedDate}
         todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
-        onDateChange={(date) => {
-          selectDate(date);
-          selectLabResult("");
-        }}
-        onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}
-        onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
+        onDateChange={handleSelectDate}
+        onNext={() => handleSelectDate(addDaysToIsoDate(selectedDate, 1))}
+        onPrevious={() => handleSelectDate(addDaysToIsoDate(selectedDate, -1))}
       />
       <EmrListHeader
         label="검사 대기열"
@@ -1951,11 +1989,19 @@ export function ImagingSidePanel({
     selectImagingStudy("");
   }, [items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
   function handleSelectImagingStudy(studyId: string) {
+    const item = items.find((candidate) => candidate.study.id === studyId);
+    if (!item) return;
+
     if (onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
         buildWorkspaceSurfaceRoute({
           moduleId: "imaging",
-          params: { imagingStudyId: studyId },
+          params: {
+            date: selectedDate,
+            encounterId: item.encounter.id,
+            imagingStudyId: studyId,
+          },
+          removeParams: ["invoiceId", "labResultId", "workItemId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1965,6 +2011,28 @@ export function ImagingSidePanel({
     }
 
     selectImagingStudy(studyId);
+  }
+  function handleSelectDate(date: string) {
+    selectDate(date);
+    selectImagingStudy("");
+    if (!onNavigateWorkspaceSurface) return;
+    onNavigateWorkspaceSurface(
+      buildWorkspaceSurfaceRoute({
+        moduleId: "imaging",
+        params: { date },
+        removeParams: [
+          "encounterId",
+          "imagingStudyId",
+          "invoiceId",
+          "labResultId",
+          "patientId",
+          "workItemId",
+        ],
+        search: searchParams,
+        workspaceId,
+      }),
+      "imaging",
+    );
   }
   const effectiveSelectedImagingStudyId = items.some(
     (item) => item.study.id === selectedImagingStudyId,
@@ -2030,12 +2098,9 @@ export function ImagingSidePanel({
         selectedDate={selectedDate}
         todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
-        onDateChange={(date) => {
-          selectDate(date);
-          selectImagingStudy("");
-        }}
-        onNext={() => selectDate(addDaysToIsoDate(selectedDate, 1))}
-        onPrevious={() => selectDate(addDaysToIsoDate(selectedDate, -1))}
+        onDateChange={handleSelectDate}
+        onNext={() => handleSelectDate(addDaysToIsoDate(selectedDate, 1))}
+        onPrevious={() => handleSelectDate(addDaysToIsoDate(selectedDate, -1))}
       />
       <EmrListHeader
         label="영상 대기열"
@@ -3690,7 +3755,8 @@ export function LabContent({
                 allowDemoContent
                   ? (getStaffName(displayDetail.order?.requestedByUserId) ??
                     "이수지")
-                  : getSnapshotString(
+                  : fulfillmentWorkItem?.requesterName ??
+                    getSnapshotString(
                       fulfillmentWorkItem?.sourceSnapshot,
                       "requestingVetName",
                       "정보 없음",
@@ -4526,7 +4592,8 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                 "요청 수의사",
                 allowDemoContent
                   ? (getStaffName(detail.order?.requestedByUserId) ?? "이수지")
-                  : getSnapshotString(
+                  : fulfillmentWorkItem?.requesterName ??
+                    getSnapshotString(
                       fulfillmentWorkItem?.sourceSnapshot,
                       "requestingVetName",
                       "정보 없음",
@@ -4570,7 +4637,8 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
             detail={detail}
             requesterName={allowDemoContent
               ? getStaffName(detail.order?.requestedByUserId) ?? "이수지"
-              : getSnapshotString(fulfillmentWorkItem?.sourceSnapshot, "requestingVetName", "정보 없음")}
+              : fulfillmentWorkItem?.requesterName ??
+                getSnapshotString(fulfillmentWorkItem?.sourceSnapshot, "requestingVetName", "정보 없음")}
             assigneeName={allowDemoContent
               ? assignment.assigneeName
               : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"}
