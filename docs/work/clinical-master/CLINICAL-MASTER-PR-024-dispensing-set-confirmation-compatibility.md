@@ -93,15 +93,19 @@ eight private helpers:
 - `clair_assert_dispensing_set_contract_copy`
 
 It adds the capture, lineage-copy, and deferred contract-copy triggers. It also
-patches or replaces these eight existing functions behind exact text-anchor
-drift guards: `clair_save_chart_order_draft_phase2_base`,
+patches or replaces these eight existing functions:
+`clair_save_chart_order_draft_phase2_base`,
 `clair_b3_assert_set_child_lineage`,
 `clair_compute_plan_order_dispense_projection`,
 `clair_set_dispensing_order_lineage`,
 `clair_confirm_chart_order_candidates_billing_summary_base`,
 `clair_snapshot_order_billing_authority`,
 `clair_confirm_chart_order_candidates_origin_base`, and
-`clair_b3_runtime_row_json`.
+`clair_b3_runtime_row_json`. The six dynamic patches have exact text-anchor
+guards in the migration. The two full replacements—billing authority and
+runtime-row JSON—are instead bound, together with the other six functions, by
+full predecessor SHA-256 checks in the release preflight and full candidate
+SHA-256 checks in the postflight and pre-use rollback.
 
 The migration ends with two scoped `UPDATE public.orders` repairs: one for
 mutable, active dispensing set children and one for their root lineage maps.
@@ -150,7 +154,11 @@ It restored all eight predecessor function definitions to their baseline
 SHA-256 values, removed all candidate objects, and preserved the exact 12-row
 baseline fingerprint. A separate denial clone with one nonempty candidate
 snapshot stopped at `dispensing_set_compatibility_rollback_after_use_denied`
-and retained all three columns, proving the fail-closed after-use guard.
+and retained all three columns, proving the fail-closed after-use guard. Two
+additional drift-negative clones added an independent field to the fully
+replaced runtime-row function: apply stopped before DDL and retained the
+predecessor change, while rollback stopped before trigger removal and retained
+the candidate change.
 
 ## Verification and recovery
 
@@ -181,9 +189,9 @@ current Vercel Production environment uses this same shared Supabase project.
 The exact migration SHA-256 is
 `84d955b3c881121cd91d6172b9ccf31599614ab67cc8d612156f119885141432`.
 The release-only preflight, postflight, and pre-use rollback SHA-256 values are
-`dc03dadebd316fb6d24e6e35184d02390898c1a27778477bfdd67af9c3177e27`,
-`f3c4b585560693dd95c229dce0520218baf080e4dc938752b6a987e124a6dc92`,
-and `eece8a7172cb14dadd71a62f4948458ba57b9da27d0f3e8b82109f83f5e6a34b`.
+`42451cbe8788789b0074295434276db3070e8d723c92c73c087dd6d05aaab0d4`,
+`356d77980209a808d3186e5c635cdb4947ed21666cad4d820c65c05d0bc0caa7`,
+and `8a150ecdfc3b32a4ab078a79b06e42dc9c0f9a44dd88859ac1d01c5ac4ceb274`.
 
 The remote `orders` baseline is 162 rows with existing-field fingerprint
 `3dae85d3e90453ba69e681eb4129681a`. Candidate columns, helpers, and triggers
@@ -201,18 +209,18 @@ change. The postflight requires the same 162-row fingerprint, zero nonempty new
 snapshots on preexisting rows, all columns/constraints/triggers/helpers, patched
 anchors, and private helper grant denial before committing.
 
-The captured predecessor function SHA-256 values are:
+The captured predecessor and candidate function SHA-256 values are:
 
-| Function | SHA-256 |
-| --- | --- |
-| `clair_save_chart_order_draft_phase2_base` | `bff6b9f029576b690267bfa3b4903f739c616ecd6e7b02526f1c3980d9d92415` |
-| `clair_b3_assert_set_child_lineage` | `fc9276157eb42ddf3df01f28d748036526dc73c88fa26b79a4f9a451adf98832` |
-| `clair_compute_plan_order_dispense_projection` | `45e7d833c3aac8fd6a95838c8b10d141ade4e5debdaab6b51602db53a0ed0ec7` |
-| `clair_set_dispensing_order_lineage` | `a7bdc73f260867a90f72bbfcb06cb02e2c8e1ff0242fc962ec7561151980cb02` |
-| `clair_confirm_chart_order_candidates_billing_summary_base` | `ef199a2e9df94783a7065a7d295ddf307f9281c31552b86ef03b5b93aa7749c0` |
-| `clair_snapshot_order_billing_authority` | `6a2ac1b735567d116932b20c8b9816557bcd1b20e7f9112112a55cdfc1bfb7cf` |
-| `clair_confirm_chart_order_candidates_origin_base` | `06d6e61c633bee382dd53db84ccb8c2a5a2c0db1534918a9362ef35d78a7b683` |
-| `clair_b3_runtime_row_json` | `42b0427da929c84ae9b012de0c05b2717ed9c2d3c179c5a5c3e9c48049b47bb5` |
+| Function | Predecessor SHA-256 | Candidate SHA-256 |
+| --- | --- | --- |
+| `clair_save_chart_order_draft_phase2_base` | `bff6b9f029576b690267bfa3b4903f739c616ecd6e7b02526f1c3980d9d92415` | `1bacf55f8ef7886c7729dcf54d46b1e107c9e81d9862e051f7ff5f95660008dc` |
+| `clair_b3_assert_set_child_lineage` | `fc9276157eb42ddf3df01f28d748036526dc73c88fa26b79a4f9a451adf98832` | `2d966e28eb8e8f60eb97765e6e1807ddc3ed922382c1dea33ee8e9d03fe7709b` |
+| `clair_compute_plan_order_dispense_projection` | `45e7d833c3aac8fd6a95838c8b10d141ade4e5debdaab6b51602db53a0ed0ec7` | `76a817fffa69e4721261f353ce834e5bf91ca23413c3d047378b4b74a1c52c6b` |
+| `clair_set_dispensing_order_lineage` | `a7bdc73f260867a90f72bbfcb06cb02e2c8e1ff0242fc962ec7561151980cb02` | `0d045bea458e4b4e9358ca680f71712ac73ed1be4ff0badea2c0caff95333079` |
+| `clair_confirm_chart_order_candidates_billing_summary_base` | `ef199a2e9df94783a7065a7d295ddf307f9281c31552b86ef03b5b93aa7749c0` | `772d3042977beb75c8f685498982ce700aa6dcd7762bb66f8ad26282552b144b` |
+| `clair_snapshot_order_billing_authority` | `6a2ac1b735567d116932b20c8b9816557bcd1b20e7f9112112a55cdfc1bfb7cf` | `887fcfb012e38a9e72cf93249fc7f26a99cbfcb6e5ffff87b09843edd7243721` |
+| `clair_confirm_chart_order_candidates_origin_base` | `06d6e61c633bee382dd53db84ccb8c2a5a2c0db1534918a9362ef35d78a7b683` | `117e71a2689568f392cbfbe0e4e324d4443af795a822d9420b60dd9a8e042b81` |
+| `clair_b3_runtime_row_json` | `42b0427da929c84ae9b012de0c05b2717ed9c2d3c179c5a5c3e9c48049b47bb5` | `afb2b2065bb1809aacad45414d3e60ecebfb457626440ef70d088d0dd85d5d98` |
 
 ## Remaining gates
 

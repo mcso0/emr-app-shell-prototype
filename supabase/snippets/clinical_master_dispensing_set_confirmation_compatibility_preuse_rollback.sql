@@ -12,6 +12,15 @@ begin;
 lock table public.orders in access exclusive mode;
 
 do $preuse_guard$
+declare
+  v_writer text;
+  v_b3_constraint text;
+  v_projection text;
+  v_lineage text;
+  v_confirmation_snapshot text;
+  v_billing_authority text;
+  v_confirmation_billing text;
+  v_runtime_row text;
 begin
   if to_regprocedure(
     'private.clair_is_set_pricing_calculation_outputs(jsonb)'
@@ -50,6 +59,51 @@ begin
   ) then
     raise exception 'dispensing_set_compatibility_rollback_after_use_denied'
       using errcode = '55000';
+  end if;
+
+  v_writer := pg_get_functiondef(
+    'public.clair_save_chart_order_draft_phase2_base(text,text,uuid,jsonb)'::regprocedure
+  );
+  v_b3_constraint := pg_get_functiondef(
+    'private.clair_b3_assert_set_child_lineage()'::regprocedure
+  );
+  v_projection := pg_get_functiondef(
+    'private.clair_compute_plan_order_dispense_projection(public.orders,timestamptz)'::regprocedure
+  );
+  v_lineage := pg_get_functiondef(
+    'private.clair_set_dispensing_order_lineage()'::regprocedure
+  );
+  v_confirmation_snapshot := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_billing_summary_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  v_billing_authority := pg_get_functiondef(
+    'private.clair_snapshot_order_billing_authority()'::regprocedure
+  );
+  v_confirmation_billing := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_origin_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  v_runtime_row := pg_get_functiondef(
+    'private.clair_b3_runtime_row_json(public.orders)'::regprocedure
+  );
+
+  if encode(digest(v_writer, 'sha256'), 'hex')
+      is distinct from '1bacf55f8ef7886c7729dcf54d46b1e107c9e81d9862e051f7ff5f95660008dc'
+    or encode(digest(v_b3_constraint, 'sha256'), 'hex')
+      is distinct from '2d966e28eb8e8f60eb97765e6e1807ddc3ed922382c1dea33ee8e9d03fe7709b'
+    or encode(digest(v_projection, 'sha256'), 'hex')
+      is distinct from '76a817fffa69e4721261f353ce834e5bf91ca23413c3d047378b4b74a1c52c6b'
+    or encode(digest(v_lineage, 'sha256'), 'hex')
+      is distinct from '0d045bea458e4b4e9358ca680f71712ac73ed1be4ff0badea2c0caff95333079'
+    or encode(digest(v_confirmation_snapshot, 'sha256'), 'hex')
+      is distinct from '772d3042977beb75c8f685498982ce700aa6dcd7762bb66f8ad26282552b144b'
+    or encode(digest(v_billing_authority, 'sha256'), 'hex')
+      is distinct from '887fcfb012e38a9e72cf93249fc7f26a99cbfcb6e5ffff87b09843edd7243721'
+    or encode(digest(v_confirmation_billing, 'sha256'), 'hex')
+      is distinct from '117e71a2689568f392cbfbe0e4e324d4443af795a822d9420b60dd9a8e042b81'
+    or encode(digest(v_runtime_row, 'sha256'), 'hex')
+      is distinct from 'afb2b2065bb1809aacad45414d3e60ecebfb457626440ef70d088d0dd85d5d98'
+  then
+    raise exception 'dispensing_set_compatibility_rollback_candidate_definition_drift';
   end if;
 end;
 $preuse_guard$;
@@ -402,6 +456,15 @@ alter table public.orders
   drop column dispensing_lineage_snapshot;
 
 do $rollback_postcondition$
+declare
+  v_writer text;
+  v_b3_constraint text;
+  v_projection text;
+  v_lineage text;
+  v_confirmation_snapshot text;
+  v_billing_authority text;
+  v_confirmation_billing text;
+  v_runtime_row text;
 begin
   if to_regprocedure(
     'private.clair_is_set_pricing_calculation_outputs(jsonb)'
@@ -419,6 +482,51 @@ begin
     )
   then
     raise exception 'dispensing_set_compatibility_rollback_incomplete';
+  end if;
+
+  v_writer := pg_get_functiondef(
+    'public.clair_save_chart_order_draft_phase2_base(text,text,uuid,jsonb)'::regprocedure
+  );
+  v_b3_constraint := pg_get_functiondef(
+    'private.clair_b3_assert_set_child_lineage()'::regprocedure
+  );
+  v_projection := pg_get_functiondef(
+    'private.clair_compute_plan_order_dispense_projection(public.orders,timestamptz)'::regprocedure
+  );
+  v_lineage := pg_get_functiondef(
+    'private.clair_set_dispensing_order_lineage()'::regprocedure
+  );
+  v_confirmation_snapshot := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_billing_summary_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  v_billing_authority := pg_get_functiondef(
+    'private.clair_snapshot_order_billing_authority()'::regprocedure
+  );
+  v_confirmation_billing := pg_get_functiondef(
+    'public.clair_confirm_chart_order_candidates_origin_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  v_runtime_row := pg_get_functiondef(
+    'private.clair_b3_runtime_row_json(public.orders)'::regprocedure
+  );
+
+  if encode(digest(v_writer, 'sha256'), 'hex')
+      is distinct from 'bff6b9f029576b690267bfa3b4903f739c616ecd6e7b02526f1c3980d9d92415'
+    or encode(digest(v_b3_constraint, 'sha256'), 'hex')
+      is distinct from 'fc9276157eb42ddf3df01f28d748036526dc73c88fa26b79a4f9a451adf98832'
+    or encode(digest(v_projection, 'sha256'), 'hex')
+      is distinct from '45e7d833c3aac8fd6a95838c8b10d141ade4e5debdaab6b51602db53a0ed0ec7'
+    or encode(digest(v_lineage, 'sha256'), 'hex')
+      is distinct from 'a7bdc73f260867a90f72bbfcb06cb02e2c8e1ff0242fc962ec7561151980cb02'
+    or encode(digest(v_confirmation_snapshot, 'sha256'), 'hex')
+      is distinct from 'ef199a2e9df94783a7065a7d295ddf307f9281c31552b86ef03b5b93aa7749c0'
+    or encode(digest(v_billing_authority, 'sha256'), 'hex')
+      is distinct from '6a2ac1b735567d116932b20c8b9816557bcd1b20e7f9112112a55cdfc1bfb7cf'
+    or encode(digest(v_confirmation_billing, 'sha256'), 'hex')
+      is distinct from '06d6e61c633bee382dd53db84ccb8c2a5a2c0db1534918a9362ef35d78a7b683'
+    or encode(digest(v_runtime_row, 'sha256'), 'hex')
+      is distinct from '42b0427da929c84ae9b012de0c05b2717ed9c2d3c179c5a5c3e9c48049b47bb5'
+  then
+    raise exception 'dispensing_set_compatibility_rollback_restore_definition_drift';
   end if;
 end;
 $rollback_postcondition$;

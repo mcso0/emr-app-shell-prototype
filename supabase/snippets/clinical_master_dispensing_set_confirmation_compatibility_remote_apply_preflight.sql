@@ -18,8 +18,11 @@ declare
   v_writer text;
   v_b3_constraint text;
   v_projection text;
+  v_lineage text;
   v_confirmation_snapshot text;
+  v_billing_authority text;
   v_confirmation_billing text;
+  v_runtime_row text;
 begin
   select count(*),
     md5(coalesce(jsonb_agg(to_jsonb(orders) order by orders.id)::text, '[]')),
@@ -101,12 +104,41 @@ begin
   v_projection := pg_get_functiondef(
     'private.clair_compute_plan_order_dispense_projection(public.orders,timestamptz)'::regprocedure
   );
+  v_lineage := pg_get_functiondef(
+    'private.clair_set_dispensing_order_lineage()'::regprocedure
+  );
   v_confirmation_snapshot := pg_get_functiondef(
     'public.clair_confirm_chart_order_candidates_billing_summary_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
+  );
+  v_billing_authority := pg_get_functiondef(
+    'private.clair_snapshot_order_billing_authority()'::regprocedure
   );
   v_confirmation_billing := pg_get_functiondef(
     'public.clair_confirm_chart_order_candidates_origin_base(text,uuid,uuid,uuid[],text,text)'::regprocedure
   );
+  v_runtime_row := pg_get_functiondef(
+    'private.clair_b3_runtime_row_json(public.orders)'::regprocedure
+  );
+
+  if encode(digest(v_writer, 'sha256'), 'hex')
+      is distinct from 'bff6b9f029576b690267bfa3b4903f739c616ecd6e7b02526f1c3980d9d92415'
+    or encode(digest(v_b3_constraint, 'sha256'), 'hex')
+      is distinct from 'fc9276157eb42ddf3df01f28d748036526dc73c88fa26b79a4f9a451adf98832'
+    or encode(digest(v_projection, 'sha256'), 'hex')
+      is distinct from '45e7d833c3aac8fd6a95838c8b10d141ade4e5debdaab6b51602db53a0ed0ec7'
+    or encode(digest(v_lineage, 'sha256'), 'hex')
+      is distinct from 'a7bdc73f260867a90f72bbfcb06cb02e2c8e1ff0242fc962ec7561151980cb02'
+    or encode(digest(v_confirmation_snapshot, 'sha256'), 'hex')
+      is distinct from 'ef199a2e9df94783a7065a7d295ddf307f9281c31552b86ef03b5b93aa7749c0'
+    or encode(digest(v_billing_authority, 'sha256'), 'hex')
+      is distinct from '6a2ac1b735567d116932b20c8b9816557bcd1b20e7f9112112a55cdfc1bfb7cf'
+    or encode(digest(v_confirmation_billing, 'sha256'), 'hex')
+      is distinct from '06d6e61c633bee382dd53db84ccb8c2a5a2c0db1534918a9362ef35d78a7b683'
+    or encode(digest(v_runtime_row, 'sha256'), 'hex')
+      is distinct from '42b0427da929c84ae9b012de0c05b2717ed9c2d3c179c5a5c3e9c48049b47bb5'
+  then
+    raise exception 'dispensing_set_compatibility_remote_predecessor_definition_drift';
+  end if;
 
   if (length(v_writer) - length(replace(
       v_writer,
