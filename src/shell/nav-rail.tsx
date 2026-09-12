@@ -229,6 +229,18 @@ function RailModuleItem({
 }) {
   const Icon = item.icon;
   const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
+  const unavailable = item.moduleId === "inpatient";
+  const itemLabel = unavailable ? `${item.label}(작업 중)` : item.label;
+  const itemClassName = cn(
+    RAIL_ITEM_CLASS_NAME,
+    active && "bg-[var(--emr-navrail-item-selected)] text-[var(--emr-navrail-icon-selected)]",
+    unavailable && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-[var(--emr-navrail-icon)]",
+  );
+  const icon = (
+    <IconFrame>
+      <Icon className={item.iconClassName} />
+    </IconFrame>
+  );
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     if (
@@ -253,25 +265,33 @@ function RailModuleItem({
       <Tooltip>
         <TooltipTrigger
           render={
-            <Link
-              href={href}
-              className={cn(
-                RAIL_ITEM_CLASS_NAME,
-                active && "bg-[var(--emr-navrail-item-selected)] text-[var(--emr-navrail-icon-selected)]"
-              )}
-              aria-current={active ? "page" : undefined}
-              aria-label={item.label}
-              data-testid={active ? "nav-rail-active-item" : undefined}
-              onClick={handleClick}
-            >
-              <IconFrame>
-                <Icon className={item.iconClassName} />
-              </IconFrame>
-            </Link>
+            unavailable ? (
+              <button
+                type="button"
+                className={itemClassName}
+                aria-current={active ? "page" : undefined}
+                aria-disabled="true"
+                aria-label={itemLabel}
+                data-testid={active ? "nav-rail-active-item" : undefined}
+              >
+                {icon}
+              </button>
+            ) : (
+              <Link
+                href={href}
+                className={itemClassName}
+                aria-current={active ? "page" : undefined}
+                aria-label={itemLabel}
+                data-testid={active ? "nav-rail-active-item" : undefined}
+                onClick={handleClick}
+              >
+                {icon}
+              </Link>
+            )
           }
         />
         <TooltipContent side="right" sideOffset={RAIL_TOOLTIP_SIDE_OFFSET}>
-          {item.label}
+          {itemLabel}
         </TooltipContent>
       </Tooltip>
     </RailLayoutItem>

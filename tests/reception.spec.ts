@@ -3448,7 +3448,7 @@ test("patient guardian registration asks before leaving dirty drafts", async ({
   ).toHaveCount(0);
 });
 
-test("nav rail maps menu labels to the intended modules", async ({ page }) => {
+test("nav rail maps available modules and explains the unavailable inpatient module", async ({ page }) => {
   await page.goto("/w/clair-demo/reception");
 
   await expect(page.getByRole("link", { name: "접수/예약" })).toHaveAttribute(
@@ -3474,10 +3474,16 @@ test("nav rail maps menu labels to the intended modules", async ({ page }) => {
     "href",
     /^\/w\/clair-demo\/billing(?:\?.*)?$/,
   );
-  await expect(page.getByRole("link", { name: "입원" })).toHaveAttribute(
-    "href",
-    /^\/w\/clair-demo\/inpatient(?:\?.*)?$/,
-  );
+  const inpatientItem = page.getByRole("button", { name: "입원(작업 중)" });
+  await expect(inpatientItem).toHaveAttribute("aria-disabled", "true");
+  await expect(page.getByRole("link", { name: "입원" })).toHaveCount(0);
+  const receptionUrl = page.url();
+  await inpatientItem.click({ force: true });
+  await expect(page).toHaveURL(receptionUrl);
+  await inpatientItem.hover();
+  await expect(
+    page.locator("[data-slot='tooltip-content']").filter({ hasText: "입원(작업 중)" }),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: "고객관리" })).toHaveAttribute(
     "href",
     /^\/w\/clair-demo\/customer(?:\?.*)?$/,
