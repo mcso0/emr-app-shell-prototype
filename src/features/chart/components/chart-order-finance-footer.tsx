@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
@@ -54,74 +55,90 @@ export function ChartOrderFinanceFooter({
   return (
     <footer
       data-testid="chart-order-footer"
-      className="flex h-[52px] min-h-[52px] shrink-0 items-center justify-between gap-4 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4 text-[12px] leading-4"
+      className="flex h-[52px] min-h-[52px] shrink-0 items-center gap-[var(--clair-spacing-24)] border-t border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[var(--clair-spacing-12)]"
     >
       {accessibilitySummary ? <span className="sr-only">{accessibilitySummary}</span> : null}
-      <div className="flex min-w-0 items-center gap-3 text-[var(--emr-text-secondary)]">
-        <span className="font-semibold text-foreground">오더 {counts.total}건</span>
-        <span data-testid="chart-order-save-status" role="status">
-          · {saveStatusText}
+      <span className="sr-only">오더 {counts.total}건</span>
+      <div className="flex min-w-0 flex-1 items-center gap-[var(--clair-spacing-12)]">
+        <div className="flex shrink-0 items-center gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-4)] text-[14px] font-medium leading-[20px] tracking-[var(--clair-typography-body-2-normal-letter-spacing)] text-[var(--clair-color-atomic-neutral-500)]">
+          <span>총 오더</span>
+          <Badge
+            variant="outline"
+            size="sm"
+            className="h-[var(--clair-spacing-20)] min-w-[var(--clair-spacing-20)] gap-[var(--clair-spacing-2)] rounded-[var(--clair-radius-atomic-6)] border-[var(--clair-color-atomic-black-alpha-8)] bg-[var(--clair-color-atomic-white-alpha-8)] px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)] text-[12px] font-medium leading-[16px] tracking-[var(--clair-typography-label-2-letter-spacing)] text-[var(--clair-color-atomic-neutral-900)]"
+          >
+            {counts.total}
+          </Badge>
+        </div>
+        <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)] rounded-[var(--clair-radius-atomic-6)] bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-8)] py-[var(--clair-spacing-4)] text-[12px] font-medium leading-[16px] tracking-[var(--clair-typography-label-2-letter-spacing)]">
+          <span className="text-[var(--clair-color-atomic-red-400)]">
+            확정 전 {counts.draft}
+          </span>
+          <span
+            aria-hidden
+            className="h-[10px] w-px bg-[var(--clair-color-atomic-neutral-200)]"
+          />
+          <span className="text-[var(--clair-color-atomic-green-500)]">
+            확정 후 {counts.confirmed}
+          </span>
+        </div>
+        <span data-testid="chart-order-save-status" role="status" className="sr-only">
+          {saveStatusText}
         </span>
-        <span aria-hidden className="h-3 w-px bg-[var(--emr-border-default)]" />
-        <span>확정 후 <b className="text-foreground">{counts.confirmed}</b></span>
-        <span>확정 전 <b className="text-[var(--emr-status-warning-text)]">{counts.draft}</b></span>
-        {counts.recheck > 0 ? (
-          <span className="text-[var(--emr-status-warning-text)]">재확인 {counts.recheck}</span>
-        ) : null}
-        {counts.requested > 0 ? <span>청구됨 {counts.requested}</span> : null}
+        <span className="sr-only">
+          {counts.recheck > 0 ? `재확인 ${counts.recheck}건. ` : ""}
+          {counts.requested > 0 ? `청구됨 ${counts.requested}건.` : ""}
+        </span>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <div className="hidden items-center gap-3 text-[var(--emr-text-secondary)] xl:flex">
-          <span>확정 후 <b className="tabular-nums text-foreground">{formatWon(amounts.confirmed)}</b></span>
-          {amounts.draft > 0 ? (
-            <span>확정 전 <b className="tabular-nums text-[var(--emr-status-warning-text)]">{formatWon(amounts.draft)}</b></span>
-          ) : null}
-          {amounts.discount > 0 ? (
-            <span>할인 <b className="tabular-nums text-[var(--emr-text-success)]">-{formatWon(amounts.discount)}</b></span>
-          ) : null}
+      <div className="flex shrink-0 items-center gap-[var(--clair-spacing-12)]">
+        <div className="flex items-center justify-end gap-[var(--clair-spacing-8)] whitespace-nowrap text-[16px] font-medium leading-[24px] tracking-[var(--clair-typography-body-1-normal-letter-spacing)]">
+          <span className="text-[var(--clair-color-atomic-neutral-500)]">총 금액</span>
+          <span className="flex items-center gap-[var(--clair-spacing-4)] font-semibold tracking-[var(--clair-typography-headline-1-letter-spacing)] text-[var(--clair-color-atomic-neutral-900)]">
+            <span className="tabular-nums">{formatWonNumber(amounts.estimatedTotal)}</span>
+            <span>원</span>
+          </span>
         </div>
-        <span aria-hidden className="h-5 w-px bg-[var(--emr-border-default)]" />
-        <p className="whitespace-nowrap text-[13px] text-[var(--emr-text-secondary)]">
-          {amountLabel}{" "}
-          <strong className="ml-1 tabular-nums text-[16px] text-foreground">
-            {formatWon(amounts.estimatedTotal)}
-          </strong>
-        </p>
+        <span
+          aria-hidden
+          className="h-[18px] w-px bg-[var(--clair-color-atomic-neutral-200)]"
+        />
+        <span className="sr-only">{amountLabel}</span>
         {freshnessText ? (
           <span
             role="status"
-            className={cn(
-              "whitespace-nowrap text-[11px]",
-              displayState === "invalid" ||
-                displayState === "save_error" ||
-                freshness === "stale" ||
-                freshness === "error"
-                ? "text-[var(--emr-status-warning-text)]"
-                : "text-[var(--emr-text-tertiary)]",
-            )}
+            className="sr-only"
           >
             {freshnessText}
           </span>
         ) : null}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          aria-expanded={drawerOpen}
-          aria-controls="chart-order-billing-detail-aside"
-          onClick={onOpenDetails}
-        >
-          금액 상세
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={!canRequestBilling || requesting}
-          onClick={onRequestBilling}
-        >
-          {requesting ? "이동 중" : "수납에서 청구"}
-        </Button>
+        <div className="flex items-center gap-[var(--clair-spacing-8)]">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="!shadow-none"
+            aria-expanded={drawerOpen}
+            aria-controls="chart-order-billing-detail-aside"
+            onClick={onOpenDetails}
+          >
+            금액 상세
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            className="!shadow-none"
+            aria-label={
+              requesting
+                ? "Order 수납 청구 이동 중"
+                : "Order 수납 청구 (수납에서 청구)"
+            }
+            disabled={!canRequestBilling || requesting}
+            onClick={onRequestBilling}
+          >
+            {requesting ? "이동 중" : "Order 수납 청구"}
+          </Button>
+        </div>
         <span className="sr-only" aria-live="polite">{error}</span>
       </div>
     </footer>
@@ -296,6 +313,10 @@ function MoneyRow({ label, tone, value }: { label: string; tone?: "success"; val
 
 function formatWon(value: number) {
   return `${Math.round(value).toLocaleString("ko-KR")}원`;
+}
+
+function formatWonNumber(value: number) {
+  return Math.round(value).toLocaleString("ko-KR");
 }
 
 function getFreshnessText(freshness: ChartOrderBillingSummaryFreshness) {
