@@ -91,7 +91,7 @@ import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
-import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrInlineAlert, type EmrInlineAlertProps } from "@/components/emr/inline-alert";
 import { EmrInstructionHistoryToggle } from "@/components/emr/instruction-header-stack";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
@@ -4205,6 +4205,8 @@ function SoapPanel({
   encounterId,
   chartId,
   loading,
+  readError,
+  onRetryRead,
   onCollapse,
   onPersistedSoapNote,
   soapNote,
@@ -4217,6 +4219,8 @@ function SoapPanel({
   encounterId: string;
   chartId?: string;
   loading: boolean;
+  readError: boolean;
+  onRetryRead: () => void;
   onCollapse: () => void;
   onPersistedSoapNote: (soapNote: SoapNote) => void;
   soapNote?: SoapNote;
@@ -4238,6 +4242,7 @@ function SoapPanel({
   );
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [saveState, setSaveState] = useState<SoapSaveState>("idle");
+  const [saveNoticeVersion, setSaveNoticeVersion] = useState(0);
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const locallyEditedRef = useRef(false);
   const saveAfterEditorReadyRef = useRef(false);
@@ -4368,6 +4373,9 @@ function SoapPanel({
       },
       (state, result) => {
         setSaveState(state);
+        if (state === "error" || state === "conflict" || state === "saved_with_warning") {
+          setSaveNoticeVersion((version) => version + 1);
+        }
         if (state === "error") {
           const failedResult = result && !result.ok ? result : undefined;
           setSaveErrorMessage(
@@ -4492,7 +4500,7 @@ function SoapPanel({
     );
   };
 
-  const activeStatusText = loading
+  const activeStatusText = readError ? "SOAP 조회 실패" : loading
     ? "SOAP 정보를 불러오는 중"
     : saveState === "saving"
       ? "자동저장 중"
@@ -4636,30 +4644,40 @@ function SoapPanel({
         </div>
       </div>
 
+      {readError ? (
+        <ChartNotice severity="error" title="SOAP를 불러오지 못했어요"
+          className="mx-3 my-2 w-auto shrink-0 emr-text-metadata" testId="chart-soap-read-error"
+          action={<Button size="sm" variant="outline" onClick={onRetryRead}>다시 불러오기</Button>}>
+          최신 내용을 확인할 때까지 편집할 수 없어요.
+        </ChartNotice>
+      ) : null}
+
       {soapNote?.blockDocumentError === "invalid_stored_document" ? (
-        <EmrInlineAlert
+        <ChartNotice
           severity="warning"
-          title="저장된 블록 문서를 열 수 없어 기존 SOAP 내용으로 복원했습니다"
+          key={`recovery-${soapNote.updatedAt}`}
+          title="저장된 문서를 열지 못해 기존 SOAP 내용을 표시했어요"
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           testId="chart-soap-document-recovery-warning"
         >
-          현재 화면의 내용을 확인한 뒤 저장하면 지원되는 문서 형식으로 다시
-          기록됩니다.
-        </EmrInlineAlert>
+          표시된 내용을 확인한 뒤 저장해 주세요.
+        </ChartNotice>
       ) : null}
 
       {saveState === "conflict" ? (
-        <div
-          role="alert"
-          className="border-b border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] px-4 py-2 text-sm text-[var(--emr-status-warning-text)]"
-        >
-          다른 탭이나 사용자가 먼저 SOAP를 저장했습니다. 현재 입력은 이 화면에
-          유지됩니다. 서버 최신본을 확인하기 전에는 자동으로 덮어쓰지 않습니다.
-        </div>
+        <ChartNotice key={`conflict-${saveNoticeVersion}`} severity="warning"
+          title="SOAP 저장 충돌 · 현재 입력 미저장"
+          className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
+          testId="chart-soap-conflict"
+          action={<Button size="sm" variant="outline" disabled={writeDisabled} onClick={() => coordinator.retry()}>다시 저장</Button>}>
+          다른 곳에서 먼저 SOAP를 저장했어요. 현재 입력은 유지되며 자동으로 덮어쓰지 않아요.
+          현재 입력을 보관하고 최신 기록을 확인해 주세요.
+        </ChartNotice>
       ) : null}
 
       {saveState === "saved_with_warning" ? (
-        <EmrInlineAlert
+        <ChartNotice
+          key={`audit-${saveNoticeVersion}`}
           severity="warning"
           title="SOAP는 저장되었지만 변경 이력 기록을 확인해야 합니다"
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
@@ -4667,11 +4685,12 @@ function SoapPanel({
         >
           임상 기록은 서버에 반영되었습니다. 중복 저장하지 말고 관리자에게 변경
           이력 상태를 확인해 주세요.
-        </EmrInlineAlert>
+        </ChartNotice>
       ) : null}
 
       {saveState === "error" ? (
-        <EmrInlineAlert
+        <ChartNotice
+          key={`save-${saveNoticeVersion}`}
           severity="error"
           title="SOAP를 저장하지 못했습니다"
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
@@ -4689,7 +4708,7 @@ function SoapPanel({
         >
           {saveErrorMessage ??
             "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다."}
-        </EmrInlineAlert>
+        </ChartNotice>
       ) : null}
 
       {loading ? (
@@ -5199,7 +5218,7 @@ function AssessmentPanel({
             </Button>
           </div>
           {saveStatusText === "저장 실패" ? (
-            <EmrInlineAlert
+            <ChartNotice
               severity="error"
               title="진단명을 저장하지 못했습니다"
               className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
@@ -5207,7 +5226,7 @@ function AssessmentPanel({
             >
               변경 내용은 화면에 남아 있지만 서버에는 반영되지 않았습니다.
               권한과 연결 상태를 확인한 뒤 다시 시도해 주세요.
-            </EmrInlineAlert>
+            </ChartNotice>
           ) : null}
           <div className="min-h-0 min-w-0 flex-1 bg-[var(--emr-surface-panel)]">
             <ChartAssessmentTable
@@ -9610,6 +9629,33 @@ const chartUnavailableActionCopy = {
   { body: string; title: string }
 >;
 
+function ChartNotice({
+  children,
+  severity = "info",
+  ...props
+}: EmrInlineAlertProps) {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) {
+    if (severity === "info" || severity === "success") return null;
+    return (
+      <div role="status" data-testid={props.testId ? `${props.testId}-collapsed` : undefined}
+        className={cn("flex shrink-0 flex-wrap items-center gap-2 text-xs text-[var(--emr-text-secondary)]", props.className)}>
+        <span>{props.title}</span>
+        {props.action}
+        {props.secondaryAction}
+      </div>
+    );
+  }
+  return (
+    <EmrInlineAlert {...props} severity={severity}
+      dismissAction={<Button type="button" size="icon-xs" variant="ghost" aria-label="안내 닫기" onClick={() => setDismissed(true)}>
+        <CdsActionsXIcon data-icon="inline-start" />
+      </Button>}>
+      {children}
+    </EmrInlineAlert>
+  );
+}
+
 function ChartUnavailableAlert({
   action,
   className,
@@ -10771,7 +10817,7 @@ function OrderArea({
   actorHeaders,
   bundle,
   chartId,
-  draftWriteDisabled,
+  draftWriteDisabled: inheritedDraftWriteDisabled,
   collapseContentId,
   collapsed,
   loading,
@@ -10794,7 +10840,9 @@ function OrderArea({
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
-  const writeDisabled = inheritedWriteDisabled || !chartId;
+  const [orderDraftReadError, setOrderDraftReadError] = useState(false);
+  const writeDisabled = inheritedWriteDisabled || !chartId || orderDraftReadError;
+  const draftWriteDisabled = inheritedDraftWriteDisabled || orderDraftReadError;
   const mutationChartId = chartId;
   const inOrderScope = useCallback(
     (row: ChartOrderDraftRow) =>
@@ -10944,9 +10992,14 @@ function OrderArea({
   } | null>(null);
   const [orderSortState, setOrderSortState] =
     useState<ChartOrderSortState>(null);
-  const [orderDraftSaveState, setOrderDraftSaveState] = useState<
+  const [orderDraftSaveState, setOrderDraftSaveStateValue] = useState<
     "idle" | "loading" | "saving" | "saved" | "error" | "conflict"
   >("idle");
+  const [orderNoticeVersion, setOrderNoticeVersion] = useState(0);
+  const setOrderDraftSaveState = useCallback((state: typeof orderDraftSaveState) => {
+    setOrderDraftSaveStateValue(state);
+    if (state === "error" || state === "conflict") setOrderNoticeVersion((version) => version + 1);
+  }, []);
   const [orderDraftEtag, setOrderDraftEtag] = useState<string | undefined>();
   const orderDraftEtagRef = useRef(orderDraftEtag);
   const [orderDraftReloadKey, setOrderDraftReloadKey] = useState(0);
@@ -11823,6 +11876,7 @@ function OrderArea({
       pendingRemovedRootOrderIdsRef.current.clear();
       setPendingRemovedRootOrderIds(new Set());
       setOrderDraftSaveState("loading");
+      setOrderDraftReadError(false);
 
       const result = await loadChartOrderDraft({
         actorHeaders,
@@ -11910,6 +11964,7 @@ function OrderArea({
         return;
       }
 
+      setOrderDraftReadError(true);
       setOrderDraftSaveState("error");
     }
 
@@ -11927,6 +11982,7 @@ function OrderArea({
     setDraftRows,
     applyPersistedOrderDrafts,
     applyPersistedOrderActions,
+    setOrderDraftSaveState,
   ]);
   const acceptAuthoritativeBillingSummary = useCallback(
     (summary: ChartOrderBillingSummary) => {
@@ -12103,7 +12159,7 @@ function OrderArea({
     if (inFlightSave) return inFlightSave;
     if (orderDraftSaveInFlightRef.current) return Promise.resolve(false);
     if (
-      writeDisabled || draftWriteDisabled ||
+      writeDisabled || draftWriteDisabled || orderDraftReadError ||
       orderDraftSaveState === "loading" ||
       orderDraftSaveState === "saving" ||
       orderDraftSaveState === "conflict"
@@ -13362,7 +13418,7 @@ function OrderArea({
     : orderDraftSaveState === "saving"
       ? "저장 중"
       : orderDraftSaveState === "error"
-        ? "저장 실패"
+        ? orderDraftReadError ? "조회 실패" : "저장 실패"
         : orderDraftSaveState === "conflict"
           ? "충돌 해결 필요"
           : hasDraftChanges
@@ -13590,37 +13646,32 @@ function OrderArea({
           />
         ) : null}
         {orderDraftSaveState === "error" ? (
-          <EmrInlineAlert
+          <ChartNotice
             severity="error"
-            title="오더 정보를 반영하지 못했습니다"
+            key={`error-${orderNoticeVersion}`}
+            title={orderDraftReadError ? "오더 정보를 불러오지 못했어요" : "오더 정보를 반영하지 못했습니다"}
             className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
             action={
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => void commitDraftRows()}
+                onClick={() => orderDraftReadError ? setOrderDraftReloadKey((key) => key + 1) : void commitDraftRows()}
               >
-                다시 저장
+                {orderDraftReadError ? "다시 불러오기" : "다시 저장"}
               </Button>
             }
             testId="chart-order-state-error"
           >
-            현재 표의 내용은 유지됩니다. 권한과 연결 상태를 확인한 뒤 변경사항을
-            다시 저장해 주세요.
-          </EmrInlineAlert>
+            {orderDraftReadError ? "오더 정보를 다시 불러온 뒤 편집해 주세요." : "현재 표의 내용은 유지돼요. 변경사항을 다시 저장해 주세요."}
+          </ChartNotice>
         ) : null}
         {orderDraftSaveState === "conflict" ? (
-          <EmrInlineAlert
+          <ChartNotice
             severity="error"
+            key={`conflict-${orderNoticeVersion}`}
             title="다른 기기의 오더 변경과 충돌했습니다"
             className="mx-3 mt-2 w-auto shrink-0 emr-text-metadata"
-            testId="chart-order-draft-conflict"
-          >
-            <span className="grid gap-2">
-              <span>
-                현재 편집값은 덮어쓰지 않았습니다. 서버 값을 다시 불러오기
-                전에는 확정과 수납 후보 생성을 진행할 수 없습니다.
-              </span>
+            action={
               <Button
                 type="button"
                 variant="outline"
@@ -13637,11 +13688,15 @@ function OrderArea({
               >
                 서버 값 다시 불러오기
               </Button>
-            </span>
-          </EmrInlineAlert>
+            }
+            testId="chart-order-draft-conflict"
+          >
+            현재 편집값은 덮어쓰지 않았습니다. 서버 값을 다시 불러오기
+            전에는 확정과 수납 후보 생성을 진행할 수 없습니다.
+          </ChartNotice>
         ) : null}
         {quickAddedHidden ? (
-          <EmrInlineAlert severity="info" title="다른 분류에 오더를 추가했어요." action={<Button size="sm" variant="ghost" onClick={() => setOrderFilter("all")}>전체에서 보기</Button>} />
+          <ChartNotice key={quickAddedSourceKey} severity="info" title="다른 분류에 오더를 추가했어요." action={<Button size="sm" variant="ghost" onClick={() => setOrderFilter("all")}>전체에서 보기</Button>} />
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
@@ -14451,6 +14506,8 @@ export function ChartContent({
     [authSession],
   );
   const diagnosisCatalogActorKey = authSession?.id ?? "signed-out";
+  const [soapReloadKey, setSoapReloadKey] = useState(0);
+  const [chartListRetryKey, setChartListRetryKey] = useState(0);
   const [persistedSoapState, setPersistedSoapState] = useState<{
     encounterId?: string;
     chartId?: string;
@@ -14611,7 +14668,7 @@ export function ChartContent({
   const detailHydrationPending = detailLoading;
   const chartWriteDisabled = detailHydrationPending || isHistoricalView || encounterCharts.status !== "ready"
     || encounterCharts.initialChartPreparationStatus === "saving"
-    || (Boolean(activeChartId) && persistedSoapState.status === "error")
+    || (Boolean(activeChartId) && (persistedSoapState.status === "error" || persistedSoapState.status === "loading"))
     || (effectiveEncounter?.status !== "in_consultation" && effectiveEncounter?.status !== "ordered");
   const orderLoading = detailHydrationPending;
   const showDetailPendingIndicator = useDelayedBoolean(
@@ -15214,7 +15271,7 @@ export function ChartContent({
       if (result.ok && result.soapNote) useChartStore.getState().updateEncounterChart(encounterCharts.scope, result.soapNote);
     });
     return () => { cancelled = true; };
-  }, [activeChartId, activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated, encounterCharts.scope]);
+  }, [activeChartId, activeEncounterId, activeWorkspaceId, actorHeaders, authHydrated, encounterCharts.scope, soapReloadKey]);
 
   useEffect(() => {
     if (!authHydrated || !activeWorkspaceId) return;
@@ -15541,22 +15598,6 @@ export function ChartContent({
   const chartHistoryEncounterCount = new Set(
     chartHistoryRows.map((row) => row.encounter.id),
   ).size;
-  const additionalChartIds = getAdditionalChartIds(chartHistoryRows);
-  const activeChartIsAdditional = Boolean(
-    activeChartId && additionalChartIds.has(activeChartId),
-  );
-  const chartCreatedDate = effectiveLatestSoap
-    ? getShortDateTime(effectiveLatestSoap.createdAt).slice(0, 8)
-    : "";
-  const chartVisitDate = getShortDateTime(
-    getEncounterVisitAt(currentBundle.encounter),
-  ).slice(0, 8);
-  const chartCreatedAfterVisit = Boolean(
-    activeChartIsAdditional &&
-      chartCreatedDate &&
-      chartVisitDate &&
-      chartCreatedDate !== chartVisitDate,
-  );
   const visibleHistoryStatus = allowMockFallback
     ? ("ready" as const)
     : chartHistoryScopeMatches
@@ -15594,20 +15635,9 @@ export function ChartContent({
             startTime={chartStartTime}
             visitLabel={chartHistoryEncounterCount > 1 ? "재진" : "초진"}
             pendingIndicator={
-              activeChartIsAdditional ||
               isHistoricalView ||
               showDetailPendingIndicator ? (
                 <span className="flex items-center gap-2">
-                  {activeChartIsAdditional ? (
-                    <Badge
-                      variant="outline"
-                      className="h-7 rounded-lg px-2 emr-text-metadata"
-                      data-testid="chart-additional-record-badge"
-                    >
-                      추가 기록
-                      {chartCreatedAfterVisit ? ` · ${chartVisitDate} 진료` : ""}
-                    </Badge>
-                  ) : null}
                   {isHistoricalView ? (
                     <Badge
                       variant="outline"
@@ -16087,18 +16117,6 @@ export function ChartContent({
           ) : null}
         </EmrDialogShell>
       </Dialog>
-      {chartCreatedAfterVisit ? (
-        <div className="px-2 pt-2">
-          <EmrInlineAlert
-            severity="info"
-            title="진료 후 작성된 추가 기록"
-            testId="chart-additional-record-info"
-          >
-            이 차트는 {chartCreatedDate}에 작성되었으며 {chartVisitDate} ·{" "}
-            {getEncounterVisitPurpose(currentBundle.encounter)} 진료에 포함됩니다.
-          </EmrInlineAlert>
-        </div>
-      ) : null}
       {chartStartLocked ? (
         <div className="flex min-h-0 flex-1 flex-col py-3">
           <ChartPreconsultationContextPanel
@@ -16116,20 +16134,20 @@ export function ChartContent({
       ) : !activeChartId ? (
         <div className="flex min-h-0 flex-1 items-start p-3">
           {encounterCharts.status === "error" ? (
-            <EmrInlineAlert severity="error" title="차트 목록을 불러오지 못했어요"
-              action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.reload()}>다시 시도</Button>} />
+            <ChartNotice key={`${encounterCharts.scope}-list-${chartListRetryKey}`} severity="error" title="차트 목록을 불러오지 못했어요"
+              action={<Button size="sm" variant="outline" onClick={() => { setChartListRetryKey((key) => key + 1); void encounterCharts.reload(); }}>다시 시도</Button>} />
           ) : shouldPrepareInitialChart && encounterCharts.initialChartPreparationStatus === "error" ? (
-            <EmrInlineAlert severity="error" title="진료 차트를 준비하지 못했어요"
+            <ChartNotice key={`${encounterCharts.scope}-prepare`} severity="error" title="진료 차트를 준비하지 못했어요"
               action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.ensureInitialChart()}>다시 시도</Button>}>
-              권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해 주세요.
-            </EmrInlineAlert>
-          ) : shouldPrepareInitialChart || encounterCharts.status === "loading" ? (
+              다시 시도해 주세요. 계속 준비되지 않으면 관리자에게 문의해 주세요.
+            </ChartNotice>
+          ) : shouldPrepareInitialChart || encounterCharts.status !== "ready" ? (
             <div role="status" className="flex items-center gap-2 text-xs text-[var(--emr-text-tertiary)]">
               <CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
               진료 차트를 준비하는 중
             </div>
           ) : (
-            <EmrInlineAlert severity="info" title="이 접수에 작성된 차트가 없어요" />
+            <ChartNotice key={`${encounterCharts.scope}-empty`} severity="info" title="이 접수에 작성된 차트가 없어요" />
           )}
         </div>
       ) : (
@@ -16163,11 +16181,16 @@ export function ChartContent({
                 encounterId={bundle.encounter.id}
                 chartId={activeChartId}
                 loading={soapLoading}
+                readError={persistedSoapState.chartId === activeChartId && persistedSoapState.encounterId === activeEncounterId && persistedSoapState.status === "error"}
+                onRetryRead={() => {
+                  setPersistedSoapState((current) => ({ ...current, status: "loading" }));
+                  setSoapReloadKey((key) => key + 1);
+                }}
                 onCollapse={() => setClinicalPanelCollapsed("soap", true)}
                 onPersistedSoapNote={(soapNote) => {
                   useChartStore.getState().updateEncounterChart(encounterCharts.scope, soapNote);
                   setPersistedSoapState((current) => current.chartId === soapNote.id ? {
-                    encounterId: bundle.encounter.id, chartId: soapNote.id, soapNote, status: "idle",
+                    ...current, soapNote,
                   } : current);
                   requestChartHistoryRefresh();
                 }}

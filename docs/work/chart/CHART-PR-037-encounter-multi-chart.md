@@ -160,3 +160,40 @@ Production smoke found that a confirmed included-order-sum set disappeared from 
 The consultation call/start path updated the encounter and queue but did not create or select the first chart, leaving SOAP correctly locked behind a missing chart ID and forcing a second `+ 새 차트` action. The scoped candidate adds a locked, audited `clair_ensure_encounter_first_chart` mutation, composes it into call/start transactions, and returns the real chart in the consultation response. Existing active charts are reused unchanged; an already-started zero-chart encounter recovers through the same mutation without another call event; list/read stays side-effect-free; intentional `+ 새 차트` creation remains unchanged.
 
 Local focused evidence: consultation/core and encounter-chart unit regressions pass; the browser call flow selects the first chart, enables SOAP, autosaves input, and preserves it through reload; isolated PostgreSQL concurrency admits one of two simultaneous calls and leaves exactly one first chart, one call event, and one in-progress queue transition. Remote migration application, Production data mutation, and `main`/Production delivery remain separate gates.
+
+
+## Chart Notice Cleanup — 2026-09-13
+
+User-approved local UI scope, based on `c0c38a60` (PR #751), in a separate worktree. Parent review is required before merge/deployment. The previous relation-banner checkpoint above is superseded: `chartCreatedAfterVisit` compared calendar dates without testing whether the visit had ended. Remove that banner and the duplicate action-bar badge; existing history still exposes source visit/date and additional-record identity. No DB, API, permission, chart provenance, or first-chart preparation contract changes.
+
+`ChartNotice` is chart-local presentation using existing `EmrInlineAlert.dismissAction` and the accessible `안내 닫기` button pattern. Dismissal changes only presentation, not persistence state, dirty buffers, CAS tokens, validation, or recovery callbacks. Information disappears; unresolved warnings/errors fold to their title and existing recovery action. Panel mounting/chart identity and notice kind bound the session-local state. Retry/new save incidents reopen the relevant notice; unrelated rerenders do not. No permanent preference or shared alert API changes.
+
+| Copy / notice | Show condition | Resolution | After X / reopen |
+| --- | --- | --- | --- |
+| `진료 후 작성된 추가 기록`; top `추가 기록 · … 진료` | Removed from default chart workspace | Source relation remains in history | No replacement banner |
+| `이 접수에 작성된 차트가 없어요` | Successful chart list, no selected chart, no initial preparation, unlocked chart surface | Chart selected/prepared or scope changes | Hidden for the mounted scope; new empty-state episode can show again |
+| `진료 차트를 준비하는 중` | No selected chart and list not ready or initial preparation required | Preparation succeeds/fails | Small local status; no dismissal |
+| `차트 목록을 불러오지 못했어요` | List failure | Successful list retry | Compact failure + `다시 시도`; new retry reopens |
+| `진료 차트를 준비하지 못했어요` | Eligible first-chart preparation failed | Successful ensure retry | Compact failure + `다시 시도`; retry failure reopens |
+| `SOAP를 불러오지 못했어요` | Selected chart SOAP read failed | Successful read retry | Compact failure + `다시 불러오기`; edit lock remains, new failure reopens |
+| `SOAP를 저장하지 못했습니다` | Autosave coordinator error | Successful save | Compact failure + `다시 저장`; header failure, text and pending flush remain; new failure reopens |
+| `SOAP 저장 충돌 · 현재 입력 미저장` | Autosave CAS conflict | Existing explicit save/recovery succeeds | Compact conflict + `다시 저장` with unchanged CAS; no automatic overwrite or completion unlock |
+| `저장된 문서를 열지 못해 기존 SOAP 내용을 표시했어요` | Stored document recovery fallback | Valid document saved | Compact warning; a new stored revision reopens |
+| `SOAP는 저장되었지만 변경 이력 기록을 확인해야 합니다` | Coordinator saved-with-warning | Subsequent resolved save/state | Compact warning; a new warning incident reopens |
+| `진단명을 저장하지 못했습니다` | Existing Assessment save failure | Successful save | Compact failure; existing panel save remains; next save failure reopens |
+| `오더 정보를 불러오지 못했어요` | Order draft GET failure | Successful GET retry | Compact failure + `다시 불러오기`; edits/writes stay blocked; new failure reopens |
+| `오더 정보를 반영하지 못했습니다` | Order write failure | Successful save | Compact failure + `다시 저장`; pending changes/validation remain; new failure reopens |
+| `다른 기기의 오더 변경과 충돌했습니다` | Order conflict | Existing explicit server reload succeeds | Compact conflict + `서버 값 다시 불러오기`; confirmation block remains; new conflict reopens |
+| `다른 분류에 오더를 추가했어요.` | Newly added order hidden by current filter | Filter includes row or next quick-add | Hidden for this addition; a new addition/episode can show again |
+| Existing unavailable-action copy | User invokes an unavailable chart/order action | X or panel reset | Existing pattern retained; another action reopens |
+
+SOAP/Assessment/Order loading remains local to the affected panel and ends with the owning request state. Popup failures remain in their existing popup. Queue toasts and global notification surfaces are outside this slice. Order read failures now retry GET rather than invoking a write; failed reads never claim that draft values are saved.
+
+Verification completed:
+
+- Ten unique focused Chromium scenarios passed: new-chart SOAP isolation/signing, save-error dismissal/retry/create blocking, first-chart failure/retry during patient-switch race, consultation call-to-SOAP input, order conflict dismissal/confirmation blocking, order failure/new-edit re-alert, SOAP/order GET failure/retry, chart-list failure/retry, successful-empty loading/dismissal/scope isolation, and SOAP conflict dismissal/blocked switch/CAS retry. The last affected reruns passed; earlier failed assertions exposed the missing empty-notice X and a read-error reset by an already-pending save, both corrected. A subsequent empty-test selector mismatch was corrected without product changes.
+- Read failure now remains until a successful read, even if an earlier SOAP save completes. A save response updates the stored note without clearing an outstanding read failure. Retry loading also keeps the edit lock.
+- TypeScript, targeted ESLint, docs references (1,027 files), Korean UX copy and whitespace checks passed. ESLint printed only the Babel large-file informational message. Full production build/release checks are deferred to delivery review; shared components and backend code are unchanged.
+- Desktop Playwright CLI visual inspection at 1920×1080 confirmed normal additional-chart layout, visible top-right X, and compact failure/retry with retained text. Local screenshots: `output/playwright/chart-notices-normal.png`, `chart-notices-error.png`, `chart-notices-collapsed.png`. The synthetic mock shell emitted existing workspace/vitals HTTP errors; the scoped automated new-chart scenario had no page runtime errors. No authenticated remote or mobile acceptance is claimed.
+
+This is local synthetic/mock evidence only; no remote database or real patient data was changed. No main merge, push, deployment, or runtime-model change was performed. Parent independent review remains required.

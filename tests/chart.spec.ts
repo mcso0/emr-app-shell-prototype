@@ -2382,6 +2382,10 @@ test("chart prepares the new encounter while an earlier first-chart request is d
         await firstPutGate;
       } else if (encounterId === second.encounter.id) {
         secondPutCount += 1;
+        if (secondPutCount === 1) {
+          await route.fulfill({ status: 503, json: { ok: false, error: "db_write_failed" } });
+          return;
+        }
       }
       const chart = chartFor(encounterId);
       charts.set(encounterId, [chart]);
@@ -2422,6 +2426,13 @@ test("chart prepares the new encounter while an earlier first-chart request is d
     await page.getByTestId(`order-queue-item-${second.encounter.id}`).click();
     await expect(page).toHaveURL(new RegExp(`encounterId=${second.encounter.id}`));
     await expect.poll(() => secondPutCount).toBe(1);
+    const preparationError = page.getByRole("alert").filter({ hasText: "진료 차트를 준비하지 못했어요" });
+    await expect(preparationError).toBeVisible();
+    await preparationError.getByRole("button", { name: "안내 닫기" }).click();
+    await expect(preparationError).toHaveCount(0);
+    await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+    await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+    await expect.poll(() => secondPutCount).toBe(2);
     await expect(page.getByLabel("SOAP 블록 문서").getByRole("textbox")).toBeEditable();
 
     releaseFirstPut();
@@ -7393,6 +7404,13 @@ test("chart order autosave preserves local edits and blocks confirmation on ETag
   await expect(
     conflict.getByRole("button", { name: "서버 값 다시 불러오기" }),
   ).toBeVisible();
+  await conflict.getByRole("button", { name: "안내 닫기" }).click();
+  await expect(conflict).toHaveCount(0);
+  const collapsedConflict = page.getByTestId("chart-order-draft-conflict-collapsed");
+  await expect(collapsedConflict.getByRole("button", { name: "서버 값 다시 불러오기" })).toBeVisible();
+  await expect(billingName).toHaveValue("다른 기기와 충돌하는 로컬 편집값");
+  await expect(page.getByRole("button", { name: "Maropitant 16mg T 확정" })).toBeDisabled();
+
 });
 
 test("chart order autosave waits for a new edit after a failed attempt", async ({
@@ -7431,10 +7449,14 @@ test("chart order autosave waits for a new edit after a failed attempt", async (
   await expect(page.getByTestId("chart-order-state-error")).toBeVisible();
   await expect(billingName).toHaveValue("첫 번째 저장 실패 후 유지할 편집값");
 
+  await page.getByTestId("chart-order-state-error").getByRole("button", { name: "안내 닫기" }).click();
+  await expect(page.getByTestId("chart-order-state-error")).toHaveCount(0);
+  await expect(page.getByTestId("chart-order-state-error-collapsed").getByRole("button", { name: "다시 저장" })).toBeVisible();
   await billingName.fill("새로 수정한 편집값");
   await expect.poll(() => patchCount, { timeout: 2_500 }).toBe(2);
   await page.waitForTimeout(1_200);
   expect(patchCount).toBe(2);
+  await expect(page.getByTestId("chart-order-state-error")).toBeVisible();
 });
 
 async function verifyChartConfirmationRetry(page: Page) {
@@ -9452,4 +9474,37 @@ test("chart status presentation keeps edits in place until blur and hides unconf
   await expect(target).toHaveAttribute("data-emr-data-table-row-state", "normal");
   await target.getByRole("button", { name: "입력 필요", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("status-draft-cbc");
+});
+
+test("chart empty notice waits for a successful list and dismissal stays encounter-scoped", async ({ page }) => {
+  const first = createLiveChartQueueRecord({ encounterId: "empty-notice-a", patientName: "빈차트에이", sortOrder: 1 });
+  const second = createLiveChartQueueRecord({ encounterId: "empty-notice-b", patientName: "빈차트비", sortOrder: 2 });
+  first.encounter.status = "ready_for_billing";
+  second.encounter.status = "ready_for_billing";
+  let releaseList!: () => void;
+  const listGate = new Promise<void>((resolve) => { releaseList = resolve; });
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(`**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    (route) => fulfillLiveChartQueue(route, [first, second]));
+  await page.route("**/chart/encounter-charts?*", async (route) => {
+    await listGate;
+    await route.fulfill({ json: { ok: true, status: 200, charts: [] } });
+  });
+  try {
+    await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?encounterId=${first.encounter.id}&modulePanel=open&aside=closed`);
+    await expect(page.getByText("진료 차트를 준비하는 중", { exact: true })).toBeVisible();
+    await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+    releaseList();
+    const empty = page.getByRole("status").filter({ hasText: "이 접수에 작성된 차트가 없어요" });
+    await expect(empty).toBeVisible();
+    await empty.getByRole("button", { name: "안내 닫기" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(empty).toHaveCount(0);
+    await page.setViewportSize({ width: 1840, height: 1080 });
+    await expect(empty).toHaveCount(0);
+    await page.getByTestId(`order-queue-item-${second.encounter.id}`).click();
+    await expect(empty).toBeVisible();
+  } finally {
+    releaseList();
+  }
 });
