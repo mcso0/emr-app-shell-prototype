@@ -3,6 +3,18 @@
   --order-scroll-header-height: var(--emr-table-header-height-standard);
 }
 
+.surface [data-slot="table-container"] {
+  min-height: 100%;
+  --emr-surface-workspace: var(--emr-surface-muted);
+}
+
+.surface
+  [data-slot="table-body"]
+  > tr[data-emr-data-table-row="true"]:last-child
+  > [data-slot="table-cell"] {
+  border-bottom: 1px solid var(--emr-table-data-border) !important;
+}
+
 .surface [data-emr-pinned-table-viewport="true"]:has([data-emr-density="compact"]) {
   --order-scroll-header-height: var(--emr-table-header-height-compact);
 }
