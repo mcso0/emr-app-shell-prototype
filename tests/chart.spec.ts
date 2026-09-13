@@ -1009,6 +1009,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(actionBar).toHaveCSS("height", "48px");
   await expect(actionBar).toHaveCSS("border-bottom-width", "0px");
   await expect(actionBar).toHaveCSS("background-color", "rgb(252, 252, 252)");
+  await expect(workspace).toBeVisible({ timeout: 15_000 });
   await expect(workspace).toHaveCSS("background-color", "rgb(252, 252, 252)");
   await expect(page.locator("main.emr-workspace-frame-responsive")).toHaveCSS(
     "border-color",
@@ -1016,6 +1017,35 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   );
   await expect(historyToggle).toHaveCSS("width", "24px");
   await expect(historyToggle).toHaveCSS("height", "24px");
+  await expect(historyToggle).toHaveCSS("border-radius", "6px");
+  await expect(historyToggle).toHaveCSS("border-color", "rgb(229, 229, 229)");
+  await expect(historyToggle).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(historyToggle).not.toHaveCSS("box-shadow", "none");
+  await expect(historyToggle.locator("svg")).toHaveCSS("width", "14px");
+  await expect(historyToggle.locator("svg")).toHaveCSS("height", "14px");
+
+  const visitBadge = page.getByTestId("chart-visit-badge");
+  const encounterNumberBadge = page.getByTestId(
+    "chart-encounter-number-badge",
+  );
+  await expect(visitBadge).toHaveText(/^(초진|재진)$/);
+  await expect(visitBadge).toHaveCSS("border-width", "1px");
+  await expect(visitBadge).toHaveCSS("border-style", "solid");
+  expect(
+    await visitBadge.evaluate((element) =>
+      Number.parseFloat(getComputedStyle(element).borderRadius),
+    ),
+  ).toBeGreaterThanOrEqual(11);
+  await expect(encounterNumberBadge).toHaveText(/^E-/);
+  await expect(encounterNumberBadge).toHaveCSS(
+    "border-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(actionBar).toContainText("진료 시작 일시");
+  await expect(page.getByRole("button", { name: "입원 수속" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "케어가이드 발송" }),
+  ).toHaveCount(0);
 
   await expect(panels).toHaveCount(4);
   for (const panel of await panels.all()) {
@@ -2726,6 +2756,10 @@ test("live patient chart history shows every chart by created_at and keeps past 
     .toBe(oldChartId);
   await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
   await expect(page.getByTestId("chart-historical-readonly-badge")).toBeVisible();
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCSS(
+    "border-width",
+    "0px",
+  );
   await historyDateMode.getByRole("button", { name: "작성일" }).click();
   await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
   await expect(

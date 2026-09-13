@@ -15619,10 +15619,10 @@ export function ChartContent({
           <ChartActionBar
             chartDate={chartDate}
             doctorName={effectiveLatestSoap ? effectiveLatestSoap.authorDisplayName ?? getChartStaffName(effectiveLatestSoap.authorUserId) ?? (effectiveLatestSoap.authorUserId ? "작성자 이름 미확인" : "작성자 미기록") : getChartBundleVeterinarianName(currentBundle)}
-            timeLabel="차트 일시"
+            timeLabel="진료 시작 일시"
             encounterNo={currentBundle.encounter.encounterNo}
             historyAction={
-              <span className="inline-flex [&_button]:size-6">
+              <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!border-[var(--clair-color-atomic-neutral-200)] [&_button]:!bg-[var(--clair-color-atomic-common-100)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
                 <EmrInstructionHistoryToggle
                   ariaLabelPrefix="차트 이력"
                   controls="chart-content-aside"
@@ -15639,13 +15639,12 @@ export function ChartContent({
               showDetailPendingIndicator ? (
                 <span className="flex items-center gap-2">
                   {isHistoricalView ? (
-                    <Badge
-                      variant="outline"
-                      className="h-7 rounded-lg px-2 emr-text-metadata"
+                    <span
+                      className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]"
                       data-testid="chart-historical-readonly-badge"
                     >
                       과거 차트 · 읽기 전용
-                    </Badge>
+                    </span>
                   ) : showDetailPendingIndicator ? (
                     <ChartDetailPendingIndicator />
                   ) : null}

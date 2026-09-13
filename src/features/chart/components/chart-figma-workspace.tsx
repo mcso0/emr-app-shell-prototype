@@ -6,10 +6,6 @@ import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-lay
 import { CdsNavigationMaximize2Icon } from "@/components/cds-icons/navigation";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
-  CdsMedicalBedIcon,
-  CdsMedicalMessagesSquareIcon,
-} from "@/components/cds-icons/medical-and-domain";
-import {
   EmrPatientContextBar,
   type ContextBarProfileInteraction,
   type ContextBarVitalAction,
@@ -130,7 +126,7 @@ export function ChartActionBar({
   historyAction,
   pendingIndicator,
   startTime,
-  timeLabel = "진료 시작",
+  timeLabel = "진료 시작 일시",
   visitLabel,
 }: {
   chartDate: string;
@@ -154,14 +150,18 @@ export function ChartActionBar({
           차트 <span className="text-muted-foreground">{chartDate}</span>
         </h1>
         <Badge
-          variant="secondary"
-          className="h-[22px] rounded-md px-2 text-xs font-medium"
+          variant="outline"
+          size="md"
+          className="rounded-full px-2"
+          data-testid="chart-visit-badge"
         >
           {visitLabel}
         </Badge>
         <Badge
-          variant="outline"
-          className="h-[22px] max-w-40 truncate rounded-md border-dashed px-2 text-xs font-medium text-muted-foreground"
+          variant="ghost"
+          size="md"
+          className="max-w-40 truncate px-2 text-muted-foreground"
+          data-testid="chart-encounter-number-badge"
         >
           {encounterNo}
         </Badge>
@@ -175,15 +175,6 @@ export function ChartActionBar({
           <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
           {doctorName}
         </span>
-        <div className="mx-1 h-5 w-px bg-[var(--emr-border-subtle)]" />
-        <UnavailableActionButton
-          icon={<CdsMedicalBedIcon />}
-          label="입원 수속"
-        />
-        <UnavailableActionButton
-          icon={<CdsMedicalMessagesSquareIcon />}
-          label="케어가이드 발송"
-        />
         {completionAction}
       </div>
     </div>
@@ -198,40 +189,6 @@ export function ChartPanelActionGroup({ children }: { children?: ReactNode }) {
     >
       {children}
     </div>
-  );
-}
-
-function UnavailableActionButton({
-  icon,
-  label,
-}: {
-  icon: ReactNode;
-  label: string;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span className="inline-flex cursor-not-allowed" tabIndex={0} />
-        }
-      >
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          className="h-7 rounded-lg bg-card px-2 text-xs disabled:opacity-50"
-          disabled
-        >
-          <span data-icon="inline-start" className="[&_svg]:size-3.5">
-            {icon}
-          </span>
-          {label}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        준비 중 · 업무 흐름 연결 후 제공됩니다.
-      </TooltipContent>
-    </Tooltip>
   );
 }
 
