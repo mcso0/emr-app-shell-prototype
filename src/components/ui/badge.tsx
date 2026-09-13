@@ -21,6 +21,8 @@ const badgeVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
+        count:
+          "size-4 min-w-4 rounded-[var(--clair-radius-full)] border-0 px-0 py-0 text-xs leading-4 tracking-[0.3px]",
         sm: "h-5 px-2 py-0.5 text-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&>svg]:size-3!",
         md: "h-[22px] px-2.5 py-0.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 [&>svg]:size-3!",
       },
@@ -50,8 +52,9 @@ export type BadgeProps = Omit<useRender.ComponentProps<"span">, "className" | "r
    */
   variant?: BadgeVariantProps["variant"]
   /**
-   * Visual density. `sm` preserves the historical compact 20px badge; `md`
-   * matches the CDS V2 22px badge used in dense headers and toolbar metadata.
+   * Visual density. `count` is the fixed 16px circular counter used in compact
+   * tabs, `sm` preserves the historical compact 20px badge, and `md` matches
+   * the CDS V2 22px badge used in dense headers and toolbar metadata.
    */
   size?: BadgeVariantProps["size"]
   /**

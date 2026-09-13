@@ -20,7 +20,7 @@ tags:
   - order-table
   - dispensing
   - billing
-last_updated: 2026-09-02
+last_updated: 2026-09-13
 ---
 
 # Plan/Order `전체` Tab Legacy Column Contract
@@ -1386,25 +1386,25 @@ classifications live in `CHART-PR-031-VALIDATION`, not in this ledger.
 - [Workspace Order Catalog Platform](workspace-order-catalog-platform.md)
 - [Chart Editable Order Table](../../work/chart/CHART-PR-007-editable-order-table.md)
 
-## Final UI Implementation Criteria — 2026-09-08
+## Final UI Implementation Criteria — 2026-09-13
 
-Final owner-approved design target, implemented locally in CHART-PR-036.
-DB schema and production behavior remain unchanged; delivery is not included.
+Final owner-approved design target, implemented and released through CHART-PR-036.
+DB schema and non-presentation behavior remain unchanged.
 This section supersedes older header, blank-cell, and visual ordering rules in
 this document; underlying lifecycle, authorization, and billing rules remain.
 
 ### Columns And Presentation
 
-| Situation | `오더 확정` | `업무 상태` | Row |
+| Situation | `확정 여부` | `업무 상태` | Row |
 | --- | --- | --- | --- |
-| Unconfirmed, required input valid | `확정 대기`, neutral badge | Muted `—` | Retained |
-| Unconfirmed, input incomplete/invalid | `입력 필요`, orange badge | Muted `—` | Retained |
-| Confirmed, task exists | `확정`, green badge | Actual task icon + domain label | Retained |
-| Confirmed, no task | `확정`, green badge | `—` | Retained |
-| Cancelled after confirmation, with or without a task | `확정`, green badge | Cancel icon + `취소` | Retained |
+| Unconfirmed, required input valid | `확정 전`, neutral badge | Muted `—` | Retained |
+| Unconfirmed, input incomplete/invalid | `미입력`, red badge | Muted `—` | Retained |
+| Confirmed, task exists | `확정 후`, green badge | Actual task icon + domain label | Retained |
+| Confirmed, no task | `확정 후`, green badge | `—` | Retained |
+| Cancelled after confirmation, with or without a task | `확정 후`, green badge | Cancel icon + `취소` | Retained |
 | Unconfirmed candidate removed | Not rendered | Not rendered | Removed from table |
 
-- `오더 확정` expresses the confirmation history boundary. A cancelled confirmed
+- `확정 여부` expresses the confirmation history boundary. A cancelled confirmed
   order remains in the confirmed group; its stored cancellation status is not
   rewritten to `confirmed`. Do not give it a separate cancellation badge or
   move it to a special last group.
@@ -1415,7 +1415,7 @@ this document; underlying lifecycle, authorization, and billing rules remain.
 - Preserve completed results, attempts, events, and audit history. This target
   requires a display projection, not overwriting terminal task state or creating
   a task for consultation/no-task orders.
-- Use 22px compact text badges, subtle borders, and existing neutral/warning/
+- Use 22px compact text badges, subtle borders, and existing neutral/danger/
   success tokens. Row backgrounds remain neutral; preserve hover, selection,
   focus, and disabled affordances. Scope styling to Plan/Order.
 - Reuse `EmrSidePanelStateIcon` with explicit mappings from task state and detailed
@@ -1423,13 +1423,13 @@ this document; underlying lifecycle, authorization, and billing rules remain.
   re-requested work are distinct. Do not infer an icon from an unknown label.
 - For unconfirmed `—`, expose `확정 후 업무 상태가 표시됩니다` on hover and keyboard
   focus, with an accessible description.
-- Reuse existing confirmation validation. `입력 필요` opens the existing relevant
+- Reuse existing confirmation validation. `미입력` opens the existing relevant
   detail editor; permission, save conflict, locking, and server failure remain
   distinct explanations and must not be relabeled as missing inputs.
 
 ### Ordering And Pinned Columns
 
-- Default group order: `확정 대기` → `입력 필요` → `확정`. Keep stable relative order
+- Default group order: `확정 전` → `미입력` → `확정 후`. Keep stable relative order
   within groups. This is display ordering, not a transition sequence.
 - Keep the edited row in place during input. Reorder after editing ends or
   confirmation succeeds, not on each keystroke. Failed confirmation must not
@@ -1438,7 +1438,7 @@ this document; underlying lifecycle, authorization, and billing rules remain.
 - Keep set parents and children together; sort groups by their parent, retaining
   child order. Excluded children keep existing inclusion semantics and must not
   become independent confirmation targets or spurious input blockers.
-- Pin `select`, `분류`, `오더 확정`, `Order 명` in that order. `업무 상태` follows
+- Pin `select`, `분류`, `확정 여부`, `Order 명` in that order. `업무 상태` follows
   `Order 명` and scrolls with subsequent columns.
 
 ### Deletion, Cancellation, And Scope
