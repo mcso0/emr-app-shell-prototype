@@ -16,7 +16,7 @@ source_docs:
 dependencies:
   - "CHART-PR-006"
   - "CHART-PR-007"
-updated: "2026-08-13"
+updated: "2026-09-13"
 ---
 
 # Figma-exact Chart Workspace
@@ -138,3 +138,12 @@ Use Figma frame `27946:58868` as the visual source of truth, correct the regress
 - Direct local-browser QA confirmed the action bar at `48px` with `#FCFCFC` and no bottom border, four white panels, `24px` history toggle, seven `28px` toolbar controls, panel actions changing from opacity `0` to `1` on hover, and URL-backed history-aside open/close behavior.
 - Focused ESLint, TypeScript (`tsc --noEmit`), docs link check (893 markdown files), `git diff --check`, and the production build passed. The build retains the pre-existing broad NFT trace warning rooted in `src/lib/prd-viewer/doc-reader.ts`.
 - No screenshot baseline was updated: the existing deterministic Figma-sized baseline passed within its committed tolerance.
+
+## 2026-09-13 panel action color follow-up
+
+- Used Figma node `28382:90537` as the source for the chart panel action group: transparent `28 × 28` buttons, `8px` radius, `4px` gap, Neutral 900 (`#171717`) icons, and `14 / 14 / 16 / 16px` icon slots.
+- Reused `--clair-color-atomic-neutral-900`; no new design token or shared component was added. Chart-local action buttons now retain that color across rest, hover, expanded, and disabled presentation while preserving the existing disabled semantics and permissions.
+- Removed the visible Subject/Object autosave text from the panel title. Autosave coordination, manual save, error state, and the existing screen-reader live announcement remain unchanged.
+- Kept the existing Plan/Order `Order 추가` behavior only; no action was added to panels where the Figma source shows an unsupported plus slot.
+- Focused ESLint, full TypeScript, docs links, secret scan, `git diff --check`, and the focused Chromium computed-style contract passed. Full lint passed with five pre-existing unused-variable warnings in WP10 scripts and no errors.
+- `npm run build` was attempted twice. Both attempts remained in Turbopack's optimized-production-build phase without an error or completion output and were stopped after bounded waits. The production build completed successfully with the supported webpack path (`npm run build -- --webpack`); the default Turbopack path remains an environment-level candidate limitation for the integration gate. Human visual and usage review remains pending as requested.

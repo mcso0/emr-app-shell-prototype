@@ -194,7 +194,7 @@ export function ChartPanelActionGroup({ children }: { children?: ReactNode }) {
   return (
     <div
       data-slot="chart-panel-actions"
-      className="flex shrink-0 items-center gap-1 has-[[aria-expanded=true]:not([data-chart-panel-collapse])]:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chart-panel:opacity-100"
+      className="flex shrink-0 items-center gap-1 text-[var(--clair-color-atomic-neutral-900)] has-[[aria-expanded=true]:not([data-chart-panel-collapse])]:opacity-100 has-[:focus-visible]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/chart-panel:opacity-100"
     >
       {children}
     </div>
@@ -238,14 +238,19 @@ function UnavailableActionButton({
 export function ChartPanelIconButton({
   children,
   disabled = false,
+  iconSize = "sm",
   label,
   onClick,
 }: {
   children?: ReactNode;
   disabled?: boolean;
+  iconSize?: "md" | "sm";
   label: string;
   onClick?: () => void;
 }) {
+  const iconSizeClassName =
+    iconSize === "md" ? "[&_svg]:!size-4" : "[&_svg]:!size-3.5";
+
   if (disabled) {
     return (
       <Tooltip>
@@ -262,7 +267,10 @@ export function ChartPanelIconButton({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="size-7 rounded-lg text-[var(--emr-text-secondary)] opacity-50 [&_svg]:size-3.5"
+            className={cn(
+              "size-7 rounded-lg text-[var(--clair-color-atomic-neutral-900)] hover:!text-[var(--clair-color-atomic-neutral-900)] aria-expanded:!text-[var(--clair-color-atomic-neutral-900)] disabled:opacity-100",
+              iconSizeClassName,
+            )}
             tabIndex={-1}
             disabled
           >
@@ -282,7 +290,10 @@ export function ChartPanelIconButton({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="size-7 rounded-lg text-[var(--emr-text-secondary)] [&_svg]:size-3.5"
+            className={cn(
+              "size-7 rounded-lg text-[var(--clair-color-atomic-neutral-900)] hover:!text-[var(--clair-color-atomic-neutral-900)] aria-expanded:!text-[var(--clair-color-atomic-neutral-900)]",
+              iconSizeClassName,
+            )}
             aria-label={label}
             onClick={onClick}
           />
@@ -302,6 +313,7 @@ export function ChartPanelActions({ onMore }: { onMore?: () => void }) {
       <ChartPanelIconButton
         label={onMore ? "더보기" : "더보기 준비 중"}
         disabled={!onMore}
+        iconSize="md"
         onClick={onMore}
       >
         <CdsFilesMoreHorizontalIcon />
