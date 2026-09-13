@@ -347,11 +347,11 @@ test("reception renders the first-path workspace instead of the placeholder", as
   expect(veterinarianFilterBox).not.toBeNull();
   expect(todayShortcutBox).not.toBeNull();
   expect(calendarViewTabsBox).not.toBeNull();
-  expect(todayShortcutBox!.x).toBeGreaterThan(
-    veterinarianFilterBox!.x + veterinarianFilterBox!.width,
-  );
   expect(todayShortcutBox!.x + todayShortcutBox!.width).toBeLessThan(
     calendarViewTabsBox!.x,
+  );
+  expect(calendarViewTabsBox!.x + calendarViewTabsBox!.width).toBeLessThan(
+    veterinarianFilterBox!.x,
   );
   await selectedDateButton.click();
   await expect(page.getByText("2026년 5월")).toBeVisible();
@@ -1974,11 +1974,11 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   expect(veterinarianBox).not.toBeNull();
   expect(todayShortcutBox).not.toBeNull();
   expect(calendarViewTabsBox).not.toBeNull();
-  expect(todayShortcutBox!.x).toBeGreaterThan(
-    veterinarianBox!.x + veterinarianBox!.width,
-  );
   expect(todayShortcutBox!.x + todayShortcutBox!.width).toBeLessThan(
     calendarViewTabsBox!.x,
+  );
+  expect(calendarViewTabsBox!.x + calendarViewTabsBox!.width).toBeLessThan(
+    veterinarianBox!.x,
   );
   await expect(async () => {
     await veterinarianButton.click();
