@@ -13540,7 +13540,7 @@ function OrderArea({
       >
         <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div
-            className="flex min-w-max shrink-0 items-center rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
+            className="flex min-w-max shrink-0 items-center gap-1 rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
             role="tablist"
             aria-label="처방/오더 분류"
           >
@@ -13552,14 +13552,25 @@ function OrderArea({
                 aria-label={`${tab.label} ${tab.count}`}
                 aria-selected={orderFilter === tab.value}
                 className={cn(
-                  "inline-flex h-6 min-w-12 items-center justify-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors",
+                  "inline-flex min-h-6 min-w-12 items-center justify-center gap-1 rounded-md px-1.5 py-0.5 text-xs leading-4 font-medium tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)] transition-[background-color,color,box-shadow]",
                   orderFilter === tab.value &&
-                    "bg-[var(--emr-surface-panel)] text-foreground shadow-[var(--clair-shadow-xs)]",
+                    "bg-[var(--clair-color-atomic-common-100)] text-[var(--clair-color-atomic-neutral-800)] shadow-[var(--clair-shadow-sm)]",
                 )}
                 onClick={() => setOrderFilter(tab.value)}
               >
                 {tab.label === "전체오더" ? "전체" : tab.label}
-                <span className="tabular-nums">{tab.count}</span>
+                <Badge
+                  aria-hidden="true"
+                  size="count"
+                  variant="secondary"
+                  className={cn(
+                    "bg-[var(--clair-color-atomic-black-alpha-4)] font-medium tabular-nums text-[var(--clair-color-atomic-neutral-700)]",
+                    orderFilter === tab.value &&
+                      "font-semibold text-[var(--clair-color-atomic-neutral-900)]",
+                  )}
+                >
+                  {tab.count}
+                </Badge>
               </button>
             ))}
           </div>
@@ -13614,16 +13625,6 @@ function OrderArea({
             >
               검사결과 분석
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-lg bg-card px-2 text-xs"
-              title="준비 중"
-              disabled
-            >
-              PACS
-            </Button>
             <div className="h-5 w-px bg-[var(--emr-border-subtle)]" />
             <Button
               type="button"
@@ -13633,7 +13634,8 @@ function OrderArea({
               disabled={writeDisabled}
               onClick={openCatalogDialog}
             >
-              오더 상세
+              <CdsActionsPlusIcon data-icon="inline-start" aria-hidden="true" />
+              상세 오더
             </Button>
           </div>
         </div>
