@@ -2756,9 +2756,18 @@ test("live patient chart history shows every chart by created_at and keeps past 
   const historyDateMode = aside.getByRole("group", {
     name: "차트 이력 표시 기준",
   });
-  await expect(historyDateMode.getByRole("button", { name: "진료일" })).toBeVisible();
-  await expect(historyDateMode.getByRole("button", { name: "작성일" })).toBeVisible();
-  await expect(historyDateMode).not.toContainText(/진료일\s*\d|작성일\s*\d/);
+  await expect(historyDateMode.getByRole("button", { name: "진료일 기준" })).toBeVisible();
+  await expect(historyDateMode.getByRole("button", { name: "작성일 기준" })).toBeVisible();
+  await expect(historyDateMode).not.toContainText(/진료일 기준\s*\d|작성일 기준\s*\d/);
+  const historyDateModeToolbar = aside.getByTestId("chart-history-date-mode-toolbar");
+  expect(
+    await historyDateModeToolbar.evaluate(
+      (element) => element.nextElementSibling?.getAttribute("data-slot"),
+    ),
+  ).toBe("scroll-area");
+  const historyGroupCalendar = aside.getByTestId("chart-history-group-calendar").first();
+  await expect(historyGroupCalendar).toHaveCSS("width", "14px");
+  await expect(historyGroupCalendar).toHaveCSS("height", "14px");
   await expect(
     aside.getByTestId("chart-history-group-26.09.08"),
   ).toContainText("외래 재진");
@@ -2797,7 +2806,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
     "border-width",
     "0px",
   );
-  await historyDateMode.getByRole("button", { name: "작성일" }).click();
+  await historyDateMode.getByRole("button", { name: "작성일 기준" }).click();
   await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
   await expect(
     aside.getByTestId("chart-history-group-26.09.12"),
@@ -2848,6 +2857,23 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(inlineHistoryItem).not.toHaveAttribute("data-selected");
   await expect(inlineHistoryItem).toHaveCSS("height", "40px");
   await expect(inlineHistoryItem).toHaveCSS("border-radius", "8px");
+  await expect(inlineHistoryItem).toHaveCSS("margin-bottom", "9px");
+  expect(
+    await inlineHistoryItem.evaluate((element) =>
+      getComputedStyle(element, "::after").bottom,
+    ),
+  ).toBe("-5px");
+  const historyDateBadge = inlineHistoryItem.getByTestId(
+    `chart-history-date-badge-${oldEncounterId}`,
+  );
+  await expect(historyDateBadge).toHaveCSS("height", "24px");
+  await expect(historyDateBadge).toHaveCSS("border-radius", "8px");
+  await expect(historyDateBadge.locator("svg")).toHaveCSS("width", "12px");
+  const inlineHistoryViewport = page
+    .getByTestId("chart-inline-history-scroll-area")
+    .locator("[data-slot='scroll-area-viewport']");
+  await expect(inlineHistoryViewport).toHaveClass(/scroll-fade-y/);
+  await expect(inlineHistoryViewport).toHaveClass(/scroll-fade-8/);
   const diagnosisChips = inlineHistoryItem.locator('[data-history-diagnosis]');
   const more = inlineHistoryItem.getByRole("button", { name: /숨겨진 진단/ });
   const view = inlineHistoryItem.getByRole("button", { name: "차트 보기", exact: true });

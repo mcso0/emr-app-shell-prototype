@@ -9,14 +9,14 @@
   min-width: 0;
   padding: var(--clair-spacing-8);
   border-radius: var(--clair-radius-atomic-8);
-  margin-bottom: 5px;
+  margin-bottom: 9px;
 }
 
 .row::after {
   content: "";
   position: absolute;
   inset-inline: 0;
-  bottom: -3px;
+  bottom: -5px;
   height: 1px;
   background: var(--clair-color-atomic-black-alpha-4);
 }
@@ -28,7 +28,9 @@
   flex-shrink: 0;
   align-items: center;
   gap: var(--clair-spacing-4);
-  width: 68px;
+  height: 24px;
+  padding: var(--clair-spacing-4);
+  border-radius: var(--clair-radius-atomic-8);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--clair-color-atomic-neutral-600);
