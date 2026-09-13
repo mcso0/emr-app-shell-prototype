@@ -24,8 +24,8 @@ const meta = {
     },
     size: {
       control: "select",
-      options: ["sm", "md"],
-      description: "Badge density. sm is 20px tall; md matches the CDS V2 22px badge.",
+      options: ["count", "sm", "md"],
+      description: "Badge density. count is a 16px circular tab counter, sm is 20px tall, and md matches the CDS V2 22px badge.",
     },
     children: {
       control: "text",
@@ -78,12 +78,16 @@ export const Sizes: Story = {
   parameters: {
     docs: {
       description: {
-        story: "Badge supports the CDS V2 sm and md densities. Use md when the design calls for the 22px toolbar/header badge.",
+        story:
+          "Badge supports a fixed 16px count plus the CDS V2 sm and md densities. Use count only for compact numeric counters.",
       },
     },
   },
   render: () => (
     <div className="flex flex-wrap items-center gap-3">
+      <Badge size="count" variant="secondary">
+        4
+      </Badge>
       <Badge size="sm" variant="secondary">
         Small
       </Badge>
