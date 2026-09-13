@@ -10,11 +10,11 @@ import {
   type ChartOrderPresentationRow,
 } from "../chart-order-table-presentation";
 
-const labels = { ready: "확정 대기", invalid: "입력 필요", confirmed: "확정" };
+const labels = { ready: "확정 전", invalid: "미입력", confirmed: "확정 후" };
 const tones = {
-  ready: "border-[var(--emr-status-neutral-border)] bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)]",
-  invalid: "border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
-  confirmed: "border-[var(--emr-status-success-border)] bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)]",
+  ready: "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--emr-status-neutral-border)]",
+  invalid: "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--emr-status-danger-border)]",
+  confirmed: "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--emr-status-success-border)]",
 };
 
 export function ChartOrderConfirmationBadge({ state, onOpenDetail, disabled = false, issueDescription }: {
@@ -23,7 +23,7 @@ export function ChartOrderConfirmationBadge({ state, onOpenDetail, disabled = fa
   disabled?: boolean;
   issueDescription?: string;
 }) {
-  const className = cn("inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-md border px-2 emr-text-status font-medium", tones[state]);
+  const className = cn("inline-flex h-[22px] items-center justify-center whitespace-nowrap rounded-[var(--clair-radius-atomic-6)] px-2 py-[3px] emr-text-status font-medium", tones[state]);
   return state === "invalid" ? (
     <button type="button" className={cn(className, "focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50")}
       data-row-interactive="true" disabled={disabled} onClick={onOpenDetail}

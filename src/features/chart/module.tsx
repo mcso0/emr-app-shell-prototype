@@ -5488,7 +5488,7 @@ type ChartOrderSortState = {
 } | null;
 
 const chartOrderSortLabels: Record<ChartOrderSortKey, string> = {
-  confirmation: "오더 확정",
+  confirmation: "확정 여부",
   billingName: "청구서명",
   chargeAmount: "청구금액",
   displayName: "Order 명",

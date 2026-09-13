@@ -7,7 +7,7 @@ area: chart
 priority: P1
 source_docs:
   - docs/product/domain/plan-order-all-tab-legacy-column-contract.md
-updated: 2026-09-08
+updated: 2026-09-13
 ---
 
 # Plan/Order confirmation and work-state presentation
@@ -23,7 +23,7 @@ WIP, notably order-defaults changes in
 
 ## Scope
 
-- `오더 확정` badges; `업무 상태` side-panel icons and cancellation precedence.
+- `확정 여부` badges; `업무 상태` side-panel icons and cancellation precedence.
 - Neutral Plan/Order rows; four pinned identity columns.
 - Stable default grouping, deferred reordering while editing, explicit sorting
   precedence, and intact parent/child sets.
@@ -138,3 +138,23 @@ rechecks visibility on list resize; it does not scroll the page or change popup
 layout, query, selection or mutation behavior. The same original 1px containment
 check passed 3/3 consecutive runs after this correction. The superseded remote
 Release Check was cancelled; the final updated head gets its own required run.
+
+## Figma badge label refinement — 2026-09-13
+
+- Renamed the table column from `오더 확정` to `확정 여부` and the three
+  presentation labels to `확정 전`, `미입력`, and `확정 후` without changing
+  confirmation authority, click behavior, persistence, or row-state derivation.
+- Matched Figma node `28382:110989` with existing CLAiR/EMR semantic tokens and
+  the shared status typography contract: 22px height, 6px radius, 12px medium
+  text, tokenized status surfaces/text/borders, and exact 51/51/48px rendered
+  widths. No raw color values or new component abstraction were added.
+- Isolated the six-file release slice from latest `origin/main` in
+  `codex/order-confirmation-badge-figma`; the owner's commit, push, PR,
+  `origin/main` merge, and production deployment approval applies to this exact
+  presentation-only scope.
+- Focused Storybook Chromium checks passed 2/2 and candidate-only chart Chromium
+  checks passed 2/2. Secrets, docs links, diff whitespace, lint, typecheck, and
+  production build also passed; lint retained five unrelated existing warnings.
+- No DB, environment, permission, API, or remote clinical-data change is in
+  scope. The pre-release Ready production rollback candidate is
+  `dpl_8aRUtwdZXt4hJhKUbcjw1j44ckw9`.
