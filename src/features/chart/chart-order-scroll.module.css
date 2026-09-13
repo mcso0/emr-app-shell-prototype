@@ -1,11 +1,18 @@
 /* Keep fades inside the table viewport, below its sticky header and scrollbars. */
 .surface [data-emr-pinned-table-viewport="true"] {
   --order-scroll-header-height: var(--emr-table-header-height-standard);
-}
-
-.surface [data-slot="table-container"] {
-  min-height: 100%;
-  --emr-surface-workspace: var(--emr-surface-muted);
+  background-color: var(--emr-surface-muted);
+  background-image: linear-gradient(
+    to right,
+    var(--emr-surface-panel) 0,
+    var(--emr-surface-panel) var(--emr-table-left-pinned-column-width, 0px),
+    var(--emr-surface-muted) var(--emr-table-left-pinned-column-width, 0px),
+    var(--emr-surface-muted)
+      calc(100% - var(--emr-table-right-pinned-column-width, 0px)),
+    var(--emr-surface-panel)
+      calc(100% - var(--emr-table-right-pinned-column-width, 0px)),
+    var(--emr-surface-panel) 100%
+  );
 }
 
 .surface
