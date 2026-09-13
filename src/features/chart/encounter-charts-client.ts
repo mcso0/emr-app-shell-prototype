@@ -48,7 +48,7 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
   const initialChartPreparationStatus = initialChartPreparationState.scope === scope
     ? initialChartPreparationState.status
     : "idle";
-  const preparingInitialChartRef = useRef(false);
+  const preparingInitialChartRequestsRef = useRef(new Map<string, symbol>());
   const requestedChartRef = useRef(requestedChartId);
   useLayoutEffect(() => { requestedChartRef.current = requestedChartId; }, [requestedChartId]);
   const reload = useCallback(async (signal?: AbortSignal) => {
@@ -73,12 +73,13 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     setInitialChartPreparationState({ scope, status: "idle" });
   }, [scope, setCharts]);
   const ensureInitialChart = useCallback(async () => {
-    if (!enabled || !workspaceId || !encounterId || preparingInitialChartRef.current) return false;
-    preparingInitialChartRef.current = true;
+    if (!enabled || !workspaceId || !encounterId || preparingInitialChartRequestsRef.current.has(scope)) return false;
+    const requestToken = Symbol(scope);
+    preparingInitialChartRequestsRef.current.set(scope, requestToken);
     setInitialChartPreparationState({ scope, status: "saving" });
     try {
       const result = await encounterChartsRequest(workspaceId, "PUT", { encounterId }, actorHeaders);
-      if (activeScopeRef.current !== scope) return false;
+      if (activeScopeRef.current !== scope || preparingInitialChartRequestsRef.current.get(scope) !== requestToken) return false;
       if (!result.ok || !result.chart) {
         setInitialChartPreparationState({ scope, status: "error" });
         return false;
@@ -87,7 +88,9 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
       useChartStore.getState().requestChartHistoryRefresh();
       return true;
     } finally {
-      preparingInitialChartRef.current = false;
+      if (preparingInitialChartRequestsRef.current.get(scope) === requestToken) {
+        preparingInitialChartRequestsRef.current.delete(scope);
+      }
     }
   }, [acceptPreparedChart, actorHeaders, enabled, encounterId, scope, workspaceId]);
   useEffect(() => {

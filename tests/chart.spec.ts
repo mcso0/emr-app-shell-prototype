@@ -2326,6 +2326,112 @@ test("chart selects the first live task on entry without flashing an empty state
   await expect(page.getByTestId("chart-content-empty-state")).toHaveCount(0);
 });
 
+test("chart prepares the new encounter while an earlier first-chart request is delayed", async ({
+  page,
+}) => {
+  const first = createLiveChartQueueRecord({
+    encounterId: "encounter-first-chart-delayed-a",
+    patientName: "지연에이",
+    sortOrder: 1,
+  });
+  const second = createLiveChartQueueRecord({
+    encounterId: "encounter-first-chart-delayed-b",
+    patientName: "지연비",
+    sortOrder: 2,
+  });
+  const charts = new Map<string, Array<Record<string, unknown>>>();
+  let firstPutCount = 0;
+  let secondPutCount = 0;
+  let releaseFirstPut!: () => void;
+  const firstPutGate = new Promise<void>((resolve) => {
+    releaseFirstPut = resolve;
+  });
+  const chartFor = (encounterId: string) => ({
+    id: `chart-${encounterId}`,
+    encounterId,
+    authorUserId: "user-vet",
+    authorDisplayName: "이수지",
+    status: "draft",
+    clinicalAt: "2026-09-13T08:00:00.000Z",
+    createdAt: "2026-09-13T08:00:00.000Z",
+    updatedAt: "2026-09-13T08:00:00.000Z",
+  });
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    (route) => fulfillLiveChartQueue(route, [first, second]),
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/encounter-charts**`,
+    async (route) => {
+      const request = route.request();
+      const encounterId = request.method() === "GET"
+        ? new URL(request.url()).searchParams.get("encounterId") ?? ""
+        : ((await request.postDataJSON()) as { encounterId: string }).encounterId;
+      if (request.method() === "GET") {
+        await route.fulfill({ json: { ok: true, status: 200, charts: charts.get(encounterId) ?? [] } });
+        return;
+      }
+      if (request.method() !== "PUT") {
+        await route.fallback();
+        return;
+      }
+      if (encounterId === first.encounter.id) {
+        firstPutCount += 1;
+        await firstPutGate;
+      } else if (encounterId === second.encounter.id) {
+        secondPutCount += 1;
+      }
+      const chart = chartFor(encounterId);
+      charts.set(encounterId, [chart]);
+      await route.fulfill({ json: { ok: true, status: 200, chart } });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/soap-notes?*`,
+    async (route) => {
+      const encounterId = new URL(route.request().url()).searchParams.get("encounterId") ?? "";
+      await route.fulfill({ json: { ok: true, status: 200, soapNote: charts.get(encounterId)?.[0] ?? null } });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/diagnoses?*`,
+    (route) => route.fulfill({ json: { ok: true, status: 200, diagnoses: [], assessments: [], version: "scope-switch-v1" } }),
+  );
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/completion?*`,
+    async (route) => {
+      const encounterId = new URL(route.request().url()).searchParams.get("encounterId") ?? "";
+      await route.fulfill({
+        json: {
+          ok: true,
+          status: 200,
+          completion: { encounterId, workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID, status: "in_consultation", updatedAt: "2026-09-13T08:00:00.000Z" },
+        },
+      });
+    },
+  );
+
+  try {
+    await page.goto(
+      `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?encounterId=${first.encounter.id}&modulePanel=open&aside=closed`,
+    );
+    await expect.poll(() => firstPutCount).toBe(1);
+
+    await page.getByTestId(`order-queue-item-${second.encounter.id}`).click();
+    await expect(page).toHaveURL(new RegExp(`encounterId=${second.encounter.id}`));
+    await expect.poll(() => secondPutCount).toBe(1);
+    await expect(page.getByLabel("SOAP 블록 문서").getByRole("textbox")).toBeEditable();
+
+    releaseFirstPut();
+    await expect(page.getByTestId(`order-queue-item-${second.encounter.id}`)).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByLabel("환자 컨텍스트 정보")).toContainText("지연비");
+  } finally {
+    releaseFirstPut();
+  }
+});
+
 test("live patient chart history shows every chart by created_at and keeps past charts read-only", async ({
   page,
 }) => {
