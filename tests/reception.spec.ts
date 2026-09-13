@@ -5374,6 +5374,160 @@ test("walk-in empty vital draft creates without a measurement payload", async ({
   expect(walkInCreate.latestBody).not.toHaveProperty("weightKg");
 });
 
+test("walk-in vital validation preserves input and explains only non-empty errors", async ({
+  page,
+}) => {
+  await page.route("**/api/workspaces/clair-demo/vital-settings", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        canManage: true,
+        presets: [
+          { key: "weight", label: "체중", description: "환자의 현재 체중", canonicalUnit: "kg", allowedDisplayUnits: ["kg", "g"], requiredInWorkspace: false },
+          { key: "temperature", label: "체온", description: "체온계로 측정한 체온", canonicalUnit: "°C", allowedDisplayUnits: ["°C", "°F"], requiredInWorkspace: false },
+          { key: "heart_rate", label: "심박수", description: "분당 심장 박동 수", canonicalUnit: "bpm", allowedDisplayUnits: ["bpm"], requiredInWorkspace: false },
+          { key: "respiratory_rate", label: "호흡수", description: "분당 호흡 횟수", canonicalUnit: "rpm", allowedDisplayUnits: ["rpm"], requiredInWorkspace: false },
+          { key: "blood_pressure", label: "혈압", description: "수축기 단독 또는 수축기/이완기", canonicalUnit: "mmHg", allowedDisplayUnits: ["mmHg"], requiredInWorkspace: false },
+        ],
+        items: [
+          { key: "weight", enabled: true, displayUnit: "kg", sortOrder: 0 },
+          { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 1 },
+          { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 },
+          { key: "respiratory_rate", enabled: true, displayUnit: "rpm", sortOrder: 3 },
+          { key: "blood_pressure", enabled: true, displayUnit: "mmHg", sortOrder: 4 },
+        ],
+      }),
+    });
+  });
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T10:45:00+09:00",
+    encounterId: "encounter-validated-vitals-walkin-dubu",
+    guardianId: "guardian-jung-harin",
+    patientId: "patient-dubu",
+    queueId: "queue-validated-vitals-walkin-dubu",
+  });
+
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+
+  const form = page.getByTestId("walk-in-reception-dialog");
+  const createButton = page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "생성", exact: true });
+  await expect(page.getByTestId("walk-in-time-block-alert")).toHaveCount(0);
+  await expect(createButton).toHaveAttribute("aria-disabled", "true");
+  await createButton.hover();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "필수 입력 정보를 확인해주세요",
+  );
+  await page.mouse.move(0, 0);
+  await createButton.focus();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "필수 입력 정보를 확인해주세요",
+  );
+
+  await form.getByLabel("환자 검색").fill("두부");
+  await page.getByRole("option", { name: /두부.*정하린/ }).click();
+  const rows = form.getByTestId("walk-in-vital-rows");
+  const weight = rows.getByLabel("체중");
+  const temperature = rows.getByLabel("체온");
+  const heartRate = rows.getByLabel("심박수");
+  const respiration = rows.getByLabel("호흡");
+  const systolic = rows.getByLabel("수축기 혈압");
+  const diastolic = rows.getByLabel("이완기 혈압");
+
+  await expect(weight).toHaveAttribute("placeholder", "측정값 입력");
+  await expect(temperature).toHaveAttribute("placeholder", "측정값 입력");
+  await expect(heartRate).toHaveAttribute("placeholder", "분당 횟수 입력");
+  await expect(respiration).toHaveAttribute("placeholder", "분당 횟수 입력");
+  await expect(systolic).toHaveAttribute("placeholder", "수축기");
+  await expect(diastolic).toHaveAttribute("placeholder", "이완기");
+
+  await weight.fill("");
+  await form.getByLabel("방문목적").fill("바이탈 입력 검증");
+  await expect(rows.getByRole("alert")).toHaveCount(0);
+  await expect(weight).not.toHaveAttribute("aria-invalid", "true");
+  await expect(createButton).not.toHaveAttribute("aria-disabled", "true");
+
+  await weight.fill("abc");
+  await expect(weight).toHaveValue("abc");
+  await expect(weight).not.toHaveAttribute("aria-invalid", "true");
+  await createButton.click({ force: true });
+  await expect.poll(() => walkInCreate.count).toBe(0);
+  await expect(weight).toHaveValue("abc");
+  await expect(weight).toHaveAttribute("aria-invalid", "true");
+  await expect(weight).toHaveAttribute(
+    "aria-describedby",
+    "walk-in-vital-weightKg-error",
+  );
+  await expect(rows.getByText("숫자로 입력해 주세요.")).toBeVisible();
+
+  await weight.fill("");
+  await expect(weight).not.toHaveAttribute("aria-invalid", "true");
+  await expect(weight).not.toHaveAttribute("aria-describedby", /.+/);
+  await expect(rows.getByText("숫자로 입력해 주세요.")).toHaveCount(0);
+
+  await weight.fill("-1");
+  await temperature.focus();
+  await expect(weight).toHaveValue("-1");
+  await expect(rows.getByText("0보다 크게 입력해 주세요.")).toBeVisible();
+  await weight.fill("12.345");
+  await expect(
+    rows.getByText("소수 둘째 자리까지 입력해 주세요."),
+  ).toBeVisible();
+  await weight.fill("");
+
+  await temperature.fill("38.75");
+  await heartRate.focus();
+  await expect(temperature).toHaveValue("38.75");
+  await expect(
+    rows.getByText("소수 첫째 자리까지 입력해 주세요."),
+  ).toBeVisible();
+  await temperature.fill("");
+
+  await heartRate.fill("88.5");
+  await respiration.focus();
+  await expect(heartRate).toHaveValue("88.5");
+  await expect(rows.getByText("정수로 입력해 주세요.")).toBeVisible();
+  await heartRate.fill("");
+
+  await systolic.fill("120");
+  await form.getByLabel("방문목적").focus();
+  await expect(systolic).not.toHaveAttribute("aria-invalid", "true");
+  await expect(createButton).not.toHaveAttribute("aria-disabled", "true");
+
+  await systolic.fill("");
+  await diastolic.fill("80");
+  await form.getByLabel("방문목적").focus();
+  await expect(diastolic).toHaveValue("80");
+  await expect(diastolic).toHaveAttribute("aria-invalid", "true");
+  await expect(rows.getByText("수축기를 먼저 입력해 주세요.")).toBeVisible();
+  await expect(createButton).toHaveAttribute("aria-disabled", "true");
+
+  await diastolic.fill("");
+  await expect(diastolic).not.toHaveAttribute("aria-invalid", "true");
+  await expect(rows.getByRole("alert")).toHaveCount(0);
+  await systolic.fill("120");
+  await weight.fill("8.65");
+  await temperature.fill("38.7");
+  await heartRate.fill("88");
+  await respiration.fill("24");
+  await createButton.click();
+
+  await expect.poll(() => walkInCreate.count).toBe(1);
+  expect(walkInCreate.latestBody).toMatchObject({
+    vitals: {
+      bloodPressure: { systolicMmhg: 120 },
+      heartRateBpm: 88,
+      respiratoryRateRpm: 24,
+      temperatureC: 38.7,
+      weightKg: 8.65,
+    },
+  });
+});
+
 test("reception creates a reservation through the unified check-in menu", async ({
   page,
 }) => {

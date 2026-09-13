@@ -114,6 +114,11 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import {
   Select,
@@ -560,16 +565,19 @@ type ReceptionCreateVitalId =
   | "respiration"
   | "bloodPressure";
 
+type ReceptionCreateVitalValues = {
+  weightKg: string;
+  temperatureC: string;
+  heartRateBpm: string;
+  respiratoryRateRpm: string;
+  bloodPressureSystolicMmhg: string;
+  bloodPressureDiastolicMmhg: string;
+};
+
 type ReceptionCreateVitalDraft = {
   selectedIds: ReceptionCreateVitalId[];
-  values: {
-    weightKg: string;
-    temperatureC: string;
-    heartRateBpm: string;
-    respiratoryRateRpm: string;
-    bloodPressureSystolicMmhg: string;
-    bloodPressureDiastolicMmhg: string;
-  };
+  shownErrors: Partial<Record<keyof ReceptionCreateVitalValues, boolean>>;
+  values: ReceptionCreateVitalValues;
 };
 
 type ReceptionCreateVitalFieldErrors = Partial<
@@ -2055,6 +2063,7 @@ const createReceptionVitalDraft = (
   selectedIds: settings
     ? getEnabledWorkspaceVitalSettings(settings).map((item) => workspaceVitalKeyToReceptionId(item.key))
     : ["weight", "temperature", "heartRate", "respiration"],
+  shownErrors: {},
   values: {
     weightKg: formatReceptionInitialWeight(weightKg, settings),
     temperatureC: "",
@@ -2078,17 +2087,43 @@ const buildReceptionVitalInput = (
 
   const readPositiveNumber = (
     key: keyof ReceptionCreateVitalDraft["values"],
-    label: string,
-    integer = false,
+    {
+      integer = false,
+      maxDecimals,
+      precisionMessage,
+    }: {
+      integer?: boolean;
+      maxDecimals?: number;
+      precisionMessage?: string;
+    } = {},
   ) => {
     const raw = draft.values[key].trim();
     if (!raw) return undefined;
     const value = Number(raw);
 
-    if (!Number.isFinite(value) || value <= 0 || (integer && !Number.isInteger(value))) {
-      fieldErrors[key] = integer
-        ? `${label}은 0보다 큰 정수로 입력해 주세요.`
-        : `${label}은 0보다 큰 숫자로 입력해 주세요.`;
+    if (!Number.isFinite(value)) {
+      fieldErrors[key] = "숫자로 입력해 주세요.";
+      return undefined;
+    }
+    if (value <= 0) {
+      fieldErrors[key] = "0보다 크게 입력해 주세요.";
+      return undefined;
+    }
+    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)) {
+      fieldErrors[key] = "숫자로 입력해 주세요.";
+      return undefined;
+    }
+    if (integer && !Number.isInteger(value)) {
+      fieldErrors[key] = "정수로 입력해 주세요.";
+      return undefined;
+    }
+    const decimalPlaces = raw.split(".")[1]?.length ?? 0;
+    if (
+      maxDecimals !== undefined &&
+      decimalPlaces > maxDecimals &&
+      precisionMessage
+    ) {
+      fieldErrors[key] = precisionMessage;
       return undefined;
     }
 
@@ -2096,38 +2131,42 @@ const buildReceptionVitalInput = (
   };
 
   if (selected.has("weight")) {
-    const value = readPositiveNumber("weightKg", "체중");
+    const value = readPositiveNumber("weightKg", {
+      maxDecimals: 2,
+      precisionMessage: "소수 둘째 자리까지 입력해 주세요.",
+    });
     if (value !== undefined) {
       input.weightKg = toCanonicalVitalValue("weight", value, getReceptionVitalUnit(settings, "weight"));
     }
   }
   if (selected.has("temperature")) {
-    const value = readPositiveNumber("temperatureC", "체온");
+    const value = readPositiveNumber("temperatureC", {
+      maxDecimals: 1,
+      precisionMessage: "소수 첫째 자리까지 입력해 주세요.",
+    });
     if (value !== undefined) {
       input.temperatureC = toCanonicalVitalValue("temperature", value, getReceptionVitalUnit(settings, "temperature"));
     }
   }
   if (selected.has("heartRate")) {
-    const value = readPositiveNumber("heartRateBpm", "심박수", true);
+    const value = readPositiveNumber("heartRateBpm", { integer: true });
     if (value !== undefined) input.heartRateBpm = value;
   }
   if (selected.has("respiration")) {
-    const value = readPositiveNumber("respiratoryRateRpm", "호흡", true);
+    const value = readPositiveNumber("respiratoryRateRpm", { integer: true });
     if (value !== undefined) input.respiratoryRateRpm = value;
   }
   if (selected.has("bloodPressure")) {
     const systolicRaw = draft.values.bloodPressureSystolicMmhg.trim();
     const diastolicRaw = draft.values.bloodPressureDiastolicMmhg.trim();
     if (!systolicRaw && diastolicRaw) {
-      fieldErrors.bloodPressureSystolicMmhg = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
+      fieldErrors.bloodPressureDiastolicMmhg = "수축기를 먼저 입력해 주세요.";
     } else if (systolicRaw) {
-      const systolic = readPositiveNumber(
-        "bloodPressureSystolicMmhg",
-        "수축기 혈압",
-        true,
-      );
+      const systolic = readPositiveNumber("bloodPressureSystolicMmhg", {
+        integer: true,
+      });
       const diastolic = diastolicRaw
-        ? readPositiveNumber("bloodPressureDiastolicMmhg", "이완기 혈압", true)
+        ? readPositiveNumber("bloodPressureDiastolicMmhg", { integer: true })
         : undefined;
       if (systolic !== undefined && (!diastolicRaw || diastolic !== undefined)) {
         input.bloodPressure = {
@@ -2143,6 +2182,43 @@ const buildReceptionVitalInput = (
     input: Object.keys(input).length > 0 ? input : undefined,
   };
 };
+
+function ReceptionCreateButton({
+  inputBlocked,
+  onClick,
+  scheduleBlocked,
+  submitting,
+}: {
+  inputBlocked: boolean;
+  onClick: () => void;
+  scheduleBlocked: boolean;
+  submitting: boolean;
+}) {
+  const disabled = inputBlocked || scheduleBlocked || submitting;
+  const showInputTooltip = inputBlocked && !scheduleBlocked && !submitting;
+  const button = (
+    <Button
+      type="button"
+      size="default"
+      aria-disabled={disabled || undefined}
+      className="aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+      onClick={() => {
+        if (!scheduleBlocked && !submitting) onClick();
+      }}
+    >
+      {submitting ? "생성 중" : "생성"}
+    </Button>
+  );
+
+  return showInputTooltip ? (
+    <Tooltip>
+      <TooltipTrigger render={button} />
+      <TooltipContent role="tooltip">필수 입력 정보를 확인해주세요</TooltipContent>
+    </Tooltip>
+  ) : (
+    button
+  );
+}
 
 const getReservationTimeOptions = (
   date: string,
@@ -7604,15 +7680,17 @@ function ReceptionWalkInFormDrawer({
       currentOperatingMinutes,
       durationMinutes,
     ) === "break-warning";
-  const canCreate = Boolean(
-    operatingScheduleStatus === "ready" &&
-      patient &&
-      department &&
-      duration &&
-      assignedStaffUserIds.length === 1 &&
-      trimmedVisitPurpose &&
-      Object.keys(vitalBuild.fieldErrors).length === 0,
+  const createInputBlocked = Boolean(
+    !patient ||
+      !department ||
+      !duration ||
+      assignedStaffUserIds.length !== 1 ||
+      !trimmedVisitPurpose ||
+      Object.keys(vitalBuild.fieldErrors).length > 0,
   );
+  const createScheduleBlocked =
+    operatingScheduleStatus !== "ready" || Boolean(createBlockMessage);
+  const canCreate = !createInputBlocked && !createScheduleBlocked;
 
   useEffect(() => {
     if (
@@ -7800,6 +7878,19 @@ function ReceptionWalkInFormDrawer({
     }
   };
   const requestCreate = () => {
+    const vitalErrorKeys = Object.keys(
+      vitalBuild.fieldErrors,
+    ) as Array<keyof ReceptionCreateVitalDraft["values"]>;
+    if (vitalErrorKeys.length > 0) {
+      setVitalDraft((current) => ({
+        ...current,
+        shownErrors: vitalErrorKeys.reduce(
+          (shownErrors, key) => ({ ...shownErrors, [key]: true }),
+          current.shownErrors,
+        ),
+      }));
+      return;
+    }
     if (
       !patient ||
       !selectedSummary ||
@@ -8166,14 +8257,12 @@ function ReceptionWalkInFormDrawer({
             >
               취소
             </Button>
-            <Button
-              type="button"
-              size="default"
+            <ReceptionCreateButton
+              inputBlocked={createInputBlocked}
               onClick={requestCreate}
-              disabled={!canCreate || Boolean(createBlockMessage) || submitting}
-            >
-              {submitting ? "생성 중" : "생성"}
-            </Button>
+              scheduleBlocked={createScheduleBlocked}
+              submitting={submitting}
+            />
           </div>
         </EmrRightPanelFooter>
         <ReceptionBreakTimeConfirmDialog
@@ -8467,9 +8556,12 @@ function ReceptionWalkInFormDrawer({
           <Button size="default" variant="ghost" onClick={close} disabled={submitting}>
             취소
           </Button>
-          <Button size="default" onClick={requestCreate} disabled={!canCreate || Boolean(createBlockMessage) || submitting}>
-            {submitting ? "생성 중" : "생성"}
-          </Button>
+          <ReceptionCreateButton
+            inputBlocked={createInputBlocked}
+            onClick={requestCreate}
+            scheduleBlocked={createScheduleBlocked}
+            submitting={submitting}
+          />
         </div>
       </div>
     </div>
@@ -10095,15 +10187,23 @@ function ReceptionCreateVitalFields({
   const updateValue = (
     key: keyof ReceptionCreateVitalDraft["values"],
     value: string,
-    integer = false,
   ) => {
-    const sanitized = integer
-      ? value.replace(/\D/g, "")
-      : value.replace(/[^\d.]/g, "");
     setDraft((current) => ({
       ...current,
-      values: { ...current.values, [key]: sanitized },
+      values: { ...current.values, [key]: value },
     }));
+  };
+
+  const showError = (key: keyof ReceptionCreateVitalDraft["values"]) => {
+    if (!fieldErrors[key]) return;
+    setDraft((current) =>
+      current.shownErrors[key]
+        ? current
+        : {
+            ...current,
+            shownErrors: { ...current.shownErrors, [key]: true },
+          },
+    );
   };
 
   const addVital = (id: ReceptionCreateVitalId) => {
@@ -10161,21 +10261,28 @@ function ReceptionCreateVitalFields({
           : id === "heartRate"
             ? "heartRateBpm"
             : "respiratoryRateRpm";
-    const error = fieldErrors[key];
+    const error = draft.shownErrors[key] ? fieldErrors[key] : undefined;
+    const errorId = `walk-in-vital-${key}-error`;
+    const placeholder =
+      id === "weight" || id === "temperature"
+        ? "측정값 입력"
+        : "분당 횟수 입력";
     const input =
       presentation === "side-panel" ? (
         <ReceptionSidePanelInput
           ref={(element) => {
             inputRefs.current[id] = element;
           }}
+          aria-describedby={error ? errorId : undefined}
           aria-label={label}
           aria-invalid={Boolean(error) || undefined}
           inputMode={inputMode}
-          placeholder={`${label}을 입력해주세요`}
+          placeholder={placeholder}
           unit={unit}
           value={draft.values[key]}
           variant="create"
-          onValueChange={(value) => updateValue(key, value, inputMode === "numeric")}
+          onBlur={() => showError(key)}
+          onValueChange={(value) => updateValue(key, value)}
         />
       ) : (
         <div className="relative min-w-0 flex-1">
@@ -10183,13 +10290,15 @@ function ReceptionCreateVitalFields({
             ref={(element) => {
               inputRefs.current[id] = element;
             }}
+            aria-describedby={error ? errorId : undefined}
             aria-label={label}
             aria-invalid={Boolean(error) || undefined}
             className="h-9 bg-card pr-12"
             inputMode={inputMode}
-            placeholder="0"
+            placeholder={placeholder}
             value={draft.values[key]}
-            onValueChange={(value) => updateValue(key, value, inputMode === "numeric")}
+            onBlur={() => showError(key)}
+            onValueChange={(value) => updateValue(key, value)}
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium text-foreground">
             {unit}
@@ -10203,15 +10312,27 @@ function ReceptionCreateVitalFields({
           <div className="min-w-0 flex-1">{input}</div>
           {renderRemoveButton(id, label)}
         </div>
-        {error ? <p className="mt-1 emr-text-micro font-medium text-destructive">{error}</p> : null}
+        {error ? (
+          <FieldError
+            id={errorId}
+            className="mt-1 emr-text-micro font-medium"
+          >
+            {error}
+          </FieldError>
+        ) : null}
       </div>
     );
   };
 
   const renderBloodPressureInput = () => {
-    const error =
-      fieldErrors.bloodPressureSystolicMmhg ??
-      fieldErrors.bloodPressureDiastolicMmhg;
+    const systolicError = draft.shownErrors.bloodPressureSystolicMmhg
+      ? fieldErrors.bloodPressureSystolicMmhg
+      : undefined;
+    const diastolicError = draft.shownErrors.bloodPressureDiastolicMmhg
+      ? fieldErrors.bloodPressureDiastolicMmhg
+      : undefined;
+    const systolicErrorId = "walk-in-vital-bloodPressureSystolicMmhg-error";
+    const diastolicErrorId = "walk-in-vital-bloodPressureDiastolicMmhg-error";
     return (
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
@@ -10220,8 +10341,9 @@ function ReceptionCreateVitalFields({
               ref={(element) => {
                 inputRefs.current.bloodPressure = element;
               }}
+              aria-describedby={systolicError ? systolicErrorId : undefined}
               aria-label="수축기 혈압"
-              aria-invalid={Boolean(fieldErrors.bloodPressureSystolicMmhg) || undefined}
+              aria-invalid={Boolean(systolicError) || undefined}
               className={cn(
                 presentation === "side-panel"
                   ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
@@ -10230,14 +10352,16 @@ function ReceptionCreateVitalFields({
               inputMode="numeric"
               placeholder="수축기"
               value={draft.values.bloodPressureSystolicMmhg}
+              onBlur={() => showError("bloodPressureSystolicMmhg")}
               onValueChange={(value) =>
-                updateValue("bloodPressureSystolicMmhg", value, true)
+                updateValue("bloodPressureSystolicMmhg", value)
               }
             />
             <span aria-hidden="true" className="text-muted-foreground">/</span>
             <Input
+              aria-describedby={diastolicError ? diastolicErrorId : undefined}
               aria-label="이완기 혈압"
-              aria-invalid={Boolean(fieldErrors.bloodPressureDiastolicMmhg) || undefined}
+              aria-invalid={Boolean(diastolicError) || undefined}
               className={cn(
                 presentation === "side-panel"
                   ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
@@ -10246,15 +10370,31 @@ function ReceptionCreateVitalFields({
               inputMode="numeric"
               placeholder="이완기"
               value={draft.values.bloodPressureDiastolicMmhg}
+              onBlur={() => showError("bloodPressureDiastolicMmhg")}
               onValueChange={(value) =>
-                updateValue("bloodPressureDiastolicMmhg", value, true)
+                updateValue("bloodPressureDiastolicMmhg", value)
               }
             />
             <span className="shrink-0 emr-text-dense font-medium text-foreground">mmHg</span>
           </div>
           {renderRemoveButton("bloodPressure", "혈압")}
         </div>
-        {error ? <p className="mt-1 emr-text-micro font-medium text-destructive">{error}</p> : null}
+        {systolicError ? (
+          <FieldError
+            id={systolicErrorId}
+            className="mt-1 emr-text-micro font-medium"
+          >
+            {systolicError}
+          </FieldError>
+        ) : null}
+        {diastolicError ? (
+          <FieldError
+            id={diastolicErrorId}
+            className="mt-1 emr-text-micro font-medium"
+          >
+            {diastolicError}
+          </FieldError>
+        ) : null}
       </div>
     );
   };
