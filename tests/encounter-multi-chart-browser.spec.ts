@@ -51,10 +51,8 @@ test("new charts isolate SOAP, preserve saves across switches and refresh, and s
   await expect(page.locator(`[data-chart-id="${createdId}"]`)).toContainText(
     "담당 송민재",
   );
-  await expect(page.getByTestId("chart-additional-record-badge")).toBeVisible();
-  await expect(page.getByTestId("chart-additional-record-info")).toContainText(
-    "진료에 포함됩니다",
-  );
+  await expect(page.getByTestId("chart-additional-record-badge")).toHaveCount(0);
+  await expect(page.getByTestId("chart-additional-record-info")).toHaveCount(0);
   const firstId = new URL(page.url()).searchParams.get("chartId")!;
   const editor = page.getByLabel("SOAP 블록 문서");
   const paragraph = editor.locator('.bn-block-content[data-content-type="paragraph"]').first();
@@ -138,6 +136,18 @@ test("failed SOAP save blocks chart creation, preserves text, and explicit retry
   await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
   await expect(editor).toContainText("Synthetic preserved failed-save text");
   await failedDialog.getByRole("button", { name: "취소" }).click();
+  const errorNotice = page.getByTestId("chart-soap-save-error");
+  await errorNotice.getByRole("button", { name: "안내 닫기" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(errorNotice).toHaveCount(0);
+  await expect(page.getByTestId("chart-soap-save-error-collapsed")).toContainText("SOAP를 저장하지 못했습니다");
+  await expect(editor).toContainText("Synthetic preserved failed-save text");
+  await expect(page.locator('h2[aria-label="Subject/Object"]')).toContainText("저장 실패");
+  failNext = true;
+  await page.getByTestId("chart-soap-save-error-collapsed").getByRole("button", { name: "다시 저장" }).click();
+  await expect(errorNotice).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+
   const retry = page.waitForResponse((response) => response.request().method() === "PATCH" && response.url().includes("chart/soap-notes") && response.request().postDataJSON()?.chartId === chartId);
   await page.getByRole("button", { name: "SOAP 저장", exact: true }).click();
   expect((await retry).ok()).toBe(true);
@@ -213,4 +223,92 @@ test("assessment response advances the SOAP token before the next save and chart
   await expect(
     diagnosisPanel.getByRole("row", { name: new RegExp(diagnosisName) }),
   ).toBeVisible();
+});
+
+
+test("chart read errors fold without unlocking editing and reopen on a failed retry", async ({ page }) => {
+  let failSoap = true;
+  let failOrders = true;
+  let orderWrites = 0;
+  await page.route("**/chart/soap-notes?*", async (route) => {
+    if (failSoap) await route.fulfill({ status: 503, json: { ok: false, error: "db_read_failed" } });
+    else await route.continue();
+  });
+  await page.route("**/chart/order-drafts**", async (route) => {
+    if (route.request().method() === "PATCH") orderWrites += 1;
+    if (route.request().method() === "GET" && failOrders) {
+      await route.fulfill({ status: 503, json: { ok: false, error: "db_read_failed" } });
+    } else await route.continue();
+  });
+  await page.goto("/w/clair-demo/treatment?encounterId=encounter-kong-260501&patientId=patient-kong&modulePanel=open&aside=closed");
+  const soapError = page.getByTestId("chart-soap-read-error");
+  await expect(soapError).toBeVisible();
+  await soapError.getByRole("button", { name: "안내 닫기" }).click();
+  await expect(page.getByLabel("SOAP 저장", { exact: true }).getByRole("button")).toBeDisabled();
+  await page.getByTestId("chart-soap-read-error-collapsed").getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(soapError).toBeVisible();
+  failSoap = false;
+  await soapError.getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(soapError).toHaveCount(0);
+  await expect(page.getByLabel("SOAP 블록 문서").getByRole("textbox")).toBeEditable();
+  const orderError = page.getByTestId("chart-order-state-error");
+  await expect(orderError).toContainText("오더 정보를 불러오지 못했어요");
+  await orderError.getByRole("button", { name: "안내 닫기" }).click();
+  await expect(page.getByTestId("chart-order-state-error-collapsed")).toContainText("오더 정보를 불러오지 못했어요");
+  await page.getByTestId("chart-order-state-error-collapsed").getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(orderError).toBeVisible();
+  expect(orderWrites).toBe(0);
+  failOrders = false;
+  await orderError.getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(orderError).toHaveCount(0);
+  await expect(page.getByLabel("Maropitant 16mg T 청구서명 수정")).toBeEnabled();
+});
+
+test("chart list retry reopens the error and never claims an empty chart", async ({ page }) => {
+  let failList = true;
+  await page.route("**/chart/encounter-charts?*", async (route) => {
+    if (failList) await route.fulfill({ status: 503, json: { ok: false, error: "db_read_failed" } });
+    else await route.continue();
+  });
+  await page.goto("/w/clair-demo/treatment?encounterId=encounter-kong-260501&patientId=patient-kong&modulePanel=open&aside=closed");
+  const error = page.getByRole("alert").filter({ hasText: "차트 목록을 불러오지 못했어요" });
+  await expect(error).toBeVisible();
+  await error.getByRole("button", { name: "안내 닫기" }).click();
+  await expect(error).toHaveCount(0);
+  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await page.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(error).toBeVisible();
+  failList = false;
+  await error.getByRole("button", { name: "다시 시도", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
+});
+
+test("SOAP conflict dismissal keeps unsaved text, chart-switch blocking and CAS retry", async ({ page }) => {
+  await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&patientId=patient-coco&modulePanel=open&aside=history");
+  await expect(createButton(page)).toBeEnabled();
+  const created = await createNewChart(page);
+  const chartId = (await created.json()).chart.id;
+  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  await page.route("**/chart/soap-notes", async (route) => {
+    await route.fulfill({ status: 409, json: { ok: false, status: 409, denialReason: "soap_note_conflict" } });
+  });
+  const editor = page.getByLabel("SOAP 블록 문서");
+  const paragraph = editor.locator('.bn-block-content[data-content-type="paragraph"]').first();
+  await expect(paragraph).toBeEditable();
+  await paragraph.click();
+  await page.keyboard.type("Synthetic conflicting note stays here");
+  const conflict = page.getByTestId("chart-soap-conflict");
+  await expect(conflict).toBeVisible();
+  await conflict.getByRole("button", { name: "안내 닫기" }).click();
+  await expect(conflict).toHaveCount(0);
+  await expect(page.locator('h2[aria-label="Subject/Object"]')).toContainText("저장 충돌");
+  await expect(editor).toContainText("Synthetic conflicting note stays here");
+  const dialog = await openNewChartDialog(page);
+  await dialog.getByRole("button", { name: "선택한 진료에 차트 추가", exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await page.getByTestId("chart-soap-conflict-collapsed").getByRole("button", { name: "다시 저장" }).click();
+  await expect(conflict).toBeVisible();
+  await expect(editor).toContainText("Synthetic conflicting note stays here");
 });
