@@ -1582,7 +1582,7 @@ test("chart Order all tab renders the approved order confirmation and work-state
   );
   expect(namedHeaders).toEqual([
     "분류",
-    "오더 확정",
+    "확정 여부",
     "Order 명",
     "업무 상태",
     "청구서명",
@@ -9472,7 +9472,7 @@ test("chart status presentation keeps edits in place until blur and hides unconf
     ({ ready: 0, invalid: 1, confirmed: 2 })[element.getAttribute("data-order-confirmation") as "ready" | "invalid" | "confirmed"]));
   expect(ranks).toEqual([...ranks].sort((a, b) => a - b));
   await expect(target).toHaveAttribute("data-emr-data-table-row-state", "normal");
-  await target.getByRole("button", { name: "입력 필요", exact: true }).click();
+  await target.getByRole("button", { name: "미입력", exact: true }).click();
   await expect(page.getByRole("dialog")).toContainText("status-draft-cbc");
 });
 
