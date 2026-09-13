@@ -4537,15 +4537,9 @@ function SoapPanel({
       <div className="relative z-30 flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
         <h2
           aria-label="Subject/Object"
-          className="flex min-w-0 items-center gap-2 truncate text-sm font-semibold leading-5 text-foreground"
+          className="min-w-0 truncate text-sm font-semibold leading-5 text-foreground"
         >
-          <span>Subject/Object</span>
-          <span
-            aria-hidden="true"
-            className="truncate emr-text-micro font-normal text-muted-foreground"
-          >
-            {activeStatusText}
-          </span>
+          Subject/Object
         </h2>
         <ChartPanelActionGroup>
           {isSigned && !parentWriteDisabled ? (
@@ -4564,6 +4558,7 @@ function SoapPanel({
           <ChartPanelIconButton
             label="SOAP 저장"
             disabled={writeDisabled}
+            iconSize="md"
             onClick={() => coordinator.saveNow()}
           >
             <CdsActionsSaveIcon />
@@ -4576,9 +4571,9 @@ function SoapPanel({
                   variant="ghost"
                   size="icon-xs"
                   aria-label="SOAP 작업"
-                  className="size-7 rounded-lg text-muted-foreground"
+                  className="size-7 rounded-lg text-[var(--clair-color-atomic-neutral-900)] hover:!text-[var(--clair-color-atomic-neutral-900)] aria-expanded:!text-[var(--clair-color-atomic-neutral-900)] [&_svg]:!size-4"
                 >
-                  <CdsFilesMoreHorizontalIcon className="size-3.5" />
+                  <CdsFilesMoreHorizontalIcon />
                 </Button>
               }
             />
@@ -13498,12 +13493,12 @@ function OrderArea({
             type="button"
             variant="ghost"
             size="icon-xs"
-            className="size-7 rounded-lg text-[var(--emr-text-secondary)]"
+            className="size-7 rounded-lg text-[var(--clair-color-atomic-neutral-900)] hover:!text-[var(--clair-color-atomic-neutral-900)] aria-expanded:!text-[var(--clair-color-atomic-neutral-900)] disabled:opacity-100 [&_svg]:!size-4"
             aria-label="Order 추가"
             disabled={writeDisabled || draftWriteDisabled}
             onClick={openCatalogDialog}
           >
-            <CdsActionsPlusIcon className="size-3.5" />
+            <CdsActionsPlusIcon />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -13512,13 +13507,13 @@ function OrderArea({
                   type="button"
                   variant="ghost"
                   size="icon-xs"
-                  className="size-7 rounded-lg text-muted-foreground"
+                  className="size-7 rounded-lg text-[var(--clair-color-atomic-neutral-900)] hover:!text-[var(--clair-color-atomic-neutral-900)] aria-expanded:!text-[var(--clair-color-atomic-neutral-900)] [&_svg]:!size-4"
                   aria-label="Plan/Order 작업"
                   onClick={() => {
                     if (collapsed) onCollapsedChange(false);
                   }}
                 >
-                  <CdsFilesMoreHorizontalIcon className="size-3.5" />
+                  <CdsFilesMoreHorizontalIcon />
                 </Button>
               }
             />

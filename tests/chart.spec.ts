@@ -1059,6 +1059,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   const subjectActions = subjectPanel.locator(
     "[data-slot='chart-panel-actions']",
   );
+  await expect(subjectPanel.locator("h2")).toHaveText("Subject/Object");
   await page.mouse.move(1, 1);
   await expect(subjectActions).toHaveCSS("opacity", "0");
   await subjectPanel.hover();
@@ -1094,6 +1095,22 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   for (const button of await subjectActionButtons.all()) {
     await expect(button).toHaveCSS("width", "28px");
     await expect(button).toHaveCSS("height", "28px");
+    await expect(button).toHaveCSS("border-radius", "8px");
+    await expect(button).toHaveCSS("color", "rgb(23, 23, 23)");
+  }
+  await expect(subjectActionButtons.nth(1)).toBeDisabled();
+  await expect(subjectActionButtons.nth(1)).toHaveCSS("opacity", "1");
+  for (const index of [0, 1]) {
+    await expect(subjectActionButtons.nth(index).locator("svg")).toHaveCSS(
+      "width",
+      "14px",
+    );
+  }
+  for (const index of [2, 3]) {
+    await expect(subjectActionButtons.nth(index).locator("svg")).toHaveCSS(
+      "width",
+      "16px",
+    );
   }
 
   const assessmentPanel = panels.filter({
@@ -1169,6 +1186,26 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "aria-label",
     "Plan/Order 작업",
   );
+  for (const button of await orderActionButtons.all()) {
+    await expect(button).toHaveCSS("width", "28px");
+    await expect(button).toHaveCSS("height", "28px");
+    await expect(button).toHaveCSS("border-radius", "8px");
+    await expect(button).toHaveCSS("color", "rgb(23, 23, 23)");
+  }
+  await expect(orderActionButtons.nth(1)).toBeDisabled();
+  await expect(orderActionButtons.nth(1)).toHaveCSS("opacity", "1");
+  for (const index of [0, 1]) {
+    await expect(orderActionButtons.nth(index).locator("svg")).toHaveCSS(
+      "width",
+      "14px",
+    );
+  }
+  for (const index of [2, 3]) {
+    await expect(orderActionButtons.nth(index).locator("svg")).toHaveCSS(
+      "width",
+      "16px",
+    );
+  }
 
   await expect(page.locator("[data-slot='chart-soap-toolbar']")).toBeVisible();
   await expect(page.getByRole("tab", { name: "기본 S/O" })).toBeVisible();
