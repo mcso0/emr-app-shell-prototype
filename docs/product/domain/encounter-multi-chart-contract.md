@@ -5,7 +5,7 @@ area: product
 doc_type: domain-contract
 related_work:
   - CHART-PR-037
-last_updated: 2026-09-12
+last_updated: 2026-09-13
 ---
 
 # Multiple Charts Within One Encounter
@@ -21,6 +21,8 @@ An encounter remains one reception/visit episode. A chart is an independently au
 Patient chart history is a list of individual, non-voided charts across the patient, not a list of encounters with one representative SOAP note. Its default `진료일` view groups the same chart rows by encounter check-in/creation date; the `작성일` view groups them by immutable chart `created_at`. Switching the segmented control never changes the selected chart and never changes the total shown only in the `차트 이력` header. Within either view, chart creation time plus chart ID provides stable descending order. `clinical_at` and `updated_at` never define the group. Selecting a row restores its actual encounter and chart identities; an encounter without a chart contributes no synthetic row. History pagination must return every chart exactly once even when multiple charts share a minute.
 
 Within a visit, the oldest active chart is the first record and later charts are `추가 기록`. The first record needs no relation marker. An additional chart written on a later date shows its source visit date in `작성일` history and a neutral relation notice above the clinical panels; this is context, not a warning or a new encounter.
+
+Calling or starting a consultation atomically ensures that first record and returns its real chart ID. Under the encounter write lock, reuse the oldest non-voided chart without changing its content, author, origin, timestamps, or signed state; create one blank draft only when no eligible chart exists. An already `in_consultation` or `ordered` encounter with no chart uses the same explicit, idempotent preparation mutation without repeating the patient call or queue transition. Chart list/read operations stay side-effect-free. `+ 새 차트` remains an intentional additional-record creation with its existing request-ID idempotency and never becomes the first-chart recovery path.
 
 ## Clinical Records
 
@@ -39,6 +41,6 @@ Within a visit, the oldest active chart is the first record and later charts are
 
 ## Persistence and Compatibility
 
-Existing SOAP IDs, documents, authors, timestamps, and revisions remain intact. Do not fabricate notes for encounters without SOAP. Existing orders without provable chart provenance remain encounter legacy records, never assigned by guessed timestamps and never shown as if they belonged to the selected chart. They remain available through encounter-owned billing/history paths. Legacy encounter-only writers must reject ambiguous multi-chart access instead of selecting the newest record. Chart-specific requests validate workspace, encounter, chart, user, permission, and expected revision at the database boundary and record audit atomically.
+Existing SOAP IDs, documents, authors, timestamps, and revisions remain intact. Do not backfill synthetic notes for historical encounters without SOAP; the only automatic creation is the locked, audited first-chart preparation for an eligible active consultation. Existing orders without provable chart provenance remain encounter legacy records, never assigned by guessed timestamps and never shown as if they belonged to the selected chart. They remain available through encounter-owned billing/history paths. Legacy encounter-only writers must reject ambiguous multi-chart access instead of selecting the newest record. Chart-specific requests validate workspace, encounter, chart, user, permission, and expected revision at the database boundary and record audit atomically.
 
 After multiple notes exist, rollback means disabling new creation while preserving chart-aware reads/writes and data. Restoring the old encounter unique index is not an acceptable rollback.

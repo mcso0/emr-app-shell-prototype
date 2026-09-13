@@ -18,7 +18,7 @@ export type EncounterChartsInput = {
   clinicalAt?: string;
   expectedUpdatedAt?: string;
 };
-type ChartOperation = "list" | "create" | "sign";
+type ChartOperation = "list" | "create" | "ensure" | "sign";
 type ChartGatewayInput = {
   operation: ChartOperation;
   workspaceId: string;
@@ -86,7 +86,7 @@ export async function manageEncounterCharts({
 }
 
 export type EncounterChartsRpcClient = {
-  rpc(name: "clair_list_encounter_charts" | "clair_create_encounter_chart" | "clair_sign_encounter_chart",
+  rpc(name: "clair_list_encounter_charts" | "clair_create_encounter_chart" | "clair_ensure_encounter_first_chart" | "clair_sign_encounter_chart",
     args: Record<string, string | null>): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
 export function createSupabaseEncounterChartsGateway(client: EncounterChartsRpcClient): EncounterChartsGateway {
@@ -96,6 +96,9 @@ export function createSupabaseEncounterChartsGateway(client: EncounterChartsRpcC
     if (input.operation === "create") {
       name = "clair_create_encounter_chart";
       Object.assign(args, { p_actor_user_id: input.actorUserId, p_creation_request_id: input.creationRequestId!, p_clinical_at: input.clinicalAt ?? null });
+    } else if (input.operation === "ensure") {
+      name = "clair_ensure_encounter_first_chart";
+      Object.assign(args, { p_actor_user_id: input.actorUserId });
     } else if (input.operation === "sign") {
       name = "clair_sign_encounter_chart";
       Object.assign(args, { p_actor_user_id: input.actorUserId, p_chart_id: input.chartId!,
@@ -134,6 +137,13 @@ export function createMockEncounterChartsGateway(): EncounterChartsGateway {
       const chart = createMockEncounterChart(input.workspaceId, input.encounterId, input.actorUserId, input.creationRequestId!, input.clinicalAt, input.actorDisplayName);
       if (chart.authorUserId !== input.actorUserId) return { ok: false, status: 403, denialReason: "actor_mismatch" };
       return { ok: true, status: 200, chart };
+    }
+    if (input.operation === "ensure") {
+      const existing = charts.at(-1);
+      if (existing) return { ok: true, status: 200, chart: existing, idempotentReplay: true };
+      return { ok: true, status: 200, chart: createMockEncounterChart(
+        input.workspaceId, input.encounterId, input.actorUserId, `initial-${input.encounterId}`, undefined, input.actorDisplayName,
+      ) };
     }
     const chart = charts.find((row) => row.id === input.chartId);
     if (!chart) return { ok: false, status: 409, denialReason: "chart_unavailable" };

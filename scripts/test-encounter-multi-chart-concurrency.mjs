@@ -27,9 +27,30 @@ const value = (result) => JSON.parse(result.stdout.split("\n").find((line) => li
 let created = false;
 try {
   sync("postgres", `create database ${database} template ${template};`); created = true;
-  sync(database, `begin; ${readFileSync("supabase/migrations/20260908211856_encounter_multi_chart.sql", "utf8")} commit;`);
+  sync(database, `begin; ${readFileSync("supabase/migrations/20260908211856_encounter_multi_chart.sql", "utf8")} ${readFileSync("supabase/migrations/20260913103000_chart_consultation_first_chart.sql", "utf8")} commit;`);
   const fixture = readFileSync("tests/sql/encounter_multi_chart_soap_contract.sql", "utf8").split("set local role authenticated;")[0].replaceAll("96370000", "96372000").replaceAll("MULTI-CHART-037", "MULTI-CHART-CONCURRENT-037");
   sync(database, `${fixture}\ncommit;`);
+  const callEncounter = "96372000-0000-4000-8000-000000000003";
+  sync(database, `insert into public.encounters(id,workspace_id,patient_id,primary_veterinarian_id,encounter_no,reception_type,status)
+    values('${callEncounter}','${workspace}','96372000-0000-4000-8000-000000000001','${actor}','MULTI-CHART-CALL-037','walk_in','waiting');
+    insert into public.waiting_queue_entries(id,workspace_id,encounter_id,queue_type,status)
+    values('96372000-0000-4000-8000-000000000004','${workspace}','${callEncounter}','consultation','waiting');`);
+  const call = () => `select public.clair_call_consultation_queue('${workspace}','${actor}','${callEncounter}','room-consult-1');`;
+  const competingCalls = await Promise.all([run(call()), run(call())]);
+  if (competingCalls.filter((result) => result.status === 0).length !== 1 ||
+    !competingCalls.some((result) => result.stderr.includes("stale_status"))) {
+    throw new Error(`Concurrent consultation call did not admit exactly one caller: ${competingCalls.map((result) => `${result.status}: ${result.stderr}`).join(" | ")}`);
+  }
+  const callState = sync(database, `select concat(
+    (select count(*) from public.soap_notes where encounter_id='${callEncounter}'),':',
+    (select count(*) from public.encounter_call_events where encounter_id='${callEncounter}'),':',
+    (select status from public.waiting_queue_entries where encounter_id='${callEncounter}' and queue_type='consultation'))`);
+  if (callState !== "1:1:in_progress") throw new Error(`Concurrent consultation call duplicated side effects: ${callState}`);
+  const ensure = () => `select public.clair_ensure_encounter_first_chart('${workspace}','${actor}','${encounter}');`;
+  const [preparedFirst, preparedRetry] = await Promise.all([run(ensure()), run(ensure())]);
+  if (preparedFirst.status || preparedRetry.status || value(preparedFirst)?.id !== value(preparedRetry)?.id) throw new Error("Concurrent first-chart preparation failed or duplicated");
+  const preparedCount = sync(database, `select count(*) from public.soap_notes where encounter_id='${encounter}';`);
+  if (preparedCount !== "1") throw new Error("Concurrent first-chart preparation duplicated rows");
   const create = (requestId) => `select public.clair_create_encounter_chart('${workspace}','${actor}','${encounter}','${requestId}');`;
   const [first, retry] = await Promise.all([run(create("96372000-0000-4000-8000-000000000101")), run(create("96372000-0000-4000-8000-000000000101"))]);
   if (first.status || retry.status || value(first)?.id !== value(retry)?.id) throw new Error("Concurrent creation failed or duplicated");
@@ -44,7 +65,7 @@ try {
   const separate = await Promise.all([run(save(currentA, "Independent A")), run(save(b, "Independent B"))]);
   if (separate.some((r) => r.status !== 0)) throw new Error(`Independent chart save failed: ${separate.map((r) => r.stderr).join(" ")}`);
   const count = sync(database, `select count(*) from public.soap_notes where encounter_id='${encounter}';`);
-  if (count !== "2") throw new Error("Concurrent creation fabricated rows");
+  if (count !== "3") throw new Error("First-chart preparation or explicit creation fabricated rows");
   // A routed set creates child execution tasks. Exercise the opposite callers
   // against the same root lock using independent PostgreSQL sessions.
   const orderFixture = readFileSync("tests/sql/encounter_multi_chart_order_contract.sql", "utf8").split("set local role authenticated;")[0]
@@ -85,7 +106,8 @@ try {
   const inconsistent = sync(database, `select count(*) from public.orders root join public.orders child on child.parent_chart_order_line_id=root.id where root.id='${rootId}' and root.status='cancelled' and child.status<>'cancelled';`);
   if (inconsistent !== "0") throw new Error("Root cancellation left active children");
   console.log("PASS concurrent root cancellation / child lifecycle synchronization without deadlocks; origin preserved");
-  console.log("PASS concurrent create/retry, same-chart conflict, independent-chart saves; two charts preserved");
+  console.log("PASS concurrent consultation call creates one first chart, queue transition, and call event");
+  console.log("PASS concurrent first-chart ensure/retry plus explicit additional creates; three charts preserved");
 } finally {
   if (created) sync("postgres", `drop database ${database};`);
 }

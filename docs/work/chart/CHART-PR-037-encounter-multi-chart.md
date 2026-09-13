@@ -154,3 +154,9 @@ Remote DB application and production-data mutation are excluded from this reposi
 ### Confirmed Set Readback Hotfix — 2026-09-13
 
 Production smoke found that a confirmed included-order-sum set disappeared from Plan/Order because its non-billable parent projected `lineTotalSnapshot: null`; the action mapper rejected the entire three-row response. The mapper now normalizes only a set parent's null total to zero while retaining `billingReflectionEnabled: false`. Individual and set-child null totals remain invalid, and no database rows or RPCs change.
+
+### Consultation First-Chart Gap — 2026-09-13
+
+The consultation call/start path updated the encounter and queue but did not create or select the first chart, leaving SOAP correctly locked behind a missing chart ID and forcing a second `+ 새 차트` action. The scoped candidate adds a locked, audited `clair_ensure_encounter_first_chart` mutation, composes it into call/start transactions, and returns the real chart in the consultation response. Existing active charts are reused unchanged; an already-started zero-chart encounter recovers through the same mutation without another call event; list/read stays side-effect-free; intentional `+ 새 차트` creation remains unchanged.
+
+Local focused evidence: consultation/core and encounter-chart unit regressions pass; the browser call flow selects the first chart, enables SOAP, autosaves input, and preserves it through reload; isolated PostgreSQL concurrency admits one of two simultaneous calls and leaves exactly one first chart, one call event, and one in-progress queue transition. Remote migration application, Production data mutation, and `main`/Production delivery remain separate gates.

@@ -18,6 +18,11 @@ const calledRetirementMigrationPath =
 const calledRetirementMigration = existsSync(calledRetirementMigrationPath)
   ? readFileSync(calledRetirementMigrationPath, "utf8")
   : "";
+const firstChartMigrationPath =
+  "supabase/migrations/20260913103000_chart_consultation_first_chart.sql";
+const firstChartMigration = existsSync(firstChartMigrationPath)
+  ? readFileSync(firstChartMigrationPath, "utf8")
+  : "";
 const roomId = "room-consult-1";
 
 const baseEncounter: Encounter = {
@@ -90,6 +95,10 @@ test("consultation flow core calls and starts consultation in one action", async
         deliveryStatus: "queued",
         roomId,
         roomName: "1진료실",
+      },
+      chart: {
+        encounterId,
+        status: "draft",
       },
     },
   });
@@ -217,6 +226,17 @@ test("consultation flow Supabase gateway calls direct-start and return RPCs", as
                   createdByUserId: "user-vet",
                 }
               : undefined,
+          chart:
+            functionName === "clair_return_consultation_to_waiting"
+              ? undefined
+              : {
+                  id: "chart-first-supabase",
+                  encounterId,
+                  authorUserId: "user-vet",
+                  status: "draft",
+                  createdAt: "2026-06-25T05:20:00.000Z",
+                  updatedAt: "2026-06-25T05:20:00.000Z",
+                },
         },
         error: null,
       };
@@ -279,6 +299,29 @@ test("consultation called-retirement migration prevents new called queue rows", 
   expect(calledRetirementMigration).not.toContain("status = 'called',");
   expect(calledRetirementMigration).not.toMatch(
     /service[_-]?role|db_password|SUPABASE_SECRET|real patient/i,
+  );
+});
+
+test("consultation first-chart migration serializes preparation without changing additional-chart creation", () => {
+  expect(firstChartMigration).toContain(
+    "private.clair_ensure_encounter_first_chart_internal",
+  );
+  expect(firstChartMigration).toContain(
+    "perform private.clair_require_chart_encounter",
+  );
+  expect(firstChartMigration).toContain("and s.status <> 'voided'");
+  expect(firstChartMigration).toContain("order by s.created_at, s.id");
+  expect(firstChartMigration).toContain(
+    "v_flow || pg_catalog.jsonb_build_object('chart', v_chart)",
+  );
+  expect(firstChartMigration).toContain(
+    "grant execute on function public.clair_ensure_encounter_first_chart(text, text, uuid)",
+  );
+  expect(firstChartMigration).not.toContain(
+    "create or replace function public.clair_create_encounter_chart",
+  );
+  expect(firstChartMigration).not.toMatch(
+    /db_password|SUPABASE_SECRET|real patient/i,
   );
 });
 
