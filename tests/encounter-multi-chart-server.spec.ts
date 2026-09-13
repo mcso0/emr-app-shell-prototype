@@ -81,6 +81,20 @@ test("database creation replay does not append a second audit event", async () =
   expect(calls).toEqual(["clair_create_encounter_chart"]);
 });
 
+test("first-chart preparation uses its dedicated idempotent RPC", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseEncounterChartsGateway({ rpc: async (name) => {
+    calls.push(name);
+    return { error: null, data: { ...note("chart-first"), idempotentReplay: true } };
+  } });
+  const result = await manageEncounterCharts({ operation: "ensure", workspaceId, actorUserId: actor,
+    input: { encounterId }, gateway,
+    auditGateway: { appendAuditEvent: async () => { throw new Error("existing first chart must not append audit"); } } as never,
+  });
+  expect(result).toMatchObject({ ok: true, chart: { id: "chart-first" }, auditRecorded: false });
+  expect(calls).toEqual(["clair_ensure_encounter_first_chart"]);
+});
+
 test("chart selection waits for SOAP and orders, and a failed save retains the current chart", async () => {
   const store = useChartStore;
   const oldState = store.getState();

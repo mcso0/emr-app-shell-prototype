@@ -9,11 +9,16 @@ import {
   type LiveMutationAuditOptions,
 } from "@/features/audit/server-mutation-audit-core";
 import {
+  createMockEncounterChart,
+  getMockEncounterCharts,
+  mapSoapNote,
+} from "@/features/chart/server-soap-note-persistence-core";
+import {
   getConsultationCallRoomById,
   type ConsultationCallRoom,
 } from "@/features/chart/data";
 import { mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
-import type { Encounter, WaitingQueueEntry } from "@/types/emr-domain";
+import type { Encounter, SoapNote, WaitingQueueEntry } from "@/types/emr-domain";
 
 export type ConsultationFlowAction = "call" | "start" | "return_to_waiting";
 
@@ -39,6 +44,7 @@ export type ConsultationCallEvent = {
 
 export type ConsultationFlowSnapshot = {
   callEvent?: ConsultationCallEvent;
+  chart?: SoapNote;
   encounter: Encounter;
   queueEntry: WaitingQueueEntry;
 };
@@ -272,17 +278,19 @@ export function createMockConsultationFlowGateway(
       };
       const key = buildCallEventKey(workspaceId, encounterId);
       mockCallEventStore.set(key, [...(mockCallEventStore.get(key) ?? []), callEvent]);
+      const chart = ensureMockFirstChart(workspaceId, encounterId, actorUserId);
 
       return {
         ok: true,
         flow: {
           callEvent,
+          chart,
           encounter: { ...found.encounter },
           queueEntry: { ...found.queueEntry },
         },
       };
     },
-    async startConsultation({ encounterId, workspaceId }) {
+    async startConsultation({ actorUserId, encounterId, workspaceId }) {
       const found = findConsultationFlowRows(encounters, queueEntries, workspaceId, encounterId);
       if (!found.encounter) {
         return { ok: false, status: 409, denialReason: "encounter_unavailable" };
@@ -299,10 +307,12 @@ export function createMockConsultationFlowGateway(
       found.encounter.startedAt = timestamp;
       found.encounter.updatedAt = timestamp;
       found.queueEntry.status = "in_progress";
+      const chart = ensureMockFirstChart(workspaceId, encounterId, actorUserId);
 
       return {
         ok: true,
         flow: {
+          chart,
           encounter: { ...found.encounter },
           queueEntry: { ...found.queueEntry },
         },
@@ -502,17 +512,33 @@ function mapConflictReason(message?: string) {
 
 function mapConsultationFlowSnapshot(value: unknown): ConsultationFlowSnapshot | null {
   if (!value || typeof value !== "object") return null;
-  const row = value as { callEvent?: unknown; call_event?: unknown; encounter?: unknown; queueEntry?: unknown; queue_entry?: unknown };
+  const row = value as { callEvent?: unknown; call_event?: unknown; chart?: unknown; encounter?: unknown; queueEntry?: unknown; queue_entry?: unknown };
   const encounter = mapEncounter(row.encounter);
   const queueEntry = mapQueueEntry(row.queueEntry ?? row.queue_entry);
   if (!encounter || !queueEntry) return null;
 
   const callEvent = mapCallEvent(row.callEvent ?? row.call_event);
+  const chart = mapSoapNote(row.chart);
   return {
     ...(callEvent ? { callEvent } : {}),
+    ...(chart ? { chart } : {}),
     encounter,
     queueEntry,
   };
+}
+
+function ensureMockFirstChart(
+  workspaceId: string,
+  encounterId: string,
+  actorUserId: string,
+) {
+  return getMockEncounterCharts(workspaceId, encounterId).at(-1) ??
+    createMockEncounterChart(
+      workspaceId,
+      encounterId,
+      actorUserId,
+      `initial-${encounterId}`,
+    );
 }
 
 function mapEncounter(value: unknown): Encounter | null {

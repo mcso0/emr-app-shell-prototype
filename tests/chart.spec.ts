@@ -4040,6 +4040,7 @@ test("chart preconsultation read error uses the shared recovery empty state", as
 test("chart consultation CTA moves from call to start before chart completion", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   const workspaceId = "clair-demo";
   const encounterId = "encounter-choco-call-flow";
   const baseEncounter = {
@@ -4099,7 +4100,94 @@ test("chart consultation CTA moves from call to start before chart completion", 
     ...baseQueueEntry,
     calledAt: undefined as string | undefined,
   };
+  let firstChart = {
+    id: "chart-choco-call-flow-first",
+    encounterId,
+    authorUserId: "user-vet",
+    authorDisplayName: "청담 원장",
+    status: "draft",
+    clinicalAt: "2026-06-25T05:20:00.000Z",
+    createdAt: "2026-06-25T05:20:00.000Z",
+    updatedAt: "2026-06-25T05:20:00.000Z",
+  };
+  let chartPrepared = false;
 
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/soap-notes**",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { ok: true, status: 200, soapNote: firstChart },
+        });
+        return;
+      }
+      const input = request.postDataJSON() as {
+        blockDocument: unknown;
+        mode: "autosave" | "manual_save";
+      };
+      firstChart = {
+        ...firstChart,
+        blockDocument: input.blockDocument,
+        status: input.mode === "autosave" ? "autosaved" : "draft",
+        updatedAt: "2026-06-25T05:21:00.000Z",
+      } as typeof firstChart;
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: true, status: 200, soapNote: firstChart },
+      });
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/encounter-charts**",
+    async (route) => {
+      const request = route.request();
+      if (request.method() === "GET") {
+        await route.fulfill({
+          contentType: "application/json",
+          json: {
+            ok: true,
+            status: 200,
+            charts: chartPrepared ? [firstChart] : [],
+          },
+        });
+        return;
+      }
+      if (request.method() === "PUT") {
+        chartPrepared = true;
+        await route.fulfill({
+          contentType: "application/json",
+          json: { ok: true, status: 200, chart: firstChart },
+        });
+        return;
+      }
+      await route.fallback();
+    },
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/diagnoses?*",
+    (route) => route.fulfill({
+      contentType: "application/json",
+      json: { ok: true, status: 200, diagnoses: [], assessments: [], version: "first-chart-v1" },
+    }),
+  );
+  await page.route(
+    "**/api/workspaces/clair-demo/chart/completion?*",
+    (route) => route.fulfill({
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        completion: {
+          encounterId,
+          workspaceId,
+          status: encounter.status,
+          updatedAt: encounter.updatedAt,
+        },
+      },
+    }),
+  );
   await page.route(
     "**/api/workspaces/clair-demo/chart/live-queue**",
     async (route) => {
@@ -4288,6 +4376,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
           status: "in_progress",
         };
       }
+      if (body.action !== "return_to_waiting") chartPrepared = true;
 
       await route.fulfill({
         contentType: "application/json",
@@ -4297,6 +4386,11 @@ test("chart consultation CTA moves from call to start before chart completion", 
           flow: {
             encounter,
             queueEntry,
+            ...(body.action === "return_to_waiting"
+              ? {}
+              : {
+                  chart: firstChart,
+                }),
             ...(body.action === "call"
               ? {
                   callEvent: {
@@ -4769,9 +4863,23 @@ test("chart consultation CTA moves from call to start before chart completion", 
     )
     .toBe("room-consult-2");
   await expect(page.getByRole("button", { name: "진료 시작" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "진료 완료" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 완료" })).toBeVisible();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
   await expect(page.getByLabel("환자 컨텍스트 정보")).toContainText("초코");
+  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(
+    page.getByLabel("SOAP 블록 문서").getByRole("textbox"),
+  ).toBeEditable();
+  const firstChartText = "첫 진료 차트 저장 확인";
+  const autosaveResponse = page.waitForResponse((response) =>
+    response.request().method() === "PATCH" &&
+    response.url().includes("/chart/soap-notes") &&
+    response.request().postDataJSON()?.mode === "autosave",
+  );
+  await page.getByLabel("SOAP 블록 문서").getByRole("textbox").fill(firstChartText);
+  expect((await autosaveResponse).ok()).toBe(true);
+  await page.reload();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(firstChartText);
 
   await page.getByRole("button", { name: "진료 보조 액션 열기" }).click();
   const chartActionMenu = page.getByRole("menu");

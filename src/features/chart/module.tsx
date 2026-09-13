@@ -413,6 +413,7 @@ type ConsultationFlowSnapshot = {
     roomId: string;
     roomName: string;
   };
+  chart?: SoapNote;
   encounter: Encounter;
   queueEntry: WaitingQueueEntry;
 };
@@ -14461,8 +14462,11 @@ export function ChartContent({
     encounterId?: string;
     status: "idle" | "loading" | "saving" | "saved" | "error";
   }>({ status: "idle" });
+  const shouldPrepareInitialChart = !isHistoricalView &&
+    (bundle?.encounter.status === "in_consultation" || bundle?.encounter.status === "ordered");
   const encounterCharts = useEncounterCharts({ workspaceId: activeWorkspaceId, encounterId: activeEncounterId,
     actorKey: authSession?.id ?? "signed-out", actorHeaders, enabled: authHydrated,
+    prepareInitialChart: shouldPrepareInitialChart,
     requestedChartId: historyViewChartId || searchParams.get("chartId") });
   const activeChartId = encounterCharts.selectedChartId;
   const selectedChart = encounterCharts.charts.find((chart) => chart.id === activeChartId);
@@ -14606,6 +14610,7 @@ export function ChartContent({
     soapLoading || diagnosisLoading || chartCompletionLoading;
   const detailHydrationPending = detailLoading;
   const chartWriteDisabled = detailHydrationPending || isHistoricalView || encounterCharts.status !== "ready"
+    || encounterCharts.initialChartPreparationStatus === "saving"
     || (Boolean(activeChartId) && persistedSoapState.status === "error")
     || (effectiveEncounter?.status !== "in_consultation" && effectiveEncounter?.status !== "ordered");
   const orderLoading = detailHydrationPending;
@@ -14823,6 +14828,19 @@ export function ChartContent({
       encounter: result.flow.encounter,
       queueEntry: result.flow.queueEntry,
     });
+    setChartCompletionState({
+      completion: {
+        encounterId: result.flow.encounter.id,
+        workspaceId: result.flow.encounter.workspaceId,
+        status: result.flow.encounter.status,
+        chartCompletedAt: result.flow.encounter.chartCompletedAt,
+        chartCompletedByUserId: result.flow.encounter.chartCompletedByUserId,
+        updatedAt: result.flow.encounter.updatedAt,
+      },
+      encounterId: result.flow.encounter.id,
+      status: "saved",
+    });
+    if (result.flow.chart) encounterCharts.acceptPreparedChart(result.flow.chart);
     saveChartLiveEncounterHandoff({
       encounter: result.flow.encounter,
       patient: selectedLiveQueueRecord.patient,
@@ -15475,6 +15493,7 @@ export function ChartContent({
     currentChartOrderCount > 0;
   const primaryActionBusy =
     detailHydrationPending || isHistoricalView ||
+    encounterCharts.initialChartPreparationStatus === "saving" ||
     consultationFlowState.status === "saving" ||
     chartCompletionState.status === "saving" ||
     encounterCancelState.status === "saving";
@@ -16068,16 +16087,6 @@ export function ChartContent({
           ) : null}
         </EmrDialogShell>
       </Dialog>
-      {!chartStartLocked && encounterCharts.status === "ready" && !activeChartId ? (
-        <EmrInlineAlert severity="info" title="이 접수에 작성된 차트가 없어요" action={<Button size="sm" onClick={() => {
-          setContentAsideOpen(true);
-          useChartStore.getState().setNewChartDialogOpen(true);
-        }}>+ 새 차트</Button>}>
-          새 차트를 열어 진료 기록을 작성해 주세요.
-        </EmrInlineAlert>
-      ) : null}
-      {encounterCharts.status === "error" ? <EmrInlineAlert severity="error" title="차트 목록을 불러오지 못했어요"
-        action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.reload()}>다시 시도</Button>} /> : null}
       {chartCreatedAfterVisit ? (
         <div className="px-2 pt-2">
           <EmrInlineAlert
@@ -16103,6 +16112,25 @@ export function ChartContent({
             primaryActionBusy={primaryActionBusy}
             workspaceId={activeWorkspaceId ?? workspaceId}
           />
+        </div>
+      ) : !activeChartId ? (
+        <div className="flex min-h-0 flex-1 items-start p-3">
+          {encounterCharts.status === "error" ? (
+            <EmrInlineAlert severity="error" title="차트 목록을 불러오지 못했어요"
+              action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.reload()}>다시 시도</Button>} />
+          ) : shouldPrepareInitialChart && encounterCharts.initialChartPreparationStatus === "error" ? (
+            <EmrInlineAlert severity="error" title="진료 차트를 준비하지 못했어요"
+              action={<Button size="sm" variant="outline" onClick={() => void encounterCharts.ensureInitialChart()}>다시 시도</Button>}>
+              권한 또는 서버 저장 상태를 확인한 뒤 다시 시도해 주세요.
+            </EmrInlineAlert>
+          ) : shouldPrepareInitialChart || encounterCharts.status === "loading" ? (
+            <div role="status" className="flex items-center gap-2 text-xs text-[var(--emr-text-tertiary)]">
+              <CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
+              진료 차트를 준비하는 중
+            </div>
+          ) : (
+            <EmrInlineAlert severity="info" title="이 접수에 작성된 차트가 없어요" />
+          )}
         </div>
       ) : (
         <div

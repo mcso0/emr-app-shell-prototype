@@ -11,8 +11,9 @@ import { createClient } from "@/lib/supabase/server";
 type Context = { params: Promise<{ workspaceId: string }> };
 export function GET(request: Request, context: Context) { return handle(request, context, "list"); }
 export function POST(request: Request, context: Context) { return handle(request, context, "create"); }
+export function PUT(request: Request, context: Context) { return handle(request, context, "ensure"); }
 export function PATCH(request: Request, context: Context) { return handle(request, context, "sign"); }
-async function handle(request: Request, { params }: Context, operation: "list" | "create" | "sign") {
+async function handle(request: Request, { params }: Context, operation: "list" | "create" | "ensure" | "sign") {
   const { workspaceId } = await params;
   const identity = resolveRoleUpdateActorIdentity({ serverSession: await readServerSession(),
     demoHeaderUserId: request.headers.get(demoSessionUserIdHeader) });

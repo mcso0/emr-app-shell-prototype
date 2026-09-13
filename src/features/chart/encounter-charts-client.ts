@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useChartStore } from "@/features/chart/store";
 import type { EncounterChartsInput, EncounterChartsResult } from "@/features/chart/server-encounter-charts-core";
+import type { SoapNote } from "@/types/emr-domain";
 
-export async function encounterChartsRequest(workspaceId: string, method: "GET" | "POST" | "PATCH", input: EncounterChartsInput,
+export async function encounterChartsRequest(workspaceId: string, method: "GET" | "POST" | "PUT" | "PATCH", input: EncounterChartsInput,
   actorHeaders?: Record<string, string>): Promise<EncounterChartsResult> {
   const path = `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/encounter-charts`;
   try {
@@ -25,9 +26,9 @@ export function chartLifecycleError(reason?: string) {
   return "차트를 처리하지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.";
 }
 
-export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHeaders, enabled, requestedChartId }: {
+export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHeaders, enabled, prepareInitialChart, requestedChartId }: {
   workspaceId?: string; encounterId?: string; actorKey: string; actorHeaders?: Record<string, string>;
-  enabled: boolean; requestedChartId?: string | null;
+  enabled: boolean; prepareInitialChart?: boolean; requestedChartId?: string | null;
 }) {
   const scope = `${workspaceId ?? ""}:${actorKey}:${encounterId ?? ""}`;
   const createRequestRef = useRef<{ scope: string; id: string } | null>(null);
@@ -40,6 +41,14 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
   const storedScope = useChartStore((state) => state.encounterChartsScope);
   const charts = useChartStore((state) => state.encounterCharts);
   const status = useChartStore((state) => state.encounterChartsStatus);
+  const [initialChartPreparationState, setInitialChartPreparationState] = useState<{
+    scope: string;
+    status: "idle" | "saving" | "error";
+  }>({ scope, status: "idle" });
+  const initialChartPreparationStatus = initialChartPreparationState.scope === scope
+    ? initialChartPreparationState.status
+    : "idle";
+  const preparingInitialChartRef = useRef(false);
   const requestedChartRef = useRef(requestedChartId);
   useLayoutEffect(() => { requestedChartRef.current = requestedChartId; }, [requestedChartId]);
   const reload = useCallback(async (signal?: AbortSignal) => {
@@ -55,6 +64,36 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     void reload(controller.signal);
     return () => controller.abort();
   }, [enabled, encounterId, reload, scope, setCharts, workspaceId]);
+  const acceptPreparedChart = useCallback((chart: SoapNote) => {
+    const current = useChartStore.getState();
+    if (current.encounterChartsScope !== scope) return;
+    const nextCharts = [...current.encounterCharts.filter((row) => row.id !== chart.id), chart]
+      .sort((a, b) => (b.clinicalAt ?? b.createdAt).localeCompare(a.clinicalAt ?? a.createdAt) || b.id.localeCompare(a.id));
+    setCharts(scope, nextCharts, "ready", chart.id);
+    setInitialChartPreparationState({ scope, status: "idle" });
+  }, [scope, setCharts]);
+  const ensureInitialChart = useCallback(async () => {
+    if (!enabled || !workspaceId || !encounterId || preparingInitialChartRef.current) return false;
+    preparingInitialChartRef.current = true;
+    setInitialChartPreparationState({ scope, status: "saving" });
+    try {
+      const result = await encounterChartsRequest(workspaceId, "PUT", { encounterId }, actorHeaders);
+      if (activeScopeRef.current !== scope) return false;
+      if (!result.ok || !result.chart) {
+        setInitialChartPreparationState({ scope, status: "error" });
+        return false;
+      }
+      acceptPreparedChart(result.chart);
+      useChartStore.getState().requestChartHistoryRefresh();
+      return true;
+    } finally {
+      preparingInitialChartRef.current = false;
+    }
+  }, [acceptPreparedChart, actorHeaders, enabled, encounterId, scope, workspaceId]);
+  useEffect(() => {
+    if (!prepareInitialChart || storedScope !== scope || status !== "ready" || charts.length > 0 || initialChartPreparationStatus !== "idle") return;
+    void ensureInitialChart();
+  }, [charts.length, ensureInitialChart, initialChartPreparationStatus, prepareInitialChart, scope, status, storedScope]);
   const create = useCallback(async (targetEncounterId = encounterId) => {
     if (!enabled || !workspaceId || !targetEncounterId || creatingRef.current) return false;
     const targetScope = `${workspaceId}:${actorKey}:${targetEncounterId}`;
@@ -110,5 +149,6 @@ export function useEncounterCharts({ workspaceId, encounterId, actorKey, actorHe
     window.history.replaceState(window.history.state, "", url);
   }, [scope, selectedChartId, storedScope]);
   return { scope, charts: storedScope === scope ? charts : [], selectedChartId: storedScope === scope ? selectedChartId : "",
-    status: storedScope === scope ? status : "loading" as const, reload, create };
+    status: storedScope === scope ? status : "loading" as const, initialChartPreparationStatus,
+    acceptPreparedChart, ensureInitialChart, reload, create };
 }
