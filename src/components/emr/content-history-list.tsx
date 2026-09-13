@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 type EmrContentHistoryGroupProps = {
   children: ReactNode;
   count: ReactNode;
+  icon?: ReactNode;
   label: ReactNode;
   collapsed?: boolean;
   dataTestId?: string;
@@ -35,6 +36,7 @@ export function EmrContentHistoryGroup({
   collapsed = false,
   count,
   dataTestId,
+  icon,
   label,
   onToggle,
   toggleTestId,
@@ -58,10 +60,12 @@ export function EmrContentHistoryGroup({
   const titleContent = (
     <>
       <div className="emr-text-body flex min-w-0 flex-1 items-center gap-[var(--emr-content-history-group-title-left-gap)] font-medium">
-        <CalendarIcon
-          className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]"
-          aria-hidden="true"
-        />
+        {icon ?? (
+          <CalendarIcon
+            className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]"
+            aria-hidden="true"
+          />
+        )}
         <span className="truncate text-[var(--emr-content-history-group-title-text)]">
           {label}
         </span>

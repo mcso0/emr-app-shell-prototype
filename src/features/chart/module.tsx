@@ -68,7 +68,10 @@ import {
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsNavigationChevronDownIcon, CdsNavigationChevronRightIcon } from "@/components/cds-icons/navigation";
-import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
+import {
+  CdsFilesCalendarIcon,
+  CdsFilesMoreHorizontalIcon,
+} from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
 import {
@@ -1525,8 +1528,8 @@ type NewChartEncounterCandidate = {
 };
 
 const chartHistoryDateModeItems = [
-  { value: "visit", label: "진료일" },
-  { value: "created", label: "작성일" },
+  { value: "visit", label: "진료일 기준" },
+  { value: "created", label: "작성일 기준" },
 ] satisfies Array<{ value: ChartHistoryDateMode; label: string }>;
 
 const chartCreationEncounterStatuses = new Set<Encounter["status"]>([
@@ -2299,7 +2302,10 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         }
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
-      <div className="flex shrink-0 items-center px-1 py-2">
+      <div
+        className="flex shrink-0 items-center px-1 py-2"
+        data-testid="chart-history-date-mode-toolbar"
+      >
         <SegmentedControl
           aria-label="차트 이력 표시 기준"
           items={chartHistoryDateModeItems}
@@ -2309,9 +2315,9 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
           onValueChange={setHistoryDateMode}
         />
       </div>
-      <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       <ScrollArea
         className="min-h-0 flex-1"
+        data-testid="chart-history-list-scroll-area"
         style={{
           marginInline: "calc(var(--emr-content-aside-padding-x) * -1)",
           width: "calc(100% + (var(--emr-content-aside-padding-x) * 2))",
@@ -2357,6 +2363,13 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
               }
               count={group.rows.length}
               dataTestId={`chart-history-group-${group.date}`}
+              icon={
+                <CdsFilesCalendarIcon
+                  aria-hidden="true"
+                  className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]"
+                  data-testid="chart-history-group-calendar"
+                />
+              }
               label={group.date}
               onToggle={() => toggleHistoryGroup(group.date)}
             >
@@ -2787,7 +2800,11 @@ function ChartInlineHistoryPanel({
         </div>
       }
     >
-      <ScrollArea className="h-full bg-[var(--emr-surface-panel)]">
+      <ScrollArea
+        className="h-full bg-[var(--emr-surface-panel)]"
+        data-testid="chart-inline-history-scroll-area"
+        viewportClassName="scroll-fade-y scroll-fade-8"
+      >
         <div className="flex min-h-full flex-col px-3 pt-2 pb-0">
           {historyStatus === "loading" ? (
             <div

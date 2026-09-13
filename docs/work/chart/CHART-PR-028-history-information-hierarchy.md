@@ -9,7 +9,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
 dependencies:
   - "CHART-PR-025"
-updated: "2026-09-08"
+updated: "2026-09-13"
 ---
 
 # Diagnosis And Chart History Information Hierarchy
@@ -113,3 +113,13 @@ This supersedes the earlier B-layout visual contract, following the user's revie
 - PASS: staged secret scan, docs links, Korean UX copy and whitespace checks. Full final-candidate lint/type/build and remote Release Check/Preview evidence are recorded in the PR before production approval.
 - Expanded panel minimums: History 305px and S/O/Assessment 240px to prevent the action area from overlapping and avoid squeezing adjacent panels; existing narrow-screen 360px tracks and internal scrolling remain.
 - Pending: exact-candidate remote checks, Ready Preview, production approval/merge and scoped deployment smoke.
+
+## 2026-09-13 History Navigation And Scroll Follow-up
+
+- Base: `origin/main` `c2c40cdb82705ae4215ae91fff478b3b772ba23c`; isolated branch `codex/chart-history-scroll-badges`.
+- Figma evidence: chart-aside group node `27946:58909` uses a 14px outline calendar, and compact History node `28308:107517` preserves the date/diagnosis row and divider hierarchy.
+- Left chart-history aside: label the date modes `진료일 기준` and `작성일 기준`, remove only the divider below the mode control, and override the shared history-group calendar through a backward-compatible optional icon slot. The default shared glyph and every other caller remain unchanged.
+- Inline History: render the date and calendar with the existing Ghost `Badge`, apply the existing `scroll-fade-y scroll-fade-8` contract to the vertical viewport, and space each row as row → 4px → 1px divider → 4px → next row.
+- Preserve selection, date-mode switching, group collapse, `차트 보기`, query ordering, draft-save-before-switch, historical read-only, API, permission, and workspace contracts.
+- No new token, dependency, schema, API, permission, provider, or remote-data change. Human visual and usage acceptance remains pending after the integrated deployment.
+- PASS: focused History browser regression 2 cases on isolated port 3018, patient-history server/permission contracts 8 cases, TypeScript, focused and repository ESLint (0 errors; 5 pre-existing WP10 script warnings), docs links, secret scan, diff check, and webpack production build. The default Turbopack build was stopped after remaining in its optimization phase without output for more than seven minutes; the integrated exact-candidate Release Check remains the remote build gate.
