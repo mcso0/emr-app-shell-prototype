@@ -23,6 +23,10 @@ const a3Migration = readFileSync(
   "supabase/migrations/20260819150622_clinical_master_phase1a3_order_authority.sql",
   "utf8",
 );
+const waitingArchiveMigration = readFileSync(
+  "supabase/migrations/20260913085259_notification_waiting_toast_archive_persistence.sql",
+  "utf8",
+);
 const gatewaySource = readFileSync(
   "src/features/notifications/server-notification-persistence.ts",
   "utf8",
@@ -123,6 +127,27 @@ test("notification persistence migration enforces workspace RLS and RPC membersh
   expect(migration).toContain("grant execute on function public.clair_list_notification_events");
   expect(migration).toContain("grant execute on function public.clair_list_notification_user_states");
   expect(migration).toContain("grant execute on function public.clair_upsert_notification_user_state");
+});
+
+test("repeated waiting alerts preserve user acknowledgement without changing other event policy", () => {
+  expect(waitingArchiveMigration).toContain(
+    "coalesce(p_event ->> 'eventKey', '') <> 'waiting_over_30m'",
+  );
+  expect(waitingArchiveMigration).toContain(
+    "return public.clair_emit_notification_event_legacy",
+  );
+  expect(waitingArchiveMigration).toContain("for update");
+  expect(waitingArchiveMigration).toContain(
+    "insert into public.notification_user_states",
+  );
+  expect(waitingArchiveMigration).toContain(
+    "on conflict (workspace_id, actor_user_id, state_scope_id, notification_id)",
+  );
+  expect(waitingArchiveMigration).toContain("archived_at = excluded.archived_at");
+  expect(waitingArchiveMigration).toContain("p_actor_user_id <> auth.uid()");
+  expect(waitingArchiveMigration).toContain(
+    "grant execute on function public.clair_emit_notification_event",
+  );
 });
 
 test("notification persistence gateway uses fixed Supabase RPC boundaries", async () => {

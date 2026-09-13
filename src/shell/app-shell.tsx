@@ -500,7 +500,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   async function handleArchiveNotification(notificationId: string) {
-    await runNotificationMutation({
+    return runNotificationMutation({
       action: "archive",
       notificationId,
     });
@@ -684,6 +684,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         notifications={notifications}
         ready={notificationRequestState === "ready" && notificationSnapshotScope === `${workspaceId}:${authSession.id}`}
         currentRoute={currentRoute}
+        onArchive={handleArchiveNotification}
         onOpenSource={handleOpenNotificationSource}
       /> : null}
       <GlobalNotificationDrawer

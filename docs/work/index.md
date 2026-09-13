@@ -194,6 +194,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | NOTIFICATION-PR-013         | human_review | notifications        | P0       | Project 20 / DEN-407 | `docs/work/notifications/NOTIFICATION-PR-013-focused-state-regression-tests.md`                         |
 | NOTIFICATION-PR-014         | human_review | notifications        | P0       | Project 20 / DEN-408 | `docs/work/notifications/NOTIFICATION-PR-014-project-closeout-report.md`                                |
 | NOTIFICATION-PR-015         | human_review | notifications        | P0       | Project 20 / DEN-409 | `docs/work/notifications/NOTIFICATION-PR-015-human-review-readiness-pass.md`                            |
+| NOTIFICATION-PR-027         | human_review | notifications        | P1       | User-approved reception waiting toast persistence | `docs/work/notifications/NOTIFICATION-PR-027-waiting-toast-dismiss-persistence.md` |
 | APP-SHELL-PR-001            | done         | app-shell            | P1       | PR 1                 | `docs/work/app-shell/APP-SHELL-PR-001-workspace-tabs.md`                                               |
 | WORKSPACE-TABS-PR-001       | human_review | app-shell            | P0       | Workspace Tabs v1 shipping closeout | `docs/work/app-shell/WORKSPACE-TABS-PR-001-workspace-tabs-v1-shipping-closeout.md`       |
 | WORKSPACE-TABS-PR-002       | human_review | app-shell            | P0       | Workspace tab work-surface independence | `docs/work/app-shell/WORKSPACE-TABS-PR-002-workspace-surface-independence.md`          |

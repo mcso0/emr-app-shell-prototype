@@ -23,6 +23,7 @@ type Props = {
   notifications: GlobalNotification[];
   ready: boolean;
   currentRoute: string;
+  onArchive: (notificationId: string) => Promise<boolean>;
   onOpenSource: (notification: GlobalNotification) => void;
 };
 
@@ -34,11 +35,15 @@ export function LiveNotificationDelivery({
   notifications,
   ready,
   currentRoute,
+  onArchive,
   onOpenSource,
 }: Props) {
   const [preferences, setPreferences] =
     useState<NotificationPreferences | null>(null);
   const [stack, setStack] = useState(createNotificationToastStackState);
+  const [archivePendingIds, setArchivePendingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const seen = useRef(new Map<string, string>());
   const initialized = useRef(false);
   const audio = useRef<AudioContext | null>(null);
@@ -211,6 +216,24 @@ export function LiveNotificationDelivery({
     return () => timers.forEach((timer) => window.clearTimeout(timer));
   }, [stack.visible]);
   if (!ready) return null;
+
+  async function handleArchive(notificationId: string) {
+    if (archivePendingIds.has(notificationId)) return;
+    setArchivePendingIds((current) => new Set(current).add(notificationId));
+    try {
+      const archived = await onArchive(notificationId);
+      if (archived) {
+        setStack((current) => dismissNotificationToast(current, notificationId));
+      }
+    } finally {
+      setArchivePendingIds((current) => {
+        const next = new Set(current);
+        next.delete(notificationId);
+        return next;
+      });
+    }
+  }
+
   return (
     <div
       aria-label="새 알림"
@@ -219,7 +242,9 @@ export function LiveNotificationDelivery({
       {stack.visible.map((notification) => (
         <NotificationToastCard
           key={notification.id}
+          archivePending={archivePendingIds.has(notification.id)}
           notification={notification}
+          onArchive={(item) => void handleArchive(item.id)}
           onDismiss={(id) =>
             setStack((current) => dismissNotificationToast(current, id))
           }

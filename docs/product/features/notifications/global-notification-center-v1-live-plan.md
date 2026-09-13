@@ -31,7 +31,8 @@ related_work:
   - "docs/work/notifications/NOTIFICATION-PR-024-db-backed-route-adoption.md"
   - "docs/work/notifications/NOTIFICATION-PR-025-producer-db-persistence-adoption.md"
   - "docs/work/notifications/NOTIFICATION-PR-026-remaining-producer-db-persistence-adoption.md"
-last_updated: "2026-07-06"
+  - "docs/work/notifications/NOTIFICATION-PR-027-waiting-toast-dismiss-persistence.md"
+last_updated: "2026-09-13"
 ---
 
 # Global Notification Center v1 Live Plan
@@ -659,3 +660,12 @@ Still out of scope after this slice:
 - Should later clinical notifications add patient/order labels, or should v1 keep only generic review copy until source-screen context is stronger?
 - Should standalone/manual billing candidate re-syncs notify staff, or should `billing_waiting_ready` stay limited to source workflow handoffs?
 - Should explicit recheck requests become durable workflow records before changing source order lifecycle state to `re_requested`?
+
+## Reception Waiting Toast Acknowledgement
+
+For `waiting_over_30m`, the toast provides two distinct dismissal actions:
+
+- `닫기` removes only the current popup and keeps the notification available in the active drawer.
+- `이 알림 다시 보지 않기` archives that notification for the current user. The archive remains effective when the same reception queue event is refreshed, including priority changes after 60 minutes.
+
+The persistent action is scoped by workspace, user, and notification dedupe key. It does not suppress another staff member's copy or a later reception queue entry for the same patient. The user can restore the archived notification from the notification drawer.

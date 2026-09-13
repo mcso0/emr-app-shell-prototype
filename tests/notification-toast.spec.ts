@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { mockGlobalNotifications, type GlobalNotification } from "../src/features/notifications/mock-notifications";
 import {
+  canArchiveNotificationFromToast,
   createNotificationToastStackState,
   dismissNotificationToast,
   enqueueNotificationToast,
@@ -105,4 +106,13 @@ test("notification toast source actions stay navigation-only", () => {
   for (const notification of mockGlobalNotifications) {
     expect(notification.sourceActionLabel).not.toMatch(forbiddenFinalActionWords);
   }
+});
+
+test("only reception waiting alerts expose archive from the toast", () => {
+  expect(canArchiveNotificationFromToast(getNotification("notif-waiting-bori"))).toBe(true);
+  expect(
+    canArchiveNotificationFromToast(
+      getNotification("notif-order-recheck-bori-cbc-sample"),
+    ),
+  ).toBe(false);
 });

@@ -41,6 +41,10 @@ export function resolveNotificationToastVariant(notification: GlobalNotification
   return "info";
 }
 
+export function canArchiveNotificationFromToast(notification: GlobalNotification) {
+  return notification.event_key === "waiting_over_30m";
+}
+
 export function createNotificationToastStackState(
   notifications: GlobalNotification[] = [],
   maxVisible = NOTIFICATION_TOAST_MAX_VISIBLE

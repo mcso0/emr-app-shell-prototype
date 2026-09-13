@@ -11,6 +11,7 @@ import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation
 import { cn } from "@/lib/utils";
 import type { GlobalNotification } from "@/features/notifications/mock-notifications";
 import {
+  canArchiveNotificationFromToast,
   resolveNotificationToastVariant,
   type NotificationToastVariant,
 } from "@/features/notifications/notification-toast-rules";
@@ -49,11 +50,15 @@ function NotificationToastStatusIcon({ variant }: { variant: NotificationToastVa
 }
 
 export function NotificationToastCard({
+  archivePending = false,
   notification,
+  onArchive,
   onDismiss,
   onOpenSource,
 }: {
+  archivePending?: boolean;
   notification: GlobalNotification;
+  onArchive?: (notification: GlobalNotification) => void;
   onDismiss?: (notificationId: string) => void;
   onOpenSource?: (notification: GlobalNotification) => void;
 }) {
@@ -109,8 +114,19 @@ export function NotificationToastCard({
             {notification.sourceActionLabel}
           </Button>
           <Button type="button" size="xs" variant="ghost" onClick={() => onDismiss?.(notification.id)}>
-            나중에 보기
+            닫기
           </Button>
+          {canArchiveNotificationFromToast(notification) ? (
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              disabled={archivePending}
+              onClick={() => onArchive?.(notification)}
+            >
+              {archivePending ? "처리 중" : "이 알림 다시 보지 않기"}
+            </Button>
+          ) : null}
         </div>
       </div>
     </article>
