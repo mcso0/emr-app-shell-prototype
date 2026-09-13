@@ -3906,6 +3906,22 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   const assessmentEmptyState = page.getByTestId("chart-assessment-empty-state");
 
   await expect(assessmentEmptyState).toBeVisible();
+  await expect(assessmentEmptyState).toContainText("선택된 진단이 없습니다.");
+  await expect(assessmentEmptyState).not.toContainText(
+    "검색창에서 현재 차트에 필요한 진단명을 추가해 주세요.",
+  );
+  const addDiagnosisButton = assessmentEmptyState.getByRole("button", {
+    name: "진단명 추가",
+  });
+  await expect(addDiagnosisButton).toBeEnabled();
+  await addDiagnosisButton.click();
+  await expect(
+    page.getByRole("textbox", { name: "진단명 검색" }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("listbox", { name: "진단명 검색 결과" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
   const pinnedViewport = orderTable.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']",
