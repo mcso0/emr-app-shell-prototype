@@ -4991,6 +4991,25 @@ function ScheduleToolbar({
         />
       </div>
       <div className="flex shrink-0 items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          className="bg-[var(--emr-surface-panel)] emr-text-metadata font-semibold"
+          aria-label="오늘 일자로 이동"
+          disabled={showingToday}
+          onClick={() => onOperatingDateChange(todayDate)}
+        >
+          오늘
+        </Button>
+        <SegmentedControl
+          aria-label="접수 캘린더 보기"
+          items={calendarViewItems}
+          size="md"
+          value={view}
+          variant="tabs"
+          onValueChange={onViewChange}
+        />
         <DropdownMenu>
           <DropdownMenuTrigger
             disabled={veterinarianFilterDisabled}
@@ -5032,25 +5051,6 @@ function ScheduleToolbar({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          className="bg-[var(--emr-surface-panel)] emr-text-metadata font-semibold"
-          aria-label="오늘 일자로 이동"
-          disabled={showingToday}
-          onClick={() => onOperatingDateChange(todayDate)}
-        >
-          오늘
-        </Button>
-        <SegmentedControl
-          aria-label="접수 캘린더 보기"
-          items={calendarViewItems}
-          size="md"
-          value={view}
-          variant="tabs"
-          onValueChange={onViewChange}
-        />
         <div
           aria-hidden="true"
           className="h-4 w-px shrink-0 bg-[var(--emr-border-subtle)]"
