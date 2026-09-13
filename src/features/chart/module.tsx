@@ -5248,18 +5248,34 @@ function AssessmentPanel({
               }
               emptyState={
                 <EmrEmptyState
-                  kind="no-data"
+                  kind={
+                    diagnosisRows.length ? "no-filter-results" : "no-data"
+                  }
                   priority="supporting"
                   surface="table"
                   title={
                     diagnosisRows.length
                       ? "선택한 진단계통에 등록된 진단이 없습니다"
-                      : "진단 입력 전입니다"
+                      : "선택된 진단이 없습니다."
                   }
                   description={
                     diagnosisRows.length
                       ? "다른 진단계통을 선택하거나 진단명을 추가해 주세요."
-                      : "검색창에서 현재 차트에 필요한 진단명을 추가해 주세요."
+                      : undefined
+                  }
+                  primaryAction={
+                    diagnosisRows.length ? undefined : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="xs"
+                        disabled={writeDisabled}
+                        onClick={() => searchInputRef.current?.focus()}
+                      >
+                        <CdsActionsPlusIcon aria-hidden="true" />
+                        진단명 추가
+                      </Button>
+                    )
                   }
                   testId="chart-assessment-empty-state"
                 />
