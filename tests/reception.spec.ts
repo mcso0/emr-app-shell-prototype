@@ -5509,6 +5509,21 @@ test("walk-in vital validation preserves input and explains only non-empty error
   await diastolic.fill("");
   await expect(diastolic).not.toHaveAttribute("aria-invalid", "true");
   await expect(rows.getByRole("alert")).toHaveCount(0);
+
+  await systolic.fill("80");
+  await diastolic.fill("120");
+  await form.getByLabel("방문목적").focus();
+  await expect(diastolic).toHaveAttribute("aria-invalid", "true");
+  await expect(rows.getByText("수축기보다 작게 입력해 주세요.")).toBeVisible();
+
+  await systolic.fill("");
+  await diastolic.fill("");
+  await weight.fill("10000");
+  await temperature.focus();
+  await expect(rows.getByText("저장할 수 있는 범위를 넘었어요.")).toBeVisible();
+  await expect(createButton).toHaveAttribute("aria-disabled", "true");
+
+  await weight.fill("");
   await systolic.fill("120");
   await weight.fill("8.65");
   await temperature.fill("38.7");
@@ -5526,6 +5541,139 @@ test("walk-in vital validation preserves input and explains only non-empty error
       weightKg: 8.65,
     },
   });
+});
+
+test("walk-in flags a plausible-format vital outlier but still creates after confirmation", async ({
+  page,
+}) => {
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T10:45:00+09:00",
+    encounterId: "encounter-outlier-vitals-walkin-dubu",
+    guardianId: "guardian-jung-harin",
+    patientId: "patient-dubu",
+    queueId: "queue-outlier-vitals-walkin-dubu",
+  });
+
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+
+  const form = page.getByTestId("walk-in-reception-dialog");
+  await form.getByLabel("환자 검색").fill("두부");
+  await page.getByRole("option", { name: /두부.*정하린/ }).click();
+  await form.getByLabel("방문목적").fill("이례적 바이탈 확인");
+
+  const rows = form.getByTestId("walk-in-vital-rows");
+  const weight = rows.getByLabel("체중");
+  const temperature = rows.getByLabel("체온");
+  const heartRate = rows.getByLabel("심박수");
+  const respiration = rows.getByLabel("호흡");
+  await weight.fill("450");
+  await temperature.fill("102");
+  await heartRate.fill("500");
+  await respiration.fill("300");
+  await form.getByLabel("방문목적").focus();
+
+  await expect(weight).not.toHaveAttribute("aria-invalid", "true");
+  await expect(weight).toHaveAttribute(
+    "aria-describedby",
+    "walk-in-vital-weightKg-warning",
+  );
+  await expect(
+    form.getByText("기존 체중과 차이가 커요. kg 단위와 측정값을 확인해 주세요."),
+  ).toBeVisible();
+  await expect(
+    form.getByText("체온이 매우 이례적이에요. °C 단위를 확인해 주세요."),
+  ).toBeVisible();
+  await expect(
+    form.getByText("심박수가 매우 이례적이에요. 측정값을 확인해 주세요."),
+  ).toBeVisible();
+  await expect(
+    form.getByText("호흡수가 매우 이례적이에요. 측정값을 확인해 주세요."),
+  ).toBeVisible();
+
+  const confirmCreate = page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "확인하고 생성", exact: true });
+  await expect(confirmCreate).not.toHaveAttribute("aria-disabled", "true");
+  await confirmCreate.click();
+
+  await expect.poll(() => walkInCreate.count).toBe(1);
+  expect(walkInCreate.latestBody).toMatchObject({
+    vitals: {
+      heartRateBpm: 500,
+      respiratoryRateRpm: 300,
+      temperatureC: 102,
+      weightKg: 450,
+    },
+  });
+});
+
+test("walk-in links a server vital rejection to the field and keeps the draft", async ({
+  page,
+}) => {
+  let createCount = 0;
+  await page.route(
+    "**/api/workspaces/clair-demo/reception/walk-in-encounters",
+    async (route) => {
+      createCount += 1;
+      const body =
+        createCount === 1
+          ? {
+              ok: false,
+              error: "invalid_input",
+              fieldErrors: {
+                "vitals.weightKg": "체중을 다시 확인해 주세요.",
+              },
+            }
+          : { ok: false, error: "db_write_failed" };
+      await route.fulfill({
+        status: createCount === 1 ? 400 : 500,
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    },
+  );
+
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+
+  const form = page.getByTestId("walk-in-reception-dialog");
+  await form.getByLabel("환자 검색").fill("두부");
+  await page.getByRole("option", { name: /두부.*정하린/ }).click();
+  await form.getByLabel("방문목적").fill("서버 검증 확인");
+  const weight = form.getByTestId("walk-in-vital-rows").getByLabel("체중");
+  await weight.fill("8.65");
+
+  await page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "생성", exact: true })
+    .click();
+
+  await expect.poll(() => createCount).toBe(1);
+  await expect(weight).toHaveValue("8.65");
+  await expect(weight).toHaveAttribute("aria-invalid", "true");
+  await expect(weight).toHaveAttribute(
+    "aria-describedby",
+    "walk-in-vital-weightKg-error",
+  );
+  await expect(form.getByText("체중을 다시 확인해 주세요.")).toBeVisible();
+
+  await weight.fill("8.7");
+  await expect(weight).toHaveValue("8.7");
+  await expect(weight).not.toHaveAttribute("aria-invalid", "true");
+  await expect(form.getByText("체중을 다시 확인해 주세요.")).toHaveCount(0);
+
+  await page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "생성", exact: true })
+    .click();
+  await expect.poll(() => createCount).toBe(2);
+  await expect(weight).toHaveValue("8.7");
+  await expect(
+    page.getByText(
+      "접수를 만들지 못했어요. 입력값은 그대로 두었어요. 다시 시도해 주세요.",
+    ),
+  ).toBeVisible();
 });
 
 test("reception creates a reservation through the unified check-in menu", async ({
