@@ -576,13 +576,17 @@ type ReceptionCreateVitalValues = {
 
 type ReceptionCreateVitalDraft = {
   selectedIds: ReceptionCreateVitalId[];
+  serverErrors: ReceptionCreateVitalFieldErrors;
   shownErrors: Partial<Record<keyof ReceptionCreateVitalValues, boolean>>;
+  shownWarnings: Partial<Record<keyof ReceptionCreateVitalValues, boolean>>;
   values: ReceptionCreateVitalValues;
 };
 
 type ReceptionCreateVitalFieldErrors = Partial<
   Record<keyof ReceptionCreateVitalDraft["values"], string>
 >;
+
+type ReceptionCreateVitalFieldWarnings = ReceptionCreateVitalFieldErrors;
 
 type WalkInReceptionInput = Omit<ReceptionWalkInEncounterInput, "vitals"> & {
   guardianMobilePhone?: string;
@@ -1704,7 +1708,7 @@ function getWalkInRouteErrorMessage(
     return "이 workspace에서 현장 접수를 생성할 권한이 없습니다.";
   }
 
-  return "접수를 생성할 수 없습니다.";
+  return "접수를 만들지 못했어요. 입력값은 그대로 두었어요. 다시 시도해 주세요.";
 }
 
 function getAppointmentCheckInRouteErrorMessage(
@@ -2063,7 +2067,9 @@ const createReceptionVitalDraft = (
   selectedIds: settings
     ? getEnabledWorkspaceVitalSettings(settings).map((item) => workspaceVitalKeyToReceptionId(item.key))
     : ["weight", "temperature", "heartRate", "respiration"],
+  serverErrors: {},
   shownErrors: {},
+  shownWarnings: {},
   values: {
     weightKg: formatReceptionInitialWeight(weightKg, settings),
     temperatureC: "",
@@ -2077,22 +2083,27 @@ const createReceptionVitalDraft = (
 const buildReceptionVitalInput = (
   draft: ReceptionCreateVitalDraft,
   settings?: WorkspaceVitalSettingsSnapshot,
+  patient?: Pick<Patient, "species" | "weightKg">,
 ): {
   fieldErrors: ReceptionCreateVitalFieldErrors;
+  fieldWarnings: ReceptionCreateVitalFieldWarnings;
   input?: ReceptionVitalMeasurementInput;
 } => {
   const selected = new Set(draft.selectedIds);
   const fieldErrors: ReceptionCreateVitalFieldErrors = {};
+  const fieldWarnings: ReceptionCreateVitalFieldWarnings = {};
   const input: ReceptionVitalMeasurementInput = {};
 
   const readPositiveNumber = (
     key: keyof ReceptionCreateVitalDraft["values"],
     {
       integer = false,
+      maxValue,
       maxDecimals,
       precisionMessage,
     }: {
       integer?: boolean;
+      maxValue?: number;
       maxDecimals?: number;
       precisionMessage?: string;
     } = {},
@@ -2117,6 +2128,10 @@ const buildReceptionVitalInput = (
       fieldErrors[key] = "정수로 입력해 주세요.";
       return undefined;
     }
+    if (maxValue !== undefined && value > maxValue) {
+      fieldErrors[key] = "저장할 수 있는 범위를 넘었어요.";
+      return undefined;
+    }
     const decimalPlaces = raw.split(".")[1]?.length ?? 0;
     if (
       maxDecimals !== undefined &&
@@ -2136,7 +2151,16 @@ const buildReceptionVitalInput = (
       precisionMessage: "소수 둘째 자리까지 입력해 주세요.",
     });
     if (value !== undefined) {
-      input.weightKg = toCanonicalVitalValue("weight", value, getReceptionVitalUnit(settings, "weight"));
+      const canonicalValue = toCanonicalVitalValue(
+        "weight",
+        value,
+        getReceptionVitalUnit(settings, "weight"),
+      );
+      if (canonicalValue > 9_999.99) {
+        fieldErrors.weightKg = "저장할 수 있는 범위를 넘었어요.";
+      } else {
+        input.weightKg = canonicalValue;
+      }
     }
   }
   if (selected.has("temperature")) {
@@ -2145,15 +2169,30 @@ const buildReceptionVitalInput = (
       precisionMessage: "소수 첫째 자리까지 입력해 주세요.",
     });
     if (value !== undefined) {
-      input.temperatureC = toCanonicalVitalValue("temperature", value, getReceptionVitalUnit(settings, "temperature"));
+      const canonicalValue = toCanonicalVitalValue(
+        "temperature",
+        value,
+        getReceptionVitalUnit(settings, "temperature"),
+      );
+      if (canonicalValue > 999.9) {
+        fieldErrors.temperatureC = "저장할 수 있는 범위를 넘었어요.";
+      } else {
+        input.temperatureC = canonicalValue;
+      }
     }
   }
   if (selected.has("heartRate")) {
-    const value = readPositiveNumber("heartRateBpm", { integer: true });
+    const value = readPositiveNumber("heartRateBpm", {
+      integer: true,
+      maxValue: 2_147_483_647,
+    });
     if (value !== undefined) input.heartRateBpm = value;
   }
   if (selected.has("respiration")) {
-    const value = readPositiveNumber("respiratoryRateRpm", { integer: true });
+    const value = readPositiveNumber("respiratoryRateRpm", {
+      integer: true,
+      maxValue: 2_147_483_647,
+    });
     if (value !== undefined) input.respiratoryRateRpm = value;
   }
   if (selected.has("bloodPressure")) {
@@ -2164,11 +2203,25 @@ const buildReceptionVitalInput = (
     } else if (systolicRaw) {
       const systolic = readPositiveNumber("bloodPressureSystolicMmhg", {
         integer: true,
+        maxValue: 2_147_483_647,
       });
       const diastolic = diastolicRaw
-        ? readPositiveNumber("bloodPressureDiastolicMmhg", { integer: true })
+        ? readPositiveNumber("bloodPressureDiastolicMmhg", {
+            integer: true,
+            maxValue: 2_147_483_647,
+          })
         : undefined;
-      if (systolic !== undefined && (!diastolicRaw || diastolic !== undefined)) {
+      if (
+        systolic !== undefined &&
+        diastolic !== undefined &&
+        diastolic >= systolic
+      ) {
+        fieldErrors.bloodPressureDiastolicMmhg =
+          "수축기보다 작게 입력해 주세요.";
+      } else if (
+        systolic !== undefined &&
+        (!diastolicRaw || diastolic !== undefined)
+      ) {
         input.bloodPressure = {
           systolicMmhg: systolic,
           ...(diastolic === undefined ? {} : { diastolicMmhg: diastolic }),
@@ -2177,18 +2230,97 @@ const buildReceptionVitalInput = (
     }
   }
 
+  const isDogOrCat = patient?.species === "dog" || patient?.species === "cat";
+  if (isDogOrCat) {
+    const weightUnit = getReceptionVitalUnit(settings, "weight");
+    const temperatureUnit = getReceptionVitalUnit(settings, "temperature");
+    const priorWeightKg = patient?.weightKg;
+    if (
+      input.weightKg !== undefined &&
+      (input.weightKg < 0.05 ||
+        input.weightKg > 200 ||
+        (priorWeightKg !== undefined &&
+          (input.weightKg < priorWeightKg / 4 || input.weightKg > priorWeightKg * 4)))
+    ) {
+      fieldWarnings.weightKg = `기존 체중과 차이가 커요. ${weightUnit} 단위와 측정값을 확인해 주세요.`;
+    }
+    if (
+      input.temperatureC !== undefined &&
+      (input.temperatureC < 30 || input.temperatureC > 45)
+    ) {
+      fieldWarnings.temperatureC = `체온이 매우 이례적이에요. ${temperatureUnit} 단위를 확인해 주세요.`;
+    }
+    if (
+      input.heartRateBpm !== undefined &&
+      (input.heartRateBpm < 20 || input.heartRateBpm > 400)
+    ) {
+      fieldWarnings.heartRateBpm =
+        "심박수가 매우 이례적이에요. 측정값을 확인해 주세요.";
+    }
+    if (
+      input.respiratoryRateRpm !== undefined &&
+      (input.respiratoryRateRpm < 5 || input.respiratoryRateRpm > 200)
+    ) {
+      fieldWarnings.respiratoryRateRpm =
+        "호흡수가 매우 이례적이에요. 측정값을 확인해 주세요.";
+    }
+    if (
+      input.bloodPressure?.systolicMmhg !== undefined &&
+      (input.bloodPressure.systolicMmhg < 20 ||
+        input.bloodPressure.systolicMmhg > 400)
+    ) {
+      fieldWarnings.bloodPressureSystolicMmhg =
+        "수축기 혈압이 매우 이례적이에요. 측정값을 확인해 주세요.";
+    }
+    if (
+      input.bloodPressure?.diastolicMmhg !== undefined &&
+      (input.bloodPressure.diastolicMmhg < 10 ||
+        input.bloodPressure.diastolicMmhg > 300)
+    ) {
+      fieldWarnings.bloodPressureDiastolicMmhg =
+        "이완기 혈압이 매우 이례적이에요. 측정값을 확인해 주세요.";
+    }
+  }
+
   return {
     fieldErrors,
+    fieldWarnings,
     input: Object.keys(input).length > 0 ? input : undefined,
   };
 };
 
+const walkInVitalResponseFieldMap = {
+  "vitals.weightKg": "weightKg",
+  "vitals.temperatureC": "temperatureC",
+  "vitals.heartRateBpm": "heartRateBpm",
+  "vitals.respiratoryRateRpm": "respiratoryRateRpm",
+  "vitals.bloodPressure": "bloodPressureSystolicMmhg",
+  "vitals.bloodPressure.systolicMmhg": "bloodPressureSystolicMmhg",
+  "vitals.bloodPressure.diastolicMmhg": "bloodPressureDiastolicMmhg",
+} as const satisfies Record<string, keyof ReceptionCreateVitalValues>;
+
+const getWalkInVitalResponseErrors = (
+  fieldErrors?: Record<string, string>,
+): ReceptionCreateVitalFieldErrors =>
+  Object.entries(fieldErrors ?? {}).reduce<ReceptionCreateVitalFieldErrors>(
+    (mapped, [key, message]) => {
+      const vitalKey = walkInVitalResponseFieldMap[
+        key as keyof typeof walkInVitalResponseFieldMap
+      ];
+      if (vitalKey) mapped[vitalKey] = message;
+      return mapped;
+    },
+    {},
+  );
+
 function ReceptionCreateButton({
+  hasVitalWarnings,
   inputBlocked,
   onClick,
   scheduleBlocked,
   submitting,
 }: {
+  hasVitalWarnings: boolean;
   inputBlocked: boolean;
   onClick: () => void;
   scheduleBlocked: boolean;
@@ -2206,7 +2338,7 @@ function ReceptionCreateButton({
         if (!scheduleBlocked && !submitting) onClick();
       }}
     >
-      {submitting ? "생성 중" : "생성"}
+      {submitting ? "생성 중" : hasVitalWarnings ? "확인하고 생성" : "생성"}
     </Button>
   );
 
@@ -7649,9 +7781,14 @@ function ReceptionWalkInFormDrawer({
   const shouldShowPatientLookup = patientLookupOpen && lookupActive;
   const trimmedVisitPurpose = visitPurpose.trim();
   const vitalBuild = useMemo(
-    () => buildReceptionVitalInput(vitalDraft, vitalSettings),
-    [vitalDraft, vitalSettings],
+    () => buildReceptionVitalInput(vitalDraft, vitalSettings, patient),
+    [patient, vitalDraft, vitalSettings],
   );
+  const vitalFieldErrors = useMemo(
+    () => ({ ...vitalBuild.fieldErrors, ...vitalDraft.serverErrors }),
+    [vitalBuild.fieldErrors, vitalDraft.serverErrors],
+  );
+  const hasVitalWarnings = Object.keys(vitalBuild.fieldWarnings).length > 0;
   const effectiveVeterinarianId =
     veterinarianId !== unassignedVeterinarianValue &&
     veterinarians.some((veterinarian) => veterinarian.id === veterinarianId)
@@ -7686,7 +7823,7 @@ function ReceptionWalkInFormDrawer({
       !duration ||
       assignedStaffUserIds.length !== 1 ||
       !trimmedVisitPurpose ||
-      Object.keys(vitalBuild.fieldErrors).length > 0,
+      Object.keys(vitalFieldErrors).length > 0,
   );
   const createScheduleBlocked =
     operatingScheduleStatus !== "ready" || Boolean(createBlockMessage);
@@ -7867,6 +8004,22 @@ function ReceptionWalkInFormDrawer({
       });
 
       if (!result.ok) {
+        const responseVitalErrors = getWalkInVitalResponseErrors(
+          result.fieldErrors,
+        );
+        const responseVitalErrorKeys = Object.keys(
+          responseVitalErrors,
+        ) as Array<keyof ReceptionCreateVitalValues>;
+        if (responseVitalErrorKeys.length > 0) {
+          setVitalDraft((current) => ({
+            ...current,
+            serverErrors: responseVitalErrors,
+            shownErrors: responseVitalErrorKeys.reduce(
+              (shownErrors, key) => ({ ...shownErrors, [key]: true }),
+              current.shownErrors,
+            ),
+          }));
+        }
         toast.error(getWalkInRouteErrorMessage(result));
         return;
       }
@@ -7879,7 +8032,7 @@ function ReceptionWalkInFormDrawer({
   };
   const requestCreate = () => {
     const vitalErrorKeys = Object.keys(
-      vitalBuild.fieldErrors,
+      vitalFieldErrors,
     ) as Array<keyof ReceptionCreateVitalDraft["values"]>;
     if (vitalErrorKeys.length > 0) {
       setVitalDraft((current) => ({
@@ -7890,6 +8043,18 @@ function ReceptionWalkInFormDrawer({
         ),
       }));
       return;
+    }
+    const vitalWarningKeys = Object.keys(
+      vitalBuild.fieldWarnings,
+    ) as Array<keyof ReceptionCreateVitalDraft["values"]>;
+    if (vitalWarningKeys.length > 0) {
+      setVitalDraft((current) => ({
+        ...current,
+        shownWarnings: vitalWarningKeys.reduce(
+          (shownWarnings, key) => ({ ...shownWarnings, [key]: true }),
+          current.shownWarnings,
+        ),
+      }));
     }
     if (
       !patient ||
@@ -8057,7 +8222,8 @@ function ReceptionWalkInFormDrawer({
                 <ReceptionSidePanelSection title="바이탈" variant="create">
                   <ReceptionCreateVitalFields
                     draft={vitalDraft}
-                    fieldErrors={vitalBuild.fieldErrors}
+                    fieldErrors={vitalFieldErrors}
+                    fieldWarnings={vitalBuild.fieldWarnings}
                     presentation={presentation}
                     setDraft={setVitalDraft}
                     vitalSettings={vitalSettings}
@@ -8258,6 +8424,7 @@ function ReceptionWalkInFormDrawer({
               취소
             </Button>
             <ReceptionCreateButton
+              hasVitalWarnings={hasVitalWarnings}
               inputBlocked={createInputBlocked}
               onClick={requestCreate}
               scheduleBlocked={createScheduleBlocked}
@@ -8411,7 +8578,8 @@ function ReceptionWalkInFormDrawer({
             <RegistrationFormSection title="바이탈">
               <ReceptionCreateVitalFields
                 draft={vitalDraft}
-                fieldErrors={vitalBuild.fieldErrors}
+                fieldErrors={vitalFieldErrors}
+                fieldWarnings={vitalBuild.fieldWarnings}
                 presentation={presentation}
                 setDraft={setVitalDraft}
                 vitalSettings={vitalSettings}
@@ -8557,6 +8725,7 @@ function ReceptionWalkInFormDrawer({
             취소
           </Button>
           <ReceptionCreateButton
+            hasVitalWarnings={hasVitalWarnings}
             inputBlocked={createInputBlocked}
             onClick={requestCreate}
             scheduleBlocked={createScheduleBlocked}
@@ -10151,12 +10320,14 @@ const getReceptionCreateVitalIcon = (id: ReceptionCreateVitalId) => {
 function ReceptionCreateVitalFields({
   draft,
   fieldErrors,
+  fieldWarnings,
   presentation,
   setDraft,
   vitalSettings,
 }: {
   draft: ReceptionCreateVitalDraft;
   fieldErrors: ReceptionCreateVitalFieldErrors;
+  fieldWarnings: ReceptionCreateVitalFieldWarnings;
   presentation: ReceptionDrawerPresentation;
   setDraft: (
     updater: (current: ReceptionCreateVitalDraft) => ReceptionCreateVitalDraft,
@@ -10188,20 +10359,31 @@ function ReceptionCreateVitalFields({
     key: keyof ReceptionCreateVitalDraft["values"],
     value: string,
   ) => {
-    setDraft((current) => ({
-      ...current,
-      values: { ...current.values, [key]: value },
-    }));
+    setDraft((current) => {
+      const serverErrors = { ...current.serverErrors };
+      delete serverErrors[key];
+
+      return {
+        ...current,
+        serverErrors,
+        values: { ...current.values, [key]: value },
+      };
+    });
   };
 
-  const showError = (key: keyof ReceptionCreateVitalDraft["values"]) => {
-    if (!fieldErrors[key]) return;
+  const showFeedback = (key: keyof ReceptionCreateVitalDraft["values"]) => {
+    if (!fieldErrors[key] && !fieldWarnings[key]) return;
     setDraft((current) =>
-      current.shownErrors[key]
+      current.shownErrors[key] && current.shownWarnings[key]
         ? current
         : {
             ...current,
-            shownErrors: { ...current.shownErrors, [key]: true },
+            shownErrors: fieldErrors[key]
+              ? { ...current.shownErrors, [key]: true }
+              : current.shownErrors,
+            shownWarnings: fieldWarnings[key]
+              ? { ...current.shownWarnings, [key]: true }
+              : current.shownWarnings,
           },
     );
   };
@@ -10262,7 +10444,12 @@ function ReceptionCreateVitalFields({
             ? "heartRateBpm"
             : "respiratoryRateRpm";
     const error = draft.shownErrors[key] ? fieldErrors[key] : undefined;
+    const warning = !error && draft.shownWarnings[key]
+      ? fieldWarnings[key]
+      : undefined;
     const errorId = `walk-in-vital-${key}-error`;
+    const warningId = `walk-in-vital-${key}-warning`;
+    const describedBy = error ? errorId : warning ? warningId : undefined;
     const placeholder =
       id === "weight" || id === "temperature"
         ? "측정값 입력"
@@ -10273,7 +10460,7 @@ function ReceptionCreateVitalFields({
           ref={(element) => {
             inputRefs.current[id] = element;
           }}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy}
           aria-label={label}
           aria-invalid={Boolean(error) || undefined}
           inputMode={inputMode}
@@ -10281,7 +10468,7 @@ function ReceptionCreateVitalFields({
           unit={unit}
           value={draft.values[key]}
           variant="create"
-          onBlur={() => showError(key)}
+          onBlur={() => showFeedback(key)}
           onValueChange={(value) => updateValue(key, value)}
         />
       ) : (
@@ -10290,14 +10477,14 @@ function ReceptionCreateVitalFields({
             ref={(element) => {
               inputRefs.current[id] = element;
             }}
-            aria-describedby={error ? errorId : undefined}
+            aria-describedby={describedBy}
             aria-label={label}
             aria-invalid={Boolean(error) || undefined}
             className="h-9 bg-card pr-12"
             inputMode={inputMode}
             placeholder={placeholder}
             value={draft.values[key]}
-            onBlur={() => showError(key)}
+            onBlur={() => showFeedback(key)}
             onValueChange={(value) => updateValue(key, value)}
           />
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 emr-text-dense font-medium text-foreground">
@@ -10320,6 +10507,15 @@ function ReceptionCreateVitalFields({
             {error}
           </FieldError>
         ) : null}
+        {warning ? (
+          <p
+            id={warningId}
+            role="status"
+            className="mt-1 emr-text-micro font-medium text-[var(--emr-status-warning-text)]"
+          >
+            {warning}
+          </p>
+        ) : null}
       </div>
     );
   };
@@ -10331,8 +10527,16 @@ function ReceptionCreateVitalFields({
     const diastolicError = draft.shownErrors.bloodPressureDiastolicMmhg
       ? fieldErrors.bloodPressureDiastolicMmhg
       : undefined;
+    const systolicWarning = !systolicError && draft.shownWarnings.bloodPressureSystolicMmhg
+      ? fieldWarnings.bloodPressureSystolicMmhg
+      : undefined;
+    const diastolicWarning = !diastolicError && draft.shownWarnings.bloodPressureDiastolicMmhg
+      ? fieldWarnings.bloodPressureDiastolicMmhg
+      : undefined;
     const systolicErrorId = "walk-in-vital-bloodPressureSystolicMmhg-error";
     const diastolicErrorId = "walk-in-vital-bloodPressureDiastolicMmhg-error";
+    const systolicWarningId = "walk-in-vital-bloodPressureSystolicMmhg-warning";
+    const diastolicWarningId = "walk-in-vital-bloodPressureDiastolicMmhg-warning";
     return (
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
@@ -10341,7 +10545,13 @@ function ReceptionCreateVitalFields({
               ref={(element) => {
                 inputRefs.current.bloodPressure = element;
               }}
-              aria-describedby={systolicError ? systolicErrorId : undefined}
+              aria-describedby={
+                systolicError
+                  ? systolicErrorId
+                  : systolicWarning
+                    ? systolicWarningId
+                    : undefined
+              }
               aria-label="수축기 혈압"
               aria-invalid={Boolean(systolicError) || undefined}
               className={cn(
@@ -10352,14 +10562,20 @@ function ReceptionCreateVitalFields({
               inputMode="numeric"
               placeholder="수축기"
               value={draft.values.bloodPressureSystolicMmhg}
-              onBlur={() => showError("bloodPressureSystolicMmhg")}
+              onBlur={() => showFeedback("bloodPressureSystolicMmhg")}
               onValueChange={(value) =>
                 updateValue("bloodPressureSystolicMmhg", value)
               }
             />
             <span aria-hidden="true" className="text-muted-foreground">/</span>
             <Input
-              aria-describedby={diastolicError ? diastolicErrorId : undefined}
+              aria-describedby={
+                diastolicError
+                  ? diastolicErrorId
+                  : diastolicWarning
+                    ? diastolicWarningId
+                    : undefined
+              }
               aria-label="이완기 혈압"
               aria-invalid={Boolean(diastolicError) || undefined}
               className={cn(
@@ -10370,7 +10586,7 @@ function ReceptionCreateVitalFields({
               inputMode="numeric"
               placeholder="이완기"
               value={draft.values.bloodPressureDiastolicMmhg}
-              onBlur={() => showError("bloodPressureDiastolicMmhg")}
+              onBlur={() => showFeedback("bloodPressureDiastolicMmhg")}
               onValueChange={(value) =>
                 updateValue("bloodPressureDiastolicMmhg", value)
               }
@@ -10394,6 +10610,24 @@ function ReceptionCreateVitalFields({
           >
             {diastolicError}
           </FieldError>
+        ) : null}
+        {systolicWarning ? (
+          <p
+            id={systolicWarningId}
+            role="status"
+            className="mt-1 emr-text-micro font-medium text-[var(--emr-status-warning-text)]"
+          >
+            {systolicWarning}
+          </p>
+        ) : null}
+        {diastolicWarning ? (
+          <p
+            id={diastolicWarningId}
+            role="status"
+            className="mt-1 emr-text-micro font-medium text-[var(--emr-status-warning-text)]"
+          >
+            {diastolicWarning}
+          </p>
         ) : null}
       </div>
     );

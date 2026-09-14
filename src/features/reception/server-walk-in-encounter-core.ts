@@ -580,12 +580,16 @@ function validateVitals(
     "vitals.weightKg",
     "체중은 0보다 큰 숫자로 입력해 주세요.",
     fieldErrors,
+    false,
+    9_999.99,
   );
   validatePositiveNumber(
     rawVitals.temperatureC,
     "vitals.temperatureC",
     "체온은 0보다 큰 숫자로 입력해 주세요.",
     fieldErrors,
+    false,
+    999.9,
   );
   validatePositiveNumber(
     rawVitals.heartRateBpm,
@@ -593,6 +597,7 @@ function validateVitals(
     "심박수는 0보다 큰 정수로 입력해 주세요.",
     fieldErrors,
     true,
+    2_147_483_647,
   );
   validatePositiveNumber(
     rawVitals.respiratoryRateRpm,
@@ -600,6 +605,7 @@ function validateVitals(
     "호흡수는 0보다 큰 정수로 입력해 주세요.",
     fieldErrors,
     true,
+    2_147_483_647,
   );
 
   const rawBloodPressure = rawVitals.bloodPressure;
@@ -626,6 +632,7 @@ function validateVitals(
       "수축기 혈압은 0보다 큰 정수로 입력해 주세요.",
       fieldErrors,
       true,
+      2_147_483_647,
     );
   }
   if (diastolic !== undefined) {
@@ -635,7 +642,20 @@ function validateVitals(
       "이완기 혈압은 0보다 큰 정수로 입력해 주세요.",
       fieldErrors,
       true,
+      2_147_483_647,
     );
+  }
+  if (
+    typeof systolic === "number" &&
+    Number.isInteger(systolic) &&
+    systolic > 0 &&
+    typeof diastolic === "number" &&
+    Number.isInteger(diastolic) &&
+    diastolic > 0 &&
+    diastolic >= systolic
+  ) {
+    fieldErrors["vitals.bloodPressure.diastolicMmhg"] =
+      "이완기 혈압은 수축기보다 작게 입력해 주세요.";
   }
 }
 
@@ -645,15 +665,20 @@ function validatePositiveNumber(
   message: string,
   fieldErrors: ReceptionWalkInEncounterFieldErrors,
   integer = false,
+  maxValue?: number,
 ) {
   if (value === undefined) return;
   if (
     typeof value !== "number" ||
     !Number.isFinite(value) ||
     value <= 0 ||
-    (integer && !Number.isInteger(value))
+    (integer && !Number.isInteger(value)) ||
+    (maxValue !== undefined && value > maxValue)
   ) {
-    fieldErrors[key] = message;
+    fieldErrors[key] =
+      maxValue !== undefined && typeof value === "number" && value > maxValue
+        ? "저장할 수 있는 범위를 넘었어요."
+        : message;
   }
 }
 

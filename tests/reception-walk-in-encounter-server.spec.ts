@@ -206,7 +206,9 @@ test("walk-in encounter core validates nested vitals before gateway access", asy
   const invalidCases = [
     { vitals: { weightKg: 0 }, field: "vitals.weightKg" },
     { vitals: { weightKg: Number.NaN }, field: "vitals.weightKg" },
+    { vitals: { weightKg: 10_000 }, field: "vitals.weightKg" },
     { vitals: { temperatureC: -1 }, field: "vitals.temperatureC" },
+    { vitals: { temperatureC: 1_000 }, field: "vitals.temperatureC" },
     {
       vitals: { respiratoryRateRpm: 22.5 },
       field: "vitals.respiratoryRateRpm",
@@ -220,6 +222,10 @@ test("walk-in encounter core validates nested vitals before gateway access", asy
       field: "vitals.heartRateBpm",
     },
     {
+      vitals: { heartRateBpm: 2_147_483_648 },
+      field: "vitals.heartRateBpm",
+    },
+    {
       vitals: { bloodPressure: { diastolicMmhg: 84 } },
       field: "vitals.bloodPressure.systolicMmhg",
     },
@@ -229,6 +235,10 @@ test("walk-in encounter core validates nested vitals before gateway access", asy
     },
     {
       vitals: { bloodPressure: { systolicMmhg: 132, diastolicMmhg: 84.5 } },
+      field: "vitals.bloodPressure.diastolicMmhg",
+    },
+    {
+      vitals: { bloodPressure: { systolicMmhg: 80, diastolicMmhg: 120 } },
       field: "vitals.bloodPressure.diastolicMmhg",
     },
   ] as const;

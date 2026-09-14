@@ -11,7 +11,8 @@ related_work:
   - "HOSPITAL-ADMIN-LIVE-PR-018"
   - "HOSPITAL-ADMIN-LIVE-PR-019"
   - "HOSPITAL-ADMIN-PR-008"
-last_updated: 2026-07-27
+  - "RECEPTION-QA-PR-014"
+last_updated: 2026-09-14
 ---
 
 # Workspace Vital Settings
@@ -46,6 +47,15 @@ Give each hospital one workspace-wide list of vital fields. Administrators choos
 
 Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to Celsius before writes, then converts canonical values back to the configured unit for display. Unit changes do not rewrite historical measurement rows.
 
+## Reception Entry Feedback
+
+- Empty measurements remain optional and neutral.
+- Invalid formats, non-positive values, unsupported precision, storage overflow, diastolic-only blood pressure, and diastolic values greater than or equal to systolic values block creation with field-level errors.
+- Dog and cat values far outside broad input-plausibility guardrails show a warning but remain creatable through `확인하고 생성`. This is an entry-review aid, not a diagnosis or clinical decision-support rule.
+- The initial broad guardrails are weight below `0.05 kg` or above `200 kg`, temperature below `30°C` or above `45°C`, heart rate below `20 bpm` or above `400 bpm`, respiratory rate below `5 rpm` or above `200 rpm`, systolic pressure below `20 mmHg` or above `400 mmHg`, and diastolic pressure below `10 mmHg` or above `300 mmHg`.
+- When a prior weight exists, a new value below one quarter or above four times that weight also receives a unit-and-measurement warning.
+- Server-returned vital field errors remain linked to their inputs. Unknown creation failures preserve the draft and ask the user to retry.
+
 ## Settings UX
 
 - The page uses the shared hospital-settings constrained content width (`max-width: 720px`).
@@ -66,7 +76,7 @@ Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to 
 
 ## Out Of Scope
 
-- Dog/cat normal ranges, alert thresholds, diagnosis, or clinical decision support.
-- Breed-, age-, weight-class-, stress-, anesthesia-, or inpatient-context rules.
+- Diagnostic normal ranges, severity classification, or clinical decision support.
+- Workspace-configurable, breed-, age-, weight-class-, stress-, anesthesia-, or inpatient-context thresholds.
 - Arbitrary user-created vital definitions.
 - Destructive deletion of historical patient vital measurements.
