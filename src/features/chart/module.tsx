@@ -16184,7 +16184,7 @@ export function ChartContent({
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] px-2 pb-2",
+            "grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] px-4 pb-2",
             isChartResizing && "select-none",
           )}
           style={{

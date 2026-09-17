@@ -21,7 +21,7 @@ const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
 const chartFigmaVisualFixture = {
   expectedContentSize: { height: 968, width: 1540 },
-  expectedPanelWidths: [567, 567, 375],
+  expectedPanelWidths: [560, 560, 371],
   expectedRows: [452, 8, 452],
   route:
     "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed",
@@ -992,6 +992,48 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
+test("chart workspace panels align with the action bar horizontal inset", async ({
+  page,
+}) => {
+  await page.setViewportSize(chartFigmaVisualFixture.viewport);
+  await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
+
+  const actionBar = page.locator("[data-slot='chart-action-bar']");
+  const workspace = page.locator("[data-slot='chart-workspace']");
+  const topPanels = page
+    .getByTestId("chart-soap-diagnosis-grid")
+    .locator(":scope > *");
+  const historyToggle = page.getByRole("button", {
+    name: "차트 이력 패널 열기",
+  });
+
+  await expect(workspace).toBeVisible({ timeout: 15_000 });
+  await expect(actionBar).toHaveCSS("padding-left", "16px");
+  await expect(actionBar).toHaveCSS("padding-right", "16px");
+  await expect(workspace).toHaveCSS("padding-left", "16px");
+  await expect(workspace).toHaveCSS("padding-right", "16px");
+  await expect(historyToggle).toBeVisible();
+  await expect(topPanels).toHaveCount(3);
+
+  const historyToggleBox = await historyToggle.boundingBox();
+  const workspaceBox = await workspace.boundingBox();
+  const firstPanelBox = await topPanels.first().boundingBox();
+  const lastPanelBox = await topPanels.last().boundingBox();
+  expect(historyToggleBox).not.toBeNull();
+  expect(workspaceBox).not.toBeNull();
+  expect(firstPanelBox).not.toBeNull();
+  expect(lastPanelBox).not.toBeNull();
+  expect(historyToggleBox!.x).toBe(firstPanelBox!.x);
+  expect(
+    Math.round(
+      workspaceBox!.x +
+        workspaceBox!.width -
+        lastPanelBox!.x -
+        lastPanelBox!.width,
+    ),
+  ).toBe(16);
+});
+
 test("chart Figma follow-up restores history and panel chrome contracts", async ({
   page,
 }) => {
@@ -1437,7 +1479,7 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
   });
 
   expect(referenceMetrics.leftPinnedWidth).toBe(410);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1112);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1096);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
