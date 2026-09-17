@@ -11362,6 +11362,15 @@ function OrderArea({
       }
     }
   }
+  const orderConfirmationCounts = topLevelOrderRows.reduce(
+    (counts, row) => {
+      counts[
+        getChartOrderConfirmationState(row, confirmationInvalidOrderIds)
+      ] += 1;
+      return counts;
+    },
+    { confirmed: 0, invalid: 0, ready: 0 },
+  );
   const hasDraftChanges = changedDraftOrderCount > 0;
   const canUpdateOrders =
     hasDraftChanges &&
@@ -13993,6 +14002,7 @@ function OrderArea({
         <ChartOrderFinanceFooter
           accessibilitySummary={orderFooterAccessibilitySummary}
           canRequestBilling={canRequestBilling}
+          confirmationCounts={orderConfirmationCounts}
           drawerOpen={billingDrawerOpen}
           displayState={billingAmountDisplayState}
           error={billingError}

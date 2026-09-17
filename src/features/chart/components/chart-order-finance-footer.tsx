@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
@@ -21,6 +20,7 @@ export type ChartOrderBillingAmountDisplayState =
 export function ChartOrderFinanceFooter({
   accessibilitySummary,
   canRequestBilling,
+  confirmationCounts,
   drawerOpen,
   error,
   displayState,
@@ -34,6 +34,11 @@ export function ChartOrderFinanceFooter({
 }: {
   accessibilitySummary?: string;
   canRequestBilling: boolean;
+  confirmationCounts: {
+    confirmed: number;
+    invalid: number;
+    ready: number;
+  };
   drawerOpen: boolean;
   error?: string;
   displayState: ChartOrderBillingAmountDisplayState;
@@ -58,28 +63,24 @@ export function ChartOrderFinanceFooter({
       className="flex h-[52px] min-h-[52px] shrink-0 items-center gap-[var(--clair-spacing-24)] border-t border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[var(--clair-spacing-12)]"
     >
       {accessibilitySummary ? <span className="sr-only">{accessibilitySummary}</span> : null}
-      <span className="sr-only">오더 {counts.total}건</span>
       <div className="flex min-w-0 flex-1 items-center gap-[var(--clair-spacing-12)]">
-        <div className="flex shrink-0 items-center gap-[var(--clair-spacing-6)] px-[var(--clair-spacing-4)] text-[14px] font-medium leading-[20px] tracking-[var(--clair-typography-body-2-normal-letter-spacing)] text-[var(--clair-color-atomic-neutral-500)]">
-          <span>총 오더</span>
-          <Badge
-            variant="outline"
-            size="sm"
-            className="h-[var(--clair-spacing-20)] min-w-[var(--clair-spacing-20)] gap-[var(--clair-spacing-2)] rounded-[var(--clair-radius-atomic-6)] border-[var(--clair-color-atomic-black-alpha-8)] bg-[var(--clair-color-atomic-white-alpha-8)] px-[var(--clair-spacing-6)] py-[var(--clair-spacing-2)] text-[12px] font-medium leading-[16px] tracking-[var(--clair-typography-label-2-letter-spacing)] text-[var(--clair-color-atomic-neutral-900)]"
-          >
-            {counts.total}
-          </Badge>
-        </div>
         <div className="flex shrink-0 items-center gap-[var(--clair-spacing-8)] rounded-[var(--clair-radius-atomic-6)] bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-8)] py-[var(--clair-spacing-4)] text-[12px] font-medium leading-[16px] tracking-[var(--clair-typography-label-2-letter-spacing)]">
-          <span className="text-[var(--clair-color-atomic-red-400)]">
-            확정 전 {counts.draft}
+          <span className="text-[var(--clair-color-atomic-gray-600)]">
+            미확정 오더 {confirmationCounts.ready}
           </span>
           <span
             aria-hidden
             className="h-[10px] w-px bg-[var(--clair-color-atomic-neutral-200)]"
           />
-          <span className="text-[var(--clair-color-atomic-green-500)]">
-            확정 후 {counts.confirmed}
+          <span className="text-[var(--clair-color-atomic-orange-600)]">
+            미입력 오더 {confirmationCounts.invalid}
+          </span>
+          <span
+            aria-hidden
+            className="h-[10px] w-px bg-[var(--clair-color-atomic-neutral-200)]"
+          />
+          <span className="text-[var(--clair-color-atomic-green-600)]">
+            확정 오더 {confirmationCounts.confirmed}
           </span>
         </div>
         <span data-testid="chart-order-save-status" role="status" className="sr-only">

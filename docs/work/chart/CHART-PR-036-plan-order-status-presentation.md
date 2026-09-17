@@ -7,7 +7,7 @@ area: chart
 priority: P1
 source_docs:
   - docs/product/domain/plan-order-all-tab-legacy-column-contract.md
-updated: 2026-09-13
+updated: 2026-09-17
 ---
 
 # Plan/Order confirmation and work-state presentation
@@ -158,3 +158,32 @@ Release Check was cancelled; the final updated head gets its own required run.
 - No DB, environment, permission, API, or remote clinical-data change is in
   scope. The pre-release Ready production rollback candidate is
   `dpl_8aRUtwdZXt4hJhKUbcjw1j44ckw9`.
+
+## Footer status summary refinement — 2026-09-17
+
+- Removed the duplicate `총 오더` badge because the Plan/Order category tab
+  already exposes the complete top-level order count.
+- Replaced the two billing-oriented footer labels with the Figma node
+  `28414:21807` presentation: `미확정 오더`, `미입력 오더`, and
+  `확정 오더`, using existing CLAiR semantic tokens and the existing label
+  typography, spacing, dividers, background, and radius.
+- The three counts are derived from the existing top-level row set and
+  `getChartOrderConfirmationState`. This keeps the footer total aligned with
+  the top `전체` count, excludes child detail rows, and preserves the current
+  confirmation, cancellation, validation, billing, API, and persistence
+  contracts.
+- Added a focused browser regression that verifies the duplicate total is
+  absent, the three counts sum to the `전체` count, and a ready row becoming
+  invalid moves exactly one count from `미확정 오더` to `미입력 오더`.
+- Owner authorization covers this presentation-only slice through commit,
+  push, PR, `origin/main` merge, and production deployment. No DB, environment,
+  permission, API, or remote clinical-data change is in scope.
+- Focused Chromium status/count regression, secret scan, docs links, diff
+  whitespace, full lint, typecheck, and production build passed. Full lint
+  retained five unrelated existing script warnings; the build retained the
+  existing broad NFT trace warning from the docs reader.
+- The broad chart reference screenshot remains stale independently of this
+  slice: it failed with 29,261 differing pixels on an untouched `origin/main`
+  worktree and 29,356 on this candidate. Its binary baseline was not refreshed
+  because that would absorb unrelated existing chart changes. The focused
+  footer regression is the acceptance check for this slice.
