@@ -9652,11 +9652,45 @@ test("chart status presentation keeps edits in place until blur and hides unconf
   const target = page.getByTestId("chart-order-row-status-draft-cbc");
   await expect(target).toHaveAttribute("data-order-confirmation", "ready");
   await expect(target.locator('td[data-column-id="status"]')).toHaveText("—");
+  const orderFooter = page.getByTestId("chart-order-footer");
+  const readFooterConfirmationCounts = async () => {
+    const readCount = async (label: string) => {
+      const text = await orderFooter
+        .getByText(new RegExp(`^${label} \\d+$`))
+        .textContent();
+      const count = text?.match(/(\d+)$/)?.[1];
+      if (!count) throw new Error(`Missing footer count for ${label}`);
+      return Number(count);
+    };
+    return {
+      ready: await readCount("미확정 오더"),
+      invalid: await readCount("미입력 오더"),
+      confirmed: await readCount("확정 오더"),
+    };
+  };
+  await expect(orderFooter).not.toContainText("총 오더");
+  const initialFooterCounts = await readFooterConfirmationCounts();
+  const allOrderCount = Number(
+    (await page.getByRole("tab", { name: /전체오더 \d+/, exact: true }).innerText())
+      .match(/\d+/)?.[0],
+  );
+  expect(
+    initialFooterCounts.ready +
+      initialFooterCounts.invalid +
+      initialFooterCounts.confirmed,
+  ).toBe(allOrderCount);
   await target.getByLabel("확정 후 업무 상태가 표시됩니다").focus();
   await expect(page.getByRole("tooltip")).toHaveText("확정 후 업무 상태가 표시됩니다");
   const quantity = target.getByLabel("status-draft-cbc 수량 수정");
   await quantity.fill("0");
   await expect(target).toHaveAttribute("data-order-confirmation", "invalid");
+  await expect
+    .poll(readFooterConfirmationCounts)
+    .toEqual({
+      ready: initialFooterCounts.ready - 1,
+      invalid: initialFooterCounts.invalid + 1,
+      confirmed: initialFooterCounts.confirmed,
+    });
   expect(await ids()).toEqual(initialIds);
   await quantity.press("Enter");
   await expect.poll(ids).not.toEqual(initialIds);
