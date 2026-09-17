@@ -9540,6 +9540,7 @@ test("reception toolbar follows the browser annotation spacing and date icon rem
 
   const scheduleToolbar = page.getByTestId("schedule-toolbar");
   const dateControl = page.getByTestId("reception-date-control");
+  const checkInButton = page.getByTestId("schedule-check-in-button");
   const workspace = page.getByTestId("workspace-main-content");
 
   await expect(scheduleToolbar).toBeVisible();
@@ -9561,6 +9562,13 @@ test("reception toolbar follows the browser annotation spacing and date icon rem
   await expect(scheduleToolbar).toHaveCSS("padding-right", "12px");
   await expect(scheduleToolbar).toHaveCSS("padding-bottom", "12px");
   await expect(scheduleToolbar).toHaveCSS("padding-left", "20px");
+  await expect(checkInButton).toHaveClass(/bg-primary/);
+  await expect(checkInButton).toHaveClass(/text-primary-foreground/);
+  await expect(
+    scheduleToolbar.locator(
+      ':scope > div:last-child > div[aria-hidden="true"]',
+    ),
+  ).toHaveCount(1);
   await expect(dateControl.locator("svg")).toHaveCount(0);
   await expect(dateControl.locator('[aria-label$="표시 중"]')).toHaveText(
     "26년 5월 1일(금)",

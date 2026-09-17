@@ -5198,7 +5198,7 @@ function ScheduleToolbar({
             render={
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="default"
                 className="px-3 font-semibold"
               />
@@ -5223,10 +5223,6 @@ function ScheduleToolbar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <div
-          aria-hidden="true"
-          className="h-4 w-px shrink-0 bg-[var(--emr-border-subtle)]"
-        />
         <DropdownMenu>
           <DropdownMenuTrigger
             aria-label="더보기"
