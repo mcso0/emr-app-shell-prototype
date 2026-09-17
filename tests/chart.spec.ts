@@ -2905,12 +2905,49 @@ test("live patient chart history shows every chart by created_at and keeps past 
       getComputedStyle(element, "::after").bottom,
     ),
   ).toBe("-5px");
-  const historyDateBadge = inlineHistoryItem.getByTestId(
-    `chart-history-date-badge-${oldEncounterId}`,
+  const historyDate = inlineHistoryItem.getByTestId(
+    `chart-history-date-${oldEncounterId}`,
   );
-  await expect(historyDateBadge).toHaveCSS("height", "24px");
-  await expect(historyDateBadge).toHaveCSS("border-radius", "8px");
-  await expect(historyDateBadge.locator("svg")).toHaveCSS("width", "12px");
+  await expect(historyDate).toHaveCSS("height", "16px");
+  await expect(historyDate).toHaveCSS("padding", "0px");
+  await expect(historyDate).toHaveCSS("border-radius", "0px");
+  await expect(historyDate).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(historyDate).toHaveCSS("color", "rgb(115, 115, 115)");
+  await expect(historyDate.locator("svg")).toHaveCSS("width", "12px");
+  const historyRowAlignment = await inlineHistoryItem.evaluate((element) => {
+    const date = element.querySelector<HTMLElement>("[data-testid^='chart-history-date-']");
+    const diagnoses = element.querySelector<HTMLElement>("[class*='diagnoses']");
+    const icon = date?.querySelector<HTMLElement>("svg");
+    if (!date || !diagnoses || !icon) {
+      throw new Error("History date alignment elements are missing.");
+    }
+    const rowRect = element.getBoundingClientRect();
+    const dateRect = date.getBoundingClientRect();
+    const diagnosesRect = diagnoses.getBoundingClientRect();
+    const iconRect = icon.getBoundingClientRect();
+    const styles = getComputedStyle(element);
+    const listSurface = element.parentElement?.parentElement;
+    if (!listSurface) {
+      throw new Error("History list surface is missing.");
+    }
+    const listStyles = getComputedStyle(listSurface);
+    return {
+      dateInset: dateRect.left - rowRect.left,
+      diagnosisGap: diagnosesRect.left - dateRect.right,
+      iconInset: iconRect.left - rowRect.left,
+      listPaddingLeft: listStyles.paddingLeft,
+      listPaddingRight: listStyles.paddingRight,
+      paddingLeft: styles.paddingLeft,
+      paddingRight: styles.paddingRight,
+    };
+  });
+  expect(historyRowAlignment.listPaddingLeft).toBe("12px");
+  expect(historyRowAlignment.listPaddingRight).toBe("12px");
+  expect(historyRowAlignment.paddingLeft).toBe("8px");
+  expect(historyRowAlignment.paddingRight).toBe("8px");
+  expect(historyRowAlignment.dateInset).toBeCloseTo(8, 1);
+  expect(historyRowAlignment.iconInset).toBeCloseTo(8, 1);
+  expect(historyRowAlignment.diagnosisGap).toBeCloseTo(20, 1);
   const inlineHistoryViewport = page
     .getByTestId("chart-inline-history-scroll-area")
     .locator("[data-slot='scroll-area-viewport']");

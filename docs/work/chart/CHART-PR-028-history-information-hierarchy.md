@@ -9,7 +9,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
 dependencies:
   - "CHART-PR-025"
-updated: "2026-09-13"
+updated: "2026-09-17"
 ---
 
 # Diagnosis And Chart History Information Hierarchy
@@ -123,3 +123,15 @@ This supersedes the earlier B-layout visual contract, following the user's revie
 - Preserve selection, date-mode switching, group collapse, `차트 보기`, query ordering, draft-save-before-switch, historical read-only, API, permission, and workspace contracts.
 - No new token, dependency, schema, API, permission, provider, or remote-data change. Human visual and usage acceptance remains pending after the integrated deployment.
 - PASS: focused History browser regression 2 cases on isolated port 3018, patient-history server/permission contracts 8 cases, TypeScript, focused and repository ESLint (0 errors; 5 pre-existing WP10 script warnings), docs links, secret scan, diff check, and webpack production build. The default Turbopack build was stopped after remaining in its optimization phase without output for more than seven minutes; the integrated exact-candidate Release Check remains the remote build gate.
+
+## 2026-09-17 Figma Date Alignment Follow-up
+
+- Approval: the user reviewed the live History panel against Figma `28382:97577` and approved implementation, commit/push/PR, merge to `origin/main`, and production delivery for this exact visual slice.
+- Scope: keep the 12px list inset and 8px row padding; replace only the Ghost date Badge with a plain 12px calendar icon plus date text, use Neutral 500, and set the date-to-diagnosis gap to 20px.
+- Preserve diagnosis Badge sizing, adaptive `+N`, hover/focus/touch `차트 보기`, search ordering/emphasis, history navigation, draft-save-before-switch, historical read-only behavior, and every API/permission/workspace boundary.
+- Isolation: branch `codex/chart-history-date-alignment`, clean worktree from `origin/main` `b000e0d338d54c1435cac7b806918c2dad045e02`; the original clinical-master checkout and unrelated WIP remain untouched.
+- Delivery target: `main` / production using the existing Vercel project configuration without printing env values. No DB, role, permission, schema, provider, or remote-data change.
+- Verification requires focused History browser geometry/behavior, focused lint, TypeScript, production build, docs links, secret scan, diff check, exact-candidate Release Check, Ready Preview, merged PR, Ready Production, route probes, and an available authenticated read-only History smoke.
+- Stop on mandatory check failure, unexpected scope, failed Preview/Production readiness, or failed scoped smoke. Rollback candidate is pre-release `origin/main` `b000e0d338d54c1435cac7b806918c2dad045e02` and its previous Ready production deployment, recorded before merge.
+- PASS locally: isolated-port History browser regression 1 case, patient-history server/permission boundary 8 cases, focused ESLint, TypeScript, docs links, secret scan, diff check, repository lint with 0 errors and 5 pre-existing WP10 script warnings, and the default Turbopack production build. The existing broad NFT trace warning remained non-blocking. Remote exact-candidate and deployment evidence remains the delivery gate.
+- Rollback deployment baseline: Ready production `dpl_GwyCFZnVwQPFH9coMUP5WKgWPJzY`, aliased to `https://emr-app-shell-prototype.vercel.app` before this release.
