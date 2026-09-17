@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 import { cn } from "@/lib/utils";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
@@ -174,10 +176,9 @@ export function ChartOrderBillingDetailAside({
   const counts = summary.orderCounts;
   const amounts = summary.amounts;
   const freshnessText = getBillingStatusText(displayState, freshness);
-  const amountLabel = getBillingAmountLabel(
-    displayState,
-    hasAuthoritativeSummary,
-  );
+  const isInitialLoading = !hasAuthoritativeSummary && freshness === "loading";
+  const isInitialError = !hasAuthoritativeSummary && freshness === "error";
+  const hasNoOrders = counts.total === 0 && !isInitialLoading && !isInitialError;
   return (
     <aside
       id="chart-order-billing-detail-aside"
@@ -185,109 +186,43 @@ export function ChartOrderBillingDetailAside({
       aria-hidden={!open || undefined}
       inert={!open ? true : undefined}
       className={cn(
-        "absolute inset-y-0 right-0 z-30 flex w-[360px] max-w-[42%] flex-col border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-lg)] transition-transform duration-200",
+        "absolute inset-y-0 right-0 z-30 flex w-[var(--emr-chart-order-amount-detail-width)] max-w-full flex-col border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-lg)] transition-transform duration-200",
         open ? "translate-x-0" : "pointer-events-none translate-x-full",
       )}
     >
-      <header className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--emr-border-default)] px-4">
-        <div>
-          <p className="text-[10px] font-semibold tracking-wide text-[var(--emr-text-tertiary)]">PLAN/ORDER</p>
-          <h3 className="text-sm font-semibold">이 차트 금액 상세</h3>
-        </div>
+      <header className="flex h-[var(--emr-rightpanel-header-height)] shrink-0 items-center justify-between border-b border-[var(--emr-border-default)] px-[var(--clair-spacing-16)]">
+        <h3 className="emr-text-panel-title font-semibold">금액 상세</h3>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>닫기</Button>
       </header>
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-        <section className="rounded-xl border border-[var(--emr-border-accent)] bg-[var(--emr-surface-selected)] p-4">
-          <div className="flex items-center justify-between text-xs text-[var(--emr-text-secondary)]">
-            <span>
-              {amountLabel}
-            </span>
-            <span>이 차트 청구 가능 {counts.requestable}건</span>
+      <div className="min-h-0 flex-1 overflow-y-auto p-[var(--clair-spacing-16)]">
+        {isInitialLoading ? (
+          <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="upstream-pending" reserveActionSpace={false} size="md" surface="drawer" title="금액을 불러오는 중입니다" />
+        ) : isInitialError ? (
+          <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="read-error" primaryAction={<Button size="sm" variant="outline" onClick={onRetry}>다시 시도</Button>} priority="local-recovery" reserveActionSpace={false} size="md" surface="drawer" title="금액을 불러오지 못했습니다" />
+        ) : hasNoOrders ? (
+          <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="no-data" reserveActionSpace={false} size="md" surface="drawer" testId="chart-order-amount-detail-empty" title="오더가 없습니다" />
+        ) : (
+          <div className="space-y-[var(--clair-spacing-24)]">
+            <section aria-labelledby="billing-order-total-title">
+              <h4 id="billing-order-total-title" className="mb-[var(--clair-spacing-8)] emr-text-section font-semibold">오더 합계</h4>
+              <Card size="sm" className="gap-0 py-0 shadow-none"><CardContent className="flex min-h-[var(--emr-chart-order-amount-detail-row-height)] items-center justify-between px-[var(--clair-spacing-16)] py-[var(--clair-spacing-12)]"><span className="emr-text-body text-[var(--emr-text-secondary)]">총 금액</span><strong className="emr-text-panel-title tabular-nums text-[var(--emr-text-primary)]">{formatWon(amounts.estimatedTotal)}</strong></CardContent></Card>
+            </section>
+            <section aria-labelledby="billing-order-detail-title">
+              <div className="mb-[var(--clair-spacing-8)] flex items-center justify-between"><h4 id="billing-order-detail-title" className="emr-text-section font-semibold">오더 상세</h4>{counts.recheck > 0 ? <span className="emr-text-metadata text-[var(--emr-status-warning-text)]">재확인 {counts.recheck}건</span> : null}</div>
+              <Card size="sm" className="gap-0 py-0 shadow-none"><CardContent className="grid grid-cols-2 p-0"><OrderDetailCell amount={amounts.confirmed} count={counts.confirmed} label="확정 후" /><OrderDetailCell amount={amounts.draft} count={counts.draft} label="확정 전" muted /></CardContent></Card>
+            </section>
+            <section aria-labelledby="billing-composition-title">
+              <h4 id="billing-composition-title" className="mb-[var(--clair-spacing-8)] emr-text-section font-semibold">금액 구성</h4>
+              <Card size="sm" className="gap-0 py-0 shadow-none"><CardContent className="px-[var(--clair-spacing-16)] py-0"><dl className="emr-text-body"><MoneyRow label="총 금액" value={formatWon(amounts.gross)} /><MoneyRow label="할인" testId="billing-discount-value" tone="adjustment" value={`- ${formatWonNumber(amounts.discount)} 원`} /><MoneyRow label="할증" testId="billing-surcharge-value" tone="adjustment" value={`- ${formatSurchargePercent(amounts.surcharge, amounts.gross)} %(${formatWon(amounts.surcharge)})`} /></dl></CardContent></Card>
+            </section>
+            {freshnessText ? <div className="flex items-center justify-between gap-[var(--clair-spacing-12)]"><p role="status" className={cn("emr-text-metadata", displayState === "invalid" || displayState === "save_error" || freshness === "stale" || freshness === "error" ? "text-[var(--emr-status-warning-text)]" : "text-[var(--emr-text-secondary)]")}>{freshnessText}</p>{freshness === "stale" || freshness === "error" ? <Button type="button" size="sm" variant="outline" onClick={onRetry}>다시 확인</Button> : null}</div> : null}
+            {summary.unfinishedOrders.length > 0 ? <section className="rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-[var(--clair-spacing-12)] emr-text-metadata"><p className="font-semibold">진행 중 오더 {summary.unfinishedOrders.length}건</p><ul className="mt-[var(--clair-spacing-8)] space-y-[var(--clair-spacing-4)]">{summary.unfinishedOrders.slice(0, 3).map((order) => <li key={order.orderId} className="truncate">{order.name} · {order.status}</li>)}</ul></section> : null}
+            {error ? <p role="alert" className="emr-text-metadata text-destructive">{error}</p> : null}
           </div>
-          <p className="mt-1 text-[28px] font-bold leading-9 tabular-nums text-[var(--emr-text-accent)]">
-            {formatWon(amounts.estimatedTotal)}
-          </p>
-          <p className="mt-1 text-xs text-[var(--emr-text-secondary)]">
-            확정 전 금액은 예상에만 포함돼요. 접수 전체 청구와 결제는 수납에서 확인해 주세요.
-          </p>
-          {freshnessText ? (
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p
-                role="status"
-                className={cn(
-                  "text-xs",
-                  displayState === "invalid" ||
-                    displayState === "save_error" ||
-                    freshness === "stale" ||
-                    freshness === "error"
-                    ? "text-[var(--emr-status-warning-text)]"
-                    : "text-[var(--emr-text-secondary)]",
-                )}
-              >
-                {freshnessText}
-              </p>
-              {freshness === "stale" || freshness === "error" ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={onRetry}
-                >
-                  금액 다시 확인
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
-
-        <section aria-labelledby="billing-order-state-title">
-          <div className="mb-2 flex items-center justify-between">
-            <h4 id="billing-order-state-title" className="text-xs font-semibold">오더 상태</h4>
-            {counts.recheck > 0 ? <span className="text-xs text-[var(--emr-status-warning-text)]">재확인 {counts.recheck}건</span> : null}
-          </div>
-          <div className="grid grid-cols-2 overflow-hidden rounded-lg border border-[var(--emr-border-default)]">
-            <div className="p-3">
-              <p className="text-[11px] text-[var(--emr-text-secondary)]">확정 후</p>
-              <p className="mt-1 font-semibold tabular-nums">{formatWon(amounts.confirmed)}</p>
-              <p className="text-[11px] text-[var(--emr-text-tertiary)]">{counts.confirmed}건</p>
-            </div>
-            <div className="border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3">
-              <p className="text-[11px] text-[var(--emr-text-secondary)]">확정 전</p>
-              <p className="mt-1 font-semibold tabular-nums text-[var(--emr-status-warning-text)]">{formatWon(amounts.draft)}</p>
-              <p className="text-[11px] text-[var(--emr-text-tertiary)]">{counts.draft}건 · 예상만</p>
-            </div>
-          </div>
-        </section>
-
-        <section aria-labelledby="billing-composition-title">
-          <h4 id="billing-composition-title" className="mb-2 text-xs font-semibold">금액 구성</h4>
-          <dl className="divide-y divide-[var(--emr-border-default)] rounded-lg border border-[var(--emr-border-default)] px-3 text-xs">
-            <MoneyRow label="현재 발생 금액" value={amounts.gross} />
-            <MoneyRow label="할인" value={-amounts.discount} tone="success" />
-            {amounts.surcharge > 0 ? <MoneyRow label="할증" value={amounts.surcharge} /> : null}
-          </dl>
-          <p className="mt-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
-            세금·기수납·접수 전체 합계는 다른 차트 오더와 섞지 않고 수납 화면에서 계산해요.
-          </p>
-        </section>
-
-        {summary.unfinishedOrders.length > 0 ? (
-          <section className="rounded-lg border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-3 text-xs">
-            <p className="font-semibold">진행 중 오더 {summary.unfinishedOrders.length}건</p>
-            <p className="mt-1 text-[var(--emr-text-secondary)]">
-              중간 정산으로 청구할 수 있지만 오더 업무는 계속 진행돼요.
-            </p>
-            <ul className="mt-2 space-y-1">
-              {summary.unfinishedOrders.slice(0, 3).map((order) => (
-                <li key={order.orderId} className="truncate">{order.name} · {order.status}</li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-        {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
+        )}
       </div>
-      <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--emr-border-default)] p-3">
-        <p className="text-xs text-[var(--emr-text-secondary)]">이 차트 청구 가능 {formatWon(amounts.requestableTotal)}</p>
+      <footer className="flex min-h-[var(--emr-rightpanel-footer-compact-height)] shrink-0 items-center justify-between gap-[var(--clair-spacing-12)] border-t border-[var(--emr-border-default)] px-[var(--clair-spacing-12)]">
+        <p className="emr-text-metadata text-[var(--emr-text-secondary)]">청구 가능 {formatWon(amounts.requestableTotal)}</p>
         <Button
           type="button"
           size="sm"
@@ -301,15 +236,23 @@ export function ChartOrderBillingDetailAside({
   );
 }
 
-function MoneyRow({ label, tone, value }: { label: string; tone?: "success"; value: number }) {
+function OrderDetailCell({ amount, count, label, muted = false }: { amount: number; count: number; label: string; muted?: boolean }) {
+  return <div className={cn("min-h-[var(--emr-chart-order-amount-detail-cell-height)] p-[var(--clair-spacing-12)]", muted && "border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)]")}><p className="emr-text-metadata text-[var(--emr-text-secondary)]">{label}</p><p className={cn("mt-[var(--clair-spacing-4)] emr-text-body font-semibold tabular-nums", muted && "text-[var(--emr-status-warning-text)]")}>{formatWon(amount)}</p><p className="emr-text-metadata text-[var(--emr-text-tertiary)]">{count}건</p></div>;
+}
+
+function MoneyRow({ label, testId, tone, value }: { label: string; testId?: string; tone?: "adjustment"; value: string }) {
   return (
-    <div className="flex items-center justify-between py-2.5">
+    <div className="flex min-h-[var(--emr-chart-order-amount-detail-row-height)] items-center justify-between border-b border-[var(--emr-border-default)] py-[var(--clair-spacing-12)] last:border-b-0">
       <dt className="text-[var(--emr-text-secondary)]">{label}</dt>
-      <dd className={cn("font-semibold tabular-nums", tone === "success" && "text-[var(--emr-text-success)]")}>
-        {value > 0 ? "+" : ""}{formatWon(value)}
-      </dd>
+      <dd className={cn("font-semibold tabular-nums", tone === "adjustment" && "text-[var(--emr-chart-order-amount-detail-adjustment-text)]")} data-testid={testId}>{value}</dd>
     </div>
   );
+}
+
+function formatSurchargePercent(surcharge: number, gross: number) {
+  if (gross <= 0 || surcharge <= 0) return "0";
+  const percent = Math.round((surcharge / gross) * 1_000) / 10;
+  return percent.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
 }
 
 function formatWon(value: number) {

@@ -148,7 +148,7 @@ test("Plan/Order rows, counts, and money follow only the active chart", async ({
 
   await openChart(page, chartAId);
   const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("오더 1건");
+  await expect(footer).toContainText("미입력 오더 1");
   await expect(footer).toContainText("4,500원");
   await expect(footer).not.toContainText("999,999원");
   await expect(
@@ -160,7 +160,7 @@ test("Plan/Order rows, counts, and money follow only the active chart", async ({
   await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
 
   await openChart(page, chartBId);
-  await expect(footer).toContainText("오더 1건");
+  await expect(footer).toContainText("미확정 오더 1");
   await expect(footer).toContainText("35,000원");
   await expect(
     page.getByRole("checkbox", { name: "CBC 검사 선택" }),
@@ -267,13 +267,13 @@ test("included-order-sum set counts once and does not double-charge its parent",
   await openChart(page, defaultChartId);
   await openChart(page, chartId);
   const footer = page.getByTestId("chart-order-footer");
-  await expect(footer).toContainText("오더 1건");
+  await expect(footer).toContainText("확정 오더 1");
   await expect(footer).toContainText("6,000원");
   await expect(footer).not.toContainText("12,000원");
   await footer.getByRole("button", { name: "금액 상세" }).click();
   const detail = page.getByLabel("Plan/Order 금액 상세");
-  await expect(detail).toContainText("이 차트 청구 가능 1건");
-  await expect(detail).toContainText("이 차트 청구 가능 6,000원");
+  await expect(detail.getByText("1건", { exact: true })).toBeVisible();
+  await expect(detail).toContainText("청구 가능 6,000원");
 });
 
 test("chart billing action navigates to encounter billing without a billing POST", async ({
@@ -299,6 +299,27 @@ test("chart billing action navigates to encounter billing without a billing POST
   expect(billingPosts).toBe(0);
 });
 
+test("chart amount detail uses the shared drawer empty state when there are no orders", async ({
+  page,
+}) => {
+  await warmChartWorkspace(page);
+  const chartId = await createChart(page);
+  await openChart(page, chartId);
+
+  await page
+    .getByTestId("chart-order-footer")
+    .getByRole("button", { name: "금액 상세" })
+    .click();
+
+  const emptyState = page.getByTestId("chart-order-amount-detail-empty");
+  await expect(emptyState).toBeVisible();
+  await expect(emptyState).toHaveAttribute("data-kind", "no-data");
+  await expect(emptyState).toHaveAttribute("data-surface", "drawer");
+  await expect(
+    emptyState.getByRole("heading", { name: "오더가 없습니다" }),
+  ).toBeVisible();
+});
+
 test("source contract keeps UI scope local while server mutations retain chart ownership", async () => {
   const moduleSource = await readFile(
     path.join(process.cwd(), "src/features/chart/module.tsx"),
@@ -318,6 +339,17 @@ test("source contract keeps UI scope local while server mutations retain chart o
     ),
     "utf8",
   );
+  const amountDetailSource = await readFile(
+    path.join(
+      process.cwd(),
+      "src/features/chart/components/chart-order-finance-footer.tsx",
+    ),
+    "utf8",
+  );
+  const foundationTokenSource = await readFile(
+    path.join(process.cwd(), "src/styles/tokens/emr-foundation.css"),
+    "utf8",
+  );
 
   expect(moduleSource).not.toContain("EncounterOrderArea");
   expect(moduleSource).not.toContain("처방 조회 범위");
@@ -330,4 +362,14 @@ test("source contract keeps UI scope local while server mutations retain chart o
   expect(actionServerSource).toContain(
     "(row.originChartId ?? null) !== (chartId ?? null)",
   );
+  expect(amountDetailSource).toContain("EmrEmptyState");
+  expect(amountDetailSource).toContain(
+    "var(--emr-chart-order-amount-detail-width)",
+  );
+  expect(amountDetailSource).not.toContain("w-[360px]");
+  expect(amountDetailSource).not.toContain("이 차트 금액 상세");
+  expect(foundationTokenSource).toContain(
+    "--emr-chart-order-amount-detail-adjustment-text",
+  );
+  expect(foundationTokenSource).toContain("--clair-color-atomic-red-600");
 });

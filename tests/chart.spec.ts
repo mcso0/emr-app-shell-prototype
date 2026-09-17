@@ -6399,6 +6399,31 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
     .click();
   const detailAside = page.getByLabel("Plan/Order 금액 상세");
   await expect(detailAside).toBeVisible();
+  await expect(
+    detailAside.getByRole("heading", {
+      exact: true,
+      level: 3,
+      name: "금액 상세",
+    }),
+  ).toBeVisible();
+  await expect(detailAside).not.toContainText("PLAN/ORDER");
+  await expect(detailAside).not.toContainText("이 차트 금액 상세");
+  await expect(detailAside.locator("h4")).toHaveText([
+    "오더 합계",
+    "오더 상세",
+    "금액 구성",
+  ]);
+  await expect(detailAside.getByTestId("billing-discount-value")).toHaveCSS(
+    "color",
+    "rgb(197, 48, 48)",
+  );
+  await expect(detailAside.getByTestId("billing-surcharge-value")).toHaveCSS(
+    "color",
+    "rgb(197, 48, 48)",
+  );
+  await expect(detailAside.getByTestId("billing-surcharge-value")).toHaveText(
+    /- \d+(?:\.\d)? %\([\d,]+원\)/,
+  );
   await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(detailAside).toBeVisible();
