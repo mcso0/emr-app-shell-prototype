@@ -4,7 +4,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 13px;
+  gap: var(--clair-spacing-20);
   height: 40px;
   min-width: 0;
   padding: var(--clair-spacing-8);
@@ -28,12 +28,10 @@
   flex-shrink: 0;
   align-items: center;
   gap: var(--clair-spacing-4);
-  height: 24px;
-  padding: var(--clair-spacing-4);
-  border-radius: var(--clair-radius-atomic-8);
+  height: 16px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  color: var(--clair-color-atomic-neutral-600);
+  color: var(--clair-color-atomic-neutral-500);
 }
 
 .date, .badge, .more {

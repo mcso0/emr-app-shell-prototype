@@ -109,14 +109,13 @@ export function ChartDiagnosisHistoryItem({
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
       }}
     >
-      <Badge
-        variant="ghost"
+      <div
         className={styles.date}
-        data-testid={`chart-history-date-badge-${encounterId}`}
+        data-testid={`chart-history-date-${encounterId}`}
       >
         <CdsFilesCalendarIcon aria-hidden="true" className={styles.calendar} />
         <span>{dateLabel}</span>
-      </Badge>
+      </div>
       <div ref={diagnosesRef} className={styles.diagnoses}>
         {names.slice(0, count).map((name, index) => (
           <Tooltip key={`${index}-${name}`} open={index === 0 && nameOpen} onOpenChange={setNameOpen}>
