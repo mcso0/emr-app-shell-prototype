@@ -1,5 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
+import {
+  CdsActionsRefreshCcwIcon,
+  CdsActionsXIcon,
+} from "@/components/cds-icons/actions-and-controls";
 import { Button } from "@/components/ui/button";
 
 import { EmrInlineAlert } from "./inline-alert";
@@ -17,11 +21,17 @@ const meta = {
     },
   },
   argTypes: {
+    layout: {
+      control: "radio",
+      options: ["default", "actions", "icon-box"],
+      description:
+        "Controls the Figma-aligned content arrangement. Omit it to infer actions when action slots are present and default otherwise.",
+    },
     severity: {
       control: "radio",
-      options: ["error", "warning", "info", "success"],
+      options: ["neutral", "error", "warning", "info", "success"],
       description:
-        "Controls default role, icon, and semantic tone. Error and warning default to alert; info and success default to status.",
+        "Controls default role, icon, and semantic tone. Error and warning default to alert; neutral, info, and success default to status.",
     },
     title: {
       control: "text",
@@ -86,6 +96,12 @@ export const Severities: Story = {
   render: () => (
     <div className="grid max-w-3xl gap-3">
       <EmrInlineAlert
+        severity="neutral"
+        title="예약 정보를 확인해 주세요"
+      >
+        진료 접수 전에 보호자 연락처와 방문 시간을 확인할 수 있습니다.
+      </EmrInlineAlert>
+      <EmrInlineAlert
         severity="error"
         title="저장하지 못했습니다"
       >
@@ -116,6 +132,122 @@ export const Severities: Story = {
       description: {
         story:
           "Severity changes role, icon, and token tone. Copy and available actions must still explain the state without relying on color alone.",
+      },
+    },
+  },
+};
+
+const recoveryActions = (
+  <>
+    <Button
+      size="sm"
+      variant="outline"
+    >
+      <CdsActionsRefreshCcwIcon data-icon="inline-start" />
+      다시 시도
+    </Button>
+    <Button
+      size="sm"
+      variant="outline"
+    >
+      <CdsActionsRefreshCcwIcon data-icon="inline-start" />
+      상세 보기
+    </Button>
+  </>
+);
+
+const dismissAction = (
+  <Button
+    aria-label="안내 닫기"
+    size="icon-sm"
+    variant="ghost"
+  >
+    <CdsActionsXIcon />
+  </Button>
+);
+
+export const FigmaLayouts: Story = {
+  render: () => (
+    <div className="grid w-[697px] max-w-full gap-3">
+      <EmrInlineAlert
+        dismissAction={dismissAction}
+        layout="default"
+        severity="neutral"
+        title="진료 정보를 확인해 주세요"
+      >
+        접수 전에 보호자 연락처와 방문 시간을 확인할 수 있습니다.
+      </EmrInlineAlert>
+      <EmrInlineAlert
+        dismissAction={dismissAction}
+        layout="default"
+        severity="neutral"
+        title="진료 정보를 확인해 주세요"
+      />
+      <EmrInlineAlert
+        action={recoveryActions}
+        layout="actions"
+        severity="neutral"
+        title="검사 대기열을 불러오지 못했습니다"
+      >
+        마지막으로 확인한 검사 목록을 표시하고 있습니다.
+      </EmrInlineAlert>
+      <EmrInlineAlert
+        action={recoveryActions}
+        layout="actions"
+        severity="neutral"
+        title="검사 대기열을 불러오지 못했습니다"
+      />
+      <EmrInlineAlert
+        action={recoveryActions}
+        layout="icon-box"
+        severity="neutral"
+        title="검사 결과를 확인해 주세요"
+      >
+        결과 검토가 필요한 항목이 2건 있습니다.
+      </EmrInlineAlert>
+      <EmrInlineAlert
+        dismissAction={dismissAction}
+        layout="icon-box"
+        severity="neutral"
+        title="검사 결과를 확인해 주세요"
+      />
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Figma reference matrix for default, actions, and icon-box layouts at the authored 697px width, including title-only and title-with-body cases.",
+      },
+    },
+  },
+};
+
+export const SeverityIconBoxes: Story = {
+  render: () => (
+    <div className="grid max-w-3xl gap-3">
+      {(["neutral", "info", "success", "warning", "error"] as const).map(
+        (severity) => (
+          <EmrInlineAlert
+            key={severity}
+            layout="icon-box"
+            severity={severity}
+            testId={`inline-alert-${severity}`}
+            title={`${severity} 상태 안내`}
+          >
+            배경은 50 단계, 테두리와 아이콘 박스는 200 단계, 텍스트와 아이콘은
+            {severity === "neutral" ? " Neutral 900" : " 의미 색상 700"} 단계를
+            사용합니다.
+          </EmrInlineAlert>
+        )
+      )}
+    </div>
+  ),
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Verifies the icon-box treatment across neutral, info, success, warning, and error semantic states.",
       },
     },
   },

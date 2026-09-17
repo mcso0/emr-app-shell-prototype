@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-05-22"
+updated: "2026-09-17"
 linear_issue: "DEN-204"
 linear_project: "CLAiR EMR UI/UX Consistency & Affordance Hardening"
 source_docs:
@@ -8,6 +8,7 @@ source_docs:
   - "docs/design/system/global-feedback-ui-audit.md"
   - "docs/design/system/component-ownership-rules.md"
   - "docs/design/qa/product-mvp-uiux-a-grade-acceptance-matrix.md"
+  - "https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28414-91491"
 ---
 
 # Inline Alert Feedback Rules
@@ -45,14 +46,33 @@ Basic usage:
 </EmrInlineAlert>
 ```
 
-The component exposes below-copy recovery action slots instead of owning click
+The component exposes an end-aligned action slot instead of owning click
 behavior. Feature modules remain responsible for retry callbacks, route state,
-permissions, logging, and local workflow copy.
+permissions, logging, and local workflow copy. Existing consumers do not need
+to set `layout`: recovery actions infer `actions`, while alerts without recovery
+actions infer `default`.
+
+## Layout Rules
+
+| Layout | Use for | Structure |
+|---|---|---|
+| `default` | A compact message, optionally dismissible | 20px icon, flexible copy, optional end dismiss control |
+| `actions` | A state with recovery or next-step commands | Default content with end-aligned `action` and `secondaryAction` controls |
+| `icon-box` | A message requiring stronger visual anchoring | 40×40 icon box, flexible copy, optional actions or dismiss control |
+
+- The shared container uses a 1px border, 8px radius, and 10px padding.
+- Content-to-end-slot spacing is 20px and actions use a 10px gap.
+- The title is 14/20 semibold; body copy is 14/20 regular with a 4px title gap.
+- At narrow widths, the end slot wraps below the copy without overlapping or
+  clipping. Button behavior and callbacks remain owned by the feature.
+- Set `layout="icon-box"` explicitly. Use the inferred layout for ordinary
+  existing call sites unless the presentation requirement is explicit.
 
 ## Severity Rules
 
 | Severity | Default role | Use for | Required affordance |
 |---|---|---|---|
+| `neutral` | `status` | General guidance or contextual information without a semantic success/warning/error meaning | Keep the message factual and optional actions neutral. |
 | `error` | `alert` | Blocking failure, failed save, failed read with no trustworthy fallback | Explain impact and include a recovery action when recoverable. |
 | `warning` | `alert` | Degraded state, live read failed but local demo is visible, risky preflight, permission uncertainty | Explain the boundary and offer the next safest action. |
 | `info` | `status` | Mock/live boundary, future-scope feature, neutral contextual guidance | Keep copy factual and avoid implying persistence. |
@@ -60,6 +80,20 @@ permissions, logging, and local workflow copy.
 
 Do not rely on color alone. The title, body, icon, placement, and available
 action must make the severity understandable.
+
+### Semantic Color Contract
+
+| Severity | Background | Border and icon box | Text and icon |
+|---|---|---|---|
+| `neutral` | Neutral 50 (`#FAFAFA`) | Neutral 200 (`#E5E5E5`) | Neutral 900 (`#171717`) |
+| `info` | Blue 50 (`#EBF8FF`) | Blue 200 (`#90CDF4`) | Blue 700 (`#2C5282`) |
+| `success` | Green 50 (`#F0FFF4`) | Green 200 (`#9AE6B4`) | Green 700 (`#22543D`) |
+| `warning` | Orange 50 (`#FFFAF0`) | Orange 200 (`#FBD38D`) | Orange 700 (`#9C4221`) |
+| `error` | Red 50 (`#FFF5F5`) | Red 200 (`#FEB2B2`) | Red 700 (`#9B2C2C`) |
+
+Use the existing `--emr-status-*` and neutral semantic tokens. Do not add local
+hex values in the component or its consumers. The icon box follows the 200-step
+border tone; it does not introduce a separate severity color.
 
 ## Recovery Action Patterns
 
@@ -72,15 +106,15 @@ Use these labels and behavior classes consistently when the action exists:
 | Permission | Point to workspace membership, role, or owner/admin resolution. |
 | View details | Reveal or link to diagnostic details useful for support/debugging. |
 | Unavailable | Explain that a feature is intentionally disconnected in the MVP. |
-| Dismiss | Hide only non-blocking info/success/warning messages. Do not dismiss blocking errors without another recovery path. |
+| Dismiss | Hide only non-blocking neutral/info/success/warning messages. Do not dismiss blocking errors without another recovery path. |
 
 ## Dismiss Controls
 
-- Use `dismissAction` only for a non-blocking `info`, `success`, or `warning`
-  message that the user may hide after reading.
-- Place a labelled icon-only dismiss button in `dismissAction`; the shadcn
-  `AlertAction` slot keeps it at the alert's top end.
-- Keep `action` and `secondaryAction` below the copy for meaningful recovery
+- Use `dismissAction` only for a non-blocking `neutral`, `info`, `success`, or
+  `warning` message that the user may hide after reading.
+- Place a labelled icon-only dismiss button in `dismissAction`; the shared end
+  slot centers it with the alert content.
+- Keep `action` and `secondaryAction` in the end slot for meaningful recovery
   paths such as retry, local-demo fallback, or viewing details.
 - Do not use a generic acknowledgement label such as `확인` when the only
   result is dismissing the alert.
@@ -111,6 +145,7 @@ For changes to this primitive, run:
 - `npm run lint -- --ignore-pattern '.worktrees/**'`
 - `npx tsc --noEmit`
 - `npm run docs:check`
+- `npm run build-storybook`
 - `npx playwright test tests/design-tokens.spec.ts --grep "shared EMR component source uses semantic color tokens"`
 
 If an issue wires `EmrInlineAlert` into a user flow, add focused Playwright
