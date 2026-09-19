@@ -274,14 +274,14 @@ test("chart content keeps the selected shell visible while details hydrate", () 
   const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(chartModule).toContain("const detailLoading =");
-  expect(chartModule).toContain("const chartDetailPendingDelayMs = 200;");
-  expect(chartModule).toContain("function useDelayedBoolean(");
-  expect(chartModule).toContain("function ChartDetailPendingIndicator()");
-  expect(chartModule).toContain('data-testid="chart-detail-pending-indicator"');
+  expect(chartModule).not.toContain("const chartDetailPendingDelayMs = 200;");
+  expect(chartModule).not.toContain("function useDelayedBoolean(");
+  expect(chartModule).not.toContain("function ChartDetailPendingIndicator()");
+  expect(chartModule).not.toContain('data-testid="chart-detail-pending-indicator"');
   expect(chartModule).toContain("const detailHydrationPending = detailLoading;");
-  expect(chartModule).toContain("const showDetailPendingIndicator = useDelayedBoolean(");
-  expect(chartModule).toContain("writeDisabled={detailHydrationPending}");
-  expect(chartModule).toContain("detailPending={showDetailPendingIndicator}");
+  expect(chartModule).not.toContain("const showDetailPendingIndicator =");
+  expect(chartModule).toContain("pendingIndicator={");
+  expect(chartModule).toContain('data-testid="chart-historical-readonly-badge"');
   expect(chartModule).toContain("function SoapPanel({");
   expect(chartModule).toContain("function AssessmentPanel({");
   expect(chartModule).toContain("function OrderArea({");

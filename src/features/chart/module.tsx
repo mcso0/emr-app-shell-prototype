@@ -696,7 +696,6 @@ const CHART_ORDER_MIN_PX = 220;
 const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
-const chartDetailPendingDelayMs = 200;
 const chartOrderDiscreteSaveDelayMs = 150;
 const chartOrderContinuousSaveDelayMs = 700;
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
@@ -14350,41 +14349,6 @@ function ChartContentLoadingState({
   );
 }
 
-function useDelayedBoolean(value: boolean, delayMs: number) {
-  const [delayedValue, setDelayedValue] = useState(false);
-
-  useEffect(() => {
-    const timerId = window.setTimeout(
-      () => {
-        setDelayedValue(value);
-      },
-      value ? delayMs : 0,
-    );
-
-    return () => window.clearTimeout(timerId);
-  }, [delayMs, value]);
-
-  return value && delayedValue;
-}
-
-function ChartDetailPendingIndicator() {
-  return (
-    <span
-      aria-label="진료 차트 상세 정보를 불러오는 중입니다"
-      aria-live="polite"
-      className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[var(--emr-radius-control)] border border-[var(--emr-status-neutral-border)] bg-[var(--emr-surface-muted)] px-2 emr-text-metadata font-medium text-[var(--emr-text-secondary)]"
-      data-testid="chart-detail-pending-indicator"
-      role="status"
-    >
-      <span className="sr-only">상세 정보 불러오는 중</span>
-      <Skeleton
-        aria-hidden="true"
-        className="h-3 w-28 motion-reduce:animate-none"
-      />
-    </span>
-  );
-}
-
 function ChartPanelPendingState({
   className,
   description,
@@ -14724,10 +14688,6 @@ export function ChartContent({
     || (Boolean(activeChartId) && (persistedSoapState.status === "error" || persistedSoapState.status === "loading"))
     || (effectiveEncounter?.status !== "in_consultation" && effectiveEncounter?.status !== "ordered");
   const orderLoading = detailHydrationPending;
-  const showDetailPendingIndicator = useDelayedBoolean(
-    detailHydrationPending,
-    chartDetailPendingDelayMs,
-  );
   const getChartSplitBounds = () => {
     const workspace = chartWorkspaceRef.current;
     const availableHeight = workspace
@@ -15671,19 +15631,14 @@ export function ChartContent({
             startTime={chartStartTime}
             visitLabel={chartHistoryEncounterCount > 1 ? "재진" : "초진"}
             pendingIndicator={
-              isHistoricalView ||
-              showDetailPendingIndicator ? (
+              isHistoricalView ? (
                 <span className="flex items-center gap-2">
-                  {isHistoricalView ? (
-                    <span
-                      className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]"
-                      data-testid="chart-historical-readonly-badge"
-                    >
-                      과거 차트 · 읽기 전용
-                    </span>
-                  ) : showDetailPendingIndicator ? (
-                    <ChartDetailPendingIndicator />
-                  ) : null}
+                  <span
+                    className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]"
+                    data-testid="chart-historical-readonly-badge"
+                  >
+                    과거 차트 · 읽기 전용
+                  </span>
                 </span>
               ) : null
             }
