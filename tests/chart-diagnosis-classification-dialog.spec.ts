@@ -171,6 +171,11 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
   await expectEmptyStateCentered(
     dialog.getByText("선택된 진단명이 없습니다", { exact: true }),
   );
+  await expect(
+    dialog
+      .getByText("선택된 진단명이 없습니다", { exact: true })
+      .locator("xpath=ancestor::section[1]"),
+  ).toHaveAttribute("data-size", "md");
   const systemOption = dialog.getByRole("option", { name: "전체 2" }).first();
   const diagnosisOption = dialog.getByRole("option", { name: "위장염" });
   const [systemRowStyle, diagnosisRowStyle] = await Promise.all([

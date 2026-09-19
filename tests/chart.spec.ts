@@ -7962,7 +7962,7 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   );
 
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
 
   const dialog = page.getByRole("dialog", {
     name: "오더 추가",
@@ -8031,6 +8031,7 @@ test("chart catalog dialog searches 108 service-review dispensing candidates at 
   const selectedEmptyState = selectedColumn
     .getByText("선택한 오더가 없습니다", { exact: true })
     .locator("xpath=ancestor::section[1]");
+  await expect(selectedEmptyState).toHaveAttribute("data-size", "md");
   const [selectedViewportBox, selectedEmptyStateBox] = await Promise.all([
     selectedViewport.boundingBox(),
     selectedEmptyState.boundingBox(),
