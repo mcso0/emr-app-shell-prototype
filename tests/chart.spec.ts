@@ -2565,6 +2565,10 @@ test("live patient chart history shows every chart by created_at and keeps past 
   const emptyEncounterId = "encounter-history-empty";
   const currentChartId = "21215000-0000-4000-8000-000000000011";
   const oldChartId = "21215000-0000-4000-8000-000000000012";
+  let releaseOldHistoryDetail!: () => void;
+  const oldHistoryDetailReady = new Promise<void>((resolve) => {
+    releaseOldHistoryDetail = resolve;
+  });
   const currentChart = {
     id: currentChartId,
     encounterId: current.encounter.id,
@@ -2687,6 +2691,9 @@ test("live patient chart history shows every chart by created_at and keeps past 
       const encounterId = new URL(route.request().url()).searchParams.get(
         "encounterId",
       );
+      if (encounterId === oldEncounterId) {
+        await oldHistoryDetailReady;
+      }
       await route.fulfill({
         status: 200,
         json: {
@@ -2838,7 +2845,22 @@ test("live patient chart history shows every chart by created_at and keeps past 
   ).toHaveCount(0);
   await expect(aside.getByText("접수 이력", { exact: false })).toHaveCount(0);
 
+  await expect(
+    page.getByRole("heading", { name: "Subject/Object" }),
+  ).toBeVisible();
   await oldHistoryItem.click();
+  const historyLoadingState = page.getByTestId("chart-content-loading-state");
+  await expect(historyLoadingState).toBeVisible();
+  await expect(historyLoadingState).toHaveAttribute("data-size", "md");
+  await expect(historyLoadingState).toContainText("차트를 불러오는 중입니다");
+  await expect(
+    page.getByRole("button", {
+      name: /차트 이력 패널 (열기|접기)/,
+    }),
+  ).toBeDisabled();
+
+  releaseOldHistoryDetail();
+  await expect(historyLoadingState).toHaveCount(0);
   await expect
     .poll(() => new URL(page.url()).searchParams.get("historyEncounterId"))
     .toBe(oldEncounterId);
@@ -3871,7 +3893,7 @@ test("chart queue read failures are not presented as an empty operating date", a
   await expect(emptyState).not.toContainText("표시할 진료 업무가 없습니다");
 });
 
-test("chart detail loading uses shared shadcn Skeleton and resolves to real empty states", async ({
+test("chart detail loading centers the md empty state and disables chart actions", async ({
   page,
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
@@ -4047,16 +4069,55 @@ test("chart detail loading uses shared shadcn Skeleton and resolves to real empt
   );
 
   const chartContent = page.locator("[data-slot='chart-content']");
+  const loadingState = page.getByTestId("chart-content-loading-state");
+  await expect(loadingState).toBeVisible();
+  await expect(loadingState).toHaveAttribute("data-size", "md");
+  await expect(loadingState).toContainText("차트를 불러오는 중입니다");
+  await expect(
+    page.getByRole("button", { name: "차트 이력 패널 열기" }),
+  ).toBeDisabled();
+  const completionButton = page.getByRole("button", {
+    name: "차트 작성 완료",
+  });
+  await expect(completionButton).toBeDisabled();
+  await expect(
+    completionButton.locator("[data-icon='inline-start']"),
+  ).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "차트 완료" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "진료 종료", exact: true }),
+  ).toHaveCount(0);
+
+  const loadingGeometry = await chartContent.evaluate((chart) => {
+    const viewport = chart.querySelector<HTMLElement>(
+      "[data-slot='chart-loading-viewport']",
+    );
+    const state = chart.querySelector<HTMLElement>(
+      "[data-testid='chart-content-loading-state']",
+    );
+    if (!viewport || !state) {
+      throw new Error("chart loading geometry is missing");
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const stateRect = state.getBoundingClientRect();
+    return {
+      stateCenterX: stateRect.left + stateRect.width / 2,
+      stateCenterY: stateRect.top + stateRect.height / 2,
+      viewportCenterX: viewportRect.left + viewportRect.width / 2,
+      viewportCenterY: viewportRect.top + viewportRect.height / 2,
+    };
+  });
+  expect(
+    Math.abs(loadingGeometry.stateCenterX - loadingGeometry.viewportCenterX),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(loadingGeometry.stateCenterY - loadingGeometry.viewportCenterY),
+  ).toBeLessThanOrEqual(1);
+
   await expect(
     page.getByRole("heading", { name: "Subject/Object" }),
   ).toBeVisible();
-  await expect
-    .poll(() => chartContent.locator("[data-slot='skeleton']").count())
-    .toBeGreaterThan(2);
-  await expect(
-    chartContent.locator("[data-slot='chart-panel-skeleton']"),
-  ).toHaveCount(2);
-  await expect(chartContent.locator(".animate-spin")).toHaveCount(0);
 
   const assessmentPanel = page.getByLabel("진단명 관리");
   const assessmentTableViewport = assessmentPanel.locator(
@@ -5189,7 +5250,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
     )
     .toBe("room-consult-2");
   await expect(page.getByRole("button", { name: "진료 시작" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "차트 완료" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 작성 완료" })).toBeVisible();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
   await expect(page.getByLabel("환자 컨텍스트 정보")).toContainText("초코");
   await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
@@ -6362,7 +6423,7 @@ test("chart safety context and confirmation dialogs identify the active patient"
   );
   await dismissChartOrderActionMenu(page);
 
-  await page.getByRole("button", { name: "진료 종료", exact: true }).click();
+  await page.getByRole("button", { name: "차트 작성 완료", exact: true }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
     name: "접수 진료 종료",
   });
@@ -7549,11 +7610,11 @@ test("chart completion persists through route-backed reload", async ({
     /오더 진행중|작성완료/,
   );
 
-  await page.getByRole("button", { name: "진료 완료" }).click();
+  await page.getByRole("button", { name: "차트 작성 완료" }).click();
   const chartCompleteDialog = page.getByRole("dialog", {
-    name: "진료 완료 확인",
+    name: "접수 진료 종료",
   });
-  await expect(chartCompleteDialog.getByText("진료 완료 확인")).toBeVisible();
+  await expect(chartCompleteDialog.getByText("접수 진료 종료")).toBeVisible();
   await expect(
     chartCompleteDialog
       .getByText("오더 진행중", { exact: true })
@@ -7561,7 +7622,7 @@ test("chart completion persists through route-backed reload", async ({
       .first(),
   ).toBeVisible();
   await chartCompleteDialog
-    .getByRole("button", { name: "진료 완료 저장" })
+    .getByRole("button", { name: "진료 종료" })
     .click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
