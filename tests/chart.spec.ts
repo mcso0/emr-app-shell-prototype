@@ -2853,6 +2853,10 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(historyLoadingState).toBeVisible();
   await expect(historyLoadingState).toHaveAttribute("data-size", "md");
   await expect(historyLoadingState).toContainText("차트를 불러오는 중입니다");
+  await page.waitForTimeout(250);
+  await expect(
+    page.getByTestId("chart-detail-pending-indicator"),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", {
       name: /차트 이력 패널 (열기|접기)/,
@@ -4077,6 +4081,10 @@ test("chart detail loading centers the md empty state and disables chart actions
   await expect(loadingState).toBeVisible();
   await expect(loadingState).toHaveAttribute("data-size", "md");
   await expect(loadingState).toContainText("차트를 불러오는 중입니다");
+  await page.waitForTimeout(250);
+  await expect(
+    page.getByTestId("chart-detail-pending-indicator"),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "차트 이력 패널 열기" }),
   ).toBeDisabled();
