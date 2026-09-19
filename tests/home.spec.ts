@@ -65,6 +65,10 @@ test("home toolbar uses full-size controls and shared filter builder across boar
   await expect(search).toHaveCSS("height", "32px");
   await expect(search).toHaveCSS("font-size", "14px");
   await expect(search.locator("svg")).toHaveCSS("width", "16px");
+  const filter = page.getByRole("button", { name: "업무 필터 설정" });
+  await expect(filter).toHaveCSS("height", "32px");
+  await expect(filter).toHaveCSS("font-size", "14px");
+  await expect(filter.locator("svg")).toHaveCSS("width", "16px");
   await expect(page.getByRole("button", { name: "이전 날짜", exact: true })).toHaveCSS("width", "28px");
   const dateTrigger = page.getByRole("button", { name: /날짜 선택$/ });
   await expect(dateTrigger).toHaveCSS("width", "160px");
@@ -96,6 +100,7 @@ test("home toolbar uses full-size controls and shared filter builder across boar
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("내가 요청한 약", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await expect(filter).toHaveCSS("font-size", "14px");
   await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
   await expect(page.getByText("내가 요청한 약", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "원내 현황", exact: true }).click();
