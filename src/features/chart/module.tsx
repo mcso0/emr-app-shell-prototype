@@ -2863,6 +2863,7 @@ function ChartInlineHistoryPanel({
                   priorDiagnosisRows.length ? "local-recovery" : "supporting"
                 }
                 surface="content"
+                size="md"
                 title={
                   priorDiagnosisRows.length
                     ? "검색 결과가 없습니다"
