@@ -38,6 +38,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 import styles from "./profile-side-panel.module.css";
@@ -786,14 +792,18 @@ function ReservationsTab({
           </button>
           <span className={styles.monthLabel}>{getMonthLabel(monthKey)}</span>
         </div>
-        <select
-          className={styles.select}
-          aria-label="예약 조회 기간"
-          defaultValue="1"
-          disabled={!items.length}
-        >
-          <option value="1">1개월</option>
-        </select>
+        <Select defaultValue="1" disabled={!items.length}>
+          <SelectTrigger
+            aria-label="예약 조회 기간"
+            size="sm"
+            className={styles.selectTrigger}
+          >
+            <span className="min-w-0 flex-1 truncate text-left">1개월</span>
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="1">1개월</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {visibleItems.length ? (
         <div className={styles.activityList}>
@@ -916,35 +926,54 @@ function HistoryTab({
         </div>
         <div className={styles.toolbarEnd}>
           {kind === "guardian" && patientOptions.length ? (
-            <select
-              className={styles.select}
-              aria-label="진료 이력 환자 필터"
+            <Select
               value={patientId}
-              onChange={(event) => {
-                const next = event.target.value;
+              onValueChange={(next) => {
+                if (!next) return;
                 setPatientId(next);
                 onFilterChange?.({ months: months as 6 | 12, patientId: next === "all" ? undefined : next });
               }}
             >
-              <option value="all">전체</option>
-              {patientOptions.map(([id, name]) => (
-                <option key={id} value={id}>{name ?? "이름 미상"}</option>
-              ))}
-            </select>
+              <SelectTrigger
+                aria-label="진료 이력 환자 필터"
+                size="sm"
+                className={styles.selectTrigger}
+              >
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {patientId === "all"
+                    ? "전체"
+                    : patientOptions.find(([id]) => id === patientId)?.[1] ?? "이름 미상"}
+                </span>
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="all">전체</SelectItem>
+                {patientOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>{name ?? "이름 미상"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
-          <select
-            className={styles.select}
-            aria-label="진료 이력 조회 기간"
-            value={months}
-            onChange={(event) => {
-              const next = Number(event.target.value) as 6 | 12;
-              setMonths(next);
-                onFilterChange?.({ months: next as 6 | 12, patientId: patientId === "all" ? undefined : patientId });
+          <Select
+            value={String(months)}
+            onValueChange={(next) => {
+              if (!next) return;
+              const nextMonths = Number(next) as 6 | 12;
+              setMonths(nextMonths);
+              onFilterChange?.({ months: nextMonths, patientId: patientId === "all" ? undefined : patientId });
             }}
           >
-            <option value="6">6개월</option>
-            <option value="12">12개월</option>
-          </select>
+            <SelectTrigger
+              aria-label="진료 이력 조회 기간"
+              size="sm"
+              className={styles.selectTrigger}
+            >
+              <span className="min-w-0 flex-1 truncate text-left">{months}개월</span>
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="6">6개월</SelectItem>
+              <SelectItem value="12">12개월</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       {visibleItems.length ? (
@@ -1061,35 +1090,54 @@ function BillingTab({
         </div>
         <div className={styles.toolbarEnd}>
           {kind === "guardian" && patientOptions.length ? (
-            <select
-              className={styles.select}
-              aria-label="수납 이력 환자 필터"
+            <Select
               value={patientId}
-              onChange={(event) => {
-                const next = event.target.value;
+              onValueChange={(next) => {
+                if (!next) return;
                 setPatientId(next);
                 onFilterChange?.({ months: months as 6 | 12, patientId: next === "all" ? undefined : next });
               }}
             >
-              <option value="all">전체</option>
-              {patientOptions.map(([id, name]) => (
-                <option key={id} value={id}>{name ?? "이름 미상"}</option>
-              ))}
-            </select>
+              <SelectTrigger
+                aria-label="수납 이력 환자 필터"
+                size="sm"
+                className={styles.selectTrigger}
+              >
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {patientId === "all"
+                    ? "전체"
+                    : patientOptions.find(([id]) => id === patientId)?.[1] ?? "이름 미상"}
+                </span>
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="all">전체</SelectItem>
+                {patientOptions.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>{name ?? "이름 미상"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
-          <select
-            className={styles.select}
-            aria-label="수납 이력 조회 기간"
-            value={months}
-            onChange={(event) => {
-              const next = Number(event.target.value) as 6 | 12;
-              setMonths(next);
-                onFilterChange?.({ months: next as 6 | 12, patientId: patientId === "all" ? undefined : patientId });
+          <Select
+            value={String(months)}
+            onValueChange={(next) => {
+              if (!next) return;
+              const nextMonths = Number(next) as 6 | 12;
+              setMonths(nextMonths);
+              onFilterChange?.({ months: nextMonths, patientId: patientId === "all" ? undefined : patientId });
             }}
           >
-            <option value="6">6개월</option>
-            <option value="12">12개월</option>
-          </select>
+            <SelectTrigger
+              aria-label="수납 이력 조회 기간"
+              size="sm"
+              className={styles.selectTrigger}
+            >
+              <span className="min-w-0 flex-1 truncate text-left">{months}개월</span>
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="6">6개월</SelectItem>
+              <SelectItem value="12">12개월</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       {visibleItems.length ? (
