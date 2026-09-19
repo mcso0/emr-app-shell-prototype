@@ -36,9 +36,11 @@
 .typeTrigger {
   width: 60px;
   height: 28px;
-  padding-inline: 7px;
+  padding-inline: 8px;
   font-size: 12px;
+  font-weight: 500;
   line-height: 16px;
+  letter-spacing: 0.3px;
 }
 
 .emptyState {

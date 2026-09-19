@@ -244,6 +244,7 @@ type ClassificationExplorerOptionProps = Omit<
   selected: boolean;
   selectedIndicator?: boolean;
   trailing?: ReactNode;
+  variant?: "facet" | "result";
 };
 
 export const ClassificationExplorerOption = forwardRef<
@@ -259,11 +260,17 @@ export const ClassificationExplorerOption = forwardRef<
     selected,
     selectedIndicator = false,
     trailing,
+    variant = "facet",
     ...props
   },
   ref,
 ) {
   const detailed = Boolean(description);
+  const hasTrailingSlot =
+    countLoading ||
+    typeof count === "number" ||
+    Boolean(trailing) ||
+    selectedIndicator;
   return (
     <button
       {...props}
@@ -276,28 +283,42 @@ export const ClassificationExplorerOption = forwardRef<
         detailed && styles.detailedOption,
         className,
       )}
+      data-list-variant={variant}
       data-slot="classification-explorer-option"
     >
       <span className={styles.optionCopy}>
         <span>{label}</span>
         {description ? <small>{description}</small> : null}
       </span>
-      {countLoading ? (
-        <span
-          aria-hidden="true"
-          className={styles.optionCountSkeleton}
-          data-testid="classification-explorer-option-count-skeleton"
-        />
-      ) : typeof count === "number" ? (
-        <em>{count}</em>
-      ) : null}
-      {trailing ? (
-        <span className={styles.optionTrailing}>{trailing}</span>
-      ) : null}
-      {selectedIndicator ? (
-        <i className={styles.optionIndicator}>
-          <CdsActionsCheckIcon aria-hidden="true" />
-        </i>
+      {hasTrailingSlot ? (
+        <span className={styles.optionTrailingSlot}>
+          {countLoading ? (
+            <span
+              aria-hidden="true"
+              className={styles.optionCountSkeleton}
+              data-slot="classification-explorer-option-count"
+              data-testid="classification-explorer-option-count-skeleton"
+            />
+          ) : typeof count === "number" ? (
+            <span
+              className={styles.optionCount}
+              data-slot="classification-explorer-option-count"
+            >
+              {count}
+            </span>
+          ) : null}
+          {trailing ? (
+            <span className={styles.optionTrailing}>{trailing}</span>
+          ) : null}
+          {selectedIndicator ? (
+            <i
+              className={styles.optionIndicator}
+              data-slot="classification-explorer-option-indicator"
+            >
+              <CdsActionsCheckIcon aria-hidden="true" />
+            </i>
+          ) : null}
+        </span>
       ) : null}
     </button>
   );
@@ -393,6 +414,7 @@ export function ClassificationExplorerSortableRow({
       ref={setNodeRef}
       className={cn(styles.selectedRow, isDragging && styles.dragging)}
       data-has-trailing={Boolean(trailing)}
+      data-list-variant="review"
       data-slot="classification-explorer-sortable-row"
       role="listitem"
       style={{ transform: CSS.Transform.toString(transform), transition }}

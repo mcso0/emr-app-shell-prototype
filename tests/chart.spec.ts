@@ -2027,7 +2027,7 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   page,
 }) => {
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
   const catalogDialog = page.getByRole("dialog", {
     name: "오더 추가",
   });
@@ -6934,7 +6934,11 @@ test("chart order add announces success only after the candidate is persisted", 
 
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Plan/Order", exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Order 추가", exact: true })
+    .click();
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   await searchChartOrderCatalog(dialog, "BASO");
   const candidate = page.getByTestId(
@@ -7016,7 +7020,7 @@ test("chart order added during an in-flight save can be removed without resurrec
 
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   await searchChartOrderCatalog(dialog, "BASO");
   await page
@@ -7948,7 +7952,7 @@ test("chart order catalog shows a visible loading state and count skeletons befo
   );
 
   await page.goto(kongScenarioUrl);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
 
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   await expect(
@@ -8234,7 +8238,11 @@ test("chart order add reorders selected orders with a grab handle before adding"
 
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Plan/Order", exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Order 추가", exact: true })
+    .click();
 
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   const firstCandidate = page.getByTestId(
@@ -8358,7 +8366,7 @@ test("chart order catalog lets veterinarians deselect unconfirmed draft orders a
 
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
 
   let dialog = page.getByRole("dialog", { name: "오더 추가" });
   let candidate = page.getByTestId(
@@ -8493,7 +8501,7 @@ test("chart dispensing catalog prefills master prescription values and preserves
 
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
   const dialog = page.getByRole("dialog", {
     name: "오더 추가",
   });
@@ -8716,7 +8724,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
 
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
 
   const dialog = page.getByRole("dialog", {
     name: "오더 추가",
@@ -8924,7 +8932,7 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
 
-  await page.getByRole("button", { name: "+ Order", exact: true }).click();
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
   const catalogDialog = page.getByRole("dialog", {
     name: "오더 추가",
   });
