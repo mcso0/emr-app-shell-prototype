@@ -36,6 +36,12 @@ import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/p
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -169,10 +175,11 @@ type ProfileSidePanelProps = {
   onBeginEdit?: () => void;
   onCancelEdit?: () => void;
   onClose: () => void;
-  onHeaderAction: (action: "message" | "reception") => void;
+  onHeaderAction: (action: "message" | "reservation" | "walk-in") => void;
   onOpenRelated?: (item: ProfileRelatedItem) => void;
   onRetryOverview?: () => void;
   onSaveEdit?: () => void;
+  onTabChange?: (tab: ProfileSidePanelTab) => void;
   sectionStates?: Partial<Record<ProfileSidePanelTab, ProfileTabState>>;
   tabAccess?: Partial<Record<ProfileSidePanelTab, ProfileTabAccess>>;
   saving?: boolean;
@@ -362,14 +369,26 @@ function ProfileHeader({
             </div>
           </div>
           <div className={styles.headerActions}>
-            <button
-              type="button"
-              className={styles.smallAction}
-              onClick={() => onHeaderAction("reception")}
-            >
-              <CdsActionsPlusIcon aria-hidden="true" />
-              접수/예약
-            </button>
+            {model.kind === "patient" ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <button type="button" className={styles.smallAction} />
+                  }
+                >
+                  <CdsActionsPlusIcon aria-hidden="true" />
+                  접수/예약
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-32">
+                  <DropdownMenuItem onClick={() => onHeaderAction("walk-in")}>
+                    접수하기
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onHeaderAction("reservation")}>
+                    예약하기
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -1123,6 +1142,7 @@ export function ProfileSidePanel({
   onOpenRelated,
   onRetryOverview,
   onSaveEdit,
+  onTabChange,
   saving = false,
   sectionStates,
   tabAccess,
@@ -1132,6 +1152,7 @@ export function ProfileSidePanel({
   const changeTab = (tab: ProfileSidePanelTab) => {
     if (tabAccess?.[tab]?.allowed === false) return;
     setActiveTab(tab);
+    onTabChange?.(tab);
     if (tab === "history") onLoadSection?.("history", { months: 6 });
     if (tab === "billing") onLoadSection?.("billing", { months: 6 });
     if (tab === "reservations") onLoadSection?.("reservations", { month: model.reservationMonth ?? getInitialMonth(model.reservations) });

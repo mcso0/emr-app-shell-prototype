@@ -7658,13 +7658,39 @@ function ReceptionBreakTimeConfirmDialog({
   );
 }
 
+function ReceptionDiscardChangesDialog({
+  onDiscard,
+  onOpenChange,
+  open,
+}: {
+  onDiscard: () => void;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <EmrConfirmDialogContent
+        cancelLabel="계속 작성"
+        closeAriaLabel="작성 내용 버리기 확인 닫기"
+        confirmLabel="나가기"
+        description="입력한 내용은 저장되지 않습니다. 환자 프로필로 돌아갈까요?"
+        title="작성 중인 내용을 버릴까요?"
+        onCancel={() => onOpenChange(false)}
+        onConfirm={onDiscard}
+      />
+    </Dialog>
+  );
+}
+
 function ReceptionWalkInFormDrawer({
   currentOperatingMinutes,
   initialDurationMinutes,
   initialAssignedStaffUserId,
   initialPatientId,
   initialVeterinarianId,
+  onClose,
   onCreate,
+  onDirtyChange,
   operatingDate,
   patientSummaries,
   presentation = "drawer",
@@ -7677,11 +7703,13 @@ function ReceptionWalkInFormDrawer({
   initialAssignedStaffUserId?: string;
   initialPatientId?: string;
   initialVeterinarianId?: string;
+  onClose?: () => void;
   onCreate: (
     input: WalkInReceptionInput,
     walkIn: ReceptionWalkInEncounterRecord,
     selectedSummary: ReceptionPatientSummary,
   ) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   presentation?: ReceptionDrawerPresentation;
@@ -7733,6 +7761,8 @@ function ReceptionWalkInFormDrawer({
   const lastSuccessfulLookupKeyRef = useRef("");
   const submitLockRef = useRef(false);
   const [breakConfirmOpen, setBreakConfirmOpen] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [visitPurpose, setVisitPurpose] = useState("");
   const [vitalDraft, setVitalDraft] = useState<ReceptionCreateVitalDraft>(() =>
@@ -7826,6 +7856,10 @@ function ReceptionWalkInFormDrawer({
   const createScheduleBlocked =
     operatingScheduleStatus !== "ready" || Boolean(createBlockMessage);
   const canCreate = !createInputBlocked && !createScheduleBlocked;
+
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
 
   useEffect(() => {
     if (
@@ -7947,6 +7981,7 @@ function ReceptionWalkInFormDrawer({
   }, [patient?.id, patient?.weightKg, vitalSettings]);
 
   const selectPatientSummary = (summary: ReceptionPatientSummary) => {
+    setDirty(true);
     setPatientId(summary.patient.id);
     setSelectedLookupSummary(summary);
     setLookupQuery(getReceptionPatientOptionLabel(summary));
@@ -7954,7 +7989,24 @@ function ReceptionWalkInFormDrawer({
     setPatientLookupOpen(false);
   };
   const close = () => {
-    if (!submitting && !submitLockRef.current) setActiveDrawer(null);
+    if (submitting || submitLockRef.current) return;
+    if (dirty && onClose) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    if (onClose) {
+      onClose();
+      return;
+    }
+    setActiveDrawer(null);
+  };
+  const discardAndClose = () => {
+    setDiscardConfirmOpen(false);
+    if (onClose) {
+      onClose();
+      return;
+    }
+    setActiveDrawer(null);
   };
   const submitCreate = async () => {
     if (
@@ -8118,6 +8170,7 @@ function ReceptionWalkInFormDrawer({
                     value={lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
                     onValueChange={(value) => {
+                      setDirty(true);
                       setLookupQuery(value);
                       if (
                         selectedLookupSummary &&
@@ -8135,6 +8188,7 @@ function ReceptionWalkInFormDrawer({
                   <ReceptionPatientLookupDecoration
                     hasQuery={Boolean(lookupQuery)}
                     onClear={() => {
+                      setDirty(true);
                       setLookupQuery("");
                       setPatientId("");
                       setSelectedLookupSummary(null);
@@ -8201,6 +8255,7 @@ function ReceptionWalkInFormDrawer({
                 variant="create"
               >
                 <ReceptionSidePanelInput
+                  aria-label="보호자명"
                   readOnly
                   placeholder="환자 선택 시 표기됩니다"
                   variant="create"
@@ -8223,7 +8278,10 @@ function ReceptionWalkInFormDrawer({
                     fieldErrors={vitalFieldErrors}
                     fieldWarnings={vitalBuild.fieldWarnings}
                     presentation={presentation}
-                    setDraft={setVitalDraft}
+                    setDraft={(updater) => {
+                      setDirty(true);
+                      setVitalDraft(updater);
+                    }}
                     vitalSettings={vitalSettings}
                   />
                 </ReceptionSidePanelSection>
@@ -8240,7 +8298,11 @@ function ReceptionWalkInFormDrawer({
               >
                 <Select
                   value={department}
-                  onValueChange={(value) => value && setDepartment(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setDepartment(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="진료과"
@@ -8270,7 +8332,11 @@ function ReceptionWalkInFormDrawer({
               >
                 <Select
                   value={veterinarianId}
-                  onValueChange={(value) => value && setVeterinarianId(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setVeterinarianId(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="담당의"
@@ -8338,7 +8404,10 @@ function ReceptionWalkInFormDrawer({
                   selectedIds={assignedStaffUserIds}
                   selectionMode="single"
                   staffMembers={staffMembers}
-                  onChange={setAssignedStaffUserIds}
+                  onChange={(ids) => {
+                    setDirty(true);
+                    setAssignedStaffUserIds(ids);
+                  }}
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
@@ -8349,7 +8418,11 @@ function ReceptionWalkInFormDrawer({
               >
                 <Select
                   value={duration}
-                  onValueChange={(value) => value && setDuration(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setDuration(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="예상소요시간"
@@ -8385,7 +8458,10 @@ function ReceptionWalkInFormDrawer({
                   className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="방문목적을 입력해주세요"
                   value={visitPurpose}
-                  onChange={(event) => setVisitPurpose(event.target.value)}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setVisitPurpose(event.target.value);
+                  }}
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
@@ -8399,7 +8475,10 @@ function ReceptionWalkInFormDrawer({
                   className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="접수 메모를 입력해주세요"
                   value={memo}
-                  onChange={(event) => setMemo(event.target.value)}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setMemo(event.target.value);
+                  }}
                 />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
@@ -8439,6 +8518,11 @@ function ReceptionWalkInFormDrawer({
             setBreakConfirmOpen(false);
             void submitCreate();
           }}
+        />
+        <ReceptionDiscardChangesDialog
+          open={discardConfirmOpen}
+          onOpenChange={setDiscardConfirmOpen}
+          onDiscard={discardAndClose}
         />
       </>
     );
@@ -8481,6 +8565,7 @@ function ReceptionWalkInFormDrawer({
                     value={lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
                     onValueChange={(value) => {
+                      setDirty(true);
                       setLookupQuery(value);
                       if (
                         selectedLookupSummary &&
@@ -8498,6 +8583,7 @@ function ReceptionWalkInFormDrawer({
                   <ReceptionPatientLookupDecoration
                     hasQuery={Boolean(lookupQuery)}
                     onClear={() => {
+                      setDirty(true);
                       setLookupQuery("");
                       setPatientId("");
                       setSelectedLookupSummary(null);
@@ -8567,7 +8653,10 @@ function ReceptionWalkInFormDrawer({
                 className="min-h-[104px] resize-none bg-card"
                 placeholder="방문목적을 입력해주세요"
                 value={visitPurpose}
-                onChange={(event) => setVisitPurpose(event.target.value)}
+                onChange={(event) => {
+                  setDirty(true);
+                  setVisitPurpose(event.target.value);
+                }}
               />
             </RegistrationFormField>
           </RegistrationFormSection>
@@ -8579,7 +8668,10 @@ function ReceptionWalkInFormDrawer({
                 fieldErrors={vitalFieldErrors}
                 fieldWarnings={vitalBuild.fieldWarnings}
                 presentation={presentation}
-                setDraft={setVitalDraft}
+                setDraft={(updater) => {
+                  setDirty(true);
+                  setVitalDraft(updater);
+                }}
                 vitalSettings={vitalSettings}
               />
             </RegistrationFormSection>
@@ -8590,7 +8682,11 @@ function ReceptionWalkInFormDrawer({
               <RegistrationFormField label="진료과" required>
                 <Select
                   value={department}
-                  onValueChange={(value) => value && setDepartment(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setDepartment(value);
+                  }}
                 >
                   <SelectTrigger aria-label="진료과" aria-required="true" size="lg" className="w-full bg-card">
                     <SelectValue />
@@ -8609,7 +8705,11 @@ function ReceptionWalkInFormDrawer({
               <RegistrationFormField label="담당의">
                 <Select
                   value={effectiveVeterinarianId}
-                  onValueChange={(value) => value && setVeterinarianId(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setVeterinarianId(value);
+                  }}
                 >
                   <SelectTrigger aria-label="담당의" size="lg" className="w-full bg-card">
                     <ReceptionVeterinarianIdentity
@@ -8654,14 +8754,21 @@ function ReceptionWalkInFormDrawer({
                 selectedIds={assignedStaffUserIds}
                 selectionMode="single"
                 staffMembers={staffMembers}
-                onChange={setAssignedStaffUserIds}
+                onChange={(ids) => {
+                  setDirty(true);
+                  setAssignedStaffUserIds(ids);
+                }}
               />
             </RegistrationFormField>
 
             <RegistrationFormField label="예상시간" required>
               <Select
                 value={duration}
-                onValueChange={(value) => value && setDuration(value)}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  setDirty(true);
+                  setDuration(value);
+                }}
               >
                 <SelectTrigger
                   aria-label="예상시간"
@@ -8689,7 +8796,10 @@ function ReceptionWalkInFormDrawer({
                 className="min-h-24 resize-none bg-card"
                 placeholder="접수 메모를 입력해주세요"
                 value={memo}
-                onChange={(event) => setMemo(event.target.value)}
+                onChange={(event) => {
+                  setDirty(true);
+                  setMemo(event.target.value);
+                }}
               />
             </RegistrationFormField>
           </RegistrationFormSection>
@@ -8703,7 +8813,10 @@ function ReceptionWalkInFormDrawer({
           aria-pressed={sendKakaoMessage}
           aria-label="카카오톡 발송"
           className="w-fit gap-2 text-[var(--emr-text-secondary)] aria-pressed:bg-accent aria-pressed:text-foreground"
-          onClick={() => setSendKakaoMessage((current) => !current)}
+          onClick={() => {
+            setDirty(true);
+            setSendKakaoMessage((current) => !current);
+          }}
         >
           <span
             aria-hidden="true"
@@ -8742,6 +8855,11 @@ function ReceptionWalkInFormDrawer({
         void submitCreate();
       }}
     />
+    <ReceptionDiscardChangesDialog
+      open={discardConfirmOpen}
+      onOpenChange={setDiscardConfirmOpen}
+      onDiscard={discardAndClose}
+    />
     </>
   );
 }
@@ -8752,9 +8870,12 @@ function ReceptionReservationFormDrawer({
   initialDate,
   initialAssignedStaffUserId,
   initialDurationMinutes,
+  initialPatientId,
   initialTimeMinutes,
   initialVeterinarianId,
+  onClose,
   onCreate,
+  onDirtyChange,
   operatingDate,
   patientSummaries,
   presentation = "drawer",
@@ -8768,9 +8889,12 @@ function ReceptionReservationFormDrawer({
   initialDate?: string;
   initialAssignedStaffUserId?: string;
   initialDurationMinutes?: number;
+  initialPatientId?: string;
   initialTimeMinutes?: number;
   initialVeterinarianId?: string;
+  onClose?: () => void;
   onCreate: (appointment: Appointment) => void;
+  onDirtyChange?: (dirty: boolean) => void;
   operatingDate: string;
   patientSummaries: ReceptionPatientSummary[];
   presentation?: ReceptionDrawerPresentation;
@@ -8796,6 +8920,8 @@ function ReceptionReservationFormDrawer({
   const [memo, setMemo] = useState("");
   const submitLockRef = useRef(false);
   const [breakConfirmOpen, setBreakConfirmOpen] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [timeMinutes, setTimeMinutes] = useState(
     initialTimeMinutes ?? 0,
@@ -8815,6 +8941,10 @@ function ReceptionReservationFormDrawer({
     patientSummaries,
     workspaceId,
   });
+  const {
+    patientId: selectedPatientId,
+    selectPatientSummary: selectLookupPatientSummary,
+  } = patientLookup;
   const {
     schedule: operatingSchedule,
     status: operatingScheduleStatus,
@@ -8878,9 +9008,30 @@ function ReceptionReservationFormDrawer({
     date >= todayDate;
   const shouldShowPatientLookup =
     patientLookupOpen && patientLookup.lookupActive;
+  useEffect(() => {
+    onDirtyChange?.(dirty);
+  }, [dirty, onDirtyChange]);
+
   const close = () => {
     if (submitting || submitLockRef.current) return;
+    if (dirty && onClose) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
     setCalendarDraftSelection(undefined);
+    if (onClose) {
+      onClose();
+      return;
+    }
+    setActiveDrawer(null);
+  };
+  const discardAndClose = () => {
+    setDiscardConfirmOpen(false);
+    setCalendarDraftSelection(undefined);
+    if (onClose) {
+      onClose();
+      return;
+    }
     setActiveDrawer(null);
   };
 
@@ -8895,6 +9046,21 @@ function ReceptionReservationFormDrawer({
     assignedStaffDefaultAppliedRef.current = true;
     setAssignedStaffUserIds([initialAssignedStaffUserId]);
   }, [initialAssignedStaffUserId, staffMembers]);
+
+  useEffect(() => {
+    if (!initialPatientId || selectedPatientId === initialPatientId) return;
+    const initialSummary = patientSummaries.find(
+      (summary) => summary.patient.id === initialPatientId,
+    );
+    if (!initialSummary) return;
+
+    selectLookupPatientSummary(initialSummary);
+  }, [
+    initialPatientId,
+    patientSummaries,
+    selectLookupPatientSummary,
+    selectedPatientId,
+  ]);
 
   useEffect(() => {
     if (
@@ -9041,6 +9207,7 @@ function ReceptionReservationFormDrawer({
                     value={patientLookup.lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
                     onValueChange={(value) => {
+                      setDirty(true);
                       patientLookup.updateLookupQuery(value);
                       setPatientLookupOpen(true);
                     }}
@@ -9048,6 +9215,7 @@ function ReceptionReservationFormDrawer({
                   <ReceptionPatientLookupDecoration
                     hasQuery={Boolean(patientLookup.lookupQuery)}
                     onClear={() => {
+                      setDirty(true);
                       patientLookup.clearPatientSelection();
                       setPatientLookupOpen(true);
                     }}
@@ -9081,6 +9249,7 @@ function ReceptionReservationFormDrawer({
                               className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
+                                setDirty(true);
                                 patientLookup.selectPatientSummary(summary);
                                 setPatientLookupOpen(false);
                               }}
@@ -9107,6 +9276,7 @@ function ReceptionReservationFormDrawer({
                 variant="create"
               >
                 <ReceptionSidePanelInput
+                  aria-label="보호자명"
                   readOnly
                   placeholder="환자 선택 시 표기됩니다"
                   variant="create"
@@ -9132,7 +9302,11 @@ function ReceptionReservationFormDrawer({
               >
                 <Select
                   value={veterinarianId}
-                  onValueChange={(value) => value && setVeterinarianId(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setVeterinarianId(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="담당의"
@@ -9173,7 +9347,10 @@ function ReceptionReservationFormDrawer({
                   compact
                   minDate={todayDate}
                   value={date}
-                  onChange={setDate}
+                  onChange={(value) => {
+                    setDirty(true);
+                    setDate(value);
+                  }}
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
@@ -9185,7 +9362,10 @@ function ReceptionReservationFormDrawer({
                 <div className="min-w-0">
                   <Select
                     value={String(timeMinutes)}
-                    onValueChange={(value) => setTimeMinutes(Number(value))}
+                    onValueChange={(value) => {
+                      setDirty(true);
+                      setTimeMinutes(Number(value));
+                    }}
                     disabled={closedDay}
                   >
                     <SelectTrigger
@@ -9240,7 +9420,10 @@ function ReceptionReservationFormDrawer({
                   label="예약 담당자"
                   selectedIds={assignedStaffUserIds}
                   staffMembers={staffMembers}
-                  onChange={setAssignedStaffUserIds}
+                  onChange={(ids) => {
+                    setDirty(true);
+                    setAssignedStaffUserIds(ids);
+                  }}
                 />
               </ReceptionSidePanelField>
               <ReceptionSidePanelField
@@ -9251,7 +9434,11 @@ function ReceptionReservationFormDrawer({
               >
                 <Select
                   value={duration}
-                  onValueChange={(value) => value && setDuration(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setDuration(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="예상소요시간"
@@ -9291,7 +9478,10 @@ function ReceptionReservationFormDrawer({
                   className="min-h-[var(--emr-reception-create-textarea-min-height)] resize-none bg-[var(--emr-reception-create-field-bg)] font-medium"
                   placeholder="예약 메모를 입력해주세요"
                   value={memo}
-                  onChange={(event) => setMemo(event.target.value)}
+                  onChange={(event) => {
+                    setDirty(true);
+                    setMemo(event.target.value);
+                  }}
                 />
               </ReceptionSidePanelField>
             </ReceptionSidePanelSection>
@@ -9333,6 +9523,11 @@ function ReceptionReservationFormDrawer({
             void submitCreate();
           }}
         />
+        <ReceptionDiscardChangesDialog
+          open={discardConfirmOpen}
+          onOpenChange={setDiscardConfirmOpen}
+          onDiscard={discardAndClose}
+        />
       </>
     );
   }
@@ -9365,6 +9560,7 @@ function ReceptionReservationFormDrawer({
                     value={patientLookup.lookupQuery}
                     onFocus={() => setPatientLookupOpen(true)}
                     onValueChange={(value) => {
+                      setDirty(true);
                       patientLookup.updateLookupQuery(value);
                       setPatientLookupOpen(true);
                     }}
@@ -9372,6 +9568,7 @@ function ReceptionReservationFormDrawer({
                   <ReceptionPatientLookupDecoration
                     hasQuery={Boolean(patientLookup.lookupQuery)}
                     onClear={() => {
+                      setDirty(true);
                       patientLookup.clearPatientSelection();
                       setPatientLookupOpen(true);
                     }}
@@ -9405,6 +9602,7 @@ function ReceptionReservationFormDrawer({
                               className="grid gap-0.5 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-[var(--emr-state-hover)] aria-selected:bg-[var(--emr-state-selected)]"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => {
+                                setDirty(true);
                                 patientLookup.selectPatientSummary(summary);
                                 setPatientLookupOpen(false);
                               }}
@@ -9433,13 +9631,20 @@ function ReceptionReservationFormDrawer({
                 <ReceptionReservationDatePicker
                   minDate={todayDate}
                   value={date}
-                  onChange={setDate}
+                  onChange={(value) => {
+                    setDirty(true);
+                    setDate(value);
+                  }}
                 />
               </RegistrationFormField>
               <RegistrationFormField label="담당의">
                 <Select
                   value={veterinarianId}
-                  onValueChange={(value) => value && setVeterinarianId(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setVeterinarianId(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="담당의"
@@ -9470,7 +9675,10 @@ function ReceptionReservationFormDrawer({
               >
                 <Select
                   value={String(timeMinutes)}
-                  onValueChange={(value) => setTimeMinutes(Number(value))}
+                  onValueChange={(value) => {
+                    setDirty(true);
+                    setTimeMinutes(Number(value));
+                  }}
                   disabled={closedDay}
                 >
                   <SelectTrigger
@@ -9507,7 +9715,11 @@ function ReceptionReservationFormDrawer({
               <RegistrationFormField label="예상시간" required>
                 <Select
                   value={duration}
-                  onValueChange={(value) => value && setDuration(value)}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setDirty(true);
+                    setDuration(value);
+                  }}
                 >
                   <SelectTrigger
                     aria-label="예상시간"
@@ -9536,7 +9748,10 @@ function ReceptionReservationFormDrawer({
                 label="예약 담당자"
                 selectedIds={assignedStaffUserIds}
                 staffMembers={staffMembers}
-                onChange={setAssignedStaffUserIds}
+                onChange={(ids) => {
+                  setDirty(true);
+                  setAssignedStaffUserIds(ids);
+                }}
               />
             </RegistrationFormField>
 
@@ -9546,7 +9761,10 @@ function ReceptionReservationFormDrawer({
                 className="min-h-24 resize-none bg-card"
                 placeholder="예약 메모를 입력해주세요"
                 value={memo}
-                onChange={(event) => setMemo(event.target.value)}
+                onChange={(event) => {
+                  setDirty(true);
+                  setMemo(event.target.value);
+                }}
               />
             </RegistrationFormField>
           </RegistrationFormSection>
@@ -9570,6 +9788,11 @@ function ReceptionReservationFormDrawer({
         setBreakConfirmOpen(false);
         void submitCreate();
       }}
+    />
+    <ReceptionDiscardChangesDialog
+      open={discardConfirmOpen}
+      onOpenChange={setDiscardConfirmOpen}
+      onDiscard={discardAndClose}
     />
     </>
   );
@@ -9889,6 +10112,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
@@ -10012,6 +10236,29 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       if (returnFocusId) document.getElementById(returnFocusId)?.focus();
     }, 0);
   }, [activeDrawer?.rightPanelPresentation?.returnFocusId, setActiveDrawer, setRightPanelOpen]);
+  const returnFromReceptionPanel = useCallback(() => {
+    setDiscardConfirmOpen(false);
+    setCalendarDraftSelection(undefined);
+    const returnDrawer = getReceptionReturnDrawer(activeDrawer);
+    if (returnDrawer) {
+      setActiveDrawer(returnDrawer);
+      setRightPanelOpen(true);
+      return;
+    }
+    setRightPanelOpen(false);
+  }, [
+    activeDrawer,
+    setActiveDrawer,
+    setCalendarDraftSelection,
+    setRightPanelOpen,
+  ]);
+  const closeReceptionPanel = useCallback(() => {
+    if (activeDrawer?.hasUnsavedChanges) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    returnFromReceptionPanel();
+  }, [activeDrawer?.hasUnsavedChanges, returnFromReceptionPanel]);
 
   if (activeDrawer?.type === "staff-operational-profile") {
     return (
@@ -10033,7 +10280,8 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   }
 
   return (
-    <EmrRightPanel
+    <>
+      <EmrRightPanel
       aria-label={`${moduleLabel} 우측 사이드 패널`}
       className="bg-[var(--emr-surface-rightpanel)]"
       data-testid="reception-right-panel"
@@ -10056,10 +10304,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
         </div>
         <EmrRightPanelHeaderIconButton
           aria-label="우측 사이드 패널 닫기"
-          onClick={() => {
-            setCalendarDraftSelection(undefined);
-            setRightPanelOpen(false);
-          }}
+          onClick={closeReceptionPanel}
         >
           {activeDrawer?.type === "reception-encounter" ? (
             <CdsActionsXIcon />
@@ -10078,7 +10323,13 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       ) : (
         <ReceptionRightPanelEmptyState />
       )}
-    </EmrRightPanel>
+      </EmrRightPanel>
+      <ReceptionDiscardChangesDialog
+        open={discardConfirmOpen}
+        onOpenChange={setDiscardConfirmOpen}
+        onDiscard={returnFromReceptionPanel}
+      />
+    </>
   );
 }
 
@@ -11568,6 +11819,16 @@ function getReceptionEncounterVitalIcon(label: string) {
   return <CdsMedicalActivityIcon className="size-3.5" />;
 }
 
+function getReceptionReturnDrawer(drawer: DrawerState): DrawerState {
+  if (!drawer?.returnTo) return null;
+
+  return {
+    type: drawer.returnTo.type,
+    id: drawer.returnTo.id,
+    profileTab: drawer.returnTo.profileTab,
+  };
+}
+
 export function ReceptionDrawer({
   presentation = "drawer",
   onEditingChange,
@@ -11591,6 +11852,9 @@ export function ReceptionDrawer({
   );
   const applyAppointmentCreate = useReceptionStore(
     (state) => state.applyAppointmentCreate,
+  );
+  const applyPersistedReceptionCalendar = useReceptionStore(
+    (state) => state.applyPersistedReceptionCalendar,
   );
   const applyWalkInCheckIn = useReceptionStore(
     (state) => state.applyWalkInCheckIn,
@@ -11682,6 +11946,12 @@ export function ReceptionDrawer({
     (state) =>
       state.resourcesByKey[staffResourceKey]?.staff ?? emptyReceptionStaffMembers,
   );
+  const setStaffResourceLoading = useReceptionStaffResourceStore(
+    (state) => state.setResourceLoading,
+  );
+  const setStaffResourceResult = useReceptionStaffResourceStore(
+    (state) => state.setResourceResult,
+  );
   const veterinarians = liveStaffSourceEnabled
     ? workspaceVeterinarians
     : allVeterinarians;
@@ -11740,6 +12010,135 @@ export function ReceptionDrawer({
       }),
     [draftCheckIns, operatingDate, persistedCalendarAppointments, workspaceId],
   );
+  useEffect(() => {
+    if (!liveStaffSourceEnabled) return;
+
+    const currentResource =
+      useReceptionStaffResourceStore.getState().resourcesByKey[staffResourceKey];
+    if (
+      currentResource?.status === "ready" &&
+      currentResource.updatedAt &&
+      Date.now() - currentResource.updatedAt < 30_000
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    setStaffResourceLoading(staffResourceKey);
+    void loadWorkspaceStaff({
+      actorId: authSession?.id,
+      operatingDate,
+      workspaceId,
+    }).then((result) => {
+      if (cancelled) return;
+      setStaffResourceResult(staffResourceKey, {
+        actorUserId: result.ok ? result.actorUserId : undefined,
+        status: result.ok ? "ready" : "error",
+        staff: mapWorkspaceStaffToReceptionStaff(result),
+        veterinarians: mapWorkspaceStaffToVeterinarians(result),
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authSession?.id,
+    liveStaffSourceEnabled,
+    operatingDate,
+    setStaffResourceLoading,
+    setStaffResourceResult,
+    staffResourceKey,
+    workspaceId,
+  ]);
+  useEffect(() => {
+    if (activeDrawer?.type !== "reception-reservation-form") return;
+
+    let cancelled = false;
+    void loadReceptionCalendar({
+      actorId: authSession?.id,
+      date: operatingDate,
+      workspaceId,
+    }).then((result) => {
+      if (!cancelled && result.ok) {
+        applyPersistedReceptionCalendar(result.records);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeDrawer?.type,
+    applyPersistedReceptionCalendar,
+    authSession?.id,
+    operatingDate,
+    workspaceId,
+  ]);
+  const closeCreateFlow = useCallback(() => {
+    setCalendarDraftSelection(undefined);
+    const returnDrawer = getReceptionReturnDrawer(activeDrawer);
+    if (returnDrawer) {
+      setActiveDrawer(returnDrawer);
+      setRightPanelOpen(true);
+      return;
+    }
+    setActiveDrawer(null);
+  }, [activeDrawer, setActiveDrawer, setCalendarDraftSelection, setRightPanelOpen]);
+  const closeDetailFlow = useCallback(() => {
+    const returnDrawer = getReceptionReturnDrawer(activeDrawer);
+    if (returnDrawer) {
+      setActiveDrawer(returnDrawer);
+      setRightPanelOpen(true);
+      return;
+    }
+    if (presentation === "side-panel") {
+      setCalendarDraftSelection(undefined);
+      setRightPanelOpen(false);
+      return;
+    }
+    setActiveDrawer(null);
+  }, [
+    activeDrawer,
+    presentation,
+    setActiveDrawer,
+    setCalendarDraftSelection,
+    setRightPanelOpen,
+  ]);
+  const setCreateFlowDirty = useCallback(
+    (dirty: boolean) => {
+      const current = useLayoutStore.getState().activeDrawer;
+      if (
+        !current ||
+        current.id !== activeDrawer?.id ||
+        current.type !== activeDrawer?.type ||
+        Boolean(current.hasUnsavedChanges) === dirty
+      ) {
+        return;
+      }
+      setActiveDrawer({
+        ...current,
+        hasUnsavedChanges: dirty || undefined,
+      });
+    },
+    [activeDrawer?.id, activeDrawer?.type, setActiveDrawer],
+  );
+  const openReceptionFlowDrawer = useCallback(
+    (type: string, id: string) => {
+      setActiveDrawer({
+        type,
+        id,
+        ...(activeDrawer?.returnTo
+          ? {
+              initialPatientId: activeDrawer.initialPatientId,
+              returnTo: activeDrawer.returnTo,
+              rightPanelPresentation: activeDrawer.rightPanelPresentation,
+            }
+          : {}),
+      });
+    },
+    [activeDrawer, setActiveDrawer],
+  );
   if (activeDrawer?.type === "reception-patient") {
     return <PatientProfileDrawer patientId={activeDrawer.id} />;
   }
@@ -11749,9 +12148,11 @@ export function ReceptionDrawer({
   }
 
   if (activeDrawer?.type === "reception-form") {
-    const initialPatientId = activeDrawer.id.startsWith("walk-in:")
-      ? activeDrawer.id.slice("walk-in:".length)
-      : undefined;
+    const initialPatientId =
+      activeDrawer.initialPatientId ??
+      (activeDrawer.id.startsWith("walk-in:")
+        ? activeDrawer.id.slice("walk-in:".length)
+        : undefined);
     const calendarDraftSelectionForForm =
       calendarDraftSelection?.id === activeDrawer.id
         ? calendarDraftSelection
@@ -11777,6 +12178,8 @@ export function ReceptionDrawer({
         initialVeterinarianId={
           calendarDraftSelectionForForm?.primaryVeterinarianId
         }
+        onClose={activeDrawer.returnTo ? closeCreateFlow : undefined}
+        onDirtyChange={activeDrawer.returnTo ? setCreateFlowDirty : undefined}
         operatingDate={calendarDraftDate ?? operatingDate}
         patientSummaries={patientSummaries}
         presentation={presentation}
@@ -11811,10 +12214,7 @@ export function ReceptionDrawer({
               veterinarians,
             ),
           });
-          setActiveDrawer({
-            type: "reception-encounter",
-            id: walkIn.encounter.id,
-          });
+          openReceptionFlowDrawer("reception-encounter", walkIn.encounter.id);
           toast.success("접수가 완료되었습니다");
         }}
       />
@@ -11841,8 +12241,11 @@ export function ReceptionDrawer({
         initialDate={reservationDraftDate}
         initialAssignedStaffUserId={initialAssignedStaffUserId}
         initialDurationMinutes={reservationDraftSelection?.durationMinutes}
+        initialPatientId={activeDrawer.initialPatientId}
         initialTimeMinutes={reservationDraftTimeMinutes}
         initialVeterinarianId={reservationDraftSelection?.primaryVeterinarianId}
+        onClose={activeDrawer.returnTo ? closeCreateFlow : undefined}
+        onDirtyChange={activeDrawer.returnTo ? setCreateFlowDirty : undefined}
         operatingDate={operatingDate}
         patientSummaries={patientSummaries}
         presentation={presentation}
@@ -11859,10 +12262,7 @@ export function ReceptionDrawer({
           }
           applyAppointmentCreate(appointment);
           requestReceptionReadRetry();
-          setActiveDrawer({
-            type: "reception-appointment",
-            id: appointment.id,
-          });
+          openReceptionFlowDrawer("reception-appointment", appointment.id);
         }}
       />
     );
@@ -12030,10 +12430,7 @@ export function ReceptionDrawer({
         veterinarians,
       ),
     });
-    setActiveDrawer({
-      type: "reception-encounter",
-      id: checkIn.encounter.id,
-    });
+    openReceptionFlowDrawer("reception-encounter", checkIn.encounter.id);
   };
   const handleConfirmAppointmentCheckIn = async () => {
     if (
@@ -12083,7 +12480,7 @@ export function ReceptionDrawer({
     });
     requestReceptionReadRetry();
     setCancelConfirmOpen(false);
-    setActiveDrawer(null);
+    closeDetailFlow();
     toast.success("접수가 취소되었습니다");
   };
   const handleSaveSelectedEncounter = async () => {
@@ -12230,12 +12627,7 @@ export function ReceptionDrawer({
               clearEditFeedback();
               return;
             }
-            if (presentation === "side-panel") {
-              setCalendarDraftSelection(undefined);
-              setRightPanelOpen(false);
-              return;
-            }
-            setActiveDrawer(null);
+            closeDetailFlow();
           }}
           onEditOpen={() => {
             clearEditFeedback();
@@ -12642,7 +13034,7 @@ export function ReceptionDrawer({
                 setEditDraft(getSelectedEncounterEditDraft());
                 return;
               }
-              setActiveDrawer(null);
+              closeDetailFlow();
             }}>
               닫기
             </Button>
@@ -12670,10 +13062,10 @@ export function ReceptionDrawer({
               size="default"
               onClick={() => {
                 if (selectedAppointment) {
-                  setActiveDrawer({
-                    type: "reception-appointment-check-in-form",
-                    id: selectedAppointment.id,
-                  });
+                  openReceptionFlowDrawer(
+                    "reception-appointment-check-in-form",
+                    selectedAppointment.id,
+                  );
                   return;
                 }
 

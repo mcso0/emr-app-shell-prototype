@@ -4,12 +4,21 @@ import type { AppIcon } from "@/components/icons";
 export type DrawerState = {
   type: string;
   id: string;
+  hasUnsavedChanges?: boolean;
+  initialPatientId?: string;
+  profileTab?: "info" | "history" | "reservations" | "billing";
+  returnTo?: {
+    type: "patient" | "reception-patient";
+    id: string;
+    profileTab?: "info" | "history" | "reservations" | "billing";
+  };
   subtitle?: string;
   rightPanelPresentation?: {
     gap?: number;
     mobileFullWidth?: boolean;
     persistToUrl?: boolean;
     returnFocusId?: string;
+    surface?: "workspace-right-panel";
     width?: number;
   };
 } | null;

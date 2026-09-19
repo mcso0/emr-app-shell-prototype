@@ -51,6 +51,12 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
       if (
         state.activeDrawer?.type === activeDrawer?.type &&
         state.activeDrawer?.id === activeDrawer?.id &&
+        state.activeDrawer?.hasUnsavedChanges ===
+          activeDrawer?.hasUnsavedChanges &&
+        state.activeDrawer?.initialPatientId === activeDrawer?.initialPatientId &&
+        state.activeDrawer?.profileTab === activeDrawer?.profileTab &&
+        JSON.stringify(state.activeDrawer?.returnTo) ===
+          JSON.stringify(activeDrawer?.returnTo) &&
         state.activeDrawer?.subtitle === activeDrawer?.subtitle &&
         JSON.stringify(state.activeDrawer?.rightPanelPresentation) ===
           JSON.stringify(activeDrawer?.rightPanelPresentation)

@@ -5808,7 +5808,10 @@ test("reception creates a reservation through the unified check-in menu", async 
   await expect(drawer.getByLabel("예약시간")).not.toContainText("600");
 
   await drawer.getByLabel("예약 메모").fill("DEN-516 예약 생성 UI 검증");
-  await drawer.getByRole("button", { name: "생성" }).click();
+  await page
+    .getByTestId("reception-right-panel")
+    .getByRole("button", { name: "생성", exact: true })
+    .click();
 
   await expect.poll(() => latestBody).toMatchObject({
     patientId: "patient-nabi",
