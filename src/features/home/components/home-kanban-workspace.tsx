@@ -201,7 +201,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
       <div className={styles.toolbar}>
         {view === "hospital" ? dateControl : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
         <div className={styles.toolbarActions}>
-          <HomeSearch key={view} personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
+          <HomeSearch personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
           <Popover key={`filters-${view}`} open={filterOpen} onOpenChange={(open) => { setFilterOpen(open); if (!open) { setFilterReady(false); setFilterAutoOpenConsumed(false); } }} onOpenChangeComplete={setFilterReady}>
             <PopoverTrigger render={<EmrTableFilterTrigger activeCount={activeFilterCount} size="default" className={styles.filterTrigger} aria-label="업무 필터 설정" />} />
             <PopoverContent align="end" className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0" initialFocus={false}>

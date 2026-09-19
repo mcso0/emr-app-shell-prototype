@@ -239,6 +239,29 @@ test("Home search reveals and restores focus without changing source navigation"
   await page.screenshot({ path: "/tmp/home-final-personal-ui.png" });
 });
 
+test("Home search stays expanded while switching between hospital and personal work", async ({ page }) => {
+  await openHome(page);
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page.getByLabel("환자 보호자 업무 검색")).toBeFocused();
+
+  await page.getByRole("button", { name: "업무 필터 설정" }).click();
+  await expect(page.locator('[data-emr-table-filter-builder="true"]')).toBeVisible();
+  await expect(page.getByLabel("환자 보호자 업무 검색")).toBeVisible();
+  await page.getByRole("button", { name: "필터 닫기", exact: true }).click();
+  await expect(page.getByLabel("환자 보호자 업무 검색")).toBeVisible();
+
+  await page.getByRole("button", { name: "완료 포함", exact: true }).click();
+  await expect(page.getByLabel("환자 보호자 업무 검색")).toBeVisible();
+
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await expect(page.getByLabel("내 업무 검색")).toBeVisible();
+  await expect(page.getByRole("button", { name: "검색", exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "원내 현황", exact: true }).click();
+  await expect(page.getByLabel("환자 보호자 업무 검색")).toBeVisible();
+  await expect(page.getByRole("button", { name: "검색", exact: true })).toHaveCount(0);
+});
+
 test("approved Home layout keeps fixed geometry in board and both personal tabs", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1084 });
   await openHome(page);
