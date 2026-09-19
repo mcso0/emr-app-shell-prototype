@@ -337,7 +337,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       }
       setRightPanelOpen(nextRightPanelOpen);
     }
-    if (drawer) {
+    if (
+      drawer &&
+      currentLayoutState.activeDrawer?.rightPanelPresentation?.persistToUrl !== false
+    ) {
       const separatorIndex = drawer.indexOf(":");
       const type = separatorIndex >= 0 ? drawer.slice(0, separatorIndex) : "";
       const id = separatorIndex >= 0 ? drawer.slice(separatorIndex + 1) : "";
@@ -392,6 +395,10 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       pendingUrlStateRef.current = null;
     }
 
+    if (activeDrawer?.rightPanelPresentation?.persistToUrl === false) {
+      return;
+    }
+
     const params = new URLSearchParams(search);
     params.set("modulePanel", modulePanelOpen ? "open" : "closed");
     if (moduleDefinition.contentAside) {
@@ -405,10 +412,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     } else {
       params.delete("right");
     }
-    if (
-      activeDrawer &&
-      activeDrawer.rightPanelPresentation?.persistToUrl !== false
-    ) {
+    if (activeDrawer) {
       params.set("drawer", `${activeDrawer.type}:${activeDrawer.id}`);
     } else {
       params.delete("drawer");

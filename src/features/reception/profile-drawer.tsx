@@ -154,6 +154,7 @@ import {
   type ProfileHistoryItem,
   type ProfileReservationItem,
   type ProfileSidePanelModel,
+  type ProfileSidePanelTab,
   type ProfileTabAccess,
 } from "@/features/reception/profile-side-panel";
 
@@ -1808,7 +1809,13 @@ function PatientSummaryFields({
   );
 }
 
-export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
+export function PatientProfileDrawer({
+  defaultTab = "info",
+  patientId,
+}: {
+  defaultTab?: ProfileSidePanelTab;
+  patientId: EmrId;
+}) {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
   const preparedWorkspace = isPreparedEmptyClinicWorkspace(workspaceId);
@@ -1817,6 +1824,10 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const updatePatient = usePatientProfileStore((state) => state.updatePatient);
+  const applyPatientGuardianLookupItem = usePatientProfileStore(
+    (state) => state.applyPatientGuardianLookupItem,
+  );
+  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const bundle = getProfileBundle(patientId, patients, guardians, patientGuardians, !preparedWorkspace);
   const liveRead = useCustomerProfileOverview({
@@ -1827,6 +1838,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileSidePanelTab>(defaultTab);
   const [draft, setDraft] = useState<
     Pick<Patient, "allergyNote" | "breed" | "handlingCautionNote" | "microchipNo" | "name" | "specialNote">
   >({
@@ -1920,6 +1932,37 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
   const showMockAction = (label: string) => {
     toast.info(`${model.name} ${label}은 mock 동작입니다.`);
   };
+  const openReceptionFlow = (type: "reception-form" | "reception-reservation-form") => {
+    if (!editablePatient) {
+      toast.error("환자 정보를 불러온 뒤 다시 시도해 주세요.");
+      return;
+    }
+
+    applyPatientGuardianLookupItem({
+      patient: editablePatient,
+      primaryGuardian: editablePrimaryGuardian,
+    });
+    setActiveDrawer({
+      type,
+      id: `patient-profile:${editablePatient.id}`,
+      initialPatientId: editablePatient.id,
+      returnTo: {
+        type:
+          activeDrawer?.type === "reception-patient"
+            ? "reception-patient"
+            : "patient",
+        id: editablePatient.id,
+        profileTab: activeTab,
+      },
+      rightPanelPresentation: {
+        gap: 10,
+        mobileFullWidth: true,
+        persistToUrl: false,
+        surface: "workspace-right-panel",
+        width: 380,
+      },
+    });
+  };
   const tabAccess = preparedWorkspace ? getLiveTabAccess(liveRead) : undefined;
   const sectionStates = preparedWorkspace
     ? {
@@ -1932,6 +1975,7 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
 
   return (
     <ProfileSidePanel
+      defaultTab={defaultTab}
       embedded
       model={model}
       onLoadSection={(section, filter, append = false) => {
@@ -1947,9 +1991,18 @@ export function PatientProfileDrawer({ patientId }: { patientId: EmrId }) {
       onCancelEdit={cancelEdit}
       onSaveEdit={editablePatient ? saveEdit : undefined}
       onClose={() => setActiveDrawer(null)}
-      onHeaderAction={(action) =>
-        showMockAction(action === "reception" ? "접수/예약" : "카카오톡 발송")
-      }
+      onHeaderAction={(action) => {
+        if (action === "message") {
+          showMockAction("카카오톡 발송");
+          return;
+        }
+        openReceptionFlow(
+          action === "walk-in"
+            ? "reception-form"
+            : "reception-reservation-form",
+        );
+      }}
+      onTabChange={setActiveTab}
       onOpenRelated={(item) => setActiveDrawer({ type: "guardian", id: item.id })}
       editContent={editablePatient ? (
         <PatientSummaryFields
@@ -2165,9 +2218,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       onCancelEdit={cancelEdit}
       onSaveEdit={editableGuardian ? saveEdit : undefined}
       onClose={() => setActiveDrawer(null)}
-      onHeaderAction={(action) =>
-        showMockAction(action === "reception" ? "접수/예약" : "카카오톡 발송")
-      }
+      onHeaderAction={() => showMockAction("카카오톡 발송")}
       onOpenRelated={(item) => setActiveDrawer({ type: "patient", id: item.id })}
       editContent={editableGuardian ? (
         <GuardianSummaryFields

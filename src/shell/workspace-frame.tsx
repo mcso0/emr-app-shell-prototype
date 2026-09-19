@@ -7,7 +7,10 @@ import {
   GuardianProfileDrawer,
   PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
-import { ReceptionDrawer } from "@/features/reception/module";
+import {
+  ReceptionDrawer,
+  ReceptionRightPanel,
+} from "@/features/reception/module";
 import type {
   ModuleDefinition,
   WorkspaceSlotAvailabilityProviderProps,
@@ -49,9 +52,6 @@ export function WorkspaceFrame({
   const ModuleDrawer = moduleDefinition.drawer;
   const SlotAvailabilityProvider =
     moduleDefinition.slotAvailabilityProvider ?? DefaultSlotAvailabilityProvider;
-  const routeReceptionDrawerToRightPanel =
-    moduleDefinition.id === "reception" && Boolean(RightPanel);
-  const instantRightPanel = moduleDefinition.id === "reception";
   const isPatientDrawer = activeDrawer?.type === "patient" || activeDrawer?.type === "reception-patient";
   const isGuardianDrawer = activeDrawer?.type === "guardian" || activeDrawer?.type === "reception-guardian";
   const isReceptionDrawer =
@@ -60,12 +60,22 @@ export function WorkspaceFrame({
     activeDrawer?.type === "reception-encounter" ||
     activeDrawer?.type === "reception-form" ||
     activeDrawer?.type === "reception-reservation-form";
+  const isReceptionDrawerInWorkspaceRightPanel =
+    isReceptionDrawer &&
+    activeDrawer?.rightPanelPresentation?.surface === "workspace-right-panel";
+  const routeReceptionDrawerToRightPanel =
+    (moduleDefinition.id === "reception" && Boolean(RightPanel)) ||
+    isReceptionDrawerInWorkspaceRightPanel;
+  const instantRightPanel =
+    moduleDefinition.id === "reception" ||
+    isReceptionDrawerInWorkspaceRightPanel;
   const CommonProfileDrawer = isPatientDrawer
     ? PatientProfileDrawer
     : isGuardianDrawer
       ? GuardianProfileDrawer
       : undefined;
   const hasCommonProfileRightPanel = Boolean(CommonProfileDrawer && activeDrawer);
+  const hasFeatureRightPanel = Boolean(isReceptionDrawerInWorkspaceRightPanel);
   const EffectiveModuleDrawer =
     isReceptionDrawer && !routeReceptionDrawerToRightPanel
       ? ReceptionDrawer
@@ -110,7 +120,7 @@ export function WorkspaceFrame({
     SHELL_LAYOUT.contentAside.minWidth
   );
   const resolvedRightPanelWidth =
-    hasCommonProfileRightPanel
+    hasCommonProfileRightPanel || hasFeatureRightPanel
       ? 380
       : (activeDrawer?.rightPanelPresentation?.width ??
         moduleDefinition.rightPanelWidth ??
@@ -133,19 +143,23 @@ export function WorkspaceFrame({
           Boolean(ContentAside) && (availability.hasContentAside ?? true);
         const hasModuleRightPanel =
           Boolean(RightPanel) && (availability.hasRightPanel ?? true);
-        const hasRightPanel = hasCommonProfileRightPanel || hasModuleRightPanel;
+        const hasRightPanel =
+          hasCommonProfileRightPanel || hasFeatureRightPanel || hasModuleRightPanel;
         const contentAsideVisible = hasContentAside && contentAsideOpen;
         const rightPanelVisible =
-          hasCommonProfileRightPanel || (hasModuleRightPanel && rightPanelOpen);
+          hasCommonProfileRightPanel ||
+          hasFeatureRightPanel ||
+          (hasModuleRightPanel && rightPanelOpen);
         const rightPanelGap = rightPanelVisible
-          ? hasCommonProfileRightPanel
-            ? SHELL_LAYOUT.shell.gap
+            ? hasCommonProfileRightPanel || hasFeatureRightPanel
+            ? (activeDrawer?.rightPanelPresentation?.gap ?? SHELL_LAYOUT.shell.gap)
             : (activeDrawer?.rightPanelPresentation?.gap ??
               (moduleDefinition.rightPanelGap ? SHELL_LAYOUT.shell.gap : 0))
           : 0;
         const rightPanelDetached = rightPanelGap > 0;
         const rightPanelMobileFullWidth = Boolean(
           hasCommonProfileRightPanel ||
+            hasFeatureRightPanel ||
             activeDrawer?.rightPanelPresentation?.mobileFullWidth,
         );
         const slotProps = {
@@ -239,10 +253,15 @@ export function WorkspaceFrame({
               >
                 {CommonProfileDrawer && activeDrawer ? (
                   isPatientDrawer ? (
-                    <PatientProfileDrawer patientId={activeDrawer.id} />
+                    <PatientProfileDrawer
+                      defaultTab={activeDrawer.profileTab}
+                      patientId={activeDrawer.id}
+                    />
                   ) : (
                     <GuardianProfileDrawer guardianId={activeDrawer.id} />
                   )
+                ) : hasFeatureRightPanel ? (
+                  <ReceptionRightPanel {...slotProps} />
                 ) : RightPanel && rightPanelVisible ? (
                   <RightPanel {...slotProps} />
                 ) : null}

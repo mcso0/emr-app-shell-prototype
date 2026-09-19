@@ -7,9 +7,10 @@ related_work:
   - "docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md"
   - "docs/work/reception/RECEPTION-QA-PR-009-command-new-reception-flow.md"
   - "docs/work/reception/RECEPTION-PR-019-active-queue-state-presentation.md"
+  - "docs/work/reception/RECEPTION-PR-020-patient-profile-reception-entry.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-30
+last_updated: 2026-09-20
 ---
 
 # Reception / Appointment Feature Spec
@@ -48,6 +49,7 @@ last_updated: 2026-08-30
 - 오늘 예약과 현장 접수 환자를 같은 업무 화면에서 확인한다.
 - 예약이 없어도 보호자/환자를 선택해 현장 접수할 수 있다.
 - 전역 command palette의 `신규 진료 접수` action은 현재 workspace module 위에서 현장 접수 drawer를 열 수 있어야 하며, 단순히 접수/예약 화면으로 이동하는 것으로 대체하지 않는다.
+- 환자 프로필의 `접수/예약` action은 `접수하기`와 `예약하기`를 선택할 수 있어야 하며, 현재 module과 우측 패널 위치를 유지한 채 선택한 환자/주 보호자를 미리 채운 기존 생성 form으로 전환한다.
 - 예약 환자를 도착 시 접수 처리하고 진료 대기열로 연결한다.
 - 접수 처리 시 encounter 생성 또는 기존 appointment와 encounter 연결 기준을 명확히 한다.
 - 담당 수의사가 지정된 대기와 미지정 대기를 구분한다.
@@ -196,6 +198,16 @@ Rules:
 6. 생성 완료 후 화면은 자동으로 접수/예약 화면으로 강제 이동하지 않는다.
 7. 생성한 encounter가 자동 선택된 `접수 상세`를 즉시 표시하고, 성공 toast는 이동 action 없이 완료만 알린다.
 
+### 1-B. 환자 프로필에서 접수/예약 시작
+
+1. 직원이 어느 workspace module에서든 환자 프로필 우측 패널을 연다.
+2. `접수/예약` action에서 `접수하기` 또는 `예약하기`를 선택한다.
+3. 현재 module과 우측 패널 위치를 유지한 채 기존 현장 접수 또는 예약 생성 form으로 전환한다.
+4. 현재 환자와 주 보호자는 form에 미리 선택되며, 직원은 필요한 나머지 정보를 입력한다.
+5. 변경 전 취소는 원래 보던 환자 프로필 tab으로 돌아간다.
+6. 변경 후 취소는 작성 중인 내용을 버릴지 확인하며, 계속 작성하면 입력값을 유지한다.
+7. 생성 성공은 같은 우측 패널에서 생성한 접수 또는 예약 상세를 보여주고, 실패는 form과 입력값을 유지한다.
+
 ### 2. 예약 환자 접수 처리
 
 1. 데스크 직원이 오늘 예약 목록 또는 캘린더에서 예약 건을 선택한다.
@@ -240,6 +252,7 @@ Rules:
 6. 예약 변경, 취소, 노쇼는 접수/대기열 연결보다 후순위지만 MVP 상태 모델 안에 포함된다.
 7. 상태 변경은 이후 audit log와 DB/API persistence로 연결 가능한 이벤트 정보를 남길 수 있어야 한다.
 8. 전역 `신규 진료 접수` action은 현재 화면을 떠나지 않고 현장 접수 drawer를 열며, 생성 완료 후에는 생성 encounter를 선택한 접수/예약 상세 상태를 즉시 표시한다.
+9. 환자 프로필의 `접수/예약` action은 현재 module을 떠나거나 별도 이동 확인 dialog를 띄우지 않고 같은 우측 패널에서 환자 맥락을 보존한 접수/예약 생성 흐름을 시작한다.
 
 ## Data And API Planning Notes
 
@@ -253,7 +266,7 @@ Rules:
 - Session-only calendar task creation may carry a planned start time in frontend state before persistence work exists. Persisting this time live requires a separate schema/API contract such as `scheduledStartAt` or `plannedStartAt`.
 - Global command entry must reuse the same walk-in creation API and store application path as the reception toolbar `접수하기` drawer. Do not create a local-only command shortcut that bypasses `POST /api/workspaces/[workspaceId]/reception/walk-in-encounters`.
 - Create success should select the generated encounter or appointment and show its detail immediately; the toast is confirmation feedback, not a second navigation step.
-- Same-day duplicate reception warnings, unsaved drawer dirty guards, and persistent notification follow-ups are useful exceptions but remain outside this implementation slice unless a later work item scopes them.
+- Same-day duplicate reception warnings and persistent notification follow-ups remain outside this implementation slice. The patient-profile entry flow owns its scoped unsaved-change guard through `RECEPTION-PR-020`.
 
 ## Source Documents
 
