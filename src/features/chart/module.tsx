@@ -4447,7 +4447,7 @@ function SoapPanel({
             auditRecorded: result.auditRecorded ?? true,
           };
         },
-        reconcileConflict: async ({ document }) => {
+        reconcileConflict: async ({ ambiguousWrite, document }) => {
           const latest = await loadChartSoapNote({
             actorHeaders,
             encounterId,
@@ -4465,7 +4465,7 @@ function SoapPanel({
           return {
             ok: true,
             soapNote: latest.soapNote,
-            auditRecorded: false,
+            auditRecorded: !ambiguousWrite,
           };
         },
         onPersisted: () => undefined,
@@ -4773,9 +4773,9 @@ function SoapPanel({
           title="SOAP 저장 충돌 · 현재 입력 미저장"
           className="mx-3 my-2 w-auto shrink-0 emr-text-metadata"
           testId="chart-soap-conflict"
-          action={<Button size="sm" variant="outline" disabled={writeDisabled} onClick={() => coordinator.retry()}>다시 저장</Button>}>
-          다른 곳에서 먼저 SOAP를 저장했어요. 현재 입력은 유지되며 자동으로 덮어쓰지 않아요.
-          현재 입력을 보관하고 최신 기록을 확인해 주세요.
+          action={<Button size="sm" variant="outline" disabled={writeDisabled} onClick={() => coordinator.retry()}>최신 상태 확인</Button>}>
+          서버의 최신 SOAP와 현재 입력이 달라 자동으로 덮어쓰지 않았어요.
+          현재 입력은 유지됩니다. 필요한 내용을 보관한 뒤 최신 상태를 다시 확인해 주세요.
         </ChartNotice>
       ) : null}
 
