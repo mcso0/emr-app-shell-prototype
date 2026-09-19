@@ -57,6 +57,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
+  CdsActionsCheckCircleIcon,
   CdsActionsCheckIcon,
   CdsActionsRefreshCcwIcon,
   CdsActionsRotateCcwIcon,
@@ -277,7 +278,10 @@ import {
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
-import { useEncounterCharts, encounterChartsRequest, chartLifecycleError } from "@/features/chart/encounter-charts-client";
+import {
+  chartLifecycleError,
+  useEncounterCharts,
+} from "@/features/chart/encounter-charts-client";
 import { useChartStore } from "@/features/chart/store";
 import { useChartPatientGuardianProfileActions } from "@/features/chart/use-chart-patient-guardian-profile-actions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -14309,29 +14313,35 @@ function EmptyChartState({
   );
 }
 
-function ChartContentLoadingState() {
+function ChartContentLoadingState({
+  fullHeight = false,
+}: {
+  fullHeight?: boolean;
+}) {
   return (
     <div
       aria-live="polite"
-      className="flex h-full items-center justify-center px-6 py-10"
-      data-testid="chart-content-loading-state"
-      role="status"
+      className={cn(
+        "flex min-h-0 min-w-0 items-center justify-center px-6 py-10",
+        fullHeight ? "h-full" : "flex-1",
+      )}
+      data-slot="chart-loading-viewport"
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-4">
-        <span className="sr-only">진료 업무를 불러오는 중입니다</span>
-        <Skeleton
-          aria-hidden="true"
-          className="h-10 w-10 rounded-xl motion-reduce:animate-none"
-        />
-        <Skeleton
-          aria-hidden="true"
-          className="h-4 w-44 motion-reduce:animate-none"
-        />
-        <Skeleton
-          aria-hidden="true"
-          className="h-3 w-64 motion-reduce:animate-none"
-        />
-      </div>
+      <EmrEmptyState
+        icon={
+          <CdsAlertsLoaderIcon
+            className="size-6 motion-safe:animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+        }
+        kind="upstream-pending"
+        reserveActionSpace={false}
+        role="status"
+        size="md"
+        surface="content"
+        testId="chart-content-loading-state"
+        title="차트를 불러오는 중입니다"
+      />
     </div>
   );
 }
@@ -14571,7 +14581,6 @@ export function ChartContent({
     && persistedSoapState.chartId === activeChartId && persistedSoapState.soapNote
       ? persistedSoapState.soapNote : selectedChart;
   const chartSigned = effectiveLatestSoap?.status === "signed" || effectiveLatestSoap?.status === "amended";
-  const [chartSigning, setChartSigning] = useState(false);
   const effectiveEncounter =
     bundle &&
     chartCompletionState.encounterId === activeEncounterId &&
@@ -14805,24 +14814,6 @@ export function ChartContent({
       event.preventDefault();
       setClampedChartTopPercent(100);
     }
-  };
-  const handleIndividualChartSign = async () => {
-    if (chartSigning || chartWriteDisabled || !activeChartId || !activeEncounterId || !activeWorkspaceId) return;
-    setChartSigning(true);
-    try {
-      if (!await useChartStore.getState().flushEditors()) {
-        toast.error("SOAP 저장 오류를 해결한 뒤 차트를 완료해 주세요."); return;
-      }
-      const latest = useChartStore.getState().encounterCharts.find((chart) => chart.id === activeChartId);
-      if (!latest) return;
-      const result = await encounterChartsRequest(activeWorkspaceId, "PATCH", {
-        encounterId: activeEncounterId, chartId: activeChartId, expectedUpdatedAt: latest.updatedAt,
-      }, actorHeaders);
-      if (!result.ok || !result.chart) { toast.error(chartLifecycleError(!result.ok ? result.denialReason : undefined)); return; }
-      useChartStore.getState().updateEncounterChart(encounterCharts.scope, result.chart);
-      setPersistedSoapState((current) => current.chartId === activeChartId ? { ...current, soapNote: result.chart, status: "idle" } : current);
-      toast.success("이 차트를 완료했어요. 접수의 진료 종료는 별도로 진행해 주세요.");
-    } finally { setChartSigning(false); }
   };
   const handleChartCompletionConfirm = async () => {
     if (chartCompletionState.status === "saving") return;
@@ -15523,7 +15514,7 @@ export function ChartContent({
       liveQueueStatus === "ready" && liveQueueRecords.length === 0;
 
     if (liveQueueStatus === "idle" || liveQueueStatus === "loading") {
-      return <ChartContentLoadingState />;
+      return <ChartContentLoadingState fullHeight />;
     }
 
     return (
@@ -15666,6 +15657,7 @@ export function ChartContent({
                 <EmrInstructionHistoryToggle
                   ariaLabelPrefix="차트 이력"
                   controls="chart-content-aside"
+                  disabled={detailHydrationPending}
                   expanded={contentAsideOpen}
                   tooltipLabel="과거 이력 보기"
                   onClick={() => setContentAsideOpen(!contentAsideOpen)}
@@ -15701,17 +15693,18 @@ export function ChartContent({
                   호출하기
                 </Button>
               ) : primaryAction === "complete" ? (
-                <div className="flex items-center gap-2">
-                <Button size="xs" variant="outline" disabled={chartWriteDisabled || !activeChartId || chartSigning || chartSigned || diagnosisPersistenceState.status === "saving"}
-                  onClick={() => void handleIndividualChartSign()}>{chartSigning ? "완료 중" : chartSigned ? "차트 완료됨" : "차트 완료"}</Button>
-                <ButtonGroup aria-label="진료 종료 보조 액션">
+                <ButtonGroup aria-label="차트 작성 완료 보조 액션">
                   <ButtonGroupPrimaryButton
-                    aria-label="진료 종료"
+                    aria-label="차트 작성 완료"
                     className="h-7 rounded-l-lg px-3 text-xs"
                     disabled={primaryActionBusy}
                     onClick={() => setChartCompleteDialogOpen(true)}
                   >
-                    진료 종료
+                    <CdsActionsCheckCircleIcon
+                      data-icon="inline-start"
+                      aria-hidden="true"
+                    />
+                    차트 작성 완료
                   </ButtonGroupPrimaryButton>
                   {canUseConsultationSecondaryActions ? (
                     <>
@@ -15759,7 +15752,6 @@ export function ChartContent({
                     </>
                   ) : null}
                 </ButtonGroup>
-                </div>
               ) : null
             }
           />
@@ -16170,6 +16162,8 @@ export function ChartContent({
             workspaceId={activeWorkspaceId ?? workspaceId}
           />
         </div>
+      ) : detailHydrationPending ? (
+        <ChartContentLoadingState />
       ) : !activeChartId ? (
         <div className="flex min-h-0 flex-1 items-start p-3">
           {encounterCharts.status === "error" ? (
@@ -16254,7 +16248,7 @@ export function ChartContent({
                   requestChartHistoryRefresh();
                 }}
                 soapNote={effectiveLatestSoap}
-                writeDisabled={chartWriteDisabled || chartSigning || diagnosisPersistenceState.status === "saving"}
+                writeDisabled={chartWriteDisabled || diagnosisPersistenceState.status === "saving"}
                 workspaceId={bundle.encounter.workspaceId}
               />
             </ChartCollapsiblePanel>
@@ -16353,7 +16347,7 @@ export function ChartContent({
               onNavigateToBilling={navigateToBilling}
               onOrderCountChange={handleCurrentChartOrderCountChange}
               orderGroups={orderGroups}
-              draftWriteDisabled={chartWriteDisabled || chartSigned || chartSigning}
+              draftWriteDisabled={chartWriteDisabled || chartSigned}
               writeDisabled={detailHydrationPending || isHistoricalView}
             />
           </div>

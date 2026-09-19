@@ -27,6 +27,7 @@ type EmrInstructionTitleBarProps = {
 type EmrInstructionHistoryToggleProps = {
   ariaLabelPrefix: string;
   controls: string;
+  disabled?: boolean;
   expanded: boolean;
   onClick: () => void;
   tooltipLabel: string;
@@ -55,6 +56,7 @@ export function EmrInstructionTitleBar({
 export function EmrInstructionHistoryToggle({
   ariaLabelPrefix,
   controls,
+  disabled = false,
   expanded,
   onClick,
   tooltipLabel,
@@ -72,6 +74,7 @@ export function EmrInstructionHistoryToggle({
             aria-controls={controls}
             aria-expanded={expanded}
             aria-pressed={expanded}
+            disabled={disabled}
             data-state={expanded ? "on" : "off"}
             onClick={onClick}
           >
