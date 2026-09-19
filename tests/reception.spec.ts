@@ -2083,6 +2083,13 @@ test("patient drawer supports editing and guardian navigation", async ({
   await expect(
     profilePanel.getByRole("heading", { name: "환자 정보", exact: true }),
   ).toBeVisible();
+  await expect(
+    profilePanel.getByRole("button", { name: "카카오톡 발송" }),
+  ).toBeDisabled();
+  await profilePanel.getByTestId("profile-message-action-trigger").hover();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "문자/카톡 발송 기능은 아직 구현되지 않았습니다.",
+  );
   await expect(profilePanel.getByText("등록된 보호자")).toBeVisible();
   await expect(page.getByText("정하린", { exact: true }).last()).toBeVisible();
   await expect(
@@ -2104,6 +2111,13 @@ test("patient drawer supports editing and guardian navigation", async ({
   await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
+  await expect(
+    profilePanel.getByRole("button", { name: "카카오톡 발송" }),
+  ).toBeDisabled();
+  await profilePanel.getByTestId("profile-message-action-trigger").hover();
+  await expect(page.getByRole("tooltip")).toHaveText(
+    "문자/카톡 발송 기능은 아직 구현되지 않았습니다.",
+  );
   await expect(page.getByText("주 보호자로 등록된 환자").last()).toBeVisible();
   await expect(page.getByText("하루", { exact: true }).last()).toBeVisible();
   await expect(page.getByText("두부", { exact: true }).last()).toBeVisible();
