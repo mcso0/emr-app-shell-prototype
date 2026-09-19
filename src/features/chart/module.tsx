@@ -1401,17 +1401,7 @@ function useChartLiveQueueCoordinator(workspaceId: string) {
   useEffect(() => {
     if (!authHydrated) return;
     const automaticRefreshKey = `${workspaceId}:${selectedDate}:${authSession?.id ?? "anonymous"}`;
-    const queueState = useChartStore.getState();
-    const hasStartedCurrentScope =
-      queueState.liveQueueScope?.workspaceId === workspaceId &&
-      queueState.liveQueueScope.date === selectedDate &&
-      queueState.liveQueueStatus !== "idle";
-    if (
-      automaticRefreshKeyRef.current === automaticRefreshKey ||
-      hasStartedCurrentScope
-    ) {
-      return;
-    }
+    if (automaticRefreshKeyRef.current === automaticRefreshKey) return;
 
     automaticRefreshKeyRef.current = automaticRefreshKey;
     void refreshLiveQueue();
