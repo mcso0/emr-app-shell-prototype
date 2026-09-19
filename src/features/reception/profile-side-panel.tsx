@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -35,11 +36,13 @@ import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/p
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import styles from "./profile-side-panel.module.css";
 
 const PROFILE_SCROLL_VIEWPORT_STYLE = { overflowX: "hidden" } as const;
+const MESSAGE_ACTION_DISABLED_REASON = "문자/카톡 발송 기능은 아직 구현되지 않았습니다.";
 
 export type ProfileSidePanelTab = "info" | "history" | "reservations" | "billing";
 
@@ -307,6 +310,7 @@ function ProfileHeader({
   onTabChange: (tab: ProfileSidePanelTab) => void;
 }) {
   const tabRefs = useRef<Partial<Record<ProfileSidePanelTab, HTMLButtonElement | null>>>({});
+  const messageActionTooltipId = useId();
   const firstLabel = model.kind === "patient" ? "환자 정보" : "보호자 정보";
   const tabs = [
     { label: firstLabel, value: "info" as const },
@@ -365,15 +369,36 @@ function ProfileHeader({
               <CdsActionsPlusIcon aria-hidden="true" />
               접수/예약
             </button>
-            <button
-              type="button"
-              aria-label="카카오톡 발송"
-              className={styles.smallAction}
-              onClick={() => onHeaderAction("message")}
-            >
-              <CdsCommunicationMessageSquareIcon aria-hidden="true" />
-              문자/카톡
-            </button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span
+                    className={styles.disabledActionTrigger}
+                    data-testid="profile-message-action-trigger"
+                    tabIndex={0}
+                  />
+                }
+              >
+                <button
+                  type="button"
+                  aria-describedby={messageActionTooltipId}
+                  aria-label="카카오톡 발송"
+                  className={styles.smallAction}
+                  disabled
+                >
+                  <CdsCommunicationMessageSquareIcon aria-hidden="true" />
+                  문자/카톡
+                </button>
+              </TooltipTrigger>
+              <TooltipContent
+                id={messageActionTooltipId}
+                role="tooltip"
+                side="bottom"
+                sideOffset={6}
+              >
+                {MESSAGE_ACTION_DISABLED_REASON}
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
         <button type="button" aria-label="상세 닫기" className={styles.closeButton} onClick={onClose}>

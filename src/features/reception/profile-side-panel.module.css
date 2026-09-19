@@ -172,6 +172,17 @@
   gap: 8px;
 }
 
+.disabledActionTrigger {
+  display: inline-flex;
+  height: 24px;
+  flex: none;
+  cursor: not-allowed;
+}
+
+.disabledActionTrigger > .smallAction {
+  pointer-events: none;
+}
+
 .smallAction {
   display: inline-flex;
   height: 24px;
@@ -203,6 +214,14 @@
 
 .smallAction:hover {
   background: var(--profile-neutral-50);
+}
+
+.smallAction:disabled,
+.smallAction:disabled:hover {
+  background: var(--profile-neutral-50);
+  box-shadow: none;
+  color: var(--profile-neutral-400);
+  cursor: not-allowed;
 }
 
 .smallAction:focus-visible,
