@@ -6409,10 +6409,37 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   await expect(detailAside).not.toContainText("PLAN/ORDER");
   await expect(detailAside).not.toContainText("이 차트 금액 상세");
   await expect(detailAside.locator("h4")).toHaveText([
-    "오더 합계",
+    "총 오더 합계",
     "오더 상세",
     "금액 구성",
   ]);
+  const totalCard = detailAside.getByTestId(
+    "chart-order-amount-detail-total-card",
+  );
+  const orderCard = detailAside.getByTestId(
+    "chart-order-amount-detail-order-card",
+  );
+  const compositionCard = detailAside.getByTestId(
+    "chart-order-amount-detail-composition-card",
+  );
+  const detailHeader = detailAside.getByTestId(
+    "chart-order-amount-detail-header",
+  );
+  const detailFooter = detailAside.getByTestId(
+    "chart-order-amount-detail-footer",
+  );
+  await expect(totalCard).toContainText("청구 가능 오더만");
+  await expect(totalCard).toContainText(
+    /총 \d+건\(확정 \d+ \+ 미확정 \d+\)/,
+  );
+  const orderStatusBadges = orderCard.locator("[data-slot='badge']");
+  await expect(orderStatusBadges.nth(0)).toContainText(/미확정 오더 \d+건/);
+  await expect(orderStatusBadges.nth(1)).toContainText(/확정된 오더 \d+건/);
+  await expect(detailFooter.getByRole("button", { name: "닫기" })).toBeVisible();
+  await expect(
+    detailFooter.getByRole("button", { name: "수납 청구" }),
+  ).toBeVisible();
+  await expect(detailAside).not.toContainText("청구 가능 22,000원");
   await expect(detailAside.getByTestId("billing-discount-value")).toHaveCSS(
     "color",
     "rgb(197, 48, 48)",
@@ -6424,6 +6451,36 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   await expect(detailAside.getByTestId("billing-surcharge-value")).toHaveText(
     /- \d+(?:\.\d)? %\([\d,]+원\)/,
   );
+  await expect(detailAside).toHaveCSS("width", "360px");
+  const [headerBox, totalBox, orderBox, compositionBox, footerBox] =
+    await Promise.all([
+      detailHeader.boundingBox(),
+      totalCard.boundingBox(),
+      orderCard.boundingBox(),
+      compositionCard.boundingBox(),
+      detailFooter.boundingBox(),
+    ]);
+  expect(headerBox).not.toBeNull();
+  expect(totalBox).not.toBeNull();
+  expect(orderBox).not.toBeNull();
+  expect(compositionBox).not.toBeNull();
+  expect(footerBox).not.toBeNull();
+  expect(headerBox?.height).toBeCloseTo(48, 0);
+  expect(totalBox?.width).toBeCloseTo(328, 0);
+  expect(totalBox?.height).toBeCloseTo(100, 0);
+  expect(orderBox?.width).toBeCloseTo(328, 0);
+  expect(orderBox?.height).toBeCloseTo(119, 0);
+  expect(compositionBox?.width).toBeCloseTo(328, 0);
+  expect(compositionBox?.height).toBeCloseTo(152, 0);
+  expect(footerBox?.height).toBeCloseTo(52, 0);
+  expect(
+    (orderBox?.y ?? 0) -
+      ((totalBox?.y ?? 0) + (totalBox?.height ?? 0)),
+  ).toBeCloseTo(16, 0);
+  expect(
+    (compositionBox?.y ?? 0) -
+      ((orderBox?.y ?? 0) + (orderBox?.height ?? 0)),
+  ).toBeCloseTo(16, 0);
   await expect(page.locator('[data-slot="dialog-overlay"]')).toHaveCount(0);
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(detailAside).toBeVisible();

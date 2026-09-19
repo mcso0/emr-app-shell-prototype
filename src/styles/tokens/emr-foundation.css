@@ -197,10 +197,13 @@
 
   /* Chart / Plan Order amount detail */
   --emr-chart-order-amount-detail-width: 360px;
-  --emr-chart-order-amount-detail-row-height: var(--clair-spacing-48);
-  --emr-chart-order-amount-detail-cell-height: var(--clair-spacing-80);
+  --emr-chart-order-amount-detail-header-height: var(--clair-spacing-48);
+  --emr-chart-order-amount-detail-footer-height: 52px;
+  --emr-chart-order-amount-detail-title-row-height: 22px;
+  --emr-chart-order-amount-detail-close-icon-size: 14px;
   --emr-chart-order-amount-detail-empty-height: 240px;
   --emr-chart-order-amount-detail-adjustment-text: var(--clair-color-atomic-red-600);
+  --emr-chart-order-amount-detail-shadow: 0 1px 1px rgb(0 0 0 / 10%), 0 1px 1.5px rgb(0 0 0 / 10%);
   --emr-profile-panel-width: 380px;
   --emr-profile-panel-gap: var(--clair-spacing-10);
   --emr-profile-header-height: 150px;

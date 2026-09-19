@@ -272,8 +272,14 @@ test("included-order-sum set counts once and does not double-charge its parent",
   await expect(footer).not.toContainText("12,000원");
   await footer.getByRole("button", { name: "금액 상세" }).click();
   const detail = page.getByLabel("Plan/Order 금액 상세");
-  await expect(detail.getByText("1건", { exact: true })).toBeVisible();
-  await expect(detail).toContainText("청구 가능 6,000원");
+  await expect(
+    detail.getByTestId("chart-order-amount-detail-total-card"),
+  ).toContainText("총 1건(확정 1 + 미확정 0)");
+  await expect(
+    detail
+      .getByTestId("chart-order-amount-detail-footer")
+      .getByRole("button", { name: "수납 청구" }),
+  ).toBeVisible();
 });
 
 test("chart billing action navigates to encounter billing without a billing POST", async ({
@@ -365,6 +371,12 @@ test("source contract keeps UI scope local while server mutations retain chart o
   expect(amountDetailSource).toContain("EmrEmptyState");
   expect(amountDetailSource).toContain(
     "var(--emr-chart-order-amount-detail-width)",
+  );
+  expect(amountDetailSource).toContain(
+    "var(--emr-chart-order-amount-detail-header-height)",
+  );
+  expect(amountDetailSource).toContain(
+    "var(--emr-chart-order-amount-detail-footer-height)",
   );
   expect(amountDetailSource).not.toContain("w-[360px]");
   expect(amountDetailSource).not.toContain("이 차트 금액 상세");
