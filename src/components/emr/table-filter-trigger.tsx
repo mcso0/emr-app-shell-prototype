@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export type EmrTableFilterTriggerProps = Omit<
   ButtonProps,
-  "children" | "size" | "variant"
+  "children" | "variant"
 > & {
   activeCount: number;
   label?: string;
@@ -18,7 +18,14 @@ export const EmrTableFilterTrigger = React.forwardRef<
   HTMLButtonElement,
   EmrTableFilterTriggerProps
 >(function EmrTableFilterTrigger(
-  { activeCount, "aria-label": ariaLabel, className, label = "필터", ...props },
+  {
+    activeCount,
+    "aria-label": ariaLabel,
+    className,
+    label = "필터",
+    size = "sm",
+    ...props
+  },
   ref
 ) {
   const selected = activeCount > 0;
@@ -28,7 +35,7 @@ export const EmrTableFilterTrigger = React.forwardRef<
       ref={ref}
       type="button"
       variant="outline"
-      size="sm"
+      size={size}
       aria-label={
         ariaLabel ?? (selected ? `${label}, 적용 중인 룰 ${activeCount}개` : label)
       }
