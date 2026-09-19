@@ -1,8 +1,11 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { CloseIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
@@ -186,15 +189,35 @@ export function ChartOrderBillingDetailAside({
       aria-hidden={!open || undefined}
       inert={!open ? true : undefined}
       className={cn(
-        "absolute inset-y-0 right-0 z-30 flex w-[var(--emr-chart-order-amount-detail-width)] max-w-full flex-col border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-lg)] transition-transform duration-200",
+        "absolute inset-y-0 right-0 z-30 box-content flex w-[var(--emr-chart-order-amount-detail-width)] flex-col border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--emr-chart-order-amount-detail-shadow)] transition-transform duration-200",
         open ? "translate-x-0" : "pointer-events-none translate-x-full",
       )}
     >
-      <header className="flex h-[var(--emr-rightpanel-header-height)] shrink-0 items-center justify-between border-b border-[var(--emr-border-default)] px-[var(--clair-spacing-16)]">
-        <h3 className="emr-text-panel-title font-semibold">금액 상세</h3>
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>닫기</Button>
+      <header
+        className="flex h-[var(--emr-chart-order-amount-detail-header-height)] shrink-0 items-center justify-between gap-[var(--clair-spacing-16)] px-[var(--clair-spacing-16)]"
+        data-testid="chart-order-amount-detail-header"
+      >
+        <h3 className="emr-text-body font-medium text-[var(--clair-color-atomic-neutral-900)]">
+          금액 상세
+        </h3>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          aria-label="금액 상세 닫기"
+          className="rounded-[var(--clair-radius-atomic-6)]"
+          onClick={onClose}
+        >
+          <CloseIcon
+            aria-hidden="true"
+            className="size-[var(--emr-chart-order-amount-detail-close-icon-size)]"
+          />
+        </Button>
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto p-[var(--clair-spacing-16)]">
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-[var(--clair-spacing-16)] py-[var(--clair-spacing-8)]"
+        data-testid="chart-order-amount-detail-body"
+      >
         {isInitialLoading ? (
           <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="upstream-pending" reserveActionSpace={false} size="md" surface="drawer" title="금액을 불러오는 중입니다" />
         ) : isInitialError ? (
@@ -202,18 +225,76 @@ export function ChartOrderBillingDetailAside({
         ) : hasNoOrders ? (
           <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="no-data" reserveActionSpace={false} size="md" surface="drawer" testId="chart-order-amount-detail-empty" title="오더가 없습니다" />
         ) : (
-          <div className="space-y-[var(--clair-spacing-24)]">
+          <div className="flex flex-col gap-[var(--clair-spacing-16)]">
             <section aria-labelledby="billing-order-total-title">
-              <h4 id="billing-order-total-title" className="mb-[var(--clair-spacing-8)] emr-text-section font-semibold">오더 합계</h4>
-              <Card size="sm" className="gap-0 py-0 shadow-none"><CardContent className="flex min-h-[var(--emr-chart-order-amount-detail-row-height)] items-center justify-between px-[var(--clair-spacing-16)] py-[var(--clair-spacing-12)]"><span className="emr-text-body text-[var(--emr-text-secondary)]">총 금액</span><strong className="emr-text-panel-title tabular-nums text-[var(--emr-text-primary)]">{formatWon(amounts.estimatedTotal)}</strong></CardContent></Card>
+              <AmountDetailCard muted testId="chart-order-amount-detail-total-card">
+                <AmountDetailCardTitle
+                  id="billing-order-total-title"
+                  title="총 오더 합계"
+                >
+                  <Badge
+                    size="md"
+                    variant="outline"
+                    className="rounded-[var(--clair-radius-full)] border-[var(--clair-color-atomic-black-alpha-8)] bg-[var(--clair-color-atomic-common-100)] px-[var(--clair-spacing-8)] text-[var(--clair-color-atomic-neutral-600)]"
+                  >
+                    청구 가능 오더만
+                  </Badge>
+                </AmountDetailCardTitle>
+                <div className="flex flex-col gap-[var(--clair-spacing-4)]">
+                  <strong className="font-[var(--clair-typography-heading-1-font-weight)] text-[length:var(--clair-typography-heading-1-font-size)] leading-[var(--clair-typography-heading-1-line-height)] tracking-[var(--clair-typography-heading-1-letter-spacing)] tabular-nums text-[var(--clair-color-atomic-neutral-900)]">
+                    {formatWonSpaced(amounts.estimatedTotal)}
+                  </strong>
+                  <p className="emr-text-dense font-medium text-[var(--clair-color-atomic-neutral-500)]">
+                    총 {counts.total}건(확정 {counts.confirmed} + 미확정 {counts.draft})
+                  </p>
+                </div>
+              </AmountDetailCard>
             </section>
             <section aria-labelledby="billing-order-detail-title">
-              <div className="mb-[var(--clair-spacing-8)] flex items-center justify-between"><h4 id="billing-order-detail-title" className="emr-text-section font-semibold">오더 상세</h4>{counts.recheck > 0 ? <span className="emr-text-metadata text-[var(--emr-status-warning-text)]">재확인 {counts.recheck}건</span> : null}</div>
-              <Card size="sm" className="gap-0 py-0 shadow-none"><CardContent className="grid grid-cols-2 p-0"><OrderDetailCell amount={amounts.confirmed} count={counts.confirmed} label="확정 후" /><OrderDetailCell amount={amounts.draft} count={counts.draft} label="확정 전" muted /></CardContent></Card>
+              <AmountDetailCard testId="chart-order-amount-detail-order-card">
+                <AmountDetailCardTitle
+                  id="billing-order-detail-title"
+                  title="오더 상세"
+                />
+                <div className="flex flex-col gap-[var(--clair-spacing-8)] pt-[var(--clair-spacing-8)]">
+                  <OrderDetailRow
+                    amount={amounts.draft}
+                    count={counts.draft}
+                    state="draft"
+                  />
+                  <AmountDetailDivider />
+                  <OrderDetailRow
+                    amount={amounts.confirmed}
+                    count={counts.confirmed}
+                    state="confirmed"
+                  />
+                </div>
+              </AmountDetailCard>
             </section>
             <section aria-labelledby="billing-composition-title">
-              <h4 id="billing-composition-title" className="mb-[var(--clair-spacing-8)] emr-text-section font-semibold">금액 구성</h4>
-              <Card size="sm" className="gap-0 py-0 shadow-none"><CardContent className="px-[var(--clair-spacing-16)] py-0"><dl className="emr-text-body"><MoneyRow label="총 금액" value={formatWon(amounts.gross)} /><MoneyRow label="할인" testId="billing-discount-value" tone="adjustment" value={`- ${formatWonNumber(amounts.discount)} 원`} /><MoneyRow label="할증" testId="billing-surcharge-value" tone="adjustment" value={`- ${formatSurchargePercent(amounts.surcharge, amounts.gross)} %(${formatWon(amounts.surcharge)})`} /></dl></CardContent></Card>
+              <AmountDetailCard testId="chart-order-amount-detail-composition-card">
+                <AmountDetailCardTitle
+                  id="billing-composition-title"
+                  title="금액 구성"
+                />
+                <dl className="flex flex-col gap-[var(--clair-spacing-8)] pt-[var(--clair-spacing-8)]">
+                  <MoneyRow label="총 금액" value={formatWonSpaced(amounts.gross)} />
+                  <AmountDetailDivider />
+                  <MoneyRow
+                    label="할인"
+                    testId="billing-discount-value"
+                    tone="adjustment"
+                    value={`- ${formatWonNumber(amounts.discount)} 원`}
+                  />
+                  <AmountDetailDivider />
+                  <MoneyRow
+                    label="할증"
+                    testId="billing-surcharge-value"
+                    tone="adjustment"
+                    value={`- ${formatSurchargePercent(amounts.surcharge, amounts.gross)} %(${formatWon(amounts.surcharge)})`}
+                  />
+                </dl>
+              </AmountDetailCard>
             </section>
             {freshnessText ? <div className="flex items-center justify-between gap-[var(--clair-spacing-12)]"><p role="status" className={cn("emr-text-metadata", displayState === "invalid" || displayState === "save_error" || freshness === "stale" || freshness === "error" ? "text-[var(--emr-status-warning-text)]" : "text-[var(--emr-text-secondary)]")}>{freshnessText}</p>{freshness === "stale" || freshness === "error" ? <Button type="button" size="sm" variant="outline" onClick={onRetry}>다시 확인</Button> : null}</div> : null}
             {summary.unfinishedOrders.length > 0 ? <section className="rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-status-warning-border)] bg-[var(--emr-status-warning-bg)] p-[var(--clair-spacing-12)] emr-text-metadata"><p className="font-semibold">진행 중 오더 {summary.unfinishedOrders.length}건</p><ul className="mt-[var(--clair-spacing-8)] space-y-[var(--clair-spacing-4)]">{summary.unfinishedOrders.slice(0, 3).map((order) => <li key={order.orderId} className="truncate">{order.name} · {order.status}</li>)}</ul></section> : null}
@@ -221,30 +302,127 @@ export function ChartOrderBillingDetailAside({
           </div>
         )}
       </div>
-      <footer className="flex min-h-[var(--emr-rightpanel-footer-compact-height)] shrink-0 items-center justify-between gap-[var(--clair-spacing-12)] border-t border-[var(--emr-border-default)] px-[var(--clair-spacing-12)]">
-        <p className="emr-text-metadata text-[var(--emr-text-secondary)]">청구 가능 {formatWon(amounts.requestableTotal)}</p>
+      <footer
+        className="flex h-[var(--emr-chart-order-amount-detail-footer-height)] shrink-0 items-center justify-end gap-[var(--clair-spacing-8)] overflow-hidden border-t border-[var(--emr-border-default)] px-[var(--clair-spacing-16)]"
+        data-testid="chart-order-amount-detail-footer"
+      >
+        <Button type="button" size="sm" variant="outline" onClick={onClose}>
+          닫기
+        </Button>
         <Button
           type="button"
           size="sm"
           disabled={!canRequestBilling || requesting}
           onClick={onRequestBilling}
         >
-          {requesting ? "이동 중" : "수납에서 청구"}
+          {requesting ? "이동 중" : "수납 청구"}
         </Button>
       </footer>
     </aside>
   );
 }
 
-function OrderDetailCell({ amount, count, label, muted = false }: { amount: number; count: number; label: string; muted?: boolean }) {
-  return <div className={cn("min-h-[var(--emr-chart-order-amount-detail-cell-height)] p-[var(--clair-spacing-12)]", muted && "border-l border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)]")}><p className="emr-text-metadata text-[var(--emr-text-secondary)]">{label}</p><p className={cn("mt-[var(--clair-spacing-4)] emr-text-body font-semibold tabular-nums", muted && "text-[var(--emr-status-warning-text)]")}>{formatWon(amount)}</p><p className="emr-text-metadata text-[var(--emr-text-tertiary)]">{count}건</p></div>;
+function AmountDetailCard({
+  children,
+  muted = false,
+  testId,
+}: {
+  children: ReactNode;
+  muted?: boolean;
+  testId: string;
+}) {
+  return (
+    <Card
+      size="sm"
+      data-testid={testId}
+      className={cn(
+        "rounded-[var(--clair-radius-atomic-8)] border-[var(--clair-color-atomic-neutral-200)] ring-0 shadow-none data-[size=sm]:gap-0 data-[size=sm]:py-0",
+        muted && "bg-[var(--clair-color-atomic-neutral-50)]",
+      )}
+    >
+      <CardContent className="flex flex-col gap-[var(--clair-spacing-8)] px-[var(--clair-spacing-10)] pb-[var(--clair-spacing-10)] pt-[var(--clair-spacing-8)] group-data-[size=sm]/card:px-[var(--clair-spacing-10)]">
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AmountDetailCardTitle({
+  children,
+  id,
+  title,
+}: {
+  children?: ReactNode;
+  id: string;
+  title: string;
+}) {
+  return (
+    <div className="flex h-[var(--emr-chart-order-amount-detail-title-row-height)] items-center justify-between">
+      <h4
+        id={id}
+        className="emr-text-metadata font-medium text-[var(--clair-color-atomic-neutral-500)]"
+      >
+        {title}
+      </h4>
+      {children}
+    </div>
+  );
+}
+
+function OrderDetailRow({
+  amount,
+  count,
+  state,
+}: {
+  amount: number;
+  count: number;
+  state: "confirmed" | "draft";
+}) {
+  const confirmed = state === "confirmed";
+  return (
+    <div className="flex items-center justify-between">
+      <Badge
+        size="md"
+        variant="outline"
+        className={cn(
+          "rounded-[var(--clair-radius-atomic-6)] px-[var(--clair-spacing-8)]",
+          confirmed
+            ? "border-[var(--clair-color-atomic-green-100)] bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-600)]"
+            : "border-[var(--clair-color-atomic-gray-100)] bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-600)]",
+        )}
+      >
+        {confirmed ? "확정된" : "미확정"} 오더 {count}건
+      </Badge>
+      <span className="emr-text-body font-medium tabular-nums text-[var(--clair-color-atomic-neutral-900)]">
+        {formatWonSpaced(amount)}
+      </span>
+    </div>
+  );
+}
+
+function AmountDetailDivider() {
+  return (
+    <div
+      aria-hidden="true"
+      className="h-px w-full bg-[var(--clair-color-atomic-neutral-200)]"
+    />
+  );
 }
 
 function MoneyRow({ label, testId, tone, value }: { label: string; testId?: string; tone?: "adjustment"; value: string }) {
   return (
-    <div className="flex min-h-[var(--emr-chart-order-amount-detail-row-height)] items-center justify-between border-b border-[var(--emr-border-default)] py-[var(--clair-spacing-12)] last:border-b-0">
-      <dt className="text-[var(--emr-text-secondary)]">{label}</dt>
-      <dd className={cn("font-semibold tabular-nums", tone === "adjustment" && "text-[var(--emr-chart-order-amount-detail-adjustment-text)]")} data-testid={testId}>{value}</dd>
+    <div className="emr-text-body flex items-center justify-between font-medium">
+      <dt className="text-[var(--clair-color-atomic-neutral-600)]">{label}</dt>
+      <dd
+        className={cn(
+          "tabular-nums text-[var(--clair-color-atomic-neutral-900)]",
+          tone === "adjustment" &&
+            "text-[var(--emr-chart-order-amount-detail-adjustment-text)]",
+        )}
+        data-testid={testId}
+      >
+        {value}
+      </dd>
     </div>
   );
 }
@@ -257,6 +435,10 @@ function formatSurchargePercent(surcharge: number, gross: number) {
 
 function formatWon(value: number) {
   return `${Math.round(value).toLocaleString("ko-KR")}원`;
+}
+
+function formatWonSpaced(value: number) {
+  return `${formatWonNumber(value)} 원`;
 }
 
 function formatWonNumber(value: number) {
