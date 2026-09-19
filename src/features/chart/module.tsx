@@ -10596,6 +10596,7 @@ function ChartOrderCatalogDialog({
             <EmrEmptyState
               kind="no-data"
               surface="content"
+              size="md"
               priority="supporting"
               title="선택한 오더가 없습니다"
               description="오더 목록에서 추가할 항목을 선택해 주세요."
