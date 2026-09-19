@@ -121,6 +121,81 @@ test("SOAP autosave keeps the local document blocked after conflicts and allows 
   coordinator.dispose();
 });
 
+test("SOAP autosave reconciles a direct stale-token conflict when server readback already matches", async () => {
+  let attempts = 0;
+  let reconciliations = 0;
+  const states: SoapAutosaveState[] = [];
+  const localDocument = document("already-current-on-server");
+  const coordinator = new SoapAutosaveCoordinator({
+    debounceMs: 0,
+    expectedUpdatedAt: "stale",
+    request: async () => {
+      attempts += 1;
+      return { ok: false, status: 409, denialReason: "soap_note_conflict" };
+    },
+    reconcileConflict: async ({ ambiguousWrite, document: retryDocument }) => {
+      reconciliations += 1;
+      expect(ambiguousWrite).toBe(false);
+      expect(retryDocument).toEqual(localDocument);
+      return {
+        ok: true,
+        soapNote: { ...note("server-current"), blockDocument: localDocument },
+        auditRecorded: true,
+      };
+    },
+    onPersisted: () => undefined,
+    onStateChange: (state) => states.push(state),
+  });
+
+  coordinator.change(localDocument);
+  await waitForTimer();
+
+  expect(attempts).toBe(1);
+  expect(reconciliations).toBe(1);
+  expect(states.at(-1)).toBe("saved");
+  coordinator.dispose();
+});
+
+test("SOAP conflict retry rechecks the server without repeating the stale PATCH", async () => {
+  let attempts = 0;
+  let reconciliations = 0;
+  const states: SoapAutosaveState[] = [];
+  const coordinator = new SoapAutosaveCoordinator({
+    debounceMs: 0,
+    expectedUpdatedAt: "stale",
+    request: async () => {
+      attempts += 1;
+      return { ok: false, status: 409, denialReason: "soap_note_conflict" };
+    },
+    reconcileConflict: async ({ ambiguousWrite }) => {
+      reconciliations += 1;
+      expect(ambiguousWrite).toBe(false);
+      return null;
+    },
+    onPersisted: () => undefined,
+    onStateChange: (state) => states.push(state),
+  });
+
+  coordinator.change(document("different-from-server"));
+  await waitForTimer();
+  expect(attempts).toBe(1);
+  expect(reconciliations).toBe(1);
+  expect(states.at(-1)).toBe("conflict");
+
+  coordinator.change(document("newer-local-change"));
+  await waitForTimer();
+  expect(attempts).toBe(1);
+  expect(reconciliations).toBe(1);
+  expect(states.at(-1)).toBe("conflict");
+
+  coordinator.retry();
+  await waitForTimer();
+  expect(attempts).toBe(1);
+  expect(reconciliations).toBe(2);
+  expect(states.at(-1)).toBe("conflict");
+  coordinator.dispose();
+});
+
 test("SOAP autosave reports reconciled writes with unknown audit confirmation as saved with warning", async () => {
   const states: SoapAutosaveState[] = [];
   const coordinator = new SoapAutosaveCoordinator({
@@ -184,8 +259,9 @@ test("SOAP autosave reconciles a response-loss retry conflict when server readba
         ? { ok: false, status: 500, error: "db_write_failed" }
         : { ok: false, status: 409, denialReason: "soap_note_conflict" };
     },
-    reconcileConflict: async ({ document: retryDocument }) => {
+    reconcileConflict: async ({ ambiguousWrite, document: retryDocument }) => {
       reconciliations += 1;
+      expect(ambiguousWrite).toBe(true);
       expect(retryDocument).toEqual(localDocument);
       return {
         ok: true,

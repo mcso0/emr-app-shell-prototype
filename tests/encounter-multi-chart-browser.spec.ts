@@ -283,13 +283,62 @@ test("chart list retry reopens the error and never claims an empty chart", async
   await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
 });
 
-test("SOAP conflict dismissal keeps unsaved text, chart-switch blocking and CAS retry", async ({ page }) => {
+test("matching SOAP readback resolves a stale token without a conflict notice", async ({ page }) => {
+  await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&patientId=patient-coco&modulePanel=open&aside=history");
+  await expect(createButton(page)).toBeEnabled();
+  const created = await createNewChart(page);
+  const chart = (await created.json()).chart;
+  await expect(page).toHaveURL(new RegExp(`chartId=${chart.id}`));
+
+  let reconciledDocument: unknown;
+  let soapPatchAttempts = 0;
+  await page.route("**/chart/soap-notes*", async (route) => {
+    if (route.request().method() === "PATCH") {
+      soapPatchAttempts += 1;
+      reconciledDocument = route.request().postDataJSON()?.blockDocument;
+      await route.fulfill({
+        status: 409,
+        json: { ok: false, status: 409, denialReason: "soap_note_conflict" },
+      });
+      return;
+    }
+    if (route.request().method() === "GET" && reconciledDocument) {
+      await route.fulfill({
+        json: {
+          ok: true,
+          status: 200,
+          soapNote: {
+            ...chart,
+            blockDocument: reconciledDocument,
+            updatedAt: "2026-09-20T00:30:00.000Z",
+          },
+        },
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  const editor = page.getByLabel("SOAP 블록 문서");
+  const paragraph = editor.locator('.bn-block-content[data-content-type="paragraph"]').first();
+  await paragraph.click();
+  await page.keyboard.type("Synthetic matching conflict readback");
+
+  await expect.poll(() => soapPatchAttempts).toBe(1);
+  await expect(editor).toContainText("Synthetic matching conflict readback");
+  await expect(page.getByTestId("chart-soap-conflict")).toHaveCount(0);
+  await expect(page.getByTestId("chart-soap-audit-warning")).toHaveCount(0);
+});
+
+test("SOAP conflict dismissal keeps unsaved text, blocks chart switching and rechecks without a stale PATCH", async ({ page }) => {
   await page.goto("/w/clair-demo/treatment?encounterId=encounter-coco-260501&patientId=patient-coco&modulePanel=open&aside=history");
   await expect(createButton(page)).toBeEnabled();
   const created = await createNewChart(page);
   const chartId = (await created.json()).chart.id;
   await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
+  let soapPatchAttempts = 0;
   await page.route("**/chart/soap-notes", async (route) => {
+    if (route.request().method() === "PATCH") soapPatchAttempts += 1;
     await route.fulfill({ status: 409, json: { ok: false, status: 409, denialReason: "soap_note_conflict" } });
   });
   const editor = page.getByLabel("SOAP 블록 문서");
@@ -301,14 +350,16 @@ test("SOAP conflict dismissal keeps unsaved text, chart-switch blocking and CAS 
   await expect(conflict).toBeVisible();
   await conflict.getByRole("button", { name: "안내 닫기" }).click();
   await expect(conflict).toHaveCount(0);
-  await expect(page.locator('h2[aria-label="Subject/Object"]')).toContainText("저장 충돌");
+  await expect(page.getByTestId("chart-soap-conflict-collapsed")).toContainText("SOAP 저장 충돌");
   await expect(editor).toContainText("Synthetic conflicting note stays here");
   const dialog = await openNewChartDialog(page);
   await dialog.getByRole("button", { name: "선택한 진료에 차트 추가", exact: true }).click();
   await expect(dialog).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`chartId=${chartId}`));
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
-  await page.getByTestId("chart-soap-conflict-collapsed").getByRole("button", { name: "다시 저장" }).click();
+  expect(soapPatchAttempts).toBe(1);
+  await page.getByTestId("chart-soap-conflict-collapsed").getByRole("button", { name: "최신 상태 확인" }).click();
   await expect(conflict).toBeVisible();
   await expect(editor).toContainText("Synthetic conflicting note stays here");
+  expect(soapPatchAttempts).toBe(1);
 });

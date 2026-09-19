@@ -33,6 +33,7 @@ type SoapAutosaveCoordinatorOptions = {
     mode: SoapAutosaveMode;
   }) => Promise<SoapAutosaveResult>;
   reconcileConflict?: (input: {
+    ambiguousWrite: boolean;
     document: SoapBlockDocument;
   }) => Promise<SoapAutosaveResult | null>;
   onPersisted: (soapNote: SoapNote) => void;
@@ -53,6 +54,7 @@ export class SoapAutosaveCoordinator {
   private inFlight = false;
   private pendingReady = false;
   private blocked = false;
+  private conflictBlocked = false;
   private disposed = false;
   private flushWaiters: Array<(saved: boolean) => void> = [];
   private ambiguousDocument: SoapBlockDocument | null = null;
@@ -87,6 +89,10 @@ export class SoapAutosaveCoordinator {
     this.pendingDocument = document;
     this.pendingMode = "autosave";
     this.pendingReady = false;
+    if (this.conflictBlocked) {
+      this.clearTimer();
+      return;
+    }
     this.blocked = false;
     this.clearTimer();
     this.notify("saving");
@@ -102,8 +108,12 @@ export class SoapAutosaveCoordinator {
     this.pendingDocument = this.latestDocument;
     this.pendingMode = "manual_save";
     this.pendingReady = true;
-    this.blocked = false;
     this.clearTimer();
+    if (this.conflictBlocked && this.reconcileConflict) {
+      void this.retryConflictReadback();
+      return;
+    }
+    this.blocked = false;
     void this.flush();
   }
 
@@ -168,6 +178,7 @@ export class SoapAutosaveCoordinator {
         this.pendingMode = mode;
       }
       this.blocked = true;
+      this.conflictBlocked = false;
       this.inFlight = false;
       this.settleFlushWaiters();
       this.notify("error", {
@@ -178,25 +189,12 @@ export class SoapAutosaveCoordinator {
       return;
     }
 
-    if (
-      !result.ok &&
-      result.denialReason === "soap_note_conflict" &&
-      this.ambiguousDocument &&
-      areSoapBlockDocumentsEqual(this.ambiguousDocument, document) &&
-      this.reconcileConflict
-    ) {
-      try {
-        result = (await this.reconcileConflict({ document })) ?? result;
-      } catch {
-        // Keep the original conflict when readback reconciliation is unavailable.
-      }
+    if (!result.ok && result.denialReason === "soap_note_conflict") {
+      result = (await this.tryReconcileConflict(document)) ?? result;
     }
 
     if (result.ok) {
-      this.ambiguousDocument = null;
-      this.expectedUpdatedAt = result.soapNote.updatedAt;
-      if (!this.disposed) this.onPersisted(result.soapNote);
-      this.notify(result.auditRecorded ? "saved" : "saved_with_warning", result);
+      this.acceptSuccessfulResult(result);
     } else {
       if (result.status === 0 || result.status >= 500) {
         this.ambiguousDocument = document;
@@ -206,6 +204,7 @@ export class SoapAutosaveCoordinator {
         this.pendingMode = mode;
       }
       this.blocked = true;
+      this.conflictBlocked = result.denialReason === "soap_note_conflict";
       this.notify(
         result.denialReason === "soap_note_conflict" ? "conflict" : "error",
         result,
@@ -217,6 +216,62 @@ export class SoapAutosaveCoordinator {
     if (!this.blocked && this.pendingDocument && this.pendingReady) {
       void this.flush();
     }
+  }
+
+  private async retryConflictReadback() {
+    if (this.inFlight || !this.pendingDocument || !this.reconcileConflict) return;
+
+    const document = this.pendingDocument;
+    this.inFlight = true;
+    this.notify("saving");
+    const result = await this.tryReconcileConflict(document);
+
+    if (result?.ok) {
+      if (
+        this.pendingDocument &&
+        areSoapBlockDocumentsEqual(this.pendingDocument, document)
+      ) {
+        this.pendingDocument = null;
+        this.pendingReady = false;
+      }
+      this.acceptSuccessfulResult(result);
+    } else {
+      this.blocked = true;
+      this.conflictBlocked = true;
+      this.notify("conflict", {
+        ok: false,
+        status: 409,
+        denialReason: "soap_note_conflict",
+      });
+    }
+
+    this.inFlight = false;
+    this.settleFlushWaiters();
+    if (!this.blocked && this.pendingDocument && this.pendingReady) {
+      void this.flush();
+    }
+  }
+
+  private async tryReconcileConflict(document: SoapBlockDocument) {
+    if (!this.reconcileConflict) return null;
+    const ambiguousWrite = Boolean(
+      this.ambiguousDocument &&
+        areSoapBlockDocumentsEqual(this.ambiguousDocument, document),
+    );
+    try {
+      return await this.reconcileConflict({ ambiguousWrite, document });
+    } catch {
+      return null;
+    }
+  }
+
+  private acceptSuccessfulResult(result: Extract<SoapAutosaveResult, { ok: true }>) {
+    this.ambiguousDocument = null;
+    this.blocked = false;
+    this.conflictBlocked = false;
+    this.expectedUpdatedAt = result.soapNote.updatedAt;
+    if (!this.disposed) this.onPersisted(result.soapNote);
+    this.notify(result.auditRecorded ? "saved" : "saved_with_warning", result);
   }
 
   private notify(state: SoapAutosaveState, result?: SoapAutosaveResult) {
