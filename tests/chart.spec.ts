@@ -2955,7 +2955,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(historyDate).toHaveCSS("padding", "0px");
   await expect(historyDate).toHaveCSS("border-radius", "0px");
   await expect(historyDate).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(historyDate).toHaveCSS("color", "rgb(115, 115, 115)");
+  await expect(historyDate).toHaveCSS("color", "rgb(64, 64, 64)");
   await expect(historyDate.locator("svg")).toHaveCSS("width", "12px");
   const historyRowAlignment = await inlineHistoryItem.evaluate((element) => {
     const date = element.querySelector<HTMLElement>("[data-testid^='chart-history-date-']");
