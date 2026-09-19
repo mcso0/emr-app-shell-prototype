@@ -10,7 +10,7 @@ source_docs:
   - docs/engineering/current-status.md
 dependencies:
   - CHART-PR-033
-updated: 2026-09-13
+updated: 2026-09-19
 ---
 
 # Encounter Multi-Chart
@@ -197,3 +197,11 @@ Verification completed:
 - Desktop Playwright CLI visual inspection at 1920×1080 confirmed normal additional-chart layout, visible top-right X, and compact failure/retry with retained text. Local screenshots: `output/playwright/chart-notices-normal.png`, `chart-notices-error.png`, `chart-notices-collapsed.png`. The synthetic mock shell emitted existing workspace/vitals HTTP errors; the scoped automated new-chart scenario had no page runtime errors. No authenticated remote or mobile acceptance is claimed.
 
 This is local synthetic/mock evidence only; no remote database or real patient data was changed. No main merge, push, deployment, or runtime-model change was performed. Parent independent review remains required.
+
+## Historical Chart Selection Recovery — 2026-09-19
+
+Phase 1 corrects a client selection-state defect without changing reception, consultation-call, chart-creation, API, database, permission, or persistence contracts. When a user moved between two already-loaded charts under the same historical encounter, the URL history identifiers changed but `selectedChartId` was cleared because the selection logic only retained loaded charts for the current encounter. The unchanged historical scope then had no reason to reload, so the workspace incorrectly rendered `이 접수에 작성된 차트가 없어요` even though the encounter chart list was non-empty.
+
+The store now keeps any requested chart that is present in the loaded encounter chart list active, including same-historical-encounter switches, and reselecting the same history identifiers repairs a missing active selection. The empty notice is now reserved for a successfully loaded zero-chart list. A non-empty list with no active selection displays `차트를 열지 못했어요` with an explicit list reload action instead of claiming that no chart exists.
+
+TDD evidence: the new store regression first failed with `selectedChartId: ""` after the historical switch, then passed after the correction. The focused browser regression switches between both same-encounter historical chart rows, verifies exact `chartId` URL/selection restoration and read-only state, and confirms the false empty notice never appears. The true zero-chart empty-notice regression also passes. TypeScript, production build, docs, secret scan, Korean UX copy, diff whitespace, and full ESLint pass; ESLint retains only the five existing WP10 unused-variable warnings, and the build retains the existing broad NFT trace warning for the docs reader. Exact remote candidate, merge, Production, smoke, and rollback evidence follow in this section before completion.
