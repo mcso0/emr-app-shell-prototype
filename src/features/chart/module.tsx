@@ -10387,6 +10387,7 @@ function ChartOrderCatalogDialog({
                     categoryTabRefs.current[index] = node;
                   }}
                   selected={selected}
+                  variant="facet"
                   tabIndex={selected ? 0 : -1}
                 />
               );
@@ -10499,10 +10500,11 @@ function ChartOrderCatalogDialog({
                         setActiveCandidateIndex(virtualRow.index)
                       }
                       selected={selected}
-                      selectedIndicator
+                      selectedIndicator={selected}
                       style={{
                         transform: `translateY(${virtualRow.start}px)`,
                       }}
+                      variant="result"
                       trailing={
                         <span
                           className={orderCatalogDialogStyles.candidatePrice}

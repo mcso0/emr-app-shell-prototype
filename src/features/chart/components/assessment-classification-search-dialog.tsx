@@ -402,6 +402,7 @@ export function AssessmentClassificationSearchDialog({
               count={totalCount}
               label="전체"
               selected={selectedSystemId === "all"}
+              variant="facet"
               disabled={!catalogReady}
               onClick={() => {
                 setSelectedSystemId("all");
@@ -414,6 +415,7 @@ export function AssessmentClassificationSearchDialog({
                 count={system.count}
                 label={system.name}
                 selected={selectedSystemId === system.id}
+                variant="facet"
                 disabled={!catalogReady}
                 onClick={() => {
                   setSelectedSystemId(system.id);
@@ -445,6 +447,7 @@ export function AssessmentClassificationSearchDialog({
               }
               label="전체"
               selected={selectedDiseaseGroupId === "all"}
+              variant="facet"
               disabled={!catalogReady}
               onClick={() => setSelectedDiseaseGroupId("all")}
             />
@@ -454,6 +457,7 @@ export function AssessmentClassificationSearchDialog({
                 count={diseaseGroup.count}
                 label={diseaseGroup.name}
                 selected={selectedDiseaseGroupId === diseaseGroup.id}
+                variant="facet"
                 disabled={!catalogReady}
                 onClick={() => setSelectedDiseaseGroupId(diseaseGroup.id)}
               />
@@ -646,7 +650,8 @@ function DiagnosisOptionList({
             title={item.name}
             label={item.name}
             selected={selected}
-            selectedIndicator
+            selectedIndicator={selected}
+            variant="result"
             onClick={() => onToggle(item)}
           />
         );

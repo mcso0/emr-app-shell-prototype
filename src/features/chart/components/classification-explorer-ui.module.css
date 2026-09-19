@@ -134,13 +134,12 @@
 }
 
 .option {
-  display: grid;
+  display: flex;
   width: 100%;
   min-height: 34px;
   flex: 0 0 34px;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   padding: 5px 8px;
   border: 0;
   border-radius: 8px;
@@ -154,8 +153,12 @@
   background: var(--emr-state-hover);
 }
 
-.option[aria-selected="true"] {
-  background: var(--emr-state-selected);
+.option[data-list-variant="facet"][aria-selected="true"] {
+  background: var(--clair-color-atomic-black-alpha-6);
+}
+
+.option[data-list-variant="result"][aria-selected="true"] {
+  background: var(--clair-color-atomic-black-alpha-4);
 }
 
 .option:disabled {
@@ -166,11 +169,14 @@
 
 .optionCopy {
   display: grid;
+  flex: 1 1 auto;
   min-width: 0;
   gap: 2px;
+  color: var(--clair-color-atomic-neutral-700);
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
+  letter-spacing: 0.247px;
 }
 
 .optionCopy > span,
@@ -194,17 +200,22 @@
   line-height: 16px;
 }
 
-.option > em {
+.optionCount {
+  display: inline-flex;
+  min-width: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
   color: var(--emr-text-tertiary);
-  font-size: 11px;
-  font-style: normal;
+  font-size: 12px;
+  font-weight: 500;
   line-height: 16px;
+  letter-spacing: 0.3px;
 }
 
 .detailedOption {
   min-height: 56px;
   flex-basis: 56px;
-  grid-template-columns: minmax(0, 1fr) auto auto;
   padding: 7px 12px;
   border-bottom: 1px solid var(--emr-border-subtle);
   border-radius: 0;
@@ -220,18 +231,21 @@
   line-height: 16px;
 }
 
-.optionIndicator {
-  display: grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  border-radius: 6px;
-  color: transparent;
-  font-style: normal;
+.optionTrailingSlot {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
 }
 
-.option[aria-selected="true"] .optionIndicator {
+.optionIndicator {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 6px;
   color: var(--clair-color-atomic-sky-600);
+  font-style: normal;
 }
 
 .optionIndicator svg {
@@ -242,7 +256,7 @@
 .selectedRow {
   position: relative;
   display: grid;
-  min-height: 44px;
+  min-height: 46px;
   grid-template-columns: 24px minmax(0, 1fr) 24px;
   align-items: center;
   gap: 6px;
@@ -283,12 +297,11 @@
 .selectedName {
   min-width: 0;
   overflow: hidden;
-  margin-right: 6px;
-  margin-left: -2px;
-  color: var(--emr-text-primary);
+  color: var(--clair-color-atomic-neutral-700);
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
+  letter-spacing: 0.247px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
