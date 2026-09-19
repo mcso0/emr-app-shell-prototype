@@ -5934,7 +5934,8 @@ function DayScheduleBoard({
           timeScale.isSelectable(hour * 60, 60) ? null : (
             <div
               key={`off-hour-background-${hour}`}
-              className="pointer-events-none absolute inset-x-0 z-0 bg-muted/70"
+              className="pointer-events-none absolute inset-x-0 z-0 bg-[var(--clair-color-fill-alternative)]"
+              data-testid={`day-off-hour-background-${hour}`}
               style={{
                 top: timeScale.minutesToY(hour * 60),
                 height: timeScale.rangeHeight(hour * 60, (hour + 1) * 60),
@@ -6257,7 +6258,8 @@ function WeekScheduleBoard({
                   className={cn(
                     "relative h-full min-h-0 min-w-0 overflow-hidden border-r last:border-r-0",
                     day.active && "bg-[var(--emr-status-info-bg)]/40",
-                    !isBusinessHourRow(hour) && "bg-muted/70",
+                    !isBusinessHourRow(hour) &&
+                      "bg-[var(--clair-color-fill-alternative)]",
                   )}
                 >
                   <CalendarQuarterHourLines />
