@@ -12,6 +12,9 @@ import type {
   EncounterStatus,
   Guardian,
   SoapNoteStatus,
+  WaitingQueueEntry,
+  WaitingQueueStatus,
+  WaitingQueueType,
 } from "@/types/emr-domain";
 
 export type ChartPatientHistoryGateway = {
@@ -200,13 +203,25 @@ function parseChartPatientHistoryRecord(
   value: unknown,
 ): ChartPatientHistoryRecord | null {
   if (!isRecord(value)) return null;
+  if (!("chart" in value)) return null;
   const encounter = parseEncounter(value.encounter);
-  const chart = mapSoapNote(value.chart);
+  const chart = value.chart === null ? null : mapSoapNote(value.chart);
+  const queueEntry = parseQueueEntry(value.queueEntry);
+  if (!encounter) {
+    return null;
+  }
   if (
-    !encounter ||
-    !chart ||
-    chart.encounterId !== encounter.id ||
-    !historyChartStatuses.has(chart.status)
+    chart &&
+    (chart.encounterId !== encounter.id || !historyChartStatuses.has(chart.status))
+  ) {
+    return null;
+  }
+  if (
+    !chart &&
+    (encounter.status !== "waiting" ||
+      queueEntry?.encounterId !== encounter.id ||
+      queueEntry.queueType !== "consultation" ||
+      queueEntry.status !== "waiting")
   ) {
     return null;
   }
@@ -226,6 +241,7 @@ function parseChartPatientHistoryRecord(
     diagnoses,
     encounter,
     ...(primaryGuardian ? { primaryGuardian } : {}),
+    ...(queueEntry ? { queueEntry } : {}),
     ...(veterinarianName ? { veterinarianName } : {}),
   };
 }
@@ -245,6 +261,60 @@ const encounterStatuses = new Set<EncounterStatus>([
   "completed",
   "cancelled",
 ]);
+
+const waitingQueueTypes = new Set<WaitingQueueType>([
+  "reception",
+  "consultation",
+  "treatment",
+  "billing",
+]);
+
+const waitingQueueStatuses = new Set<WaitingQueueStatus>([
+  "waiting",
+  "called",
+  "in_progress",
+  "done",
+  "cancelled",
+]);
+
+function parseQueueEntry(value: unknown): WaitingQueueEntry | undefined {
+  if (!isRecord(value)) return undefined;
+  const id = getString(value.id);
+  const workspaceId = getString(value.workspaceId);
+  const encounterId = getString(value.encounterId);
+  const queueType = getString(value.queueType) as WaitingQueueType | undefined;
+  const status = getString(value.status) as WaitingQueueStatus | undefined;
+  const priority = getString(value.priority) as WaitingQueueEntry["priority"] | undefined;
+  const enteredAt = getString(value.enteredAt);
+  if (
+    !id ||
+    !workspaceId ||
+    !encounterId ||
+    !queueType ||
+    !waitingQueueTypes.has(queueType) ||
+    !status ||
+    !waitingQueueStatuses.has(status) ||
+    !priority ||
+    !["urgent", "high", "normal", "low"].includes(priority) ||
+    !enteredAt
+  ) {
+    return undefined;
+  }
+
+  const queueEntry: WaitingQueueEntry = {
+    id,
+    workspaceId,
+    encounterId,
+    queueType,
+    status,
+    priority,
+    enteredAt,
+    ...optionalStringFields(value, ["calledAt", "finishedAt"]),
+  };
+  const sortOrder = getFiniteNumber(value.sortOrder);
+  if (sortOrder !== undefined) queueEntry.sortOrder = sortOrder;
+  return queueEntry;
+}
 
 function parseEncounter(
   value: unknown,

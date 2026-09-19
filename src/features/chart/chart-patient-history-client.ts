@@ -54,7 +54,7 @@ export async function loadCompleteChartPatientHistory({
   loadPage?: typeof loadChartPatientHistoryPage;
 }): Promise<ChartPatientHistoryResponse> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const recordsByChartId = new Map<
+    const recordsByHistoryId = new Map<
       string,
       Extract<ChartPatientHistoryResponse, { ok: true }>["items"][number]
     >();
@@ -72,10 +72,8 @@ export async function loadCompleteChartPatientHistory({
       if (!result.ok) return result;
 
       for (const record of result.items) {
-        if (!record.chart?.id) {
-          return { ok: false, status: 500, error: "db_read_failed" };
-        }
-        recordsByChartId.set(record.chart.id, record);
+        const historyId = record.chart?.id ?? `waiting:${record.encounter.id}`;
+        recordsByHistoryId.set(historyId, record);
       }
       totalCount = result.totalCount;
 
@@ -87,13 +85,13 @@ export async function loadCompleteChartPatientHistory({
       cursor = result.nextCursor;
     }
 
-    if (recordsByChartId.size === totalCount) {
+    if (recordsByHistoryId.size === totalCount) {
       return {
         enforcedBy: "chart-patient-history-read",
-        items: [...recordsByChartId.values()].sort(
+        items: [...recordsByHistoryId.values()].sort(
           (a, b) =>
-            b.chart.createdAt.localeCompare(a.chart.createdAt) ||
-            b.chart.id.localeCompare(a.chart.id),
+            getChartHistorySortAt(b).localeCompare(getChartHistorySortAt(a)) ||
+            getChartHistoryStableId(b).localeCompare(getChartHistoryStableId(a)),
         ),
         nextCursor: null,
         ok: true,
@@ -104,4 +102,16 @@ export async function loadCompleteChartPatientHistory({
   }
 
   return { ok: false, status: 500, error: "db_read_failed" };
+}
+
+function getChartHistorySortAt(
+  record: Extract<ChartPatientHistoryResponse, { ok: true }>["items"][number],
+) {
+  return record.chart?.createdAt ?? record.encounter.checkedInAt ?? record.encounter.createdAt;
+}
+
+function getChartHistoryStableId(
+  record: Extract<ChartPatientHistoryResponse, { ok: true }>["items"][number],
+) {
+  return record.chart?.id ?? record.encounter.id;
 }
