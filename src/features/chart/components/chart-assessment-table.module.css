@@ -13,7 +13,7 @@
   min-width: 0;
   min-height: 0;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
   scrollbar-gutter: auto;
 }
@@ -21,13 +21,25 @@
 .table {
   --chart-assessment-content-inset: var(--clair-spacing-12);
   --chart-assessment-system-column: 100px;
+  --chart-assessment-diagnosis-column-min: 140px;
   --chart-assessment-primary-column: 52px;
   --chart-assessment-confirmed-column: 52px;
   --chart-assessment-closed-column: 52px;
   --chart-assessment-veterinarian-column: 84px;
+  --chart-assessment-fixed-column-width: calc(
+    var(--chart-assessment-system-column) +
+      var(--chart-assessment-primary-column) +
+      var(--chart-assessment-confirmed-column) +
+      var(--chart-assessment-closed-column) +
+      var(--chart-assessment-veterinarian-column)
+  );
+  --chart-assessment-table-min-width: calc(
+    var(--chart-assessment-fixed-column-width) +
+      var(--chart-assessment-diagnosis-column-min)
+  );
 
   width: 100%;
-  min-width: 0 !important;
+  min-width: var(--chart-assessment-table-min-width) !important;
   table-layout: fixed;
 }
 
@@ -70,6 +82,14 @@
   padding-inline-start: var(--chart-assessment-content-inset);
 }
 
+.table .firstHeaderCell[data-slot="table-head"]
+  > :global(.emr-table-cell-content)
+  > button {
+  padding-inline: calc(
+    var(--clair-spacing-8) + var(--clair-border-width-default)
+  );
+}
+
 .table .statusHeaderCell[data-slot="table-head"] {
   padding-inline: 0;
 }
@@ -93,7 +113,7 @@
 }
 
 .diagnosisCell {
-  padding-inline: var(--clair-spacing-4) !important;
+  padding-inline: var(--clair-spacing-10) !important;
 }
 
 .statusCell {
@@ -229,6 +249,18 @@
     > :global(.emr-table-cell-content)
     > :is(button, span) {
     padding-inline: var(--clair-spacing-6);
+  }
+
+  .table .firstHeaderCell[data-slot="table-head"]
+    > :global(.emr-table-cell-content)
+    > button {
+    padding-inline: calc(
+      var(--clair-spacing-8) + var(--clair-border-width-default)
+    );
+  }
+
+  .diagnosisCell {
+    padding-inline: var(--clair-spacing-6) !important;
   }
 }
 

@@ -5948,8 +5948,9 @@ test("chart diagnosis search recommends, adds, marks, and removes session diagno
 test("Assessment diagnosis table matches the approved Figma geometry and semantics", async ({
   page,
 }) => {
+  await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
-  await page.goto(chartFigmaVisualFixture.route);
+  await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
 
   const diagnosisPanel = page.getByLabel("진단명 관리");
   const table = diagnosisPanel.getByRole("table", { name: "진단명 목록" });
@@ -6150,6 +6151,12 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
         header: rect(headerCells[1].querySelector("button > span:first-child"))
           .left,
       },
+      systemTextStart: {
+        body: rect(rowCells[0].querySelector("[data-slot='badge'] > span"))
+          .left,
+        header: rect(headerCells[0].querySelector("button > span:first-child"))
+          .left,
+      },
       statusCenters: headerCells.slice(2, 5).map((header, index) => ({
         body: rect(rowCells[index + 2].querySelector("[data-slot='checkbox']"))
           .center,
@@ -6184,12 +6191,16 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   expect(
     alignmentGeometry.diagnosisTextStart.header -
       alignmentGeometry.diagnosisTextStart.body,
-  ).toBeCloseTo(6, 2);
+  ).toBeCloseTo(0, 2);
+  expect(
+    alignmentGeometry.systemTextStart.header -
+      alignmentGeometry.systemTextStart.body,
+  ).toBeCloseTo(0, 2);
   expect(alignmentGeometry.headerInsets).toEqual({
     firstCell: "12px",
-    firstText: 10,
+    firstText: 9,
     lastCell: "12px",
-    sortableButton: "10px",
+    sortableButton: "9px",
   });
   for (const start of Object.values(alignmentGeometry.contentStart)) {
     expect(start).toBeCloseTo(alignmentGeometry.contentStart.title, 2);
@@ -6299,7 +6310,10 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
 
       return {
         clientWidth: viewport.clientWidth,
+        documentOverflow:
+          document.documentElement.scrollWidth - window.innerWidth,
         lastHeaderRight: lastHeaderRect.right,
+        overflowX: getComputedStyle(viewport).overflowX,
         scrollWidth: viewport.scrollWidth,
         tableRight: tableRect.right,
         viewportRight: viewportRect.right,
@@ -6309,15 +6323,29 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
       };
     });
 
-    expect(horizontalGeometry.scrollWidth).toBeLessThanOrEqual(
-      horizontalGeometry.clientWidth + 1,
-    );
-    expect(horizontalGeometry.tableRight).toBeLessThanOrEqual(
-      horizontalGeometry.viewportRight + 1,
-    );
-    expect(horizontalGeometry.lastHeaderRight).toBeLessThanOrEqual(
-      horizontalGeometry.viewportRight + 1,
-    );
+    expect(horizontalGeometry.overflowX).toBe("auto");
+    expect(horizontalGeometry.documentOverflow).toBeLessThanOrEqual(0);
+    if (horizontalGeometry.clientWidth >= 480) {
+      expect(horizontalGeometry.scrollWidth).toBeLessThanOrEqual(
+        horizontalGeometry.clientWidth + 1,
+      );
+      expect(horizontalGeometry.tableRight).toBeLessThanOrEqual(
+        horizontalGeometry.viewportRight + 1,
+      );
+      expect(horizontalGeometry.lastHeaderRight).toBeLessThanOrEqual(
+        horizontalGeometry.viewportRight + 1,
+      );
+    } else {
+      expect(horizontalGeometry.scrollWidth).toBeGreaterThan(
+        horizontalGeometry.clientWidth,
+      );
+      expect(horizontalGeometry.tableRight).toBeGreaterThan(
+        horizontalGeometry.viewportRight + 1,
+      );
+      expect(horizontalGeometry.lastHeaderRight).toBeGreaterThan(
+        horizontalGeometry.viewportRight + 1,
+      );
+    }
     expect(new Set(horizontalGeometry.widths.slice(2, 5)).size).toBe(1);
     if (horizontalGeometry.clientWidth >= 340) {
       expect(horizontalGeometry.widths[0]).toBe(100);
@@ -6326,6 +6354,7 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
       expect(horizontalGeometry.widths[0]).toBe(92);
       expect(horizontalGeometry.widths.slice(2)).toEqual([44, 44, 44, 72]);
     }
+    expect(horizontalGeometry.widths[1]).toBeGreaterThanOrEqual(140);
   }
 
   const systemHeader = table.getByRole("columnheader", { name: /진단계통/ });
