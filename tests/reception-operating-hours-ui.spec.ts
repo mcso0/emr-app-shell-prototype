@@ -5,8 +5,13 @@ test("day calendar compresses non-business rows and keeps business quarters at 3
 }) => {
   await page.goto("/w/clair-demo/reception?date=2026-05-01");
   const offHour = page.getByTestId("day-hour-row-0");
+  const offHourBackground = page.getByTestId("day-off-hour-background-0");
   const businessHour = page.getByTestId("day-hour-row-9");
   await expect(offHour).toBeVisible();
+  await expect(offHourBackground).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0.04)",
+  );
   await expect(businessHour).toBeVisible();
   expect(
     await offHour.evaluate((element) => element.getBoundingClientRect().height),
