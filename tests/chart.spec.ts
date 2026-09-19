@@ -2781,6 +2781,9 @@ test("live patient chart history shows every chart by created_at and keeps past 
   const oldHistoryItem = aside.getByTestId(
     `chart-history-item-${oldChartId}`,
   );
+  const oldHistorySameMinuteItem = aside.getByTestId(
+    `chart-history-item-${oldChartSameMinute.id}`,
+  );
   const inlineHistoryItem = page.getByTestId(
     `chart-diagnosis-history-item-${oldEncounterId}`,
   );
@@ -2848,6 +2851,20 @@ test("live patient chart history shows every chart by created_at and keeps past 
     "border-width",
     "0px",
   );
+  await oldHistorySameMinuteItem.click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"))
+    .toBe(oldChartSameMinute.id);
+  await expect(oldHistorySameMinuteItem).toHaveAttribute("data-selected", "true");
+  await expect(oldHistoryItem).not.toHaveAttribute("data-selected", "true");
+  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toBeVisible();
+  await oldHistoryItem.click();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"))
+    .toBe(oldChartId);
+  await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
+  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
   await historyDateMode.getByRole("button", { name: "작성일 기준" }).click();
   await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
   await expect(

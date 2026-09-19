@@ -132,11 +132,17 @@ export const useChartStore = create<ChartStore>()((set, get) => ({
     set({ historyViewChartId: "", historyViewEncounterId: "", selectedEncounterId, selectedChartId: "" });
   },
   selectHistoryChart: async (encounterId, chartId, beforeSelect) => {
+    const chartAlreadyLoaded = get().encounterCharts.some(
+      (chart) => chart.id === chartId,
+    );
     if (
       get().historyViewEncounterId === encounterId &&
       get().historyViewChartId === chartId
     ) {
       beforeSelect?.();
+      if (chartAlreadyLoaded && get().selectedChartId !== chartId) {
+        set({ selectedChartId: chartId });
+      }
       return true;
     }
     if (!await get().flushEditors()) return false;
@@ -145,11 +151,7 @@ export const useChartStore = create<ChartStore>()((set, get) => ({
     set({
       historyViewChartId: chartId,
       historyViewEncounterId: selectingCurrentEncounter ? "" : encounterId,
-      selectedChartId:
-        selectingCurrentEncounter &&
-        get().encounterCharts.some((chart) => chart.id === chartId)
-          ? chartId
-          : "",
+      selectedChartId: chartAlreadyLoaded ? chartId : "",
     });
     return true;
   },

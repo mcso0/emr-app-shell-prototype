@@ -16185,8 +16185,28 @@ export function ChartContent({
               <CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
               진료 차트를 준비하는 중
             </div>
-          ) : (
+          ) : encounterCharts.charts.length === 0 ? (
             <ChartNotice key={`${encounterCharts.scope}-empty`} severity="info" title="이 접수에 작성된 차트가 없어요" />
+          ) : (
+            <ChartNotice
+              key={`${encounterCharts.scope}-selection-${chartListRetryKey}`}
+              severity="error"
+              title="차트를 열지 못했어요"
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setChartListRetryKey((key) => key + 1);
+                    void encounterCharts.reload();
+                  }}
+                >
+                  다시 불러오기
+                </Button>
+              }
+            >
+              차트 목록을 다시 불러온 뒤 선택해 주세요.
+            </ChartNotice>
           )}
         </div>
       ) : (

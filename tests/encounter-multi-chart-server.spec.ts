@@ -121,6 +121,44 @@ test("chart selection waits for SOAP and orders, and a failed save retains the c
   } finally { store.setState(oldState); }
 });
 
+test("historical chart selection keeps a loaded chart active within the same past encounter", async () => {
+  const store = useChartStore;
+  const oldState = store.getState();
+  store.setState({
+    selectedEncounterId: "encounter-current",
+    historyViewEncounterId: "encounter-past",
+    historyViewChartId: "chart-past-a",
+    selectedChartId: "chart-past-a",
+    encounterChartsScope: "test-history-scope",
+    encounterCharts: [note("chart-past-a"), note("chart-past-b")],
+    diagnosisSaving: false,
+    flushActiveChart: async () => true,
+    flushOrderEdits: async () => true,
+  });
+  try {
+    expect(
+      await store
+        .getState()
+        .selectHistoryChart("encounter-past", "chart-past-b"),
+    ).toBe(true);
+    expect(store.getState()).toMatchObject({
+      historyViewEncounterId: "encounter-past",
+      historyViewChartId: "chart-past-b",
+      selectedChartId: "chart-past-b",
+    });
+
+    store.setState({ selectedChartId: "" });
+    expect(
+      await store
+        .getState()
+        .selectHistoryChart("encounter-past", "chart-past-b"),
+    ).toBe(true);
+    expect(store.getState().selectedChartId).toBe("chart-past-b");
+  } finally {
+    store.setState(oldState);
+  }
+});
+
 test("chart-specific draft API accepts chartId and preserves origin while rejecting unknown envelope fields", async ({ request }) => {
   const created = await request.post(`/api/workspaces/${workspaceId}/chart/encounter-charts`, {
     headers, data: { encounterId, creationRequestId: crypto.randomUUID() },
