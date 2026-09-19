@@ -183,7 +183,11 @@ test("personal assigned and requested lists are independent of hospital filterin
 test("completion is opt-in and board/list show the same filtered tasks", async ({ page }) => {
   await openHome(page);
   await expect(page.getByTestId("home-kanban-task-lab:done")).toHaveCount(0);
-  await page.getByRole("button", { name: "완료 포함", exact: true }).click();
+  const completedToggle = page.getByRole("button", { name: "완료 포함", exact: true });
+  await expect(completedToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(completedToggle).toHaveCSS("height", "32px");
+  await completedToggle.click();
+  await expect(completedToggle).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("home-kanban-task-lab:done")).toBeVisible();
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("완료한 검사", { exact: true })).toBeVisible();

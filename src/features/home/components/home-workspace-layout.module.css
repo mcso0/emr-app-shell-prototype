@@ -7,7 +7,6 @@
 }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--clair-spacing-24); min-height: calc(var(--clair-control-height-sm) + var(--clair-spacing-6)); }
 .toolbarActions { display: flex; flex-wrap: wrap; max-width: 100%; justify-content: flex-end; align-items: center; gap: 12px; margin-left: auto; flex-shrink: 0; }
-.completedButton[aria-pressed="true"] { background: var(--emr-state-selected); border-color: var(--emr-state-selected-border); }
 .toolbarDivider { height: 16px; width: 1px; background: var(--emr-border-default); }
 .viewTabs { height: calc(var(--clair-control-height-sm) + var(--clair-spacing-6)); padding: calc(var(--clair-spacing-6) / 2); flex-shrink: 0; }
 .viewTabs button { gap: var(--clair-spacing-6); }

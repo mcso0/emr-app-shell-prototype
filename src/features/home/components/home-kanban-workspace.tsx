@@ -12,6 +12,7 @@ import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
 import { EmrSidePanelTypeBadge } from "@/components/emr/side-panel-card";
 import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrFilterToggle } from "@/components/emr/filter-toggle";
 import { EmrModuleListSidePanel } from "@/components/emr/module-list-side-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -210,9 +211,12 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
                 onClose={() => { setFilterOpen(false); setFilterReady(false); setFilterAutoOpenConsumed(false); }} />
             </PopoverContent>
           </Popover>
-          <Button variant="outline" size="default" className={styles.completedButton} aria-pressed={query.includeCompleted} onClick={() => updateQuery(view, { includeCompleted: !query.includeCompleted })}>
-            <CheckIcon aria-hidden="true" /><span className="px-0.5">완료 포함</span>
-          </Button>
+          <EmrFilterToggle
+            pressed={query.includeCompleted}
+            onPressedChange={(pressed) => updateQuery(view, { includeCompleted: pressed })}
+          >
+            완료 포함
+          </EmrFilterToggle>
           {view === "hospital" && <>
             <HomeMultiSelect label="담당자" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
