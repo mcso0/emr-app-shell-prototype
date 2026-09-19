@@ -3187,6 +3187,10 @@ test("live patient chart history keeps loading, error, and empty states distinct
   await error.getByRole("button", { name: "다시 시도" }).click();
 
   await expect(page.getByTestId("chart-history-empty-state")).toBeVisible();
+  await expect(page.getByTestId("chart-history-empty-state")).toHaveAttribute(
+    "data-size",
+    "md",
+  );
   await expect(error).toHaveCount(0);
   await expect(page.getByTestId("chart-history-loading-state")).toHaveCount(0);
 });
