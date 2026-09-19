@@ -6404,11 +6404,16 @@ function CalendarResourceLoadingState() {
   return (
     <div
       aria-busy="true"
-      aria-label="진료 일정을 불러오는 중입니다"
       className="flex min-h-[720px] flex-col bg-card"
       data-testid="reception-calendar-resource-loading"
-      role="status"
     >
+      <span
+        className="sr-only"
+        data-testid="reception-calendar-resource-loading-status"
+        role="status"
+      >
+        진료 일정을 불러오는 중입니다
+      </span>
       <div className="grid border-b bg-card shadow-xs [grid-template-columns:56px_repeat(3,minmax(180px,1fr))]">
         <div className="h-[var(--emr-calendar-lane-header-cell-height)] border-r" />
         {skeletonLanes.map((lane) => (
@@ -6455,14 +6460,6 @@ function CalendarResourceLoadingState() {
           ))}
           <Skeleton className="absolute left-3 top-[112px] h-9 w-[28%] rounded-[var(--emr-calendar-task-radius)]" />
           <Skeleton className="absolute left-[36%] top-[224px] h-9 w-[24%] rounded-[var(--emr-calendar-task-radius)]" />
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span
-              className="rounded-[var(--clair-radius-atomic-6)] bg-[var(--emr-surface-panel)] px-3 py-1.5 emr-text-metadata font-medium text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)]"
-              data-testid="reception-calendar-resource-loading-message"
-            >
-              진료 일정을 불러오는 중입니다
-            </span>
-          </div>
         </div>
       </div>
     </div>

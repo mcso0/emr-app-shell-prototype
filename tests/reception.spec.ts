@@ -6086,7 +6086,7 @@ test("Cheongdam reception defers the calendar board while veterinarian lanes loa
   });
 
   await page.route(
-    `**/api/workspaces/${workspaceId}/staff?role=vet*`,
+    `**/api/workspaces/${workspaceId}/staff?date=*`,
     async (route) => {
       await staffResponseReady;
       await route.fulfill({
@@ -6141,31 +6141,21 @@ test("Cheongdam reception defers the calendar board while veterinarian lanes loa
 
   await page.goto(`/w/${workspaceId}/reception?modulePanel=open`);
 
-  await expect(page.getByTestId("reception-calendar-resource-loading")).toBeVisible();
-  const loadingGrid = page.getByTestId("reception-calendar-resource-loading-grid");
-  const loadingMessage = page.getByTestId(
-    "reception-calendar-resource-loading-message",
+  const loadingState = page.getByTestId("reception-calendar-resource-loading");
+  await expect(loadingState).toBeVisible();
+  await expect(loadingState).toHaveAttribute("aria-busy", "true");
+  await expect(
+    page.getByTestId("reception-calendar-resource-loading-grid"),
+  ).toBeVisible();
+  const loadingStatus = page.getByTestId(
+    "reception-calendar-resource-loading-status",
   );
-  await expect(loadingMessage).toHaveText("진료 일정을 불러오는 중입니다");
-  const loadingGridBox = await loadingGrid.boundingBox();
-  const loadingMessageBox = await loadingMessage.boundingBox();
-  if (!loadingGridBox || !loadingMessageBox) {
-    throw new Error("Calendar loading grid and message must be measurable.");
-  }
-  expect(
-    Math.abs(
-      loadingMessageBox.x +
-        loadingMessageBox.width / 2 -
-        (loadingGridBox.x + loadingGridBox.width / 2),
-    ),
-  ).toBeLessThan(4);
-  expect(
-    Math.abs(
-      loadingMessageBox.y +
-        loadingMessageBox.height / 2 -
-        (loadingGridBox.y + loadingGridBox.height / 2),
-    ),
-  ).toBeLessThan(4);
+  await expect(loadingStatus).toHaveAttribute("role", "status");
+  await expect(loadingStatus).toHaveClass(/sr-only/);
+  await expect(loadingStatus).toHaveText("진료 일정을 불러오는 중입니다");
+  await expect(
+    page.getByTestId("reception-calendar-resource-loading-message"),
+  ).toHaveCount(0);
   await expect(page.getByText("수의사 0")).toHaveCount(0);
   await expect(page.getByTestId("reception-day-calendar")).toHaveCount(0);
   await expect(page.getByTestId("day-current-time-indicator")).toHaveCount(0);
