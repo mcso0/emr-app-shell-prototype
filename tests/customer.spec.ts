@@ -2516,6 +2516,8 @@ test("patient and guardian profiles share the right-panel slot and push customer
     },
   });
   await expectHorizontalWheelLocked();
+  await profilePanel.getByRole("tab", { name: "진료 이력" }).click();
+  await expect(profilePanel.getByText("방문 목적", { exact: true })).toBeVisible();
 
   const guardianRightPanelBox = await rightPanel.boundingBox();
   expect(guardianRightPanelBox).not.toBeNull();

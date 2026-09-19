@@ -2134,6 +2134,8 @@ test("patient drawer exposes the Figma activity tabs and live mock projections",
   await profilePanel.getByRole("tab", { name: "진료 이력" }).click();
   await expect(page.getByText("전체 진료 이력")).toBeVisible();
   await expect(page.getByText("내과 진료")).toBeVisible();
+  await expect(profilePanel.getByText("방문 목적", { exact: true })).toBeVisible();
+  await expect(profilePanel.getByText("주제", { exact: true })).toHaveCount(0);
 
   await profilePanel.getByRole("tab", { name: "예약", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "예약 조회 기간" })).toBeVisible();

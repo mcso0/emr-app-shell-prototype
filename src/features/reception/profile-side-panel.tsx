@@ -34,6 +34,7 @@ import {
 } from "@/components/cds-icons/navigation";
 import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -824,7 +825,13 @@ function ActivityCard({ item }: { item: ProfileHistoryItem }) {
         <span className={styles.activityTitle}>{item.title}</span>
       </div>
       <div className={styles.activitySubtitle}>
-        <span className={styles.activitySubtitleLabel}>주제</span>
+        <Badge
+          className={styles.activityPurposeBadge}
+          size="sm"
+          variant="ghost"
+        >
+          방문 목적
+        </Badge>
         <span className={styles.activitySubtitleValue}>{item.subjectLabel}</span>
       </div>
       <div className={styles.activityChips}>

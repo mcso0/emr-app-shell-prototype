@@ -688,7 +688,7 @@ const getHistoryItems = ({
       patientName: patient?.name,
       requestedAtLabel: time ? `${time} 접수` : undefined,
       statusLabel: getStatusLabel("encounter", encounter.status),
-      subjectLabel: encounter.visitPurpose ?? encounter.chiefComplaint ?? "진료 주제 미입력",
+      subjectLabel: encounter.visitPurpose ?? encounter.chiefComplaint ?? "방문 목적 미입력",
       title: `${patient?.name ?? "환자 미상"} · ${guardian?.name ?? "보호자 미상"}`,
     };
   });
@@ -996,7 +996,7 @@ function mapLiveHistoryItems(
       patientName: item.patientName,
       requestedAtLabel: time ? `${time} 접수` : undefined,
       statusLabel: getStatusLabel("encounter", item.status as Encounter["status"]),
-      subjectLabel: item.visitPurpose ?? "진료 주제 미입력",
+      subjectLabel: item.visitPurpose ?? "방문 목적 미입력",
       title: `${item.patientName ?? "환자 미상"}${guardianName ? ` · ${guardianName}` : ""}`,
     };
   });
