@@ -1489,6 +1489,14 @@ function getChartHistoryRowsForBundle(
   return getChartHistoryRows(bundle.patient.id);
 }
 
+function getChartHistoryRowId(row: ChartHistoryRow) {
+  return row.chart?.id ?? `waiting:${row.encounter.id}`;
+}
+
+function getChartHistoryCreatedAt(row: ChartHistoryRow) {
+  return row.chart?.createdAt ?? getEncounterVisitAt(row.encounter);
+}
+
 function mergeCurrentEncounterChartsIntoHistory({
   bundle,
   charts,
@@ -1499,11 +1507,12 @@ function mergeCurrentEncounterChartsIntoHistory({
   historyRows: ChartHistoryRow[];
 }) {
   const rowsByChartId = new Map(
-    historyRows.map((row) => [row.chart.id, row] as const),
+    historyRows.map((row) => [getChartHistoryRowId(row), row] as const),
   );
 
   for (const chart of charts) {
     if (chart.status === "voided") continue;
+    rowsByChartId.delete(`waiting:${chart.encounterId}`);
     rowsByChartId.set(chart.id, {
       chart,
       diagnoses: bundle.diagnoses.filter(
@@ -1517,8 +1526,8 @@ function mergeCurrentEncounterChartsIntoHistory({
 
   return [...rowsByChartId.values()].sort(
     (a, b) =>
-      b.chart.createdAt.localeCompare(a.chart.createdAt) ||
-      b.chart.id.localeCompare(a.chart.id),
+      getChartHistoryCreatedAt(b).localeCompare(getChartHistoryCreatedAt(a)) ||
+      getChartHistoryRowId(b).localeCompare(getChartHistoryRowId(a)),
   );
 }
 
@@ -1582,7 +1591,7 @@ function getNewChartEncounterCandidates({
     if (row.encounter.status === "cancelled") continue;
     const current = candidateByEncounterId.get(row.encounter.id);
     candidateByEncounterId.set(row.encounter.id, {
-      chartCount: (current?.chartCount ?? 0) + 1,
+      chartCount: (current?.chartCount ?? 0) + (row.chart ? 1 : 0),
       encounter: row.encounter,
       veterinarianName: row.veterinarianName ?? current?.veterinarianName,
     });
@@ -1610,6 +1619,7 @@ function getAdditionalChartIds(rows: ChartHistoryRow[]) {
   const rowsByEncounterId = new Map<string, ChartHistoryRow[]>();
 
   for (const row of rows) {
+    if (!row.chart) continue;
     const encounterRows = rowsByEncounterId.get(row.encounter.id) ?? [];
     encounterRows.push(row);
     rowsByEncounterId.set(row.encounter.id, encounterRows);
@@ -1619,10 +1629,12 @@ function getAdditionalChartIds(rows: ChartHistoryRow[]) {
   for (const encounterRows of rowsByEncounterId.values()) {
     const ordered = encounterRows.sort(
       (a, b) =>
-        a.chart.createdAt.localeCompare(b.chart.createdAt) ||
-        a.chart.id.localeCompare(b.chart.id),
+        getChartHistoryCreatedAt(a).localeCompare(getChartHistoryCreatedAt(b)) ||
+        getChartHistoryRowId(a).localeCompare(getChartHistoryRowId(b)),
     );
-    ordered.slice(1).forEach((row) => additionalIds.add(row.chart.id));
+    ordered.slice(1).forEach((row) => {
+      if (row.chart) additionalIds.add(row.chart.id);
+    });
   }
 
   return additionalIds;
@@ -1892,19 +1904,36 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const isHistoricalView = Boolean(
     bundle && activeBundle && bundle.encounter.id !== activeBundle.encounter.id,
   );
-
+  const historicalHistoryRecord = isHistoricalView
+    ? scopedChartHistoryRecords.find(
+        (record) => record.encounter.id === bundle?.encounter.id,
+      )
+    : undefined;
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
   );
+  const effectiveQueueEntry = isHistoricalView
+    ? historicalHistoryRecord?.queueEntry
+    : selectedLiveQueueRecord?.queueEntry;
+  const isHistoricalWorkflowView = Boolean(
+    isHistoricalView &&
+      ((bundle?.encounter.status === "waiting" &&
+        effectiveQueueEntry?.status === "waiting") ||
+        ((bundle?.encounter.status === "in_consultation" ||
+          bundle?.encounter.status === "ordered") &&
+          (effectiveQueueEntry?.status === "in_progress" ||
+            effectiveQueueEntry?.status === "called"))),
+  );
+  const isHistoricalReadOnlyView =
+    isHistoricalView && !isHistoricalWorkflowView;
   const { openGuardianProfile, openPatientProfile } =
     useChartPatientGuardianProfileActions({
       patient: bundle?.patient,
       primaryGuardian: bundle?.primaryGuardian,
     });
   const chartStartLocked =
-    !isHistoricalView &&
     bundle?.encounter.status === "waiting" &&
-    selectedLiveQueueRecord?.queueEntry.status === "waiting";
+    effectiveQueueEntry?.status === "waiting";
   const latestVitals = usePatientLatestVitalItems({
     actorHeaders,
     encounterId: bundle?.encounter.id,
@@ -1920,15 +1949,15 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   if (chartStartLocked) return null;
 
   const veterinarianName = getChartBundleVeterinarianName(bundle);
-  const queueStatus = isHistoricalView
-    ? undefined
-    : selectedLiveQueueRecord?.queueEntry.status;
+  const queueStatus = effectiveQueueEntry?.status;
   const vitalWriteStateAllowed =
     bundle.encounter.status === "in_consultation" &&
     queueStatus === "in_progress";
   const vitalActionDisabled =
-    isHistoricalView || !vitalWriteStateAllowed || !latestVitals.canWriteVitals;
-  const vitalActionDisabledReason = isHistoricalView
+    isHistoricalReadOnlyView ||
+    !vitalWriteStateAllowed ||
+    !latestVitals.canWriteVitals;
+  const vitalActionDisabledReason = isHistoricalReadOnlyView
     ? "과거 차트 보기에서는 바이탈을 수정할 수 없어요."
     : !vitalWriteStateAllowed
       ? "진료 중인 접수에서만 바이탈을 입력할 수 있어요."
@@ -2088,6 +2117,12 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const encounterChartsScope = useChartStore((state) => state.encounterChartsScope);
   const selectedChartId = useChartStore((state) => state.selectedChartId);
   const selectHistoryChart = useChartStore((state) => state.selectHistoryChart);
+  const selectHistoryEncounter = useChartStore(
+    (state) => state.selectHistoryEncounter,
+  );
+  const requestConsultationCall = useChartStore(
+    (state) => state.requestConsultationCall,
+  );
   const createChart = useChartStore((state) => state.createEncounterChart);
   const creatingChart = useChartStore((state) => state.encounterChartCreating);
   const chartsMatch = encounterChartsScope === `${workspaceId}:${session?.id ?? "signed-out"}:${bundle?.encounter.id ?? ""}`;
@@ -2121,6 +2156,9 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   const [historyDateMode, setHistoryDateMode] =
     useState<ChartHistoryDateMode>("visit");
   const [newChartEncounterId, setNewChartEncounterId] = useState("");
+  const [pastWaitingRecord, setPastWaitingRecord] =
+    useState<ChartHistoryRow | null>(null);
+  const { todayDate } = useChartOperatingDate(workspaceId);
   const liveHistoryScopeMatches = Boolean(
     bundle &&
     chartHistoryScope?.workspaceId === workspaceId &&
@@ -2179,17 +2217,17 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
       const orderedRows = [...displayedHistoryRows].sort((a, b) => {
         const aGroupAt =
           historyDateMode === "created"
-            ? a.chart.createdAt
+            ? getChartHistoryCreatedAt(a)
             : getEncounterVisitAt(a.encounter);
         const bGroupAt =
           historyDateMode === "created"
-            ? b.chart.createdAt
+            ? getChartHistoryCreatedAt(b)
             : getEncounterVisitAt(b.encounter);
 
         return (
           bGroupAt.localeCompare(aGroupAt) ||
-          b.chart.createdAt.localeCompare(a.chart.createdAt) ||
-          b.chart.id.localeCompare(a.chart.id)
+          getChartHistoryCreatedAt(b).localeCompare(getChartHistoryCreatedAt(a)) ||
+          getChartHistoryRowId(b).localeCompare(getChartHistoryRowId(a))
         );
       });
 
@@ -2197,7 +2235,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         (groups, row) => {
           const groupAt =
             historyDateMode === "created"
-              ? row.chart.createdAt
+              ? getChartHistoryCreatedAt(row)
               : getEncounterVisitAt(row.encounter);
           const date = getShortDateTime(groupAt).slice(0, 8);
           const group = groups.find((item) => item.date === date);
@@ -2270,12 +2308,12 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
 
   const selectedHistoryGroupDate = useMemo(() => {
     const selectedRow = displayedHistoryRows.find(
-      (row) => row.chart.id === selectedChartId,
+      (row) => row.chart?.id === selectedChartId,
     );
     if (!selectedRow) return "";
     const groupAt =
       historyDateMode === "created"
-        ? selectedRow.chart.createdAt
+        ? getChartHistoryCreatedAt(selectedRow)
         : getEncounterVisitAt(selectedRow.encounter);
     return getShortDateTime(groupAt).slice(0, 8);
   }, [displayedHistoryRows, historyDateMode, selectedChartId]);
@@ -2378,17 +2416,33 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
             >
               {group.rows.map((row) => (
                 <ChartHistoryItem
-                  key={row.chart.id}
+                  key={getChartHistoryRowId(row)}
                   bundle={bundle}
                   dateMode={historyDateMode}
-                  isAdditional={additionalChartIds.has(row.chart.id)}
+                  isAdditional={Boolean(
+                    row.chart && additionalChartIds.has(row.chart.id),
+                  )}
                   mode="visit"
                   row={row}
-                  selected={row.chart.id === selectedChartId}
+                  selected={Boolean(row.chart?.id === selectedChartId)}
                   onSelect={async () => {
+                    const chart = row.chart;
+                    if (!chart) {
+                      const visitDate =
+                        getOperatingDateFromIso(
+                          getEncounterVisitAt(row.encounter),
+                        ) ?? getEncounterVisitAt(row.encounter).slice(0, 10);
+                      if (visitDate < todayDate) {
+                        setPastWaitingRecord(row);
+                        return;
+                      }
+                      await selectHistoryEncounter(row.encounter.id);
+                      requestConsultationCall(row.encounter.id);
+                      return;
+                    }
                     const selected = await selectHistoryChart(
                       row.encounter.id,
-                      row.chart.id,
+                      chart.id,
                       () => {
                         const url = new URL(window.location.href);
                         if (row.encounter.id === selectedEncounterId) {
@@ -2399,7 +2453,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
                             row.encounter.id,
                           );
                         }
-                        url.searchParams.set("chartId", row.chart.id);
+                        url.searchParams.set("chartId", chart.id);
                         window.history.replaceState(
                           window.history.state,
                           "",
@@ -2557,6 +2611,45 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
             </div>
           ) : null}
         </EmrDialogShell>
+      </Dialog>
+      <Dialog
+        open={Boolean(pastWaitingRecord)}
+        onOpenChange={(open) => {
+          if (!open) setPastWaitingRecord(null);
+        }}
+      >
+        <EmrDialogShell
+          variant="confirm"
+          title="지난 접수 건을 호출할까요?"
+          description={
+            pastWaitingRecord
+              ? `${getShortDateTime(getEncounterVisitAt(pastWaitingRecord.encounter)).slice(0, 8)}에 등록된 접수입니다. 호출하면 지금 진료를 시작하고 차트는 오늘 날짜로 생성됩니다.`
+              : undefined
+          }
+          primaryAction={
+            <Button
+              size="sm"
+              onClick={async () => {
+                if (!pastWaitingRecord) return;
+                const encounterId = pastWaitingRecord.encounter.id;
+                setPastWaitingRecord(null);
+                await selectHistoryEncounter(encounterId);
+                requestConsultationCall(encounterId);
+              }}
+            >
+              계속해서 호출하기
+            </Button>
+          }
+          secondaryAction={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPastWaitingRecord(null)}
+            >
+              취소
+            </Button>
+          }
+        />
       </Dialog>
     </EmrContentAsidePanel>
   );
@@ -2719,6 +2812,7 @@ function ChartInlineHistoryPanel({
       const rowsByEncounterId = new Map<string, ChartHistoryRow>();
       for (const row of historyRows) {
         if (
+          row.chart &&
           row.encounter.id !== activeEncounterId &&
           !rowsByEncounterId.has(row.encounter.id)
         ) {
@@ -2913,15 +3007,18 @@ function ChartHistoryItem({
   row: ChartHistoryRow;
   selected: boolean;
 }) {
+  const chart = row.chart;
   const eventAt = mode === "visit"
-    ? row.chart.createdAt
+    ? chart?.createdAt ?? getEncounterVisitAt(row.encounter)
     : row.encounter.checkedInAt ?? row.encounter.createdAt;
   const diagnosisLabel = getChartHistoryDiagnosisLabel(row);
   const visitPurpose = row.encounter.visitPurpose?.trim() || "방문 목적 미입력";
   const statusLabel =
-    row.chart.status === "signed"
+    !chart
+      ? "대기 중"
+      : chart.status === "signed"
       ? "완료"
-      : row.chart.status === "amended"
+      : chart.status === "amended"
         ? "수정 완료"
         : "작성 중";
   const isDiagnosisHistory = mode === "diagnosis";
@@ -2929,7 +3026,9 @@ function ChartHistoryItem({
     0,
     8,
   );
-  const createdDate = getShortDateTime(row.chart.createdAt).slice(0, 8);
+  const createdDate = getShortDateTime(
+    chart?.createdAt ?? getEncounterVisitAt(row.encounter),
+  ).slice(0, 8);
   const relationLabel =
     dateMode === "created"
       ? isAdditional && visitDate !== createdDate
@@ -2949,9 +3048,9 @@ function ChartHistoryItem({
         type="button"
         className={historyStyles.entry}
         data-slot="content-history-item"
-        data-chart-id={row.chart.id}
+        data-chart-id={chart?.id}
         data-encounter-id={row.encounter.id}
-        data-testid={`chart-history-item-${row.chart.id}`}
+        data-testid={`chart-history-item-${chart?.id ?? `waiting-${row.encounter.id}`}`}
         data-selected={selected ? "true" : undefined}
         aria-pressed={selected}
         onClick={onSelect}
@@ -2966,7 +3065,7 @@ function ChartHistoryItem({
             {relationLabel ? (
               <span
                 className={historyStyles.relation}
-                data-testid={`chart-history-relation-${row.chart.id}`}
+                data-testid={`chart-history-relation-${chart?.id ?? row.encounter.id}`}
               >
                 {relationLabel}
               </span>
@@ -2976,11 +3075,11 @@ function ChartHistoryItem({
             <span className={historyStyles.person}>
               <span className={historyStyles.personLabel}>담당 </span>
               <span className="truncate">
-                {row.chart.authorDisplayName ??
-                  getChartStaffName(row.chart.authorUserId) ??
-                  (row.chart.authorUserId
+                {chart?.authorDisplayName ??
+                  getChartStaffName(chart?.authorUserId) ??
+                  (chart?.authorUserId
                     ? "작성자 이름 미확인"
-                    : "작성자 미기록")}
+                    : getChartHistoryVeterinarianName(row, bundle))}
               </span>
             </span>
             <span className={historyStyles.status}>
@@ -2988,8 +3087,7 @@ function ChartHistoryItem({
                 aria-hidden="true"
                 className={historyStyles.dot}
                 data-active={
-                  row.chart.status === "draft" ||
-                  row.chart.status === "autosaved"
+                  chart?.status === "draft" || chart?.status === "autosaved"
                     ? "true"
                     : undefined
                 }
@@ -3005,7 +3103,7 @@ function ChartHistoryItem({
   return (
     <EmrContentHistoryItem
       selected={selected}
-      testId={`${isDiagnosisHistory ? "chart-diagnosis-history-item" : "chart-history-item"}-${isDiagnosisHistory ? row.encounter.id : row.chart.id}`}
+      testId={`${isDiagnosisHistory ? "chart-diagnosis-history-item" : "chart-history-item"}-${isDiagnosisHistory ? row.encounter.id : chart?.id ?? `waiting-${row.encounter.id}`}`}
       title={isDiagnosisHistory ? diagnosisLabel : visitPurpose}
       badge={
         isDiagnosisHistory ? undefined : (
@@ -14509,6 +14607,18 @@ export function ChartContent({
   const isHistoricalView = Boolean(
     bundle && activeBundle && bundle.encounter.id !== activeBundle.encounter.id,
   );
+  const historicalHistoryRecord = isHistoricalView
+    ? scopedChartHistoryRecords.find(
+        (record) => record.encounter.id === bundle?.encounter.id,
+      )
+    : undefined;
+  const isHistoricalActiveConsultation = Boolean(
+    isHistoricalView &&
+      (bundle?.encounter.status === "in_consultation" ||
+        bundle?.encounter.status === "ordered") &&
+      (historicalHistoryRecord?.queueEntry?.status === "in_progress" ||
+        historicalHistoryRecord?.queueEntry?.status === "called"),
+  );
   const { openGuardianProfile, openPatientProfile } =
     useChartPatientGuardianProfileActions({
       patient: bundle?.patient,
@@ -14517,6 +14627,16 @@ export function ChartContent({
   const selectedLiveQueueRecord = liveQueueRecords.find(
     (record) => record.encounter.id === selectedEncounterId,
   );
+  const historicalQueueRecord =
+    historicalHistoryRecord?.queueEntry && activeBundle
+      ? {
+          encounter: historicalHistoryRecord.encounter,
+          patient: activeBundle.patient,
+          primaryGuardian: historicalHistoryRecord.primaryGuardian,
+          queueEntry: historicalHistoryRecord.queueEntry,
+          veterinarianName: historicalHistoryRecord.veterinarianName,
+        }
+      : undefined;
   const activeEncounterId = bundle?.encounter.id;
   const activeWorkspaceId = bundle?.encounter.workspaceId;
   const actorHeaders = useMemo(
@@ -14658,8 +14778,17 @@ export function ChartContent({
     [activeChartId],
   );
   const effectiveQueueEntry = isHistoricalView
-    ? undefined
+    ? historicalHistoryRecord?.queueEntry
     : selectedLiveQueueRecord?.queueEntry;
+  const isHistoricalWaitingCall = Boolean(
+    isHistoricalView &&
+      bundle?.encounter.status === "waiting" &&
+      effectiveQueueEntry?.status === "waiting",
+  );
+  const isHistoricalReadOnlyView =
+    isHistoricalView &&
+    !isHistoricalWaitingCall &&
+    !isHistoricalActiveConsultation;
   const soapLoading =
     Boolean(activeEncounterId && activeWorkspaceId) &&
     !allowMockFallback &&
@@ -14683,7 +14812,7 @@ export function ChartContent({
   const detailLoading =
     soapLoading || diagnosisLoading || chartCompletionLoading;
   const detailHydrationPending = detailLoading;
-  const chartWriteDisabled = detailHydrationPending || isHistoricalView || encounterCharts.status !== "ready"
+  const chartWriteDisabled = detailHydrationPending || isHistoricalReadOnlyView || encounterCharts.status !== "ready"
     || encounterCharts.initialChartPreparationStatus === "saving"
     || (Boolean(activeChartId) && (persistedSoapState.status === "error" || persistedSoapState.status === "loading"))
     || (effectiveEncounter?.status !== "in_consultation" && effectiveEncounter?.status !== "ordered");
@@ -14782,7 +14911,7 @@ export function ChartContent({
   const handleChartCompletionConfirm = async () => {
     if (chartCompletionState.status === "saving") return;
     if (detailHydrationPending) return;
-    if (isHistoricalView) {
+    if (isHistoricalReadOnlyView) {
       toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
       return;
     }
@@ -14839,11 +14968,14 @@ export function ChartContent({
   ) => {
     if (consultationFlowState.status === "saving") return;
     if (detailHydrationPending) return;
-    if (isHistoricalView) {
+    if (isHistoricalReadOnlyView) {
       toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
       return;
     }
-    if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
+    const consultationFlowRecord = isHistoricalView
+      ? historicalQueueRecord
+      : selectedLiveQueueRecord;
+    if (!activeEncounterId || !activeWorkspaceId || !consultationFlowRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
     }
@@ -14875,11 +15007,13 @@ export function ChartContent({
       return;
     }
 
-    updateLiveQueueRecord({
-      ...selectedLiveQueueRecord,
-      encounter: result.flow.encounter,
-      queueEntry: result.flow.queueEntry,
-    });
+    if (selectedLiveQueueRecord) {
+      updateLiveQueueRecord({
+        ...selectedLiveQueueRecord,
+        encounter: result.flow.encounter,
+        queueEntry: result.flow.queueEntry,
+      });
+    }
     setChartCompletionState({
       completion: {
         encounterId: result.flow.encounter.id,
@@ -14895,10 +15029,42 @@ export function ChartContent({
     if (result.flow.chart) encounterCharts.acceptPreparedChart(result.flow.chart);
     saveChartLiveEncounterHandoff({
       encounter: result.flow.encounter,
-      patient: selectedLiveQueueRecord.patient,
-      primaryGuardian: selectedLiveQueueRecord.primaryGuardian,
-      veterinarianName: selectedLiveQueueRecord.veterinarianName,
+      patient: consultationFlowRecord.patient,
+      primaryGuardian: consultationFlowRecord.primaryGuardian,
+      veterinarianName: consultationFlowRecord.veterinarianName,
     });
+    const preparedChart = result.flow.chart;
+    if (isHistoricalView) {
+      setChartHistoryState({
+        records: scopedChartHistoryRecords.map((record) =>
+          record.encounter.id === result.flow.encounter.id
+            ? {
+                ...record,
+                chart: preparedChart ?? record.chart,
+                encounter: result.flow.encounter,
+                queueEntry: result.flow.queueEntry,
+              }
+            : record,
+        ),
+        status: "ready",
+      });
+      if (preparedChart) {
+        await selectHistoryChart(
+          result.flow.encounter.id,
+          preparedChart.id,
+          () => {
+            const url = new URL(window.location.href);
+            url.searchParams.set("historyEncounterId", result.flow.encounter.id);
+            url.searchParams.set("chartId", preparedChart.id);
+            window.history.replaceState(
+              window.history.state,
+              "",
+              `${url.pathname}${url.search}`,
+            );
+          },
+        );
+      }
+    }
     if (action === "call") {
       writeCallRoomPreference({
         actorUserId: authSession?.id,
@@ -14925,11 +15091,14 @@ export function ChartContent({
   const handleCancelEncounterConfirm = async () => {
     if (encounterCancelState.status === "saving") return;
     if (detailHydrationPending) return;
-    if (isHistoricalView) {
+    if (isHistoricalReadOnlyView) {
       toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
       return;
     }
-    if (!activeEncounterId || !activeWorkspaceId || !selectedLiveQueueRecord) {
+    const cancellationRecord = isHistoricalView
+      ? historicalQueueRecord
+      : selectedLiveQueueRecord;
+    if (!activeEncounterId || !activeWorkspaceId || !cancellationRecord) {
       toast.error("진료 대기열에서 환자를 먼저 선택해 주세요.");
       return;
     }
@@ -14963,11 +15132,27 @@ export function ChartContent({
       return;
     }
 
-    updateLiveQueueRecord({
-      ...selectedLiveQueueRecord,
-      encounter: result.cancellation.encounter,
-      queueEntry: result.cancellation.queueEntry,
-    });
+    if (selectedLiveQueueRecord) {
+      updateLiveQueueRecord({
+        ...selectedLiveQueueRecord,
+        encounter: result.cancellation.encounter,
+        queueEntry: result.cancellation.queueEntry,
+      });
+    }
+    if (isHistoricalView) {
+      setChartHistoryState({
+        records: scopedChartHistoryRecords.map((record) =>
+          record.encounter.id === result.cancellation.encounter.id
+            ? {
+                ...record,
+                encounter: result.cancellation.encounter,
+                queueEntry: result.cancellation.queueEntry,
+              }
+            : record,
+        ),
+        status: "ready",
+      });
+    }
     setEncounterCancelState({ status: "idle" });
     setCancelEncounterDialogOpen(false);
     setCancelEncounterReason("");
@@ -14976,7 +15161,7 @@ export function ChartContent({
   };
   const handleDiagnosisRowsChange = async (nextRows: EditableDiagnosis[]) => {
     if (useChartStore.getState().diagnosisSaving || detailHydrationPending || chartSigned || !activeChartId) return;
-    if (isHistoricalView) {
+    if (isHistoricalReadOnlyView) {
       toast.error("과거 차트는 읽기 전용으로 열려 있어요.");
       return;
     }
@@ -15140,7 +15325,7 @@ export function ChartContent({
     const requestedRecord = scopedChartHistoryRecords.find(
       (record) =>
         record.encounter.id === requestedEncounterId &&
-        record.chart.id === requestedChartId,
+        record.chart?.id === requestedChartId,
     );
     if (!requestedRecord) {
       const url = currentUrl;
@@ -15527,15 +15712,15 @@ export function ChartContent({
     effectiveQueueEntry,
   );
   const primaryAction =
-    !isHistoricalView &&
+    !isHistoricalReadOnlyView &&
     currentBundle.encounter.status === "waiting" &&
     effectiveQueueEntry?.status === "waiting"
       ? "call"
-      : !isHistoricalView && canCompleteCurrentChart
+      : !isHistoricalReadOnlyView && canCompleteCurrentChart
         ? "complete"
         : null;
   const canUseConsultationSecondaryActions =
-    !isHistoricalView &&
+    !isHistoricalReadOnlyView &&
     (currentBundle.encounter.status === "in_consultation" ||
       effectiveQueueEntry?.status === "in_progress" ||
       effectiveQueueEntry?.status === "called");
@@ -15544,13 +15729,12 @@ export function ChartContent({
     chartDiagnosisRows.length > 0 ||
     currentChartOrderCount > 0;
   const primaryActionBusy =
-    detailHydrationPending || isHistoricalView ||
+    detailHydrationPending || isHistoricalReadOnlyView ||
     encounterCharts.initialChartPreparationStatus === "saving" ||
     consultationFlowState.status === "saving" ||
     chartCompletionState.status === "saving" ||
     encounterCancelState.status === "saving";
   const chartStartLocked =
-    !isHistoricalView &&
     currentBundle.encounter.status === "waiting" &&
     effectiveQueueEntry?.status === "waiting";
   const callDialogTitle = `${currentBundle.patient.name}/${currentBundle.primaryGuardian?.name ?? "보호자 미지정"}을 호출하시겠습니까?`;
@@ -15631,7 +15815,7 @@ export function ChartContent({
             startTime={chartStartTime}
             visitLabel={chartHistoryEncounterCount > 1 ? "재진" : "초진"}
             pendingIndicator={
-              isHistoricalView ? (
+              isHistoricalReadOnlyView ? (
                 <span className="flex items-center gap-2">
                   <span
                     className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]"
@@ -16307,7 +16491,7 @@ export function ChartContent({
               onOrderCountChange={handleCurrentChartOrderCountChange}
               orderGroups={orderGroups}
               draftWriteDisabled={chartWriteDisabled || chartSigned}
-              writeDisabled={detailHydrationPending || isHistoricalView}
+              writeDisabled={detailHydrationPending || isHistoricalReadOnlyView}
             />
           </div>
         </div>

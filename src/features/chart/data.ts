@@ -29,10 +29,11 @@ export type ChartQueueRow = {
 };
 
 export type ChartHistoryRow = {
-  chart: SoapNote;
+  chart: SoapNote | null;
   diagnoses: Array<Pick<Diagnosis, "diagnosisText">>;
   encounter: Encounter;
   primaryGuardian?: Guardian;
+  queueEntry?: WaitingQueueEntry;
   veterinarianName?: string;
 };
 

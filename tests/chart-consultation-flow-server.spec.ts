@@ -70,6 +70,7 @@ test("consultation flow core calls and starts consultation in one action", async
     ],
   });
 
+  const beforeCall = Date.now();
   const called = await mutateConsultationFlow({
     actorUserId: "user-vet",
     workspaceId,
@@ -102,6 +103,14 @@ test("consultation flow core calls and starts consultation in one action", async
       },
     },
   });
+  expect(called.ok && called.flow.chart?.clinicalAt).toBe(
+    called.ok ? called.flow.chart?.createdAt : undefined,
+  );
+  expect(
+    called.ok && called.flow.chart
+      ? Date.parse(called.flow.chart.createdAt)
+      : Number.NaN,
+  ).toBeGreaterThanOrEqual(beforeCall);
 
   const returned = await mutateConsultationFlow({
     actorUserId: "user-vet",

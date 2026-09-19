@@ -3130,6 +3130,329 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이력 전환 직전 작성한 기록");
 });
 
+test("an uncalled past reception stays waiting and warns before creating today's first chart", async ({
+  page,
+}) => {
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const current = createLiveChartQueueRecord({
+    encounterId: "encounter-history-active",
+    patientName: "구름",
+    sortOrder: 1,
+  });
+  const waitingEncounterId = "encounter-history-uncalled";
+  const waitingQueueId = "queue-history-uncalled";
+  const todayWaitingEncounterId = "encounter-history-uncalled-today";
+  const createdChartId = "21215000-0000-4000-8000-000000000099";
+  const currentChart = {
+    id: "21215000-0000-4000-8000-000000000098",
+    encounterId: current.encounter.id,
+    authorUserId: "user-vet",
+    authorDisplayName: "이수지",
+    status: "autosaved",
+    clinicalAt: "2026-09-20T01:00:00.000Z",
+    createdAt: "2026-09-20T01:00:00.000Z",
+    updatedAt: "2026-09-20T01:00:00.000Z",
+  } as const;
+  const waitingEncounter = {
+    ...current.encounter,
+    id: waitingEncounterId,
+    encounterNo: "E-260908-WAITING",
+    status: "waiting" as const,
+    visitPurpose: "미호출 접수 확인",
+    checkedInAt: "2026-09-08T06:00:00.000Z",
+    createdAt: "2026-09-08T06:00:00.000Z",
+    updatedAt: "2026-09-08T06:00:00.000Z",
+  };
+  const waitingQueue = {
+    id: waitingQueueId,
+    workspaceId,
+    encounterId: waitingEncounterId,
+    queueType: "consultation" as const,
+    status: "waiting" as const,
+    priority: "normal" as const,
+    sortOrder: 1,
+    enteredAt: "2026-09-08T06:00:00.000Z",
+  };
+  const todayWaitingEncounter = {
+    ...waitingEncounter,
+    id: todayWaitingEncounterId,
+    encounterNo: "E-260920-WAITING",
+    visitPurpose: "당일 미호출 접수 확인",
+    checkedInAt: "2026-09-20T01:30:00.000Z",
+    createdAt: "2026-09-20T01:30:00.000Z",
+    updatedAt: "2026-09-20T01:30:00.000Z",
+  };
+  const todayWaitingQueue = {
+    ...waitingQueue,
+    id: "queue-history-uncalled-today",
+    encounterId: todayWaitingEncounterId,
+    enteredAt: "2026-09-20T01:30:00.000Z",
+  };
+  let called = false;
+  const callRequests: Array<Record<string, unknown>> = [];
+  const createdChart = {
+    id: createdChartId,
+    encounterId: waitingEncounterId,
+    authorUserId: "user-vet",
+    authorDisplayName: "이수지",
+    status: "draft" as const,
+    clinicalAt: "2026-09-20T02:30:00.000Z",
+    createdAt: "2026-09-20T02:30:00.000Z",
+    updatedAt: "2026-09-20T02:30:00.000Z",
+  };
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/live-queue?*`,
+    (route) => fulfillLiveChartQueue(route, [current]),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/history?*`,
+    (route) => {
+      return route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-patient-history-read",
+          items: [
+            {
+              chart: null,
+              encounter: todayWaitingEncounter,
+              primaryGuardian: current.primaryGuardian,
+              queueEntry: todayWaitingQueue,
+              veterinarianName: "이수지",
+              diagnoses: [],
+            },
+            {
+              chart: currentChart,
+              encounter: current.encounter,
+              primaryGuardian: current.primaryGuardian,
+              veterinarianName: "이수지",
+              diagnoses: [],
+            },
+            {
+              chart: called ? createdChart : null,
+              encounter: called
+                ? {
+                    ...waitingEncounter,
+                    status: "in_consultation",
+                    startedAt: "2026-09-20T02:30:00.000Z",
+                    updatedAt: "2026-09-20T02:30:00.000Z",
+                  }
+                : waitingEncounter,
+              primaryGuardian: current.primaryGuardian,
+              queueEntry: called
+                ? {
+                    ...waitingQueue,
+                    status: "in_progress",
+                    calledAt: "2026-09-20T02:30:00.000Z",
+                  }
+                : waitingQueue,
+              veterinarianName: "이수지",
+              diagnoses: [],
+            },
+          ],
+          nextCursor: null,
+          totalCount: 3,
+        },
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/encounter-charts?*`,
+    (route) => {
+      const encounterId = new URL(route.request().url()).searchParams.get(
+        "encounterId",
+      );
+      return route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          charts:
+            encounterId === waitingEncounterId
+              ? called
+                ? [createdChart]
+                : []
+              : encounterId === todayWaitingEncounterId
+                ? []
+              : [currentChart],
+        },
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/preconsultation-context?*`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          canWriteVitals: true,
+          enforcedBy: "chart-preconsultation-context-read",
+          context: {
+            encounter: new URL(route.request().url()).searchParams.get(
+              "encounterId",
+            ) === todayWaitingEncounterId
+              ? todayWaitingEncounter
+              : waitingEncounter,
+            queue: { id: waitingQueueId, status: "waiting" },
+            patient: current.patient,
+            guardian: current.primaryGuardian,
+            veterinarian: { id: "user-vet", displayName: "이수지" },
+            priorEncounterCount: 1,
+            vitals: [],
+            history: [],
+          },
+        },
+      }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/diagnoses?*`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          diagnoses: [],
+          assessments: [],
+          version: "uncalled-history-test",
+        },
+      }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/completion?*`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          completion: {
+            encounterId: new URL(route.request().url()).searchParams.get(
+              "encounterId",
+            ),
+            workspaceId,
+            status: called ? "in_consultation" : "waiting",
+            updatedAt: called
+              ? "2026-09-20T02:30:00.000Z"
+              : "2026-09-08T06:00:00.000Z",
+          },
+        },
+      }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/soap-notes**`,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          soapNote: called ? createdChart : null,
+        },
+      }),
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/chart/consultation-flow`,
+    async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      callRequests.push(body);
+      called = true;
+      await route.fulfill({
+        status: 200,
+        json: {
+          ok: true,
+          status: 200,
+          enforcedBy: "chart-consultation-flow",
+          flow: {
+            encounter: {
+              ...waitingEncounter,
+              status: "in_consultation",
+              startedAt: "2026-09-20T02:30:00.000Z",
+              updatedAt: "2026-09-20T02:30:00.000Z",
+            },
+            queueEntry: {
+              ...waitingQueue,
+              status: "in_progress",
+              calledAt: "2026-09-20T02:30:00.000Z",
+            },
+            callEvent: {
+              id: "call-event-history-uncalled",
+              displayText: "진료실로 환자를 호출합니다.",
+              deliveryStatus: "queued",
+              roomId: body.roomId,
+              roomName: "1진료실",
+            },
+            chart: createdChart,
+          },
+        },
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${workspaceId}/treatment?encounterId=${current.encounter.id}&modulePanel=open&aside=history`,
+  );
+
+  const waitingItem = page.getByTestId(
+    `chart-history-item-waiting-${waitingEncounterId}`,
+  );
+  const todayWaitingItem = page.getByTestId(
+    `chart-history-item-waiting-${todayWaitingEncounterId}`,
+  );
+  await expect(todayWaitingItem).toContainText("대기 중");
+  await todayWaitingItem.click();
+  await expect(
+    page.getByRole("dialog", { name: "지난 접수 건을 호출할까요?" }),
+  ).toHaveCount(0);
+  const todayCallDialog = page.getByRole("dialog", {
+    name: "구름/구름 보호자을 호출하시겠습니까?",
+  });
+  await expect(todayCallDialog).toBeVisible();
+  await todayCallDialog.getByRole("button", { name: "취소" }).click();
+
+  await expect(waitingItem).toContainText("대기 중");
+  await waitingItem.click();
+
+  const warningDialog = page.getByRole("dialog", {
+    name: "지난 접수 건을 호출할까요?",
+  });
+  await expect(warningDialog).toContainText("26.09.08에 등록된 접수");
+  await expect(warningDialog).toContainText("차트는 오늘 날짜로 생성");
+  await warningDialog.getByRole("button", { name: "취소" }).click();
+  expect(callRequests).toHaveLength(0);
+
+  await waitingItem.click();
+  await warningDialog
+    .getByRole("button", { name: "계속해서 호출하기" })
+    .click();
+  const callDialog = page.getByRole("dialog", {
+    name: "구름/구름 보호자을 호출하시겠습니까?",
+  });
+  await expect(callDialog).toBeVisible();
+  await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
+  await page.getByRole("option", { name: "1진료실" }).click();
+  await callDialog.getByRole("button", { name: "호출하기" }).click();
+
+  expect(callRequests).toEqual([
+    { action: "call", encounterId: waitingEncounterId, roomId: "room-consult-1" },
+  ]);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("chartId"))
+    .toBe(createdChartId);
+  await expect(page.getByText("이 접수에 작성된 차트가 없어요")).toHaveCount(0);
+  await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByLabel("SOAP 블록 문서").getByRole("textbox"),
+  ).toBeEditable();
+});
+
 test("live patient chart history keeps loading, error, and empty states distinct", async ({
   page,
 }) => {

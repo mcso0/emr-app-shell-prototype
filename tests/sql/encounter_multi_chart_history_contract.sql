@@ -24,7 +24,19 @@ values
     'MULTI-HISTORY-EMPTY', 'walk_in', 'completed', '2026-09-12T08:00:00Z', '2026-09-12T08:10:00Z'),
   ('96378000-0000-4000-8000-000000000013', 'workspace-clair-cheongdam',
     '96378000-0000-4000-8000-000000000002', '49110000-0000-4000-8000-000000000003',
-    'MULTI-HISTORY-OTHER-PATIENT', 'walk_in', 'completed', '2026-09-12T09:00:00Z', '2026-09-12T09:10:00Z');
+    'MULTI-HISTORY-OTHER-PATIENT', 'walk_in', 'completed', '2026-09-12T09:00:00Z', '2026-09-12T09:10:00Z'),
+  ('96378000-0000-4000-8000-000000000014', 'workspace-clair-cheongdam',
+    '96378000-0000-4000-8000-000000000001', '49110000-0000-4000-8000-000000000003',
+    'MULTI-HISTORY-WAITING', 'walk_in', 'waiting', '2026-09-01T08:00:00Z', null);
+
+insert into public.waiting_queue_entries(
+  id, workspace_id, encounter_id, queue_type, status, priority, sort_order, entered_at
+)
+values (
+  '96378000-0000-4000-8000-000000000201', 'workspace-clair-cheongdam',
+  '96378000-0000-4000-8000-000000000014', 'consultation', 'waiting', 'normal', 1,
+  '2026-09-01T08:00:00Z'
+);
 
 insert into public.soap_notes(
   id, workspace_id, encounter_id, author_user_id, status,
@@ -74,8 +86,8 @@ begin
     null,
     2
   );
-  if first_page->>'totalCount' <> '3' then
-    raise exception 'history_count_includes_empty_or_voided_encounter';
+  if first_page->>'totalCount' <> '4' then
+    raise exception 'history_count_excludes_waiting_or_includes_empty_voided_encounter';
   end if;
   if jsonb_array_length(first_page->'items') <> 2 or first_page->>'nextCursor' is null then
     raise exception 'history_first_page_shape';
@@ -94,9 +106,12 @@ begin
     first_page->>'nextCursor',
     2
   );
-  if second_page->>'totalCount' <> '3'
-    or jsonb_array_length(second_page->'items') <> 1
+  if second_page->>'totalCount' <> '4'
+    or jsonb_array_length(second_page->'items') <> 2
     or second_page#>>'{items,0,chart,id}' <> '96378000-0000-4000-8000-000000000103'
+    or second_page#>>'{items,1,chart}' is not null
+    or second_page#>>'{items,1,encounter,id}' <> '96378000-0000-4000-8000-000000000014'
+    or second_page#>>'{items,1,queueEntry,status}' <> 'waiting'
     or second_page->>'nextCursor' is not null then
     raise exception 'history_second_page_loss_or_duplicate';
   end if;
