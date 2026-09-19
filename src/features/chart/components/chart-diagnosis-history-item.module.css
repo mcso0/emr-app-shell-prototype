@@ -31,7 +31,7 @@
   height: 16px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  color: var(--clair-color-atomic-neutral-500);
+  color: var(--clair-color-atomic-neutral-700);
 }
 
 .date, .badge, .more {
