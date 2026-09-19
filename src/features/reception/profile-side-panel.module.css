@@ -862,6 +862,21 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   flex: none;
 }
 
+.activityPurposeBadge {
+  display: inline-flex;
+  height: 20px;
+  min-width: max-content;
+  align-items: center;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--profile-neutral-500);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
 .activitySubtitleValue {
   min-width: 0;
   overflow: hidden;
