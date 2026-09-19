@@ -4034,6 +4034,46 @@ test("chart coordinator selects the first queue task after entering from home wi
   await expect.poll(() => liveQueueRequestCount).toBe(1);
 });
 
+test("chart refetches the live queue after returning from reception", async ({
+  page,
+}) => {
+  const newReception = createLiveChartQueueRecord({
+    encounterId: "encounter-reception-reentry",
+    patientName: "재진입환자",
+    sortOrder: 1,
+  });
+  let liveQueueRequestCount = 0;
+  let queue: ChartLiveQueueRecord[] = [];
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      liveQueueRequestCount += 1;
+      await fulfillLiveChartQueue(route, queue);
+    },
+  );
+
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?modulePanel=open&aside=closed`,
+  );
+  await expect(page.getByTestId("chart-content-empty-state")).toBeVisible();
+  await expect.poll(() => liveQueueRequestCount).toBe(1);
+
+  await page.getByRole("link", { name: "접수/예약" }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/reception`),
+  );
+  queue = [newReception];
+
+  await page.getByRole("link", { name: "진료/차트" }).click();
+
+  await expect.poll(() => liveQueueRequestCount).toBe(2);
+  await expect(
+    page.getByTestId(`order-queue-item-${newReception.encounter.id}`),
+  ).toContainText("재진입환자");
+});
+
 test("chart no-work empty state keeps refresh and opens the closed queue panel", async ({
   page,
 }) => {
