@@ -20,6 +20,52 @@ async function openHome(page: Page, status = "live") {
   await expect(page.getByTestId("home-workspace")).toHaveAttribute("aria-busy", "false");
 }
 
+test("home data loading uses the centered shared empty state", async ({ page }) => {
+  let release: (() => void) | undefined;
+  const responsePending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
+    await responsePending;
+    await route.fulfill({
+      json: {
+        ok: true,
+        workspaceId,
+        operatingDate: today,
+        generatedAt: new Date().toISOString(),
+        sourceStatus: "live",
+        items,
+        currentPatients: { present: 2, waiting: 1, inProgress: 1 },
+      },
+    });
+  });
+
+  await page.goto(`/w/${workspaceId}/home`);
+
+  const loadingState = page.getByTestId("home-loading-state");
+  await expect(loadingState).toBeVisible();
+  await expect(loadingState).toContainText("업무를 불러오는 중입니다");
+  const alignment = await loadingState.evaluate((element) => {
+    const viewport = document.querySelector<HTMLElement>(
+      '[data-testid="home-workspace-scroll"]',
+    );
+    if (!viewport) throw new Error("Home workspace viewport is missing");
+
+    const stateBox = element.getBoundingClientRect();
+    const viewportBox = viewport.getBoundingClientRect();
+    return {
+      x: Math.abs(stateBox.left + stateBox.width / 2 - (viewportBox.left + viewportBox.width / 2)),
+      y: Math.abs(stateBox.top + stateBox.height / 2 - (viewportBox.top + viewportBox.height / 2)),
+    };
+  });
+  expect(alignment.x).toBeLessThanOrEqual(1);
+  expect(alignment.y).toBeLessThanOrEqual(1);
+
+  release?.();
+  await expect(page.getByTestId("home-loading-state")).toHaveCount(0);
+});
+
 test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {
   await openHome(page);
   await expect(page.getByTestId("home-kanban-task-lab:previous")).toHaveCount(0);

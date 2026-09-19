@@ -235,7 +235,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         <ScrollAreaPrimitive.Root className={cn(styles.scrollFrame, "overflow-hidden", isBoard && styles.boardScrollFrame)} data-testid="home-workspace-scroll-area">
           <ScrollAreaPrimitive.Viewport ref={scrollRef} onScroll={rememberScroll} className="size-full min-h-0 min-w-0 rounded-[inherit] outline-none focus-visible:outline-1 focus-visible:ring-[3px] focus-visible:ring-ring/50" data-slot="scroll-area-viewport" data-testid="home-workspace-scroll">
             <ScrollAreaPrimitive.Content className="h-full">
-              {loading ? <div role="status" className="emr-text-body p-6 text-muted-foreground">업무를 불러오는 중입니다.</div> :
+              {loading ? <HomeDataLoadingState /> :
               view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
                 {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={operatingDate} collapsed={collapsed(`column:${type.id}`)}
                   onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
@@ -265,6 +265,25 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
 
       </div>}
   </section>;
+}
+
+function HomeDataLoadingState() {
+  return (
+    <div
+      aria-label="업무를 불러오는 중"
+      className="flex min-h-full w-full items-center justify-center"
+      data-testid="home-loading-state"
+      role="status"
+    >
+      <EmrEmptyState
+        kind="upstream-pending"
+        reserveActionSpace={false}
+        size="lg"
+        surface="content"
+        title="업무를 불러오는 중입니다"
+      />
+    </div>
+  );
 }
 
 function HomeWorkTypeIcon({ id }: { id: string }) {
