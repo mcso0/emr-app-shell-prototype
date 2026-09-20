@@ -2022,6 +2022,38 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   expect(
     Math.abs(clearAllBox!.y - (veterinarianMenuBox!.y + 9)),
   ).toBeLessThanOrEqual(1);
+  const menuSeparators = veterinarianMenu.getByRole("separator");
+  await expect(menuSeparators).toHaveCount(2);
+  const headerSeparatorBox = await menuSeparators.nth(0).boundingBox();
+  expect(headerSeparatorBox).not.toBeNull();
+  expect(
+    Math.abs(headerSeparatorBox!.y - (veterinarianMenuBox!.y + 37)),
+  ).toBeLessThanOrEqual(1);
+  expect(headerSeparatorBox!.height).toBeCloseTo(10, 0);
+  const separatorClasses = await menuSeparators.evaluateAll((separators) =>
+    separators.map((separator) => separator.className),
+  );
+  expect(separatorClasses.every((className) => className.includes("neutral-100"))).toBe(
+    true,
+  );
+  const menuLabels = veterinarianMenu.locator(
+    '[data-slot="dropdown-menu-label"]',
+  );
+  await expect(menuLabels).toHaveCount(2);
+  const firstMenuLabel = menuLabels.nth(0);
+  const firstMenuLabelText = firstMenuLabel.getByText("오늘 근무 수의사", {
+    exact: true,
+  });
+  const firstMenuLabelBox = await firstMenuLabel.boundingBox();
+  const firstMenuLabelTextBox = await firstMenuLabelText.boundingBox();
+  expect(firstMenuLabelBox).not.toBeNull();
+  expect(firstMenuLabelTextBox).not.toBeNull();
+  expect(
+    Math.abs(
+      firstMenuLabelTextBox!.y -
+        (firstMenuLabelBox!.y + (firstMenuLabelBox!.height - firstMenuLabelTextBox!.height) / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   await expect
     .poll(() =>
       veterinarianMenu

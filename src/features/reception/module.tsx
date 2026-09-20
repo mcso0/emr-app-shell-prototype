@@ -5189,8 +5189,9 @@ function ScheduleToolbar({
                 전체해제
               </DropdownMenuItem>
             </div>
+            <DropdownMenuSeparator className="mx-0 my-0 h-[10px] bg-transparent bg-[linear-gradient(to_bottom,transparent_4px,var(--clair-color-atomic-neutral-100)_4px,var(--clair-color-atomic-neutral-100)_5px,transparent_5px)]" />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="h-8 px-2 py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
+              <DropdownMenuLabel className="flex h-8 items-center px-2 py-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
                 오늘 근무 수의사
               </DropdownMenuLabel>
               {todayWorkingVeterinarians.map((veterinarian) => (
@@ -5204,9 +5205,9 @@ function ScheduleToolbar({
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator className="mx-0 my-0 h-[10px] bg-transparent bg-[linear-gradient(to_bottom,transparent_4px,var(--clair-color-atomic-neutral-200)_4px,var(--clair-color-atomic-neutral-200)_5px,transparent_5px)]" />
+            <DropdownMenuSeparator className="mx-0 my-0 h-[10px] bg-transparent bg-[linear-gradient(to_bottom,transparent_4px,var(--clair-color-atomic-neutral-100)_4px,var(--clair-color-atomic-neutral-100)_5px,transparent_5px)]" />
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="h-8 px-2 py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
+              <DropdownMenuLabel className="flex h-8 items-center px-2 py-0 text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
                 그 외 수의사
               </DropdownMenuLabel>
               {otherVeterinarians.map((veterinarian) => (
