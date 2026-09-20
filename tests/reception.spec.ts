@@ -2063,6 +2063,42 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
     )
     .toBe("32px");
   await expect(page.getByRole("menuitemcheckbox")).toHaveCount(10);
+
+  const profileMenuItem = veterinarianMenu.getByRole("menuitemcheckbox", {
+    name: "이수지",
+  });
+  await expect(profileMenuItem.locator('[data-slot="avatar-image"]')).toHaveAttribute(
+    "src",
+    "/avatars/49110000-0000-4000-8000-000000000003.png",
+  );
+
+  const fallbackMenuItem = veterinarianMenu.getByRole("menuitemcheckbox", {
+    name: "서재원",
+  });
+  const fallbackAvatar = fallbackMenuItem.locator('[data-slot="avatar"]');
+  await expect(fallbackAvatar.locator('[data-slot="avatar-image"]')).toHaveCount(0);
+  await expect(fallbackAvatar.locator('[data-slot="avatar-fallback"]')).toHaveText(
+    "JW",
+  );
+
+  const primaryForeground = await page.locator("body").evaluate(() => {
+    const probe = document.createElement("span");
+    probe.style.color = "var(--primary-foreground)";
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  });
+  await fallbackMenuItem.hover();
+  await expect(fallbackMenuItem).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0.04)",
+  );
+  await expect(fallbackAvatar.locator('[data-slot="avatar-fallback"]')).toHaveCSS(
+    "color",
+    primaryForeground,
+  );
+
   await veterinarianMenu
     .getByRole("menuitem", { name: "전체해제", exact: true })
     .click();

@@ -838,16 +838,26 @@ function VeterinarianMenuItemLabel({
 
   return (
     <span className="flex min-w-0 items-center gap-2">
-      <span
+      <Avatar
+        roundness="roundrect"
         className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-[4px] border border-[var(--clair-color-atomic-black-alpha-6)] text-[8px] font-normal leading-3 tracking-[0.304px] text-primary-foreground",
+          "size-5 shrink-0 rounded-[var(--clair-radius-atomic-4)] border border-[var(--clair-color-atomic-black-alpha-6)] after:rounded-[var(--clair-radius-atomic-4)] after:border-[var(--clair-color-atomic-black-alpha-6)]",
           veterinarianMenuItemToneClasses[
             toneIndex % veterinarianMenuItemToneClasses.length
           ],
         )}
       >
-        {veterinarian.initial}
-      </span>
+        {veterinarian.avatarUrl ? (
+          <AvatarImage
+            src={veterinarian.avatarUrl}
+            alt=""
+            className="rounded-[var(--clair-radius-atomic-4)]"
+          />
+        ) : null}
+        <AvatarFallback className="rounded-[var(--clair-radius-atomic-4)] bg-transparent text-[8px] font-normal leading-3 tracking-[0.304px] text-primary-foreground">
+          {veterinarian.initial}
+        </AvatarFallback>
+      </Avatar>
       <span className="min-w-0 truncate">{veterinarian.name}</span>
     </span>
   );
