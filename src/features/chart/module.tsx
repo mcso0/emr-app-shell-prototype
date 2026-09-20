@@ -16282,7 +16282,7 @@ export function ChartContent({
         </EmrDialogShell>
       </Dialog>
       {chartStartLocked ? (
-        <div className="flex min-h-0 flex-1 flex-col py-3">
+        <div className="flex min-h-0 flex-1 flex-col bg-[var(--clair-color-atomic-common-100)] py-3">
           <ChartPreconsultationContextPanel
             key={currentBundle.encounter.id}
             actorHeaders={actorHeaders}

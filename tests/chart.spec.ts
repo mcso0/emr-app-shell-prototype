@@ -5188,6 +5188,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
       .locator("[data-slot='emr-main-content-header']"),
   ).toHaveCount(0);
   const lockedState = page.getByTestId("chart-start-locked-state");
+  await expect(lockedState.locator("..")).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 255)",
+  );
   const preconsultationCallButtons = lockedState.getByRole("button", {
     name: "호출하기",
     exact: true,
@@ -5211,6 +5215,24 @@ test("chart consultation CTA moves from call to start before chart completion", 
     "max-width",
     "1024px",
   );
+  const preconsultationPanel = lockedState.locator(":scope > div").first();
+  const headerSeparator = preconsultationPanel
+    .locator(":scope > [data-slot='separator']")
+    .first();
+  const separatorMetrics = await headerSeparator.evaluate((element) => {
+    const panel = element.parentElement;
+    if (!panel) throw new Error("preconsultation panel is missing");
+
+    const separatorRect = element.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+
+    return {
+      leftInset: separatorRect.left - panelRect.left,
+      rightInset: panelRect.right - separatorRect.right,
+    };
+  });
+  expect(Math.abs(separatorMetrics.leftInset - 24)).toBeLessThanOrEqual(1);
+  expect(Math.abs(separatorMetrics.rightInset - 24)).toBeLessThanOrEqual(1);
   await expect(lockedState).toHaveClass(/scroll-fade-y/);
   await expect(lockedState).toHaveClass(/scroll-fade-8/);
   await expect(lockedState).toHaveCSS("overflow-y", "auto");

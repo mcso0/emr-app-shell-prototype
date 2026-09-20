@@ -191,7 +191,7 @@ export function ChartPreconsultationContextPanel({
           onOpenPatientInformation={onOpenPatientProfile}
           onRequestCall={onRequestCall}
         />
-        <Separator className="mx-6 w-auto" />
+        <Separator className="mx-6 !w-auto" />
         <main className="px-5 py-6 sm:px-8 sm:py-8">
           <div className="flex min-w-0 flex-col gap-6">
             <ReceptionSummary context={context} />
@@ -279,7 +279,7 @@ function PreconsultationLoadingState() {
             </div>
           </div>
         </div>
-        <Separator className="mx-6 w-auto" />
+        <Separator className="mx-6 !w-auto" />
         <div className="flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8">
           {[80, 56, 56, 154, 180].map((height, index) => (
             <div className="flex flex-col gap-3.5" key={`${height}-${index}`}>
