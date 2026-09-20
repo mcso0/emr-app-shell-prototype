@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, within } from "storybook/test";
 
 import {
   Field,
@@ -162,6 +163,48 @@ export const Sizes: Story = {
       ))}
     </div>
   ),
+};
+
+export const ChartOrderTableVisualContract: Story = {
+  render: () => (
+    <div className="flex items-center gap-4">
+      <Switch aria-label="시안 꺼짐" size="sm" />
+      <Switch aria-label="시안 켜짐" defaultChecked size="sm" />
+      <Switch aria-label="시안 읽기 전용" defaultChecked readOnly size="sm" />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const off = canvas.getByRole("switch", { name: "시안 꺼짐" });
+    const on = canvas.getByRole("switch", { name: "시안 켜짐" });
+    const readonly = canvas.getByRole("switch", { name: "시안 읽기 전용" });
+    await expect(readonly).toHaveAttribute("aria-readonly", "true");
+
+    for (const control of [off, on]) {
+      await expect(control).toHaveAttribute("data-size", "sm");
+      const style = window.getComputedStyle(control);
+      expect(style.width).toBe("32px");
+      expect(style.height).toBe("18px");
+      expect(style.borderWidth).toBe("0px");
+      const track = control.getBoundingClientRect();
+      const thumb = control.querySelector<HTMLElement>("[data-slot=\"switch-thumb\"]")?.getBoundingClientRect();
+      expect(thumb).toBeDefined();
+      expect(thumb!.width).toBe(16);
+      expect(thumb!.height).toBe(16);
+      expect(thumb!.top - track.top).toBe(1);
+    }
+
+    expect(
+      off.querySelector<HTMLElement>("[data-slot=\"switch-thumb\"]")!.getBoundingClientRect().left -
+        off.getBoundingClientRect().left,
+    ).toBe(1);
+    expect(
+      on.querySelector<HTMLElement>("[data-slot=\"switch-thumb\"]")!.getBoundingClientRect().left -
+        on.getBoundingClientRect().left,
+    ).toBe(15);
+    expect(window.getComputedStyle(off).backgroundColor).toBe("rgb(212, 212, 212)");
+    expect(window.getComputedStyle(on).backgroundColor).toBe("rgb(23, 23, 23)");
+  },
 };
 
 export const ControlledInteraction: Story = {

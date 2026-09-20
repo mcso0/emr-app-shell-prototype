@@ -35,7 +35,7 @@ export function getChartOrderWorkPresentation(row: ChartOrderPresentationRow): {
   unconfirmed: boolean;
 } {
   if (!isChartOrderPresentationConfirmed(row)) {
-    return { label: "—", icon: null, unconfirmed: true };
+    return { label: "-", icon: null, unconfirmed: true };
   }
   // Cancellation is a display override; immutable task results stay intact.
   if (row.order.status === "cancelled" || row.runtimeRow?.orderConfirmationStatus === "cancelled") {

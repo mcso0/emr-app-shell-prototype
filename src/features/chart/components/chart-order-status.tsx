@@ -10,11 +10,11 @@ import {
   type ChartOrderPresentationRow,
 } from "../chart-order-table-presentation";
 
-const labels = { ready: "확정 전", invalid: "미입력", confirmed: "확정 후" };
+const labels = { ready: "미확정", invalid: "미입력", confirmed: "확정" };
 const tones = {
-  ready: "bg-[var(--emr-status-neutral-bg)] text-[var(--emr-status-neutral-text)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--emr-status-neutral-border)]",
-  invalid: "bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--emr-status-danger-border)]",
-  confirmed: "bg-[var(--emr-status-success-bg)] text-[var(--emr-status-success-text)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--emr-status-success-border)]",
+  ready: "bg-[var(--clair-color-atomic-gray-50)] text-[var(--clair-color-atomic-gray-600)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--clair-color-atomic-gray-100)]",
+  invalid: "bg-[var(--clair-color-atomic-orange-50)] text-[var(--clair-color-atomic-orange-600)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--clair-color-atomic-orange-100)]",
+  confirmed: "bg-[var(--clair-color-atomic-green-50)] text-[var(--clair-color-atomic-green-600)] shadow-[inset_0_0_0_var(--clair-border-width-default)_var(--clair-color-atomic-green-100)]",
 };
 
 export function ChartOrderConfirmationBadge({ state, onOpenDetail, disabled = false, issueDescription }: {
@@ -38,13 +38,13 @@ export function ChartOrderWorkStatus({ row }: { row: ChartOrderPresentationRow }
   const state = getChartOrderWorkPresentation(row);
   if (state.unconfirmed) {
     return <Tooltip>
-      <TooltipTrigger render={<span tabIndex={0} className="text-[var(--emr-text-tertiary)]" aria-label="확정 후 업무 상태가 표시됩니다" aria-describedby={tooltipId} />}>
-        —
+      <TooltipTrigger render={<span tabIndex={0} className="inline-flex items-center text-[var(--clair-color-atomic-neutral-400)]" aria-label="확정 후 업무 상태가 표시됩니다" aria-describedby={tooltipId} data-emr-order-work-status="unconfirmed" />}>
+        <span aria-hidden="true" className="ml-0.5">-</span>
       </TooltipTrigger>
       <TooltipContent id={tooltipId} role="tooltip">확정 후 업무 상태가 표시됩니다</TooltipContent>
     </Tooltip>;
   }
-  return <span className="inline-flex items-center gap-1.5 whitespace-nowrap emr-text-status text-[var(--emr-text-secondary)]">
+  return <span className="inline-flex items-center gap-1 whitespace-nowrap emr-text-status text-[var(--clair-color-atomic-neutral-900)]" data-emr-order-work-status="confirmed">
     {state.icon ? <EmrSidePanelStateIcon state={state.icon} aria-hidden="true" /> : null}
     {state.label}
   </span>;

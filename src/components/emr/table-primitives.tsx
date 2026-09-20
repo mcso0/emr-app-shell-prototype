@@ -24,6 +24,7 @@ type EmrTableHeaderCellProps = Omit<
 > & {
   align?: "left" | "center" | "right";
   children: React.ReactNode;
+  gutter?: number;
   filterActive?: boolean;
   identity?: boolean;
   interaction?: EmrTableHeaderInteraction;
@@ -34,6 +35,7 @@ type EmrTableHeaderCellProps = Omit<
   onMenu?: () => void;
   onResizeKeyDown?: React.KeyboardEventHandler<HTMLButtonElement>;
   onResizeMouseDown?: React.MouseEventHandler<HTMLButtonElement>;
+  onResizeDoubleClick?: React.MouseEventHandler<HTMLButtonElement>;
   onResizeTouchStart?: React.TouchEventHandler<HTMLButtonElement>;
   onSort?: () => void;
   resize?: EmrColumnResize;
@@ -75,9 +77,14 @@ type EmrTableSelectionHeaderCellProps = Omit<
   "children" | "interaction" | "resize"
 > & {
   children: React.ReactNode;
+  gutter?: number;
+  selectionWidth?: number;
 };
 
-type EmrTableSelectionCellProps = React.ComponentProps<typeof TableCell>;
+type EmrTableSelectionCellProps = React.ComponentProps<typeof TableCell> & {
+  gutter?: number;
+  selectionWidth?: number;
+};
 
 type EmrTableContextualSelectionCellProps = EmrTableSelectionCellProps & {
   controlVisibility?: "always" | "contextual";
@@ -136,12 +143,14 @@ export function EmrTableHeaderCell({
   onMenu,
   onResizeKeyDown,
   onResizeMouseDown,
+  onResizeDoubleClick,
   onResizeTouchStart,
   onSort,
   resize = "none",
   resizeLabel,
   sortDirection,
   sortLabel,
+  gutter = 0,
   label: labelProp,
   style,
   ...props
@@ -153,7 +162,7 @@ export function EmrTableHeaderCell({
       ? labelProp
       : children;
   const resizable =
-    resize === "data-column" &&
+    resize !== "none" &&
     Boolean(onResizeKeyDown || onResizeMouseDown || onResizeTouchStart);
   const sortable = Boolean(onSort);
   const filterable = Boolean(onFilter);
@@ -162,7 +171,7 @@ export function EmrTableHeaderCell({
     typeof displayedChildren === "string" ||
     typeof displayedChildren === "number";
   const hidePinnedBoundaryResizeIndicator =
-    props.pinned === "left" && props.pinnedEdge;
+    resize === "data-column" && props.pinned === "left" && props.pinnedEdge;
 
   return (
     <TableHead
@@ -187,6 +196,7 @@ export function EmrTableHeaderCell({
           align === "center" && "justify-center",
         )}
         data-emr-table-content="true"
+        style={gutter ? { marginInlineEnd: `${gutter}px` } : undefined}
       >
         {sortable ? (
           <button
@@ -269,14 +279,16 @@ export function EmrTableHeaderCell({
       {resizable ? (
         <button
           data-row-interactive="true"
+          data-emr-column-resize-handle="true"
           type="button"
           aria-label={resizeLabel ?? `${label} 컬럼 너비 조절`}
           className={cn(
-            "absolute right-[-4px] top-1/2 z-10 h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--emr-border-default)] hover:bg-[var(--emr-state-selected)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--emr-state-drag)]",
+            "absolute right-[-4px] top-1/2 z-10 h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)] hover:bg-[var(--clair-color-atomic-black-alpha-6)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
             hidePinnedBoundaryResizeIndicator && "before:opacity-0",
           )}
           data-resizing={isResizing ? "true" : undefined}
           onClick={(event) => event.stopPropagation()}
+          onDoubleClick={onResizeDoubleClick}
           onKeyDown={onResizeKeyDown}
           onMouseDown={onResizeMouseDown}
           onTouchStart={onResizeTouchStart}
@@ -445,6 +457,8 @@ export function EmrTableIdentityCellContent({
 
 export function EmrTableSelectionHeaderCell({
   children,
+  gutter,
+  selectionWidth = 40,
   className,
   ...props
 }: EmrTableSelectionHeaderCellProps) {
@@ -452,11 +466,15 @@ export function EmrTableSelectionHeaderCell({
     <EmrTableHeaderCell
       {...props}
       className={cn(
-        "w-10 min-w-10 max-w-10 [&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
+        selectionWidth === 20
+          ? "w-5 min-w-5 max-w-5"
+          : "w-10 min-w-10 max-w-10",
+        "[&_.emr-table-cell-content]:justify-center [&_.emr-table-cell-content>*]:shrink-0",
         className,
       )}
       interaction="static"
       resize="none"
+      gutter={gutter}
     >
       {children}
     </EmrTableHeaderCell>
@@ -467,15 +485,25 @@ export function EmrTableSelectionCell({
   children,
   className,
   controlVisibility = "always",
+  gutter = 0,
+  selectionWidth = 40,
   ...props
 }: EmrTableContextualSelectionCellProps) {
   return (
     <TableCell
-      className={cn("w-10 min-w-10 max-w-10", className)}
+      className={cn(
+        selectionWidth === 20
+          ? "w-5 min-w-5 max-w-5"
+          : "w-10 min-w-10 max-w-10",
+        className,
+      )}
       data-emr-table-selection-visibility={controlVisibility}
       {...props}
     >
-      <span className="emr-table-cell-content flex min-w-0 items-center justify-center gap-1 [&>*]:shrink-0">
+      <span
+        className="emr-table-cell-content flex min-w-0 items-center justify-center gap-1 [&>*]:shrink-0"
+        style={gutter ? { marginInlineEnd: `${gutter}px` } : undefined}
+      >
         {children}
       </span>
     </TableCell>

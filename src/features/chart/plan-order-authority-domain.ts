@@ -642,6 +642,9 @@ export function calculatePlanOrderCharge({
   if (!Number.isSafeInteger(baseAmountKrw) || baseAmountKrw < 0) {
     return { ok: false, reason: "invalid_amount" };
   }
+  if (!adjustment || typeof adjustment !== "object") {
+    return { ok: false, reason: "invalid_amount" };
+  }
   const adjustmentAmountKrw =
     adjustment.source === "amount"
       ? adjustment.amountKrw
@@ -650,10 +653,15 @@ export function calculatePlanOrderCharge({
     return { ok: false, reason: "invalid_amount" };
   }
   const chargeAmountKrw = baseAmountKrw + adjustmentAmountKrw;
+  if (!Number.isSafeInteger(chargeAmountKrw)) {
+    return { ok: false, reason: "invalid_amount" };
+  }
   if (chargeAmountKrw < 0) return { ok: false, reason: "negative_charge" };
   const adjustmentPercent =
     baseAmountKrw === 0
-      ? 0
+      ? adjustment.source === "percent"
+        ? adjustment.percent
+        : 0
       : adjustment.source === "percent"
         ? adjustment.percent
         : (adjustmentAmountKrw / baseAmountKrw) * 100;

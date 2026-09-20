@@ -12,6 +12,7 @@ related_work:
   - CLINICAL-FULFILLMENT-PR-010
   - CLINICAL-BILLING-PR-023
   - CHART-PR-032
+  - CHART-PR-038
 supersedes: []
 superseded_by: []
 tags:
@@ -20,7 +21,7 @@ tags:
   - order-table
   - dispensing
   - billing
-last_updated: 2026-09-13
+last_updated: 2026-09-20
 ---
 
 # Plan/Order `전체` Tab Legacy Column Contract
@@ -44,6 +45,13 @@ does not alter pinned-column, sorting, editing, or persistence contracts.
 Replace only the column composition of the current Plan/Order `전체` tab with the legacy CLAiR column order and approved labels, including the explicit `직원` to `담당자` replacement, while preserving the current UI system unless a later decision explicitly changes it.
 
 ## Contract Precedence And State Objects
+
+The 2026-09-20 owner-approved [26-column table contract](../../design/screens/chart/planning/plan-order-table/implementation.md)
+supersedes this document's historical visible-column names/order and sizing.
+It also replaces configured/required billing-adjustment reasons with optional
+free text. Underlying clinical quantities, confirmation, billing authority and
+history contracts below remain valid. CHART-PR-038 tracks implementation and
+delivery; this product decision alone does not claim deployment or DB apply.
 
 For the Plan/Order flow covered here, this later owner-approved contract takes
 precedence over older sections that require `accepted`, allow billing of a
@@ -189,9 +197,11 @@ pointed to source `7b0cb0a3` and reported success.
   evidence is recorded in
   `docs/work/chart/CHART-PR-031-plan-order-legacy-column-validation.md`.
 
-## Target Column Order
+## Historical Column Order — superseded by CHART-PR-038
 
-The selection checkbox remains as the first unlabeled control column. The following 25 named columns must keep this exact order and spelling.
+This is the earlier delivered 25-business-column reference, retained for domain
+traceability. The latest 26-visible-column target, including selection, is in the
+implementation contract linked above; do not restore the historical order.
 
 | Position | Display label | Decision status |
 | ---: | --- | --- |
@@ -703,7 +713,7 @@ unit.
 - Block an adjustment that would make `청구금액` negative.
 - Freeze the calculation inputs and results at `Order 청구`.
 
-### `할인할증(금액)`, `(%)`, and `사유`
+### `할인/할증`, `%`, and `할인/할증 사유`
 
 - A negative adjustment is a discount, a positive adjustment is a surcharge, and zero means no adjustment.
 - Let the user enter either an amount or a percentage as the authoritative adjustment source, not both independently.
@@ -711,9 +721,13 @@ unit.
 - When percentage is authoritative, recalculate the amount if `합계` changes.
 - When amount is authoritative, preserve the amount if `합계` changes and recalculate the displayed percentage.
 - Round a percentage-derived adjustment amount to the nearest whole KRW, resolving half-KRW ties away from zero so discounts and surcharges are symmetric; do not persist fractional KRW.
-- Require `사유` whenever the adjustment is non-zero; use a selectable reason with free text when needed.
-- Source the selectable standard reason list from hospital billing configuration rather than hard-coding one universal vocabulary.
-- Always provide `기타`; selecting it requires free-text detail.
+- Reason is optional free text, including nonzero adjustments. Blank/whitespace
+  normalizes to null. No configured allowlist or required `기타` detail.
+- A reason-only edit preserves the adjustment source and values; zeroing the
+  adjustment does not erase a voluntary reason. Preserve immutable audit history.
+- Amount and percentage are live linked views of one signed adjustment. Editing
+  the derived field explicitly changes source; merely focusing/blurring its
+  rounded display must not change the source or stored precision.
 - `사유` is the billing-adjustment reason and must not be reused for a `실조제량` override reason.
 - Lock the adjustment source, values, and reason at `Order 청구`; later changes follow the billing correction flow and preserve history.
 

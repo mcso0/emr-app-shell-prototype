@@ -4,6 +4,7 @@ import {
   type WorkspacePermissionAdapter,
   type WorkspacePermissionDenialReason,
 } from "@/features/auth/permission-resolver";
+import { calculatePlanOrderCharge } from "@/features/chart/plan-order-authority-domain";
 
 export type ChartOrderPrebillingOverridePatch = {
   adjustmentAmountKrw?: number;
@@ -239,21 +240,42 @@ export function createMockChartOrderPrebillingOverrideGateway(): ChartOrderPrebi
       if ((previous?.versionNo ?? 0) !== input.expectedVersion) {
         return { error: "revision_conflict", ok: false };
       }
-      const billingQuantity = input.override.billingQuantity ?? previous?.billingQuantity ?? 1;
+      const has = (key: keyof ChartOrderPrebillingOverridePatch) =>
+        Object.prototype.hasOwnProperty.call(input.override, key);
+      const billingQuantity = has("billingQuantity")
+        ? input.override.billingQuantity!
+        : previous?.billingQuantity ?? 1;
       const baseAmountKrw = previous?.baseAmountKrw ?? 0;
-      const adjustmentAmountKrw = input.override.adjustmentSource === "percent"
-        ? Math.round(baseAmountKrw * (input.override.adjustmentPercent ?? 0) / 100)
-        : input.override.adjustmentAmountKrw ?? previous?.adjustmentAmountKrw ?? 0;
+      const adjustmentSource = has("adjustmentSource")
+        ? input.override.adjustmentSource ?? null
+        : previous?.adjustmentSource ?? null;
+      const requestedAdjustment = adjustmentSource === "percent"
+        ? { source: "percent" as const, percent: input.override.adjustmentPercent ?? previous?.adjustmentPercent ?? 0 }
+        : adjustmentSource === "amount"
+          ? { source: "amount" as const, amountKrw: has("adjustmentAmountKrw") ? input.override.adjustmentAmountKrw! : previous?.adjustmentAmountKrw ?? 0 }
+          : null;
+      const calculation = requestedAdjustment
+        ? calculatePlanOrderCharge({ baseAmountKrw, adjustment: requestedAdjustment })
+        : { ok: true as const, adjustmentAmountKrw: 0, adjustmentPercent: 0, chargeAmountKrw: baseAmountKrw };
+      if (!calculation.ok) {
+        return calculation.reason === "negative_charge"
+          ? { error: "negative_charge", ok: false }
+          : { error: "db_write_failed", ok: false };
+      }
+      const adjustmentAmountKrw = calculation.adjustmentAmountKrw;
+      const adjustmentPercent = calculation.adjustmentPercent;
       const next: ChartOrderPrebillingOverride = {
         adjustmentAmountKrw,
-        adjustmentPercent: input.override.adjustmentPercent ?? previous?.adjustmentPercent ?? 0,
-        adjustmentReason: input.override.adjustmentReason ?? previous?.adjustmentReason ?? null,
-        adjustmentSource: input.override.adjustmentSource ?? previous?.adjustmentSource ?? null,
+        adjustmentPercent,
+        adjustmentReason: has("adjustmentReason")
+          ? input.override.adjustmentReason ?? null
+          : previous?.adjustmentReason ?? null,
+        adjustmentSource,
         baseAmountKrw,
         billingName: input.override.billingName ?? previous?.billingName ?? "Order",
         billingQuantity,
         billingReflectionEnabled: input.override.billingReflectionEnabled ?? previous?.billingReflectionEnabled ?? true,
-        chargeAmountKrw: Math.max(0, baseAmountKrw + adjustmentAmountKrw),
+        chargeAmountKrw: calculation.chargeAmountKrw,
         orderId: input.orderId,
         versionNo: input.expectedVersion + 1,
       };
@@ -280,12 +302,12 @@ function isValidOverridePatch(
     "billingReflectionEnabled",
   ]);
   if (entries.some(([key]) => !allowed.has(key))) return false;
-  if (value.billingName !== undefined && !value.billingName.trim()) return false;
-  if (value.billingQuantity !== undefined && (!Number.isFinite(value.billingQuantity) || value.billingQuantity <= 0)) return false;
-  if (value.adjustmentAmountKrw !== undefined && !Number.isSafeInteger(value.adjustmentAmountKrw)) return false;
-  if (value.adjustmentPercent !== undefined && !Number.isFinite(value.adjustmentPercent)) return false;
-  if (value.adjustmentReason !== undefined && value.adjustmentReason !== null && !value.adjustmentReason.trim()) return false;
-  if (value.adjustmentSource !== undefined && value.adjustmentSource !== null && !["amount", "percent"].includes(value.adjustmentSource)) return false;
+  if (value.billingName !== undefined && (typeof value.billingName !== "string" || !value.billingName.trim())) return false;
+  if (value.billingQuantity !== undefined && (typeof value.billingQuantity !== "number" || !Number.isFinite(value.billingQuantity) || value.billingQuantity <= 0)) return false;
+  if (value.adjustmentAmountKrw !== undefined && (typeof value.adjustmentAmountKrw !== "number" || !Number.isSafeInteger(value.adjustmentAmountKrw))) return false;
+  if (value.adjustmentPercent !== undefined && (typeof value.adjustmentPercent !== "number" || !Number.isFinite(value.adjustmentPercent))) return false;
+  if (value.adjustmentReason !== undefined && value.adjustmentReason !== null && typeof value.adjustmentReason !== "string") return false;
+  if (value.adjustmentSource !== undefined && value.adjustmentSource !== null && (typeof value.adjustmentSource !== "string" || !["amount", "percent"].includes(value.adjustmentSource))) return false;
   return value.billingReflectionEnabled === undefined || typeof value.billingReflectionEnabled === "boolean";
 }
 
@@ -294,7 +316,7 @@ function normalizeOverridePatch(value: ChartOrderPrebillingOverridePatch) {
     ...value,
     ...(value.billingName !== undefined ? { billingName: value.billingName.trim() } : {}),
     ...(value.adjustmentReason !== undefined
-      ? { adjustmentReason: value.adjustmentReason?.trim() || null }
+      ? { adjustmentReason: typeof value.adjustmentReason === "string" ? value.adjustmentReason.trim() || null : value.adjustmentReason }
       : {}),
   };
 }
