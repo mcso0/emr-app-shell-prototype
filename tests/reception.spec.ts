@@ -1989,14 +1989,31 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   const veterinarianMenu = page.getByRole("menu");
   await expect(veterinarianMenu.getByText("오늘 근무 수의사")).toBeVisible();
   await expect(veterinarianMenu.getByText("그 외 수의사")).toBeVisible();
-  await expect(
-    veterinarianMenu.getByRole("menuitem", { name: "전체선택", exact: true }),
-  ).toBeVisible();
-  await expect(
-    veterinarianMenu.getByRole("menuitem", { name: "전체해제", exact: true }),
-  ).toBeVisible();
+  const selectAllItem = veterinarianMenu.getByRole("menuitem", {
+    name: "전체선택",
+    exact: true,
+  });
+  const clearAllItem = veterinarianMenu.getByRole("menuitem", {
+    name: "전체해제",
+    exact: true,
+  });
+  await expect(selectAllItem).toBeVisible();
+  await expect(clearAllItem).toBeVisible();
   const veterinarianMenuBox = await veterinarianMenu.boundingBox();
-  expect(veterinarianMenuBox?.width).toBe(201);
+  const selectAllBox = await selectAllItem.boundingBox();
+  const clearAllBox = await clearAllItem.boundingBox();
+  expect(veterinarianMenuBox).not.toBeNull();
+  expect(Math.abs(veterinarianMenuBox!.width - 201)).toBeLessThanOrEqual(1);
+  expect(selectAllBox).not.toBeNull();
+  expect(clearAllBox).not.toBeNull();
+  expect(
+    Math.abs(selectAllBox!.x - (veterinarianMenuBox!.x + 5)),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    Math.abs(
+      clearAllBox!.x + clearAllBox!.width - (veterinarianMenuBox!.x + 196),
+    ),
+  ).toBeLessThanOrEqual(1);
   await expect
     .poll(() =>
       veterinarianMenu

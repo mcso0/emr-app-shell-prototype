@@ -5164,15 +5164,15 @@ function ScheduleToolbar({
             className="w-[201px] rounded-[8px] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[4px] text-[var(--clair-color-atomic-neutral-900)] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] ring-0"
             data-testid="reception-veterinarian-filter-menu"
           >
-            <div className="flex h-8 w-full items-center">
+            <div className="flex h-8 w-full items-center justify-between">
               <DropdownMenuItem
-                className="h-8 min-w-0 flex-1 justify-center rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
+                className="h-8 min-w-0 rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
                 onClick={onSelectAllVeterinarians}
               >
                 전체선택
               </DropdownMenuItem>
               <DropdownMenuItem
-                className="h-8 min-w-0 flex-1 justify-center rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
+                className="h-8 min-w-0 rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
                 onClick={onClearVeterinarians}
               >
                 전체해제
