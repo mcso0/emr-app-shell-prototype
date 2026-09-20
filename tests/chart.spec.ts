@@ -1525,7 +1525,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(selectionActions).toBeVisible();
-  await expect(selectionActions).toContainText("확정 전 후보");
+  await expect(selectionActions.getByText("1개 오더 선택", { exact: true })).toBeVisible();
   await expect(
     selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeVisible();
@@ -7088,7 +7088,8 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   await page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }).check();
   await expect(detailAside).toBeVisible();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
-  await expect(selectionActions).toContainText("확정 전 후보");
+  await expect(selectionActions.getByText("1개 오더 선택", { exact: true })).toBeVisible();
+  await expect(selectionActions).not.toContainText("확정 전 후보");
   await expect(
     selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeVisible();
@@ -7114,10 +7115,13 @@ test("chart mixed selection keeps confirmation and partial billing scoped", asyn
   await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
-  await expect(selectionActions).toContainText("확정 전 후보 + 확정 오더");
-  await expect(
-    selectionActions.getByRole("button", { name: "1개 Order 확정" }),
-  ).toBeVisible();
+  await expect(selectionActions.getByText("2개 오더 선택", { exact: true })).toBeVisible();
+  await expect(selectionActions).not.toContainText("확정 전 후보 + 확정 오더");
+  const mixedConfirmButton = selectionActions.getByRole("button", {
+    name: "1개 Order 확정",
+  });
+  await expect(mixedConfirmButton).toBeVisible();
+  await expect(mixedConfirmButton).toHaveClass(/border-input/);
   // This fixture's confirmed CBC row is not billing-eligible, so a zero-count
   // partial-billing action must not be shown for the mixed selection.
   await expect(
@@ -7127,8 +7131,13 @@ test("chart mixed selection keeps confirmation and partial billing scoped", asyn
   await expect(selectionActions.getByRole("button", { name: "긴급" })).toHaveCount(0);
 
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).uncheck();
-  await expect(selectionActions.getByRole("button", { name: "재요청" })).toBeVisible();
-  await expect(selectionActions.getByRole("button", { name: "긴급" })).toBeVisible();
+  await expect(selectionActions.getByText("1개 오더 선택", { exact: true })).toBeVisible();
+  const rerequestButton = selectionActions.getByRole("button", { name: "재요청" });
+  const urgentButton = selectionActions.getByRole("button", { name: "긴급" });
+  await expect(rerequestButton).toBeVisible();
+  await expect(rerequestButton).toHaveClass(/border-input/);
+  await expect(urgentButton).toBeVisible();
+  await expect(urgentButton).toHaveClass(/emr-status-danger-bg/);
   await selectionActions.getByRole("button", { name: "긴급" }).click();
   const urgentDialog = page.getByRole("dialog");
   await expect(urgentDialog).toContainText("1개 확정 오더");
@@ -7361,10 +7370,10 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await restoreKongOrderDraftDefaults(page);
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   await page.getByRole("checkbox", { name: "피하 수액 처치 선택" }).check();
-  await page
-    .getByRole("toolbar", { name: "선택 행 작업" })
-    .getByRole("button", { name: "삭제" })
-    .click();
+  const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
+  const deleteButton = selectionActions.getByRole("button", { name: "삭제" });
+  await expect(deleteButton).toHaveClass(/emr-status-danger-bg/);
+  await deleteButton.click();
   const bulkDeleteDialog = page.getByRole("dialog");
   await expect(bulkDeleteDialog).toContainText(
     "선택한 2개 오더가 현재 Plan에서 제거됩니다.",
@@ -9440,7 +9449,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
   await expect(
     page.getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" }),
   ).not.toBeChecked();
-  await expect(cohortActions).toContainText("확정 전 후보");
+  await expect(cohortActions.getByText("2개 오더 선택", { exact: true })).toBeVisible();
 });
 
 test("chart order set requires explicit leaf intent and preserves set rows on reload save", async ({
