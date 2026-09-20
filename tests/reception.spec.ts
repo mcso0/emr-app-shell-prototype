@@ -1989,7 +1989,46 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   const veterinarianMenu = page.getByRole("menu");
   await expect(veterinarianMenu.getByText("오늘 근무 수의사")).toBeVisible();
   await expect(veterinarianMenu.getByText("그 외 수의사")).toBeVisible();
+  await expect(
+    veterinarianMenu.getByRole("menuitem", { name: "전체선택", exact: true }),
+  ).toBeVisible();
+  await expect(
+    veterinarianMenu.getByRole("menuitem", { name: "전체해제", exact: true }),
+  ).toBeVisible();
+  const veterinarianMenuBox = await veterinarianMenu.boundingBox();
+  expect(veterinarianMenuBox?.width).toBe(201);
+  await expect
+    .poll(() =>
+      veterinarianMenu
+        .getByRole("menuitemcheckbox")
+        .first()
+        .evaluate((item) => getComputedStyle(item).height),
+    )
+    .toBe("32px");
   await expect(page.getByRole("menuitemcheckbox")).toHaveCount(10);
+  await veterinarianMenu
+    .getByRole("menuitem", { name: "전체해제", exact: true })
+    .click();
+  await expect(
+    scheduleToolbar.getByRole("button", {
+      name: "선택된 수의사 없음",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await scheduleToolbar
+    .getByRole("button", { name: "선택된 수의사 없음", exact: true })
+    .click();
+  await page
+    .getByRole("menu")
+    .getByRole("menuitem", { name: "전체선택", exact: true })
+    .click();
+  await expect(
+    scheduleToolbar.getByRole("button", { name: "이수지 +9", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("veterinarian-lane-header")).toHaveCount(10);
+  await scheduleToolbar
+    .getByRole("button", { name: "이수지 +9", exact: true })
+    .click();
   await page.getByRole("menuitemcheckbox", { name: "김도윤" }).click();
   await page.getByRole("menuitemcheckbox", { name: "박서연" }).click();
 

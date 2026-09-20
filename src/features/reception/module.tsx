@@ -837,7 +837,7 @@ function VeterinarianMenuItemLabel({
     <span className="flex min-w-0 items-center gap-2">
       <span
         className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full border text-[9px] font-semibold leading-none text-primary-foreground",
+          "flex size-5 shrink-0 items-center justify-center rounded-[4px] border border-[var(--clair-color-atomic-black-alpha-6)] text-[8px] font-normal leading-3 tracking-[0.304px] text-primary-foreground",
           veterinarianMenuItemToneClasses[
             toneIndex % veterinarianMenuItemToneClasses.length
           ],
@@ -5059,6 +5059,8 @@ function ScheduleToolbar({
   onOpenStaffProfile,
   onUnifiedPatientReady,
   onToggleVeterinarian,
+  onSelectAllVeterinarians,
+  onClearVeterinarians,
   selectedVeterinarianIds,
   staffReadStatus = "ready",
   staffMembers,
@@ -5078,6 +5080,8 @@ function ScheduleToolbar({
   ) => void;
   onUnifiedPatientReady: (patientId: string) => void;
   onToggleVeterinarian: (veterinarianId: string) => void;
+  onSelectAllVeterinarians: () => void;
+  onClearVeterinarians: () => void;
   selectedVeterinarianIds: string[];
   staffReadStatus?: WorkspaceStaffReadStatus;
   staffMembers: ReceptionStaffMember[];
@@ -5155,26 +5159,50 @@ function ScheduleToolbar({
             <CdsActionsSearchIcon data-icon="inline-start" />
             {veterinarianLabel}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuContent
+            align="end"
+            className="w-[201px] rounded-[8px] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[4px] text-[var(--clair-color-atomic-neutral-900)] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] ring-0"
+            data-testid="reception-veterinarian-filter-menu"
+          >
+            <div className="flex h-8 w-full items-center">
+              <DropdownMenuItem
+                className="h-8 min-w-0 flex-1 justify-center rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
+                onClick={onSelectAllVeterinarians}
+              >
+                전체선택
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="h-8 min-w-0 flex-1 justify-center rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
+                onClick={onClearVeterinarians}
+              >
+                전체해제
+              </DropdownMenuItem>
+            </div>
             <DropdownMenuGroup>
-              <DropdownMenuLabel>오늘 근무 수의사</DropdownMenuLabel>
+              <DropdownMenuLabel className="h-8 px-2 py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
+                오늘 근무 수의사
+              </DropdownMenuLabel>
               {todayWorkingVeterinarians.map((veterinarian) => (
                 <DropdownMenuCheckboxItem
                   key={veterinarian.id}
                   checked={selectedVeterinarianIds.includes(veterinarian.id)}
+                  className="h-8 gap-2 rounded-[4px] px-2 py-[6px] pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] opacity-80"
                   onCheckedChange={() => onToggleVeterinarian(veterinarian.id)}
                 >
                   <VeterinarianMenuItemLabel veterinarian={veterinarian} />
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="mx-0 my-0 h-[10px] bg-transparent bg-[linear-gradient(to_bottom,transparent_4px,var(--clair-color-atomic-neutral-200)_4px,var(--clair-color-atomic-neutral-200)_5px,transparent_5px)]" />
             <DropdownMenuGroup>
-              <DropdownMenuLabel>그 외 수의사</DropdownMenuLabel>
+              <DropdownMenuLabel className="h-8 px-2 py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px] text-[var(--clair-color-atomic-neutral-600)]">
+                그 외 수의사
+              </DropdownMenuLabel>
               {otherVeterinarians.map((veterinarian) => (
                 <DropdownMenuCheckboxItem
                   key={veterinarian.id}
                   checked={selectedVeterinarianIds.includes(veterinarian.id)}
+                  className="h-8 gap-2 rounded-[4px] px-2 py-[6px] pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] opacity-80"
                   onCheckedChange={() => onToggleVeterinarian(veterinarian.id)}
                 >
                   <VeterinarianMenuItemLabel veterinarian={veterinarian} />
@@ -6958,7 +6986,11 @@ export function ReceptionContent() {
       veterinarianIds.includes(id),
     );
 
-    return selectedIds.length > 0 ? selectedIds : veterinarianIds;
+    return selectedVeterinarianIds.length === 0
+      ? []
+      : selectedIds.length > 0
+        ? selectedIds
+        : veterinarianIds;
   }, [selectedVeterinarianIds, veterinarianIds]);
   const workspaceDraftCheckIns = useMemo(
     () =>
@@ -7026,16 +7058,14 @@ export function ReceptionContent() {
       const currentInWorkspace = current.filter((id) =>
         veterinarianIds.includes(id),
       );
-      const baseSelection =
-        currentInWorkspace.length > 0 ? currentInWorkspace : veterinarianIds;
 
-      if (baseSelection.includes(veterinarianId)) {
-        return baseSelection.length > 1
-          ? baseSelection.filter((id) => id !== veterinarianId)
-          : baseSelection;
+      if (currentInWorkspace.includes(veterinarianId)) {
+        return currentInWorkspace.length > 1
+          ? currentInWorkspace.filter((id) => id !== veterinarianId)
+          : currentInWorkspace;
       }
 
-      return [...baseSelection, veterinarianId];
+      return [...currentInWorkspace, veterinarianId];
     });
   };
   const openStaffOperationalProfile = useCallback(
@@ -7515,6 +7545,8 @@ export function ReceptionContent() {
         view={calendarView}
         onViewChange={handleCalendarViewChange}
         selectedVeterinarianIds={effectiveSelectedVeterinarianIds}
+        onSelectAllVeterinarians={() => setSelectedVeterinarianIds(veterinarianIds)}
+        onClearVeterinarians={() => setSelectedVeterinarianIds([])}
         staffReadStatus={workspaceStaffReadStatus}
         staffMembers={staffMembers}
         todayDate={defaultOperatingDate}
