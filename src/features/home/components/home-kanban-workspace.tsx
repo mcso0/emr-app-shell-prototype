@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import { filterRowsByEmrTableFilterBuilder, getEmrTableFilterBuilderActiveCount, type EmrTableFilterBuilderField } from "@/components/emr/table-filter-builder-model";
@@ -218,7 +218,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             완료 포함
           </EmrFilterToggle>
           {view === "hospital" && <>
-            <HomeMultiSelect label="담당자" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
+            <HomeMultiSelect label="담당자" menuVariant="reception" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
             <HomeMultiSelect label="업무" options={[...workTypes]} values={visibleTypes.map((type) => type.id)} allSelected={hiddenTypes.length === 0}
               onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
@@ -310,14 +310,24 @@ function HomeSearch({ personal, value, onChange }: { personal: boolean; value: s
   </div> : <Button ref={buttonRef} variant="outline" size="default" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" /><span className="px-0.5">검색</span></Button>;
 }
 
-function HomeMultiSelect({ label, options, values, allSelected, onChange }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void }) {
+function HomeMultiSelect({ label, options, values, allSelected, onChange, menuVariant = "default" }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void; menuVariant?: "default" | "reception" }) {
   const text = allSelected ? `${label} 전체` : values.length === 0 ? `${label} 선택 없음` : values.length === 1 ? options.find((option) => option.id === values[0])?.label || values[0] : `${label} ${values.length}개`;
+  const receptionMenu = menuVariant === "reception";
   return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" aria-label={`${label} 다중 선택`}><span className="px-0.5">{text}</span><ChevronDownIcon /></Button>} />
-    <DropdownMenuContent align="end" className="w-52 p-2">
-      <div className="flex justify-between border-b border-border pb-1"><Button size="xs" variant="ghost" onClick={() => onChange(options.map((option) => option.id))}>전체 선택</Button><Button size="xs" variant="ghost" onClick={() => onChange([])}>선택 해제</Button></div>
-      <div className="max-h-64 overflow-auto" role="group" aria-label={`${label} 선택`}>
-        {options.map((option) => <label key={option.id} className="emr-text-body flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-[var(--emr-state-hover)]"><Checkbox aria-label={`${option.label} 선택`} checked={values.includes(option.id)} onCheckedChange={() => onChange(toggleValue(values, option.id))} />{option.label}</label>)}
-      </div>
+    <DropdownMenuContent align="end" className={receptionMenu ? "w-[201px] rounded-[8px] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[4px] text-[var(--clair-color-atomic-neutral-900)] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] ring-0" : "w-52 p-2"} data-testid={receptionMenu ? "home-assignee-filter-menu" : undefined}>
+      {receptionMenu ? <>
+        <div className="flex h-8 w-full items-center">
+          <DropdownMenuItem className="h-8 min-w-0 flex-1 justify-center rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]" onClick={() => onChange(options.map((option) => option.id))}>전체 선택</DropdownMenuItem>
+          <DropdownMenuItem className="h-8 min-w-0 flex-1 justify-center rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]" onClick={() => onChange([])}>선택 해제</DropdownMenuItem>
+        </div>
+        <DropdownMenuSeparator className="mx-0 my-0 h-[10px] bg-transparent bg-[linear-gradient(to_bottom,transparent_4px,var(--clair-color-atomic-neutral-200)_4px,var(--clair-color-atomic-neutral-200)_5px,transparent_5px)]" />
+        {options.map((option) => <DropdownMenuCheckboxItem key={option.id} checked={values.includes(option.id)} className="h-8 gap-2 rounded-[4px] px-2 py-[6px] pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] opacity-80" onCheckedChange={() => onChange(toggleValue(values, option.id))}>{option.label}</DropdownMenuCheckboxItem>)}
+      </> : <>
+        <div className="flex justify-between border-b border-border pb-1"><Button size="xs" variant="ghost" onClick={() => onChange(options.map((option) => option.id))}>전체 선택</Button><Button size="xs" variant="ghost" onClick={() => onChange([])}>선택 해제</Button></div>
+        <div className="max-h-64 overflow-auto" role="group" aria-label={`${label} 선택`}>
+          {options.map((option) => <label key={option.id} className="emr-text-body flex cursor-pointer items-center gap-2 rounded px-2 py-2 hover:bg-[var(--emr-state-hover)]"><Checkbox aria-label={`${option.label} 선택`} checked={values.includes(option.id)} onCheckedChange={() => onChange(toggleValue(values, option.id))} />{option.label}</label>)}
+        </div>
+      </>}
     </DropdownMenuContent>
   </DropdownMenu>;
 }
