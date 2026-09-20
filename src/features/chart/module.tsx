@@ -14233,7 +14233,7 @@ function OrderArea({
     >
       <div
         className={cn(
-          "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3",
+          "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 pl-7 pr-3",
           collapsed ? "py-0" : "pt-2 pb-0.5",
         )}
       >
@@ -14309,7 +14309,7 @@ function OrderArea({
         inert={collapsed ? true : undefined}
         className={collapsed ? "hidden" : "contents"}
       >
-        <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] pl-7 pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div
             className="flex min-w-max shrink-0 items-center gap-1 rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
             role="tablist"
