@@ -9217,17 +9217,8 @@ function ChartOrderTable({
             );
             return (
               <>
-                <span className="grid min-w-[112px] border-r border-[var(--emr-border-default)] pr-3">
-                  <strong className="text-xs">
-                    {selectedOriginalRows.length}개 선택
-                  </strong>
-                  <span className="emr-text-micro text-[var(--emr-text-secondary)]">
-                    {hasMixedSelection
-                      ? "확정 전 후보 + 확정 오더"
-                      : selectedDraftRows.length > 0
-                        ? "확정 전 후보"
-                        : "확정 오더"}
-                  </span>
+                <span className="inline-flex min-w-[112px] items-center whitespace-nowrap border-r border-[var(--emr-border-default)] pr-3 text-xs font-medium">
+                  {selectedOriginalRows.length}개 오더 선택
                 </span>
                 {selectedDraftRows.length > 0 ? (
                   <Button
@@ -9239,6 +9230,7 @@ function ChartOrderTable({
                       )
                     }
                     size="xs"
+                    variant={hasMixedSelection ? "outline" : "default"}
                     onClick={onConfirmSelected}
                   >
                     {selectedDraftRows.length}개 Order 확정
@@ -9249,6 +9241,7 @@ function ChartOrderTable({
                     {selectedBillingRows.length > 0 ? (
                       <Button
                         disabled={writeDisabled}
+                        variant={hasMixedSelection ? "outline" : "default"}
                         size="xs"
                         onClick={() =>
                           onRequestBilling(
@@ -9280,7 +9273,7 @@ function ChartOrderTable({
                         </Button>
                         <Button
                           size="xs"
-                          variant="outline"
+                          variant="destructive"
                           disabled={writeDisabled}
                           onClick={() =>
                             onOpenBulkMutation(
@@ -9300,7 +9293,7 @@ function ChartOrderTable({
                   selectedDraftRows.length > 0 ? (
                     <Button
                       size="xs"
-                      variant="outline"
+                      variant="destructive"
                       disabled={writeDisabled}
                       onClick={() =>
                         onDeleteSelected(

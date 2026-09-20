@@ -69,6 +69,8 @@ last_updated: 2026-09-20
 - count label: Pretendard Medium `12px / 16px`, letter-spacing `2.5%`, `#171717`
 - divider: `1px × 24px`, `#E5E5E5`
 - 버튼 매핑: primary=`Button default`, outline=`Button outline`, destructive=`Button destructive`, ghost=`Button ghost`, 모두 `size="xs"`
+- 상태별 버튼 variant: 미확정만=`default · destructive · ghost`, 확정만=`default · outline · destructive · ghost`, 혼합=`outline · outline · ghost`
+- CAB 요약은 모든 상태에서 `n개 오더 선택` 한 줄로 표시하고 상태 설명을 별도 줄에 중복하지 않는다.
 - hover, focus, disabled, loading은 기존 Button 컴포넌트 상태를 사용한다.
 
 ## Implementation boundary
