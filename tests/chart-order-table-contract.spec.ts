@@ -248,6 +248,64 @@ test("Plan/Order keeps scrolled columns behind the fixed start edge", async ({
   ).resolves.toMatchObject({ hitColumn: "select" });
 });
 
+test("Plan/Order keeps scrolled resize handles below the fixed header", async ({
+  page,
+}) => {
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const viewport = table.locator(
+    'xpath=ancestor::*[@data-emr-pinned-table-viewport="true"]',
+  );
+  const scrollOwner = viewport.locator(
+    '> [data-emr-pinned-table-scroll-owner="true"]',
+  );
+
+  await expect(table).toBeVisible();
+  await scrollOwner.evaluate((element) => element.scrollTo({ left: 600, top: 0 }));
+  await expect.poll(() => scrollOwner.evaluate((element) => element.scrollLeft)).toBe(600);
+
+  const overlapResult = await table.evaluate((element) => {
+    const pinnedHeaders = Array.from(
+      element.querySelectorAll<HTMLElement>(
+        'thead [data-emr-column-pinned="left"]',
+      ),
+    );
+    const pinnedStart = Math.min(
+      ...pinnedHeaders.map((header) => header.getBoundingClientRect().left),
+    );
+    const pinnedEnd = Math.max(
+      ...pinnedHeaders.map((header) => header.getBoundingClientRect().right),
+    );
+    const overlappingHandles = Array.from(
+      element.querySelectorAll<HTMLElement>(
+        'thead [data-slot="table-head"]:not([data-emr-column-pinned]) [data-emr-column-resize-handle="true"]',
+      ),
+    ).filter((handle) => {
+      const box = handle.getBoundingClientRect();
+      const center = box.left + box.width / 2;
+      return center > pinnedStart && center < pinnedEnd;
+    });
+
+    return {
+      overlapCount: overlappingHandles.length,
+      leakedHandles: overlappingHandles
+        .filter((handle) => {
+          const box = handle.getBoundingClientRect();
+          return (
+            document.elementFromPoint(
+              box.left + box.width / 2,
+              box.top + box.height / 2,
+            ) === handle
+          );
+        })
+        .map((handle) => handle.getAttribute("aria-label")),
+    };
+  });
+
+  expect(overlapResult.overlapCount).toBeGreaterThan(0);
+  expect(overlapResult.leakedHandles).toEqual([]);
+});
+
 test("Plan/Order keeps the boundary line and fixed area above the scroll layer", async ({
   page,
 }) => {
@@ -318,9 +376,16 @@ test("Plan/Order scroll columns keep a working header resize handle", async ({ p
   });
   await expect(statusHandle).toBeVisible();
   await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  const box = await statusHandle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 16, box!.y + box!.height / 2);
+  await page.mouse.up();
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "104");
   await statusHandle.focus();
   await statusHandle.press("ArrowRight");
-  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "96");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "112");
   await expect(table.locator('thead th[data-column-id="status"]')).not.toHaveAttribute(
     "aria-sort",
     "ascending",

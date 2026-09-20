@@ -873,6 +873,13 @@
   }
 
   .emr-table-surface[data-emr-pinning="columns"]
+    thead
+    [data-slot="table-head"]:not([data-emr-column-pinned])
+    [data-emr-column-resize-handle="true"] {
+    z-index: 11;
+  }
+
+  .emr-table-surface[data-emr-pinning="columns"]
     tbody
     [data-emr-column-pinned] {
     z-index: 2;
