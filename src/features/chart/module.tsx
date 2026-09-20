@@ -300,6 +300,7 @@ import {
   formatOperatingShortTime,
   formatShortOperatingDate,
   getOperatingDateFromIso,
+  isIsoOperatingDate,
 } from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
@@ -1088,17 +1089,28 @@ function useDisplayedChartBundle(workspaceId: string) {
 }
 
 function useChartOperatingDate(workspaceId: string) {
-  const { todayDate } = useSelectedOperatingDate(workspaceId);
+  const searchParams = useSearchParams();
+  const requestedDate = searchParams.get("date");
+  const { selectedDate: requestedSelectedDate, todayDate } =
+    useSelectedOperatingDate(workspaceId, requestedDate);
   const storedSelectedDate = useChartStore(
     (state) => state.selectedOperatingDateByWorkspace[workspaceId],
   );
   const selectOperatingDate = useChartStore(
     (state) => state.selectOperatingDate,
   );
+  const selectedDate =
+    requestedDate === null
+      ? (storedSelectedDate ?? todayDate)
+      : requestedSelectedDate;
+
+  useEffect(() => {
+    if (storedSelectedDate === selectedDate) return;
+    selectOperatingDate(workspaceId, selectedDate);
+  }, [selectOperatingDate, selectedDate, storedSelectedDate, workspaceId]);
 
   return {
-    selectDate: (date: string) => selectOperatingDate(workspaceId, date),
-    selectedDate: storedSelectedDate ?? todayDate,
+    selectedDate,
     todayDate,
   };
 }
@@ -1749,13 +1761,12 @@ export function ChartSidePanel({
     (state) => state.requestConsultationCall,
   );
   const selectEncounter = useChartStore((state) => state.selectEncounter);
-  const setLiveQueueState = useChartStore((state) => state.setLiveQueueState);
   const { setModulePanelOpen, setSelectedQueueItem } = useLayoutStore();
   const legacySalesDemo =
     isLegacySalesDemoWorkspace(workspaceId) &&
     getAuthRuntimeMode().authProvider === "mock";
-  const { selectDate, selectedDate, todayDate } =
-    useChartOperatingDate(workspaceId);
+  const { selectedDate, todayDate } = useChartOperatingDate(workspaceId);
+  const requestedDate = searchParams.get("date");
   const mockItems = useMemo(
     () => (legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems),
     [legacySalesDemo],
@@ -1770,6 +1781,19 @@ export function ChartSidePanel({
     [liveItems, liveMode, mockItems],
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
+  useEffect(() => {
+    if (requestedDate === null || isIsoOperatingDate(requestedDate)) return;
+
+    router.replace(
+      buildWorkspaceSurfaceRoute({
+        moduleId: "treatment",
+        params: { date: selectedDate },
+        search: searchParams,
+        workspaceId,
+      }),
+      { scroll: false },
+    );
+  }, [requestedDate, router, searchParams, selectedDate, workspaceId]);
   const selectWorkspaceEncounter = (itemId: string) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "treatment",
@@ -1827,21 +1851,20 @@ export function ChartSidePanel({
       typeFilterVisible={false}
       onCollapse={() => setModulePanelOpen(false)}
       onDateChange={(date) => {
-        selectDate(date);
-        setLiveQueueState({
-          records: [],
-          scope: {
-            date,
-            ignoreExplicitEncounter: true,
-            workspaceId,
-          },
-          status: "idle",
+        const href = buildWorkspaceSurfaceRoute({
+          moduleId: "treatment",
+          params: { date },
+          removeParams: [
+            "chartId",
+            "encounterId",
+            "historyEncounterId",
+            "patientId",
+            "scenario",
+          ],
+          search: searchParams,
+          workspaceId,
         });
-        setSelectedQueueItem("treatment", "");
-        selectEncounter("");
-        if (!legacySalesDemo) {
-          replaceLiveChartSelection({ encounterId: "", router, workspaceId });
-        }
+        router.replace(href, { scroll: false });
       }}
       onSelectItem={selectWorkspaceEncounter}
     />

@@ -39,6 +39,13 @@ position.
   successful write; preserve the form and draft after a failed write.
 - Keep profile-origin panel state transient so it does not replace the
   URL-owned patient drawer or force module navigation.
+- Capture the workspace operating date when the profile action starts so a
+  stale Reception selection cannot backdate a walk-in or reservation default.
+- After a successful write, align Reception state and the current URL to the
+  persisted record date and refresh the mounted Chart queue when its scope is
+  already that date.
+- Use the compact Figma return header only while a profile return target exists:
+  65px header, 8px horizontal padding, 24x32 return button, and 16px chevron.
 
 ## Out Of Scope
 
@@ -51,6 +58,10 @@ position.
 
 - Both menu choices open the expected preselected existing form in the same
   right-panel slot without changing the module route.
+- Profile walk-ins use the captured today date, reservations start from today,
+  and explicit calendar-slot dates retain priority.
+- The persisted record date owns post-create URL/store scope, and a mounted
+  Chart queue refresh shows the new walk-in without relying only on realtime.
 - Clean and dirty cancellation return behavior matches the profile-origin
   contract.
 - Success and failure preserve the expected detail or draft state.
@@ -72,3 +83,24 @@ position.
   the existing project-wide NFT trace warning.
 - Release Check, preview, staging, and production evidence are recorded against
   the exact committed candidate.
+
+## 2026-09-20 Date And Return-Header Follow-up
+
+- Added RED/GREEN browser coverage for a past Reception date followed by a
+  profile walk-in or reservation, persisted-date URL alignment, immediate Chart
+  queue refresh, the compact return header, and return behavior after detail.
+- Preserved direct Reception entry at the shared 56px header and kept the
+  profile-origin date transient until a successful write.
+- RED evidence: the source-boundary check selected the stale stored Chart date,
+  while browser checks could not find the return action, measured the old 56px
+  header, and retained the stale URL date after a persisted-date response.
+- GREEN evidence: the combined profile-entry, Chart boundary, and shared-header
+  run passed 26/26; the isolated Chart URL/date transition run passed 5/5.
+- TypeScript, changed-file ESLint, production build, docs links, Korean UX copy,
+  secret scan, and `git diff --check` passed. The build retained the existing
+  project-wide NFT trace warning.
+- The broad 94-case Chart file was also sampled once: 73 passed and 21 unrelated
+  SOAP/Order/history/UI cases failed after the long-running development server
+  repeatedly emitted `MaxListenersExceededWarning`. The affected date/queue
+  cases passed again on a fresh server; this broad-run caveat remains open for
+  release-candidate verification.

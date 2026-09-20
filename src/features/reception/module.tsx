@@ -37,7 +37,10 @@ import {
   CdsMedicalStethoscopeIcon,
   CdsMedicalThermometerIcon,
 } from "@/components/cds-icons/medical-and-domain";
-import { CdsNavigationSidebarIcon } from "@/components/cds-icons/navigation";
+import {
+  CdsNavigationChevronLeftIcon,
+  CdsNavigationSidebarIcon,
+} from "@/components/cds-icons/navigation";
 import {
   CdsPeopleUserIcon,
   CdsPeopleUserMinusIcon,
@@ -10156,6 +10159,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   const patients = usePatientProfileStore((state) => state.patients);
   const [isEditing, setIsEditing] = useState(false);
   const title = getReceptionRightPanelTitle(activeDrawer);
+  const usesReturnHeader = Boolean(activeDrawer?.returnTo);
   const searchParams = useSearchParams();
   const authSession = useMockAuthStore((state) => state.session);
   const operatingDateOverride = useReceptionStore(
@@ -10311,47 +10315,65 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
   return (
     <>
       <EmrRightPanel
-      aria-label={`${moduleLabel} 우측 사이드 패널`}
-      className="bg-[var(--emr-surface-rightpanel)]"
-      data-testid="reception-right-panel"
-      header={
-        <EmrRightPanelHeader className="justify-between border-b border-[var(--emr-border-default)]">
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="truncate emr-text-panel-title font-semibold text-foreground">
-            {title}
-          </div>
-          {activeDrawer?.type === "reception-encounter" && isEditing ? (
-            <Badge
-              size="sm"
-              variant="secondary"
-              className="shrink-0 rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
-              data-testid="reception-right-panel-editing-badge"
-            >
-              수정 중
-            </Badge>
-          ) : null}
-        </div>
-        <EmrRightPanelHeaderIconButton
-          aria-label="우측 사이드 패널 닫기"
-          onClick={closeReceptionPanel}
-        >
-          {activeDrawer?.type === "reception-encounter" ? (
-            <CdsActionsXIcon />
-          ) : (
-            <CdsNavigationSidebarIcon />
-          )}
-        </EmrRightPanelHeaderIconButton>
-        </EmrRightPanelHeader>
-      }
-    >
-      {isReceptionRightPanelDrawer(activeDrawer) ? (
-        <ReceptionDrawer
-          presentation="side-panel"
-          onEditingChange={setIsEditing}
-        />
-      ) : (
-        <ReceptionRightPanelEmptyState />
-      )}
+        aria-label={`${moduleLabel} 우측 사이드 패널`}
+        className="bg-[var(--emr-surface-rightpanel)]"
+        data-testid="reception-right-panel"
+        header={
+          <EmrRightPanelHeader
+            className={cn(
+              "justify-between border-b border-[var(--emr-border-default)]",
+              usesReturnHeader && "h-[65px] px-2 py-4",
+            )}
+          >
+            <div className="flex min-w-0 items-center gap-2">
+              {usesReturnHeader ? (
+                <EmrRightPanelHeaderIconButton
+                  aria-label="환자 프로필로 돌아가기"
+                  className="h-8 w-6 shrink-0 rounded-lg p-0"
+                  onClick={closeReceptionPanel}
+                >
+                  <CdsNavigationChevronLeftIcon size={16} />
+                </EmrRightPanelHeaderIconButton>
+              ) : null}
+              <div className="truncate emr-text-panel-title font-semibold text-foreground">
+                {title}
+              </div>
+              {activeDrawer?.type === "reception-encounter" && isEditing ? (
+                <Badge
+                  size="sm"
+                  variant="secondary"
+                  className="shrink-0 rounded-[var(--clair-radius-atomic-6)] emr-text-micro font-semibold"
+                  data-testid="reception-right-panel-editing-badge"
+                >
+                  수정 중
+                </Badge>
+              ) : null}
+            </div>
+            {usesReturnHeader ? (
+              <span aria-hidden="true" className="size-8 shrink-0" />
+            ) : (
+              <EmrRightPanelHeaderIconButton
+                aria-label="우측 사이드 패널 닫기"
+                onClick={closeReceptionPanel}
+              >
+                {activeDrawer?.type === "reception-encounter" ? (
+                  <CdsActionsXIcon />
+                ) : (
+                  <CdsNavigationSidebarIcon />
+                )}
+              </EmrRightPanelHeaderIconButton>
+            )}
+          </EmrRightPanelHeader>
+        }
+      >
+        {isReceptionRightPanelDrawer(activeDrawer) ? (
+          <ReceptionDrawer
+            presentation="side-panel"
+            onEditingChange={setIsEditing}
+          />
+        ) : (
+          <ReceptionRightPanelEmptyState />
+        )}
       </EmrRightPanel>
       <ReceptionDiscardChangesDialog
         open={discardConfirmOpen}
@@ -11866,9 +11888,15 @@ export function ReceptionDrawer({
   onEditingChange?: (isEditing: boolean) => void;
 } = {}) {
   const params = useParams<{ workspaceId?: string | string[] }>();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const treatmentRefreshAction = useLayoutStore(
+    (state) => state.moduleRefreshActions.treatment,
+  );
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const calendarDraftSelection = useReceptionStore(
     (state) => state.calendarDraftSelection,
@@ -11957,6 +11985,29 @@ export function ReceptionDrawer({
   );
   const operatingDate =
     operatingDateOverride ?? getWorkspaceOperatingDate(workspaceId);
+  const syncOperatingDate = useCallback(
+    (nextOperatingDate: string) => {
+      setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+      const href = buildReceptionOperatingDateRoute({
+        operatingDate: nextOperatingDate,
+        pathname,
+        searchParams,
+      });
+      const currentHref =
+        typeof window === "undefined"
+          ? ""
+          : `${window.location.pathname}${window.location.search}`;
+
+      if (href !== currentHref) router.replace(href, { scroll: false });
+    },
+    [
+      pathname,
+      router,
+      searchParams,
+      setWorkspaceOperatingDate,
+      workspaceId,
+    ],
+  );
   const liveStaffSourceEnabled = isPreparedEmptyClinicWorkspace(workspaceId) ||
     (workspaceId === "workspace-clinical-master-pilot-v1" && shouldUseSupabaseAuth());
   const staffResourceKey = getReceptionStaffResourceKey({
@@ -12160,6 +12211,7 @@ export function ReceptionDrawer({
         ...(activeDrawer?.returnTo
           ? {
               initialPatientId: activeDrawer.initialPatientId,
+              initialOperatingDate: activeDrawer.initialOperatingDate,
               returnTo: activeDrawer.returnTo,
               rightPanelPresentation: activeDrawer.rightPanelPresentation,
             }
@@ -12209,7 +12261,9 @@ export function ReceptionDrawer({
         }
         onClose={activeDrawer.returnTo ? closeCreateFlow : undefined}
         onDirtyChange={activeDrawer.returnTo ? setCreateFlowDirty : undefined}
-        operatingDate={calendarDraftDate ?? operatingDate}
+        operatingDate={
+          calendarDraftDate ?? activeDrawer.initialOperatingDate ?? operatingDate
+        }
         patientSummaries={patientSummaries}
         presentation={presentation}
         staffMembers={staffMembers}
@@ -12232,6 +12286,22 @@ export function ReceptionDrawer({
             });
           }
           applyWalkInCheckIn({ ...input, walkIn });
+          const persistedOperatingDate = getOperatingDateFromIso(
+            walkIn.queueEntry.enteredAt ??
+              walkIn.encounter.checkedInAt ??
+              walkIn.encounter.createdAt,
+          );
+          if (persistedOperatingDate) {
+            const routeOperatingDate = searchParams.get("date");
+            syncOperatingDate(persistedOperatingDate);
+            if (
+              routeOperatingDate === persistedOperatingDate ||
+              (routeOperatingDate === null &&
+                persistedOperatingDate === getWorkspaceOperatingDate(workspaceId))
+            ) {
+              void treatmentRefreshAction?.onRefresh();
+            }
+          }
           setCalendarDraftSelection(undefined);
           requestReceptionReadRetry();
           saveChartLiveEncounterHandoff({
@@ -12267,7 +12337,9 @@ export function ReceptionDrawer({
         key={activeDrawer.id}
         appointments={appointments}
         currentOperatingMinutes={currentOperatingMinutes}
-        initialDate={reservationDraftDate}
+        initialDate={
+          reservationDraftDate ?? activeDrawer.initialOperatingDate
+        }
         initialAssignedStaffUserId={initialAssignedStaffUserId}
         initialDurationMinutes={reservationDraftSelection?.durationMinutes}
         initialPatientId={activeDrawer.initialPatientId}
@@ -12287,7 +12359,7 @@ export function ReceptionDrawer({
             appointment.scheduledStartAt,
           );
           if (appointmentOperatingDate) {
-            setWorkspaceOperatingDate(workspaceId, appointmentOperatingDate);
+            syncOperatingDate(appointmentOperatingDate);
           }
           applyAppointmentCreate(appointment);
           requestReceptionReadRetry();

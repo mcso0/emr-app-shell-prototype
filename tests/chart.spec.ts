@@ -3921,6 +3921,9 @@ test("chart date changes show loading, clear old content, and select the next da
   const sidePanel = page.locator("aside").first();
   await sidePanel.getByRole("button", { name: "다음 날짜" }).click();
   await expect.poll(() => Boolean(releaseEmptyDate)).toBe(true);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("date"))
+    .toBe(emptyDate);
   await expect(page.getByTestId("chart-content-loading-state")).toBeVisible();
   await expect(page.getByText("전환에이", { exact: true })).toHaveCount(0);
   await expect(
@@ -3937,8 +3940,71 @@ test("chart date changes show loading, clear old content, and select the next da
 
   await sidePanel.getByRole("button", { name: "다음 날짜" }).click();
   await expect(page).toHaveURL(/encounterId=encounter-transition-c/);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("date"))
+    .toBe(thirdDate);
   await expect(page.getByText("전환씨", { exact: true }).first()).toBeVisible();
   await expect(emptyState).toHaveCount(0);
+
+  await page.reload();
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("date"))
+    .toBe(thirdDate);
+  await expect(page.getByText("전환씨", { exact: true }).first()).toBeVisible();
+});
+
+test("chart uses a valid URL date as the initial queue scope", async ({ page }) => {
+  const urlDate = addDaysToIsoDate(getCurrentOperatingDate(), -1);
+  const record = createLiveChartQueueRecord({
+    encounterId: "encounter-url-date",
+    patientName: "주소날짜",
+    sortOrder: 1,
+  });
+  const requestedDates: Array<string | null> = [];
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      requestedDates.push(new URL(route.request().url()).searchParams.get("date"));
+      await fulfillLiveChartQueue(route, [record]);
+    },
+  );
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?date=${urlDate}&modulePanel=open&aside=closed`,
+  );
+
+  await expect(page).toHaveURL(/encounterId=encounter-url-date/);
+  await expect.poll(() => requestedDates[0]).toBe(urlDate);
+  await expect(page.getByText("주소날짜", { exact: true }).first()).toBeVisible();
+});
+
+test("chart normalizes an invalid URL date to today", async ({ page }) => {
+  const todayDate = getCurrentOperatingDate();
+  const record = createLiveChartQueueRecord({
+    encounterId: "encounter-normalized-date",
+    patientName: "오늘날짜",
+    sortOrder: 1,
+  });
+  const requestedDates: Array<string | null> = [];
+
+  await grantCheongdamWorkspaceAccess(page);
+  await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+    async (route) => {
+      requestedDates.push(new URL(route.request().url()).searchParams.get("date"));
+      await fulfillLiveChartQueue(route, [record]);
+    },
+  );
+  await page.goto(
+    `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?date=invalid&modulePanel=open&aside=closed`,
+  );
+
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("date"))
+    .toBe(todayDate);
+  await expect.poll(() => requestedDates[0]).toBe(todayDate);
+  await expect(page.getByText("오늘날짜", { exact: true }).first()).toBeVisible();
 });
 
 test("chart ignores a late queue response after a rapid date change", async ({

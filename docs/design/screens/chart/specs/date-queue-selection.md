@@ -9,7 +9,7 @@ tags:
 status: "implemented"
 related_work:
   - "CHART-PR-022"
-last_updated: "2026-08-14"
+last_updated: "2026-09-20"
 ---
 
 # 진료/차트 날짜·대기열 선택 상태
@@ -25,6 +25,7 @@ last_updated: "2026-08-14"
 - 진료 대기열 조회 및 선택 강조
 - 선택 encounter와 workspace layout 선택
 - 환자 정보 헤더와 차트 콘텐츠
+- URL `date`
 - URL `encounterId`
 - 날짜별 로딩, 빈 상태, 오류, 권한 상태
 
@@ -52,6 +53,7 @@ last_updated: "2026-08-14"
 ## Interaction Rules
 
 - 날짜를 바꾸는 순간 이전 queue records, encounter 선택, layout 선택, `encounterId`, `patientId`, `scenario`를 해제한다.
+- 유효한 URL `date`는 최초 진입과 새로고침의 선택 날짜다. 날짜 control 변경은 URL과 workspace별 store를 함께 갱신하고, 잘못된 URL 날짜는 오늘로 replace 정규화한다.
 - 자동 선택과 stale URL 정규화는 `replace`를 사용해 탭 방문 기록을 늘리지 않는다.
 - 사용자가 queue card를 직접 고르는 동작은 기존 workspace navigation 흐름을 유지한다.
 - 빠르게 날짜를 바꾸면 현재 workspace/date와 일치하는 최신 응답만 적용한다.

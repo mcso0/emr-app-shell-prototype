@@ -69,9 +69,17 @@ test("live chart today uses the actual operating date while preserving explicit 
     for (const selected of [undefined, "2026-05-30"]) {
       const result = runInNewContext(`${declarations("useChartOperatingDate")}\nuseChartOperatingDate("clair-demo")`, {
         ...runtime(authProvider),
-        useSelectedOperatingDate: () => ({ todayDate: authProvider === "supabase" ? "2026-09-07" : "2026-05-01" }),
+        useSearchParams: () => new URLSearchParams(selected ? `date=${selected}` : ""),
+        useEffect: (effect: () => void) => effect(),
+        useSelectedOperatingDate: (_workspaceId: string, requestedDate?: string | null) => ({
+          selectedDate: requestedDate ?? (authProvider === "supabase" ? "2026-09-07" : "2026-05-01"),
+          todayDate: authProvider === "supabase" ? "2026-09-07" : "2026-05-01",
+        }),
         useChartStore: (select: (state: unknown) => unknown) => select({
-          selectedOperatingDateByWorkspace: { "clair-demo": selected }, selectOperatingDate: () => undefined,
+          selectedOperatingDateByWorkspace: {
+            "clair-demo": selected ? "2026-04-30" : undefined,
+          },
+          selectOperatingDate: () => undefined,
         }),
       });
       const expectedToday = authProvider === "supabase" ? "2026-09-07" : "2026-05-01";
