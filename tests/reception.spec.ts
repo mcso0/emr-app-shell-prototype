@@ -2136,13 +2136,45 @@ test("patient drawer exposes the Figma activity tabs and live mock projections",
   await expect(page.getByText("내과 진료")).toBeVisible();
   await expect(profilePanel.getByText("방문 목적", { exact: true })).toBeVisible();
   await expect(profilePanel.getByText("주제", { exact: true })).toHaveCount(0);
+  await expect(profilePanel.locator("select")).toHaveCount(0);
+  const historyPeriod = profilePanel.getByRole("combobox", {
+    name: "진료 이력 조회 기간",
+  });
+  await historyPeriod.click();
+  await expect(page.getByRole("option", { name: "12개월", exact: true })).toBeVisible();
+  await page.getByRole("option", { name: "12개월", exact: true }).click();
+  await expect(historyPeriod).toContainText("12개월");
 
   await profilePanel.getByRole("tab", { name: "예약", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "예약 조회 기간" })).toBeVisible();
+  await expect(profilePanel.locator("select")).toHaveCount(0);
 
   await profilePanel.getByRole("tab", { name: "수납" }).click();
   await expect(page.getByText("전체 수납 이력")).toBeVisible();
   await expect(page.getByText(/INV-260501-0001/)).toBeVisible();
+  await expect(profilePanel.locator("select")).toHaveCount(0);
+});
+
+test("guardian profile activity filters use the shared select surface", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?drawer=reception-patient:patient-dubu",
+  );
+
+  const profilePanel = page.getByTestId("profile-side-panel");
+  await page.getByRole("button", { name: "보호자 강서윤 보기" }).click();
+  await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");
+
+  await profilePanel.getByRole("tab", { name: "진료 이력" }).click();
+  await expect(profilePanel.getByRole("combobox", { name: "진료 이력 환자 필터" })).toBeVisible();
+  await expect(profilePanel.getByRole("combobox", { name: "진료 이력 조회 기간" })).toBeVisible();
+  await expect(profilePanel.locator("select")).toHaveCount(0);
+
+  await profilePanel.getByRole("tab", { name: "수납" }).click();
+  await expect(profilePanel.getByRole("combobox", { name: "수납 이력 환자 필터" })).toBeVisible();
+  await expect(profilePanel.getByRole("combobox", { name: "수납 이력 조회 기간" })).toBeVisible();
+  await expect(profilePanel.locator("select")).toHaveCount(0);
 });
 
 test("profile drawer follows the CDS V2 geometry and keyboard contract", async ({

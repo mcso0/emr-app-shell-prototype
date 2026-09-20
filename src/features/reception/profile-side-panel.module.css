@@ -771,22 +771,20 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   color: var(--profile-neutral-800);
 }
 
-.select {
-  height: 28px;
-  padding: 0 28px 0 10px;
-  border: 1px solid var(--profile-neutral-200);
-  border-radius: 8px;
+.selectTrigger {
+  min-width: 76px;
+  max-width: 144px;
+  border-color: var(--profile-neutral-200);
   background-color: #fff;
   color: var(--profile-neutral-700);
-  font: inherit;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 500;
   line-height: 16px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
-  cursor: pointer;
 }
 
-.select:disabled {
+.selectTrigger:disabled {
   cursor: default;
   opacity: 0.5;
 }
