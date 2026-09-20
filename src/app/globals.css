@@ -708,11 +708,11 @@
     z-index: 65;
     display: flex;
     width: max-content;
-    min-height: 48px;
+    min-height: 42px;
     align-items: center;
-    gap: var(--clair-spacing-8);
+    gap: 8px;
     overflow-x: auto;
-    padding: var(--clair-spacing-8) var(--clair-spacing-10);
+    padding: 6px 8px;
     border: 1px solid var(--emr-border-default);
     border-radius: 14px;
     background: color-mix(

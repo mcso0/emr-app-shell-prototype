@@ -278,7 +278,7 @@ test("included-order-sum set counts once and does not double-charge its parent",
   await expect(
     detail
       .getByTestId("chart-order-amount-detail-footer")
-      .getByRole("button", { name: "수납 청구" }),
+      .getByRole("button", { name: "전체 수납 청구" }),
   ).toBeVisible();
 });
 
@@ -298,7 +298,7 @@ test("chart billing action navigates to encounter billing without a billing POST
 
   const billingButton = page
     .getByTestId("chart-order-footer")
-    .getByRole("button", { name: "수납에서 청구" });
+    .getByRole("button", { name: "전체 수납 청구" });
   await expect(billingButton).toBeEnabled();
   await billingButton.click();
   await expect(page).toHaveURL(/\/billing\?/);

@@ -1050,6 +1050,17 @@ function useBillingWorkspaceData() {
   const queryInvoiceId = searchParams.get("invoiceId") ?? scenario?.invoiceId;
   const queryEncounterId =
     searchParams.get("encounterId") ?? scenario?.encounterId;
+  const queryOrderIdsKey = searchParams.get("orderIds") ?? "";
+  const queryOrderIds = useMemo(
+    () =>
+      new Set(
+        queryOrderIdsKey
+          .split(",")
+          .map((orderId) => orderId.trim())
+          .filter(Boolean),
+      ),
+    [queryOrderIdsKey],
+  );
   const effectiveInvoiceId = queryInvoiceId ?? selectedInvoiceId;
   const [persistedCandidates, setPersistedCandidates] = useState<{
     candidates: BillingInvoiceCandidateSnapshot[];
@@ -1111,7 +1122,13 @@ function useBillingWorkspaceData() {
     ? payments
     : (ownedPaymentSnapshot?.payments ?? []).filter((payment) =>
         workspaceInvoiceIds.has(payment.invoiceId),
-      );
+    );
+  const scopedWorkspaceInvoiceLines =
+    queryOrderIds.size > 0
+      ? workspaceInvoiceLines.filter(
+          (line) => Boolean(line.orderId && queryOrderIds.has(line.orderId)),
+        )
+      : workspaceInvoiceLines;
   const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
   const applyWorkspaceInvoiceSnapshot = (
     invoice: BillingPersistedInvoiceSnapshot,
@@ -1155,11 +1172,11 @@ function useBillingWorkspaceData() {
   const effectiveInvoiceLines =
     baseDetail && persistedCandidates.encounterId === baseDetail.encounter.id
       ? mergeInvoiceCandidateLines(
-          workspaceInvoiceLines,
+          scopedWorkspaceInvoiceLines,
           persistedCandidates.candidates,
           baseDetail.invoice.id,
         )
-      : workspaceInvoiceLines;
+      : scopedWorkspaceInvoiceLines;
   const effectiveInvoices = workspaceInvoices.map((invoice) => {
     const subtotalAmount = effectiveInvoiceLines
       .filter((line) => line.invoiceId === invoice.id)
@@ -1228,7 +1245,12 @@ function useBillingWorkspaceData() {
       if (cancelled) return;
       if (candidateResult.ok) {
         setPersistedCandidates({
-          candidates: candidateResult.candidates,
+          candidates:
+            queryOrderIds.size > 0
+              ? candidateResult.candidates.filter((candidate) =>
+                  queryOrderIds.has(candidate.orderId),
+                )
+              : candidateResult.candidates,
           encounterId: resolvedEncounterId,
           ownerKey: protectedOwnerKey,
         });
@@ -1253,6 +1275,7 @@ function useBillingWorkspaceData() {
     baseEncounterWorkspaceId,
     queryEncounterId,
     protectedOwnerKey,
+    queryOrderIds,
     workspaceId,
   ]);
   useEffect(() => {

@@ -129,7 +129,7 @@ async function getChartOrderAction(page: Page, name: string | RegExp) {
 function getChartSelectedOrderConfirmAction(page: Page) {
   return page
     .getByRole("toolbar", { name: "선택 행 작업" })
-    .getByRole("button", { name: "선택 확정" });
+    .getByRole("button", { name: /\d+개 Order 확정/ });
 }
 
 async function dismissChartOrderActionMenu(page: Page) {
@@ -1527,7 +1527,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   await expect(selectionActions).toBeVisible();
   await expect(selectionActions).toContainText("확정 전 후보");
   await expect(
-    selectionActions.getByRole("button", { name: "선택 확정" }),
+    selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeVisible();
   await selectionActions.getByRole("button", { name: "선택 해제" }).click();
   await expect(selectionActions).toBeHidden();
@@ -2135,7 +2135,7 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
 
   await page.getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" }).check();
   const actionBar = page.getByRole("toolbar", { name: "선택 행 작업" });
-  const confirmButton = actionBar.getByRole("button", { name: "선택 확정" });
+  const confirmButton = actionBar.getByRole("button", { name: /\d+개 Order 확정/ });
   await expect(confirmButton).toBeEnabled();
   await confirmButton.click();
   const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
@@ -6961,9 +6961,9 @@ test("chart safety context and confirmation dialogs identify the active patient"
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(
-    selectionActions.getByRole("button", { name: "선택 확정" }),
+    selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeEnabled();
-  await selectionActions.getByRole("button", { name: "선택 확정" }).click();
+  await selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }).click();
   const orderConfirmDialog = page.getByRole("dialog");
   await expect(orderConfirmDialog.getByText("Order 확정 확인")).toBeVisible();
   await expect(
@@ -6991,7 +6991,7 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   await dismissChartOrderActionMenu(page);
   await expect(
     page.getByTestId("chart-order-footer").getByRole("button", {
-      name: "수납에서 청구",
+      name: "전체 수납 청구",
     }),
   ).toBeVisible();
   await page
@@ -7040,7 +7040,7 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   await expect(orderStatusBadges.nth(1)).toContainText(/확정된 오더 \d+건/);
   await expect(detailFooter.getByRole("button", { name: "닫기" })).toBeVisible();
   await expect(
-    detailFooter.getByRole("button", { name: "수납 청구" }),
+    detailFooter.getByRole("button", { name: "전체 수납 청구" }),
   ).toBeVisible();
   await expect(detailAside).not.toContainText("청구 가능 22,000원");
   await expect(detailAside.getByTestId("billing-discount-value")).toHaveCSS(
@@ -7090,11 +7090,49 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
   await expect(selectionActions).toContainText("확정 전 후보");
   await expect(
-    selectionActions.getByRole("button", { name: "선택 확정" }),
+    selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeVisible();
   await expect(
     selectionActions.getByRole("button", { name: "Order 청구" }),
   ).toHaveCount(0);
+});
+
+test("chart mixed selection keeps confirmation and partial billing scoped", async ({
+  page,
+}) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+
+  // Confirm a fixture row that is not used by the following candidate-removal
+  // tests, so this interaction test does not leak confirmation state.
+  await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
+  await getChartSelectedOrderConfirmAction(page).click();
+  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  await confirmDialog.getByRole("button", { name: "Order 확정", exact: true }).click();
+  await expect(confirmDialog).toBeHidden();
+
+  await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
+  const selectionActions = page.getByRole("toolbar", { name: "선택 행 작업" });
+  await expect(selectionActions).toContainText("확정 전 후보 + 확정 오더");
+  await expect(
+    selectionActions.getByRole("button", { name: "1개 Order 확정" }),
+  ).toBeVisible();
+  // This fixture's confirmed CBC row is not billing-eligible, so a zero-count
+  // partial-billing action must not be shown for the mixed selection.
+  await expect(
+    selectionActions.getByRole("button", { name: /Order 수납 청구/ }),
+  ).toHaveCount(0);
+  await expect(selectionActions.getByRole("button", { name: "재요청" })).toHaveCount(0);
+  await expect(selectionActions.getByRole("button", { name: "긴급" })).toHaveCount(0);
+
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).uncheck();
+  await expect(selectionActions.getByRole("button", { name: "재요청" })).toBeVisible();
+  await expect(selectionActions.getByRole("button", { name: "긴급" })).toBeVisible();
+  await selectionActions.getByRole("button", { name: "긴급" }).click();
+  const urgentDialog = page.getByRole("dialog");
+  await expect(urgentDialog).toContainText("1개 확정 오더");
+  await urgentDialog.getByRole("button", { name: "취소" }).click();
 });
 
 test("chart keeps orders visible when SOAP sections grow", async ({ page }) => {
@@ -7298,9 +7336,9 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   const deleteDialog = page.getByRole("dialog");
 
   await expect(deleteDialog.getByText("오더를 삭제할까요?")).toBeVisible();
-  await expect(
-    deleteDialog.getByText(/삭제하면 즉시 저장합니다/),
-  ).toBeVisible();
+  await expect(deleteDialog).toContainText(
+    "선택한 1개 오더가 현재 Plan에서 제거됩니다.",
+  );
   await deleteDialog.getByRole("button", { name: "삭제", exact: true }).click();
 
   const pendingRemovalRow = page.getByTestId("chart-order-row-order-kong-cbc");
@@ -7325,10 +7363,12 @@ test("chart order table edits quantity, commits draft changes, and deletes rows"
   await page.getByRole("checkbox", { name: "피하 수액 처치 선택" }).check();
   await page
     .getByRole("toolbar", { name: "선택 행 작업" })
-    .getByRole("button", { name: "후보 삭제" })
+    .getByRole("button", { name: "삭제" })
     .click();
   const bulkDeleteDialog = page.getByRole("dialog");
-  await expect(bulkDeleteDialog).toContainText("2개 오더를");
+  await expect(bulkDeleteDialog).toContainText(
+    "선택한 2개 오더가 현재 Plan에서 제거됩니다.",
+  );
   await bulkDeleteDialog.getByRole("button", { name: "취소" }).click();
   await expect(page.getByTestId("chart-order-footer")).toContainText(
     /이 차트 오더 합계/,
