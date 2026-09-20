@@ -79,7 +79,7 @@ test("Plan/Order renders the approved 26-column geometry and presentation contra
   await expect(firstRow.locator('td[data-column-id="status"]')).not.toContainText("—");
 });
 
-test("Plan/Order keeps transparent 8px gutters aligned across header and body", async ({
+test("Plan/Order fills the left edge and keeps transparent 8px gutters aligned", async ({
   page,
 }) => {
   await page.goto(chartOrderUrl);
@@ -95,7 +95,7 @@ test("Plan/Order keeps transparent 8px gutters aligned across header and body", 
   ]);
   expect(tableBox).not.toBeNull();
   expect(rootBox).not.toBeNull();
-  expect(tableBox!.x - rootBox!.x).toBeCloseTo(12, 0);
+  expect(tableBox!.x - rootBox!.x).toBeCloseTo(0, 0);
 
   const headerBoxes = await table.locator("thead th[data-column-id]").evaluateAll((elements) =>
     elements.map((element) => {
@@ -122,7 +122,7 @@ test("Plan/Order keeps transparent 8px gutters aligned across header and body", 
         Math.round(Number.parseFloat(getComputedStyle(element).left)),
       ),
     ),
-  ).toEqual([12, 40, 136, 232]);
+  ).toEqual([0, 28, 124, 220]);
   expect(
     Math.round(
       Number.parseFloat(
@@ -131,7 +131,7 @@ test("Plan/Order keeps transparent 8px gutters aligned across header and body", 
           .evaluate((element) => getComputedStyle(element).left),
       ) + 180,
     ),
-  ).toBe(412);
+  ).toBe(400);
   for (let index = 0; index < visibleColumns.length; index += 1) {
     expect(headerBoxes[index]?.id).toBe(visibleColumns[index]?.[0]);
     expect(bodyBoxes[index]?.id).toBe(visibleColumns[index]?.[0]);
@@ -148,6 +148,46 @@ test("Plan/Order keeps transparent 8px gutters aligned across header and body", 
       0,
     );
   }
+});
+
+test("Plan/Order keeps scrolled columns behind the fixed start edge", async ({
+  page,
+}) => {
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const viewport = table.locator(
+    'xpath=ancestor::*[@data-emr-pinned-table-viewport="true"]',
+  );
+  const scrollOwner = viewport.locator(
+    '> [data-emr-pinned-table-scroll-owner="true"]',
+  );
+  const firstRow = table.locator('tbody tr[data-emr-data-table-row="true"]').first();
+
+  await expect(firstRow).toBeVisible();
+  await scrollOwner.evaluate((element) => element.scrollTo({ left: 600, top: 0 }));
+  await expect.poll(() => scrollOwner.evaluate((element) => element.scrollLeft)).toBe(600);
+
+  await expect(
+    firstRow.evaluate((row) => {
+      const viewportElement = row.closest('[data-emr-pinned-table-viewport="true"]');
+      const viewportBox = viewportElement?.getBoundingClientRect();
+      const pinnedCell = row.querySelector('td[data-column-id="select"]');
+      const pinnedBox = pinnedCell?.getBoundingClientRect();
+      const rowBox = row.getBoundingClientRect();
+      const hit = viewportBox
+        ? document.elementFromPoint(
+            viewportBox.left + 1,
+            rowBox.top + rowBox.height / 2,
+          )?.closest("td")
+        : null;
+
+      return {
+        hitColumn: hit?.getAttribute("data-column-id"),
+        pinnedLeft: pinnedBox?.left,
+        viewportLeft: viewportBox?.left,
+      };
+    }),
+  ).resolves.toMatchObject({ hitColumn: "select" });
 });
 
 test("Plan/Order keeps the boundary line and fixed area above the scroll layer", async ({
@@ -203,7 +243,7 @@ test("Plan/Order keeps the boundary line and fixed area above the scroll layer",
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCount(1);
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]').evaluate((element) =>
     getComputedStyle(element).insetInlineStart,
-  )).resolves.toBe("420px");
+  )).resolves.toBe("408px");
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCSS("z-index", "1");
   await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toHaveCount(1);
   await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toBeVisible();

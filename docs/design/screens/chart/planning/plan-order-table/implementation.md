@@ -171,9 +171,11 @@ Required behavior:
 - Initial/reset width is180px; retain sizing only in the mounted screen state.
   No localStorage/server persistence. Place reset in the existing header sizing
   affordance; do not add an out-of-scope toolbar redesign.
-- The fixed content is412px initially,392px at minimum,632px at maximum,
-  before the external boundary. Its first three starts remain12,40,136;
-  Order 명 starts232.
+- The fixed span is408px initially,388px at minimum,628px at maximum,
+  including the terminal 8px boundary allocation. There is no leading inset:
+  its first four starts are0,28,124,220 and Order 명's visible content ends at
+  400px; the divider/resize boundary is at408px. This keeps horizontally
+  scrolled columns from bleeding into the fixed area.
 - `분류`, `확정 여부`, and `선택` do not have direct resize handles.
 - `Order 명` is resized only through the fixed/scroll boundary. Dragging that
   boundary changes `Order 명` width, not the other pinned columns.
@@ -504,7 +506,10 @@ available; do not invent props or expose Storybook externally.
 
 - MD/HTML target names/order/widths:26; source measurement appendix:27 clearly
   labeled historical source. Seven decision IDs remain traceable, not seven open.
-- Default pinned starts12/40/136/232 and end412, min392/max632 excluding boundary.
+- Default pinned starts0/28/124/220 and boundary span408, min388/max628.
+  The table starts at the viewport's left edge; the terminal 8px boundary
+  allocation is included once and scroll content is clipped behind the pinned
+  span.
   Scroll target widths sum1992;22 columns have21 internal8px gaps. Leading/source
   boundary allocation must be measured once, not counted twice.
 - Header/body same grid widths through resize, density and scroll start/middle/end.
@@ -617,7 +622,7 @@ body wrapper는 선택 px2 외에는 px0. 대부분 spacer6 + gap4로 콘텐츠 
 | 항목 | 실측 / 합의 | 구현 시 의미 |
 | --- | --- | --- |
 | 원본 고정 영역 | 394px; 셀 시작 x12,32,128,224 | 원본은 선택–분류 사이 8px이 없음 |
-| 이전 합의 고정 영역 (최신 너비 전) | 이전402px; 최신 목표는 기본412 / 최소392 / 최대632 | 내부 3개 간격 모두 투명. 디바이더·hover·resize 없음 |
+| 이전 합의 고정 영역 (최신 너비 전) | 이전402px; 최신 목표는 기본408 / 최소388 / 최대628 | 선행 인셋 없음. 내부 3개 간격과 터미널 8px 경계 할당은 투명하며, 디바이더는 고정–스크롤 경계에만 표시 |
 | 스크롤 컬럼 흐름 | 너비 합2080 + 22×8 + 선행10 = 2266px | 마지막 요청 수의사 x2189 +77 =2266 |
 | 원본 스크롤 프레임 | 2317px | 남은51px은 빈 패딩이라고 추정하면 안 됨 |
 | 원본 action overlay | 28441:163362, ABSOLUTE, x2203 / w114 / 끝2317 | 요청 수의사 영역과 겹치는 별도 오버레이. 내부 24px 버튼3개, px20/10, gap6. 28번째 컬럼이 아님 |
