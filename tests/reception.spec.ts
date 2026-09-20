@@ -2071,6 +2071,24 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
     "src",
     "/avatars/49110000-0000-4000-8000-000000000003.png",
   );
+  const profileAvatar = profileMenuItem.locator('[data-slot="avatar"]');
+  await expect
+    .poll(() =>
+      profileAvatar.evaluate((element) => {
+        const style = getComputedStyle(element);
+        const afterStyle = getComputedStyle(element, "::after");
+        return {
+          backgroundColor: style.backgroundColor,
+          borderWidth: style.borderWidth,
+          afterBorderWidth: afterStyle.borderWidth,
+        };
+      }),
+    )
+    .toEqual({
+      backgroundColor: "rgba(0, 0, 0, 0)",
+      borderWidth: "0px",
+      afterBorderWidth: "0px",
+    });
 
   const fallbackMenuItem = veterinarianMenu.getByRole("menuitemcheckbox", {
     name: "서재원",

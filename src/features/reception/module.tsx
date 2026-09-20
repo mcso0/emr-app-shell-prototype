@@ -841,10 +841,15 @@ function VeterinarianMenuItemLabel({
       <Avatar
         roundness="roundrect"
         className={cn(
-          "size-5 shrink-0 rounded-[var(--clair-radius-atomic-4)] border border-[var(--clair-color-atomic-black-alpha-6)] after:rounded-[var(--clair-radius-atomic-4)] after:border-[var(--clair-color-atomic-black-alpha-6)]",
-          veterinarianMenuItemToneClasses[
-            toneIndex % veterinarianMenuItemToneClasses.length
-          ],
+          "size-5 shrink-0 rounded-[var(--clair-radius-atomic-4)] after:rounded-[var(--clair-radius-atomic-4)]",
+          veterinarian.avatarUrl
+            ? "bg-transparent after:border-0"
+            : cn(
+                "border border-[var(--clair-color-atomic-black-alpha-6)] after:border-[var(--clair-color-atomic-black-alpha-6)]",
+                veterinarianMenuItemToneClasses[
+                  toneIndex % veterinarianMenuItemToneClasses.length
+                ],
+              ),
         )}
       >
         {veterinarian.avatarUrl ? (
