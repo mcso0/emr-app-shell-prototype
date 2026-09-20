@@ -6,7 +6,12 @@ import {
   createMockConsultationFlowGateway,
   createSupabaseConsultationFlowGateway,
   mutateConsultationFlow,
+  readConsultationCallRooms,
 } from "../src/features/chart/server-consultation-flow-core";
+import {
+  createMockWorkspaceSpaceManagementGateway,
+  type WorkspaceSpaceManagementGateway,
+} from "../src/features/hospital-admin/space-management/server-space-management-core";
 import type { Encounter, WaitingQueueEntry } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
@@ -23,7 +28,38 @@ const firstChartMigrationPath =
 const firstChartMigration = existsSync(firstChartMigrationPath)
   ? readFileSync(firstChartMigrationPath, "utf8")
   : "";
-const roomId = "room-consult-1";
+const roomId = "space-consult-1";
+
+const consultationRoomGateway: WorkspaceSpaceManagementGateway = {
+  async get(requestedWorkspaceId) {
+    return {
+      ok: true,
+      snapshot: {
+        workspaceId: requestedWorkspaceId,
+        canManage: false,
+        categories: [
+          {
+            id: "category-consult",
+            name: "진료 공간",
+            iconKey: "consult",
+            sortOrder: 0,
+            spaces: [
+              {
+                id: roomId,
+                categoryId: "category-consult",
+                name: "3진료실",
+                sortOrder: 0,
+              },
+            ],
+          },
+        ],
+      },
+    };
+  },
+  async mutate() {
+    throw new Error("consultation flow must not mutate space management");
+  },
+};
 
 const baseEncounter: Encounter = {
   id: encounterId,
@@ -77,6 +113,7 @@ test("consultation flow core calls and starts consultation in one action", async
     input: { action: "call", encounterId, roomId },
     gateway,
     permissionAdapter,
+    spaceManagementGateway: consultationRoomGateway,
   });
 
   expect(called).toMatchObject({
@@ -95,7 +132,7 @@ test("consultation flow core calls and starts consultation in one action", async
         eventType: "did_call_requested",
         deliveryStatus: "queued",
         roomId,
-        roomName: "1진료실",
+        roomName: "3진료실",
       },
       chart: {
         encounterId,
@@ -127,6 +164,91 @@ test("consultation flow core calls and starts consultation in one action", async
       encounter: { status: "waiting" },
       queueEntry: { status: "waiting" },
     },
+  });
+});
+
+test("consultation flow accepts a room added through workspace space management", async () => {
+  const spaceManagementGateway = createMockWorkspaceSpaceManagementGateway(
+    "consultation-added-room-test",
+  );
+  const created = await spaceManagementGateway.mutate({
+    actorUserId: "user-admin",
+    workspaceId,
+    command: {
+      action: "space.create",
+      categoryId: "category-consult",
+      name: "추가 진료실",
+    },
+  });
+  expect(created.ok).toBe(true);
+  if (!created.ok) throw new Error("space fixture creation failed");
+  const createdRoom = created.snapshot.categories
+    .find((category) => category.iconKey === "consult")
+    ?.spaces.find((space) => space.name === "추가 진료실");
+  expect(createdRoom).toBeTruthy();
+
+  const called = await mutateConsultationFlow({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: {
+      action: "call",
+      encounterId,
+      roomId: createdRoom?.id,
+    },
+    gateway: createMockConsultationFlowGateway({
+      encounters: [{ ...baseEncounter }],
+      waitingQueueEntries: [{ ...baseQueueEntry }],
+    }),
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-vet", status: "active" }],
+      memberships: [
+        {
+          id: "membership-vet-added-room",
+          workspaceId,
+          userId: "user-vet",
+          roles: ["vet"],
+          status: "active",
+        },
+      ],
+    }),
+    spaceManagementGateway,
+  });
+
+  expect(called).toMatchObject({
+    ok: true,
+    flow: {
+      callEvent: {
+        roomId: createdRoom?.id,
+        roomName: "추가 진료실",
+      },
+    },
+  });
+});
+
+test("consultation room read uses chart permission without granting hospital settings access", async () => {
+  const result = await readConsultationCallRooms({
+    actorUserId: "user-vet",
+    workspaceId,
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-vet", status: "active" }],
+      memberships: [
+        {
+          id: "membership-vet-room-read",
+          workspaceId,
+          userId: "user-vet",
+          roles: ["vet"],
+          status: "active",
+        },
+      ],
+    }),
+    spaceManagementGateway: consultationRoomGateway,
+  });
+
+  expect(result).toMatchObject({
+    ok: true,
+    status: 200,
+    enforcedBy: "chart-consultation-room-read",
+    rooms: [{ id: roomId, name: "3진료실" }],
   });
 });
 
@@ -163,6 +285,30 @@ test("consultation flow core rejects unauthorized users and stale transitions", 
     ok: false,
     status: 403,
     denialReason: "permission_missing",
+  });
+
+  const unavailableRoom = await mutateConsultationFlow({
+    actorUserId: "user-vet",
+    workspaceId,
+    input: { action: "call", encounterId, roomId: "space-treatment-1" },
+    permissionAdapter: createMockWorkspacePermissionAdapter({
+      users: [{ id: "user-vet", status: "active" }],
+      memberships: [
+        {
+          id: "membership-vet-room-check",
+          workspaceId,
+          userId: "user-vet",
+          roles: ["vet"],
+          status: "active",
+        },
+      ],
+    }),
+    spaceManagementGateway: consultationRoomGateway,
+  });
+  expect(unavailableRoom).toMatchObject({
+    ok: false,
+    status: 409,
+    denialReason: "room_unavailable",
   });
 
   const staleStart = await mutateConsultationFlow({
@@ -257,7 +403,7 @@ test("consultation flow Supabase gateway calls direct-start and return RPCs", as
     encounterId,
     room: {
       id: roomId,
-      name: "1진료실",
+      name: "3진료실",
       spaceType: "consultation_room",
       status: "active",
       isCallTarget: true,
@@ -339,6 +485,10 @@ test("consultation flow route stays server-owned and secret-free", () => {
     "src/app/api/workspaces/[workspaceId]/chart/consultation-flow/route.ts",
     "utf8",
   );
+  const roomRouteSource = readFileSync(
+    "src/app/api/workspaces/[workspaceId]/chart/consultation-rooms/route.ts",
+    "utf8",
+  );
   const serverSource = readFileSync(
     "src/features/chart/server-consultation-flow.ts",
     "utf8",
@@ -348,6 +498,11 @@ test("consultation flow route stays server-owned and secret-free", () => {
   expect(routeSource).toContain("resolveRoleUpdateActorIdentity");
   expect(routeSource).toContain("enforceWorkspaceMutationRateLimit");
   expect(routeSource).toContain("loadWorkspacePermissionAdapterFromDb");
+  expect(roomRouteSource).toContain("readConsultationCallRooms");
+  expect(roomRouteSource).toContain("demoClientSessionIdHeader");
+  expect(roomRouteSource).toContain("createSupabaseWorkspaceSpaceManagementGateway");
   expect(serverSource).toContain('import "server-only"');
-  expect(`${routeSource}\n${serverSource}`).not.toMatch(/service[_-]?role|db_password|SUPABASE_SECRET/i);
+  expect(`${routeSource}\n${roomRouteSource}\n${serverSource}`).not.toMatch(
+    /service[_-]?role|db_password|SUPABASE_SECRET/i,
+  );
 });
