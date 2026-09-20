@@ -172,6 +172,7 @@ export function EmrTableHeaderCell({
     typeof displayedChildren === "number";
   const hidePinnedBoundaryResizeIndicator =
     resize === "data-column" && props.pinned === "left" && props.pinnedEdge;
+  const pinnedHeaderBoundary = props.pinned === "left" && props.pinnedEdge;
 
   return (
     <TableHead
@@ -276,6 +277,12 @@ export function EmrTableHeaderCell({
           </button>
         ) : null}
       </div>
+      {pinnedHeaderBoundary ? (
+        <span
+          aria-hidden="true"
+          data-emr-pinned-table-header-divider="true"
+        />
+      ) : null}
       {resizable ? (
         <button
           data-row-interactive="true"
@@ -283,7 +290,7 @@ export function EmrTableHeaderCell({
           type="button"
           aria-label={resizeLabel ?? `${label} 컬럼 너비 조절`}
           className={cn(
-            "absolute right-[-4px] top-1/2 z-10 h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)] hover:bg-[var(--clair-color-atomic-black-alpha-6)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
+            "absolute right-[-4px] top-1/2 z-[16] h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)] hover:bg-[var(--clair-color-atomic-black-alpha-6)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
             hidePinnedBoundaryResizeIndicator && "before:opacity-0",
           )}
           data-resizing={isResizing ? "true" : undefined}

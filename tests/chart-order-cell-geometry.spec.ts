@@ -60,6 +60,28 @@ test("approved cell geometry centers selection and keeps exact input insets", as
     await expect(input).toHaveCSS("font-size", "12px");
     await expect(input).toHaveCSS("line-height", "16px");
   }
+
+  const billingNameHandle = table
+    .locator('th[data-column-id="billingName"]')
+    .getByRole("button", { name: "청구서명 컬럼 너비 조절" });
+  const billingNameInput = row.locator('td[data-column-id="billingName"] input');
+  const billingNameBefore = await box(billingNameInput);
+  await billingNameHandle.focus();
+  await billingNameHandle.press("Shift+ArrowRight");
+  await expect.poll(async () => (await box(billingNameInput)).width).toBeGreaterThan(
+    billingNameBefore.width,
+  );
+
+  const quantityHandle = table
+    .locator('th[data-column-id="quantity"]')
+    .getByRole("button", { name: "수량 컬럼 너비 조절" });
+  const quantityInput = row.locator('td[data-column-id="quantity"] input');
+  const quantityBefore = await box(quantityInput);
+  await quantityHandle.focus();
+  await quantityHandle.press("Shift+ArrowRight");
+  await expect.poll(async () => (await box(quantityInput)).width).toBeGreaterThan(
+    quantityBefore.width,
+  );
 });
 
 for (const [label, bodyHeight, headerHeight] of [["좁은 간격", 36, 36], ["기본 간격", 40, 36], ["넓은 간격", 52, 44]] as const) {

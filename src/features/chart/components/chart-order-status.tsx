@@ -44,6 +44,9 @@ export function ChartOrderWorkStatus({ row }: { row: ChartOrderPresentationRow }
       <TooltipContent id={tooltipId} role="tooltip">확정 후 업무 상태가 표시됩니다</TooltipContent>
     </Tooltip>;
   }
+  if (state.label === "-" && state.icon === null) {
+    return <span className="inline-flex items-center text-[var(--clair-color-atomic-neutral-400)]" data-emr-order-work-status="empty">-</span>;
+  }
   return <span className="inline-flex items-center gap-1 whitespace-nowrap emr-text-status text-[var(--clair-color-atomic-neutral-900)]" data-emr-order-work-status="confirmed">
     {state.icon ? <EmrSidePanelStateIcon state={state.icon} aria-hidden="true" /> : null}
     {state.label}
