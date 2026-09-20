@@ -2009,10 +2009,18 @@ test("reception veterinarian selector controls visible schedule lanes", async ({
   expect(
     Math.abs(selectAllBox!.x - (veterinarianMenuBox!.x + 5)),
   ).toBeLessThanOrEqual(1);
+  expect(selectAllBox!.height).toBeCloseTo(24, 0);
+  expect(
+    Math.abs(selectAllBox!.y - (veterinarianMenuBox!.y + 9)),
+  ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
       clearAllBox!.x + clearAllBox!.width - (veterinarianMenuBox!.x + 196),
     ),
+  ).toBeLessThanOrEqual(1);
+  expect(clearAllBox!.height).toBeCloseTo(24, 0);
+  expect(
+    Math.abs(clearAllBox!.y - (veterinarianMenuBox!.y + 9)),
   ).toBeLessThanOrEqual(1);
   await expect
     .poll(() =>

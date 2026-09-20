@@ -5161,18 +5161,26 @@ function ScheduleToolbar({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-[201px] rounded-[8px] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[4px] text-[var(--clair-color-atomic-neutral-900)] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] ring-0"
+            className="w-[201px] rounded-[var(--clair-radius-atomic-8)] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[var(--clair-spacing-4)] text-[var(--clair-color-atomic-neutral-900)] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] ring-0"
             data-testid="reception-veterinarian-filter-menu"
           >
-            <div className="flex h-8 w-full items-center justify-between">
+            <div className="flex h-[var(--clair-control-height-md)] w-full items-center gap-[var(--clair-spacing-6)] py-[var(--clair-spacing-4)]">
+              <div className="flex min-w-0 flex-1 items-center">
+                <DropdownMenuItem
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "xs" }),
+                    "min-w-0 rounded-[var(--clair-radius-atomic-8)] px-[var(--clair-spacing-6)] text-[var(--emr-type-size-metadata)] leading-[var(--emr-type-leading-metadata)] tracking-[var(--emr-type-tracking-status)]",
+                  )}
+                  onClick={onSelectAllVeterinarians}
+                >
+                  전체선택
+                </DropdownMenuItem>
+              </div>
               <DropdownMenuItem
-                className="h-8 min-w-0 rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
-                onClick={onSelectAllVeterinarians}
-              >
-                전체선택
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="h-8 min-w-0 rounded-[4px] px-[6px] py-[6px] text-[12px] font-medium leading-4 tracking-[0.3px]"
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "xs" }),
+                  "min-w-0 rounded-[var(--clair-radius-atomic-8)] px-[var(--clair-spacing-6)] text-[var(--emr-type-size-metadata)] leading-[var(--emr-type-leading-metadata)] tracking-[var(--emr-type-tracking-status)]",
+                )}
                 onClick={onClearVeterinarians}
               >
                 전체해제
