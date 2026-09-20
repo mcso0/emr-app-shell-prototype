@@ -176,10 +176,11 @@ Required behavior:
   its first four starts are0,28,124,220 and Order 명's visible content ends at
   400px; the divider/resize boundary is at408px. This keeps horizontally
   scrolled columns from bleeding into the fixed area.
-- The `Plan/Order` title and classification tab list start on the fixed
-  selection boundary: 28px from the panel's content edge (`선택` 20px plus its
-  8px transparent gap). The checkbox cell remains full-bleed at the table's
-  left edge; only the title/tab content uses this alignment line.
+- The `Plan/Order` title and classification tab list start on the selection
+  checkbox's center axis: 10px from the panel's content edge. The 20px
+  selection column remains full-bleed at the table's left edge and its trailing
+  8px transparent gap remains unchanged; the title/tab axis is not the 28px
+  selection-column boundary.
 - `분류`, `확정 여부`, and `선택` do not have direct resize handles.
 - `Order 명` is resized only through the fixed/scroll boundary. Dragging that
   boundary changes `Order 명` width, not the other pinned columns.
