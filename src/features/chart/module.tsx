@@ -9059,7 +9059,7 @@ function ChartOrderTable({
         <div className="flex h-full min-h-0">
         <EmrDataTable
           aria-label="처방/오더 테이블"
-          className="!w-auto bg-[var(--emr-surface-panel)]"
+          className="!w-auto bg-[var(--emr-surface-panel)] [&_[data-column-id=select]_.emr-table-cell-content]:!ms-2 [&_[data-column-id=select]_.emr-table-cell-content]:!me-0"
           columnGap={8}
           density={density}
           growLastColumn={false}

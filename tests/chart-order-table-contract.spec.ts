@@ -150,7 +150,7 @@ test("Plan/Order fills the left edge and keeps transparent 8px gutters aligned",
   }
 });
 
-test("Plan/Order title and tabs align with the selection checkbox center axis", async ({
+test("Plan/Order title, tabs, and selection checkbox share the same left edge", async ({
   page,
 }) => {
   await page.goto(chartOrderUrl);
@@ -175,9 +175,8 @@ test("Plan/Order title and tabs align with the selection checkbox center axis", 
   expect(headingBox).not.toBeNull();
   expect(tabsBox).not.toBeNull();
   expect(checkboxBox).not.toBeNull();
-  const checkboxCenter = checkboxBox!.x + checkboxBox!.width / 2;
-  expect(headingBox!.x).toBeCloseTo(checkboxCenter, 0);
-  expect(tabsBox!.x).toBeCloseTo(checkboxCenter, 0);
+  expect(headingBox!.x).toBeCloseTo(checkboxBox!.x, 0);
+  expect(tabsBox!.x).toBeCloseTo(checkboxBox!.x, 0);
 });
 
 test("Plan/Order keeps scrolled columns behind the fixed start edge", async ({
