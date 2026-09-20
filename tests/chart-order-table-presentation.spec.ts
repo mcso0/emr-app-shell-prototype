@@ -42,7 +42,7 @@ function row(id: string, status = "confirmed", taskStatus?: "complete" | "return
 
 test("unconfirmed orders hide stale task state and validation never replaces confirmed history", () => {
   const draft = row("draft", "draft", "complete");
-  expect(getChartOrderWorkPresentation(draft)).toEqual({ label: "—", icon: null, unconfirmed: true });
+  expect(getChartOrderWorkPresentation(draft)).toEqual({ label: "-", icon: null, unconfirmed: true });
   expect(getChartOrderConfirmationState(draft, new Set(["draft"]))).toBe("invalid");
   const cancelled = row("cancelled", "cancelled", "complete");
   expect(getChartOrderConfirmationState(cancelled, new Set(["cancelled"]))).toBe("confirmed");

@@ -13,7 +13,10 @@ export type EmrTableHeaderInteraction =
   | "menu"
   | "compound";
 export type EmrTableHeaderRole = EmrTableHeaderInteraction;
-export type EmrColumnResize = "none" | "data-column";
+export type EmrColumnResize =
+  | "none"
+  | "data-column"
+  | "pinned-order-boundary";
 export type EmrTableCellTextMode =
   | "one-line"
   | "two-line-if-long"

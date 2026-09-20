@@ -519,3 +519,4 @@ See `docs/work/inbox.md`.
 | CHART-PR-036 | human_review | chart | P1 | Local status presentation implemented and focused checks passed | `docs/work/chart/CHART-PR-036-plan-order-status-presentation.md` |
 
 | CHART-PR-037 | in_progress | chart | P0 | PR #743 deployed; uncalled waiting-reception history and past-call guard are a release candidate | `docs/work/chart/CHART-PR-037-encounter-multi-chart.md` |
+| CHART-PR-038 | in_progress | chart | P1 | Approved 26-column table contract; supervised TDD implementation and scoped delivery | `docs/work/chart/CHART-PR-038-plan-order-table-contract.md` |

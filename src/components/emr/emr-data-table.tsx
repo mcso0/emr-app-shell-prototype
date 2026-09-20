@@ -57,6 +57,7 @@ export type EmrDataTableRowState =
 export type EmrDataTableColumnMeta = {
   actionVisibility?: EmrDataTableActionVisibility;
   align?: "left" | "center" | "right";
+  cellPadding?: "default" | "none";
   grow?: boolean;
   identity?: boolean;
   label?: string;
@@ -65,6 +66,7 @@ export type EmrDataTableColumnMeta = {
   verticalAlign?: "middle" | "top";
   headerInteraction?: EmrTableHeaderInteraction;
   resize?: EmrColumnResize;
+  resetSize?: number;
 };
 
 declare module "@tanstack/react-table" {
@@ -85,7 +87,10 @@ export type EmrDataTableProps<TData> = {
   overscrollAxes?: TableOverscrollAxes;
   containerClassName?: string;
   className?: string;
+  columnGap?: number;
+  leadingInset?: number;
   initialLoading?: boolean;
+  growLastColumn?: boolean;
   skeletonRowCount?: number;
   getRowProps?: (
     row: Row<TData>,
@@ -148,12 +153,16 @@ function getVisibleCells<TData>(table: TanStackTable<TData>, row: Row<TData>) {
   ];
 }
 
-function getGrowColumnId<TData>(columns: Column<TData, unknown>[]) {
+function getGrowColumnId<TData>(
+  columns: Column<TData, unknown>[],
+  growLastColumn: boolean,
+) {
   const explicitGrowColumn = columns.find(
     (column) => getColumnMeta(column)?.grow === true,
   );
 
   if (explicitGrowColumn) return explicitGrowColumn.id;
+  if (!growLastColumn) return undefined;
 
   return [...columns].reverse().find((column) => {
     const meta = getColumnMeta(column);
@@ -163,6 +172,34 @@ function getGrowColumnId<TData>(columns: Column<TData, unknown>[]) {
       meta?.role !== "actions"
     );
   })?.id;
+}
+
+function getPinnedPropsWithGap<TData>(
+  table: TanStackTable<TData>,
+  column: Column<TData, unknown>,
+  columnGap: number,
+  leadingInset = 0,
+) {
+  const pinnedProps = getEmrPinnedColumnProps(column);
+  if (!columnGap || !pinnedProps.pinned) return pinnedProps;
+
+  const pinnedColumns =
+    pinnedProps.pinned === "left"
+      ? table.getLeftVisibleLeafColumns()
+      : table.getRightVisibleLeafColumns();
+  const columnIndex = pinnedColumns.findIndex((item) => item.id === column.id);
+  const gapOffset =
+    pinnedProps.pinned === "left"
+      ? columnIndex * columnGap
+      : (pinnedColumns.length - columnIndex - 1) * columnGap;
+
+  return {
+    ...pinnedProps,
+    pinnedOffset:
+      Number(pinnedProps.pinnedOffset ?? 0) +
+      gapOffset +
+      (pinnedProps.pinned === "left" ? leadingInset : 0),
+  };
 }
 
 function getSortLabel(label: string, direction: false | "asc" | "desc") {
@@ -194,6 +231,17 @@ function resizeColumnFromKeyboard<TData>(
   column: Column<TData, unknown>,
   event: React.KeyboardEvent<HTMLButtonElement>,
 ) {
+  const resetSize = getColumnMeta(column)?.resetSize;
+  if (event.key === "Home" && resetSize !== undefined) {
+    event.preventDefault();
+    event.stopPropagation();
+    table.setColumnSizing((current) => ({
+      ...current,
+      [column.id]: resetSize,
+    }));
+    return;
+  }
+
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
 
   event.preventDefault();
@@ -204,6 +252,22 @@ function resizeColumnFromKeyboard<TData>(
   const maxSize = column.columnDef.maxSize ?? Number.MAX_SAFE_INTEGER;
   const size = Math.min(maxSize, Math.max(minSize, column.getSize() + delta));
   table.setColumnSizing((current) => ({ ...current, [column.id]: size }));
+}
+
+function resetColumnFromResizeHandle<TData>(
+  table: TanStackTable<TData>,
+  column: Column<TData, unknown>,
+  event: React.MouseEvent<HTMLButtonElement>,
+) {
+  const resetSize = getColumnMeta(column)?.resetSize;
+  if (resetSize === undefined) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+  table.setColumnSizing((current) => ({
+    ...current,
+    [column.id]: resetSize,
+  }));
 }
 
 function getRenderedCellContent<TData>(
@@ -424,11 +488,15 @@ function EmrDataTableSelectionActionBar({
 }
 
 function EmrDataTableSkeletonRows<TData>({
+  columnGap,
   hasRowOverlay,
+  leadingInset,
   rowCount,
   table,
 }: {
+  columnGap: number;
   hasRowOverlay: boolean;
+  leadingInset: number;
   rowCount: number;
   table: TanStackTable<TData>;
 }) {
@@ -443,7 +511,14 @@ function EmrDataTableSkeletonRows<TData>({
     >
       {columns.map((column, columnIndex) => {
         const meta = getColumnMeta(column);
-        const pinnedProps = getEmrPinnedColumnProps(column);
+        const effectiveColumnGap =
+          columnIndex === columns.length - 1 ? 0 : columnGap;
+        const pinnedProps = getPinnedPropsWithGap(
+          table,
+          column,
+          effectiveColumnGap,
+          leadingInset,
+        );
         const isSelection = meta?.role === "selection";
         const selectionColumnSize = column.getSize();
 
@@ -456,6 +531,7 @@ function EmrDataTableSkeletonRows<TData>({
               isSelection && selectionColumnSize === 32 && "!pl-3 !pr-1",
             )}
             data-column-id={column.id}
+            data-emr-column-size={column.getSize()}
             style={
               isSelection
                 ? {
@@ -478,6 +554,11 @@ function EmrDataTableSkeletonRows<TData>({
               )}
               data-emr-table-identity-content={
                 meta?.identity ? "true" : undefined
+              }
+              style={
+                effectiveColumnGap
+                  ? { marginInlineEnd: `${effectiveColumnGap}px` }
+                  : undefined
               }
             >
               <Skeleton
@@ -504,11 +585,15 @@ function EmrDataTableSkeletonRows<TData>({
 }
 
 function EmrDataTableHeader<TData>({
+  columnGap,
   group,
   hasRowOverlay,
+  leadingInset,
 }: {
+  columnGap: number;
   group: HeaderGroup<TData>;
   hasRowOverlay: boolean;
+  leadingInset: number;
 }) {
   return (
     <TableRow
@@ -518,9 +603,17 @@ function EmrDataTableHeader<TData>({
     >
       {group.headers.map((header: Header<TData, unknown>) => {
         const column = header.column;
+        const visibleColumns = getOrderedVisibleColumns(header.getContext().table);
+        const effectiveColumnGap =
+          visibleColumns.at(-1)?.id === column.id ? 0 : columnGap;
         const meta = getColumnMeta(column);
         const role = meta?.role ?? "data";
-        const pinnedProps = getEmrPinnedColumnProps(column);
+        const pinnedProps = getPinnedPropsWithGap(
+          header.getContext().table,
+          column,
+          effectiveColumnGap,
+          leadingInset,
+        );
         const isSelection = role === "selection";
         const isActions = role === "actions";
         const sortDirection = column.getIsSorted();
@@ -558,10 +651,17 @@ function EmrDataTableHeader<TData>({
               key={header.id}
               aria-label={label}
               className={cn(
-                "!p-0 [&_.emr-table-cell-content]:!p-0",
-                selectionColumnSize === 32 ? "!pl-3 !pr-1" : "!pl-5 !pr-2",
+                "!p-0 min-w-0 overflow-hidden [&_.emr-table-cell-content]:!p-0",
+                selectionColumnSize === 20
+                  ? "!pl-0.5 !pr-0.5"
+                  : selectionColumnSize === 32
+                    ? "!pl-3 !pr-1"
+                    : "!pl-5 !pr-2",
               )}
               data-column-id={column.id}
+              data-emr-column-size={column.getSize()}
+              gutter={effectiveColumnGap}
+              selectionWidth={selectionColumnSize}
               style={{
                 maxWidth: selectionColumnSize,
                 minWidth: selectionColumnSize,
@@ -580,11 +680,12 @@ function EmrDataTableHeader<TData>({
             align={meta?.align}
             aria-label={isActions ? label : undefined}
             className={cn(
-              "!p-0",
+              "!p-0 min-w-0 overflow-hidden",
               isActions && "w-[52px] min-w-[52px] max-w-[52px] !pl-2 !pr-5",
               meta?.identity && "!p-0",
             )}
             data-column-id={column.id}
+            data-emr-column-size={column.getSize()}
             identity={meta?.identity}
             insetPlainTextLabel={!isActions}
             interaction={interaction}
@@ -594,12 +695,25 @@ function EmrDataTableHeader<TData>({
             resizeLabel={`${label} 컬럼 너비 조절`}
             sortDirection={sortDirection || undefined}
             sortLabel={canSort ? getSortLabel(label, sortDirection) : undefined}
+            style={{
+              width: column.getSize() + effectiveColumnGap,
+              minWidth: column.getSize() + effectiveColumnGap,
+              maxWidth: column.getSize() + effectiveColumnGap,
+            }}
             onResizeKeyDown={(event) =>
               resizeColumnFromKeyboard(header.getContext().table, column, event)
+            }
+            onResizeDoubleClick={(event) =>
+              resetColumnFromResizeHandle(
+                header.getContext().table,
+                column,
+                event,
+              )
             }
             onResizeMouseDown={header.getResizeHandler()}
             onResizeTouchStart={header.getResizeHandler()}
             onSort={canSort ? () => toggleColumnSorting(column) : undefined}
+            gutter={effectiveColumnGap}
             {...pinnedProps}
           >
             {headerContent}
@@ -612,23 +726,27 @@ function EmrDataTableHeader<TData>({
 }
 
 function EmrDataTableBodyRow<TData>({
+  columnGap,
   getRowProps,
   getRowState,
   getRowOverlayAriaLabel,
   onTouchOverlayOpenChange,
   row,
   rowOverlayWidth,
+  leadingInset,
   renderRowOverlay,
   renderAfterRow,
   table,
   touchOverlayOpen,
 }: {
+  columnGap: number;
   getRowProps?: EmrDataTableProps<TData>["getRowProps"];
   getRowState?: EmrDataTableProps<TData>["getRowState"];
   getRowOverlayAriaLabel?: EmrDataTableProps<TData>["getRowOverlayAriaLabel"];
   onTouchOverlayOpenChange: (open: boolean) => void;
   row: Row<TData>;
   rowOverlayWidth: number | string;
+  leadingInset: number;
   renderRowOverlay?: EmrDataTableProps<TData>["renderRowOverlay"];
   renderAfterRow?: EmrDataTableProps<TData>["renderAfterRow"];
   table: TanStackTable<TData>;
@@ -641,10 +759,17 @@ function EmrDataTableBodyRow<TData>({
   return (
     <React.Fragment key={row.id}>
       <TableRow {...getSafeRowProps(row, rowState, getRowProps)}>
-        {cells.map((cell) => {
+        {cells.map((cell, cellIndex) => {
           const meta = getColumnMeta(cell.column);
           const role = meta?.role ?? "data";
-          const pinnedProps = getEmrPinnedColumnProps(cell.column);
+          const effectiveColumnGap =
+            cellIndex === cells.length - 1 ? 0 : columnGap;
+          const pinnedProps = getPinnedPropsWithGap(
+            table,
+            cell.column,
+            effectiveColumnGap,
+            leadingInset,
+          );
           const isSelection = role === "selection";
           const isActions = role === "actions";
 
@@ -655,11 +780,18 @@ function EmrDataTableBodyRow<TData>({
               <EmrTableSelectionCell
                 key={cell.id}
                 className={cn(
-                  "!p-0 [&_.emr-table-cell-content]:!p-0",
-                  selectionColumnSize === 32 ? "!pl-3 !pr-1" : "!pl-5 !pr-2",
+                  "!p-0 min-w-0 overflow-hidden [&_.emr-table-cell-content]:!p-0",
+                  selectionColumnSize === 20
+                    ? "!pl-0.5 !pr-0.5"
+                    : selectionColumnSize === 32
+                      ? "!pl-3 !pr-1"
+                      : "!pl-5 !pr-2",
                 )}
                 controlVisibility="contextual"
                 data-column-id={cell.column.id}
+                data-emr-column-size={cell.column.getSize()}
+                gutter={effectiveColumnGap}
+                selectionWidth={selectionColumnSize}
                 style={{
                   maxWidth: selectionColumnSize,
                   minWidth: selectionColumnSize,
@@ -676,14 +808,18 @@ function EmrDataTableBodyRow<TData>({
             <TableCell
               key={cell.id}
               className={cn(
-                "overflow-hidden !p-0",
+                "min-w-0 overflow-hidden !p-0",
                 isActions && "overflow-visible !pl-2 !pr-5 text-right",
               )}
               data-column-id={cell.column.id}
+              data-emr-column-size={cell.column.getSize()}
               data-emr-table-action-visibility={
                 isActions ? (meta?.actionVisibility ?? "always") : undefined
               }
               style={{
+                width: cell.column.getSize() + effectiveColumnGap,
+                minWidth: cell.column.getSize() + effectiveColumnGap,
+                maxWidth: cell.column.getSize() + effectiveColumnGap,
                 verticalAlign: meta?.verticalAlign ?? "middle",
               }}
               {...pinnedProps}
@@ -691,13 +827,22 @@ function EmrDataTableBodyRow<TData>({
               <div
                 className={cn(
                   "emr-data-table-cell-content flex min-w-0",
+                  meta?.cellPadding === "none" &&
+                    "emr-data-table-cell-content--no-boundary-inset",
                   meta?.identity && "!px-0",
+                  meta?.cellPadding === "none" && "!px-0",
                   meta?.align === "right" && "justify-end text-right",
                   meta?.align === "center" && "justify-center text-center",
                   meta?.verticalAlign === "top" && "items-start",
                   isActions && "justify-end",
                 )}
                 data-emr-table-content="true"
+                style={{
+                  marginInlineEnd: effectiveColumnGap
+                    ? `${effectiveColumnGap}px`
+                    : undefined,
+                  paddingInline: meta?.cellPadding === "none" ? 0 : undefined,
+                }}
               >
                 {getRenderedCellContent(cell)}
               </div>
@@ -724,12 +869,15 @@ export function EmrDataTable<TData>({
   table,
   "aria-label": ariaLabel,
   className,
+  columnGap = 0,
   containerClassName,
   density = "standard",
   footerRows,
   getRowOverlayAriaLabel,
   getRowProps,
   getRowState,
+  growLastColumn = true,
+  leadingInset = 0,
   initialLoading = false,
   overscrollAxes = "horizontal",
   renderRowOverlay,
@@ -746,14 +894,29 @@ export function EmrDataTable<TData>({
     null,
   );
   const columns = getOrderedVisibleColumns(table);
+  const visibleColumnWidth = columns.reduce(
+    (total, column) => total + column.getSize(),
+    0,
+  );
   const rows = table.getRowModel().rows;
   const selectedRows = table.getSelectedRowModel().rows;
   const hasPinnedColumns = table.getIsSomeColumnsPinned();
   const hasRowOverlay = Boolean(renderRowOverlay);
   const visibleColumnCount = columns.length + (hasRowOverlay ? 1 : 0);
-  const leftPinnedColumnWidth = table.getLeftTotalSize();
-  const rightPinnedColumnWidth = table.getRightTotalSize();
-  const growColumnId = getGrowColumnId(columns);
+  const leftPinnedColumnWidth =
+    leadingInset +
+    table.getLeftVisibleLeafColumns().reduce(
+      (total, column) => total + column.getSize(),
+      0,
+    ) +
+    Math.max(0, table.getLeftVisibleLeafColumns().length - 1) * columnGap;
+  const rightPinnedColumnWidth =
+    table.getRightVisibleLeafColumns().reduce(
+      (total, column) => total + column.getSize(),
+      0,
+    ) +
+    Math.max(0, table.getRightVisibleLeafColumns().length - 1) * columnGap;
+  const growColumnId = getGrowColumnId(columns, growLastColumn);
   const headerGroups = getOrderedHeaderGroups(table);
   const activeTouchOverlayRowId = rows.some(
     (row) => row.id === touchOverlayRowId,
@@ -775,21 +938,42 @@ export function EmrDataTable<TData>({
           : "w-full overflow-x-auto",
         containerClassName,
       )}
-      containerStyle={hasPinnedColumns ? { overflow: "visible" } : undefined}
+      containerStyle={
+        hasPinnedColumns || leadingInset
+          ? {
+              ...(hasPinnedColumns ? { overflow: "visible" } : {}),
+              paddingInlineStart: leadingInset || undefined,
+            }
+          : undefined
+      }
       density={density}
       layout="scroll"
-      minWidth={table.getTotalSize()}
+      minWidth={
+        visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap
+      }
       overscrollAxes={hasPinnedColumns ? "none" : overscrollAxes}
       pinning={hasPinnedColumns ? "columns" : "none"}
+      style={
+        !growLastColumn
+          ? {
+              width: `${visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap}px`,
+              maxWidth: `${visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap}px`,
+              tableLayout: "fixed",
+            }
+          : undefined
+      }
     >
       <colgroup>
-        {columns.map((column) => (
+        {columns.map((column, columnIndex) => (
           <col
             key={column.id}
             style={
               column.id === growColumnId
                 ? { minWidth: `${column.getSize()}px` }
-                : { width: `${column.getSize()}px` }
+                : {
+                    width: `${column.getSize() + (columnIndex === columns.length - 1 ? 0 : columnGap)}px`,
+                    minWidth: `${column.getSize() + (columnIndex === columns.length - 1 ? 0 : columnGap)}px`,
+                  }
             }
           />
         ))}
@@ -798,22 +982,27 @@ export function EmrDataTable<TData>({
       <TableHeader className="sticky top-0 z-10">
         {headerGroups.map((group) => (
           <EmrDataTableHeader
+            columnGap={columnGap}
             key={group.id}
             group={group}
             hasRowOverlay={hasRowOverlay}
+            leadingInset={leadingInset}
           />
         ))}
       </TableHeader>
       <TableBody>
         {initialLoading ? (
           <EmrDataTableSkeletonRows
+            columnGap={columnGap}
             hasRowOverlay={hasRowOverlay}
+            leadingInset={leadingInset}
             rowCount={skeletonRowCount}
             table={table}
           />
         ) : (
           rows.map((row) => (
             <EmrDataTableBodyRow
+              columnGap={columnGap}
               key={row.id}
               getRowOverlayAriaLabel={getRowOverlayAriaLabel}
               getRowProps={getRowProps}
@@ -825,6 +1014,7 @@ export function EmrDataTable<TData>({
               renderAfterRow={renderAfterRow}
               row={row}
               rowOverlayWidth={rowOverlayWidth}
+              leadingInset={leadingInset}
               table={table}
               touchOverlayOpen={activeTouchOverlayRowId === row.id}
             />
@@ -847,6 +1037,8 @@ export function EmrDataTable<TData>({
       )}
       data-emr-data-table="true"
       data-emr-data-table-has-row-overlay={hasRowOverlay ? "true" : "false"}
+      data-emr-data-table-column-gap={columnGap || undefined}
+      data-emr-data-table-leading-inset={leadingInset || undefined}
       data-emr-data-table-pinning={hasPinnedColumns ? "columns" : "none"}
       data-emr-data-table-viewport-mode={viewportMode}
       onKeyDown={(event) => {

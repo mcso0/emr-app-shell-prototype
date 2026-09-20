@@ -85,6 +85,11 @@ export type ChartOrderRuntimeRow = {
   calculationOutputs: Record<string, unknown>;
   billingAdjustmentReasons?: string[];
   preBillingOverride?: Record<string, unknown>;
+  billingCandidateStatus?:
+    | "candidate_created"
+    | "billing_review_required"
+    | "invoice_linked"
+    | "cancelled";
   billingReflectionEnabled: boolean;
   intendedAssigneeUserId?: string | null;
   orderConfirmationStatus?: "draft" | "pending" | "confirmed" | "billed" | "cancelled";

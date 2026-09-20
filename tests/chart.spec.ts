@@ -1434,7 +1434,7 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
   );
 });
 
-test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", async ({
+test("chart Plan/Order keeps the approved pinned region and scrolls detail columns", async ({
   page,
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
@@ -1478,13 +1478,13 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
     };
   });
 
-  expect(referenceMetrics.leftPinnedWidth).toBe(410);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1096);
+  expect(referenceMetrics.leftPinnedWidth).toBe(412);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1094);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
       .first(),
-  ).toHaveCSS("height", "40px");
+  ).toHaveCSS("height", "36px");
 
   const pinnedColumnIds = await orderTable
     .locator("[data-slot='table-head'][data-emr-column-pinned='left']")
@@ -1507,8 +1507,8 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
     name: "업무 상태 오름차순 정렬",
   });
 
-  await expect(selectionHeader).toHaveCSS("width", "32px");
-  await expect(statusHeader).toHaveCSS("width", "84px");
+  await expect(selectionHeader).toHaveCSS("width", "28px");
+  await expect(statusHeader).toHaveCSS("width", "96px");
 
   const selectionCheckboxBox = await selectionCheckbox.boundingBox();
   const statusSortButtonBox = await statusSortButton.boundingBox();
@@ -1539,9 +1539,20 @@ test("chart Plan/Order keeps a 410px pinned region and scrolls detail columns", 
   ]);
   expect(viewportBox).not.toBeNull();
   expect(scrollbarBox).not.toBeNull();
-  expect(Math.abs(scrollbarBox!.x - viewportBox!.x - 410)).toBeLessThanOrEqual(
-    1,
-  );
+  const pinnedState = await orderTable.getAttribute("data-emr-pinning");
+  const expectedScrollbarStart =
+    pinnedState === "columns"
+      ? Number.parseFloat(
+          await pinnedViewport.evaluate((element) =>
+            getComputedStyle(element).getPropertyValue(
+              "--emr-table-left-pinned-column-width",
+            ),
+          ),
+        )
+      : 0;
+  expect(
+    Math.abs(scrollbarBox!.x - viewportBox!.x - expectedScrollbarStart),
+  ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(
       scrollbarBox!.x +
@@ -1703,19 +1714,18 @@ test("chart Order all tab renders the approved order confirmation and work-state
     "1회당",
     "성분량",
     "조제량",
-    "준비 예정량",
     "보관",
     "투여/복약",
-    "담당자",
     "단가",
     "수량",
     "합계",
-    "할인할증(금액)",
-    "(%)",
-    "청구금액",
-    "사유",
+    "할인/할증",
+    "%",
+    "총 청구금액",
+    "할인/할증 사유",
     "과세",
-    "수의사",
+    "업무 담당",
+    "요청 수의사",
   ]);
   await expect(
     table.getByRole("columnheader", { name: "작업", exact: true }),
@@ -2026,6 +2036,7 @@ for (const actualDispenseUiCase of actualDispenseUiCases) {
 test("chart Order draft autosaves Field Matrix values and enables explicit confirmation", async ({
   page,
 }) => {
+  await routeQuickAddCatalog(page);
   await page.goto(kongScenarioUrl);
   await page.getByRole("button", { name: "Order 추가", exact: true }).click();
   const catalogDialog = page.getByRole("dialog", {
@@ -2037,6 +2048,8 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   );
   await candidate.click();
   await confirmChartOrderCatalogSelection(catalogDialog, 1);
+  // Catalog defaults do not invent a billing quantity for a unit-price order.
+  await page.getByLabel("[CBC 검사] #BASO 수량 수정", { exact: true }).fill("1");
   await expect(page.getByTestId("chart-order-footer")).toContainText("저장됨", {
     timeout: 10_000,
   });
@@ -2297,7 +2310,7 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
     await expect(button).toHaveCSS("height", "28px");
   }
 
-  await page.getByRole("button", { name: "Order 추가" }).click();
+  await orderActions.getByRole("button", { name: "Order 추가" }).click();
   await expect(page.getByRole("dialog", { name: "오더 추가" })).toBeVisible();
   await page.getByRole("button", { name: "오더 추가 닫기" }).click();
 
@@ -10312,7 +10325,7 @@ test("chart status presentation keeps edits in place until blur and hides unconf
   const initialIds = await ids();
   const target = page.getByTestId("chart-order-row-status-draft-cbc");
   await expect(target).toHaveAttribute("data-order-confirmation", "ready");
-  await expect(target.locator('td[data-column-id="status"]')).toHaveText("—");
+  await expect(target.locator('td[data-column-id="status"]')).toHaveText("-");
   const orderFooter = page.getByTestId("chart-order-footer");
   const readFooterConfirmationCounts = async () => {
     const readCount = async (label: string) => {
