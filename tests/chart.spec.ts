@@ -2336,6 +2336,24 @@ test("chart Plan/Order header adds Order and collapse actions without changing b
   await collapseButton.click();
   await expect(orderPanel).toHaveAttribute("data-collapsed", "true");
   await expect(orderPanel).toHaveCSS("height", "38px");
+  const collapsedOrderHeading = orderPanel.getByRole("heading", {
+    name: "Plan/Order",
+  });
+  const collapsedOrderHeader = collapsedOrderHeading.locator("xpath=..");
+  await expect(collapsedOrderHeader).toHaveCSS("padding-top", "0px");
+  await expect(collapsedOrderHeader).toHaveCSS("padding-bottom", "0px");
+  await expect(
+    collapsedOrderHeading.evaluate((element) => {
+      const header = element.parentElement;
+      if (!header) throw new Error("Plan/Order header is missing");
+      const headerRect = header.getBoundingClientRect();
+      const headingRect = element.getBoundingClientRect();
+      return {
+        bottom: Math.round(headerRect.bottom - headingRect.bottom),
+        top: Math.round(headingRect.top - headerRect.top),
+      };
+    }),
+  ).resolves.toEqual({ bottom: 9, top: 9 });
   await expect(orderContent).toHaveAttribute("aria-hidden", "true");
   await expect(divider).toHaveAttribute("aria-hidden", "true");
   await expect
