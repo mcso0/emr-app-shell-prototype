@@ -14,9 +14,14 @@ import {
   mapSoapNote,
 } from "@/features/chart/server-soap-note-persistence-core";
 import {
+  getConsultationCallRooms,
   getConsultationCallRoomById,
   type ConsultationCallRoom,
-} from "@/features/chart/data";
+} from "@/features/chart/consultation-room-contract";
+import {
+  createMockWorkspaceSpaceManagementGateway,
+  type WorkspaceSpaceManagementGateway,
+} from "@/features/hospital-admin/space-management/server-space-management-core";
 import { mockEncounters, mockWaitingQueueEntries } from "@/mocks/emr-domain";
 import type { Encounter, SoapNote, WaitingQueueEntry } from "@/types/emr-domain";
 
@@ -104,9 +109,53 @@ export type ConsultationFlowMutationResult =
         | "room_unavailable"
         | "stale_status";
     }
-  | { ok: false; status: 500; error: "db_write_failed" | "supabase_client_missing" };
+  | {
+      ok: false;
+      status: 500;
+      error: "db_read_failed" | "db_write_failed" | "supabase_client_missing";
+    };
 
 const mockCallEventStore = new Map<string, ConsultationCallEvent[]>();
+
+export async function readConsultationCallRooms({
+  actorUserId,
+  permissionAdapter,
+  spaceManagementGateway = createMockWorkspaceSpaceManagementGateway("shared"),
+  workspaceId,
+}: {
+  actorUserId: string | null;
+  permissionAdapter?: WorkspacePermissionAdapter;
+  spaceManagementGateway?: WorkspaceSpaceManagementGateway;
+  workspaceId: string;
+}) {
+  const permission = resolveWorkspacePermission(
+    permissionAdapter ?? createDemoConsultationFlowPermissionAdapter(workspaceId),
+    {
+      sessionUserId: actorUserId,
+      workspaceId,
+      requiredPermission: "chart:view",
+    },
+  );
+  if (!permission.allowed) {
+    return {
+      ok: false as const,
+      status: permission.denialReason === "unauthenticated" ? 401 as const : 403 as const,
+      denialReason: permission.denialReason ?? "permission_missing",
+    };
+  }
+
+  const result = await spaceManagementGateway.get(workspaceId);
+  if (!result.ok) {
+    return { ok: false as const, status: 500 as const, error: "db_read_failed" as const };
+  }
+  return {
+    ok: true as const,
+    status: 200 as const,
+    workspaceId,
+    rooms: getConsultationCallRooms(result.snapshot),
+    enforcedBy: "chart-consultation-room-read" as const,
+  };
+}
 
 export async function mutateConsultationFlow({
   actorUserId,
@@ -115,7 +164,8 @@ export async function mutateConsultationFlow({
   auditRequestId,
   gateway = createMockConsultationFlowGateway(),
   input,
-  permissionAdapter = createDemoConsultationFlowPermissionAdapter(),
+  permissionAdapter,
+  spaceManagementGateway = createMockWorkspaceSpaceManagementGateway("shared"),
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -125,16 +175,17 @@ export async function mutateConsultationFlow({
   gateway?: ConsultationFlowGateway;
   input: ConsultationFlowInput;
   permissionAdapter?: WorkspacePermissionAdapter;
+  spaceManagementGateway?: WorkspaceSpaceManagementGateway;
   workspaceId: string;
 }): Promise<ConsultationFlowMutationResult> {
   const encounterId = trimToUndefined(input.encounterId);
   const action = input.action;
-  const room = action === "call" ? getConsultationCallRoomById(input.roomId) : undefined;
+  const roomId = trimToUndefined(input.roomId);
 
   if (
     !encounterId ||
     (action !== "call" && action !== "start" && action !== "return_to_waiting") ||
-    (action === "call" && !room)
+    (action === "call" && !roomId)
   ) {
     return {
       ok: false,
@@ -142,7 +193,7 @@ export async function mutateConsultationFlow({
       error: "invalid_input",
       fieldErrors: {
         ...(encounterId ? {} : { encounterId: "진료 차트를 선택해 주세요." }),
-        ...(action !== "call" || room ? {} : { roomId: "진료실을 선택해 주세요." }),
+        ...(action !== "call" || roomId ? {} : { roomId: "진료실을 선택해 주세요." }),
         ...(action === "call" || action === "start" || action === "return_to_waiting"
           ? {}
           : { action: "지원하지 않는 진료 흐름 액션이에요." }),
@@ -150,11 +201,14 @@ export async function mutateConsultationFlow({
     };
   }
 
-  const permission = resolveWorkspacePermission(permissionAdapter, {
-    sessionUserId: actorUserId,
-    workspaceId,
-    requiredPermission: "chart:update",
-  });
+  const permission = resolveWorkspacePermission(
+    permissionAdapter ?? createDemoConsultationFlowPermissionAdapter(workspaceId),
+    {
+      sessionUserId: actorUserId,
+      workspaceId,
+      requiredPermission: "chart:update",
+    },
+  );
 
   if (!permission.allowed) {
     return {
@@ -162,6 +216,18 @@ export async function mutateConsultationFlow({
       status: permission.denialReason === "unauthenticated" ? 401 : 403,
       denialReason: permission.denialReason ?? "permission_missing",
     };
+  }
+
+  let room: ConsultationCallRoom | undefined;
+  if (action === "call") {
+    const spaceManagement = await spaceManagementGateway.get(workspaceId);
+    if (!spaceManagement.ok) {
+      return { ok: false, status: 500, error: "db_read_failed" };
+    }
+    room = getConsultationCallRoomById(spaceManagement.snapshot, roomId);
+    if (!room) {
+      return { ok: false, status: 409, denialReason: "room_unavailable" };
+    }
   }
 
   const result =
@@ -413,7 +479,9 @@ export function createSupabaseConsultationFlowGateway(
   };
 }
 
-export function createDemoConsultationFlowPermissionAdapter() {
+export function createDemoConsultationFlowPermissionAdapter(
+  workspaceId = "clair-demo",
+) {
   return createMockWorkspacePermissionAdapter({
     users: [
       { id: "playwright-default-session", status: "active", displayName: "Playwright Admin" },
@@ -425,35 +493,35 @@ export function createDemoConsultationFlowPermissionAdapter() {
     memberships: [
       {
         id: "membership-playwright-admin",
-        workspaceId: "clair-demo",
+        workspaceId,
         userId: "playwright-default-session",
         roles: ["hospital_admin"],
         status: "active",
       },
       {
         id: "membership-admin",
-        workspaceId: "clair-demo",
+        workspaceId,
         userId: "user-admin",
         roles: ["hospital_admin"],
         status: "active",
       },
       {
         id: "membership-front-desk",
-        workspaceId: "clair-demo",
+        workspaceId,
         userId: "user-front-desk",
         roles: ["front_desk"],
         status: "active",
       },
       {
         id: "membership-vet",
-        workspaceId: "clair-demo",
+        workspaceId,
         userId: "user-vet",
         roles: ["vet"],
         status: "active",
       },
       {
         id: "membership-tech",
-        workspaceId: "clair-demo",
+        workspaceId,
         userId: "user-tech",
         roles: ["technician"],
         status: "active",

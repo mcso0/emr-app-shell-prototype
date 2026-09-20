@@ -3468,11 +3468,11 @@ test("an uncalled past reception stays waiting and warns before creating today's
   });
   await expect(callDialog).toBeVisible();
   await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
-  await page.getByRole("option", { name: "1진료실" }).click();
+  await page.getByRole("option", { name: "진료실 1" }).click();
   await callDialog.getByRole("button", { name: "호출하기" }).click();
 
   expect(callRequests).toEqual([
-    { action: "call", encounterId: waitingEncounterId, roomId: "room-consult-1" },
+    { action: "call", encounterId: waitingEncounterId, roomId: "space-consult-1" },
   ]);
   await expect
     .poll(() => new URL(page.url()).searchParams.get("chartId"))
@@ -4974,6 +4974,26 @@ test("chart consultation CTA moves from call to start before chart completion", 
   let chartPrepared = false;
 
   await page.route(
+    "**/api/workspaces/clair-demo/chart/consultation-rooms",
+    (route) => route.fulfill({
+      contentType: "application/json",
+      json: {
+        workspaceId,
+        rooms: [
+          {
+            id: "space-consult-added",
+            name: "3진료실",
+            spaceType: "consultation_room",
+            status: "active",
+            isCallTarget: true,
+            sortOrder: 0,
+          },
+        ],
+      },
+    }),
+  );
+
+  await page.route(
     "**/api/workspaces/clair-demo/chart/soap-notes**",
     async (route) => {
       const request = route.request();
@@ -5202,7 +5222,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
         roomId?: string;
       };
       if (body.action === "call") {
-        expect(body.roomId).toBe("room-consult-2");
+        expect(body.roomId).toBe("space-consult-added");
         encounter = {
           ...encounter,
           status: "in_consultation",
@@ -5256,10 +5276,10 @@ test("chart consultation CTA moves from call to start before chart completion", 
               ? {
                   callEvent: {
                     id: "call-event-choco",
-                    displayText: "2진료실로 환자를 호출합니다.",
+                    displayText: "3진료실로 환자를 호출합니다.",
                     deliveryStatus: "queued",
-                    roomId: "room-consult-2",
-                    roomName: "2진료실",
+                    roomId: "space-consult-added",
+                    roomName: "3진료실",
                   },
                 }
               : {}),
@@ -5722,14 +5742,14 @@ test("chart consultation CTA moves from call to start before chart completion", 
   });
   await expect(defaultRoomCheckbox).toBeDisabled();
   await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
-  await page.getByRole("option", { name: "2진료실" }).click();
+  await page.getByRole("option", { name: "3진료실" }).click();
   await expect(
     callDialog.getByRole("combobox", { name: "호출 진료실" }),
-  ).toContainText("2진료실");
+  ).toContainText("3진료실");
   await expect(defaultRoomCheckbox).toBeEnabled();
   await defaultRoomCheckbox.click();
   await expect(defaultRoomCheckbox).toBeChecked();
-  await expect(callDialog).not.toContainText("room-consult-2");
+  await expect(callDialog).not.toContainText("space-consult-added");
   await page.getByRole("button", { name: "호출하기" }).last().click();
 
   await expect(page.getByTestId("chart-completion-status")).toContainText(
@@ -5744,7 +5764,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
         ),
       ),
     )
-    .toBe("room-consult-2");
+    .toBe("space-consult-added");
   await expect(page.getByRole("button", { name: "진료 시작" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "차트 작성 완료" })).toBeVisible();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
@@ -8025,7 +8045,7 @@ test("chart queue selection changes the selected encounter", async ({
     name: "하루/강서윤을 호출하시겠습니까?",
   });
   await callDialog.getByRole("combobox", { name: "호출 진료실" }).click();
-  await page.getByRole("option", { name: "1진료실" }).click();
+  await page.getByRole("option", { name: "진료실 1" }).click();
   await callDialog.getByRole("button", { name: "호출하기" }).click();
   await expect(page.getByTestId("chart-start-locked-state")).toHaveCount(0);
   await expect(

@@ -1,4 +1,5 @@
 import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import { demoClientSessionIdHeader } from "@/features/auth/demo-actor";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
   demoSessionUserIdHeader,
@@ -19,6 +20,11 @@ import {
   type ConsultationFlowInput,
   type SupabaseConsultationFlowRpcClient,
 } from "@/features/chart/server-consultation-flow";
+import {
+  createMockWorkspaceSpaceManagementGateway,
+  createSupabaseWorkspaceSpaceManagementGateway,
+  type SupabaseWorkspaceSpaceManagementClient,
+} from "@/features/hospital-admin/space-management/server-space-management-core";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
@@ -67,6 +73,15 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         workspaceId,
       })
     : undefined;
+  const spaceManagementGateway = identity.source === "demo_header_mock_mode"
+    ? createMockWorkspaceSpaceManagementGateway(
+        request.headers.get(demoClientSessionIdHeader) ?? "shared",
+      )
+    : client
+      ? createSupabaseWorkspaceSpaceManagementGateway(
+          client as unknown as SupabaseWorkspaceSpaceManagementClient,
+        )
+      : undefined;
   const result = await mutateConsultationFlow({
     actorUserId: identity.actorUserId,
     workspaceId,
@@ -77,6 +92,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         )
       : undefined,
     permissionAdapter,
+    spaceManagementGateway,
     auditGateway: client
       ? createSupabaseLiveAuditAppendGateway(
           client as unknown as SupabaseLiveAuditAppendRpcClient,

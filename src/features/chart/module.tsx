@@ -181,11 +181,11 @@ import {
   getChartQueueItems,
   getChartQueueStatuses,
   getChartStaffName,
-  getConsultationCallRooms,
   type ChartEncounterBundle,
   type ChartHistoryRow,
   type ChartOrderGroup,
 } from "@/features/chart/data";
+import { useWorkspaceConsultationRooms } from "@/features/chart/use-workspace-consultation-rooms";
 import { ChartDiagnosisHistoryItem } from "@/features/chart/components/chart-diagnosis-history-item";
 import { ChartPreconsultationContextPanel } from "@/features/chart/preconsultation-context-panel";
 import {
@@ -15423,6 +15423,11 @@ export function ChartContent({
     () => getDemoActorHeader(authSession),
     [authSession],
   );
+  const {
+    reload: reloadConsultationRooms,
+    rooms: consultationCallRooms,
+    status: consultationRoomsStatus,
+  } = useWorkspaceConsultationRooms({ session: authSession, workspaceId });
   const diagnosisCatalogActorKey = authSession?.id ?? "signed-out";
   const [soapReloadKey, setSoapReloadKey] = useState(0);
   const [chartListRetryKey, setChartListRetryKey] = useState(0);
@@ -16162,8 +16167,15 @@ export function ChartContent({
     selectHistoryEncounter,
   ]);
 
-  const handleOpenCallDialog = () => {
-    const roomIds = new Set(getConsultationCallRooms().map((room) => room.id));
+  const handleOpenCallDialog = async () => {
+    setPreferredCallRoomId("");
+    setSaveCallRoomPreference(false);
+    setSelectedCallRoomId("");
+    setCallDialogOpen(true);
+
+    const rooms = await reloadConsultationRooms();
+    if (!rooms) return;
+    const roomIds = new Set(rooms.map((room) => room.id));
     const storedRoomId = readCallRoomPreference({
       actorUserId: authSession?.id,
       roomIds,
@@ -16173,7 +16185,6 @@ export function ChartContent({
     setPreferredCallRoomId(storedRoomId);
     setSaveCallRoomPreference(Boolean(storedRoomId));
     setSelectedCallRoomId(storedRoomId);
-    setCallDialogOpen(true);
   };
 
   useEffect(() => {
@@ -16193,10 +16204,17 @@ export function ChartContent({
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      const roomIds = new Set(
-        getConsultationCallRooms().map((room) => room.id),
-      );
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setPreferredCallRoomId("");
+      setSaveCallRoomPreference(false);
+      setSelectedCallRoomId("");
+      setCallDialogOpen(true);
+      clearPendingConsultationCall();
+
+      const rooms = await reloadConsultationRooms();
+      if (cancelled || !rooms) return;
+      const roomIds = new Set(rooms.map((room) => room.id));
       const storedRoomId = readCallRoomPreference({
         actorUserId: authSession?.id,
         roomIds,
@@ -16206,15 +16224,17 @@ export function ChartContent({
       setPreferredCallRoomId(storedRoomId);
       setSaveCallRoomPreference(Boolean(storedRoomId));
       setSelectedCallRoomId(storedRoomId);
-      setCallDialogOpen(true);
-      clearPendingConsultationCall();
     }, 0);
 
-    return () => window.clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [
     activeEncounterId,
     activeWorkspaceId,
     authSession?.id,
+    reloadConsultationRooms,
     bundle?.encounter.status,
     clearPendingConsultationCall,
     effectiveQueueEntry?.status,
@@ -16480,7 +16500,6 @@ export function ChartContent({
     });
     onNavigateWorkspaceSurface?.(href, "billing");
   };
-  const consultationCallRooms = getConsultationCallRooms();
   const selectedCallRoom = consultationCallRooms.find(
     (room) => room.id === selectedCallRoomId,
   );
@@ -16707,6 +16726,7 @@ export function ChartContent({
               disabled={
                 consultationFlowState.status === "saving" ||
                 detailHydrationPending ||
+                consultationRoomsStatus !== "ready" ||
                 !selectedCallRoomId
               }
               onClick={() => void handleConsultationFlowMutation("call")}
@@ -16774,7 +16794,9 @@ export function ChartContent({
                 }}
                 disabled={
                   consultationFlowState.status === "saving" ||
-                  detailHydrationPending
+                  detailHydrationPending ||
+                  consultationRoomsStatus !== "ready" ||
+                  consultationCallRooms.length === 0
                 }
               >
                 <SelectTrigger
@@ -16794,6 +16816,31 @@ export function ChartContent({
                 </SelectContent>
               </Select>
             </ChartPreflightField>
+            {consultationRoomsStatus !== "ready" ||
+            consultationCallRooms.length === 0 ? (
+              <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-center gap-x-2 emr-text-metadata sm:gap-x-3 [&>*]:min-w-0">
+                <span aria-hidden="true" />
+                <div className="flex min-h-7 items-center justify-between gap-2 text-[var(--emr-text-secondary)]">
+                  <span role="status">
+                    {consultationRoomsStatus === "loading"
+                      ? "진료실 목록을 불러오는 중입니다."
+                      : consultationRoomsStatus === "ready"
+                        ? "사용 가능한 진료실이 없습니다. 병원 관리에서 진료 공간을 추가해 주세요."
+                        : "진료실 목록을 불러오지 못했어요."}
+                  </span>
+                  {consultationRoomsStatus === "error" ||
+                  consultationRoomsStatus === "denied" ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void reloadConsultationRooms()}
+                    >
+                      다시 시도
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
             <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-x-2 emr-text-metadata sm:gap-x-3 [&>*]:min-w-0">
               <span aria-hidden="true" />
               <label className="flex min-h-7 items-center gap-2 text-[var(--emr-text-secondary)]">
@@ -16803,6 +16850,7 @@ export function ChartContent({
                   disabled={
                     consultationFlowState.status === "saving" ||
                     detailHydrationPending ||
+                    consultationRoomsStatus !== "ready" ||
                     !selectedCallRoomId
                   }
                   onCheckedChange={(checked) =>
