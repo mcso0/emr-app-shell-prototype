@@ -109,6 +109,12 @@ test("consultation call RPC resolves an active workspace consultation space", ()
   expect(consultationRoomMigration).toContain(
     "private.clair_current_user_has_workspace_permission(p_workspace_id, 'chart:update')",
   );
+  expect(
+    consultationRoomMigration.match(/security definer\nset search_path = ''/g),
+  ).toHaveLength(2);
+  expect(consultationRoomMigration).toContain(
+    "alter function public.clair_call_consultation_queue(text, text, uuid, text)\n  set search_path = ''",
+  );
   expect(consultationRoomMigration).toContain("raise exception 'room_unavailable'");
   expect(consultationRoomMigration).not.toContain("when 'room-consult-1'");
 });

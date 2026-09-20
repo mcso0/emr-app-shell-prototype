@@ -9,7 +9,7 @@ create or replace function private.clair_call_consultation_queue_internal(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, private, pg_temp
+set search_path = ''
 as $$
 declare
   v_actor_user_id uuid := nullif(p_actor_user_id, '')::uuid;
@@ -142,6 +142,9 @@ $$;
 revoke all on function private.clair_call_consultation_queue_internal(text, text, uuid, text)
   from public, anon, authenticated;
 
+alter function public.clair_call_consultation_queue(text, text, uuid, text)
+  set search_path = '';
+
 create or replace function public.clair_call_consultation_queue(
   p_workspace_id text,
   p_actor_user_id text,
@@ -150,7 +153,7 @@ create or replace function public.clair_call_consultation_queue(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, private, pg_temp
+set search_path = ''
 as $$
 declare
   v_actor_user_id uuid;
