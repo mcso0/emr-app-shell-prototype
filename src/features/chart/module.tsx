@@ -75,10 +75,7 @@ import {
 } from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
-import {
-  CdsUtilitiesHistoryIcon,
-  CdsUtilitiesSortIcon,
-} from "@/components/cds-icons/utilities-and-misc";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
   EmrContentAsideHeader,
@@ -101,7 +98,6 @@ import { EmrInstructionHistoryToggle } from "@/components/emr/instruction-header
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
-import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
@@ -7609,6 +7605,29 @@ function ChartOrderActualDispenseCell({
   );
 }
 
+function ChartOrderDisabledAction({
+  children,
+  reason,
+}: {
+  children: ReactNode;
+  reason?: string;
+}) {
+  if (!reason) return children;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="inline-flex" tabIndex={0} aria-label={reason} />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function ChartOrderTable({
   detailOpen,
   quickAdd,
@@ -7866,6 +7885,50 @@ function ChartOrderTable({
     });
     return latest;
   }, [executionTasks]);
+  const getPrimaryEditAction = (
+    orderRow: ChartOrderDraftRow,
+  ): "amend" | "re_request" | null => {
+    if (
+      orderRow.runtimeRow?.rowType === "set" ||
+      orderRow.runtimeRow?.rowType === "set_child"
+    ) {
+      return null;
+    }
+    const currentTask = latestTaskByOrderId.get(orderRow.order.id);
+    if (currentTask) {
+      if (currentTask.taskRole !== "execution") return null;
+      if (currentTask.status === "pending") return "amend";
+      if (
+        ["in_progress", "paused", "complete", "returned"].includes(
+          currentTask.status,
+        )
+      ) {
+        return "re_request";
+      }
+      return null;
+    }
+    if (orderRow.order.status === "confirmed") return "amend";
+    if (
+      ["in_progress", "completed", "re_requested"].includes(
+        orderRow.order.status,
+      )
+    ) {
+      return "re_request";
+    }
+    return null;
+  };
+  const canRepeatRequest = (orderRow: ChartOrderDraftRow) => {
+    const currentTask = latestTaskByOrderId.get(orderRow.order.id);
+    if (currentTask) {
+      const expectedRole =
+        orderRow.runtimeRow?.rowType === "set" ? "aggregate" : "execution";
+      return (
+        currentTask.taskRole === expectedRole &&
+        ["complete", "returned"].includes(currentTask.status)
+      );
+    }
+    return ["completed", "re_requested"].includes(orderRow.order.status);
+  };
   const sorting = useMemo<SortingState>(
     () =>
       sortState
@@ -8105,13 +8168,7 @@ function ChartOrderTable({
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
-        cell: ({ row }) => {
-          const pendingRemoval = pendingRemovalOrderIdsRef.current.has(
-            row.original.order.id,
-          );
-          if (pendingRemoval) return <EmrStatusBadge label="삭제 중" marker="icon" />;
-          return <ChartOrderWorkStatus row={row.original} />;
-        },
+        cell: ({ row }) => <ChartOrderWorkStatus row={row.original} />,
         meta: {
           label: chartOrderSortLabels.status,
           headerInteraction: "sortable",
@@ -9035,7 +9092,7 @@ function ChartOrderTable({
           getRowOverlayAriaLabel={(row) =>
             `${row.original.order.displayName} 행 작업`
           }
-          rowOverlayWidth={174}
+          rowOverlayWidth={114}
           renderRowOverlay={({ row }) => {
             const orderRow = row.original;
             const { order } = orderRow;
@@ -9044,69 +9101,55 @@ function ChartOrderTable({
             const setChild = orderRow.runtimeRow?.rowType === "set_child";
             const setParent = orderRow.runtimeRow?.rowType === "set";
             const included = isChartOrderSetChildIncluded(orderRow);
-            const currentTask = latestTaskByOrderId.get(order.id);
-            const canAmend = currentTask
-              ? currentTask.taskRole === "execution" &&
-                currentTask.status === "pending"
-              : order.status === "confirmed";
-            const canReRequest = currentTask
-              ? currentTask.taskRole ===
-                  (setParent ? "aggregate" : "execution") &&
-                (setParent
-                  ? [
-                      "in_progress",
-                      "paused",
-                      "partial_complete",
-                      "complete",
-                      "returned",
-                    ].includes(currentTask.status)
-                  : ["in_progress", "paused", "complete", "returned"].includes(
-                      currentTask.status,
-                    ))
-              : ["in_progress", "completed", "re_requested"].includes(
-                  order.status,
-                );
+            const primaryEditAction = getPrimaryEditAction(orderRow);
+            const repeatRequestAvailable = canRepeatRequest(orderRow);
             const iconClassName =
-              "size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]";
+              "size-6 rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)] disabled:bg-[rgba(255,255,255,0.04)] disabled:shadow-none disabled:opacity-50 [&_svg]:size-[14px]";
 
             if (!confirmed) {
               if (pendingRemoval) return null;
+              const confirmationReason = setChild
+                ? "세트 자식은 세트 단위로 확정해 주세요."
+                : writeDisabled
+                  ? "오더 수정 권한이 없습니다."
+                  : draftWriteDisabled
+                    ? "저장이 끝난 뒤 확정할 수 있어요."
+                    : confirmationDisabled
+                      ? "삭제 저장 또는 충돌 해결 후 확정할 수 있어요."
+                      : invalidOrderIds.has(order.id)
+                        ? "확정에 필요한 수량과 세부값을 입력해 주세요."
+                        : undefined;
+              const deletionReason = setChild
+                ? "세트 자식은 세트 구성에서 제외해 주세요."
+                : writeDisabled
+                  ? "오더 수정 권한이 없습니다."
+                  : draftWriteDisabled
+                    ? "저장이 끝난 뒤 삭제할 수 있어요."
+                    : undefined;
               return (
                 <>
-                  {!setChild ? (
+                  <ChartOrderDisabledAction reason={confirmationReason}>
                     <EmrIconButton
                       aria-label={`${order.displayName} 확정`}
                       className={iconClassName}
-                      disabled={
-                        confirmationDisabled ||
-                        writeDisabled ||
-                        invalidOrderIds.has(order.id)
-                      }
+                      disabled={Boolean(confirmationReason)}
                       onClick={() => onConfirmOrder(order.id)}
                       type="button"
                     >
                       <CdsActionsCheckIcon aria-hidden="true" />
                     </EmrIconButton>
-                  ) : null}
-                  <EmrIconButton
-                    aria-label={`${order.displayName} 상세`}
-                    className={iconClassName}
-                    onClick={() => openDetail(order.id)}
-                    type="button"
-                  >
-                    <CdsMedicalFileSearchIcon aria-hidden="true" />
-                  </EmrIconButton>
-                  {!setChild ? (
+                  </ChartOrderDisabledAction>
+                  <ChartOrderDisabledAction reason={deletionReason}>
                     <EmrIconButton
                       aria-label={`${order.displayName} 후보 삭제`}
                       className={cn(iconClassName, "text-destructive")}
-                      disabled={writeDisabled || draftWriteDisabled}
+                      disabled={Boolean(deletionReason)}
                       onClick={() => onDeleteOrder(order.id)}
                       type="button"
                     >
                       <CdsActionsTrash2Icon aria-hidden="true" />
                     </EmrIconButton>
-                  ) : null}
+                  </ChartOrderDisabledAction>
                   <EmrRowActionMenu
                     ariaLabel={`${order.displayName} 더보기`}
                     density="compact"
@@ -9134,6 +9177,15 @@ function ChartOrderTable({
               );
             }
 
+            const editReason = setChild
+              ? "세트 자식은 개별 수정할 수 없습니다."
+              : setParent
+                ? "세트 오더는 더보기에서 재요청할 수 있습니다."
+                : writeDisabled
+                  ? "오더 수정 권한이 없습니다."
+                  : !primaryEditAction
+                    ? "현재 상태에서는 수정할 수 없습니다."
+                    : undefined;
             return (
               <>
                 <EmrIconButton
@@ -9144,25 +9196,20 @@ function ChartOrderTable({
                 >
                   <CdsMedicalFileSearchIcon aria-hidden="true" />
                 </EmrIconButton>
-                <EmrIconButton
-                  aria-label={`${order.displayName} 이력`}
-                  className={iconClassName}
-                  onClick={() => onOpenHistory(order.id)}
-                  type="button"
-                >
-                  <CdsUtilitiesHistoryIcon aria-hidden="true" />
-                </EmrIconButton>
-                {!setParent && !setChild ? (
+                <ChartOrderDisabledAction reason={editReason}>
                   <EmrIconButton
-                    aria-label={`${order.displayName} 정정`}
+                    aria-label={`${order.displayName} 수정`}
                     className={iconClassName}
-                    disabled={writeDisabled || !canAmend}
-                    onClick={() => onOpenMutation(order.id, "amend")}
+                    disabled={Boolean(editReason)}
+                    onClick={() =>
+                      primaryEditAction &&
+                      onOpenMutation(order.id, primaryEditAction)
+                    }
                     type="button"
                   >
                     <CdsContentEdit2Icon aria-hidden="true" />
                   </EmrIconButton>
-                ) : null}
+                </ChartOrderDisabledAction>
                 <EmrRowActionMenu
                   ariaLabel={`${order.displayName} 더보기`}
                   density="compact"
@@ -9181,8 +9228,9 @@ function ChartOrderTable({
                     },
                     {
                       key: "re-request",
-                      label: "수정·재확정",
-                      disabled: writeDisabled || setChild || !canReRequest,
+                      label: "재요청",
+                      disabled:
+                        writeDisabled || setChild || !repeatRequestAvailable,
                       onSelect: () => onOpenMutation(order.id, "re_request"),
                     },
                     {
@@ -9973,10 +10021,10 @@ const chartOrderMutationLabels: Record<
   ChartOrderExecutionMutationAction,
   string
 > = {
-  amend: "오더 정정",
+  amend: "오더 수정",
   cancel: "오더 취소",
   priority_change: "긴급 변경",
-  re_request: "오더 수정·재확정",
+  re_request: "수정 후 재요청",
 };
 
 function ChartOrderMutationDialog({
@@ -11480,6 +11528,9 @@ function OrderArea({
   const [orderActionDialog, setOrderActionDialog] =
     useState<OrderActionDialogType | null>(null);
   const [confirmationOrderIds, setConfirmationOrderIds] = useState<Set<string> | null>(null);
+  const [confirmationSource, setConfirmationSource] = useState<
+    "row" | "selection" | null
+  >(null);
   const [deleteOrderIds, setDeleteOrderIds] = useState<string[]>([]);
   const [selectedBillingOrderIds, setSelectedBillingOrderIds] = useState<string[]>([]);
   const [bulkOrderMutation, setBulkOrderMutation] = useState<ChartOrderBulkMutationDraft | null>(null);
@@ -11697,7 +11748,12 @@ function OrderArea({
   const filteredOrderRows = draftRows.filter(
     (row) => !filteredRootIds || filteredRootIds.has(orderRootId(row)),
   );
-  const visibleOrderRows = filteredOrderRows;
+  const visibleOrderRows = filteredOrderRows.filter(
+    (row) =>
+      orderDraftSaveState === "error" ||
+      orderDraftSaveState === "conflict" ||
+      !pendingRemovalOrderIds.has(row.order.id),
+  );
   const quickAddedRow = draftRows.find((row) => getChartDraftRowCatalogSourceKey(row) === quickAddedSourceKey);
   const quickAddedHidden = quickAddedRow && !visibleOrderRows.includes(quickAddedRow);
   const quickAddExistingKeys = useMemo(() => new Set(draftRows.map(getChartDraftRowCatalogSourceKey)), [draftRows]);
@@ -12932,7 +12988,9 @@ function OrderArea({
         draftSaveDelayMsRef.current = chartOrderContinuousSaveDelayMs;
         if (attemptedRemovedRootOrderIds.size > 0) {
           toast.success(
-            `${attemptedRemovedRootOrderIds.size}개 후보를 삭제하고 저장했어요.`,
+            attemptedRemovedRootOrderIds.size === 1
+              ? "오더를 삭제했어요."
+              : `${attemptedRemovedRootOrderIds.size}개 오더를 삭제했어요.`,
           );
         }
         const acknowledgedAdditionCount = Array.from(
@@ -13328,6 +13386,7 @@ function OrderArea({
       toast.error("확정에 필요한 수량과 세부값을 모두 입력해 주세요.");
       setOrderActionDialog(null);
       setConfirmationOrderIds(null);
+      setConfirmationSource(null);
       return;
     }
     if (
@@ -13338,6 +13397,7 @@ function OrderArea({
       toast.error("확정 전 후보만 확정할 수 있어요.");
       setOrderActionDialog(null);
       setConfirmationOrderIds(null);
+      setConfirmationSource(null);
       return;
     }
     const pendingDraftSave = orderDraftSavePromiseRef.current;
@@ -13404,8 +13464,11 @@ function OrderArea({
         setOrderDraftEtag(result.etag);
       }
       pendingConfirmationRef.current = null;
-      setSelectedOrderIds(new Set());
+      if (confirmationSource === "selection") {
+        setSelectedOrderIds(new Set());
+      }
       setConfirmationOrderIds(null);
+      setConfirmationSource(null);
       setOrderActionDialog(null);
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
@@ -13477,15 +13540,18 @@ function OrderArea({
       draftRowsRef.current,
     );
     const attemptedDraftEditVersion = draftEditVersionRef.current;
-    const nextSelectedOrderIds = remapChartOrderIdSet(
+    const nextConfirmationOrderIds = remapChartOrderIdSet(
       confirmationTargetOrderIds,
       preparedDraft.orderIdMap,
     );
     if (preparedDraft.orderIdMap.size > 0) {
       setDraftRows(preparedDraft.rows);
-      setSelectedOrderIds(nextSelectedOrderIds);
+      setSelectedOrderIds((current) =>
+        remapChartOrderIdSet(current, preparedDraft.orderIdMap),
+      );
+      setConfirmationOrderIds(nextConfirmationOrderIds);
     }
-    const orderIds = Array.from(nextSelectedOrderIds);
+    const orderIds = Array.from(nextConfirmationOrderIds);
 
     const expectedDraftEtag = orderDraftEtagRef.current;
     if (!expectedDraftEtag) {
@@ -13593,7 +13659,7 @@ function OrderArea({
         setOrderDraftSaveState("error");
         setCommittedRows(savedDraftRows);
         setDraftRows(savedDraftRows);
-        setSelectedOrderIds(new Set(actionOrderIds));
+        setConfirmationOrderIds(new Set(actionOrderIds));
         toast.error("선택한 오더를 서버 draft에 저장하지 못했어요.");
         return;
       }
@@ -13613,7 +13679,7 @@ function OrderArea({
     if (actionOrderIds.length !== orderIds.length) {
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState("error");
-      setSelectedOrderIds(new Set(actionOrderIds));
+      setConfirmationOrderIds(new Set(actionOrderIds));
       toast.error("선택한 오더를 서버 draft에서 확인하지 못했어요.");
       return;
     }
@@ -13789,8 +13855,8 @@ function OrderArea({
     ) {
       return;
     }
-    setSelectedOrderIds(new Set([orderId]));
     setConfirmationOrderIds(new Set([orderId]));
+    setConfirmationSource("row");
     setChartActualDrafts({});
     setOrderActionDialog("confirm");
   };
@@ -13802,6 +13868,7 @@ function OrderArea({
       return;
     }
     setConfirmationOrderIds(new Set(draftOrderIds));
+    setConfirmationSource("selection");
     setChartActualDrafts({});
     setOrderActionDialog("confirm");
   };
@@ -14073,7 +14140,7 @@ function OrderArea({
       }
       const error =
         result.denialReason === "amendment_requires_pending"
-          ? "진행을 시작한 오더는 같은 attempt에서 정정할 수 없습니다. 재요청을 사용해 주세요."
+          ? "진행을 시작한 오더는 현재 요청에서 수정할 수 없습니다. 수정 후 재요청을 사용해 주세요."
           : result.denialReason === "revision_conflict"
             ? "다른 사용자가 먼저 변경했습니다. 최신 이력을 불러온 뒤 다시 시도해 주세요."
             : result.denialReason === "re_request_transition_invalid"
@@ -14840,6 +14907,7 @@ function OrderArea({
             if (!open) {
               setOrderActionDialog(null);
               setConfirmationOrderIds(null);
+              setConfirmationSource(null);
             }
           }}
         >
@@ -14861,7 +14929,7 @@ function OrderArea({
                   </span>
                   <span>차트번호: {bundle.encounter.encounterNo}</span>
                   <span>
-                    선택 오더: {confirmationTargetOrderIds.size}건 · 선택 금액{" "}
+                    확정 오더: {confirmationTargetOrderIds.size}건 · 확정 금액{" "}
                     {confirmationSelectedOrderRows
                       .reduce(
                         (sum, row) => sum + getChartOrderScopedChargeAmount(row),
@@ -14894,6 +14962,7 @@ function OrderArea({
             onCancel={() => {
               setOrderActionDialog(null);
               setConfirmationOrderIds(null);
+              setConfirmationSource(null);
             }}
             onConfirm={() => void commitOrderConfirmation()}
           />
