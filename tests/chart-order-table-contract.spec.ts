@@ -150,7 +150,7 @@ test("Plan/Order keeps transparent 8px gutters aligned across header and body", 
   }
 });
 
-test("Plan/Order keeps the gap resize handle inside its allocation without a body divider", async ({
+test("Plan/Order keeps the boundary line and fixed area above the scroll layer", async ({
   page,
 }) => {
   await page.goto(chartOrderUrl);
@@ -179,11 +179,32 @@ test("Plan/Order keeps the gap resize handle inside its allocation without a bod
     before: { top: "4px", left: "3.5px", height: "14px", width: "1px" },
   });
   await expect(root.locator('[data-emr-pinned-table-divider="true"]')).toHaveCount(1);
-  await expect(root.locator('[data-emr-pinned-table-divider="true"]').first()).toHaveCSS("display", "none");
+  const divider = root.locator('[data-emr-pinned-table-divider="true"]').first();
+  await expect(divider).toBeVisible();
+  await expect(divider).toHaveCSS("display", "block");
+  await expect(divider.evaluate((element) => {
+    const dividerRect = element.getBoundingClientRect();
+    const viewport = element.closest('[data-emr-pinned-table-viewport="true"]');
+    const viewportRect = viewport?.getBoundingClientRect();
+    return viewportRect
+      ? {
+          top: Math.round(dividerRect.top - viewportRect.top),
+          height: Math.round(dividerRect.height),
+          viewportHeight: Math.round(viewportRect.height),
+        }
+      : null;
+  })).resolves.toMatchObject({ top: 0 });
+  await expect(divider.evaluate((element) => {
+    const dividerRect = element.getBoundingClientRect();
+    const viewport = element.closest('[data-emr-pinned-table-viewport="true"]');
+    const viewportRect = viewport?.getBoundingClientRect();
+    return viewportRect ? Math.round(dividerRect.height - viewportRect.height) : null;
+  })).resolves.toBe(0);
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCount(1);
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]').evaluate((element) =>
     getComputedStyle(element).insetInlineStart,
   )).resolves.toBe("420px");
+  await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCSS("z-index", "1");
   await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toHaveCount(1);
   await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toBeVisible();
   await expect(handle).toHaveCSS("pointer-events", "auto");
@@ -206,6 +227,24 @@ test("Plan/Order scroll columns keep a working header resize handle", async ({ p
     "aria-sort",
     "ascending",
   );
+});
+
+test("Plan/Order boundary drag resizes only Order name", async ({ page }) => {
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const displayNameHeader = table.locator('th[data-column-id="displayName"]');
+  const statusHeader = table.locator('th[data-column-id="status"]');
+  const handle = displayNameHeader.locator('[data-emr-column-resize-handle="true"]');
+  await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "180");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  const box = await handle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 24, box!.y + box!.height / 2);
+  await page.mouse.up();
+  await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "204");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
 });
 
 test("Plan/Order empty display values use the shared hyphen placeholder", async ({

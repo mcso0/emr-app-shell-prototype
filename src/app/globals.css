@@ -413,11 +413,6 @@
   }
 
   [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
-    [data-emr-pinned-table-divider="true"] {
-    display: none;
-  }
-
-  [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
     [data-emr-pinned-table-header-divider="true"] {
     position: absolute;
     z-index: 15;
