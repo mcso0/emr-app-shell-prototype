@@ -1478,8 +1478,10 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
     };
   });
 
-  expect(referenceMetrics.leftPinnedWidth).toBe(412);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1094);
+  // The left pinned span includes the terminal 8px boundary gap. The visible
+  // divider is drawn at its trailing edge and the scroll layer starts after it.
+  expect(referenceMetrics.leftPinnedWidth).toBe(420);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1086);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")

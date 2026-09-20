@@ -306,7 +306,7 @@
                   <div class="column-block scroll-block" style="width:88px"><b>총횟수</b><span>88px</span></div><div class="grab"></div>
                   <div class="column-block scroll-block" style="width:88px"><b>…</b><span>22개</span></div>
                 </div>
-                <div class="architecture-note"><b>8px</b><span>스크롤 영역은 헤더에만 visible Grab이 있고, body에는 동일 폭의 투명 gutter만 둔다. 고정/스크롤 경계는 Grab stroke 대신 header line을 사용하고 hit area만 유지한다. td에는 리사이즈 인터랙션이 없다.</span></div>
+                <div class="architecture-note"><b>8px</b><span>스크롤 영역은 헤더에만 visible Grab이 있고, body에는 동일 폭의 투명 gutter만 둔다. 고정/스크롤 경계는 header와 body에 1px line을 사용하고, header의 hit area만 리사이즈로 유지한다. td에는 리사이즈 인터랙션이 없다.</span></div>
                 <div class="architecture-note"><b>선택형</b><span>공유 테이블의 resize는 optional, 기본 비활성. 필요한 테이블만 켠다. 헤더 label의 정렬과 Grab drag는 분리하고, drag는 정렬 클릭으로 전파하지 않는다.</span></div>
                 <div class="architecture-note"><b>토큰</b><span>Grab hover/focus blackAlpha/6 · drag blackAlpha/8. 앱에서는 공유 토큰을 사용한다. 이 도식은 핸들 동작을 실행하지 않는다.</span></div>
               </div>
@@ -386,7 +386,7 @@
 <p>착수 전 문서 검증 기록: docs:check, 목표26/원본27 구분, MD/HTML 순서·폭 일치, JS 문법·앵커·공백 검사 통과. 당시 file URL 렌더링 검증은 하지 못했다. 앱 구현의 최종 통과 여부와 구분한다. Jev의 잔여 위험 의견은 DB CHECK·반올림·합계0·WIP 보존 항목에 반영했다.</p>
 <details class="research-block" open><summary>이번 구현에 반영한 UI 수정사항</summary>
 <ul>
-<li><strong>고정/스크롤 경계</strong>: 헤더에는 1px 세로 라인만 보이고, `Order 명` 리사이즈는 같은 8px 영역의 투명 hit area로 유지한다. body에는 라인·Grab 없이 투명 8px gap만 둔다.</li>
+<li><strong>고정/스크롤 경계</strong>: 헤더와 body에 1px 세로 라인이 보이고, `Order 명` 리사이즈는 같은 8px 영역의 투명 hit area로 유지한다. body에는 Grab 없이 투명 8px gap만 둔다.</li>
 <li><strong>스크롤 헤더</strong>: 스크롤 컬럼의 Grab은 헤더에만 있고 body에는 없다. 업무 상태는 88px 이상으로 onChange 리사이즈할 수 있다.</li>
 <li><strong>빈 값</strong>: 데이터가 없는 셀은 Neutral400 ASCII `-`로 통일하고, `계산 불가`처럼 의미가 있는 도메인 표기는 보존한다.</li>
 <li><strong>입력 폭</strong>: 청구서명·수량·상세 필드·실제 조제량·할인/할증·사유 입력은 컬럼 폭에 따라 늘어난다. 시안의 6px trailing 및 10px leading inset은 보존한다.</li>
@@ -456,7 +456,7 @@
 <tr><td>Switch focus / disabled</td><td>검사한 set에 전용 variant 없음; 현재 공유 Switch는 최소40×40 hit area</td><td>focus/keyboard/disabled semantics 보존. 64px 열에서 인접 클릭 간섭과 border·thumb margin 실제 좌표 검증</td></tr>
 <tr><td>Avatar</td><td>24×24 circle, neutral/100, border1 blackAlpha/6; initials10/14 Medium general/foreground</td><td>163358 / 163361; small PictureOff 27290:111189 / PictureOn 27290:111197. loading/error 전용 variant 없음</td></tr>
 <tr><td>업무 상태</td><td>미확정 - x12 neutral/400; 확정 icon16 x10, label x30 neutral/900</td><td>163295 / 163452. 아이콘–라벨 gap4; 내부 text wrapper gap6과 혼동 금지</td></tr>
-<tr><td>Grab</td><td>8×22 hit frame; 중앙 stroke1×14, x3.5 y4 neutral/300</td><td>163228 / 163229. hover blackAlpha/6, drag blackAlpha/8은 사용자 합의. body와 고정 내부에는 선 없음</td></tr></tbody></table></div>
+<tr><td>Grab</td><td>8×22 hit frame; 중앙 stroke1×14, x3.5 y4 neutral/300</td><td>163228 / 163229. hover blackAlpha/6, drag blackAlpha/8은 사용자 합의. 고정 경계는 header/body line과 header-only invisible hit area를 사용하고, 고정 내부 gap과 scroll body gutter에는 선 없음</td></tr></tbody></table></div>
 <p>공유 Input은 이미 px10 py4, invalid ring, disabled opacity100을 제공한다. 높이·색상·focus ring은 semantic CSS 변수와 현재 사용처를 대조해 최소 변경한다. 공유 Switch sm/default는 이미32×18/16이며 청구반영도 default 사용 중이다. 확인된 차이는 OFF neutral/200→300, thumb border/margin 좌표 및 hover 세부 값이지 새 size 추가가 아니다.</p>
 <p>상태 시안이 없는 항목은 조사를 생략한 것이 아니라 해당 set에 variant가 없는 것으로 기록했다. focus-visible, 접근 가능한 이름, 오류 설명, 비활성 이유와 키보드 동작을 삭제해서 모양만 맞추지 않는다.</p></details>
 <details class="research-block"><summary>편집·저장·실패: 현재 코드 계약</summary>

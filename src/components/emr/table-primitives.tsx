@@ -377,7 +377,7 @@ export function EmrPinnedTableViewport({
       <ScrollBar
         data-emr-pinned-table-scrollbar="horizontal"
         orientation="horizontal"
-        className="z-20"
+        className="z-[1]"
         style={{
           insetInlineStart: "var(--emr-table-left-pinned-column-width)",
           insetInlineEnd: "var(--emr-table-right-pinned-column-width)",

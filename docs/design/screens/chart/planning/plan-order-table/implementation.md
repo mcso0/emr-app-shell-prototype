@@ -266,12 +266,12 @@ Between `선택`, `분류`, `확정 여부`, and `Order 명`, both header and bo
 
 The boundary after `Order 명` is the one exception inside the pinned area:
 
-- the header shows a 1px vertical boundary line at the fixed/scroll edge;
+- the header and body share a 1px vertical boundary line at the fixed/scroll edge;
 - the resize hit area remains an invisible 8px header-only handle on the `Order 명` edge;
 - dragging it changes only the `Order 명` width;
 - the resize updates live with `columnResizeMode: "onChange"`;
-- the body has no line and no resize control; it retains only the transparent
-  8px spacing at the boundary.
+- the body line is visual only and has no resize control; the transparent 8px
+  spacing remains part of the boundary allocation.
 
 ### Scrollable columns
 
@@ -643,7 +643,7 @@ body wrapper는 선택 px2 외에는 px0. 대부분 spacer6 + gap4로 콘텐츠 
 | Switch focus / disabled | 검사한 set에 전용 variant 없음; 현재 공유 Switch는 최소40×40 hit area | focus/keyboard/disabled semantics 보존. 64px 열에서 인접 클릭 간섭과 border·thumb margin 실제 좌표 검증 |
 | Avatar | 24×24 circle, neutral/100, border1 blackAlpha/6; initials10/14 Medium general/foreground | 163358 / 163361; small PictureOff 27290:111189 / PictureOn 27290:111197. loading/error 전용 variant 없음 |
 | 업무 상태 | 미확정 - x12 neutral/400; 확정 icon16 x10, label x30 neutral/900 | 163295 / 163452. 아이콘–라벨 gap4; 내부 text wrapper gap6과 혼동 금지 |
-| Grab | 8×22 hit frame; 중앙 stroke1×14, x3.5 y4 neutral/300 | 163228 / 163229. 스크롤 헤더는 visible Grab, 고정 경계는 1px header line + invisible hit area. hover blackAlpha/6, drag blackAlpha/8은 사용자 합의. body에는 선 없음 |
+| Grab | 8×22 hit frame; 중앙 stroke1×14, x3.5 y4 neutral/300 | 163228 / 163229. 스크롤 헤더는 visible Grab, 고정 경계는 1px header/body line + invisible header-only hit area. hover blackAlpha/6, drag blackAlpha/8은 사용자 합의. 고정 내부 gap과 scroll body gutter에는 선 없음 |
 
 공유 Input은 이미 px10 py4, invalid ring, disabled opacity100을 제공한다. 높이·색상·focus ring은 semantic CSS 변수와 현재 사용처를 대조해 최소 변경한다. 공유 Switch sm/default는 이미32×18/16이며 청구반영도 default 사용 중이다. 확인된 차이는 OFF neutral/200→300, thumb border/margin 좌표 및 hover 세부 값이지 새 size 추가가 아니다.
 

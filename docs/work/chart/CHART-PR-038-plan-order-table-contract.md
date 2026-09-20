@@ -25,7 +25,8 @@ change and synthetic verification, not unrelated DB or real-data operations.
 
 ## Scope and boundaries
 
-- Header/body geometry, widths, optional resize, narrow fallback, units/sorting.
+- Header/body geometry, widths, fixed/scroll boundary line, optional resize,
+  narrow fallback, units/sorting, and scroll-layer containment.
 - Existing Input/Switch/badge/status/avatar presentation, linked signed amount
   and percent, optional free-text reason across UI/core and a new SQL migration.
 - Preserve selection, sets, lifecycle, workspace permissions, CAS, idempotency,
