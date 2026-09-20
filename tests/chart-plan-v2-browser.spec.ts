@@ -62,7 +62,7 @@ test("V2 chart plan confirms first, then records explicit actual after refresh",
   await page.goto("/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed");
   await expect(page.getByRole("checkbox", { name: `${name} 선택` })).toBeVisible();
   await page.getByRole("checkbox", { name: `${name} 선택` }).check();
-  await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: "선택 확정" }).click();
+  await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: /\d+개 Order 확정/ }).click();
   const dialog = page.getByRole("dialog", { name: "Order 확정 확인" });
   await expect(dialog.getByLabel(`${name} 실제 수행`, { exact: true })).toHaveCount(0);
   await dialog.getByRole("button", { name: "Order 확정", exact: true }).click();
