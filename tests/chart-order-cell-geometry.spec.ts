@@ -42,8 +42,8 @@ test("approved cell geometry centers selection and keeps exact input insets", as
     const [cellBox, controlBox] = await Promise.all([box(cell), box(control)]);
     expect(controlBox.width).toBe(16);
     expect(controlBox.height).toBe(16);
-    // A leading table inset may be allocated outside the logical 20px cell.
-    expect(controlBox.x - cellBox.x).toBeCloseTo(2 + Math.max(0, cellBox.width - 28), 0);
+    // The 8px inter-column gap precedes the 20px selection control area.
+    expect(controlBox.x - cellBox.x).toBeCloseTo(10 + Math.max(0, cellBox.width - 28), 0);
     // The row's 1px bottom rule is not part of its flex content box.
     expect(Math.abs(controlBox.y + 8 - (cellBox.y + cellBox.height / 2))).toBeLessThanOrEqual(0.5);
   }

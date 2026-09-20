@@ -294,7 +294,7 @@
                   </div>
                 </div>
                 <div class="architecture-note"><b>0px</b><span>선행 여백 없음. 20+88+88+180+4×8=408px이며 마지막 8px은 고정/스크롤 경계 할당이다. 원본394px/Order 명170과 달리 사용자 너비를 적용한다. 내부 간격은 선·상호작용 없는 투명 여백이고, 고정 영역이 스크롤 컬럼 위를 불투명하게 덮어 비침을 막는다. 고정/스크롤 경계는 1px 라인을 보이며, 같은 8px 영역 안의 리사이즈 hit area는 유지한다. 선택 폭은 실제20px.</span></div>
-                <div class="architecture-note"><b>10px</b><span>Plan/Order 제목과 분류 탭은 20px 선택 컬럼 안 체크박스의 가로 중심축에 맞춘다. 선택 셀은 테이블 좌측 끝을 유지하고 뒤의 투명한 8px 간격도 그대로 둔다. 이 정렬선은 선택 컬럼과 간격이 끝나는 28px 경계가 아니다.</span></div>
+                <div class="architecture-note"><b>10px</b><span>Plan/Order 제목, 분류 탭 그룹, 선택 체크박스의 왼쪽 외곽선을 일치시킨다. 테이블은 좌측 끝까지 채우고, 선행 투명 여백 8px 뒤의 논리적 20px 선택 영역에서 체크박스가 내부 2px inset을 유지한다.</span></div>
               </div>
               <div class="region">
                 <div class="region-title"><h3>ScrollColumn</h3><small>업무 상태 → 요청 수의사</small></div>
@@ -430,8 +430,8 @@
 <tr><td>과세</td><td>163287 / 163355</td><td>64 최소</td><td>왼쪽 / 왼쪽</td><td>없음</td><td>Switch x10 / 32×18</td></tr>
 <tr><td>업무 담당</td><td>163290 / 163358</td><td>66 최소</td><td>왼쪽 / 왼쪽</td><td>없음</td><td>Avatar x10 / 24×24</td></tr>
 <tr><td>요청 수의사</td><td>163293 / 163361</td><td>77 최소</td><td>왼쪽 / 왼쪽</td><td>없음</td><td>Avatar x10 / 24×24</td></tr></tbody></table></div>
-<p>아래 측정표의27개는 원본 근거이며 단위 열과Order 명170은 최신 목표가 아니다. 선택의 가로·세로 중앙 정렬은 사용자 확정 사항이다. 나머지 셀은 세로 중앙. 헤더 Button은 px8 + 내부 wrapper px2라 왼쪽 라벨 inset이 10px이다. 오른쪽 정렬 헤더는 버튼 그룹이 우측으로 붙으며 아이콘이 없으면 라벨 오른쪽 10px, 아이콘이 있으면 라벨 오른쪽 26px(아이콘12+gap4+10)이다.</p>
-<p>body wrapper는 선택 px2 외에는 px0. 대부분 spacer6 + gap4로 콘텐츠 시작 또는 끝 여백이 10px이다. 청구서명은 gap0이며 Input138 + trailing6, 수량·할인·할증은 선행6+4 뒤 Input이므로 단순한 공통 trailing padding 규칙으로 구현하면 틀린다.</p>
+<p>아래 측정표의27개는 원본 근거이며 단위 열과Order 명170은 최신 목표가 아니다. 선택 체크박스는 선행 투명 여백8px 뒤의 논리적20px 영역에서 가로·세로 중앙 정렬하며, 그 왼쪽 외곽선은Plan/Order 제목·분류 탭 그룹과 일치한다. 나머지 셀은 세로 중앙. 헤더 Button은 px8 + 내부 wrapper px2라 왼쪽 라벨 inset이 10px이다. 오른쪽 정렬 헤더는 버튼 그룹이 우측으로 붙으며 아이콘이 없으면 라벨 오른쪽 10px, 아이콘이 있으면 라벨 오른쪽 26px(아이콘12+gap4+10)이다.</p>
+<p>body wrapper는 선택만 선행 gap8 + 내부 px2이며 나머지는 px0. 대부분 spacer6 + gap4로 콘텐츠 시작 또는 끝 여백이 10px이다. 청구서명은 gap0이며 Input138 + trailing6, 수량·할인·할증은 선행6+4 뒤 Input이므로 단순한 공통 trailing padding 규칙으로 구현하면 틀린다.</p>
 <p>조제량 헤더 instance만 opacity 0.88이고 body는 1이다. 시안에 조건부 비활성화 의미는 명시되어 있지 않으므로 opacity로 편집 가능 여부를 판단하지 않는다. head/kg당의 88, 단위의 mmlg/lg 등 예시 문자열은 유효 임상 데이터나 단위 정의로 채택하지 않는다.</p></details>
 <details class="research-block"><summary>프레임 너비와 오버레이를 분리</summary>
 <div class="table-wrap"><table><thead><tr><th>항목</th><th>실측 / 합의</th><th>구현 시 의미</th></tr></thead><tbody><tr><td>원본 고정 영역</td><td>394px; 셀 시작 x12,32,128,224</td><td>원본은 선택–분류 사이 8px이 없음</td></tr>

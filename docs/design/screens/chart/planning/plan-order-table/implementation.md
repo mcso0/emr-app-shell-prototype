@@ -176,11 +176,10 @@ Required behavior:
   its first four starts are0,28,124,220 and Order 명's visible content ends at
   400px; the divider/resize boundary is at408px. This keeps horizontally
   scrolled columns from bleeding into the fixed area.
-- The `Plan/Order` title and classification tab list start on the selection
-  checkbox's center axis: 10px from the panel's content edge. The 20px
-  selection column remains full-bleed at the table's left edge and its trailing
-  8px transparent gap remains unchanged; the title/tab axis is not the 28px
-  selection-column boundary.
+- The `Plan/Order` title, classification tab list, and selection checkbox share
+  the same left edge: 10px from the panel's content edge. The table remains
+  full-bleed; an 8px transparent leading gap precedes the logical 20px
+  selection-control area, whose checkbox keeps its internal 2px inset.
 - `분류`, `확정 여부`, and `선택` do not have direct resize handles.
 - `Order 명` is resized only through the fixed/scroll boundary. Dragging that
   boundary changes `Order 명` width, not the other pinned columns.
@@ -617,9 +616,9 @@ and measurements for traceability. Product decisions in the latest register win.
 | 업무 담당 | 163290 / 163358 | 66 최소 | 왼쪽 / 왼쪽 | 없음 | Avatar x10 / 24×24 |
 | 요청 수의사 | 163293 / 163361 | 77 최소 | 왼쪽 / 왼쪽 | 없음 | Avatar x10 / 24×24 |
 
-선택의 가로·세로 중앙 정렬은 사용자 확정 사항이다. 나머지 셀은 세로 중앙. 헤더 Button은 px8 + 내부 wrapper px2라 왼쪽 라벨 inset이 10px이다. 오른쪽 정렬 헤더는 버튼 그룹이 우측으로 붙으며 아이콘이 없으면 라벨 오른쪽 10px, 아이콘이 있으면 라벨 오른쪽 26px(아이콘12+gap4+10)이다.
+선택 체크박스는 선행 투명 여백 8px 뒤의 논리적 20px 영역에서 가로·세로 중앙 정렬하며, 그 왼쪽 외곽선은 Plan/Order 제목·분류 탭 그룹과 일치한다. 나머지 셀은 세로 중앙. 헤더 Button은 px8 + 내부 wrapper px2라 왼쪽 라벨 inset이 10px이다. 오른쪽 정렬 헤더는 버튼 그룹이 우측으로 붙으며 아이콘이 없으면 라벨 오른쪽 10px, 아이콘이 있으면 라벨 오른쪽 26px(아이콘12+gap4+10)이다.
 
-body wrapper는 선택 px2 외에는 px0. 대부분 spacer6 + gap4로 콘텐츠 시작 또는 끝 여백이 10px이다. 청구서명은 gap0이며 Input138 + trailing6, 수량·할인·할증은 선행6+4 뒤 Input이므로 단순한 공통 trailing padding 규칙으로 구현하면 틀린다.
+body wrapper는 선택만 선행 gap8 + 내부 px2이며 나머지는 px0. 대부분 spacer6 + gap4로 콘텐츠 시작 또는 끝 여백이 10px이다. 청구서명은 gap0이며 Input138 + trailing6, 수량·할인·할증은 선행6+4 뒤 Input이므로 단순한 공통 trailing padding 규칙으로 구현하면 틀린다.
 
 조제량 헤더 instance만 opacity 0.88이고 body는 1이다. 시안에 조건부 비활성화 의미는 명시되어 있지 않으므로 opacity로 편집 가능 여부를 판단하지 않는다. head/kg당의 88, 단위의 mmlg/lg 등 예시 문자열은 유효 임상 데이터나 단위 정의로 채택하지 않는다.
 
