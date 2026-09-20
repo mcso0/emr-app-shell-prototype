@@ -7,14 +7,41 @@ async function openPatientReceptionMenu(page: Page) {
   await page.getByRole("button", { name: "접수/예약" }).click();
 }
 
-async function mockWalkInCreateSuccess(page: Page) {
+async function mockWalkInCreateSuccess(
+  page: Page,
+  checkedInAt = "2026-05-01T11:20:00+09:00",
+) {
   let count = 0;
+  const inputs: Record<string, unknown>[] = [];
+  const walkIn = {
+    encounter: {
+      id: "encounter-patient-profile-walk-in",
+      workspaceId: "clair-demo",
+      patientId: "patient-coco",
+      guardianId: "guardian-lee-jieun",
+      encounterNo: "E-PROFILE-001",
+      receptionType: "walk_in",
+      status: "waiting",
+      checkedInAt,
+      createdAt: checkedInAt,
+      updatedAt: checkedInAt,
+    },
+    queueEntry: {
+      id: "queue-patient-profile-walk-in",
+      workspaceId: "clair-demo",
+      encounterId: "encounter-patient-profile-walk-in",
+      queueType: "consultation",
+      status: "waiting",
+      priority: "normal",
+      enteredAt: checkedInAt,
+    },
+  };
   await page.route(
     "**/api/workspaces/clair-demo/reception/walk-in-encounters",
     async (route) => {
       count += 1;
       const input = route.request().postDataJSON() as Record<string, unknown>;
-      const checkedInAt = "2026-05-01T11:20:00+09:00";
+      inputs.push(input);
       await route.fulfill({
         status: 201,
         contentType: "application/json",
@@ -24,37 +51,24 @@ async function mockWalkInCreateSuccess(page: Page) {
           workspaceId: "clair-demo",
           walkIn: {
             encounter: {
-              id: "encounter-patient-profile-walk-in",
-              workspaceId: "clair-demo",
-              patientId: "patient-coco",
-              guardianId: "guardian-lee-jieun",
-              encounterNo: "E-PROFILE-001",
-              receptionType: "walk_in",
+              ...walkIn.encounter,
               department: input.department,
               durationMinutes: input.durationMinutes,
               visitPurpose: input.visitPurpose,
               chiefComplaint: input.visitPurpose,
-              status: "waiting",
-              checkedInAt,
-              createdAt: checkedInAt,
-              updatedAt: checkedInAt,
             },
-            queueEntry: {
-              id: "queue-patient-profile-walk-in",
-              workspaceId: "clair-demo",
-              encounterId: "encounter-patient-profile-walk-in",
-              queueType: "consultation",
-              status: "waiting",
-              priority: "normal",
-              enteredAt: checkedInAt,
-            },
+            queueEntry: walkIn.queueEntry,
           },
           enforcedBy: "reception-walk-in-encounter",
         }),
       });
     },
   );
-  return () => count;
+  return {
+    getCount: () => count,
+    getInputs: () => inputs,
+    getWalkIn: () => walkIn,
+  };
 }
 
 test("patient profile starts a preselected walk-in in the same right-panel slot", async ({
@@ -121,12 +135,48 @@ test("dirty header close uses the same discard guard", async ({ page }) => {
 
   const purpose = page.getByRole("textbox", { name: "방문목적" });
   await purpose.fill("헤더 닫기 초안");
-  await page.getByRole("button", { name: "우측 사이드 패널 닫기" }).click();
+  await page.getByRole("button", { name: "환자 프로필로 돌아가기" }).click();
 
   const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버릴까요?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "계속 작성" }).click();
   await expect(purpose).toHaveValue("헤더 닫기 초안");
+});
+
+test("profile-origin create header matches the compact Figma return layout", async ({
+  page,
+}) => {
+  await page.goto(patientProfileRoute);
+  await openPatientReceptionMenu(page);
+  await page.getByRole("menuitem", { name: "접수하기" }).click();
+
+  const panel = page.getByTestId("workspace-right-panel");
+  const header = panel.locator('[data-slot="emr-right-panel-header"]');
+  const backButton = header.getByRole("button", {
+    name: "환자 프로필로 돌아가기",
+  });
+  const title = header.getByText("접수 생성", { exact: true });
+
+  await expect(header).toHaveCSS("height", "65px");
+  await expect(backButton).toBeVisible();
+  await expect(header.getByRole("button", { name: "우측 사이드 패널 닫기" })).toHaveCount(0);
+
+  const [backBox, iconBox, titleBox] = await Promise.all([
+    backButton.boundingBox(),
+    backButton.locator("svg").boundingBox(),
+    title.boundingBox(),
+  ]);
+  expect(backBox).not.toBeNull();
+  expect(iconBox).not.toBeNull();
+  expect(titleBox).not.toBeNull();
+  expect(backBox!.width).toBe(24);
+  expect(backBox!.height).toBe(32);
+  expect(iconBox!.width).toBe(16);
+  expect(iconBox!.height).toBe(16);
+  expect(titleBox!.x).toBeGreaterThan(backBox!.x + backBox!.width);
+
+  await backButton.click();
+  await expect(page.getByTestId("profile-side-panel")).toBeVisible();
 });
 
 test("patient profile starts a preselected reservation in the same right-panel slot", async ({
@@ -151,9 +201,57 @@ test("patient profile starts a preselected reservation in the same right-panel s
 test("successful walk-in keeps the current module and shows detail in the same slot", async ({
   page,
 }) => {
-  const getCreateCount = await mockWalkInCreateSuccess(page);
+  const create = await mockWalkInCreateSuccess(page);
+  let liveQueueRequestCount = 0;
+  await page.route("**/api/workspaces/clair-demo/chart/live-queue?*", async (route) => {
+    liveQueueRequestCount += 1;
+    const walkIn = create.getWalkIn();
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: 200,
+        enforcedBy: "chart-live-queue-read",
+        queue:
+          create.getCount() === 0
+            ? []
+            : [
+                {
+                  encounter: walkIn.encounter,
+                  queueEntry: { ...walkIn.queueEntry, sortOrder: 1 },
+                  patient: {
+                    id: "patient-coco",
+                    workspaceId: "clair-demo",
+                    patientNo: "P-COCO",
+                    name: "코코",
+                    species: "dog",
+                    breed: "Maltese",
+                    sex: "female",
+                    estimatedAgeText: "8세",
+                    handlingCautionLocked: false,
+                    status: "active",
+                    createdAt: walkIn.encounter.createdAt,
+                    updatedAt: walkIn.encounter.updatedAt,
+                  },
+                  primaryGuardian: {
+                    id: "guardian-lee-jieun",
+                    workspaceId: "clair-demo",
+                    name: "이지은",
+                    mobilePhone: "010-3245-1188",
+                    createdAt: walkIn.encounter.createdAt,
+                    updatedAt: walkIn.encounter.updatedAt,
+                  },
+                  veterinarianName: "이수지",
+                },
+              ],
+      }),
+    });
+  });
   await page.goto(patientProfileRoute);
   const originalPathname = new URL(page.url()).pathname;
+  await expect.poll(() => liveQueueRequestCount).toBeGreaterThan(0);
+  const requestsBeforeCreate = liveQueueRequestCount;
 
   await openPatientReceptionMenu(page);
   await page.getByRole("menuitem", { name: "접수하기" }).click();
@@ -164,15 +262,78 @@ test("successful walk-in keeps the current module and shows detail in the same s
     .getByRole("button", { name: "생성", exact: true })
     .click();
 
-  await expect.poll(getCreateCount).toBe(1);
+  await expect.poll(create.getCount).toBe(1);
+  await expect.poll(() => liveQueueRequestCount).toBeGreaterThan(requestsBeforeCreate);
+  await expect(
+    page.getByTestId("order-queue-item-encounter-patient-profile-walk-in"),
+  ).toContainText("코코");
   await expect(page.getByText("접수가 완료되었습니다")).toBeVisible();
   await expect.poll(() => new URL(page.url()).pathname).toBe(originalPathname);
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect(page.getByTestId("workspace-right-panel")).toContainText("접수 상세");
   await expect(page.getByTestId("workspace-right-panel")).toContainText("심잡음 재진");
+  await expect(
+    page.getByRole("button", { name: "환자 프로필로 돌아가기" }),
+  ).toBeVisible();
 
   await page.getByRole("button", { name: "닫기", exact: true }).click();
   await expect(page.getByTestId("profile-side-panel")).toBeVisible();
+});
+
+test("profile walk-in ignores a stale module date and aligns the URL to the persisted date", async ({
+  page,
+}) => {
+  const create = await mockWalkInCreateSuccess(
+    page,
+    "2026-05-02T00:05:00+09:00",
+  );
+  await page.goto(
+    "/w/clair-demo/reception?date=2026-04-30&modulePanel=open&aside=closed",
+  );
+  await page.getByRole("link", { name: "고객관리" }).click();
+  await page
+    .getByTestId("customer-patient-row-patient-coco")
+    .getByText("코코", { exact: true })
+    .click();
+  await expect(page.getByTestId("profile-side-panel")).toBeVisible();
+
+  await openPatientReceptionMenu(page);
+  await page.getByRole("menuitem", { name: "접수하기" }).click();
+  await page
+    .getByTestId("walk-in-reception-dialog")
+    .getByRole("textbox", { name: "방문목적" })
+    .fill("당일 접수 날짜 확인");
+  await page
+    .getByTestId("workspace-right-panel")
+    .getByRole("button", { name: "생성", exact: true })
+    .click();
+
+  await expect.poll(create.getCount).toBe(1);
+  expect(create.getInputs()[0]?.plannedStartAt).toMatch(/^2026-05-01T/);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("date"))
+    .toBe("2026-05-02");
+});
+
+test("profile reservation starts from today after visiting a past reception date", async ({
+  page,
+}) => {
+  await page.goto(
+    "/w/clair-demo/reception?date=2026-04-30&modulePanel=open&aside=closed",
+  );
+  await page.getByRole("link", { name: "고객관리" }).click();
+  await page
+    .getByTestId("customer-patient-row-patient-coco")
+    .getByText("코코", { exact: true })
+    .click();
+  await expect(page.getByTestId("profile-side-panel")).toBeVisible();
+
+  await openPatientReceptionMenu(page);
+  await page.getByRole("menuitem", { name: "예약하기" }).click();
+
+  await expect(page.getByRole("button", { name: "예약일" })).toContainText(
+    "26.05.01",
+  );
 });
 
 test("walk-in failure preserves the draft for retry", async ({ page }) => {
@@ -277,4 +438,7 @@ test("successful reservation keeps patient context and opens reservation detail"
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect(page.getByTestId("workspace-right-panel")).toContainText("예약 상세");
   await expect(page.getByTestId("workspace-right-panel")).toContainText("정기 심장 검진");
+  await expect(
+    page.getByRole("button", { name: "환자 프로필로 돌아가기" }),
+  ).toBeVisible();
 });

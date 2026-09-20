@@ -1945,6 +1945,7 @@ export function PatientProfileDrawer({
     setActiveDrawer({
       type,
       id: `patient-profile:${editablePatient.id}`,
+      initialOperatingDate: getWorkspaceOperatingDate(workspaceId),
       initialPatientId: editablePatient.id,
       returnTo: {
         type:

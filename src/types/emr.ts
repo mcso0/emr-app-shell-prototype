@@ -5,6 +5,7 @@ export type DrawerState = {
   type: string;
   id: string;
   hasUnsavedChanges?: boolean;
+  initialOperatingDate?: string;
   initialPatientId?: string;
   profileTab?: "info" | "history" | "reservations" | "billing";
   returnTo?: {
