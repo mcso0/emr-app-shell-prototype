@@ -1,0 +1,4 @@
+-- Remote-history compatibility alias.
+-- The linked synthetic/demo project applied the exact SQL from canonical migration
+-- 20260920120000_chart_workspace_consultation_rooms.sql under remote version
+-- 20260920141201. Keep this file statement-free so fresh replay runs it only once.
