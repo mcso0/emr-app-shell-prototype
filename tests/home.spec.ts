@@ -73,8 +73,8 @@ test("hospital limits board and list to the selected day while personal work ret
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("이전 혈액검사", { exact: true })).toHaveCount(0);
   await page.getByLabel("담당자 다중 선택").click();
-  await expect(page.getByRole("checkbox", { name: "이전담당 선택", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "선택 해제", exact: true }).click();
+  await expect(page.getByRole("menuitemcheckbox", { name: "이전담당", exact: true })).toHaveCount(0);
+  await page.getByRole("menuitem", { name: "선택 해제", exact: true }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByLabel("표시 업무 수")).toHaveText("0");
   await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
