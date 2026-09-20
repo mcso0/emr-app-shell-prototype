@@ -4,9 +4,47 @@ import {
   getChartOrderConfirmationState,
   getChartOrderProjectedLineTotal,
   getChartOrderWorkPresentation,
+  formatPlanOrderTableUnit,
   sortChartOrderGroups,
   type ChartOrderPresentationRow,
 } from "../src/features/chart/chart-order-table-presentation";
+
+test("Plan/Order table units use the approved clinical display labels", () => {
+  const cases = [
+    ["mg", "mg"],
+    ["MG", "mg"],
+    ["mg/kg", "mg/kg"],
+    ["ml", "mL"],
+    ["mL", "mL"],
+    ["ML", "mL"],
+    ["ml/kg", "mL/kg"],
+    ["mL/kg", "mL/kg"],
+    ["g", "g"],
+    ["kg", "kg"],
+    ["Kg", "kg"],
+    ["tablet", "TAB"],
+    ["T", "TAB"],
+    ["capsule", "CAP"],
+    ["drop", "DROPS"],
+    ["spray", "SPRAY"],
+    ["pipette", "PIP"],
+    ["application", "APPL"],
+    ["vial", "VIAL"],
+    ["sachet", "PKT"],
+    ["bottle", "BOT"],
+    ["applicator", "AP"],
+    ["syringe", "SYR"],
+    ["tube", "TUBE"],
+  ] as const;
+
+  for (const [input, expected] of cases) {
+    expect(formatPlanOrderTableUnit(input)).toBe(expected);
+  }
+  expect(formatPlanOrderTableUnit(null)).toBe("");
+  expect(formatPlanOrderTableUnit(undefined)).toBe("");
+  expect(formatPlanOrderTableUnit("   ")).toBe("");
+  expect(formatPlanOrderTableUnit(" custom-unit ")).toBe("custom-unit");
+});
 
 test("pre-confirmation product-unit totals use the required dispense quantity", () => {
   expect(getChartOrderProjectedLineTotal({

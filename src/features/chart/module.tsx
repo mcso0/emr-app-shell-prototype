@@ -88,7 +88,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { ChartOrderConfirmationBadge, ChartOrderWorkStatus } from "./components/chart-order-status";
-import { chartOrderConfirmationRank, getChartOrderConfirmationState, getChartOrderProjectedLineTotal, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
+import { chartOrderConfirmationRank, formatPlanOrderTableUnit, getChartOrderConfirmationState, getChartOrderProjectedLineTotal, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
@@ -6385,7 +6385,7 @@ function getChartOrderTotalOccurrences(row: ChartOrderDraftRow) {
 function getChartOrderIngredientStrength(row: ChartOrderDraftRow) {
   const strength = getChartOrderAuthority(row)?.productStrength;
   return strength
-    ? `${strength.numeratorValue} ${strength.numeratorUnit}/${strength.denominatorValue === 1 ? "" : `${strength.denominatorValue} `}${strength.denominatorUnit}`
+    ? `${strength.numeratorValue} ${formatPlanOrderTableUnit(strength.numeratorUnit)}/${strength.denominatorValue === 1 ? "" : `${strength.denominatorValue} `}${formatPlanOrderTableUnit(strength.denominatorUnit)}`
     : "";
 }
 
@@ -6397,7 +6397,7 @@ function getChartOrderCalculatedDispense(row: ChartOrderDraftRow) {
   ].find((value): value is number => typeof value === "number");
   const authority = getChartOrderAuthority(row);
   if (quantity !== undefined && authority?.dispenseUnit) {
-    return `${quantity} ${authority.dispenseUnit}`;
+    return `${quantity} ${formatPlanOrderTableUnit(authority.dispenseUnit)}`;
   }
   return authority?.calculationMode === "not_applicable" ? "" : "계산 불가";
 }
@@ -6406,7 +6406,9 @@ function getChartOrderActualDispense(row: ChartOrderDraftRow) {
   const outputs = row.runtimeRow?.calculationOutputs ?? {};
   const quantity = outputs.preparationSchemaVersion === 2
     ? outputs.plannedPracticalDispenseQuantity : outputs.actualDispenseQuantity;
-  const unit = outputs.actualDispenseUnit;
+  const unit = typeof outputs.actualDispenseUnit === "string"
+    ? formatPlanOrderTableUnit(outputs.actualDispenseUnit)
+    : "";
   const precision = getChartOrderAuthority(row)?.preparationPolicy
     ?.displayPrecision;
   if (typeof quantity === "number" && Number.isFinite(quantity)) {
@@ -6419,7 +6421,7 @@ function getChartOrderActualDispense(row: ChartOrderDraftRow) {
     });
     const scope = outputs.preparationSchemaVersion === 2
       ? outputs.preparationQuantityScope === "course_total" ? " (전체)" : " (1회)" : "";
-    return `${formatted}${typeof unit === "string" && unit ? ` ${unit}` : ""}${scope}`;
+    return `${formatted}${unit ? ` ${unit}` : ""}${scope}`;
   }
   if (isChartOrderConfirmedRow(row)) return "미기록";
   if (outputs.dispenseApplicability === false) return "";
@@ -6922,7 +6924,9 @@ const chartOrderLegacyProjectionColumns: ColumnDef<
     value: (row) => {
       const dose = getChartOrderDetailNumber(row, "dose");
       const unit = getChartOrderDetailString(row, "doseUnit");
-      return dose === null ? null : `${dose}${unit ? ` ${unit}` : ""}`;
+      return dose === null
+        ? null
+        : `${dose}${unit ? ` ${formatPlanOrderTableUnit(unit)}` : ""}`;
     },
   }),
   createPlanOrderDisplayColumn({
@@ -7457,8 +7461,9 @@ function ChartOrderActualDispenseCell({
   }
 
   const precision = policy?.displayPrecision ?? 6;
+  const dispenseUnit = formatPlanOrderTableUnit(authority?.dispenseUnit);
   const validationTitle = !inputValid
-    ? `${policy!.increment} ${authority?.dispenseUnit ?? ""} 단위${
+    ? `${policy!.increment}${dispenseUnit ? ` ${dispenseUnit}` : ""} 단위${
         policy!.minimum !== undefined && policy!.minimum !== null
           ? `, 최소 ${policy!.minimum}`
           : ""
@@ -7525,7 +7530,7 @@ function ChartOrderActualDispenseCell({
             준비 예정량 변경 사유가 필요해요
           </p>
           <p className="emr-text-micro text-[var(--emr-text-secondary)]">
-            기준값 {proposedQuantity!.toFixed(precision)} {authority?.dispenseUnit}
+            기준값 {proposedQuantity!.toFixed(precision)}{dispenseUnit ? ` ${dispenseUnit}` : ""}
           </p>
           <div className="grid gap-1">
             {actualDispenseSuggestedReasons.map((reason) => (

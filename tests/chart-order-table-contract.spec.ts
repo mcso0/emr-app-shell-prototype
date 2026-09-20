@@ -79,6 +79,35 @@ test("Plan/Order renders the approved 26-column geometry and presentation contra
   await expect(firstRow.locator('td[data-column-id="status"]')).not.toContainText("—");
 });
 
+test("Plan/Order table cells render approved unit labels", async ({ page }) => {
+  await page.goto(chartOrderUrl);
+  const row = page.getByTestId("chart-order-row-order-kong-maropitant");
+  const doseCell = row.locator('td[data-column-id="dosePerAdministration"]');
+
+  const editDoseUnit = async (option: string, doseValue = "0.25") => {
+    await row.hover();
+    await row.getByRole("button", { name: "Maropitant 16mg T 더보기" }).click();
+    await page.getByRole("menuitem", { name: "마스터·세부값 보기" }).click();
+    const detail = page.getByRole("dialog", { name: "Maropitant 16mg T 상세" });
+    const dose = detail.getByLabel("Maropitant 16mg T 용량", { exact: true });
+    if ((await dose.inputValue()) !== doseValue) await dose.fill(doseValue);
+    await detail.getByLabel("Maropitant 16mg T 단위", { exact: true }).click();
+    await page.getByRole("option", { name: option, exact: true }).click();
+    await detail.getByRole("button", { name: "저장하고 닫기" }).click();
+  };
+
+  await editDoseUnit("정");
+  await expect(doseCell).toHaveText("0.25 TAB");
+  await editDoseUnit("피펫");
+  await expect(doseCell).toHaveText("0.25 PIP");
+  await editDoseUnit("회분");
+  await expect(doseCell).toHaveText("0.25 APPL");
+  await editDoseUnit("ml");
+  await expect(doseCell).toHaveText("0.25 mL");
+  await editDoseUnit("mg", "16");
+  await expect(doseCell).toHaveText("16 mg");
+});
+
 test("Plan/Order fills the left edge and keeps transparent 8px gutters aligned", async ({
   page,
 }) => {

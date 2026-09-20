@@ -15,6 +15,34 @@ export type ChartOrderPresentationRow = {
 
 export type ChartOrderConfirmationState = "ready" | "invalid" | "confirmed";
 
+const planOrderTableUnitLabels: Readonly<Record<string, string>> = {
+  mg: "mg",
+  "mg/kg": "mg/kg",
+  ml: "mL",
+  "ml/kg": "mL/kg",
+  g: "g",
+  kg: "kg",
+  tablet: "TAB",
+  t: "TAB",
+  capsule: "CAP",
+  drop: "DROPS",
+  spray: "SPRAY",
+  pipette: "PIP",
+  application: "APPL",
+  vial: "VIAL",
+  sachet: "PKT",
+  bottle: "BOT",
+  applicator: "AP",
+  syringe: "SYR",
+  tube: "TUBE",
+};
+
+export function formatPlanOrderTableUnit(unit: string | null | undefined) {
+  const trimmed = unit?.trim() ?? "";
+  if (!trimmed) return "";
+  return planOrderTableUnitLabels[trimmed.toLowerCase()] ?? trimmed;
+}
+
 export function isChartOrderPresentationConfirmed(row: ChartOrderPresentationRow) {
   const status = row.runtimeRow?.orderConfirmationStatus;
   if (status) return status !== "draft";
