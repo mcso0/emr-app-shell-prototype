@@ -17,23 +17,46 @@ declare
   v_encounter public.encounters%rowtype;
   v_queue public.waiting_queue_entries%rowtype;
   v_call_event public.encounter_call_events%rowtype;
+  v_requested_room_id text := nullif(btrim(p_room_id), '');
+  v_resolved_room_id text;
   v_room_name text;
 begin
   if not private.clair_is_active_workspace_member(p_workspace_id) then
     raise exception 'workspace_membership_missing';
   end if;
 
-  select space.name
-    into v_room_name
+  select space.id::text, space.name
+    into v_resolved_room_id, v_room_name
   from public.workspace_spaces space
   join public.workspace_space_categories category
     on category.id = space.category_id
    and category.workspace_id = space.workspace_id
   where space.workspace_id = p_workspace_id
-    and space.id::text = nullif(btrim(p_room_id), '')
     and space.archived_at is null
     and category.archived_at is null
-    and category.icon_key = 'consult';
+    and category.icon_key = 'consult'
+    and (
+      space.id::text = v_requested_room_id
+      or v_requested_room_id = any (array['room-consult-1', 'room-consult-2', 'room-cat', 'room-director'])
+    )
+  order by
+    case when space.id::text = v_requested_room_id then 0 else 1 end,
+    case
+      when v_requested_room_id = 'room-consult-1'
+        and space.name in ('1진료실', '진료실 1') then 0
+      when v_requested_room_id = 'room-consult-2'
+        and space.name in ('2진료실', '진료실 2') then 0
+      when v_requested_room_id = 'room-cat'
+        and space.name = '고양이 진료실' then 0
+      when v_requested_room_id = 'room-director'
+        and space.name = '원장 진료실' then 0
+      else 1
+    end,
+    category.sort_order,
+    space.sort_order,
+    space.name,
+    space.id
+  limit 1;
 
   if v_room_name is null then
     raise exception 'room_unavailable';
@@ -107,11 +130,11 @@ begin
     v_room_name || '로 환자를 호출하고 진료를 시작합니다.',
     'queued',
     'local_outbox',
-    p_room_id,
+    v_resolved_room_id,
     v_room_name,
     jsonb_build_object(
       'didProvider', 'not_configured',
-      'roomId', p_room_id,
+      'roomId', v_resolved_room_id,
       'roomName', v_room_name
     ),
     v_actor_user_id,

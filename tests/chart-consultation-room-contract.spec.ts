@@ -105,6 +105,13 @@ test("consultation call RPC resolves an active workspace consultation space", ()
   expect(consultationRoomMigration).toContain("category.icon_key = 'consult'");
   expect(consultationRoomMigration).toContain("space.archived_at is null");
   expect(consultationRoomMigration).toContain("category.archived_at is null");
+  expect(consultationRoomMigration).toContain("v_resolved_room_id text");
+  expect(consultationRoomMigration).toContain(
+    "v_requested_room_id = any (array['room-consult-1', 'room-consult-2', 'room-cat', 'room-director'])",
+  );
+  expect(consultationRoomMigration).toContain(
+    "'roomId', v_resolved_room_id",
+  );
   expect(consultationRoomMigration).toContain("v_actor_user_id <> auth.uid()");
   expect(consultationRoomMigration).toContain(
     "private.clair_current_user_has_workspace_permission(p_workspace_id, 'chart:update')",
@@ -116,5 +123,7 @@ test("consultation call RPC resolves an active workspace consultation space", ()
     "alter function public.clair_call_consultation_queue(text, text, uuid, text)\n  set search_path = ''",
   );
   expect(consultationRoomMigration).toContain("raise exception 'room_unavailable'");
-  expect(consultationRoomMigration).not.toContain("when 'room-consult-1'");
+  expect(consultationRoomMigration).not.toContain(
+    "v_room_name := case p_room_id",
+  );
 });

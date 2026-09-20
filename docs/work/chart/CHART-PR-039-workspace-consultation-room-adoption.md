@@ -31,8 +31,10 @@ push, PR, `origin/main` merge, and production deployment after checks pass on
   authoritative room list is ready.
 - Validate the submitted room against the same workspace-scoped gateway before
   consultation mutation.
-- Update the Supabase call RPC to accept only an active, non-archived `consult`
-  space in the same workspace and preserve its name snapshot in the call event.
+- Update the Supabase call RPC to resolve only an active, non-archived `consult`
+  space in the same workspace and preserve its real ID/name snapshot in the call
+  event. During mixed-version deployment, the four former request IDs translate
+  to an active real space instead of surviving as stored room identities.
 - Preserve session-scoped mock behavior, chart permission checks, audit,
   first-chart creation, and saved room preference invalidation.
 
@@ -61,6 +63,8 @@ push, PR, `origin/main` merge, and production deployment after checks pass on
   module did not exist.
 - RED: the migration contract failed until the compatibility RPC preserved
   actor identity and `chart:update` permission checks before room lookup.
+- RED: the rollout contract failed until legacy requests were translated to an
+  active workspace space, preventing an old-app/new-database mismatch window.
 - GREEN: contract/server tests and the browser flow pass with a dynamically
   supplied `3진료실` and its real space ID.
 
@@ -75,14 +79,15 @@ push, PR, `origin/main` merge, and production deployment after checks pass on
 - Docs links (1,036 files), secret scan (4,391 tracked files), UX copy, and
   `git diff --check` passed.
 - The new SQL applied in a local PostgreSQL transaction. An active same-workspace
-  consultation room reached `encounter_unavailable`, an unknown room reached
-  `room_unavailable`, and the transaction rolled back without residue.
+  consultation room and a legacy request alias both reached
+  `encounter_unavailable`, while an unknown room reached `room_unavailable`.
 - Remote Supabase application, exact candidate Release Check, PR merge, Ready
   Production, and post-deploy smoke remain release-phase evidence.
 
 ## Rollback
 
 Revert the application commit while retaining the additive RPC migration only
-if compatibility is confirmed. Do not restore the former synthetic room IDs in
-the database function; a database rollback requires a separately reviewed
-function replacement that remains compatible with existing call-event snapshots.
+if compatibility is confirmed. Legacy request aliases resolve to real active
+spaces and are never stored as room identities. A database rollback requires a
+separately reviewed function replacement compatible with existing call-event
+snapshots.
