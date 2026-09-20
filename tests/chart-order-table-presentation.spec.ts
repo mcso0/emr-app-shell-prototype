@@ -58,7 +58,7 @@ for (const task of [undefined, "complete", "returned", "pending"] as const) {
 }
 
 test("no-task confirmation stays empty; return, repeat request, pause and imaging retain distinct meaning", () => {
-  expect(getChartOrderWorkPresentation(row("no-task")).label).toBe("—");
+  expect(getChartOrderWorkPresentation(row("no-task")).label).toBe("-");
   expect(getChartOrderWorkPresentation(row("returned", "confirmed", "returned"))).toMatchObject({ label: "반려", icon: "rework" });
   const repeated = row("again", "confirmed", "pending");
   repeated.executionTask!.requestCycle = 2;

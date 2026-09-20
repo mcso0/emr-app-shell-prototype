@@ -418,6 +418,23 @@
   }
 
   [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
+    [data-emr-pinned-table-header-divider="true"] {
+    position: absolute;
+    z-index: 15;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: 1px;
+    pointer-events: none;
+    background: var(--emr-table-pinned-divider-color);
+  }
+
+  [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
+    [data-emr-column-resize-handle="true"]::before {
+    opacity: 0;
+  }
+
+  [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
     [data-emr-column-resize-handle="true"] {
     right: 0 !important;
     height: 22px !important;

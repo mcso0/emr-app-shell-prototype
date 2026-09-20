@@ -180,6 +180,59 @@ test("Plan/Order keeps the gap resize handle inside its allocation without a bod
   });
   await expect(root.locator('[data-emr-pinned-table-divider="true"]')).toHaveCount(1);
   await expect(root.locator('[data-emr-pinned-table-divider="true"]').first()).toHaveCSS("display", "none");
+  await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCount(1);
+  await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]').evaluate((element) =>
+    getComputedStyle(element).insetInlineStart,
+  )).resolves.toBe("420px");
+  await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toHaveCount(1);
+  await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toBeVisible();
+  await expect(handle).toHaveCSS("pointer-events", "auto");
+  await expect(handle).toHaveCSS("z-index", "16");
+});
+
+test("Plan/Order scroll columns keep a working header resize handle", async ({ page }) => {
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const statusHeader = table.locator('th[data-column-id="status"]');
+  const statusHandle = statusHeader.getByRole("button", {
+    name: "업무 상태 컬럼 너비 조절",
+  });
+  await expect(statusHandle).toBeVisible();
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  await statusHandle.focus();
+  await statusHandle.press("ArrowRight");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "96");
+  await expect(table.locator('thead th[data-column-id="status"]')).not.toHaveAttribute(
+    "aria-sort",
+    "ascending",
+  );
+});
+
+test("Plan/Order empty display values use the shared hyphen placeholder", async ({
+  page,
+}) => {
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  await expect(table).toBeVisible();
+  await expect(table).not.toContainText("—");
+  await expect(table).not.toContainText("미설정");
+});
+
+test("Plan/Order billing and tax headers and switches are centered", async ({
+  page,
+}) => {
+  await page.goto(chartOrderUrl);
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  for (const id of ["billingReflection", "taxClass"]) {
+    await expect(table.locator(`th[data-column-id="${id}"] [data-emr-table-content="true"]`)).toHaveCSS(
+      "justify-content",
+      "center",
+    );
+    await expect(table.locator(`tbody td[data-column-id="${id}"] [data-emr-table-content="true"]`).first()).toHaveCSS(
+      "justify-content",
+      "center",
+    );
+  }
 });
 
 test("Plan/Order resize is live, keyboard-accessible, and does not sort", async ({ page }) => {

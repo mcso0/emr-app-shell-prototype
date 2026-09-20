@@ -42,7 +42,7 @@ export function getChartOrderWorkPresentation(row: ChartOrderPresentationRow): {
     return { label: "취소", icon: "cancel", unconfirmed: false };
   }
   const task = row.executionTask;
-  if (!task) return { label: "—", icon: null, unconfirmed: false };
+  if (!task) return { label: "-", icon: null, unconfirmed: false };
   let label: string;
   let icon: EmrSidePanelStateIconState;
   switch (task.status) {

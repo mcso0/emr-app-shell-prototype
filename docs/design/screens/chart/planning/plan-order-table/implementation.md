@@ -50,7 +50,7 @@ is superseded by initial180 / minimum160 / maximum400.
 | DEC-02 | 확정 | 할인/할증 사유는 자유 입력·optional. 할인/할증이 있어도 빈 사유 허용. 설정 목록 선택과 필수 검증을 제거하는 서버·SQL 변경도 준비 범위에 포함. |
 | DEC-03 | 반영 방향 | 별도 단위 컬럼 삭제 → 목표26개(고정4+스크롤22). 필요한 값과 인풋에 해당 데이터의 단위를 표시. 임의 변환·dose/strength/dispense fallback 금지. |
 | DEC-04 | 확정 | 업무 담당:24px avatar trigger + picker; 이름은 hover/focus로 제공. 미지정 기본 아이콘, 로딩/저장 상태, 실패 시 기존값, readonly에서는 picker 없음. |
-| DEC-05 | 확정 | known ON/OFF만 switch; unknown은 - 및 미설정 설명. 과세 readonly, 청구반영은 기존 편집 가능 조건 유지; saving 잠금/실패 복원. |
+| DEC-05 | 확정 | known ON/OFF만 switch; unknown은 Neutral400 `-` 및 데이터 없음 설명. 과세 readonly, 청구반영은 기존 편집 가능 조건 유지; saving 잠금/실패 복원. |
 | DEC-06 | 확정 | Order 명 기본180 / 최소160 / 최대400px. 오른쪽 최소240px 확보, 불가능하면 전체 가로 스크롤로 전환(고정 해제). 너비는 화면 수명 동안 유지, 초기화180; 영구 저장 없음. |
 | DEC-07 | 확정 | 현재 확정 여부 오름차순과 정렬 기능·아이콘 유지(시안 차이 기록). 총횟수 숫자 정렬 추가. 실제 정렬 가능한 헤더만 아이콘. resize는 sort로 전파하지 않음. |
 
@@ -266,11 +266,12 @@ Between `선택`, `분류`, `확정 여부`, and `Order 명`, both header and bo
 
 The boundary after `Order 명` is the one exception inside the pinned area:
 
-- the header exposes a resize handle;
+- the header shows a 1px vertical boundary line at the fixed/scroll edge;
+- the resize hit area remains an invisible 8px header-only handle on the `Order 명` edge;
 - dragging it changes only the `Order 명` width;
 - the resize updates live with `columnResizeMode: "onChange"`;
-- the body exposes no resize control and retains only the transparent 8px
-  spacing at the boundary.
+- the body has no line and no resize control; it retains only the transparent
+  8px spacing at the boundary.
 
 ### Scrollable columns
 
@@ -294,13 +295,29 @@ Rules:
 
 ### Grab states and tokens
 
-- Normal state: retain the subtle visible Grab treatment from the Figma source.
+- Normal state: scroll-column headers retain the subtle visible Grab treatment
+  from the Figma source. The pinned `Order 명` boundary uses the line above and
+  hides the Grab stroke while preserving its hit area.
 - Hover/focus state: use the design token `blackAlpha/6`.
 - Dragging/active state: use the design token `blackAlpha/8`.
 - Use the repository's existing semantic token names or token aliases for
   these values; do not introduce local hard-coded rgba/hex values.
 - Do not substitute the generic `--emr-state-hover` token if it resolves to a
   different alpha value.
+
+### Follow-up corrections applied during implementation
+
+- `업무 상태` is resizable from its 88px minimum; the former `maxSize: 88px`
+  was preventing the existing header handle from changing the column width.
+- Every editable table input/select uses the available cell width and grows with
+  its column. The approved insets remain: `청구서명` keeps a trailing 6px,
+  `수량` keeps its leading 10px, and suffix inputs keep their unit suffix.
+- `청구반영` and `과세` headers and row switches are centered on both axes.
+- Empty display values use ASCII `-` with Neutral400 styling. Meaningful domain
+  values such as `계산 불가` remain unchanged; the empty-state explanation is
+  available through the accessible label/tooltip.
+- The pinned viewport's horizontal scrollbar starts after the terminal 8px
+  fixed-area gap, so it cannot paint over the pinned checkbox/fixed cells.
 
 
 ### Shared typography and spacing primitives
@@ -568,7 +585,7 @@ and measurements for traceability. Product decisions in the latest register win.
 | Order 명 | 163194 / 163199 | 170 최소 | 왼쪽 / 왼쪽 | 있음 | 텍스트 x10; 한 줄 말줄임 |
 | 업무 상태 | 163227 / 163295 | 88 최소 | 왼쪽 / 왼쪽 | 있음 | - x12 (6+4+2); 확정 아이콘 x10 / 라벨 x30 |
 | 청구서명 | 163230 / 163298 | 144 최소 | 왼쪽 / 왼쪽 | 있음 | Input x0 / 138×28; px10; 오른쪽 빈 영역 6 |
-| 청구반영 | 163233 / 163301 | 64 최소 | 왼쪽 / 왼쪽 | 없음 | Switch x10 / 32×18 |
+| 청구반영 | 163233 / 163301 | 64 최소 | 중앙 / 중앙 | 없음 | Switch 32×18, header/body center |
 | 일수 | 163236 / 163304 | 64 최소 | 오른쪽 / 오른쪽 | 없음 | 오른쪽 10 (gap4+spacer6) |
 | 횟수 | 163239 / 163307 | 64 최소 | 오른쪽 / 오른쪽 | 없음 | 오른쪽 10 (gap4+spacer6) |
 | 총횟수 | 163242 / 163310 | 88 최소 | 오른쪽 / 오른쪽 | 있음 | 오른쪽 10 (gap4+spacer6) |
@@ -586,7 +603,7 @@ and measurements for traceability. Product decisions in the latest register win.
 | 할증(%) | 163278 / 163346 | 72 최소 | 오른쪽 / 오른쪽 | 없음 | Input x10 / 62×28; px10; 숫자↔% gap4 |
 | 총 청구금액 | 163281 / 163349 | 126 최소 | 오른쪽 / 오른쪽 | 있음 | 오른쪽 10; 원 표시 |
 | 할인/할증 사유 | 163284 / 163352 | 126 최소 | 왼쪽 / 왼쪽 | 없음 | Input x0 / 126×28; px10; 외부 spacer 없음 |
-| 과세 | 163287 / 163355 | 64 최소 | 왼쪽 / 왼쪽 | 없음 | Switch x10 / 32×18 |
+| 과세 | 163287 / 163355 | 64 최소 | 중앙 / 중앙 | 없음 | Switch 32×18, header/body center |
 | 업무 담당 | 163290 / 163358 | 66 최소 | 왼쪽 / 왼쪽 | 없음 | Avatar x10 / 24×24 |
 | 요청 수의사 | 163293 / 163361 | 77 최소 | 왼쪽 / 왼쪽 | 없음 | Avatar x10 / 24×24 |
 
@@ -626,7 +643,7 @@ body wrapper는 선택 px2 외에는 px0. 대부분 spacer6 + gap4로 콘텐츠 
 | Switch focus / disabled | 검사한 set에 전용 variant 없음; 현재 공유 Switch는 최소40×40 hit area | focus/keyboard/disabled semantics 보존. 64px 열에서 인접 클릭 간섭과 border·thumb margin 실제 좌표 검증 |
 | Avatar | 24×24 circle, neutral/100, border1 blackAlpha/6; initials10/14 Medium general/foreground | 163358 / 163361; small PictureOff 27290:111189 / PictureOn 27290:111197. loading/error 전용 variant 없음 |
 | 업무 상태 | 미확정 - x12 neutral/400; 확정 icon16 x10, label x30 neutral/900 | 163295 / 163452. 아이콘–라벨 gap4; 내부 text wrapper gap6과 혼동 금지 |
-| Grab | 8×22 hit frame; 중앙 stroke1×14, x3.5 y4 neutral/300 | 163228 / 163229. hover blackAlpha/6, drag blackAlpha/8은 사용자 합의. body와 고정 내부에는 선 없음 |
+| Grab | 8×22 hit frame; 중앙 stroke1×14, x3.5 y4 neutral/300 | 163228 / 163229. 스크롤 헤더는 visible Grab, 고정 경계는 1px header line + invisible hit area. hover blackAlpha/6, drag blackAlpha/8은 사용자 합의. body에는 선 없음 |
 
 공유 Input은 이미 px10 py4, invalid ring, disabled opacity100을 제공한다. 높이·색상·focus ring은 semantic CSS 변수와 현재 사용처를 대조해 최소 변경한다. 공유 Switch sm/default는 이미32×18/16이며 청구반영도 default 사용 중이다. 확인된 차이는 OFF neutral/200→300, thumb border/margin 좌표 및 hover 세부 값이지 새 size 추가가 아니다.
 
@@ -680,6 +697,6 @@ DEC-03의 단위 동반 표시를 설명하는 합성 예시(임상 용량 지�
 | VERIFY-04 | draft/candidate/read-only 저장·오류·readback 경로 소스 조사 완료 | 허용·거절·경쟁 업데이트·readback 실패 실제 테스트 |
 | VERIFY-05 | compact row/header36/36, standard40/36, comfortable52/44 확인 | 3 density × scroll 시작/중간/끝 × set parent/child × 긴 라벨 |
 
-리사이즈는 사용자 확정 onChange이며 현재 크기는 component state(새로 mount되면 초기화)다. 공유 키보드 스텝은8px, Shift24px이고 min/max를 clamp한다. DEC-06의180/160/400·최소240·좁은 화면 고정 해제·초기화 정책은 최신 목표로 승인되었고 아직 구현 전이다.
+리사이즈는 사용자 확정 onChange이며 현재 크기는 component state(새로 mount되면 초기화)다. 공유 키보드 스텝은8px, Shift24px이고 min/max를 clamp한다. DEC-06의180/160/400·최소240·좁은 화면 고정 해제·초기화 정책은 최신 목표로 승인되었고, Order 명 기본/최소/최대와 onChange 경로는 구현되어 있다.
 
 측정용 HTML의 체크박스는 새로고침하면 초기화되는 임시 체크다. 체크 자체가 테스트 실행이나 구현 수락을 뜻하지 않는다. 숫자·노드·부호 계약 등은 결정론적 검사, Jev는 조사 우선순위와 누락 가능성에 대한 보조 판정으로만 사용한다.

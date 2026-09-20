@@ -5586,9 +5586,9 @@ function formatChartOrderFieldValue(
   value: unknown,
   definition: ClinicalOrderFieldDefinition,
 ) {
-  if (value === null || value === undefined || value === "") return "미설정";
+  if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "boolean") return value ? "예" : "아니오";
-  if (Array.isArray(value)) return value.length ? `${value.length}개` : "—";
+  if (Array.isArray(value)) return value.length ? `${value.length}개` : "-";
   const formatted = chartOrderFieldOptionLabels[String(value)] ?? String(value);
   return definition.unit ? `${formatted}${definition.unit}` : formatted;
 }
@@ -6517,7 +6517,7 @@ function ChartOrderUnknownState({ label }: { label: string }) {
           <span
             aria-describedby={tooltipId}
             aria-label={`${label} 미설정`}
-            className="inline-flex items-center"
+            className="inline-flex items-center text-[var(--clair-color-atomic-neutral-400)]"
             tabIndex={0}
           />
         }
@@ -6525,9 +6525,27 @@ function ChartOrderUnknownState({ label }: { label: string }) {
         -
       </TooltipTrigger>
       <TooltipContent id={tooltipId} role="tooltip">
-        미설정
+        데이터 없음
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+function ChartOrderEmptyValue({
+  className,
+  fullText = "데이터 없음",
+}: {
+  className?: string;
+  fullText?: string;
+}) {
+  return (
+    <EmrTableCellText
+      mode="one-line"
+      className={cn("text-[var(--clair-color-atomic-neutral-400)]", className)}
+      fullText={fullText}
+    >
+      -
+    </EmrTableCellText>
   );
 }
 
@@ -6547,7 +6565,7 @@ function ChartOrderAvatar({
         {name === "미지정" && unknownIcon ? (
           <CdsPeopleUserIcon aria-hidden="true" className="size-4" />
         ) : name === "미기록" || name === "미지정" ? (
-          "—"
+          "-"
         ) : (
           name.slice(0, 1)
         )}
@@ -6850,7 +6868,7 @@ function createPlanOrderDisplayColumn({
           className={align === "right" ? "text-right tabular-nums" : undefined}
           fullText={displayText}
         >
-          {displayText || "—"}
+          {displayText ? displayText : <ChartOrderEmptyValue />}
         </EmrTableCellText>
       );
     },
@@ -7165,7 +7183,7 @@ function ChartOrderInlineFieldCell({
   writeDisabled: boolean;
 }) {
   if (!definition || row.runtimeRow?.rowType === "set") {
-    return <span aria-label="해당 없음">—</span>;
+    return <ChartOrderEmptyValue fullText="해당 없음" />;
   }
   const value = getChartOrderFieldValue(row, definition);
   if (definition.key === "responsibleClinicianId") {
@@ -7200,7 +7218,7 @@ function ChartOrderInlineFieldCell({
   if (definition.control === "switch") {
     if (typeof value !== "boolean") return (
       <Select value={null} onValueChange={(next) => onUpdateDetailInput(row.order.id, definition.key, next === null ? undefined : next === "true")}>
-        <SelectTrigger aria-label={ariaLabel}><SelectValue placeholder="미설정" /></SelectTrigger>
+        <SelectTrigger aria-label={ariaLabel}><SelectValue placeholder="-" /></SelectTrigger>
         <SelectContent><SelectItem value="true">예</SelectItem><SelectItem value="false">아니오</SelectItem></SelectContent>
       </Select>
     );
@@ -7235,7 +7253,7 @@ function ChartOrderInlineFieldCell({
       >
         <SelectTrigger
           aria-label={ariaLabel}
-          className="h-7 min-w-[112px] bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
+          className="h-7 w-full min-w-[112px] flex-1 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata"
           data-row-interactive="true"
         >
           <SelectValue placeholder="선택" />
@@ -7261,7 +7279,7 @@ function ChartOrderInlineFieldCell({
       aria-label={ariaLabel}
       aria-invalid={invalid}
       className={cn(
-        "h-7 min-w-[112px] bg-[var(--emr-surface-panel)] px-2 emr-text-metadata",
+        "h-7 w-full min-w-[112px] flex-1 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata",
         definition.valueType === "number" && "text-right tabular-nums",
         invalid && "border-[var(--emr-status-danger-border)]",
       )}
@@ -7401,7 +7419,7 @@ function ChartOrderActualDispenseCell({
           )}
           fullText={displayed}
         >
-          {displayed || "—"}
+          {displayed ? displayed : <ChartOrderEmptyValue className="text-right tabular-nums" />}
         </EmrTableCellText>
       );
     }
@@ -7416,7 +7434,7 @@ function ChartOrderActualDispenseCell({
           className="min-w-0 text-right tabular-nums"
           fullText={displayed}
         >
-          {displayed || "—"}
+          {displayed ? displayed : <ChartOrderEmptyValue className="text-right tabular-nums" />}
         </EmrTableCellText>
         <Popover>
           <PopoverTrigger
@@ -7460,7 +7478,7 @@ function ChartOrderActualDispenseCell({
         aria-label={`${row.order.displayName} 준비 예정량`}
         aria-invalid={!inputValid}
         className={cn(
-          "h-7 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-right emr-text-metadata tabular-nums",
+          "h-7 w-full flex-1 min-w-0 bg-[var(--emr-surface-panel)] px-2 text-right emr-text-metadata tabular-nums",
           outputs.requiresReconfirmation === true &&
             "border-[var(--emr-status-warning-border)]",
         )}
@@ -8090,7 +8108,6 @@ function ChartOrderTable({
         accessorFn: (row) => getChartOrderWorkPresentation(row).label,
         size: 88,
         minSize: 88,
-        maxSize: 88,
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
@@ -8308,7 +8325,7 @@ function ChartOrderTable({
               <Input
                 key={`${row.original.order.id}-billing-name-${getChartOrderPrebillingVersion(row.original)}-${prebillingSavingOrderIds.has(row.original.order.id)}`}
                 aria-label={`${row.original.order.displayName} 확정 청구서명 수정`}
-                className="h-7 w-[138px] max-w-full min-w-0 bg-[var(--emr-surface-panel)] px-2.5 !text-[12px] !leading-4"
+                className="mr-1.5 h-7 w-full max-w-full min-w-0 flex-1 bg-[var(--emr-surface-panel)] px-2.5 !text-[12px] !leading-4"
                 data-row-interactive="true"
                 defaultValue={row.original.billingName}
                 disabled={
@@ -8352,7 +8369,7 @@ function ChartOrderTable({
                 pendingRemovalOrderIdsRef.current.has(row.original.order.id)
               }
               value={row.original.billingName}
-              className="h-7 w-[138px] max-w-full min-w-0 bg-[var(--emr-surface-panel)] px-2.5 !text-[12px] !leading-4"
+              className="mr-1.5 h-7 w-full max-w-full min-w-0 flex-1 bg-[var(--emr-surface-panel)] px-2.5 !text-[12px] !leading-4"
               data-emr-table-input="true"
               onChange={(event) =>
                 editableCallbacksRef.current.onUpdateBillingName(
@@ -8397,7 +8414,7 @@ function ChartOrderTable({
               <Input
                 key={`${row.original.order.id}-billing-quantity-${getChartOrderPrebillingVersion(row.original)}-${prebillingSavingOrderIds.has(row.original.order.id)}`}
                 aria-label={`${row.original.order.displayName} 확정 청구 수량 수정`}
-                className="ml-2.5 h-7 w-[55px] max-w-none min-w-0 bg-[var(--emr-surface-panel)] px-2.5 text-right !text-[12px] !leading-4 tabular-nums"
+                className="ml-2.5 h-7 w-full max-w-none min-w-0 flex-1 bg-[var(--emr-surface-panel)] px-2.5 text-right !text-[12px] !leading-4 tabular-nums"
                 data-row-interactive="true"
                 data-emr-table-input="true"
                 defaultValue={row.original.quantityInput}
@@ -8454,7 +8471,7 @@ function ChartOrderTable({
               }
               value={row.original.quantityInput}
               className={cn(
-                "ml-2.5 h-7 w-[55px] max-w-none min-w-0 bg-[var(--emr-surface-panel)] px-2.5 text-right !text-[12px] !leading-4 tabular-nums",
+                "ml-2.5 h-7 w-full max-w-none min-w-0 flex-1 bg-[var(--emr-surface-panel)] px-2.5 text-right !text-[12px] !leading-4 tabular-nums",
                 invalidQuantity && "border-[var(--emr-status-danger-border)]",
               )}
               data-emr-table-input="true"
@@ -8487,12 +8504,13 @@ function ChartOrderTable({
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "unitPrice"),
         cell: ({ row }) => (
-          <EmrTableCellText mode="one-line">
-            {row.original.unitPrice !== undefined &&
-            row.original.unitPrice !== null
-              ? `${row.original.unitPrice.toLocaleString("ko-KR")}원`
-              : "-"}
-          </EmrTableCellText>
+          row.original.unitPrice !== undefined && row.original.unitPrice !== null ? (
+            <EmrTableCellText mode="one-line">
+              {`${row.original.unitPrice.toLocaleString("ko-KR")}원`}
+            </EmrTableCellText>
+          ) : (
+            <ChartOrderEmptyValue className="text-right tabular-nums" />
+          )
         ),
         meta: {
           align: "right",
@@ -8510,12 +8528,13 @@ function ChartOrderTable({
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "lineTotal"),
         cell: ({ row }) => (
-          <EmrTableCellText mode="one-line">
-            {getDraftLineTotal(row.original) !== null &&
-            getDraftLineTotal(row.original) !== undefined
-              ? `${getDraftLineTotal(row.original)!.toLocaleString("ko-KR")}원`
-              : "-"}
-          </EmrTableCellText>
+          getDraftLineTotal(row.original) !== null && getDraftLineTotal(row.original) !== undefined ? (
+            <EmrTableCellText mode="one-line">
+              {`${getDraftLineTotal(row.original)!.toLocaleString("ko-KR")}원`}
+            </EmrTableCellText>
+          ) : (
+            <ChartOrderEmptyValue className="text-right tabular-nums" />
+          )
         ),
         meta: {
           align: "right",
@@ -8569,7 +8588,7 @@ function ChartOrderTable({
           }
           const editable = isChartOrderPrebillingEditable(row.original);
           return (
-            <span className="inline-flex items-center">
+            <span className="inline-flex w-full items-center justify-center">
               <ChartOrderTableSwitch
                 ariaLabel={`${row.original.order.displayName} 청구반영`}
                 checked={enabled}
@@ -8592,6 +8611,7 @@ function ChartOrderTable({
           );
         },
         meta: {
+          align: "center",
           label: "청구반영",
           resize: "data-column",
           textMode: "one-line",
@@ -8610,7 +8630,7 @@ function ChartOrderTable({
             return <ChartOrderUnknownState label={`${row.original.order.displayName} 과세`} />;
           }
           return (
-            <span className="inline-flex items-center">
+            <span className="inline-flex w-full items-center justify-center">
               <ChartOrderTableSwitch
                 ariaLabel={`${row.original.order.displayName} 과세`}
                 checked={taxable}
@@ -8621,6 +8641,7 @@ function ChartOrderTable({
           );
         },
         meta: {
+          align: "center",
           label: "과세",
           resize: "data-column",
           textMode: "one-line",
@@ -8647,7 +8668,7 @@ function ChartOrderTable({
           }
           const draft = getAdjustmentDraft(row.original);
           return (
-            <span className="relative inline-flex w-[104px] shrink-0">
+            <span className="relative inline-flex w-full min-w-0 flex-1">
               <Input
                 aria-label={`${row.original.order.displayName} 할인할증 금액`}
                 className="h-7 w-full min-w-0 bg-[var(--emr-surface-panel)] pr-7 pl-2.5 text-right !text-[12px] !leading-4 tabular-nums"
@@ -8706,7 +8727,7 @@ function ChartOrderTable({
           }
           const draft = getAdjustmentDraft(row.original);
           return (
-            <span className="relative inline-flex w-[62px] shrink-0">
+            <span className="relative inline-flex w-full min-w-0 flex-1">
               <Input
                 aria-label={`${row.original.order.displayName} 할인할증 퍼센트`}
                 className="h-7 w-full min-w-0 bg-[var(--emr-surface-panel)] pr-[22px] pl-2.5 text-right !text-[12px] !leading-4 tabular-nums"
@@ -8756,7 +8777,7 @@ function ChartOrderTable({
           if (!isChartOrderPrebillingEditable(row.original)) {
             return (
               <EmrTableCellText mode="one-line" fullText={draft.reasonText}>
-                {draft.reasonText || "미설정"}
+                {draft.reasonText ? draft.reasonText : <ChartOrderEmptyValue />}
               </EmrTableCellText>
             );
           }
@@ -8807,7 +8828,7 @@ function ChartOrderTable({
           const orderId = row.original.order.id;
           const options = intendedAssigneeOptionsByOrderId[orderId] ?? [];
           const assignee = getChartOrderAssignee(row.original, options);
-          if (!assignee) return <span aria-hidden="true">—</span>;
+          if (!assignee) return <ChartOrderEmptyValue fullText="담당자 데이터 없음" />;
           const confirmed = isChartOrderConfirmedRow(row.original);
           if (!confirmed) {
             const loadingAssignees =

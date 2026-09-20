@@ -903,13 +903,12 @@ export function EmrDataTable<TData>({
   const hasPinnedColumns = table.getIsSomeColumnsPinned();
   const hasRowOverlay = Boolean(renderRowOverlay);
   const visibleColumnCount = columns.length + (hasRowOverlay ? 1 : 0);
+  const leftPinnedColumns = table.getLeftVisibleLeafColumns();
   const leftPinnedColumnWidth =
     leadingInset +
-    table.getLeftVisibleLeafColumns().reduce(
-      (total, column) => total + column.getSize(),
-      0,
-    ) +
-    Math.max(0, table.getLeftVisibleLeafColumns().length - 1) * columnGap;
+    leftPinnedColumns.reduce((total, column) => total + column.getSize(), 0) +
+    Math.max(0, leftPinnedColumns.length - 1) * columnGap +
+    (leftPinnedColumns.length > 0 ? columnGap : 0);
   const rightPinnedColumnWidth =
     table.getRightVisibleLeafColumns().reduce(
       (total, column) => total + column.getSize(),
