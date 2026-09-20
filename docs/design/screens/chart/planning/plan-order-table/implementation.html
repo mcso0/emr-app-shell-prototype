@@ -210,7 +210,7 @@
       }
 
       .fixed-overflow { overflow-x: auto; }
-      .fixed-strip { display: grid; grid-template-columns: 20px 88px 88px 180px; gap: 8px; width: 412px; padding: 14px 0 14px 12px; background: #fafafa; }
+      .fixed-strip { display: grid; grid-template-columns: 20px 88px 88px 180px; gap: 8px; width: 408px; padding: 14px 0; background: #fafafa; }
       .fixed-cell { min-width: 0; min-height: 66px; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding-left: 10px; background: #eaf3ff; border-radius: 4px; font-size: 12px; }
       .fixed-cell span { font-size: 10px; color: #525252; }
       .fixed-cell.selection { padding: 0; align-items: center; }
@@ -284,16 +284,17 @@
             <div class="section-head"><div><h2>1. 테이블 구조</h2><p>왼쪽 4개는 고정하고, 업무 상태부터 오른쪽으로 스크롤한다.</p></div><span class="pill dark">기본 간격: Header 36px · Row 40px</span></div>
             <div class="architecture">
               <div class="region fixed">
-                <div class="region-title"><h3>FixedColumn</h3><small>기본412px · 최소392px</small></div>
+                <div class="region-title"><h3>FixedColumn</h3><small>기본408px · 최소388px</small></div>
                 <div class="fixed-overflow">
-                  <div class="fixed-strip" aria-label="412px 고정 영역: 선행12, 선택20, 간격8, 분류88, 간격8, 확정 여부88, 간격8, Order 명180">
+                  <div class="fixed-strip" aria-label="408px 고정 영역: 선행 여백 없음, 선택20, 간격8, 분류88, 간격8, 확정 여부88, 간격8, Order 명180, 경계8">
                     <div class="fixed-cell selection" title="선택 20px"><span class="checkbox-demo" aria-hidden="true"></span></div>
                     <div class="fixed-cell"><b>분류</b><span>88px 고정</span></div>
                     <div class="fixed-cell"><b>확정 여부</b><span>88px 고정</span></div>
                     <div class="fixed-cell"><b>Order 명</b><span>180 기본 · 160~400</span></div>
                   </div>
                 </div>
-                <div class="architecture-note"><b>12px</b><span>선행 여백. 12+20+88+88+180+3×8=412px. 원본394px/Order 명170과 달리 사용자 너비를 적용한다. 위 내부 간격은 선·상호작용 없는 투명 여백이다. 고정/스크롤 경계는 헤더에만 1px 라인을 보이고, 같은 8px 영역 안의 리사이즈 hit area는 투명하게 유지한다. 선택 폭은 실제20px.</span></div>
+                <div class="architecture-note"><b>0px</b><span>선행 여백 없음. 20+88+88+180+4×8=408px이며 마지막 8px은 고정/스크롤 경계 할당이다. 원본394px/Order 명170과 달리 사용자 너비를 적용한다. 내부 간격은 선·상호작용 없는 투명 여백이고, 고정 영역이 스크롤 컬럼 위를 불투명하게 덮어 비침을 막는다. 고정/스크롤 경계는 1px 라인을 보이며, 같은 8px 영역 안의 리사이즈 hit area는 유지한다. 선택 폭은 실제20px.</span></div>
+                <div class="architecture-note"><b>10px</b><span>Plan/Order 제목, 분류 탭 그룹, 선택 체크박스의 왼쪽 외곽선을 일치시킨다. 테이블은 좌측 끝까지 채우고, 선행 투명 여백 8px 뒤의 논리적 20px 선택 영역에서 체크박스가 내부 2px inset을 유지한다.</span></div>
               </div>
               <div class="region">
                 <div class="region-title"><h3>ScrollColumn</h3><small>업무 상태 → 요청 수의사</small></div>
@@ -429,12 +430,12 @@
 <tr><td>과세</td><td>163287 / 163355</td><td>64 최소</td><td>왼쪽 / 왼쪽</td><td>없음</td><td>Switch x10 / 32×18</td></tr>
 <tr><td>업무 담당</td><td>163290 / 163358</td><td>66 최소</td><td>왼쪽 / 왼쪽</td><td>없음</td><td>Avatar x10 / 24×24</td></tr>
 <tr><td>요청 수의사</td><td>163293 / 163361</td><td>77 최소</td><td>왼쪽 / 왼쪽</td><td>없음</td><td>Avatar x10 / 24×24</td></tr></tbody></table></div>
-<p>아래 측정표의27개는 원본 근거이며 단위 열과Order 명170은 최신 목표가 아니다. 선택의 가로·세로 중앙 정렬은 사용자 확정 사항이다. 나머지 셀은 세로 중앙. 헤더 Button은 px8 + 내부 wrapper px2라 왼쪽 라벨 inset이 10px이다. 오른쪽 정렬 헤더는 버튼 그룹이 우측으로 붙으며 아이콘이 없으면 라벨 오른쪽 10px, 아이콘이 있으면 라벨 오른쪽 26px(아이콘12+gap4+10)이다.</p>
-<p>body wrapper는 선택 px2 외에는 px0. 대부분 spacer6 + gap4로 콘텐츠 시작 또는 끝 여백이 10px이다. 청구서명은 gap0이며 Input138 + trailing6, 수량·할인·할증은 선행6+4 뒤 Input이므로 단순한 공통 trailing padding 규칙으로 구현하면 틀린다.</p>
+<p>아래 측정표의27개는 원본 근거이며 단위 열과Order 명170은 최신 목표가 아니다. 선택 체크박스는 선행 투명 여백8px 뒤의 논리적20px 영역에서 가로·세로 중앙 정렬하며, 그 왼쪽 외곽선은Plan/Order 제목·분류 탭 그룹과 일치한다. 나머지 셀은 세로 중앙. 헤더 Button은 px8 + 내부 wrapper px2라 왼쪽 라벨 inset이 10px이다. 오른쪽 정렬 헤더는 버튼 그룹이 우측으로 붙으며 아이콘이 없으면 라벨 오른쪽 10px, 아이콘이 있으면 라벨 오른쪽 26px(아이콘12+gap4+10)이다.</p>
+<p>body wrapper는 선택만 선행 gap8 + 내부 px2이며 나머지는 px0. 대부분 spacer6 + gap4로 콘텐츠 시작 또는 끝 여백이 10px이다. 청구서명은 gap0이며 Input138 + trailing6, 수량·할인·할증은 선행6+4 뒤 Input이므로 단순한 공통 trailing padding 규칙으로 구현하면 틀린다.</p>
 <p>조제량 헤더 instance만 opacity 0.88이고 body는 1이다. 시안에 조건부 비활성화 의미는 명시되어 있지 않으므로 opacity로 편집 가능 여부를 판단하지 않는다. head/kg당의 88, 단위의 mmlg/lg 등 예시 문자열은 유효 임상 데이터나 단위 정의로 채택하지 않는다.</p></details>
 <details class="research-block"><summary>프레임 너비와 오버레이를 분리</summary>
 <div class="table-wrap"><table><thead><tr><th>항목</th><th>실측 / 합의</th><th>구현 시 의미</th></tr></thead><tbody><tr><td>원본 고정 영역</td><td>394px; 셀 시작 x12,32,128,224</td><td>원본은 선택–분류 사이 8px이 없음</td></tr>
-<tr><td>이전 합의 고정 영역 (최신 너비 전)</td><td>이전402px; 최신 목표는 기본412 / 최소392 / 최대632</td><td>내부 3개 간격 모두 투명. 디바이더·hover·resize 없음</td></tr>
+<tr><td>이전 합의 고정 영역 (최신 너비 전)</td><td>이전402px; 최신 목표는 기본408 / 최소388 / 최대628</td><td>선행 인셋 없음. 내부 3개 간격과 터미널 8px 경계 할당은 투명하며, 스크롤 컬럼은 고정 영역 뒤로 비치지 않음</td></tr>
 <tr><td>스크롤 컬럼 흐름</td><td>너비 합2080 + 22×8 + 선행10 = 2266px</td><td>마지막 요청 수의사 x2189 +77 =2266</td></tr>
 <tr><td>원본 스크롤 프레임</td><td>2317px</td><td>남은51px은 빈 패딩이라고 추정하면 안 됨</td></tr>
 <tr><td>원본 action overlay</td><td>28441:163362, ABSOLUTE, x2203 / w114 / 끝2317</td><td>요청 수의사 영역과 겹치는 별도 오버레이. 내부 24px 버튼3개, px20/10, gap6. 28번째 컬럼이 아님</td></tr>

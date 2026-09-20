@@ -134,15 +134,11 @@ export function ChartOrderFinanceFooter({
             type="button"
             size="sm"
             className="!shadow-none"
-            aria-label={
-              requesting
-                ? "Order 수납 청구 이동 중"
-                : "Order 수납 청구 (수납에서 청구)"
-            }
+            aria-label={requesting ? "전체 수납 청구 이동 중" : "전체 수납 청구"}
             disabled={!canRequestBilling || requesting}
             onClick={onRequestBilling}
           >
-            {requesting ? "이동 중" : "Order 수납 청구"}
+            {requesting ? "이동 중" : "전체 수납 청구"}
           </Button>
         </div>
         <span className="sr-only" aria-live="polite">{error}</span>
@@ -315,7 +311,7 @@ export function ChartOrderBillingDetailAside({
           disabled={!canRequestBilling || requesting}
           onClick={onRequestBilling}
         >
-          {requesting ? "이동 중" : "수납 청구"}
+          {requesting ? "이동 중" : "전체 수납 청구"}
         </Button>
       </footer>
     </aside>

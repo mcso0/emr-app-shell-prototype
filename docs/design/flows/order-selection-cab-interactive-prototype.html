@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Selection CAB · Interaction Draft</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #171717;
+        --muted: #737373;
+        --subtle: #a3a3a3;
+        --line: #e5e5e5;
+        --line-strong: #d4d4d4;
+        --surface: #ffffff;
+        --surface-soft: #fafafa;
+        --surface-tint: #f5f5f5;
+        --accent: #171717;
+        --danger-bg: #fff5f5;
+        --danger: #c53030;
+        --success-bg: #f0fdf4;
+        --success: #15803d;
+        --warning-bg: #fffaf0;
+        --warning: #b45309;
+        --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        --shadow-md: 0 10px 24px -12px rgb(0 0 0 / 0.22);
+        --radius-lg: 14px;
+        --radius-md: 10px;
+        --radius-sm: 8px;
+        --font: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+      html, body { min-height: 100%; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: #f4f5f7;
+        font-family: var(--font);
+        font-size: 13px;
+        letter-spacing: -0.01em;
+      }
+      button, input, select { font: inherit; }
+      button { cursor: pointer; }
+      button:focus-visible, select:focus-visible, input:focus-visible {
+        outline: 3px solid rgb(59 130 246 / 0.28);
+        outline-offset: 2px;
+      }
+
+      .shell {
+        width: min(1440px, calc(100% - 48px));
+        margin: 0 auto;
+        padding: 36px 0 72px;
+      }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      h1, h2, h3, p { margin: 0; }
+      h1 {
+        font-size: clamp(24px, 3vw, 36px);
+        line-height: 1.15;
+        letter-spacing: -0.04em;
+      }
+      .lede {
+        max-width: 720px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+      .header-row {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+      }
+      .header-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 9px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .badge--dark { border-color: var(--ink); background: var(--ink); color: white; }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 18px;
+        align-items: start;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--surface);
+        box-shadow: 0 2px 12px rgb(0 0 0 / 0.035);
+      }
+      .panel__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .panel__title { font-size: 14px; font-weight: 750; }
+      .panel__hint { color: var(--muted); font-size: 11px; }
+      .panel__body { padding: 20px; }
+
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 0.7fr);
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .field label {
+        display: block;
+        margin: 0 0 7px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+      select, input {
+        width: 100%;
+        height: 36px;
+        padding: 0 11px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--ink);
+      }
+      .case-description {
+        min-height: 76px;
+        padding: 13px 14px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-md);
+        background: var(--surface-soft);
+      }
+      .case-description__label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 12px;
+        font-weight: 750;
+      }
+      .case-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+      .case-dot--blue { background: #2563eb; }
+      .case-dot--amber { background: #d97706; }
+      .case-description p { color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+      .chart-canvas {
+        position: relative;
+        min-height: 485px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #fbfbfc;
+      }
+      .chart-topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 48px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+      }
+      .chart-topbar__left { display: flex; align-items: center; gap: 12px; }
+      .chart-title { font-size: 13px; font-weight: 750; }
+      .crumb { color: var(--muted); font-size: 11px; }
+      .chart-actions { display: flex; gap: 6px; }
+      .icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--muted);
+      }
+      .table-wrap { padding: 18px 16px 150px; }
+      .table-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+      }
+      .table-toolbar__tabs { display: flex; gap: 5px; }
+      .tab {
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .tab.is-active { border-color: var(--line); background: var(--surface); color: var(--ink); font-weight: 700; }
+      .table-toolbar__tools { color: var(--subtle); font-size: 11px; }
+      .plan-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-top: 12px;
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+      .plan-footer__meta { display: grid; gap: 3px; }
+      .plan-footer__label { color: var(--muted); font-size: 10px; }
+      .plan-footer__summary { display: flex; align-items: baseline; gap: 8px; }
+      .plan-footer__summary strong { font-size: 12px; }
+      .plan-footer__summary span { color: var(--muted); font-size: 11px; }
+      .footer-button {
+        min-height: 28px;
+        padding: 4px 10px;
+        border: 1px solid var(--ink);
+        border-radius: 8px;
+        background: var(--ink);
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .footer-button:hover { background: #303030; }
+      table { width: 100%; border-collapse: separate; border-spacing: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+      th, td { height: 42px; padding: 0 12px; border-bottom: 1px solid var(--line); text-align: left; }
+      th { height: 34px; background: #fafafa; color: var(--muted); font-size: 10px; font-weight: 700; }
+      td { color: #404040; font-size: 11px; }
+      tr:last-child td { border-bottom: 0; }
+      tr.is-selected td { background: #f5f8ff; }
+      .check {
+        width: 15px;
+        height: 15px;
+        accent-color: var(--ink);
+        vertical-align: middle;
+      }
+      .status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        padding: 0 7px;
+        border-radius: 6px;
+        background: #f5f5f5;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+      }
+      .status--draft { background: #eff6ff; color: #2563eb; }
+      .status--confirmed { background: #f0fdf4; color: #15803d; }
+      .row-name { color: var(--ink); font-weight: 700; }
+      .row-sub { margin-top: 3px; color: var(--subtle); font-size: 10px; }
+      .disabled-cell { color: var(--subtle); }
+
+      /* Exact CAB geometry from Figma node 28441:115889. */
+      .cab-stage {
+        position: absolute;
+        right: 0;
+        bottom: 22px;
+        left: 0;
+        display: flex;
+        justify-content: center;
+        min-height: 42px;
+        pointer-events: none;
+      }
+      .cab {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        padding: 6px 8px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgb(255 255 255 / 0.98);
+        box-shadow: var(--shadow-xl);
+        backdrop-filter: blur(28px);
+        pointer-events: auto;
+        animation: cab-in 180ms ease-out both;
+      }
+      @keyframes cab-in { from { opacity: 0; transform: translateY(5px) scale(0.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      .cab__count {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 0 8px;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 16px;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+      }
+      .cab__divider { width: 1px; height: 24px; background: var(--line); }
+      .cab__button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        padding: 4px 8px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 16px;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+        transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+      }
+      .cab__button:hover { transform: translateY(-1px); }
+      .cab__button:active { transform: translateY(0); }
+      .cab__button--primary { border-color: var(--ink); background: var(--ink); color: white; }
+      .cab__button--outline { border-color: var(--line); background: white; box-shadow: 0 1px 1px rgb(0 0 0 / 0.05); }
+      .cab__button--danger { background: var(--danger-bg); color: var(--danger); }
+      .cab__button--ghost { background: rgb(255 255 255 / 0); }
+      .cab__button--primary:hover { background: #303030; }
+      .cab__button--outline:hover { background: var(--surface-tint); }
+      .cab__button--danger:hover { background: #ffe8e8; }
+      .cab__button--ghost:hover { background: var(--surface-tint); }
+
+      .side-stack { display: grid; gap: 18px; }
+      .spec-list { display: grid; gap: 10px; }
+      .spec-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+      .spec-row:last-child { padding-bottom: 0; border-bottom: 0; }
+      .spec-row dt { color: var(--muted); font-size: 11px; font-weight: 700; }
+      .spec-row dd { margin: 0; color: var(--ink); font-size: 12px; line-height: 1.5; }
+      code { padding: 2px 5px; border-radius: 5px; background: var(--surface-tint); color: #404040; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+
+      .event-log { display: grid; gap: 9px; max-height: 260px; overflow: auto; }
+      .event {
+        padding: 10px 11px;
+        border-left: 3px solid var(--line-strong);
+        border-radius: 0 8px 8px 0;
+        background: var(--surface-soft);
+      }
+      .event__meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; color: var(--subtle); font-size: 10px; }
+      .event__text { color: #404040; font-size: 11px; line-height: 1.45; }
+      .event--success { border-left-color: var(--success); background: var(--success-bg); }
+      .event--warning { border-left-color: var(--warning); background: var(--warning-bg); }
+      .event--danger { border-left-color: var(--danger); background: var(--danger-bg); }
+      .empty-log { color: var(--subtle); font-size: 12px; line-height: 1.5; }
+
+      .case-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+      .case-card { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+      .case-card__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+      .case-card h3 { font-size: 12px; }
+      .case-card p { min-height: 36px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+      .case-card__action { margin-top: 12px; color: var(--ink); font-size: 11px; font-weight: 700; }
+      .case-card.is-current { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+
+      .modal-backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 24px; background: rgb(23 23 23 / 0.28); backdrop-filter: blur(2px); }
+      .modal-backdrop[hidden] { display: none; }
+      .modal { width: min(420px, 100%); border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 24px 48px rgb(0 0 0 / 0.18); animation: modal-in 160ms ease-out both; }
+      @keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+      .modal__body { padding: 22px 22px 18px; }
+      .modal__icon { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 14px; border-radius: 10px; background: var(--surface-tint); color: var(--ink); font-size: 16px; }
+      .modal--danger .modal__icon { background: var(--danger-bg); color: var(--danger); }
+      .modal--billing .modal__icon { background: var(--warning-bg); color: var(--warning); }
+      .modal h2 { font-size: 16px; letter-spacing: -0.02em; }
+      .modal p { margin-top: 9px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .modal__detail { display: grid; gap: 8px; margin-top: 14px; padding: 12px; border-radius: 9px; background: var(--surface-soft); }
+      .modal__detail-row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; }
+      .modal__detail-row strong { color: var(--ink); }
+      .modal__actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 22px 18px; }
+      .modal__button { min-height: 32px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font-size: 12px; font-weight: 700; }
+      .modal__button--primary { border-color: var(--ink); background: var(--ink); color: white; }
+      .modal__button--danger { border-color: var(--danger); background: var(--danger); color: white; }
+      .modal__button--warning { border-color: var(--warning); background: var(--warning); color: white; }
+
+      .toast-stack { position: fixed; right: 24px; bottom: 24px; z-index: 20; display: grid; gap: 9px; width: min(360px, calc(100% - 48px)); }
+      .toast { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: start; gap: 10px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; background: white; box-shadow: var(--shadow-md); animation: toast-in 180ms ease-out both; }
+      @keyframes toast-in { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+      .toast__mark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; background: var(--surface-tint); color: var(--ink); font-size: 12px; font-weight: 800; }
+      .toast--success .toast__mark { background: var(--success-bg); color: var(--success); }
+      .toast--warning .toast__mark { background: var(--warning-bg); color: var(--warning); }
+      .toast--danger .toast__mark { background: var(--danger-bg); color: var(--danger); }
+      .toast__title { font-size: 12px; font-weight: 750; }
+      .toast__body { margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+      .toast__close { border: 0; background: transparent; color: var(--subtle); font-size: 14px; line-height: 1; }
+
+      @media (max-width: 1050px) {
+        .workspace { grid-template-columns: 1fr; }
+        .side-stack { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .side-stack > :last-child { grid-column: 1 / -1; }
+      }
+      @media (max-width: 700px) {
+        .shell { width: min(100% - 24px, 1440px); padding-top: 24px; }
+        .header-row { display: block; }
+        .header-meta { margin-top: 14px; }
+        .controls, .case-grid, .side-stack { grid-template-columns: 1fr; }
+        .side-stack > :last-child { grid-column: auto; }
+        .chart-canvas { min-height: 560px; }
+        .table-wrap { overflow-x: auto; }
+        table { min-width: 620px; }
+        .cab { max-width: calc(100% - 20px); overflow-x: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="header-row">
+        <div>
+          <p class="eyebrow">CLAiR · Chart / Plan Order</p>
+          <h1>Order Selection CAB 인터랙션 시안</h1>
+          <p class="lede">Figma의 세 가지 선택 상태를 전환해 보고, 각 버튼을 눌렀을 때 필요한 확인 알럿과 결과 토스트를 함께 검토하는 정적 프로토타입입니다.</p>
+        </div>
+        <div class="header-meta">
+          <span class="badge badge--dark">Review prototype</span>
+          <span>Figma node 28441:115889</span>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <div class="panel__title">선택 상태 시뮬레이터</div>
+              <div class="panel__hint">CAB의 위치와 버튼 피드백을 함께 확인합니다.</div>
+            </div>
+            <span class="badge" id="selectionBadge">미확정 3개 선택</span>
+          </div>
+          <div class="panel__body">
+            <div class="controls">
+              <div class="field">
+                <label for="caseSelect">확인할 케이스</label>
+                <select id="caseSelect">
+                  <option value="draft">미확정 오더만 선택 시</option>
+                  <option value="confirmed">확정 오더만 선택 시</option>
+                  <option value="mixed">복합 오더 선택 시</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="countInput">선택 개수 샘플</label>
+                <input id="countInput" type="number" min="1" max="99" value="3" inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="case-description" id="caseDescription"></div>
+
+            <div class="chart-canvas" aria-label="오더 테이블 시뮬레이션">
+              <div class="chart-topbar">
+                <div class="chart-topbar__left">
+                  <span class="chart-title">Plan / Order</span>
+                  <span class="crumb">2026.09.19 · 외래</span>
+                </div>
+                <div class="chart-actions" aria-hidden="true">
+                  <span class="icon-button">⌕</span>
+                  <span class="icon-button">⋯</span>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <div class="table-toolbar">
+                  <div class="table-toolbar__tabs">
+                    <button class="tab is-active" type="button">전체 8</button>
+                    <button class="tab" type="button">진료 3</button>
+                    <button class="tab" type="button">검사 2</button>
+                  </div>
+                  <span class="table-toolbar__tools">정렬 · 필터 · + 상세 오더</span>
+                </div>
+                <table>
+                  <thead>
+                    <tr><th style="width: 44px;"><input class="check" type="checkbox" aria-label="전체 선택" /></th><th>분류</th><th>오더명</th><th>확정 여부</th><th>업무 상태</th><th>청구 금액</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr class="is-selected"><td><input class="check" type="checkbox" checked aria-label="혈액검사 선택됨" /></td><td>검사</td><td><div class="row-name">혈액학적 검사</div><div class="row-sub">CBC / 기본 패널</div></td><td><span class="status status--draft">미확정</span></td><td>대기중</td><td>20,000원</td></tr>
+                    <tr class="is-selected"><td><input class="check" type="checkbox" checked aria-label="초음파 선택됨" /></td><td>영상</td><td><div class="row-name">복부 초음파</div><div class="row-sub">Abdominal US</div></td><td><span class="status status--confirmed">확정</span></td><td>접수 완료</td><td>25,000원</td></tr>
+                    <tr class="is-selected"><td><input class="check" type="checkbox" checked aria-label="피부검사 선택됨" /></td><td>검사</td><td><div class="row-name">피부 현미경 검사</div><div class="row-sub">Skin scraping</div></td><td><span class="status status--draft">미확정</span></td><td>대기중</td><td>15,000원</td></tr>
+                    <tr><td><input class="check" type="checkbox" aria-label="처치 선택" /></td><td>처치</td><td><div class="row-name">기본 처치</div><div class="row-sub">General care</div></td><td><span class="status status--confirmed">확정</span></td><td>완료</td><td>10,000원</td></tr>
+                    <tr><td><input class="check" type="checkbox" aria-label="약제 선택" /></td><td>약제</td><td><div class="row-name">내복약 조제</div><div class="row-sub">Oral medication</div></td><td><span class="status status--confirmed">확정</span></td><td>대기중</td><td>8,000원</td></tr>
+                    <tr><td><input class="check" type="checkbox" aria-label="추가 검사 선택" /></td><td>검사</td><td><div class="row-name">추가 항목</div><div class="row-sub">Additional test</div></td><td class="disabled-cell">—</td><td class="disabled-cell">—</td><td class="disabled-cell">—</td></tr>
+                  </tbody>
+                </table>
+                <div class="plan-footer">
+                  <div class="plan-footer__meta">
+                    <span class="plan-footer__label">선택과 무관한 현재 진료 전체 청구 대상</span>
+                    <div class="plan-footer__summary"><strong>4개 확정 오더</strong><span>총 63,000원</span></div>
+                  </div>
+                  <button class="footer-button" id="globalBilling" type="button">전체 수납 청구</button>
+                </div>
+              </div>
+              <div class="cab-stage" id="cabStage" aria-live="polite"></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="side-stack">
+          <section class="panel">
+            <div class="panel__header">
+              <div class="panel__title">현재 케이스의 규칙</div>
+              <span class="panel__hint">실행 전 정의</span>
+            </div>
+            <div class="panel__body">
+              <dl class="spec-list" id="specList"></dl>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__header">
+              <div class="panel__title">액션 피드백 로그</div>
+              <button class="tab" id="clearLog" type="button">지우기</button>
+            </div>
+            <div class="panel__body">
+              <div class="event-log" id="eventLog"><p class="empty-log">버튼을 누르면 알럿, 토스트, 선택 상태 변화가 이곳에 기록됩니다.</p></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <section class="case-grid" aria-label="CAB 케이스 요약">
+        <article class="case-card" data-card="draft">
+          <div class="case-card__top"><h3>01 · 미확정만</h3><span class="badge">342 × 42</span></div>
+          <p>확정 전 후보를 확정하거나 삭제하는 상태입니다.</p>
+          <div class="case-card__action">Primary · Destructive · Ghost</div>
+        </article>
+        <article class="case-card" data-card="confirmed">
+          <div class="case-card__top"><h3>02 · 확정만</h3><span class="badge">426 × 42</span></div>
+          <p>청구·재요청·긴급 액션을 제공하는 상태입니다.</p>
+          <div class="case-card__action">Primary · Outline · Destructive · Ghost</div>
+        </article>
+        <article class="case-card" data-card="mixed">
+          <div class="case-card__top"><h3>03 · 복합 선택</h3><span class="badge">423 × 42</span></div>
+          <p>상태별 처리 가능한 액션을 각각 노출하는 상태입니다.</p>
+          <div class="case-card__action">Outline · Outline · Ghost</div>
+        </article>
+      </section>
+    </main>
+
+    <div class="modal-backdrop" id="modalBackdrop" hidden>
+      <section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDescription">
+        <div class="modal__body">
+          <div class="modal__icon" id="modalIcon">!</div>
+          <h2 id="modalTitle">확인</h2>
+          <p id="modalDescription"></p>
+          <div class="modal__detail" id="modalDetail"></div>
+        </div>
+        <div class="modal__actions">
+          <button class="modal__button" id="modalCancel" type="button">취소</button>
+          <button class="modal__button modal__button--primary" id="modalConfirm" type="button">진행</button>
+        </div>
+      </section>
+    </div>
+    <div class="toast-stack" id="toastStack" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+      const CASES = {
+        draft: {
+          label: "미확정 오더만 선택 시",
+          dot: "",
+          description: "확정 전 후보 오더만 선택된 상태입니다. 확정 또는 삭제를 실행할 수 있습니다.",
+          selection: count => `미확정 ${count}개 선택`,
+          specs: [
+            ["노출 버튼", "Order 확정 · 삭제 · 선택 해제"],
+            ["확정", "확인 알럿 후 성공 토스트"],
+            ["삭제", "경고 알럿 후 성공 토스트"],
+            ["취소", "선택 상태 유지"],
+          ],
+          buttons: count => [
+            { label: `${count}개 Order 확정`, style: "primary", action: "confirm" },
+            { label: "삭제", style: "danger", action: "delete" },
+            { label: "선택 해제", style: "ghost", action: "clear" },
+          ],
+        },
+        confirmed: {
+          label: "확정 오더만 선택 시",
+          dot: "blue",
+          description: "이미 확정된 오더만 선택된 상태입니다. 선택된 오더만 부분 수납할 수 있습니다.",
+          selection: count => `확정 ${count}개 선택`,
+          specs: [
+            ["노출 버튼", "수납 청구 · 재요청 · 긴급 · 선택 해제"],
+            ["수납 청구", "선택된 확정 오더만 금액 확인 후 진행"],
+            ["재요청", "재요청 확인 알럿 후 결과 토스트"],
+            ["긴급", "긴급 표시 확인 알럿 후 결과 토스트"],
+          ],
+          buttons: count => [
+            { label: `${count}개 Order 수납 청구`, style: "primary", action: "billing" },
+            { label: "재요청", style: "outline", action: "rerequest" },
+            { label: "긴급", style: "danger", action: "urgent" },
+            { label: "선택 해제", style: "ghost", action: "clear" },
+          ],
+        },
+        mixed: {
+          label: "복합 오더 선택 시",
+          dot: "amber",
+          description: "미확정과 확정 오더가 함께 선택된 상태입니다. 수납 청구는 확정 오더만 대상으로 합니다.",
+          selection: count => `총 ${count}개 오더 선택`,
+          specs: [
+            ["노출 버튼", "Order 확정 · 수납 청구 · 선택 해제"],
+            ["확정", "미확정 대상만 실행"],
+            ["수납 청구", "확정·청구 가능 대상만 실행"],
+            ["개수 표기", "액션별 대상 수를 표시하는 안"],
+          ],
+          buttons: count => [
+            { label: "2개 Order 확정", style: "outline", action: "confirm" },
+            { label: "1개 Order 수납 청구", style: "outline", action: "billing" },
+            { label: "선택 해제", style: "ghost", action: "clear" },
+          ],
+        },
+      };
+
+      const state = { caseKey: "draft", count: 3, hasSelection: true, modalAction: null, log: [] };
+      const caseSelect = document.querySelector("#caseSelect");
+      const countInput = document.querySelector("#countInput");
+      const cabStage = document.querySelector("#cabStage");
+      const selectionBadge = document.querySelector("#selectionBadge");
+      const caseDescription = document.querySelector("#caseDescription");
+      const specList = document.querySelector("#specList");
+      const eventLog = document.querySelector("#eventLog");
+      const modalBackdrop = document.querySelector("#modalBackdrop");
+      const modal = document.querySelector("#modal");
+      const modalIcon = document.querySelector("#modalIcon");
+      const modalTitle = document.querySelector("#modalTitle");
+      const modalDescription = document.querySelector("#modalDescription");
+      const modalDetail = document.querySelector("#modalDetail");
+      const modalCancel = document.querySelector("#modalCancel");
+      const modalConfirm = document.querySelector("#modalConfirm");
+
+      function currentCase() { return CASES[state.caseKey]; }
+      function clampCount(value) { return Math.min(99, Math.max(1, Number.parseInt(value || "1", 10))); }
+      function render() {
+        const config = currentCase();
+        selectionBadge.textContent = state.hasSelection ? config.selection(state.count) : "선택 없음";
+        caseDescription.innerHTML = `<div class="case-description__label"><span class="case-dot case-dot--${config.dot}"></span>${config.label}</div><p>${config.description}</p>`;
+        specList.innerHTML = config.specs.map(([key, value]) => `<div class="spec-row"><dt>${key}</dt><dd>${value}</dd></div>`).join("");
+        cabStage.innerHTML = state.hasSelection ? `<div class="cab" role="toolbar" aria-label="선택 행 작업">${
+          `<span class="cab__count">${state.caseKey === "mixed" ? `${state.count}개 오더 선택` : `${state.count}개 오더 선택`}</span>` +
+          `<span class="cab__divider" aria-hidden="true"></span>` +
+          config.buttons(state.count).map(button => `<button class="cab__button cab__button--${button.style}" type="button" data-action="${button.action}">${button.label}</button>`).join("")
+        }</div>` : "";
+        document.querySelectorAll("[data-card]").forEach(card => card.classList.toggle("is-current", card.dataset.card === state.caseKey));
+        cabStage.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", () => handleAction(button.dataset.action)));
+      }
+
+      function addLog(message, tone = "") {
+        state.log.unshift({ message, tone, time: new Intl.DateTimeFormat("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()) });
+        renderLog();
+      }
+      function renderLog() {
+        eventLog.innerHTML = state.log.length ? state.log.slice(0, 8).map(item => `<div class="event ${item.tone ? `event--${item.tone}` : ""}"><div class="event__meta"><span>interaction log</span><time>${item.time}</time></div><div class="event__text">${item.message}</div></div>`).join("") : `<p class="empty-log">버튼을 누르면 알럿, 토스트, 선택 상태 변화가 이곳에 기록됩니다.</p>`;
+      }
+
+      function openModal(action) {
+        state.modalAction = action;
+        const count = state.count;
+        const configs = {
+          confirm: { title: `${count}개 오더를 확정할까요?`, description: "확정 후에는 확정 전 후보 목록에서 변경됩니다. 실행 전 선택한 오더를 다시 확인해 주세요.", icon: "✓", type: "", confirm: "확정", detail: [["대상", `${count}개 미확정 오더`], ["다음 상태", "확정 오더"]] },
+          delete: { title: `${count}개 오더를 삭제할까요?`, description: `선택한 ${count}개 오더가 현재 Plan에서 제거됩니다.`, icon: "!", type: "danger", confirm: "삭제", detail: [["대상", `${count}개 미확정 후보`], ["영향", "현재 테이블에서 제거"]] },
+          billing: { title: "수납 청구를 진행할까요?", description: "금액을 확인한 뒤 청구를 진행합니다. 실제 연동 시에는 서버 preflight와 권한 검증이 필요합니다.", icon: "₩", type: "billing", confirm: "청구 진행", detail: [["청구 대상", state.caseKey === "mixed" ? "1개 확정 오더" : `${count}개 확정 오더`], ["예상 금액", state.caseKey === "mixed" ? "25,000원" : `${count * 25000}원`]] },
+          globalBilling: { title: "전체 수납 청구를 진행할까요?", description: "현재 진료의 확정·미청구 오더 전체를 확인한 뒤 수납 청구합니다.", icon: "₩", type: "billing", confirm: "청구 진행", detail: [["청구 대상", "4개 확정 오더"], ["예상 금액", "63,000원"]] },
+          rerequest: { title: `${count}개 오더를 재요청할까요?`, description: "검사 또는 처치 요청을 다시 업무 큐에 등록합니다. 기존 요청 이력은 유지됩니다.", icon: "↻", type: "", confirm: "재요청", detail: [["대상", `${count}개 확정 오더`], ["이력", "기존 요청 이력 유지"]] },
+          urgent: { title: `${count}개 오더를 긴급으로 표시할까요?`, description: "해당 오더가 업무 큐에서 긴급 상태로 표시됩니다. 필요한 경우 긴급 사유를 별도로 입력하는 정책을 추가할 수 있습니다.", icon: "!", type: "danger", confirm: "긴급 표시", detail: [["대상", `${count}개 확정 오더`], ["변경", "긴급 상태 적용"]] },
+        };
+        const config = configs[action];
+        modal.className = `modal ${config.type ? `modal--${config.type}` : ""}`;
+        modalIcon.textContent = config.icon;
+        modalTitle.textContent = config.title;
+        modalDescription.textContent = config.description;
+        modalDetail.innerHTML = config.detail.map(([key, value]) => `<div class="modal__detail-row"><span>${key}</span><strong>${value}</strong></div>`).join("");
+        modalConfirm.textContent = config.confirm;
+        modalConfirm.className = `modal__button ${config.type === "danger" ? "modal__button--danger" : config.type === "billing" ? "modal__button--warning" : "modal__button--primary"}`;
+        modalBackdrop.hidden = false;
+        modalConfirm.focus();
+        addLog(`알럿 노출 · ${config.title}`);
+      }
+
+      function closeModal() { modalBackdrop.hidden = true; state.modalAction = null; }
+      function showToast(title, body, tone = "success") {
+        const mark = tone === "danger" ? "!" : tone === "warning" ? "₩" : "✓";
+        const toast = document.createElement("div");
+        toast.className = `toast toast--${tone}`;
+        toast.innerHTML = `<div class="toast__mark">${mark}</div><div><div class="toast__title">${title}</div><div class="toast__body">${body}</div></div><button class="toast__close" type="button" aria-label="토스트 닫기">×</button>`;
+        toast.querySelector(".toast__close").addEventListener("click", () => toast.remove());
+        document.querySelector("#toastStack").appendChild(toast);
+        window.setTimeout(() => toast.remove(), 5200);
+      }
+
+      function completeAction(action) {
+        const count = state.count;
+        const results = {
+          confirm: ["오더 확정 완료", `${count}개 오더를 확정했습니다.`, "success"],
+          delete: ["Plan에서 오더 제거 완료", `${count}개 오더를 Plan에서 제거했습니다.`, "success"],
+          billing: ["수납 청구 요청 완료", `${state.caseKey === "mixed" ? "1개" : `${count}개`} 확정 오더의 청구를 요청했습니다.`, "warning"],
+          globalBilling: ["전체 수납 청구 요청 완료", "현재 진료의 확정 오더 전체를 청구 요청했습니다.", "warning"],
+          rerequest: ["재요청 완료", `${count}개 오더를 업무 큐에 다시 요청했습니다.`, "success"],
+          urgent: ["긴급 표시 완료", `${count}개 오더를 긴급 상태로 표시했습니다.`, "danger"],
+        };
+        const [title, body, tone] = results[action];
+        closeModal();
+        showToast(title, body, tone);
+        addLog(`결과 토스트 · ${title}`, tone === "warning" ? "warning" : tone === "danger" ? "danger" : "success");
+        if (action === "confirm") { state.caseKey = "confirmed"; }
+        if (["confirm", "delete", "billing", "globalBilling", "rerequest", "urgent"].includes(action)) {
+          state.hasSelection = false;
+        }
+        render();
+      }
+
+      function handleAction(action) {
+        if (action === "clear") {
+          addLog("선택 해제 · CAB가 사라지고 선택 상태가 초기화됩니다.");
+          state.hasSelection = false;
+          render();
+          return;
+        }
+        openModal(action);
+      }
+
+      caseSelect.addEventListener("change", event => {
+        state.caseKey = event.target.value;
+        state.count = state.caseKey === "confirmed" ? 2 : state.caseKey === "mixed" ? 3 : 3;
+        state.hasSelection = true;
+        countInput.value = state.count;
+        addLog(`케이스 전환 · ${currentCase().label}`);
+        render();
+      });
+      countInput.addEventListener("input", event => {
+        state.count = clampCount(event.target.value);
+        event.target.value = state.count;
+        render();
+      });
+      modalCancel.addEventListener("click", () => { addLog("알럿 취소 · 선택 상태 유지"); closeModal(); });
+      modalConfirm.addEventListener("click", () => completeAction(state.modalAction));
+      document.querySelector("#globalBilling").addEventListener("click", () => openModal("globalBilling"));
+      modalBackdrop.addEventListener("click", event => { if (event.target === modalBackdrop) closeModal(); });
+      document.addEventListener("keydown", event => { if (event.key === "Escape" && !modalBackdrop.hidden) closeModal(); });
+      document.querySelector("#clearLog").addEventListener("click", () => { state.log = []; renderLog(); });
+      document.querySelectorAll("[data-card]").forEach(card => card.addEventListener("click", () => { state.caseKey = card.dataset.card; caseSelect.value = state.caseKey; state.count = state.caseKey === "confirmed" ? 2 : state.caseKey === "mixed" ? 3 : 3; state.hasSelection = true; countInput.value = state.count; render(); }));
+
+      render();
+    </script>
+  </body>
+</html>

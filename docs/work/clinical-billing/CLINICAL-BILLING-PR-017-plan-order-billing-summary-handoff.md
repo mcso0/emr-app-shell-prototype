@@ -95,6 +95,30 @@ order and financial summary, a non-modal amount-detail aside, and a chart-owned
   remote catalog verification, PR checks, deployment, smoke, and rollback
   evidence are reported.
 
+## Current Chart CAB UX Clarification (2026-09-20)
+
+The chart now has two intentionally different billing entry points in the
+approved interaction contract:
+
+- Footer `전체 수납 청구`: encounter-scoped; selection-independent; includes all
+  currently eligible confirmed, not-yet-invoiced orders.
+- Selection CAB `n개 Order 수납 청구`: selection-scoped partial billing; includes
+  only selected confirmed, billing-eligible orders. In mixed selection, draft
+  orders are excluded from the billing count and request.
+
+This does not change the existing out-of-scope rule for arbitrary partial-amount
+input. It clarifies that staff may request billing for a selected subset of
+eligible order lines while the billing amount remains server-owned. The full
+interaction contract is recorded in
+[Order Selection CAB Interaction Contract](../../design/flows/order-selection-cab-interaction-spec.md).
+
+The chart implementation now permits mixed draft/confirmed top-level selection,
+renders action-specific counts, carries selected billable order IDs into the
+billing route, and keeps the encounter-wide footer action separate. Confirmed
+bulk `재요청` and `긴급` use the existing server mutation route with per-order
+success/failure retention; candidate `삭제` still removes rows from the current
+Plan draft only after confirmation.
+
 ## Verification
 
 - `npm run security:secrets`
@@ -103,6 +127,8 @@ order and financial summary, a non-modal amount-detail aside, and a chart-owned
 - `npm run lint`
 - `npx tsc --noEmit`
 - `npm run build`
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4175 npx playwright test tests/order-selection-cab-prototype.spec.ts`
+- `npx playwright test tests/chart.spec.ts -g "chart mixed selection keeps confirmation and partial billing scoped"`
 - `npx playwright test tests/chart-order-billing-summary-server.spec.ts --reporter=line`
 - `npx playwright test tests/chart-order-action-persistence-server.spec.ts --reporter=line`
 - `npx playwright test tests/billing-invoice-candidate-sync-server.spec.ts --reporter=line`

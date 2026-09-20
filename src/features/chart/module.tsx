@@ -75,10 +75,7 @@ import {
 } from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
-import {
-  CdsUtilitiesHistoryIcon,
-  CdsUtilitiesSortIcon,
-} from "@/components/cds-icons/utilities-and-misc";
+import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
   EmrContentAsideHeader,
@@ -101,7 +98,6 @@ import { EmrInstructionHistoryToggle } from "@/components/emr/instruction-header
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
-import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { EmrTableDensitySelector } from "@/components/emr/table-density-selector";
 import {
@@ -7609,6 +7605,29 @@ function ChartOrderActualDispenseCell({
   );
 }
 
+function ChartOrderDisabledAction({
+  children,
+  reason,
+}: {
+  children: ReactNode;
+  reason?: string;
+}) {
+  if (!reason) return children;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="inline-flex" tabIndex={0} aria-label={reason} />
+        }
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent>{reason}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 function ChartOrderTable({
   detailOpen,
   quickAdd,
@@ -7633,6 +7652,8 @@ function ChartOrderTable({
   onConfirmOrder,
   onConfirmSelected,
   onDeleteSelected,
+  onOpenBulkMutation,
+  onRequestBilling,
   onOpenDetail,
   onOpenHistory,
   onOpenMutation,
@@ -7680,6 +7701,11 @@ function ChartOrderTable({
   onConfirmSelected: () => void;
   onDeleteOrder: (orderId: string) => void;
   onDeleteSelected: (orderIds: string[]) => void;
+  onOpenBulkMutation: (
+    action: Extract<ChartOrderExecutionMutationAction, "priority_change" | "re_request">,
+    orderIds: string[],
+  ) => void;
+  onRequestBilling: (orderIds: string[]) => void;
   onFlushDraft: () => void;
   onOpenDetail: (orderId: string) => void;
   onOpenHistory: (orderId: string) => void;
@@ -7859,6 +7885,50 @@ function ChartOrderTable({
     });
     return latest;
   }, [executionTasks]);
+  const getPrimaryEditAction = (
+    orderRow: ChartOrderDraftRow,
+  ): "amend" | "re_request" | null => {
+    if (
+      orderRow.runtimeRow?.rowType === "set" ||
+      orderRow.runtimeRow?.rowType === "set_child"
+    ) {
+      return null;
+    }
+    const currentTask = latestTaskByOrderId.get(orderRow.order.id);
+    if (currentTask) {
+      if (currentTask.taskRole !== "execution") return null;
+      if (currentTask.status === "pending") return "amend";
+      if (
+        ["in_progress", "paused", "complete", "returned"].includes(
+          currentTask.status,
+        )
+      ) {
+        return "re_request";
+      }
+      return null;
+    }
+    if (orderRow.order.status === "confirmed") return "amend";
+    if (
+      ["in_progress", "completed", "re_requested"].includes(
+        orderRow.order.status,
+      )
+    ) {
+      return "re_request";
+    }
+    return null;
+  };
+  const canRepeatRequest = (orderRow: ChartOrderDraftRow) => {
+    const currentTask = latestTaskByOrderId.get(orderRow.order.id);
+    if (currentTask) {
+      const expectedRole =
+        orderRow.runtimeRow?.rowType === "set" ? "aggregate" : "execution";
+      return (
+        currentTask.taskRole === expectedRole &&
+        ["complete", "returned"].includes(currentTask.status)
+      );
+    }
+    return ["completed", "re_requested"].includes(orderRow.order.status);
+  };
   const sorting = useMemo<SortingState>(
     () =>
       sortState
@@ -7884,21 +7954,8 @@ function ChartOrderTable({
       onSelectionChange(new Set());
       return;
     }
-    const newlySelected = requestedRows.find(
-      (row) => !selectedOrderIds.has(row.order.id),
-    );
-    const currentSelected = eligibleRows.find((row) =>
-      selectedOrderIds.has(row.order.id),
-    );
-    const cohort = getChartOrderSelectionCohort(
-      newlySelected ?? currentSelected ?? requestedRows[0]!,
-    );
     onSelectionChange(
-      new Set(
-        requestedRows
-          .filter((row) => getChartOrderSelectionCohort(row) === cohort)
-          .map((row) => row.order.id),
-      ),
+      new Set(requestedRows.map((row) => row.order.id)),
     );
   };
   const handleSortingChange = (updater: Updater<SortingState>) => {
@@ -8111,13 +8168,7 @@ function ChartOrderTable({
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
-        cell: ({ row }) => {
-          const pendingRemoval = pendingRemovalOrderIdsRef.current.has(
-            row.original.order.id,
-          );
-          if (pendingRemoval) return <EmrStatusBadge label="삭제 중" marker="icon" />;
-          return <ChartOrderWorkStatus row={row.original} />;
-        },
+        cell: ({ row }) => <ChartOrderWorkStatus row={row.original} />,
         meta: {
           label: chartOrderSortLabels.status,
           headerInteraction: "sortable",
@@ -9008,11 +9059,11 @@ function ChartOrderTable({
         <div className="flex h-full min-h-0">
         <EmrDataTable
           aria-label="처방/오더 테이블"
-          className="!w-auto bg-[var(--emr-surface-panel)]"
+          className="!w-auto bg-[var(--emr-surface-panel)] [&_[data-column-id=select]_.emr-table-cell-content]:!ms-2 [&_[data-column-id=select]_.emr-table-cell-content]:!me-0"
           columnGap={8}
           density={density}
           growLastColumn={false}
-          leadingInset={12}
+          leadingInset={0}
           initialLoading={loading && rows.length === 0}
           overscrollAxes="horizontal"
           renderAfterRows={({ visibleColumnCount }) =>
@@ -9041,7 +9092,7 @@ function ChartOrderTable({
           getRowOverlayAriaLabel={(row) =>
             `${row.original.order.displayName} 행 작업`
           }
-          rowOverlayWidth={174}
+          rowOverlayWidth={114}
           renderRowOverlay={({ row }) => {
             const orderRow = row.original;
             const { order } = orderRow;
@@ -9050,69 +9101,55 @@ function ChartOrderTable({
             const setChild = orderRow.runtimeRow?.rowType === "set_child";
             const setParent = orderRow.runtimeRow?.rowType === "set";
             const included = isChartOrderSetChildIncluded(orderRow);
-            const currentTask = latestTaskByOrderId.get(order.id);
-            const canAmend = currentTask
-              ? currentTask.taskRole === "execution" &&
-                currentTask.status === "pending"
-              : order.status === "confirmed";
-            const canReRequest = currentTask
-              ? currentTask.taskRole ===
-                  (setParent ? "aggregate" : "execution") &&
-                (setParent
-                  ? [
-                      "in_progress",
-                      "paused",
-                      "partial_complete",
-                      "complete",
-                      "returned",
-                    ].includes(currentTask.status)
-                  : ["in_progress", "paused", "complete", "returned"].includes(
-                      currentTask.status,
-                    ))
-              : ["in_progress", "completed", "re_requested"].includes(
-                  order.status,
-                );
+            const primaryEditAction = getPrimaryEditAction(orderRow);
+            const repeatRequestAvailable = canRepeatRequest(orderRow);
             const iconClassName =
-              "size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]";
+              "size-6 rounded-[var(--clair-radius-atomic-6)] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)] disabled:bg-[rgba(255,255,255,0.04)] disabled:shadow-none disabled:opacity-50 [&_svg]:size-[14px]";
 
             if (!confirmed) {
               if (pendingRemoval) return null;
+              const confirmationReason = setChild
+                ? "세트 자식은 세트 단위로 확정해 주세요."
+                : writeDisabled
+                  ? "오더 수정 권한이 없습니다."
+                  : draftWriteDisabled
+                    ? "저장이 끝난 뒤 확정할 수 있어요."
+                    : confirmationDisabled
+                      ? "삭제 저장 또는 충돌 해결 후 확정할 수 있어요."
+                      : invalidOrderIds.has(order.id)
+                        ? "확정에 필요한 수량과 세부값을 입력해 주세요."
+                        : undefined;
+              const deletionReason = setChild
+                ? "세트 자식은 세트 구성에서 제외해 주세요."
+                : writeDisabled
+                  ? "오더 수정 권한이 없습니다."
+                  : draftWriteDisabled
+                    ? "저장이 끝난 뒤 삭제할 수 있어요."
+                    : undefined;
               return (
                 <>
-                  {!setChild ? (
+                  <ChartOrderDisabledAction reason={confirmationReason}>
                     <EmrIconButton
                       aria-label={`${order.displayName} 확정`}
                       className={iconClassName}
-                      disabled={
-                        confirmationDisabled ||
-                        writeDisabled ||
-                        invalidOrderIds.has(order.id)
-                      }
+                      disabled={Boolean(confirmationReason)}
                       onClick={() => onConfirmOrder(order.id)}
                       type="button"
                     >
                       <CdsActionsCheckIcon aria-hidden="true" />
                     </EmrIconButton>
-                  ) : null}
-                  <EmrIconButton
-                    aria-label={`${order.displayName} 상세`}
-                    className={iconClassName}
-                    onClick={() => openDetail(order.id)}
-                    type="button"
-                  >
-                    <CdsMedicalFileSearchIcon aria-hidden="true" />
-                  </EmrIconButton>
-                  {!setChild ? (
+                  </ChartOrderDisabledAction>
+                  <ChartOrderDisabledAction reason={deletionReason}>
                     <EmrIconButton
                       aria-label={`${order.displayName} 후보 삭제`}
                       className={cn(iconClassName, "text-destructive")}
-                      disabled={writeDisabled || draftWriteDisabled}
+                      disabled={Boolean(deletionReason)}
                       onClick={() => onDeleteOrder(order.id)}
                       type="button"
                     >
                       <CdsActionsTrash2Icon aria-hidden="true" />
                     </EmrIconButton>
-                  ) : null}
+                  </ChartOrderDisabledAction>
                   <EmrRowActionMenu
                     ariaLabel={`${order.displayName} 더보기`}
                     density="compact"
@@ -9140,6 +9177,15 @@ function ChartOrderTable({
               );
             }
 
+            const editReason = setChild
+              ? "세트 자식은 개별 수정할 수 없습니다."
+              : setParent
+                ? "세트 오더는 더보기에서 재요청할 수 있습니다."
+                : writeDisabled
+                  ? "오더 수정 권한이 없습니다."
+                  : !primaryEditAction
+                    ? "현재 상태에서는 수정할 수 없습니다."
+                    : undefined;
             return (
               <>
                 <EmrIconButton
@@ -9150,25 +9196,20 @@ function ChartOrderTable({
                 >
                   <CdsMedicalFileSearchIcon aria-hidden="true" />
                 </EmrIconButton>
-                <EmrIconButton
-                  aria-label={`${order.displayName} 이력`}
-                  className={iconClassName}
-                  onClick={() => onOpenHistory(order.id)}
-                  type="button"
-                >
-                  <CdsUtilitiesHistoryIcon aria-hidden="true" />
-                </EmrIconButton>
-                {!setParent && !setChild ? (
+                <ChartOrderDisabledAction reason={editReason}>
                   <EmrIconButton
-                    aria-label={`${order.displayName} 정정`}
+                    aria-label={`${order.displayName} 수정`}
                     className={iconClassName}
-                    disabled={writeDisabled || !canAmend}
-                    onClick={() => onOpenMutation(order.id, "amend")}
+                    disabled={Boolean(editReason)}
+                    onClick={() =>
+                      primaryEditAction &&
+                      onOpenMutation(order.id, primaryEditAction)
+                    }
                     type="button"
                   >
                     <CdsContentEdit2Icon aria-hidden="true" />
                   </EmrIconButton>
-                ) : null}
+                </ChartOrderDisabledAction>
                 <EmrRowActionMenu
                   ariaLabel={`${order.displayName} 더보기`}
                   density="compact"
@@ -9187,8 +9228,9 @@ function ChartOrderTable({
                     },
                     {
                       key: "re-request",
-                      label: "수정·재확정",
-                      disabled: writeDisabled || setChild || !canReRequest,
+                      label: "재요청",
+                      disabled:
+                        writeDisabled || setChild || !repeatRequestAvailable,
                       onSelect: () => onOpenMutation(order.id, "re_request"),
                     },
                     {
@@ -9208,90 +9250,113 @@ function ChartOrderTable({
           renderSelectionActionBar={({ selectedRows: selected }) => {
             if (selectionActionsHidden) return null;
             const selectedOriginalRows = selected.map((row) => row.original);
-            const cohort = getChartOrderSelectionCohort(
-              selectedOriginalRows[0]!,
+            const selectedDraftRows = selectedOriginalRows.filter(
+              (row) => !isChartOrderConfirmedRow(row),
             );
-            const singleRow =
-              selectedOriginalRows.length === 1
-                ? selectedOriginalRows[0]
-                : undefined;
+            const selectedConfirmedRows = selectedOriginalRows.filter(
+              isChartOrderConfirmedRow,
+            );
+            const hasMixedSelection =
+              selectedDraftRows.length > 0 && selectedConfirmedRows.length > 0;
+            const selectedBillingRows = selectedConfirmedRows.filter(
+              (row) =>
+                row.billingCandidateStatus === "candidate_created" &&
+                getChartOrderScopedChargeAmount(row) > 0,
+            );
             return (
               <>
-                <span className="grid min-w-[112px] border-r border-[var(--emr-border-default)] pr-3">
-                  <strong className="text-xs">
-                    {selectedOriginalRows.length}개 선택
-                  </strong>
-                  <span className="emr-text-micro text-[var(--emr-text-secondary)]">
-                    {cohort === "draft" ? "확정 전 후보" : "확정 후 이력"}
-                  </span>
+                <span className="inline-flex min-w-[112px] items-center whitespace-nowrap border-r border-[var(--emr-border-default)] pr-3 text-xs font-medium">
+                  {selectedOriginalRows.length}개 오더 선택
                 </span>
-                {cohort === "draft" ? (
+                {selectedDraftRows.length > 0 ? (
+                  <Button
+                    disabled={
+                      confirmationDisabled ||
+                      writeDisabled ||
+                      selectedDraftRows.some((selectedRow) =>
+                        invalidOrderIds.has(selectedRow.order.id),
+                      )
+                    }
+                    size="xs"
+                    variant={hasMixedSelection ? "outline" : "default"}
+                    onClick={onConfirmSelected}
+                  >
+                    {selectedDraftRows.length}개 Order 확정
+                  </Button>
+                ) : null}
+                {selectedConfirmedRows.length > 0 ? (
                   <>
+                    {selectedBillingRows.length > 0 ? (
+                      <Button
+                        disabled={writeDisabled}
+                        variant={hasMixedSelection ? "outline" : "default"}
+                        size="xs"
+                        onClick={() =>
+                          onRequestBilling(
+                            selectedBillingRows.map(
+                              (selectedRow) => selectedRow.order.id,
+                            ),
+                          )
+                        }
+                      >
+                        {selectedBillingRows.length}개 Order 수납 청구
+                      </Button>
+                    ) : null}
+                    {!hasMixedSelection ? (
+                      <>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          disabled={writeDisabled}
+                          onClick={() =>
+                            onOpenBulkMutation(
+                              "re_request",
+                              selectedConfirmedRows.map(
+                                (selectedRow) => selectedRow.order.id,
+                              ),
+                            )
+                          }
+                        >
+                          재요청
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="destructive"
+                          disabled={writeDisabled}
+                          onClick={() =>
+                            onOpenBulkMutation(
+                              "priority_change",
+                              selectedConfirmedRows.map(
+                                (selectedRow) => selectedRow.order.id,
+                              ),
+                            )
+                          }
+                        >
+                          긴급
+                        </Button>
+                      </>
+                    ) : null}
+                  </>
+                ) : (
+                  selectedDraftRows.length > 0 ? (
                     <Button
-                      disabled={
-                        confirmationDisabled ||
-                        writeDisabled ||
-                        selectedOriginalRows.some((selectedRow) =>
-                          invalidOrderIds.has(selectedRow.order.id),
-                        )
-                      }
-                      size="sm"
-                      onClick={onConfirmSelected}
-                    >
-                      선택 확정
-                    </Button>
-                    <Button
+                      size="xs"
+                      variant="destructive"
                       disabled={writeDisabled}
-                      size="sm"
-                      variant="outline"
                       onClick={() =>
                         onDeleteSelected(
-                          selectedOriginalRows.map(
+                          selectedDraftRows.map(
                             (selectedRow) => selectedRow.order.id,
                           ),
                         )
                       }
                     >
-                      후보 삭제
+                      삭제
                     </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      disabled={!singleRow}
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        singleRow && onOpenHistory(singleRow.order.id)
-                      }
-                    >
-                      이력
-                    </Button>
-                    <Button
-                      disabled={writeDisabled || !singleRow}
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        singleRow && onOpenMutation(singleRow.order.id, "amend")
-                      }
-                    >
-                      정정
-                    </Button>
-                    <Button
-                      disabled={writeDisabled || !singleRow}
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        singleRow &&
-                        onOpenMutation(singleRow.order.id, "re_request")
-                      }
-                    >
-                      수정·재확정
-                    </Button>
-                  </>
+                  ) : null
                 )}
                 <Button
-                  size="sm"
+                  size="xs"
                   variant="ghost"
                   onClick={() => onSelectionChange(new Set())}
                 >
@@ -9945,14 +10010,21 @@ type ChartOrderMutationDraft = {
   saving: boolean;
 };
 
+type ChartOrderBulkMutationDraft = {
+  action: Extract<ChartOrderExecutionMutationAction, "priority_change" | "re_request">;
+  error?: string;
+  orderIds: string[];
+  saving: boolean;
+};
+
 const chartOrderMutationLabels: Record<
   ChartOrderExecutionMutationAction,
   string
 > = {
-  amend: "오더 정정",
+  amend: "오더 수정",
   cancel: "오더 취소",
   priority_change: "긴급 변경",
-  re_request: "오더 수정·재확정",
+  re_request: "수정 후 재요청",
 };
 
 function ChartOrderMutationDialog({
@@ -11391,7 +11463,7 @@ function OrderArea({
   collapsed: boolean;
   loading: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  onNavigateToBilling?: (invoiceId?: string) => void;
+  onNavigateToBilling?: (invoiceId?: string, orderIds?: string[]) => void;
   onOrderCountChange?: (count: number) => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
@@ -11455,7 +11527,13 @@ function OrderArea({
   );
   const [orderActionDialog, setOrderActionDialog] =
     useState<OrderActionDialogType | null>(null);
+  const [confirmationOrderIds, setConfirmationOrderIds] = useState<Set<string> | null>(null);
+  const [confirmationSource, setConfirmationSource] = useState<
+    "row" | "selection" | null
+  >(null);
   const [deleteOrderIds, setDeleteOrderIds] = useState<string[]>([]);
+  const [selectedBillingOrderIds, setSelectedBillingOrderIds] = useState<string[]>([]);
+  const [bulkOrderMutation, setBulkOrderMutation] = useState<ChartOrderBulkMutationDraft | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [historyOrderId, setHistoryOrderId] = useState<string | null>(null);
   const [orderExecution, setOrderExecution] =
@@ -11670,7 +11748,12 @@ function OrderArea({
   const filteredOrderRows = draftRows.filter(
     (row) => !filteredRootIds || filteredRootIds.has(orderRootId(row)),
   );
-  const visibleOrderRows = filteredOrderRows;
+  const visibleOrderRows = filteredOrderRows.filter(
+    (row) =>
+      orderDraftSaveState === "error" ||
+      orderDraftSaveState === "conflict" ||
+      !pendingRemovalOrderIds.has(row.order.id),
+  );
   const quickAddedRow = draftRows.find((row) => getChartDraftRowCatalogSourceKey(row) === quickAddedSourceKey);
   const quickAddedHidden = quickAddedRow && !visibleOrderRows.includes(quickAddedRow);
   const quickAddExistingKeys = useMemo(() => new Set(draftRows.map(getChartDraftRowCatalogSourceKey)), [draftRows]);
@@ -11818,19 +11901,19 @@ function OrderArea({
   const selectedOrderRows = draftRows.filter(({ order }) =>
     selectedOrderIds.has(order.id),
   );
+  const confirmationTargetOrderIds = confirmationOrderIds ?? selectedOrderIds;
+  const confirmationSelectedOrderRows = draftRows.filter(({ order }) =>
+    confirmationTargetOrderIds.has(order.id),
+  );
   const [chartActualDrafts, setChartActualDrafts] = useState<Record<string, ChartActualDraft>>({});
   const chartActualRows: ChartActualConfirmationRow[] = draftRows.flatMap(row => {
     const type = getChartOrderClinicalType(row);
-    const selected = selectedOrderIds.has(row.order.id) || (row.runtimeRow?.parentOrderId && selectedOrderIds.has(row.runtimeRow.parentOrderId));
+    const selected = confirmationTargetOrderIds.has(row.order.id) || (row.runtimeRow?.parentOrderId && confirmationTargetOrderIds.has(row.runtimeRow.parentOrderId));
     const destination = row.runtimeRow ? row.runtimeRow.destinationModule : getChartOrderCanonicalDefaults(row.order).destinationModule;
     return selected && row.runtimeRow?.rowType !== "set" && !isChartOrderConfirmedRow(row) && !destination && isChartActualType(type) && !isDeferredChartPlan(type, row.detailSchemaVersion)
       ? [{ orderId: row.order.id, name: row.order.displayName, type, findingSummary: typeof row.detailInputs.findingSummary === "string" ? row.detailInputs.findingSummary : undefined }] : [];
   });
   const chartActualRecords = buildChartActualRecords(chartActualRows, chartActualDrafts);
-  const selectedOrders = selectedOrderRows.map(({ order }) => order);
-  const selectedRecheckOrderCount = selectedOrders.filter(
-    (order) => order.status === "re_requested",
-  ).length;
   const deletedDraftOrderCount = committedRows.filter(
     (row) =>
       !isChartOrderConfirmedRow(row) &&
@@ -12905,7 +12988,9 @@ function OrderArea({
         draftSaveDelayMsRef.current = chartOrderContinuousSaveDelayMs;
         if (attemptedRemovedRootOrderIds.size > 0) {
           toast.success(
-            `${attemptedRemovedRootOrderIds.size}개 후보를 삭제하고 저장했어요.`,
+            attemptedRemovedRootOrderIds.size === 1
+              ? "오더를 삭제했어요."
+              : `${attemptedRemovedRootOrderIds.size}개 오더를 삭제했어요.`,
           );
         }
         const acknowledgedAdditionCount = Array.from(
@@ -13294,21 +13379,25 @@ function OrderArea({
       }
       return;
     }
-    const invalidSelectedOrder = Array.from(selectedOrderIds).find((orderId) =>
+    const invalidSelectedOrder = Array.from(confirmationTargetOrderIds).find((orderId) =>
       confirmationInvalidOrderIds.has(orderId),
     );
     if (invalidSelectedOrder) {
       toast.error("확정에 필요한 수량과 세부값을 모두 입력해 주세요.");
       setOrderActionDialog(null);
+      setConfirmationOrderIds(null);
+      setConfirmationSource(null);
       return;
     }
     if (
-      selectedOrderRows.some(
+      confirmationSelectedOrderRows.some(
         (row) => getChartOrderSelectionCohort(row) !== "draft",
       )
     ) {
-      toast.error("확정 전 후보만 같은 확정 요청에 포함할 수 있어요.");
+      toast.error("확정 전 후보만 확정할 수 있어요.");
       setOrderActionDialog(null);
+      setConfirmationOrderIds(null);
+      setConfirmationSource(null);
       return;
     }
     const pendingDraftSave = orderDraftSavePromiseRef.current;
@@ -13375,7 +13464,11 @@ function OrderArea({
         setOrderDraftEtag(result.etag);
       }
       pendingConfirmationRef.current = null;
-      setSelectedOrderIds(new Set());
+      if (confirmationSource === "selection") {
+        setSelectedOrderIds(new Set());
+      }
+      setConfirmationOrderIds(null);
+      setConfirmationSource(null);
       setOrderActionDialog(null);
       setOrderDraftSaveState("saved");
       void refreshOrderExecution();
@@ -13383,7 +13476,7 @@ function OrderArea({
       return true;
     };
 
-    const selectedRootOrderIds = Array.from(selectedOrderIds).sort();
+    const selectedRootOrderIds = Array.from(confirmationTargetOrderIds).sort();
     const pendingConfirmation = pendingConfirmationRef.current;
     if (
       pendingConfirmation &&
@@ -13447,15 +13540,18 @@ function OrderArea({
       draftRowsRef.current,
     );
     const attemptedDraftEditVersion = draftEditVersionRef.current;
-    const nextSelectedOrderIds = remapChartOrderIdSet(
-      selectedOrderIds,
+    const nextConfirmationOrderIds = remapChartOrderIdSet(
+      confirmationTargetOrderIds,
       preparedDraft.orderIdMap,
     );
     if (preparedDraft.orderIdMap.size > 0) {
       setDraftRows(preparedDraft.rows);
-      setSelectedOrderIds(nextSelectedOrderIds);
+      setSelectedOrderIds((current) =>
+        remapChartOrderIdSet(current, preparedDraft.orderIdMap),
+      );
+      setConfirmationOrderIds(nextConfirmationOrderIds);
     }
-    const orderIds = Array.from(nextSelectedOrderIds);
+    const orderIds = Array.from(nextConfirmationOrderIds);
 
     const expectedDraftEtag = orderDraftEtagRef.current;
     if (!expectedDraftEtag) {
@@ -13563,7 +13659,7 @@ function OrderArea({
         setOrderDraftSaveState("error");
         setCommittedRows(savedDraftRows);
         setDraftRows(savedDraftRows);
-        setSelectedOrderIds(new Set(actionOrderIds));
+        setConfirmationOrderIds(new Set(actionOrderIds));
         toast.error("선택한 오더를 서버 draft에 저장하지 못했어요.");
         return;
       }
@@ -13583,7 +13679,7 @@ function OrderArea({
     if (actionOrderIds.length !== orderIds.length) {
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState("error");
-      setSelectedOrderIds(new Set(actionOrderIds));
+      setConfirmationOrderIds(new Set(actionOrderIds));
       toast.error("선택한 오더를 서버 draft에서 확인하지 못했어요.");
       return;
     }
@@ -13759,21 +13855,186 @@ function OrderArea({
     ) {
       return;
     }
-    setSelectedOrderIds(new Set([orderId]));
+    setConfirmationOrderIds(new Set([orderId]));
+    setConfirmationSource("row");
     setChartActualDrafts({});
     setOrderActionDialog("confirm");
   };
   const confirmSelectedOrders = () => {
-    if (
-      selectedOrderRows.length === 0 ||
-      selectedOrderRows.some(
-        (row) => getChartOrderSelectionCohort(row) !== "draft",
-      )
-    ) {
+    const draftOrderIds = selectedOrderRows
+      .filter((row) => !isChartOrderConfirmedRow(row))
+      .map((row) => row.order.id);
+    if (draftOrderIds.length === 0) {
       return;
     }
+    setConfirmationOrderIds(new Set(draftOrderIds));
+    setConfirmationSource("selection");
     setChartActualDrafts({});
     setOrderActionDialog("confirm");
+  };
+  const openSelectedBilling = (orderIds: string[]) => {
+    const requestableOrderIds = new Set(localBillingSummary.requestableOrderIds);
+    const eligibleOrderIds = orderIds.filter((orderId) =>
+      requestableOrderIds.has(orderId),
+    );
+    if (eligibleOrderIds.length === 0) {
+      toast.info("선택한 확정 오더 중 수납 청구 가능한 오더가 없습니다.");
+      return;
+    }
+    setSelectedBillingOrderIds(eligibleOrderIds);
+  };
+  const openBulkOrderMutation = (
+    action: Extract<ChartOrderExecutionMutationAction, "priority_change" | "re_request">,
+    orderIds: string[],
+  ) => {
+    const confirmedOrderIds = draftRowsRef.current
+      .filter(
+        (row) =>
+          orderIds.includes(row.order.id) && isChartOrderConfirmedRow(row),
+      )
+      .map((row) => row.order.id);
+    if (confirmedOrderIds.length === 0) return;
+    setBulkOrderMutation({
+      action,
+      orderIds: confirmedOrderIds,
+      saving: false,
+    });
+  };
+  const commitBulkOrderMutation = async () => {
+    const draft = bulkOrderMutation;
+    if (!draft || draft.saving) return;
+    const rowsById = new Map(
+      draftRowsRef.current.map((row) => [row.order.id, row]),
+    );
+    const targetRows = draft.orderIds
+      .map((orderId) => rowsById.get(orderId))
+      .filter((row): row is ChartOrderDraftRow => Boolean(row));
+    if (targetRows.length === 0) {
+      setBulkOrderMutation(null);
+      return;
+    }
+
+    setBulkOrderMutation({ ...draft, error: undefined, saving: true });
+    let nextRows = draftRowsRef.current;
+    const succeededOrderIds: string[] = [];
+    const failedOrderIds: string[] = [];
+    for (const row of targetRows) {
+      let changes: Record<string, unknown>;
+      if (draft.action === "re_request") {
+        const validation = validateClinicalOrderDetailInputs({
+          clinicalOrderType: getChartOrderClinicalType(row),
+          detailInputs: row.detailInputs,
+          requireComplete: true,
+          schemaVersion: row.detailSchemaVersion,
+        });
+        if (!validation.valid) {
+          failedOrderIds.push(row.order.id);
+          continue;
+        }
+        const actualDispenseQuantity =
+          row.runtimeRow?.calculationOutputs?.actualDispenseQuantity;
+        changes = {
+          detailInputs: validation.normalized,
+          detailSchemaVersion: row.detailSchemaVersion,
+          priority: row.priority,
+          ...(typeof actualDispenseQuantity === "number"
+            ? { actualDispenseQuantity }
+            : {}),
+        };
+      } else {
+        changes = { priority: "urgent" };
+      }
+
+      const result = await saveChartOrderExecutionMutationRoute({
+        action: draft.action,
+        actorHeaders,
+        chartId: mutationChartId,
+        changes,
+        expectedRevisionNo: row.runtimeRow?.revisionNo ?? 0,
+        idempotencyKey: `chart-bulk-mutation-${createChartOrderDraftId()}`,
+        orderId: row.order.id,
+        reason:
+          draft.action === "re_request"
+            ? "선택 CAB에서 일괄 재요청"
+            : "선택 CAB에서 긴급 처리",
+        workspaceId: bundle.encounter.workspaceId,
+      });
+      if (!result.ok || !acceptAuthoritativeBillingSummary(result.billingSummary)) {
+        failedOrderIds.push(row.order.id);
+        continue;
+      }
+
+      const payload = result.mutation.order;
+      const nextDetailInputs =
+        payload.detailInputs &&
+        typeof payload.detailInputs === "object" &&
+        !Array.isArray(payload.detailInputs)
+          ? (payload.detailInputs as Record<string, unknown>)
+          : row.detailInputs;
+      const nextCalculationOutputs =
+        payload.calculationOutputs &&
+        typeof payload.calculationOutputs === "object" &&
+        !Array.isArray(payload.calculationOutputs)
+          ? (payload.calculationOutputs as Record<string, unknown>)
+          : row.runtimeRow?.calculationOutputs;
+      const nextPriority =
+        payload.priority === "urgent"
+          ? "urgent"
+          : payload.priority === "normal"
+            ? "normal"
+            : draft.action === "priority_change"
+              ? "urgent"
+              : row.priority;
+      const nextStatus: EmrOrderStatus =
+        payload.orderStatus === "cancelled" ? "cancelled" : "confirmed";
+      nextRows = nextRows.map((currentRow) =>
+        currentRow.order.id !== row.order.id
+          ? currentRow
+          : {
+              ...currentRow,
+              detailInputs: nextDetailInputs,
+              order: {
+                ...currentRow.order,
+                priority: nextPriority,
+                status: nextStatus,
+                updatedAt: new Date().toISOString(),
+              },
+              priority: nextPriority,
+              runtimeRow: currentRow.runtimeRow
+                ? {
+                    ...currentRow.runtimeRow,
+                    calculationOutputs:
+                      nextCalculationOutputs ??
+                      currentRow.runtimeRow.calculationOutputs,
+                    detailInputs: nextDetailInputs,
+                    priority: nextPriority,
+                    revisionNo: result.mutation.revisionNo,
+                    status: nextStatus,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : currentRow.runtimeRow,
+            },
+      );
+      succeededOrderIds.push(row.order.id);
+    }
+
+    draftRowsRef.current = nextRows;
+    setCommittedRows(nextRows);
+    setDraftRows(nextRows);
+    setSelectedOrderIds(new Set(failedOrderIds));
+    setBulkOrderMutation(null);
+    void refreshOrderExecution();
+    if (failedOrderIds.length > 0) {
+      toast.warning(
+        `${succeededOrderIds.length}개 오더 처리 완료, ${failedOrderIds.length}개 오더 처리에 실패했습니다.`,
+      );
+    } else {
+      toast.success(
+        draft.action === "re_request"
+          ? `${succeededOrderIds.length}개 오더 재요청 완료`
+          : `${succeededOrderIds.length}개 오더를 긴급으로 변경했습니다.`,
+      );
+    }
   };
   const openOrderMutation = (
     orderId: string,
@@ -13879,7 +14140,7 @@ function OrderArea({
       }
       const error =
         result.denialReason === "amendment_requires_pending"
-          ? "진행을 시작한 오더는 같은 attempt에서 정정할 수 없습니다. 재요청을 사용해 주세요."
+          ? "진행을 시작한 오더는 현재 요청에서 수정할 수 없습니다. 수정 후 재요청을 사용해 주세요."
           : result.denialReason === "revision_conflict"
             ? "다른 사용자가 먼저 변경했습니다. 최신 이력을 불러온 뒤 다시 시도해 주세요."
             : result.denialReason === "re_request_transition_invalid"
@@ -14032,7 +14293,7 @@ function OrderArea({
     >
       <div
         className={cn(
-          "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3",
+          "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 pl-2.5 pr-3",
           collapsed ? "py-0" : "pt-2 pb-0.5",
         )}
       >
@@ -14108,7 +14369,7 @@ function OrderArea({
         inert={collapsed ? true : undefined}
         className={collapsed ? "hidden" : "contents"}
       >
-        <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] px-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex h-11 min-h-11 shrink-0 items-center justify-between gap-3 overflow-x-auto border-b border-[var(--emr-border-default)] pl-2.5 pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div
             className="flex min-w-max shrink-0 items-center gap-1 rounded-lg bg-[var(--clair-color-atomic-black-alpha-4)] p-[3px]"
             role="tablist"
@@ -14393,7 +14654,13 @@ function OrderArea({
                 </EmrPopoverShell>
               </Popover>
             }
-            selectionActionsHidden={orderActionDialog !== null || historyOrderId !== null || detailOrderId !== null}
+            selectionActionsHidden={
+              orderActionDialog !== null ||
+              historyOrderId !== null ||
+              detailOrderId !== null ||
+              bulkOrderMutation !== null ||
+              selectedBillingOrderIds.length > 0
+            }
             actualDispenseSavingOrderIds={actualDispenseSavingOrderIds}
             confirmationDisabled={
               orderDraftSaveState === "conflict" ||
@@ -14416,6 +14683,8 @@ function OrderArea({
             onConfirmSelected={confirmSelectedOrders}
             onDeleteOrder={(orderId) => requestDraftRootRemoval([orderId])}
             onDeleteSelected={requestDraftRootRemoval}
+            onOpenBulkMutation={openBulkOrderMutation}
+            onRequestBilling={openSelectedBilling}
             onFlushDraft={() => {
               if (canUpdateOrders) void autoSaveDraftRef.current();
             }}
@@ -14564,8 +14833,83 @@ function OrderArea({
           onRequestBilling={openEncounterBilling}
         />
         <Dialog
+          open={selectedBillingOrderIds.length > 0}
+          onOpenChange={(open) => {
+            if (!open) setSelectedBillingOrderIds([]);
+          }}
+        >
+          {selectedBillingOrderIds.length > 0 ? (
+            <EmrConfirmDialogContent
+              title="선택 오더 수납 청구"
+              description={
+                <span className="grid gap-3">
+                  <span>선택한 확정 오더만 수납 청구합니다.</span>
+                  <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
+                    {selectedBillingOrderIds.length}개 확정 오더 ·{" "}
+                    {draftRows
+                      .filter((row) => selectedBillingOrderIds.includes(row.order.id))
+                      .reduce(
+                        (sum, row) => sum + getChartOrderScopedChargeAmount(row),
+                        0,
+                      )
+                      .toLocaleString()}
+                    원
+                  </span>
+                </span>
+              }
+              cancelLabel="취소"
+              confirmLabel="수납 청구"
+              confirmDisabled={writeDisabled}
+              onCancel={() => setSelectedBillingOrderIds([])}
+              onConfirm={() => {
+                const orderIds = [...selectedBillingOrderIds];
+                setSelectedBillingOrderIds([]);
+                setSelectedOrderIds(new Set());
+                onNavigateToBilling?.(
+                  billingSummaryRef.current?.invoiceId ?? undefined,
+                  orderIds,
+                );
+              }}
+            />
+          ) : null}
+        </Dialog>
+        <Dialog
+          open={bulkOrderMutation !== null}
+          onOpenChange={(open) => {
+            if (!open && !bulkOrderMutation?.saving) setBulkOrderMutation(null);
+          }}
+        >
+          {bulkOrderMutation ? (
+            <EmrConfirmDialogContent
+              title={
+                bulkOrderMutation.action === "re_request"
+                  ? "선택 오더를 재요청할까요?"
+                  : "선택 오더를 긴급으로 변경할까요?"
+              }
+              description={
+                bulkOrderMutation.action === "re_request"
+                  ? bulkOrderMutation.orderIds.length + "개 확정 오더를 업무 큐에 다시 요청합니다."
+                  : bulkOrderMutation.orderIds.length + "개 확정 오더를 긴급 처리하고 좌측 업무 대기열 최상단에 표시합니다."
+              }
+              cancelLabel="취소"
+              confirmLabel={
+                bulkOrderMutation.action === "re_request" ? "재요청" : "긴급"
+              }
+              confirmDisabled={writeDisabled || bulkOrderMutation.saving}
+              onCancel={() => setBulkOrderMutation(null)}
+              onConfirm={() => void commitBulkOrderMutation()}
+            />
+          ) : null}
+        </Dialog>
+        <Dialog
           open={orderActionDialog !== null}
-          onOpenChange={(open) => !open && setOrderActionDialog(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setOrderActionDialog(null);
+              setConfirmationOrderIds(null);
+              setConfirmationSource(null);
+            }
+          }}
         >
           <EmrConfirmDialogContent
             title={`${orderActionLabel} 확인`}
@@ -14585,13 +14929,22 @@ function OrderArea({
                   </span>
                   <span>차트번호: {bundle.encounter.encounterNo}</span>
                   <span>
-                    선택 오더: {selectedOrderIds.size}건 · 선택 금액{" "}
-                    {selectedAmount.toLocaleString()}
+                    확정 오더: {confirmationTargetOrderIds.size}건 · 확정 금액{" "}
+                    {confirmationSelectedOrderRows
+                      .reduce(
+                        (sum, row) => sum + getChartOrderScopedChargeAmount(row),
+                        0,
+                      )
+                      .toLocaleString()}
                   </span>
                   <span>
                     재요청 포함:{" "}
-                    {selectedRecheckOrderCount
-                      ? `${selectedRecheckOrderCount}건`
+                    {confirmationSelectedOrderRows.filter(
+                      (row) => row.order.status === "re_requested",
+                    ).length
+                      ? confirmationSelectedOrderRows.filter(
+                          (row) => row.order.status === "re_requested",
+                        ).length + "건"
                       : "없음"}
                   </span>
                 </span>
@@ -14606,7 +14959,11 @@ function OrderArea({
               orderDraftSaveState === "conflict" ||
               orderDraftSaveState === "saving"
             }
-            onCancel={() => setOrderActionDialog(null)}
+            onCancel={() => {
+              setOrderActionDialog(null);
+              setConfirmationOrderIds(null);
+              setConfirmationSource(null);
+            }}
             onConfirm={() => void commitOrderConfirmation()}
           />
         </Dialog>
@@ -14618,18 +14975,9 @@ function OrderArea({
             <EmrConfirmDialogContent
               title="오더를 삭제할까요?"
               description={
-                <span className="grid gap-3">
-                  <span>
-                    {deleteTargetRows.length === 1
-                      ? `${deleteTargetRows[0]?.order.displayName} 오더를`
-                      : `${deleteTargetRows.length}개 오더를`}{" "}
-                    현재 차트의 확정 전 후보에서 제외합니다.
-                  </span>
-                  <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
-                    삭제하면 즉시 저장합니다. 확정·수행·청구된 오더는 이
-                    작업으로 변경되지 않습니다.
-                  </span>
-                </span>
+                "선택한 " +
+                deleteTargetRows.length +
+                "개 오더가 현재 Plan에서 제거됩니다."
               }
               cancelLabel="취소"
               confirmLabel="삭제"
@@ -16134,12 +16482,13 @@ export function ChartContent({
   }
 
   const currentBundle = effectiveBundle;
-  const navigateToBilling = (invoiceId?: string) => {
+  const navigateToBilling = (invoiceId?: string, orderIds?: string[]) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "billing",
       params: {
         encounterId: currentBundle.encounter.id,
         ...(invoiceId ? { invoiceId } : {}),
+        ...(orderIds?.length ? { orderIds: orderIds.join(",") } : {}),
       },
       removeParams: ["orderId", "taskId", "historyEncounterId"],
       search: searchParams,
