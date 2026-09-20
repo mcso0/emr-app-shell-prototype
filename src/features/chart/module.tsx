@@ -9265,9 +9265,13 @@ function ChartOrderTable({
             );
             return (
               <>
-                <span className="inline-flex min-w-[112px] items-center whitespace-nowrap border-r border-[var(--emr-border-default)] pr-3 text-xs font-medium">
+                <div className="inline-flex h-7 shrink-0 items-center px-2 py-1.5 text-xs font-medium whitespace-nowrap">
                   {selectedOriginalRows.length}개 오더 선택
-                </span>
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="h-6 w-px shrink-0 bg-[var(--emr-border-default)]"
+                />
                 {selectedDraftRows.length > 0 ? (
                   <Button
                     disabled={
@@ -9277,7 +9281,7 @@ function ChartOrderTable({
                         invalidOrderIds.has(selectedRow.order.id),
                       )
                     }
-                    size="xs"
+                    size="default"
                     variant={hasMixedSelection ? "outline" : "default"}
                     onClick={onConfirmSelected}
                   >
@@ -9290,7 +9294,7 @@ function ChartOrderTable({
                       <Button
                         disabled={writeDisabled}
                         variant={hasMixedSelection ? "outline" : "default"}
-                        size="xs"
+                        size="default"
                         onClick={() =>
                           onRequestBilling(
                             selectedBillingRows.map(
@@ -9305,7 +9309,7 @@ function ChartOrderTable({
                     {!hasMixedSelection ? (
                       <>
                         <Button
-                          size="xs"
+                          size="default"
                           variant="outline"
                           disabled={writeDisabled}
                           onClick={() =>
@@ -9320,7 +9324,7 @@ function ChartOrderTable({
                           재요청
                         </Button>
                         <Button
-                          size="xs"
+                          size="default"
                           variant="destructive"
                           disabled={writeDisabled}
                           onClick={() =>
@@ -9340,7 +9344,7 @@ function ChartOrderTable({
                 ) : (
                   selectedDraftRows.length > 0 ? (
                     <Button
-                      size="xs"
+                      size="default"
                       variant="destructive"
                       disabled={writeDisabled}
                       onClick={() =>
@@ -9356,7 +9360,7 @@ function ChartOrderTable({
                   ) : null
                 )}
                 <Button
-                  size="xs"
+                  size="default"
                   variant="ghost"
                   onClick={() => onSelectionChange(new Set())}
                 >
