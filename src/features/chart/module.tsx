@@ -14009,7 +14009,12 @@ function OrderArea({
         "group/chart-collapsible-panel relative",
       )}
     >
-      <div className="flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3 pt-2 pb-0.5">
+      <div
+        className={cn(
+          "flex h-[38px] min-h-[38px] shrink-0 items-center justify-between gap-3 px-3",
+          collapsed ? "py-0" : "pt-2 pb-0.5",
+        )}
+      >
         <h2 className="truncate text-sm font-semibold leading-5 text-foreground">
           Plan/Order
         </h2>
