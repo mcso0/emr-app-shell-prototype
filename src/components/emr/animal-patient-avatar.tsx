@@ -63,7 +63,7 @@ export function AnimalPatientAvatar({
       aria-busy={displayState === "loading" ? true : undefined}
       aria-label={label}
       className={cn(
-        "border border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] after:!rounded-[inherit]",
+        "border border-[var(--emr-border-subtle)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-tertiary)] after:!rounded-[inherit] after:!border-transparent",
         displayState === "loading" && "animate-pulse",
         displayState === "error" &&
           "border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] text-[var(--emr-status-danger-text)]",
