@@ -150,6 +150,32 @@ test("Plan/Order fills the left edge and keeps transparent 8px gutters aligned",
   }
 });
 
+test("Plan/Order title and tabs align with the fixed selection boundary", async ({
+  page,
+}) => {
+  await page.goto(chartOrderUrl);
+
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  await expect(table).toBeVisible();
+  const panel = page
+    .getByRole("heading", { name: "Plan/Order" })
+    .locator('xpath=ancestor::section[@data-slot="chart-workspace-panel"]');
+  const heading = panel.getByRole("heading", { name: "Plan/Order" });
+  const tabs = panel.locator('[role="tablist"][aria-label="처방/오더 분류"]');
+  const selectionHeader = table.locator('thead th[data-column-id="select"]');
+  const [headingBox, tabsBox, selectionBox] = await Promise.all([
+    heading.boundingBox(),
+    tabs.boundingBox(),
+    selectionHeader.boundingBox(),
+  ]);
+
+  expect(headingBox).not.toBeNull();
+  expect(tabsBox).not.toBeNull();
+  expect(selectionBox).not.toBeNull();
+  expect(headingBox!.x).toBeCloseTo(selectionBox!.x + selectionBox!.width, 0);
+  expect(tabsBox!.x).toBeCloseTo(selectionBox!.x + selectionBox!.width, 0);
+});
+
 test("Plan/Order keeps scrolled columns behind the fixed start edge", async ({
   page,
 }) => {
