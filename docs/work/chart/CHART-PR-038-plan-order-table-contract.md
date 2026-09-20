@@ -125,6 +125,29 @@ Current GREEN evidence (2026-09-20, before final candidate):
   delivery evidence remain the release phase. Local/mock UI tests are not an
   authenticated Production acceptance test.
 
+## 2026-09-20 row-action follow-up
+
+The owner approved the Figma row-hover action treatment and asked that the
+remaining gray zones follow the recommended behavior. The table now keeps a
+fixed three-slot, 114px overlay with 24px controls. Draft rows use confirm,
+delete and more; confirmed rows use detail, state-aware edit and more. Set
+children retain the same three-slot geometry while confirm and delete stay
+disabled with an explanatory tooltip. History and repeat request remain in
+the overflow menu. User-facing order terminology is `수정` and `수정 후 재요청`.
+
+Candidate deletion hides the row immediately without a `삭제 중` label and
+restores it only when persistence fails or conflicts. A single-row confirm no
+longer replaces the current checkbox/CAB selection. Focused Chromium coverage
+for the three-slot geometry and selection preservation, successful deletion,
+and failed-deletion restoration passes 3/3. The catalog-dependent set and
+confirmed-lifecycle scenarios remain blocked before the changed assertions by
+the existing disabled `전체 오더 검색 열기` control; this is recorded as a
+separate current-main test precondition, not as proof for this follow-up.
+
+Final local gates pass: secret scan, docs check, lint with the same five script
+warnings, TypeScript, production build with the existing NFT trace warning, and
+`git diff --check`.
+
 After the new migration is generated, run the exact path through
 `node scripts/test-plan-order-table-sql.mjs <migration-path>`.
 The runner accepts only this work item's optional-reason migration name and

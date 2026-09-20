@@ -674,6 +674,29 @@
     pointer-events: none;
   }
 
+  [data-slot="chart-order-table-surface"] .emr-data-table-row-overlay {
+    gap: var(--clair-spacing-6);
+    padding: 0 var(--clair-spacing-10) 0 var(--clair-spacing-20);
+    background:
+      linear-gradient(
+        90deg,
+        transparent 5.469%,
+        var(--emr-table-row-interaction-surface) 8.149%,
+        var(--emr-table-row-interaction-surface) 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 5.469%,
+        var(--emr-table-row-state-surface) 8.149%,
+        var(--emr-table-row-state-surface) 100%
+      );
+  }
+
+  [data-slot="chart-order-table-surface"]
+    .emr-data-table-row-overlay-actions {
+    gap: var(--clair-spacing-6);
+  }
+
   [data-emr-data-table="true"]
     .emr-data-table-row-overlay-touch-trigger {
     display: none;
