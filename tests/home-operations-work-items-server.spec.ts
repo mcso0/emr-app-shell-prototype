@@ -204,6 +204,18 @@ test("home excludes future work, old completed work, foreign fulfillment and una
   expect(response.ok && response.items[0].sourceHref).toContain("date=2026-07-04");
 });
 
+test("cancelled fulfillment is returned only when explicitly included", async () => {
+  const cancelled = { id: "cancelled", workspaceId, patientId: "patient", encounterId: "encounter", queueType: "lab", status: "cancelled", createdAt: `${operatingDate}T09:00:00+09:00`, dueAt: `${operatingDate}T10:00:00+09:00` };
+  const client = sourceClient({}, [cancelled]);
+  const gateway = createSupabaseHomeOperationsWorkItemGateway(client);
+  const omitted = await gateway.listHomeOperationsWorkItems(gatewayInput);
+  const included = await gateway.listHomeOperationsWorkItems({ ...gatewayInput, includeCancelled: true });
+  expect(omitted.ok).toBe(true);
+  expect(included.ok).toBe(true);
+  expect(omitted.ok && omitted.items.some((item) => item.id === "lab:cancelled")).toBe(false);
+  expect(included.ok && included.items.find((item) => item.id === "lab:cancelled")?.progressState).toBe("cancelled");
+});
+
 test("core derives assigned and requested independently and rejects foreign or unauthorized rows before counts", async () => {
   const result = await readHomeOperationsWorkItems({ actorUserId, workspaceId, filters: { date: operatingDate }, permissionAdapter,
     gateway: createMockHomeOperationsWorkItemGateway({ ok: true, generatedAt: "now", sourceStatus: "live", items: [

@@ -18,7 +18,7 @@ related_work:
   - "docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md"
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-05
+last_updated: 2026-09-22
 ---
 
 # Feature: Home Operations Work Status
@@ -166,19 +166,15 @@ Do not use official `지연` language in Home v0 unless a work-type-specific SLA
 
 Unassigned team work remains in hospital view. `내가 요청한 업무` independently uses requester user ID.
 
-### Default Sort
+### Hospital Sort — Approved 2026-09-22
 
-Within each column or queue-like group, sort by:
+Hospital board and list share a session-scoped sort selection, keyed by actor and workspace. Default is `업무 우선순`; alternatives are `오래된 요청순` and `최근 요청순`.
 
-1. `urgent`
-2. `re_requested`
-3. `assignment_missing`
-4. `in_progress`
-5. `waiting`
-6. `completed` when included
-7. `cancelled` when included
-
-Within the same bucket, sort older operational work first so stale items surface naturally.
+- Priority: unfinished urgent work first, then re-requested, in-progress, waiting, completed, cancelled. Within unfinished status buckets, older request timestamps come first; completed/cancelled buckets use newer request timestamps first.
+- Oldest/newest options compare request timestamps without an urgency override.
+- Missing or invalid timestamps sort last within the relevant bucket; stable work identity breaks ties.
+- Board column order remains fixed; sorting applies inside each column. The flat list applies the comparator to all filtered rows.
+- Date, work-tab and board/list changes preserve the selected sort. Personal work retains its existing grouping and order.
 
 ## Work Type Generation Rules
 
@@ -196,30 +192,19 @@ Within the same bucket, sort older operational work first so stale items surface
 
 ## Board And Side Panel Policy
 
-### Main Board
+### Hospital Board And List — Approved 2026-09-22
 
-The main board shows all visible hospital work for the selected operating day.
+The hospital view shows permitted work for the selected operating date. The date title uses the existing calendar popup with previous/next buttons, visible hover/pressed/focus/disabled states, and balanced horizontal padding. Keep the existing current-patient summary; it is independent of the selected work date.
 
-Recommended columns:
+Work tabs are `전체업무`, `접수`, `예약`, `진료`, `임상병리`, `영상`, `조제`, `처치`, `수납`. Tab counts are calculated after common date/search/assignee/filter/completed/cancelled conditions, before the selected work tab and board-column visibility. The existing filter-builder work-type condition remains and combines with the tab using AND; an empty result must expose the active conditions and reset path.
 
-- 접수/예약
-- 진료
-- 임상병리
-- 영상
-- 조제/처치
-- 수납
-- 입원, when included
+Toolbar order: search icon, filter icon, today, `완료 포함`, sort, assignee, existing board/list switch. Search and filter retain their behavior. Completed and cancelled work default off independently; `취소 포함` belongs in the filter popup.
 
-Top controls:
+Board columns are fixed display states: `대기`, `진행중`, `재요청`, `완료`, `취소`. Derive terminal completed/cancelled first, then unfinished `re_requested`, then normal progress state. Each item appears once. `kanbanColumn` continues to represent source work type; this design introduces no persisted progress state. State-column hide/collapse preferences use separate keys from legacy work-type preferences, including the ambiguous `waiting` key. Hidden board columns do not remove list rows.
 
-- Operating date: today, previous/next day, date picker.
-- `전체 흐름`
-- `내 업무 보기`
-- `배정 누락`
-- `긴급/재요청`
-- `완료 포함`
-- `취소 포함`
-- Filters for assignee, team/queue, work type, and progress state.
+The hospital list is a flat table with work type, patient, guardian, details, status, request timestamp, requester, assignees and source action. Personal work retains its existing groups. Missing requester displays `—`; do not infer an identity. Preserve row click/Enter/Space source navigation and card menu-only navigation. Cards show request time and expose elapsed time as a tooltip. No drag/drop or business-state writes are introduced.
+
+Reuse shared components and semantic tokens. Board columns use 280px width, 16px gaps, 12px radius and a subtle background without an outer border. Keep 52px collapsed columns. List rows retain a 36px surface and horizontal overflow on narrow screens rather than compressing clinical identifiers. Existing loading/error/partial/no-permission states remain authoritative; no mock fallback is allowed.
 
 ### Side Panel
 

@@ -3,6 +3,8 @@
 import { createInitialEmrTableFilterBuilderModel, type EmrTableFilterBuilderModel } from "@/components/emr/table-filter-builder-model";
 import { create } from "zustand";
 import { isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
+import type { HospitalSort } from "@/features/home/home-hospital-presentation";
+import { hospitalStatuses } from "@/features/home/home-hospital-presentation";
 
 export type HomeView = "hospital" | "mine";
 export type HomePersonalTab = "assigned" | "requested";
@@ -11,11 +13,14 @@ export type HomeViewQuery = {
   search: string;
   owners: string[] | null;
   includeCompleted: boolean;
+  includeCancelled: boolean;
 };
 export type HomeDisplayPreferences = {
   layout: "board" | "list";
   hidden: string[];
   collapsed: string[];
+  hiddenStatuses: string[];
+  collapsedStatuses: string[];
 };
 type ScrollPosition = { left: number; top: number };
 type HomeSessionState = {
@@ -23,6 +28,8 @@ type HomeSessionState = {
   personalTab: HomePersonalTab;
   queries: Record<HomeView, HomeViewQuery>;
   scroll: Record<string, ScrollPosition>;
+  hospitalWorkType: string;
+  hospitalSort: HospitalSort;
 };
 type HomeWorkspaceStore = HomeSessionState & {
   scopeKey: string | null;
@@ -32,6 +39,8 @@ type HomeWorkspaceStore = HomeSessionState & {
   activate: (scopeKey: string, today: string) => void;
   setView: (view: HomeView) => void;
   setPersonalTab: (tab: HomePersonalTab) => void;
+  setHospitalWorkType: (type: string) => void;
+  setHospitalSort: (sort: HospitalSort) => void;
   updateQuery: (view: HomeView, patch: Partial<HomeViewQuery>) => void;
   updatePreferences: (patch: Partial<HomeDisplayPreferences>) => void;
   rememberScroll: (key: string, position: ScrollPosition) => void;
@@ -42,10 +51,12 @@ type HomeWorkspaceStore = HomeSessionState & {
 const initialFilters = () => ({ hospital: createInitialEmrTableFilterBuilderModel("home-hospital"), mine: createInitialEmrTableFilterBuilderModel("home-mine") });
 
 const prefix = "clair.home.v2:";
-const defaultPreferences: HomeDisplayPreferences = { layout: "board", hidden: [], collapsed: [] };
-const query = (date: string): HomeViewQuery => ({ date, search: "", owners: null, includeCompleted: false });
+const allowedWorkTypes = new Set(["all", "waiting", "reservation", "chart", "lab", "imaging", "dispensing", "treatment", "billing"]);
+const allowedStatuses = new Set<string>(hospitalStatuses.map((status) => status.id));
+const defaultPreferences: HomeDisplayPreferences = { layout: "board", hidden: [], collapsed: [], hiddenStatuses: [], collapsedStatuses: [] };
+const query = (date: string): HomeViewQuery => ({ date, search: "", owners: null, includeCompleted: false, includeCancelled: false });
 function initialSession(today: string): HomeSessionState {
-  return { view: "hospital", personalTab: "assigned", queries: { hospital: query(today), mine: query(today) }, scroll: {} };
+  return { view: "hospital", personalTab: "assigned", queries: { hospital: query(today), mine: query(today) }, scroll: {}, hospitalWorkType: "all", hospitalSort: "priority" };
 }
 function read(storage: Storage, key: string): Record<string, unknown> {
   try { return JSON.parse(storage.getItem(key) ?? "null") ?? {}; } catch { return {}; }
@@ -60,6 +71,7 @@ function restoreQuery(value: unknown, today: string): HomeViewQuery {
     search: typeof saved.search === "string" ? saved.search : "",
     owners: Array.isArray(saved.owners) ? strings(saved.owners) : null,
     includeCompleted: saved.includeCompleted === true,
+    includeCancelled: saved.includeCancelled === true,
   };
 }
 function persist(state: HomeWorkspaceStore) {
@@ -68,6 +80,7 @@ function persist(state: HomeWorkspaceStore) {
     localStorage.setItem(prefix + state.scopeKey, JSON.stringify(state.preferences));
     sessionStorage.setItem(prefix + state.scopeKey, JSON.stringify({
       view: state.view, personalTab: state.personalTab, queries: state.queries, scroll: state.scroll,
+      hospitalWorkType: state.hospitalWorkType, hospitalSort: state.hospitalSort,
     }));
   } catch { /* UI remains usable when browser storage is unavailable. */ }
 }
@@ -81,12 +94,14 @@ export const useHomeWorkspaceStore = create<HomeWorkspaceStore>()((set, get) => 
     if (typeof window !== "undefined") {
       try {
         const display = read(localStorage, prefix + scopeKey);
-        preferences = { layout: display.layout === "list" ? "list" : "board", hidden: strings(display.hidden), collapsed: strings(display.collapsed) };
+        preferences = { layout: display.layout === "list" ? "list" : "board", hidden: strings(display.hidden), collapsed: strings(display.collapsed), hiddenStatuses: strings(display.hiddenStatuses).filter((status) => allowedStatuses.has(status)), collapsedStatuses: strings(display.collapsedStatuses).filter((status) => allowedStatuses.has(status)) };
         const saved = read(sessionStorage, prefix + scopeKey);
         const queries = saved.queries as Partial<Record<HomeView, HomeViewQuery>> | undefined;
         session = {
           view: saved.view === "mine" ? "mine" : "hospital",
           personalTab: saved.personalTab === "requested" ? "requested" : "assigned",
+          hospitalWorkType: typeof saved.hospitalWorkType === "string" && allowedWorkTypes.has(saved.hospitalWorkType) ? saved.hospitalWorkType : "all",
+          hospitalSort: saved.hospitalSort === "oldest" || saved.hospitalSort === "newest" ? saved.hospitalSort : "priority",
           queries: { hospital: restoreQuery(queries?.hospital, today), mine: restoreQuery(queries?.mine, today) },
           scroll: {},
         };
@@ -103,6 +118,8 @@ export const useHomeWorkspaceStore = create<HomeWorkspaceStore>()((set, get) => 
   },
   setView: (view) => { set({ view }); persist(get()); },
   setPersonalTab: (personalTab) => { set({ personalTab }); persist(get()); },
+  setHospitalWorkType: (hospitalWorkType) => { set({ hospitalWorkType }); persist(get()); },
+  setHospitalSort: (hospitalSort) => { set({ hospitalSort }); persist(get()); },
   updateQuery: (view, patch) => {
     set((state) => ({ queries: { ...state.queries, [view]: { ...state.queries[view], ...patch } } }));
     persist(get());

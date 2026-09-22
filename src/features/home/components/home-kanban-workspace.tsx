@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EmrTableFilterBuilder } from "@/components/emr/table-filter-builder";
 import { EmrTableFilterTrigger } from "@/components/emr/table-filter-trigger";
 import { filterRowsByEmrTableFilterBuilder, getEmrTableFilterBuilderActiveCount, type EmrTableFilterBuilderField } from "@/components/emr/table-filter-builder-model";
@@ -27,6 +27,7 @@ import { ScrollBar } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useLayoutStore } from "@/stores/layout-store";
 import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
+import { compareHospitalTasks, countHospitalWorkTypes, getHospitalStatus, hospitalStatuses, type HospitalStatus, type HospitalSort } from "@/features/home/home-hospital-presentation";
 import type { HomeDashboardData, HomeTask, HomeOperationsProgressState } from "@/features/home/home.types";
 import { cn } from "@/lib/utils";
 import { moduleIconById } from "@/shell/module-nav-icons";
@@ -65,6 +66,10 @@ function elapsed(task: HomeTask) {
 }
 function offsetDate(date: string, amount: number) {
   const day = new Date(`${date}T12:00:00Z`); day.setUTCDate(day.getUTCDate() + amount); return day.toISOString().slice(0, 10);
+}
+function hospitalDateLabel(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  return Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day) ? `${String(year).slice(-2)}년 ${month}월 ${day}일` : date;
 }
 function toggleValue(values: string[], value: string) {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
@@ -115,18 +120,24 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   const updateQuery = useHomeWorkspaceStore((state) => state.updateQuery);
   const updatePreferences = useHomeWorkspaceStore((state) => state.updatePreferences);
   const setPersonalTab = useHomeWorkspaceStore((state) => state.setPersonalTab);
+  const hospitalWorkType = useHomeWorkspaceStore((state) => state.hospitalWorkType);
+  const setHospitalWorkType = useHomeWorkspaceStore((state) => state.setHospitalWorkType);
+  const hospitalSort = useHomeWorkspaceStore((state) => state.hospitalSort);
+  const setHospitalSort = useHomeWorkspaceStore((state) => state.setHospitalSort);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const isBoard = view === "hospital" && preferences.layout === "board";
   const scrollKey = `${view}:${view === "hospital" ? preferences.layout : personalTab}`;
   const term = query.search.trim().toLocaleLowerCase();
   const [personalHidden, setPersonalHidden] = useState<Record<string, string[]>>({ assigned: [], requested: [] });
-  const hidden = view === "hospital" ? preferences.hidden : personalHidden[personalTab];
-  const setHidden = (values: string[]) => view === "hospital" ? updatePreferences({ hidden: values }) : setPersonalHidden((current) => ({ ...current, [personalTab]: values }));
+  const hidden = personalHidden[personalTab];
+  const setHidden = (values: string[]) => setPersonalHidden((current) => ({ ...current, [personalTab]: values }));
   const visibleTypes = workTypes.filter((type) => !hidden.includes(type.id));
   const hiddenTypes = workTypes.filter((type) => hidden.includes(type.id));
+  const hiddenStatuses = hospitalStatuses.filter((status) => preferences.hiddenStatuses.includes(status.id));
+  const visibleStatuses = hospitalStatuses.filter((status) => !preferences.hiddenStatuses.includes(status.id));
   const scopeTasks = data.hospitalTasks.filter((task) => {
-    if (progress(task) === "cancelled" || (!query.includeCompleted && progress(task) === "completed")) return false;
+    if ((progress(task) === "cancelled" && !query.includeCancelled) || (!query.includeCompleted && progress(task) === "completed")) return false;
     const date = task.operatingDate || operatingDay(task.dueAt || task.requestedAt);
     if (!(date === operatingDate || (view === "mine" && previous(task, operatingDate)))) return false;
     if (view === "mine") return personalTab === "assigned" ? task.isMyWork === true : task.isRequestedWork === true;
@@ -138,11 +149,13 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     { id: "workType", label: "업무", getValue: (task) => task.kanbanColumn, operators: [{ id: "is", label: "같음" }], options: workTypes.map((type) => ({ value: type.id, label: type.label })) },
   ];
   const activeFilterCount = getEmrTableFilterBuilderActiveCount(filterModel, filterFields);
-  const tasks = filterRowsByEmrTableFilterBuilder(scopeTasks, filterModel, filterFields).filter((task) =>
-    !hidden.includes(task.kanbanColumn) &&
-    (view !== "hospital" || (!preferences.hidden.includes(task.kanbanColumn) && (query.owners === null || taskOwners(task).some((owner) => query.owners?.includes(owner))))) &&
+  const commonTasks = filterRowsByEmrTableFilterBuilder(scopeTasks, filterModel, filterFields).filter((task) =>
+    (view !== "mine" || !hidden.includes(task.kanbanColumn)) &&
+    (view !== "hospital" || (query.owners === null || taskOwners(task).some((owner) => query.owners?.includes(owner)))) &&
     (!term || [task.patientName, task.clientName, task.title, task.sourceLabel, task.assigneeName].filter(Boolean).join(" ").toLocaleLowerCase().includes(term)),
   );
+  const workTypeCounts = countHospitalWorkTypes(commonTasks);
+  const tasks = view === "hospital" ? commonTasks.filter((task) => hospitalWorkType === "all" || task.kanbanColumn === hospitalWorkType).sort((a, b) => compareHospitalTasks(a, b, hospitalSort)) : commonTasks;
   const blocked = sourceStatus === "error" || sourceStatus === "permission_denied";
 
   useEffect(() => {
@@ -163,7 +176,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
     // Column hiding/collapse changes scrollWidth without necessarily resizing the viewport.
     if (element.firstElementChild) observer.observe(element.firstElementChild);
     return () => { element.removeEventListener("scroll", update); observer.disconnect(); };
-  }, [loading, blocked, isBoard, preferences.hidden, preferences.collapsed]);
+  }, [loading, blocked, isBoard, preferences.hiddenStatuses, preferences.collapsedStatuses]);
 
   function rememberScroll() {
     const element = scrollRef.current;
@@ -175,7 +188,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   }
   function toggleGroup(key: string) { updatePreferences({ collapsed: toggleValue(preferences.collapsed, key) }); }
   const collapsed = (key: string) => preferences.collapsed.includes(key);
-  const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} selectedDate={query.date} todayDate={today} todayLabel={query.date === today ? "오늘" : undefined}
+  const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} formatSelectedDateLabel={hospitalDateLabel} selectedDate={query.date} todayDate={today} todayLabel={query.date === today ? "오늘" : undefined}
     onDateChange={(date) => updateQuery(view, { date, owners: null })}
     onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1), owners: null })}
     onNext={() => updateQuery(view, { date: offsetDate(query.date, 1), owners: null })} />;
@@ -186,13 +199,13 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   };
 
   return <section className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="home-workspace" aria-busy={loading}>
-    <EmrMainContentHeader aria-hidden="true" heightMode="fixed" style={{ height: 56 }} />
+    <EmrMainContentHeader aria-hidden="true" heightMode="fixed" style={{ height: view === "hospital" ? 52 : 56 }} />
     <header className={styles.pageHeader}>
       <EmrPageHeader
         className="min-h-8 gap-3"
-        titleClassName="text-[24px] font-bold leading-8 tracking-[-0.552px] text-[var(--clair-color-atomic-neutral-900)]"
-        title={view === "hospital" ? "원내 현황" : "내 업무"}
-        badge={<Badge variant="secondary" aria-label="표시 업무 수" className="h-7 min-w-5 rounded-md bg-[var(--clair-color-atomic-black-alpha-4)] px-2 py-0 text-[16px] font-medium leading-6 tracking-[0.096px] text-[var(--clair-color-atomic-neutral-900)]">{loading ? "…" : blocked ? "—" : tasks.length}</Badge>}
+        titleClassName={view === "hospital" ? styles.hospitalTitle : "text-[24px] font-bold leading-8 tracking-[-0.552px] text-[var(--clair-color-atomic-neutral-900)]"}
+        title={view === "hospital" ? dateControl : "내 업무"}
+        badge={view === "mine" ? <Badge variant="secondary" aria-label="표시 업무 수" className="h-7 min-w-5 rounded-md bg-[var(--clair-color-atomic-black-alpha-4)] px-2 py-0 text-[16px] font-medium leading-6 tracking-[0.096px] text-[var(--clair-color-atomic-neutral-900)]">{loading ? "…" : blocked ? "—" : tasks.length}</Badge> : undefined}
         actions={view === "hospital" ? <div className="emr-text-metadata flex flex-wrap items-center gap-2 text-[var(--emr-text-secondary)]" aria-label="현재 병원 환자 현황">
           <span>원내 {patientSummary?.present ?? "—"}마리</span><span aria-hidden="true">·</span>
           <span>진료 대기 {patientSummary?.waiting ?? "—"}마리</span><span aria-hidden="true">·</span>
@@ -200,17 +213,22 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         </div> : undefined}
       />
       <div className={styles.toolbar}>
-        {view === "hospital" ? dateControl : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
+        {view === "hospital" ? <div className={styles.workTypeTabs} role="group" aria-label="업무 종류">
+          <button type="button" data-testid="home-all-work-tab" aria-pressed={hospitalWorkType === "all"} onClick={() => setHospitalWorkType("all")}>전체 업무 <span>{loading ? "…" : blocked ? "—" : commonTasks.length}</span></button>
+          {workTypes.map((type) => <button type="button" key={type.id} aria-pressed={hospitalWorkType === type.id} onClick={() => setHospitalWorkType(type.id)}>{type.label} <span>{loading ? "…" : blocked ? "—" : workTypeCounts[type.id] ?? 0}</span></button>)}
+        </div> : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
         <div className={styles.toolbarActions}>
           <HomeSearch personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
           <Popover key={`filters-${view}`} open={filterOpen} onOpenChange={(open) => { setFilterOpen(open); if (!open) { setFilterReady(false); setFilterAutoOpenConsumed(false); } }} onOpenChangeComplete={setFilterReady}>
-            <PopoverTrigger render={<EmrTableFilterTrigger activeCount={activeFilterCount} size="default" className={styles.filterTrigger} aria-label="업무 필터 설정" />} />
+            <PopoverTrigger render={<EmrTableFilterTrigger activeCount={activeFilterCount + (view === "hospital" && query.includeCancelled ? 1 : 0)} size="default" className={view === "hospital" ? styles.hospitalFilterTrigger : styles.filterTrigger} aria-label={view === "hospital" && (activeFilterCount || query.includeCancelled) ? `업무 필터 설정, 적용 중인 룰 ${activeFilterCount + Number(query.includeCancelled)}개` : "업무 필터 설정"} />} />
             <PopoverContent align="end" className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0" initialFocus={false}>
+              {view === "hospital" && <div className={styles.cancelFilter}><Checkbox aria-label="취소 포함" checked={query.includeCancelled} onCheckedChange={(checked) => updateQuery("hospital", { includeCancelled: checked === true })} /><span>취소 포함</span></div>}
               <EmrTableFilterBuilder fields={filterFields} model={filterModel} autoOpenFirstField={filterReady && !filterAutoOpenConsumed}
                 onModelChange={(model) => { setFilterAutoOpenConsumed(true); updateFilter(view, model); }}
                 onClose={() => { setFilterOpen(false); setFilterReady(false); setFilterAutoOpenConsumed(false); }} />
             </PopoverContent>
           </Popover>
+          {view === "hospital" && <Button variant="outline" size="default" className={styles.todayButton} disabled={query.date === today} onClick={() => updateQuery("hospital", { date: today, owners: null })}>오늘</Button>}
           <EmrFilterToggle
             pressed={query.includeCompleted}
             onPressedChange={(pressed) => updateQuery(view, { includeCompleted: pressed })}
@@ -218,10 +236,11 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             완료 포함
           </EmrFilterToggle>
           {view === "hospital" && <>
+            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" aria-label="정렬" className={styles.sortButton}><ArrowDownUpIcon aria-hidden="true" className="size-4" /><span>{hospitalSort === "priority" ? "업무 우선순" : hospitalSort === "oldest" ? "오래된 요청순" : "최근 요청순"}</span></Button>} />
+              <DropdownMenuContent align="end"><DropdownMenuRadioGroup value={hospitalSort} onValueChange={(sort) => setHospitalSort(sort as HospitalSort)}>{([ ["priority", "업무 우선순"], ["oldest", "오래된 요청순"], ["newest", "최근 요청순"] ] as const).map(([sort, label]) => <DropdownMenuRadioItem key={sort} value={sort}>{label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent>
+            </DropdownMenu>
             <HomeMultiSelect label="담당자" menuVariant="reception" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
-            <HomeMultiSelect label="업무" options={[...workTypes]} values={visibleTypes.map((type) => type.id)} allSelected={hiddenTypes.length === 0}
-              onChange={(values) => updatePreferences({ hidden: workTypes.filter((type) => !values.includes(type.id)).map((type) => type.id) })} />
           </>}
           {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: <><Columns3Icon aria-hidden="true" />칸반</> }, { value: "list", label: <><ListIcon aria-hidden="true" />리스트</> }]} /></> :
             <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default"><ArrowDownUpIcon aria-hidden="true" />정렬</Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
@@ -229,6 +248,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         </div>
       </div>
     </header>
+    {view === "hospital" && !loading && !blocked && tasks.length === 0 && (hospitalWorkType !== "all" || term || query.owners !== null || activeFilterCount > 0) && <div role="status" className={styles.noMatchNotice}>선택한 조건에 맞는 업무가 없습니다. <Button variant="ghost" size="sm" onClick={() => { setHospitalWorkType("all"); updateQuery("hospital", { search: "", owners: null }); updateFilter("hospital", { ...filterModel, groups: filterModel.groups.map((group) => ({ ...group, rules: group.rules.map((rule) => ({ ...rule, applied: null })) })) }); }}>검색·업무 탭·필터 초기화</Button></div>}
     {sourceStatus === "partial" && <div role="status" className="emr-text-body flex shrink-0 items-center justify-between bg-[var(--emr-status-warning-bg)] px-6 py-2">일부 업무를 불러오지 못했습니다. 표시된 업무만 확인할 수 있습니다.<Button variant="ghost" size="sm" onClick={onRefresh}>다시 시도</Button></div>}
     {blocked ? <EmrEmptyState kind={sourceStatus === "permission_denied" ? "no-permission" : "read-error"} surface="content" title={sourceStatus === "permission_denied" ? "업무를 볼 권한이 없습니다" : "업무를 불러오지 못했습니다"} description={errorMessage} primaryAction={sourceStatus === "error" && onRefresh ? <Button variant="outline" onClick={onRefresh}>다시 시도</Button> : undefined} /> :
       <div className={cn(styles.workspaceBody, (view === "mine" || preferences.layout === "list") && styles.listWorkspaceBody)} data-testid="home-workspace-body">
@@ -236,13 +256,13 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           <ScrollAreaPrimitive.Viewport ref={scrollRef} onScroll={rememberScroll} className="size-full min-h-0 min-w-0 rounded-[inherit] outline-none focus-visible:outline-1 focus-visible:ring-[3px] focus-visible:ring-ring/50" data-slot="scroll-area-viewport" data-testid="home-workspace-scroll">
             <ScrollAreaPrimitive.Content className="h-full">
               {loading ? <HomeDataLoadingState /> :
-              view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleTypes.map((type) => collapsed(`column:${type.id}`) ? "52px" : "280px").join(" ") }}>
-                {visibleTypes.map((type) => <HomeBoardColumn key={type.id} id={type.id} label={type.label} tasks={tasks.filter((task) => task.kanbanColumn === type.id)} date={operatingDate} collapsed={collapsed(`column:${type.id}`)}
-                  onToggle={() => toggleGroup(`column:${type.id}`)} onHide={() => updatePreferences({ hidden: [...preferences.hidden, type.id] })}
-                  isGroupCollapsed={collapsed} onToggleGroup={toggleGroup} onNavigate={navigate} />)}
-                {visibleTypes.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 업무 종류를 선택해 주세요" />}
+              view === "hospital" && preferences.layout === "board" ? <div className={styles.board} data-testid="home-kanban-board" style={{ gridTemplateColumns: visibleStatuses.map((status) => preferences.collapsedStatuses.includes(status.id) ? "52px" : "280px").join(" ") }}>
+                {visibleStatuses.map((status) => <HomeBoardColumn key={status.id} id={status.id} label={status.label} inclusionDisabled={status.id === "completed" ? !query.includeCompleted : status.id === "cancelled" ? !query.includeCancelled : false} tasks={tasks.filter((task) => getHospitalStatus(task) === status.id)} date={operatingDate} collapsed={preferences.collapsedStatuses.includes(status.id)}
+                  onToggle={() => updatePreferences({ collapsedStatuses: toggleValue(preferences.collapsedStatuses, status.id) })} onHide={() => updatePreferences({ hiddenStatuses: [...preferences.hiddenStatuses, status.id] })}
+                  onNavigate={navigate} />)}
+                {visibleStatuses.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 상태를 선택해 주세요" />}
               </div> : <div className={styles.list} data-testid="home-task-list">
-                {view === "hospital" ? visibleTypes.map((type) => renderListGroup(type, tasks.filter((task) => task.kanbanColumn === type.id), "hospital")) : [
+                {view === "hospital" ? <HomeHospitalList tasks={tasks} date={operatingDate} onNavigate={navigate} /> : [
                   { id: "selected", label: "오늘 할 업무", items: tasks.filter((task) => !previous(task, operatingDate)) },
                   { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, operatingDate)) },
                 ].map((period) => <section key={period.id} className={styles.period} aria-label={period.label}>
@@ -258,7 +278,11 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           <ScrollAreaPrimitive.Corner />
           {isBoard && !loading && <div className={styles.scrollFade} data-visible={canScrollRight} data-testid="home-board-scroll-fade" aria-hidden="true" />}
         </ScrollAreaPrimitive.Root>
-        {hiddenTypes.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 업무">
+        {view === "hospital" && isBoard && hiddenStatuses.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 상태">
+          <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 상태</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => updatePreferences({ hiddenStatuses: [] })}><EyeIcon className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
+          <div className={styles.hiddenRows}>{hiddenStatuses.map((status) => <div key={status.id} className={styles.hiddenRow}><span>{status.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${status.label} 열 표시`} onClick={() => updatePreferences({ hiddenStatuses: preferences.hiddenStatuses.filter((id) => id !== status.id) })}><EyeIcon className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
+        </section>}
+        {view === "mine" && hiddenTypes.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 업무">
           <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 업무</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => setHidden([])}><EyeIcon className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
           <div className={styles.hiddenRows}>{hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><span>{type.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
         </section>}
@@ -307,7 +331,7 @@ function HomeSearch({ personal, value, onChange }: { personal: boolean; value: s
       className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pl-8 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
     <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label={value ? "검색어 지우기" : "검색 닫기"}
       onClick={() => { if (value) { onChange(""); inputRef.current?.focus(); } else close(); }}><CircleCloseFillIcon className="size-4" /></Button>
-  </div> : <Button ref={buttonRef} variant="outline" size="default" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" /><span className="px-0.5">검색</span></Button>;
+  </div> : <Button ref={buttonRef} variant="outline" size={personal ? "default" : "icon"} className={personal ? undefined : styles.hospitalSearchTrigger} aria-label="검색" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" />{personal && <span className="px-0.5">검색</span>}</Button>;
 }
 
 function HomeMultiSelect({ label, options, values, allSelected, onChange, menuVariant = "default" }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void; menuVariant?: "default" | "reception" }) {
@@ -343,38 +367,35 @@ function HomeTaskState({ task }: { task: HomeTask }) {
   const state = progress(task);
   return <span className="emr-text-body inline-flex items-center gap-1.5 whitespace-nowrap text-[var(--emr-text-secondary)]"><EmrSidePanelStateIcon state={state === "completed" ? "done" : state === "in_progress" ? "in-progress" : "to-do"} />{statusGroups.find((group) => group.id === state)?.label ?? "취소"}</span>;
 }
-function HomeBoardColumn({ id, label, tasks, date, collapsed, onToggle, onHide, isGroupCollapsed, onToggleGroup, onNavigate }: {
-  id: string; label: string; tasks: HomeTask[]; date: string; collapsed: boolean; onToggle: () => void; onHide: () => void;
-  isGroupCollapsed: (key: string) => boolean; onToggleGroup: (key: string) => void; onNavigate: (task: HomeTask) => void;
+function HospitalStateIcon({ state }: { state: HospitalStatus }) {
+  return <EmrSidePanelStateIcon state={state === "completed" ? "done" : state === "in_progress" ? "in-progress" : state === "re_requested" ? "rework" : state === "cancelled" ? "cancel" : "to-do"} />;
+}
+function HomeBoardColumn({ id, label, tasks, date, collapsed, inclusionDisabled, onToggle, onHide, onNavigate }: {
+  id: HospitalStatus; label: string; tasks: HomeTask[]; date: string; collapsed: boolean; inclusionDisabled: boolean; onToggle: () => void; onHide: () => void;
+  onNavigate: (task: HomeTask) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const element = scrollRef.current; const saved = useHomeWorkspaceStore.getState().scroll[`column:${id}`];
+    const element = scrollRef.current; const saved = useHomeWorkspaceStore.getState().scroll[`status-column:${id}`];
     if (element && saved) element.scrollTop = saved.top;
   }, [id, collapsed]);
   return <section data-testid={`home-kanban-column-${id}`} className={cn(styles.column, collapsed && styles.collapsedColumn)}>
-    {collapsed ? <div className="flex flex-col items-center gap-3 py-3"><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 펼치기`} aria-expanded={false} onClick={onToggle}><ChevronRightIcon /></Button><h2 className="emr-text-body [writing-mode:vertical-rl]">{label}</h2><span className="emr-text-metadata text-muted-foreground">{tasks.length}</span></div> : <>
-      <HomeGroupHeader id={id} label={label} count={tasks.length} collapsed={false} onToggle={onToggle} onHide={onHide} column />
-      <div ref={scrollRef} className={styles.columnBody} onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>
-        {statusGroups.filter((group) => tasks.some((task) => progress(task) === group.id)).map((group) => {
-          const key = `status:${id}:${group.id}`; const items = tasks.filter((task) => progress(task) === group.id);
-          return <section key={key} data-testid={`home-kanban-status-${id}-${group.id}`}>
-            <button type="button" className={styles.statusHeader} aria-label={`${label} ${group.label}`} aria-expanded={!isGroupCollapsed(key)} onClick={() => onToggleGroup(key)}><EmrSidePanelStateIcon state={group.id === "completed" ? "done" : group.id === "in_progress" ? "in-progress" : "to-do"} /><span>{group.label}</span><span className={styles.count}>{items.length}</span>{isGroupCollapsed(key) ? <ChevronDownIcon /> : <ChevronUpIcon />}</button>
-            {!isGroupCollapsed(key) && <div className={styles.cards}>
-            {items.map((task) => <div key={task.id} className="space-y-1">
+    {collapsed ? <div className="flex flex-col items-center gap-3 py-3"><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 펼치기`} aria-expanded={false} onClick={onToggle}><ChevronRightIcon /></Button><HospitalStateIcon state={id} /><h2 className="emr-text-body [writing-mode:vertical-rl]">{label}</h2><span className="emr-text-metadata text-muted-foreground">{tasks.length}</span></div> : <>
+      <header className={cn(styles.groupHeader, styles.dividedHeader)}><h2><HospitalStateIcon state={id} />{label}<span>{tasks.length}</span></h2><div className={styles.groupActions}><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 숨기기`} onClick={onHide}><EyeOffIcon /></Button><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded="true" onClick={onToggle}><ChevronUpIcon /></Button></div></header>
+      <div ref={scrollRef} className={styles.columnBody} onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`status-column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>
+        <div className={styles.cards}>
+            {tasks.map((task) => <div key={task.id} className="space-y-1" data-testid={`home-status-task-${task.id}`} title={`${task.requestedAt} · ${elapsed(task)} 경과`}>
               <EmrTaskQueueCard selected={false} item={{
                 patientName: task.patientName || "환자 미지정", guardianName: task.clientName || "보호자 미지정", receptionType: task.receptionType || "외래",
-                secondLineText: task.queueCardSecondLineText || task.title, secondLineBadgeLabel: task.queueCardSecondLineBadgeLabel,
-                assigneeName: ownerLabel(task), eventActorName: task.requestedBy || "", eventTime: "", eventText: task.queueCardEventText || `${elapsed(task)} 경과`,
-                actionAriaLabel: `${task.patientName || "환자"} ${label} 업무 메뉴`, actionMenuDensity: "compact",
-                actionItems: [{ key: "source", label: `${label} 화면으로 이동`, onSelect: () => onNavigate(task) }], testId: `home-kanban-task-${task.id}`,
+                secondLineText: `${typeLabel(task)} · ${task.queueCardSecondLineText || task.title}`, secondLineBadgeLabel: task.queueCardSecondLineBadgeLabel,
+                assigneeName: ownerLabel(task), eventActorName: task.requestedBy || "", eventTime: requestTime(task), eventText: `요청 ${requestTime(task)}`,
+                actionAriaLabel: `${task.patientName || "환자"} ${typeLabel(task)} 업무 메뉴`, actionMenuDensity: "compact",
+                actionItems: [{ key: "source", label: `${typeLabel(task)} 화면으로 이동`, onSelect: () => onNavigate(task) }], testId: `home-kanban-task-${task.id}`,
               }} />
               <HomeTaskSignals task={task} date={date} />
             </div>)}
-            </div>}
-          </section>;
-        })}
-        {tasks.length === 0 && <p className="emr-text-metadata px-2 py-5 text-center text-muted-foreground">표시할 업무가 없습니다.</p>}
+        </div>
+        {tasks.length === 0 && <p className="emr-text-metadata px-2 py-5 text-center text-muted-foreground">{inclusionDisabled && id === "completed" ? "완료 포함을 켜면 표시됩니다." : inclusionDisabled && id === "cancelled" ? "필터에서 취소 포함을 켜면 표시됩니다." : "표시할 업무가 없습니다."}</p>}
       </div>
     </>}
   </section>;
@@ -395,6 +416,32 @@ function HomeGroupHeader({ id, label, count, collapsed, onToggle, onHide, column
 function requestTime(task: HomeTask) {
   const time = new Date(task.requestedAt);
   return Number.isNaN(time.getTime()) ? "—" : new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit", hour12: true }).format(time);
+}
+
+function HomeHospitalList({ tasks, date, onNavigate }: { tasks: HomeTask[]; date: string; onNavigate: (task: HomeTask) => void }) {
+  const headings = ["업무", "환자", "보호자", "세부 업무", "상태", "요청 시각", "요청자", "담당자", ""];
+  return <div role="table" aria-label="원내 업무 목록" className={styles.hospitalTable} data-testid="home-hospital-table">
+    <div role="row" className={styles.hospitalTableHeader}>{headings.map((heading, index) => <span role="columnheader" key={`${heading}-${index}`}>{heading}</span>)}</div>
+    <div className={styles.hospitalTableRows}>
+      {tasks.map((task) => {
+        const state = getHospitalStatus(task);
+        const stateLabel = hospitalStatuses.find((item) => item.id === state)?.label ?? state;
+        return <div role="row" tabIndex={0} key={task.id} className={styles.hospitalRow} data-testid={`home-hospital-row-${task.id}`} aria-label={`${task.patientName || "환자 미지정"} ${task.title}`}
+          onClick={() => onNavigate(task)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onNavigate(task); } }}>
+          <span role="cell" title={typeLabel(task)}>{typeLabel(task)}</span>
+          <span role="cell" title={task.patientName || "환자 미지정"}>{task.patientName || "환자 미지정"}</span>
+          <span role="cell" title={task.clientName || "보호자 미지정"}>{task.clientName || "보호자 미지정"}</span>
+          <span role="cell" className={styles.hospitalDetails} title={task.queueCardSecondLineText || task.title}><span>{task.queueCardSecondLineText || task.title}</span><HomeTaskSignals task={task} date={date} /></span>
+          <span role="cell" className={styles.hospitalState}><HospitalStateIcon state={state} />{stateLabel}</span>
+          <span role="cell" title={`${task.requestedAt} · ${elapsed(task)} 경과`}>{requestTime(task)}</span>
+          <span role="cell" title={task.requestedBy || "—"}>{task.requestedBy || "—"}</span>
+          <span role="cell" title={taskOwners(task).join(", ")}>{taskOwners(task).join(", ")}</span>
+          <span role="cell" className={styles.hospitalRowAction}><Button variant="ghost" size="icon-xs" aria-label={`${task.patientName || "환자"} ${typeLabel(task)} 화면으로 이동`} onClick={(event) => { event.stopPropagation(); onNavigate(task); }}><ChevronRightIcon aria-hidden="true" /></Button></span>
+        </div>;
+      })}
+      {tasks.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="조건에 맞는 업무가 없습니다" />}
+    </div>
+  </div>;
 }
 
 function HomeListGroup({ id, label, tasks, date, collapsed, onToggle, onHide, onNavigate }: {

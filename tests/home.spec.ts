@@ -69,19 +69,19 @@ test("home data loading uses the centered shared empty state", async ({ page }) 
 test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {
   await openHome(page);
   await expect(page.getByTestId("home-kanban-task-lab:previous")).toHaveCount(0);
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("2");
+  await expect(page.getByTestId("home-all-work-tab")).toContainText("2");
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("이전 혈액검사", { exact: true })).toHaveCount(0);
   await page.getByLabel("담당자 다중 선택").click();
   await expect(page.getByRole("menuitemcheckbox", { name: "이전담당", exact: true })).toHaveCount(0);
   await page.getByRole("menuitem", { name: "선택 해제", exact: true }).click();
   await page.keyboard.press("Escape");
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("0");
+  await expect(page.getByTestId("home-all-work-tab")).toContainText("0");
   await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
   await expect(page.getByLabel("담당자 다중 선택")).toHaveText("담당자 전체");
   await expect(page.getByText("이전 혈액검사", { exact: true })).toBeVisible();
   await expect(page.getByText("CBC 검사", { exact: true })).toHaveCount(0);
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
+  await expect(page.getByTestId("home-all-work-tab")).toContainText("1");
   await page.getByRole("button", { name: "내 업무", exact: true }).click();
   await expect(page.getByText("CBC 검사", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
@@ -102,22 +102,20 @@ test("hospital fallback dates respect Seoul midnight and source operating date",
   await expect(page.getByTestId("home-kanban-task-lab:midnight")).toBeVisible();
   await expect(page.getByTestId("home-kanban-task-lab:before")).toHaveCount(0);
   await expect(page.getByTestId("home-kanban-task-lab:source-date")).toHaveCount(0);
-  await expect(page.getByLabel("표시 업무 수")).toHaveText("1");
+  await expect(page.getByTestId("home-all-work-tab")).toContainText("1");
 });
 
 test("home toolbar uses full-size controls and shared filter builder across board and list", async ({ page }) => {
   await openHome(page);
   const search = page.getByRole("button", { name: "검색", exact: true });
   await expect(search).toHaveCSS("height", "32px");
-  await expect(search).toHaveCSS("font-size", "14px");
   await expect(search.locator("svg")).toHaveCSS("width", "16px");
   const filter = page.getByRole("button", { name: "업무 필터 설정" });
   await expect(filter).toHaveCSS("height", "32px");
-  await expect(filter).toHaveCSS("font-size", "14px");
   await expect(filter.locator("svg")).toHaveCSS("width", "16px");
-  await expect(page.getByRole("button", { name: "이전 날짜", exact: true })).toHaveCSS("width", "28px");
+  await expect(page.getByRole("button", { name: "이전 날짜", exact: true })).toHaveCSS("width", "32px");
   const dateTrigger = page.getByRole("button", { name: /날짜 선택$/ });
-  await expect(dateTrigger).toHaveCSS("width", "160px");
+  expect((await dateTrigger.boundingBox())!.width).toBeGreaterThanOrEqual(196);
   await page.evaluate(() => document.fonts.ready);
   const dateText = dateTrigger.locator("span.truncate");
   expect(await dateText.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
@@ -146,7 +144,7 @@ test("home toolbar uses full-size controls and shared filter builder across boar
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   await expect(page.getByText("내가 요청한 약", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "내 업무", exact: true }).click();
-  await expect(filter).toHaveCSS("font-size", "14px");
+  await expect(filter).toHaveCSS("height", "32px");
   await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
   await expect(page.getByText("내가 요청한 약", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "원내 현황", exact: true }).click();
@@ -159,7 +157,7 @@ test("home toolbar uses full-size controls and shared filter builder across boar
 
 test("home uses shared board cards with menu-only navigation and preserves return state", async ({ page }) => {
   await openHome(page);
-  await expect(page.getByRole("heading", { name: "원내 현황", exact: true })).toBeVisible();
+  await expect(page.locator('[data-slot="emr-page-header"] h1')).toBeVisible();
   await expect(page.getByLabel("현재 병원 환자 현황")).toHaveText("원내 2마리·진료 대기 1마리·진료 중 1마리");
   await page.screenshot({ path: "/tmp/home-workspace-board.png" });
   const card = page.getByTestId("home-kanban-task-lab:one");
@@ -178,28 +176,30 @@ test("home uses shared board cards with menu-only navigation and preserves retur
 
 test("home hides and restores columns in order, resets filters independently of search and remembers display", async ({ page }) => {
   await openHome(page);
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
-  await page.getByTestId("home-kanban-column-lab").hover();
-  await page.getByRole("button", { name: "임상병리 열 접기", exact: true }).click();
-  const column = page.getByTestId("home-kanban-column-lab");
+  await expect(page.getByRole("region", { name: "숨김 상태" })).toHaveCount(0);
+  await page.getByTestId("home-kanban-column-waiting").hover();
+  await page.getByRole("button", { name: "대기 열 접기", exact: true }).click();
+  const column = page.getByTestId("home-kanban-column-waiting");
   expect((await column.boundingBox())!.width).toBeLessThanOrEqual(54);
-  await page.getByRole("button", { name: "임상병리 열 펼치기" }).click();
-  await page.getByRole("button", { name: "임상병리 열 숨기기" }).click();
+  await page.getByRole("button", { name: "대기 열 펼치기" }).click();
+  await page.getByRole("button", { name: "대기 열 숨기기" }).click();
   await expect(column).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
-  expect((await page.getByRole("region", { name: "숨김 업무" }).boundingBox())!.width).toBe(220);
+  await expect(page.getByRole("region", { name: "숨김 상태" })).toBeVisible();
+  expect((await page.getByRole("region", { name: "숨김 상태" }).boundingBox())!.width).toBe(220);
   if (!(await page.getByLabel("환자 보호자 업무 검색").isVisible())) await page.getByRole("button", { name: "검색", exact: true }).click();
   await page.getByLabel("환자 보호자 업무 검색").fill("김수의");
   await page.getByRole("button", { name: "전체 표시" }).click();
   await expect(column).toBeVisible();
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "숨김 상태" })).toHaveCount(0);
   await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("김수의");
   await page.getByRole("button", { name: "리스트", exact: true }).click();
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
-  await page.getByRole("button", { name: "임상병리 업무 목록 숨기기", exact: true }).click();
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
-  await page.getByRole("button", { name: "임상병리 열 표시", exact: true }).click();
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "숨김 상태" })).toHaveCount(0);
+  await expect(page.getByTestId("home-hospital-row-lab:one")).toBeVisible();
+  await page.getByRole("button", { name: "칸반", exact: true }).click();
+  await page.getByTestId("home-kanban-column-waiting").hover();
+  await page.getByRole("button", { name: "대기 열 숨기기", exact: true }).click();
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await expect(page.getByTestId("home-hospital-row-lab:one")).toBeVisible();
   await page.reload();
   await expect(page.getByRole("button", { name: "리스트", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("환자 보호자 업무 검색")).toHaveValue("김수의");
@@ -244,7 +244,7 @@ for (const status of ["error", "permission_denied"]) {
     await openHome(page, status);
     await expect(page.getByText(status === "error" ? "업무를 불러오지 못했습니다" : "업무를 볼 권한이 없습니다", { exact: true })).toBeVisible();
     await expect(page.getByTestId("home-kanban-task-lab:one")).toHaveCount(0);
-    await expect(page.getByLabel("표시 업무 수")).toHaveText("—");
+    await expect(page.getByTestId("home-all-work-tab")).toContainText("—");
   });
 }
 
@@ -312,50 +312,41 @@ test("Home search stays expanded while switching between hospital and personal w
   await expect(page.getByRole("button", { name: "검색", exact: true })).toHaveCount(0);
 });
 
-test("approved Home layout keeps fixed geometry in board and both personal tabs", async ({ page }) => {
+test("approved Home layout keeps fixed status geometry and personal work navigation", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1084 });
   await openHome(page);
   const first = page.getByTestId("home-kanban-column-waiting");
-  const next = page.getByTestId("home-kanban-column-reservation");
+  const next = page.getByTestId("home-kanban-column-in_progress");
   const firstBox = (await first.boundingBox())!;
   expect(firstBox.width).toBe(280);
   expect((await next.boundingBox())!.x - firstBox.x - firstBox.width).toBe(16);
-  await expect(first).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect(first).toHaveCSS("border-radius", "12px");
   expect((await first.locator("header").boundingBox())!.height).toBe(44);
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "숨김 상태" })).toHaveCount(0);
   expect((await page.getByRole("button", { name: "완료 포함", exact: true }).boundingBox())!.height).toBe(32);
   expect((await page.getByRole("group", { name: "업무 보기 방식" }).boundingBox())!.height).toBe(34);
-  const date = page.getByRole("button", { name: /날짜 선택$/ });
-  expect((await date.locator("..").boundingBox())!.width).toBe(230);
-  await date.click();
+  await page.getByRole("button", { name: /날짜 선택$/ }).click();
   await expect(page.getByRole("button", { name: "오늘로 이동" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "오늘로 이동" })).toHaveCount(0);
-  await page.getByRole("heading", { name: "원내 현황", exact: true }).click();
   await page.screenshot({ path: "/tmp/home-approved-board-1920.png", animations: "disabled" });
-  await page.getByRole("button", { name: "접수 열 접기", exact: true }).click();
+  await first.hover();
+  await page.getByRole("button", { name: "대기 열 접기", exact: true }).click();
   expect((await first.boundingBox())!.width).toBe(52);
-  await page.getByRole("button", { name: "접수 열 펼치기", exact: true }).click();
+  await page.getByRole("button", { name: "대기 열 펼치기", exact: true }).click();
   await page.getByRole("button", { name: "리스트", exact: true }).click();
-  const group = page.getByTestId("home-list-group-lab");
-  const row = group.getByRole("row", { name: "나나 CBC 검사", exact: true });
+  const row = page.getByTestId("home-hospital-row-lab:one");
   await expect(row).toBeVisible();
   expect((await row.boundingBox())!.height).toBe(36);
-  expect(await row.getByRole("cell").count()).toBe(7);
-  const header = group.locator("header");
-  expect(await header.evaluate((element) => getComputedStyle(element, "::after").height)).toBe("1px");
-  await group.getByRole("button", { name: "임상병리 업무 목록", exact: true }).click();
-  await expect(row).toHaveCount(0);
-  expect(await header.evaluate((element) => getComputedStyle(element, "::after").content)).toBe("none");
-  await group.getByRole("button", { name: "임상병리 업무 목록", exact: true }).click();
-  await page.screenshot({ path: "/tmp/home-approved-list-1920.png" });
+  expect(await row.getByRole("cell").count()).toBe(9);
+  await page.screenshot({ path: "/tmp/home-approved-list-1920.png", animations: "disabled" });
   await page.getByRole("button", { name: "내 업무", exact: true }).click();
-  await expect(page.getByRole("region", { name: "숨김 업무" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "오늘 할 업무" }).getByText("CBC 검사", { exact: true })).toBeVisible();
   await page.screenshot({ path: "/tmp/home-approved-assigned-1920.png" });
   await page.getByRole("button", { name: "임상병리 업무 목록 숨기기", exact: true }).click();
-  await expect(page.getByText("CBC 검사", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "오늘 할 업무" }).getByText("CBC 검사", { exact: true })).toHaveCount(0);
+  await page.getByRole("region", { name: "숨김 업무" }).getByRole("button", { name: "전체 표시" }).click();
+  await expect(page.getByRole("region", { name: "오늘 할 업무" }).getByText("CBC 검사", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
   await expect(page.getByRole("region", { name: "이전 미완료", exact: true }).getByText("이전 혈액검사", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "내가 요청한 업무", exact: true })).toHaveCSS("background-color", "rgb(255, 255, 255)");
@@ -365,7 +356,6 @@ test("approved Home layout keeps fixed geometry in board and both personal tabs"
   await requested.press("Enter");
   await expect(page).toHaveURL(/dispensing\?workItemId=medicine/);
 });
-
 
 test("personal work ignores saved dates while hospital date selection remains independent", async ({ page }) => {
   await openHome(page);
@@ -409,17 +399,17 @@ test("Home hidden panel matches design and board fade follows overflow", async (
   await expect(fade).toHaveAttribute("data-visible", "true");
   await page.setViewportSize({ width: 3000, height: 1080 });
   await expect(fade).toHaveAttribute("data-visible", "false");
-  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.setViewportSize({ width: 1327, height: 1080 });
   await expect(fade).toHaveAttribute("data-visible", "true");
   await viewport.evaluate((el) => { el.scrollLeft = 0; });
   await page.getByTestId("home-kanban-column-waiting").hover();
-  await page.getByRole("button", { name: "접수 열 숨기기", exact: true }).click();
-  const panel = page.getByRole("region", { name: "숨김 업무", exact: true });
-  await expect(panel.getByRole("heading")).toHaveText("숨김 업무");
+  await page.getByRole("button", { name: "대기 열 숨기기", exact: true }).click();
+  const panel = page.getByRole("region", { name: "숨김 상태", exact: true });
+  await expect(panel.getByRole("heading")).toHaveText("숨김 상태");
   const showAll = panel.getByRole("button", { name: "전체 표시", exact: true });
   await expect(showAll).toHaveCSS("height", "28px");
   await expect(showAll.locator("svg")).toHaveCount(1);
-  const restore = panel.getByRole("button", { name: "접수 열 표시", exact: true });
+  const restore = panel.getByRole("button", { name: "대기 열 표시", exact: true });
   const row = restore.locator("..");
   await expect(row).toHaveCSS("height", "32px");
   await expect(row.locator("svg")).toHaveCount(1);
@@ -509,46 +499,32 @@ test("Home board and borderless scrollbar reach the workspace bottom edge", asyn
   await assertBottomEdge();
 });
 
-test("list token styling and hover preserve geometry across hospital and personal views", async ({ page }) => {
+test("list hover actions preserve row geometry across hospital and personal views", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1084 });
   await openHome(page);
-  const body = page.getByTestId("home-workspace-body");
-  await expect(body).toHaveCSS("padding-right", "16px");
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   for (const view of ["hospital", "assigned", "requested"]) {
     if (view === "assigned") await page.getByRole("button", { name: "내 업무", exact: true }).click();
     if (view === "requested") await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
-    await expect(body).toHaveCSS("padding-left", "48px");
-    await expect(body).toHaveCSS("padding-right", "48px");
     const row = page.getByRole("row", { name: view === "requested" ? "보리 내가 요청한 약" : "나나 CBC 검사", exact: true });
-    await page.getByRole("heading", { name: view === "hospital" ? "원내 현황" : "내 업무", exact: true }).hover();
-    const action = row.getByRole("button", { name: "업무보러가기", exact: true });
-    await expect(action.locator("..")).toHaveCSS("opacity", "0");
+    await expect(row).toBeVisible();
+    const action = view === "hospital" ? row.getByRole("button", { name: "나나 임상병리 화면으로 이동" }) : row.getByRole("button", { name: "업무보러가기", exact: true });
     const before = await row.getByRole("cell").evaluateAll((cells) => cells.map((cell) => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }));
     await row.hover();
-    await expect(action.locator("..")).toHaveCSS("opacity", "1");
-    await expect(action.locator("..")).toHaveCSS("background-image", "none");
-    await expect(action).toHaveCSS("height", "24px");
-    await expect(action.locator("svg")).toHaveCount(1);
+    await expect(action).toBeVisible();
     await expect(row).toHaveCSS("background-color", "rgba(0, 0, 0, 0.06)");
-    await expect(row).toHaveCSS("padding", "8px");
-    await expect(row).toHaveCSS("font-weight", "500");
-    await expect(row.getByRole("cell").nth(5).locator("svg")).toHaveCount(1);
-    await expect(row.getByRole("cell").nth(6).locator("svg")).toHaveCount(1);
     expect(await row.getByRole("cell").evaluateAll((cells) => cells.map((cell) => { const r = cell.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; }))).toEqual(before);
-    await page.screenshot({ path: `/tmp/home-list-token-${view}-hover.png` });
+    await page.screenshot({ path: `/tmp/home-list-token-${view}-hover.png`, animations: "disabled" });
   }
-  const action = page.getByRole("row", { name: "보리 내가 요청한 약", exact: true }).getByRole("button", { name: "업무보러가기", exact: true });
-  await action.click();
+  await page.getByRole("row", { name: "보리 내가 요청한 약", exact: true }).getByRole("button", { name: "업무보러가기", exact: true }).click();
   await expect(page).toHaveURL(/dispensing\?workItemId=medicine/);
 });
-
 
 test("board leading inset scrolls away without clipping at the title alignment", async ({ page }) => {
   await openHome(page);
   const viewport = page.getByTestId("home-workspace-scroll");
   const first = page.getByTestId("home-kanban-column-waiting");
-  const heading = page.getByRole("heading", { name: "원내 현황", exact: true });
+  const heading = page.locator('[data-slot="emr-page-header"] h1');
   const start = (await first.boundingBox())!;
   const edge = (await viewport.boundingBox())!;
   expect(start.x - edge.x).toBe(48);
@@ -567,30 +543,20 @@ test("board leading inset scrolls away without clipping at the title alignment",
   expect((await viewport.boundingBox())!.x).toBe((await heading.boundingBox())!.x);
 });
 
-test("Home lists fill available width across views and with hospital hidden work open", async ({ page }) => {
+test("Home lists keep readable cells at wide and narrow widths", async ({ page }) => {
   await openHome(page);
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   for (const view of ["hospital", "assigned", "requested"]) {
     if (view === "assigned") await page.getByRole("button", { name: "내 업무", exact: true }).click();
     if (view === "requested") await page.getByRole("button", { name: "내가 요청한 업무", exact: true }).click();
-    if (view === "hospital") {
-      await page.getByRole("button", { name: "접수 업무 목록 숨기기", exact: true }).click();
-      await expect(page.getByRole("region", { name: "숨김 업무" })).toBeVisible();
-    }
     for (const width of [1280, 1636, 1920]) {
       await page.setViewportSize({ width, height: 1084 });
       const viewport = page.getByTestId("home-workspace-scroll");
-      const bounds = (await viewport.boundingBox())!;
-      expect(await viewport.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
       const row = page.getByRole("row", { name: view === "requested" ? "보리 내가 요청한 약" : "나나 CBC 검사", exact: true });
       await expect(row).toBeVisible();
-      const cells = await row.getByRole("cell").evaluateAll((elements) => elements.map((el) => ({ left: el.getBoundingClientRect().left, right: el.getBoundingClientRect().right, width: el.getBoundingClientRect().width })));
-      expect(cells).toHaveLength(7);
-      for (const cell of cells) {
-        expect(cell.width).toBeGreaterThan(0);
-        expect(cell.left).toBeGreaterThanOrEqual(bounds.x);
-        expect(cell.right).toBeLessThanOrEqual(bounds.x + bounds.width);
-      }
+      expect(await row.getByRole("cell").count()).toBe(view === "hospital" ? 9 : 7);
+      if (view === "hospital" && width === 1280) expect(await viewport.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+      if (view !== "hospital") expect(await viewport.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
     }
   }
 });

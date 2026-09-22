@@ -59,6 +59,7 @@ type EmrSubpanelTitleProps = {
 
 type EmrDateNavigatorProps = {
   dateLabel: ReactNode;
+  formatSelectedDateLabel?: (date: string) => ReactNode;
   className?: string;
   onDateChange?: (date: string) => void;
   nextLabel?: string;
@@ -227,6 +228,7 @@ function EmrSubpanelHeaderIconButton({
 
 export function EmrDateNavigator({
   dateLabel,
+  formatSelectedDateLabel,
   className,
   onDateChange,
   nextLabel = "다음 날짜",
@@ -250,7 +252,7 @@ export function EmrDateNavigator({
       )
     : [];
   const renderedDateLabel = selectedDate
-    ? formatCompactKoreanOperatingDateLabel(selectedDate)
+    ? formatSelectedDateLabel?.(selectedDate) ?? formatCompactKoreanOperatingDateLabel(selectedDate)
     : dateLabel;
 
   const openDatePicker = () => {
