@@ -2138,11 +2138,10 @@ test("chart Order draft autosaves Field Matrix values and enables explicit confi
   const confirmButton = actionBar.getByRole("button", { name: /\d+개 Order 확정/ });
   await expect(confirmButton).toBeEnabled();
   await confirmButton.click();
-  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
-  await expect(confirmDialog).toContainText(
-    "선택하지 않은 후보는 공유 Draft에 남고",
-  );
-  await confirmDialog.getByRole("button", { name: "다시 확인" }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  await expect(confirmDialog.getByText("[CBC 검사] #BASO", { exact: true })).toBeVisible();
+  await expect(confirmDialog).not.toContainText("공유 Draft");
+  await confirmDialog.getByRole("button", { name: "취소" }).click();
 
   await page.reload();
   const reloadedDetail = await openChartOrderDetail(
@@ -6946,7 +6945,7 @@ test("Assessment delete actions remain visible in touch environments", async ({
   }
 });
 
-test("chart safety context and confirmation dialogs identify the active patient", async ({
+test("chart safety context identifies the patient while order review shows only selected orders", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
@@ -6984,18 +6983,57 @@ test("chart safety context and confirmation dialogs identify the active patient"
     selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }),
   ).toBeEnabled();
   await selectionActions.getByRole("button", { name: /\d+개 Order 확정/ }).click();
-  const orderConfirmDialog = page.getByRole("dialog");
-  await expect(orderConfirmDialog.getByText("Order 확정 확인")).toBeVisible();
-  await expect(
-    orderConfirmDialog.getByText("환자: 콩이 · 보호자 김하늘"),
-  ).toBeVisible();
-  await expect(
-    orderConfirmDialog.getByText("차트번호: E-260501-0003"),
-  ).toBeVisible();
-  await expect(
-    orderConfirmDialog.getByText("확정 오더: 1건 · 확정 금액 35,000"),
-  ).toBeVisible();
-  await expect(orderConfirmDialog.getByText("재요청 포함: 없음")).toBeVisible();
+  const orderConfirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  await expect(orderConfirmDialog.getByRole("listitem")).toContainText("CBC 검사");
+  await expect(orderConfirmDialog.getByRole("listitem")).toContainText("35,000원");
+  await expect(orderConfirmDialog.getByText("선택 오더 합계")).toBeVisible();
+  await expect(orderConfirmDialog.getByRole("button", { name: "1건 확정" })).toBeVisible();
+  await expect(orderConfirmDialog).not.toContainText("보호자");
+  await expect(orderConfirmDialog).not.toContainText("차트번호");
+  await expect(orderConfirmDialog).not.toContainText("공유 Draft");
+  await expect(orderConfirmDialog).not.toContainText("재요청 포함");
+});
+
+test("chart order review counts selected roots, matches scoped row charges, and cancels without a mutation", async ({ page }) => {
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const actionRequests: string[] = [];
+  page.on("request", request => {
+    if (request.method() === "PATCH" && request.url().includes("/chart/order-actions")) {
+      actionRequests.push(request.url());
+    }
+  });
+
+  await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
+  await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
+  const trigger = getChartSelectedOrderConfirmAction(page);
+  await trigger.click();
+  const dialog = page.getByRole("dialog", { name: "오더 2건을 확정할까요?" });
+  const rows = dialog.getByRole("listitem");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText("CBC 검사");
+  await expect(rows.nth(0).getByText("임상", { exact: true })).toBeVisible();
+  await expect(rows.nth(1)).toContainText("복부 초음파");
+  await expect(rows.nth(1).getByText("영상", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "2건 확정" })).toBeEnabled();
+  const rowAmounts = (await rows.allTextContents()).map(text => {
+    const amount = text.match(/([\d,]+)원$/);
+    if (!amount) throw new Error(`Missing row amount: ${text}`);
+    return Number(amount[1].replaceAll(",", ""));
+  });
+  const totalText = await dialog.getByText("선택 오더 합계").locator("..").locator("strong").innerText();
+  expect(Number(totalText.replace(/[^\d]/g, ""))).toBe(rowAmounts.reduce((sum, amount) => sum + amount, 0));
+  await expect(dialog).toHaveCSS("opacity", "1");
+  await expect(dialog).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await page.screenshot({ path: "/tmp/order-confirmation-multi.png", animations: "disabled" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dialog.locator('[data-slot="dialog-footer"]')).toHaveCSS("flex-direction", "row");
+  await page.screenshot({ path: "/tmp/order-confirmation-multi-mobile.png", animations: "disabled" });
+  await dialog.getByRole("button", { name: "취소" }).click();
+  await expect(dialog).toBeHidden();
+  expect(actionRequests).toHaveLength(0);
+  await expect(page.getByRole("checkbox", { name: "CBC 검사 선택" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "복부 초음파 선택" })).toBeChecked();
 });
 
 test("chart keeps confirmation selection-scoped and routes current-chart billing to checkout", async ({
@@ -7124,8 +7162,8 @@ test("chart mixed selection keeps confirmation and partial billing scoped", asyn
   // tests, so this interaction test does not leak confirmation state.
   await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
-  await confirmDialog.getByRole("button", { name: "Order 확정", exact: true }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  await confirmDialog.getByRole("button", { name: "1건 확정", exact: true }).click();
   await expect(confirmDialog).toBeHidden();
 
   await page.getByRole("checkbox", { name: "복부 초음파 선택" }).check();
@@ -7422,15 +7460,15 @@ test("chart row actions keep three Figma slots without replacing checkbox select
 
   await draftActions.getByRole("button", { name: "CBC 검사 확정" }).click();
   const confirmationDialog = page.getByRole("dialog", {
-    name: "Order 확정 확인",
+    name: "오더 1건을 확정할까요?",
   });
-  await expect(confirmationDialog).toContainText("확정 오더: 1건");
+  await expect(confirmationDialog.getByRole("listitem")).toContainText("CBC 검사");
   const preservedSelection = page.locator(
     '[aria-label="Maropitant 16mg T 선택"]',
   );
   await expect(preservedSelection).toBeChecked();
   await confirmationDialog
-    .getByRole("button", { name: "다시 확인" })
+    .getByRole("button", { name: "취소" })
     .click();
   await expect(confirmationDialog).toBeHidden();
   await expect(preservedSelection).toBeChecked();
@@ -8489,14 +8527,18 @@ async function verifyChartConfirmationRetry(page: Page) {
     },
   );
 
-  const detail = await openChartOrderDetail(page, "CBC 검사");
+  const cbcRow = page.getByTestId("chart-order-row-order-kong-cbc");
+  await cbcRow.hover();
+  await cbcRow.getByRole("button", { name: "CBC 검사 더보기" }).click();
+  await page.getByRole("menuitem", { name: "마스터·세부값 보기" }).click();
+  const detail = page.getByRole("dialog", { name: "CBC 검사 상세" });
   await detail.getByRole("switch", { name: "CBC 검사 긴급" }).check();
   await detail.getByRole("button", { name: "저장하고 닫기" }).click();
   await page.getByRole("checkbox", { name: "CBC 검사 선택" }).check();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
   const confirmButton = confirmDialog.getByRole("button", {
-    name: "Order 확정",
+    name: "1건 확정",
   });
   await confirmButton.click();
   await expect.poll(() => draftResponses.length).toBe(1);
@@ -9371,7 +9413,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
     .getByRole("checkbox", { name: "[CBC 검사] #BASO 선택" })
     .click();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
   await expect(confirmDialog).toBeVisible();
   const orderActionResponse = page.waitForResponse(
     (response) =>
@@ -9380,7 +9422,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
         .includes("/api/workspaces/clair-demo/chart/order-actions") &&
       response.request().method() === "PATCH",
   );
-  await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
+  await confirmDialog.getByRole("button", { name: "1건 확정" }).click();
   const actionResponse = await orderActionResponse;
   expect(actionResponse.ok()).toBe(true);
   const actionBody = (await actionResponse.json()) as {
@@ -9991,8 +10033,8 @@ test("chart confirmation continues after an ambiguous draft response only when r
     .fill(`${displayName} updated`);
   await page.getByRole("checkbox", { name: `${displayName} 선택` }).check();
   await getChartSelectedOrderConfirmAction(page).click();
-  const confirmDialog = page.getByRole("dialog", { name: "Order 확정 확인" });
-  await confirmDialog.getByRole("button", { name: "Order 확정" }).click();
+  const confirmDialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  await confirmDialog.getByRole("button", { name: "1건 확정" }).click();
 
   await expect.poll(() => draftPatchCount).toBe(1);
   await expect.poll(() => draftReadbackCount).toBeGreaterThanOrEqual(1);

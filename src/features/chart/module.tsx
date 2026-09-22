@@ -7702,8 +7702,8 @@ function ChartOrderTable({
   invalidOrderIds: Set<string>;
   loading: boolean;
   onAddOrder: () => void;
-  onConfirmOrder: (orderId: string) => void;
-  onConfirmSelected: () => void;
+  onConfirmOrder: (orderId: string, trigger: HTMLElement) => void;
+  onConfirmSelected: (trigger: HTMLElement) => void;
   onDeleteOrder: (orderId: string) => void;
   onDeleteSelected: (orderIds: string[]) => void;
   onOpenBulkMutation: (
@@ -9138,7 +9138,7 @@ function ChartOrderTable({
                       aria-label={`${order.displayName} 확정`}
                       className={iconClassName}
                       disabled={Boolean(confirmationReason)}
-                      onClick={() => onConfirmOrder(order.id)}
+                      onClick={(event) => onConfirmOrder(order.id, event.currentTarget)}
                       type="button"
                     >
                       <CdsActionsCheckIcon aria-hidden="true" />
@@ -9288,7 +9288,7 @@ function ChartOrderTable({
                     }
                     size="default"
                     variant={hasMixedSelection ? "outline" : "default"}
-                    onClick={onConfirmSelected}
+                    onClick={(event) => onConfirmSelected(event.currentTarget)}
                   >
                     {selectedDraftRows.length}개 Order 확정
                   </Button>
@@ -10242,7 +10242,7 @@ function ChartOrderMutationDialog({
   );
 }
 
-type OrderActionDialogType = "confirm";
+type OrderActionDialogType = "actual" | "confirm";
 type ChartUnavailableAction = "order-history" | "order-print" | "order-request";
 
 const chartUnavailableActionCopy = {
@@ -11534,8 +11534,23 @@ function OrderArea({
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [orderActionDialog, setOrderActionDialog] =
+  const [orderActionDialogStage, setOrderActionDialogStage] =
     useState<OrderActionDialogType | null>(null);
+  const [orderActionDialogOpen, setOrderActionDialogOpen] = useState(false);
+  const orderActionDialog = orderActionDialogOpen ? orderActionDialogStage : null;
+  const setOrderActionDialog = (stage: OrderActionDialogType | null) => {
+    if (stage) setOrderActionDialogStage(stage);
+    setOrderActionDialogOpen(stage !== null);
+  };
+  const orderConfirmationTriggerRef = useRef<HTMLElement | null>(null);
+  const orderConfirmationFallbackRef = useRef<HTMLElement | null>(null);
+  const orderConfirmationFinalFocus = () => {
+    const trigger = orderConfirmationTriggerRef.current;
+    const target = trigger?.isConnected ? trigger : orderConfirmationFallbackRef.current;
+    orderConfirmationTriggerRef.current = null;
+    orderConfirmationFallbackRef.current = null;
+    return target?.isConnected ? target : null;
+  };
   const [confirmationOrderIds, setConfirmationOrderIds] = useState<Set<string> | null>(null);
   const [confirmationSource, setConfirmationSource] = useState<
     "row" | "selection" | null
@@ -11911,17 +11926,38 @@ function OrderArea({
     selectedOrderIds.has(order.id),
   );
   const confirmationTargetOrderIds = confirmationOrderIds ?? selectedOrderIds;
-  const confirmationSelectedOrderRows = draftRows.filter(({ order }) =>
-    confirmationTargetOrderIds.has(order.id),
+  const confirmationSelectedOrderRows = draftRows.filter(
+    (row) => isChartOrderTopLevelRow(row) && confirmationTargetOrderIds.has(row.order.id),
+  );
+  const confirmationReviewRows = confirmationSelectedOrderRows.map((row) => {
+    const members = draftRows.filter(candidate => orderRootId(candidate) === row.order.id);
+    const persistedChildren = members.filter(candidate =>
+      candidate.runtimeRow?.rowType === "set_child" && isChartOrderSetChildIncluded(candidate),
+    );
+    return {
+      row,
+      amount: members.reduce((sum, member) => sum + getChartOrderScopedChargeAmount(member), 0),
+      setChildNames: row.runtimeRow?.rowType === "set" || row.catalogSearchRow?.rowType === "set" || row.setPreview
+        ? row.runtimeRow
+          ? persistedChildren.map(child => child.order.displayName)
+          : (row.setPreview?.items ?? []).filter(item => item.selected).map(getChartOrderSetPreviewItemDisplayName)
+        : [],
+    };
+  });
+  const confirmationReviewAmount = confirmationReviewRows.reduce(
+    (sum, item) => sum + item.amount,
+    0,
   );
   const [chartActualDrafts, setChartActualDrafts] = useState<Record<string, ChartActualDraft>>({});
-  const chartActualRows: ChartActualConfirmationRow[] = draftRows.flatMap(row => {
-    const type = getChartOrderClinicalType(row);
-    const selected = confirmationTargetOrderIds.has(row.order.id) || (row.runtimeRow?.parentOrderId && confirmationTargetOrderIds.has(row.runtimeRow.parentOrderId));
-    const destination = row.runtimeRow ? row.runtimeRow.destinationModule : getChartOrderCanonicalDefaults(row.order).destinationModule;
-    return selected && row.runtimeRow?.rowType !== "set" && !isChartOrderConfirmedRow(row) && !destination && isChartActualType(type) && !isDeferredChartPlan(type, row.detailSchemaVersion)
-      ? [{ orderId: row.order.id, name: row.order.displayName, type, findingSummary: typeof row.detailInputs.findingSummary === "string" ? row.detailInputs.findingSummary : undefined }] : [];
-  });
+  const getChartActualRowsForSelection = (orderIds: Set<string>): ChartActualConfirmationRow[] =>
+    draftRows.flatMap(row => {
+      const type = getChartOrderClinicalType(row);
+      const selected = orderIds.has(row.order.id) || (row.runtimeRow?.parentOrderId && orderIds.has(row.runtimeRow.parentOrderId));
+      const destination = row.runtimeRow ? row.runtimeRow.destinationModule : getChartOrderCanonicalDefaults(row.order).destinationModule;
+      return selected && row.runtimeRow?.rowType !== "set" && !isChartOrderConfirmedRow(row) && !destination && isChartActualType(type) && !isDeferredChartPlan(type, row.detailSchemaVersion)
+        ? [{ orderId: row.order.id, name: row.order.displayName, type, findingSummary: typeof row.detailInputs.findingSummary === "string" ? row.detailInputs.findingSummary : undefined }] : [];
+    });
+  const chartActualRows = getChartActualRowsForSelection(confirmationTargetOrderIds);
   const chartActualRecords = buildChartActualRecords(chartActualRows, chartActualDrafts);
   const deletedDraftOrderCount = committedRows.filter(
     (row) =>
@@ -13854,7 +13890,7 @@ function OrderArea({
     });
     setDeleteOrderIds([]);
   };
-  const confirmSingleOrder = (orderId: string) => {
+  const confirmSingleOrder = (orderId: string, trigger: HTMLElement) => {
     const row = draftRows.find((candidate) => candidate.order.id === orderId);
     if (
       !row ||
@@ -13864,22 +13900,32 @@ function OrderArea({
     ) {
       return;
     }
-    setConfirmationOrderIds(new Set([orderId]));
+    orderConfirmationTriggerRef.current = trigger;
+    orderConfirmationFallbackRef.current = document.querySelector(
+      `[data-testid="chart-order-row-${CSS.escape(orderId)}"] [role="checkbox"]`,
+    );
+    const orderIds = new Set([orderId]);
+    setConfirmationOrderIds(orderIds);
     setConfirmationSource("row");
     setChartActualDrafts({});
-    setOrderActionDialog("confirm");
+    setOrderActionDialog(getChartActualRowsForSelection(orderIds).length ? "actual" : "confirm");
   };
-  const confirmSelectedOrders = () => {
+  const confirmSelectedOrders = (trigger: HTMLElement) => {
     const draftOrderIds = selectedOrderRows
       .filter((row) => !isChartOrderConfirmedRow(row))
       .map((row) => row.order.id);
     if (draftOrderIds.length === 0) {
       return;
     }
-    setConfirmationOrderIds(new Set(draftOrderIds));
+    orderConfirmationTriggerRef.current = trigger;
+    orderConfirmationFallbackRef.current = document.querySelector(
+      `[data-testid="chart-order-row-${CSS.escape(draftOrderIds[0])}"] [role="checkbox"]`,
+    );
+    const orderIds = new Set(draftOrderIds);
+    setConfirmationOrderIds(orderIds);
     setConfirmationSource("selection");
     setChartActualDrafts({});
-    setOrderActionDialog("confirm");
+    setOrderActionDialog(getChartActualRowsForSelection(orderIds).length ? "actual" : "confirm");
   };
   const openSelectedBilling = (orderIds: string[]) => {
     const requestableOrderIds = new Set(localBillingSummary.requestableOrderIds);
@@ -14246,8 +14292,6 @@ function OrderArea({
     void refreshOrderExecution();
     toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했어요.`);
   };
-  const orderActionLabel = "Order 확정";
-  const guardianName = bundle.primaryGuardian?.name ?? "보호자 미지정";
   const draftStatusText = orderLoading
     ? "오더 정보를 불러오는 중"
     : orderDraftSaveState === "saving"
@@ -14911,70 +14955,102 @@ function OrderArea({
           ) : null}
         </Dialog>
         <Dialog
-          open={orderActionDialog !== null}
+          open={orderActionDialogOpen}
           onOpenChange={(open) => {
-            if (!open) {
+            if (!open && orderDraftSaveState !== "saving") {
               setOrderActionDialog(null);
               setConfirmationOrderIds(null);
               setConfirmationSource(null);
             }
           }}
         >
-          <EmrConfirmDialogContent
-            title={`${orderActionLabel} 확인`}
-            description={
-              <span className="grid gap-3">
-                <span>
-                  선택한 확정 전 후보만 원자적으로 확정합니다. 선택하지 않은
-                  후보는 공유 Draft에 남고, 비용이 있는 오더의 수납 후보는 같은
-                  transaction에서 생성됩니다.
-                </span>
+          {orderActionDialogStage === "actual" ? (
+            <EmrConfirmDialogContent
+              title="실제 수행 기록 입력"
+              finalFocus={orderConfirmationFinalFocus}
+              description={
                 <ChartActualConfirmation rows={chartActualRows} drafts={chartActualDrafts}
                   disabled={writeDisabled || orderDraftSaveState === "saving"}
                   onChange={(id, value) => setChartActualDrafts(current => ({ ...current, [id]: value }))} />
-                <span className="grid gap-1 rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
-                  <span>
-                    환자: {bundle.patient.name} · 보호자 {guardianName}
-                  </span>
-                  <span>차트번호: {bundle.encounter.encounterNo}</span>
-                  <span>
-                    확정 오더: {confirmationTargetOrderIds.size}건 · 확정 금액{" "}
-                    {confirmationSelectedOrderRows
-                      .reduce(
-                        (sum, row) => sum + getChartOrderScopedChargeAmount(row),
-                        0,
-                      )
-                      .toLocaleString()}
-                  </span>
-                  <span>
-                    재요청 포함:{" "}
-                    {confirmationSelectedOrderRows.filter(
-                      (row) => row.order.status === "re_requested",
-                    ).length
-                      ? confirmationSelectedOrderRows.filter(
-                          (row) => row.order.status === "re_requested",
-                        ).length + "건"
-                      : "없음"}
-                  </span>
-                </span>
-              </span>
-            }
-            cancelLabel="다시 확인"
-            confirmLabel={orderActionLabel}
-            confirmDisabled={
-              chartActualRecords === null ||
-              writeDisabled ||
-              pendingRemovedRootOrderIds.size > 0 ||
-              orderDraftSaveState === "conflict" ||
-              orderDraftSaveState === "saving"
-            }
-            onCancel={() => {
-              setOrderActionDialog(null);
-              setConfirmationOrderIds(null);
-              setConfirmationSource(null);
-            }}
-            onConfirm={() => void commitOrderConfirmation()}
-          />
+              }
+              cancelLabel="취소"
+              confirmLabel="오더 확인"
+              confirmDisabled={chartActualRecords === null || writeDisabled || orderDraftSaveState === "saving"}
+              onCancel={() => {
+                setOrderActionDialog(null);
+                setConfirmationOrderIds(null);
+                setConfirmationSource(null);
+              }}
+              onConfirm={() => setOrderActionDialog("confirm")}
+            />
+          ) : orderActionDialogStage === "confirm" ? (
+            <DialogContent className="grid max-h-[calc(100dvh-2rem)] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden bg-[var(--emr-surface-panel)] p-0 sm:max-w-[560px]" finalFocus={orderConfirmationFinalFocus} showCloseButton={false}>
+              <DialogHeader className="relative px-6 pb-3 pt-6">
+                <DialogTitle className="emr-text-dialog-title pr-10 font-semibold text-[var(--emr-text-primary)]">
+                  오더 {confirmationReviewRows.length}건을 확정할까요?
+                </DialogTitle>
+                <DialogDescription className="sr-only">선택한 오더와 금액을 확인해 주세요.</DialogDescription>
+                <Button type="button" variant="ghost" size="icon-sm"
+                  className="absolute right-[var(--emr-dialog-close-offset)] top-[var(--emr-dialog-close-offset)] size-8 rounded-md text-[var(--emr-text-secondary)] hover:bg-[var(--emr-state-hover)]"
+                  aria-label="확인 다이얼로그 닫기" disabled={orderDraftSaveState === "saving"}
+                  onClick={() => {
+                    setOrderActionDialog(null);
+                    setConfirmationOrderIds(null);
+                    setConfirmationSource(null);
+                  }}>
+                  <CdsActionsXIcon className="size-4" />
+                </Button>
+              </DialogHeader>
+              <div className="min-h-0 overflow-y-auto px-6 pb-5">
+                <div className="flex justify-between text-xs text-[var(--emr-text-tertiary)]">
+                  <span>확정할 오더 {confirmationReviewRows.length}건</span><span>금액</span>
+                </div>
+                <ul className="mt-2">
+                  {confirmationReviewRows.map(({ row, amount, setChildNames }) => (
+                    <li key={row.order.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-[var(--emr-border-default)] py-3.5">
+                      <div className="flex min-w-0 flex-wrap items-baseline gap-2">
+                        <Badge variant="outline" size="sm" className="rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)] text-[var(--emr-text-secondary)]">
+                          {row.runtimeRow?.rowType === "set" || row.catalogSearchRow?.rowType === "set"
+                            ? "Order 세트"
+                            : CLINICAL_ORDER_FIELD_SCHEMAS[getChartOrderClinicalType(row)].label}
+                        </Badge>
+                        <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
+                          {row.order.displayName}
+                          {row.order.status === "re_requested" ? (
+                            <span className="ml-2 rounded-[var(--emr-radius-control)] bg-[var(--emr-surface-muted)] px-1.5 py-0.5 text-xs font-medium text-[var(--emr-text-secondary)]">재요청</span>
+                          ) : null}
+                        </span>
+                        {setChildNames.length ? (
+                          <details className="w-full text-xs text-[var(--emr-text-secondary)]">
+                            <summary className="w-fit cursor-pointer">구성 {setChildNames.length}항목 보기</summary>
+                            <ul className="mt-1 list-disc pl-4">
+                              {setChildNames.map((name, index) => <li key={`${index}-${name}`} className="[overflow-wrap:anywhere]">{name}</li>)}
+                            </ul>
+                          </details>
+                        ) : null}
+                      </div>
+                      <span className="whitespace-nowrap tabular-nums">{amount.toLocaleString("ko-KR")}원</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center justify-between gap-3 border-t border-[var(--emr-border-default)] pt-4">
+                  <span className="text-[var(--emr-text-secondary)]">선택 오더 합계</span>
+                  <strong className="whitespace-nowrap text-lg tabular-nums">{confirmationReviewAmount.toLocaleString("ko-KR")}원</strong>
+                </div>
+              </div>
+              <DialogFooter className="-mx-0 -mb-0 flex-row items-center justify-end rounded-none border-t bg-[var(--emr-surface-panel)] px-6 py-4">
+                <Button variant="outline" disabled={orderDraftSaveState === "saving"} onClick={() => {
+                  setOrderActionDialog(null);
+                  setConfirmationOrderIds(null);
+                  setConfirmationSource(null);
+                }}>취소</Button>
+                <Button disabled={confirmationReviewRows.length === 0 || chartActualRecords === null || writeDisabled || pendingRemovedRootOrderIds.size > 0 || orderDraftSaveState === "conflict" || orderDraftSaveState === "saving"}
+                  onClick={() => void commitOrderConfirmation()}>
+                  {orderDraftSaveState === "saving" ? "확정 중…" : `${confirmationReviewRows.length}건 확정`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          ) : null}
         </Dialog>
         <Dialog
           open={deleteOrderIds.length > 0}
