@@ -136,8 +136,8 @@ test("SOAP V1 rejects unsupported versions, blocks, duplicate IDs, and duplicate
 
   const unsupported = validDocument();
   unsupported.blocks.push({
-    id: "image-1",
-    type: "image",
+    id: "audio-1",
+    type: "audio",
     props: {},
     children: [],
   });

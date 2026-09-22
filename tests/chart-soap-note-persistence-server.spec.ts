@@ -656,6 +656,64 @@ test("SOAP note Supabase gateway keeps workspace and encounter scope in RPC call
     auditRecorded: true,
     auditEventId: "chart-soap-save-db-audit",
   });
+
+  expect((calls[0].args.p_note as Record<string, unknown>).editorCapability).toBeUndefined();
+  await gateway.saveSoapNote({
+    actorUserId: "00000000-0000-4000-8000-000000000002",
+    workspaceId,
+    encounterId,
+    chartId: "soap-db-den-69",
+    editorCapability: "media_table_v1",
+    fields: {
+      subjective: validSoapInput.subjective,
+      objective: validSoapInput.objective,
+      assessment: validSoapInput.assessment,
+      plan: validSoapInput.plan,
+    },
+    blockDocument: validBlockDocument,
+    mode: "manual_save",
+  });
+  expect(calls[1].functionName).toBe("clair_save_chart_soap_note_v4");
+  expect((calls[1].args.p_note as Record<string, unknown>).editorCapability).toBe("media_table_v1");
+});
+
+test("SOAP route requires explicit new-editor capability for rich blocks", async ({ request }) => {
+  const richBlockDocument = {
+    schemaVersion: 1 as const,
+    blocks: [{
+      ...validBlockDocument.blocks[0],
+      children: [...validBlockDocument.blocks[0].children, {
+        id: "table-capability-check",
+        type: "table",
+        props: { textColor: "default" },
+        content: { type: "tableContent", columnWidths: [null], rows: [{
+          cells: [{
+            type: "tableCell",
+            props: { colspan: 1, rowspan: 1, backgroundColor: "default", textColor: "default", textAlignment: "left" },
+            content: [{ type: "text", text: "예시 검사 항목", styles: {} }],
+          }],
+        }] },
+        children: [],
+      }],
+    }],
+  };
+  const url = `/api/workspaces/${workspaceId}/chart/soap-notes`;
+  const headers = { "x-clair-demo-session-user-id": "user-vet" };
+  const legacy = await request.patch(url, {
+    data: { ...validSoapInput, blockDocument: richBlockDocument },
+    headers,
+  });
+  expect(legacy.status()).toBe(409);
+  await expectJson(legacy, { ok: false, denialReason: "soap_editor_upgrade_required" });
+
+  const current = await request.patch(url, {
+    data: { ...validSoapInput, blockDocument: richBlockDocument, editorCapability: "media_table_v1" },
+    headers,
+  });
+  expect(current.status()).toBe(200);
+  const body = await current.json() as { ok: boolean; soapNote?: { blockDocument?: unknown } };
+  expect(body.ok).toBe(true);
+  expect(body.soapNote?.blockDocument).toEqual(richBlockDocument);
 });
 
 test("SOAP BlockNote migration keeps canonical JSON and legacy projections inside the guarded RPC boundary", () => {

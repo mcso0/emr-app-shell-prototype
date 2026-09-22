@@ -71,6 +71,9 @@ const supportedBlockTypes = new Set([
   "checkListItem",
   "quote",
   "divider",
+  "image",
+  "video",
+  "table",
 ]);
 
 const inlineBlockTypes = new Set([
@@ -97,6 +100,7 @@ const forbiddenLinkCharacters =
 
 export function validateAndProjectSoapDocument(
   value: unknown,
+  attachmentScope?: { workspaceId: string; encounterId: string },
 ): SoapDocumentValidationResult {
   if (!isRecord(value) || (value.schemaVersion !== 1 && value.schemaVersion !== 2)) {
     return isRecord(value) && "schemaVersion" in value
@@ -163,7 +167,7 @@ export function validateAndProjectSoapDocument(
       if (typeof type !== "string" || !supportedBlockTypes.has(type)) {
         return { ok: false, error: "unsupported_block" };
       }
-      if (!isRecord(props) || !validateBlockProps(type, props)) {
+      if (!isRecord(props) || !validateBlockProps(type, props, attachmentScope)) {
         return { ok: false, error: "invalid_block" };
       }
       if (!Array.isArray(children)) return { ok: false, error: "invalid_block" };
@@ -198,13 +202,25 @@ export function validateAndProjectSoapDocument(
         }
       }
 
-      if (inlineBlockTypes.has(type)) {
+      if (type === "table") {
+        const table = validateTableContent(valueBlock.content);
+        if (!table.ok) return table;
+        if (nextProjectionTarget && table.text) projectionParts[nextProjectionTarget].push(table.text);
+      } else if (inlineBlockTypes.has(type)) {
         const inline = validateInlineContent(valueBlock.content);
         if (!inline.ok) return inline;
         if (nextProjectionTarget && inline.text) {
           projectionParts[nextProjectionTarget].push(inline.text);
         }
       } else if (valueBlock.content !== undefined) {
+        return { ok: false, error: "invalid_block" };
+      }
+
+      if ((type === "image" || type === "video" || type === "table") && children.length > 0) {
+        return { ok: false, error: "invalid_block" };
+      }
+      if ((type === "image" || type === "video" || type === "table") &&
+        Object.keys(valueBlock).some((key) => !["id", "type", "props", "children", ...(type === "table" ? ["content"] : [])].includes(key))) {
         return { ok: false, error: "invalid_block" };
       }
 
@@ -526,6 +542,12 @@ export function hasMeaningfulSoapScopeContent(scope: SoapBlockDocumentScope) {
   const visit = (blocks: unknown[]): boolean =>
     blocks.some((block) => {
       if (!isRecord(block)) return false;
+      if (block.type === "table" && isRecord(block.content) && Array.isArray(block.content.rows) &&
+        block.content.rows.some((row) => isRecord(row) && Array.isArray(row.cells) &&
+          row.cells.some((cell) => isRecord(cell) && Array.isArray(cell.content) &&
+            cell.content.some((inline) => isRecord(inline) && typeof inline.text === "string" && inline.text.trim())))) {
+        return true;
+      }
       if (
         Array.isArray(block.content) &&
         block.content.some(
@@ -585,7 +607,11 @@ export function areSoapBlockDocumentsEqual(
   return JSON.stringify(sortJsonValue(left)) === JSON.stringify(sortJsonValue(right));
 }
 
-function validateBlockProps(type: string, props: UnknownRecord) {
+function validateBlockProps(
+  type: string,
+  props: UnknownRecord,
+  attachmentScope?: { workspaceId: string; encounterId: string },
+) {
   if (type === "soapSection") {
     return (
       soapDocumentFieldKinds.includes(props.kind as SoapDocumentFieldKind) &&
@@ -596,6 +622,29 @@ function validateBlockProps(type: string, props: UnknownRecord) {
   }
 
   if (type === "divider") return Object.keys(props).length === 0;
+  if (type === "table") return Object.keys(props).every((key) => key === "textColor") &&
+    typeof props.textColor === "string" && countUnicodeCodePoints(props.textColor) <= 50;
+  if (type === "image" || type === "video") {
+    const reference = parseSoapAttachmentUrl(props.url);
+    return (
+      reference !== null &&
+      Object.keys(props).every((key) =>
+        ["backgroundColor", "textAlignment", "name", "url", "caption", "showPreview", "previewWidth"].includes(key)) &&
+      (!attachmentScope ||
+        (reference.workspaceId === attachmentScope.workspaceId &&
+          reference.encounterId === attachmentScope.encounterId)) &&
+      typeof props.backgroundColor === "string" &&
+      countUnicodeCodePoints(props.backgroundColor) <= 50 &&
+      validateTextAlignment(props.textAlignment) &&
+      typeof props.name === "string" && countUnicodeCodePoints(props.name) <= 200 &&
+      typeof props.caption === "string" && countUnicodeCodePoints(props.caption) <= 1000 &&
+      typeof props.showPreview === "boolean" &&
+      (props.previewWidth === undefined ||
+        (typeof props.previewWidth === "number" &&
+          Number.isInteger(props.previewWidth) &&
+          props.previewWidth >= 1 && props.previewWidth <= 2000))
+    );
+  }
   if (!validateColorProps(props)) return false;
   if (type !== "quote" && !validateTextAlignment(props.textAlignment)) return false;
   if (type === "heading") {
@@ -613,6 +662,16 @@ function validateBlockProps(type: string, props: UnknownRecord) {
   return true;
 }
 
+export function parseSoapAttachmentUrl(value: unknown):
+  | { workspaceId: string; encounterId: string; attachmentId: string }
+  | null {
+  if (typeof value !== "string") return null;
+  const match = /^\/api\/workspaces\/([A-Za-z0-9_-]{1,100})\/chart\/soap-attachments\/([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\?encounterId=([0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/.exec(value);
+  return match
+    ? { workspaceId: match[1], attachmentId: match[2], encounterId: match[3] }
+    : null;
+}
+
 function validateColorProps(props: UnknownRecord) {
   return (
     typeof props.backgroundColor === "string" &&
@@ -624,6 +683,50 @@ function validateColorProps(props: UnknownRecord) {
 
 function validateTextAlignment(value: unknown) {
   return typeof value === "string" && ["left", "center", "right", "justify"].includes(value);
+}
+
+function validateTableContent(value: unknown):
+  | { ok: true; text: string }
+  | { ok: false; error: "invalid_block" | "invalid_inline_content" | "invalid_link" } {
+  if (!isRecord(value) || value.type !== "tableContent" ||
+    Object.keys(value).some((key) => !["type", "rows", "columnWidths", "headerRows", "headerCols"].includes(key)) ||
+    !Array.isArray(value.rows) || value.rows.length < 1 || value.rows.length > 20 ||
+    !Array.isArray(value.columnWidths) || value.columnWidths.length < 1 || value.columnWidths.length > 10) {
+    return { ok: false, error: "invalid_block" };
+  }
+  const columns = value.columnWidths.length;
+  if (columns * value.rows.length > 100 || value.columnWidths.some((width) =>
+    width !== null && (typeof width !== "number" || !Number.isInteger(width) || width < 40 || width > 2000))) {
+    return { ok: false, error: "invalid_block" };
+  }
+  for (const [key, bound] of [["headerRows", value.rows.length], ["headerCols", columns]] as const) {
+    const count = value[key];
+    if (count !== undefined && (typeof count !== "number" || !Number.isInteger(count) || count < 0 || count > bound)) {
+      return { ok: false, error: "invalid_block" };
+    }
+  }
+  const lines: string[] = [];
+  for (const row of value.rows) {
+    if (!isRecord(row) || Object.keys(row).some((key) => key !== "cells") ||
+      !Array.isArray(row.cells) || row.cells.length !== columns) return { ok: false, error: "invalid_block" };
+    const cells: string[] = [];
+    for (const cell of row.cells) {
+      if (!isRecord(cell) || cell.type !== "tableCell" ||
+        Object.keys(cell).some((key) => !["type", "content", "props"].includes(key)) ||
+        !isRecord(cell.props) ||
+        Object.keys(cell.props).some((key) => !["backgroundColor", "textColor", "textAlignment", "colspan", "rowspan"].includes(key)) ||
+        typeof cell.props.backgroundColor !== "string" || countUnicodeCodePoints(cell.props.backgroundColor) > 50 ||
+        typeof cell.props.textColor !== "string" || countUnicodeCodePoints(cell.props.textColor) > 50 ||
+        !validateTextAlignment(cell.props.textAlignment) || cell.props.colspan !== 1 || cell.props.rowspan !== 1) {
+        return { ok: false, error: "invalid_block" };
+      }
+      const inline = validateInlineContent(cell.content);
+      if (!inline.ok) return inline;
+      cells.push(inline.text);
+    }
+    lines.push(cells.join("\t"));
+  }
+  return { ok: true, text: lines.join("\n") };
 }
 
 function validateInlineContent(value: unknown):

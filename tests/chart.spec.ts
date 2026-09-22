@@ -2784,9 +2784,25 @@ test("live patient chart history shows every chart by created_at and keeps past 
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/soap-notes**`,
     async (route) => {
       const request = route.request();
+      const requestUrl = new URL(request.url());
       const encounterId = request.method() === "GET"
-        ? new URL(request.url()).searchParams.get("encounterId")!
+        ? requestUrl.searchParams.get("encounterId")!
         : request.postDataJSON().encounterId;
+      const historyChart = [oldChart, oldChartSameMinute].find(
+        (chart) => chart.id === requestUrl.searchParams.get("chartId"),
+      );
+      if (request.method() === "GET" && historyChart) {
+        await route.fulfill({
+          status: 200,
+          json: { ok: true, status: 200, soapNote: {
+            ...historyChart,
+            subjective: "이전 차트의 주관적 기록",
+            objective: "",
+            plan: "",
+          } },
+        });
+        return;
+      }
       if (request.method() === "PATCH") {
         soapWriteEncounterIds.push(encounterId);
         savedSoapByEncounter.set(encounterId, {
@@ -3161,6 +3177,25 @@ test("live patient chart history shows every chart by created_at and keeps past 
     page.getByText(current.encounter.encounterNo).first(),
   ).toBeVisible();
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이력 전환 직전 작성한 기록");
+  const soapToolbar = page.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
+  const recordButton = soapToolbar.getByRole("button", { name: "기록 삽입" });
+  if (await recordButton.count()) await recordButton.click();
+  else {
+    await soapToolbar.getByRole("button", { name: "도구 더보기" }).click();
+    await page.getByRole("menuitem", { name: "기록 삽입" }).click();
+  }
+  const priorSources = page.getByRole("menuitem", { name: /이전 진료 SOAP/ });
+  await expect(priorSources).toHaveCount(2);
+  const priorRead = page.waitForRequest((request) => {
+    const url = new URL(request.url());
+    return request.method() === "GET" && url.pathname.endsWith("/chart/soap-notes") &&
+      [oldChartId, oldChartSameMinute.id].includes(url.searchParams.get("chartId") ?? "");
+  });
+  await priorSources.first().click();
+  const priorRequest = await priorRead;
+  expect([oldChartId, oldChartSameMinute.id]).toContain(new URL(priorRequest.url()).searchParams.get("chartId"));
+  await page.getByRole("menuitem", { name: /S · 주관적/ }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이전 차트의 주관적 기록");
 });
 
 test("an uncalled past reception stays waiting and warns before creating today's first chart", async ({
@@ -5780,7 +5815,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
     response.request().postDataJSON()?.mode === "autosave",
   );
   await page.getByLabel("SOAP 블록 문서").getByRole("textbox").fill(firstChartText);
-  expect((await autosaveResponse).ok()).toBe(true);
+  const autosavedResponse = await autosaveResponse;
+  expect(autosavedResponse.ok()).toBe(true);
+  expect(autosavedResponse.request().postDataJSON()?.editorCapability).toBe("media_table_v1");
   await page.reload();
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText(firstChartText);
 
@@ -6006,7 +6043,7 @@ test("chart diagnosis panel omits comment and plan text areas", async ({
   await expect(diagnosisPanel.getByText("사전 연결 · 의심")).toHaveCount(0);
 });
 
-test("chart SOAP editor keeps one BlockNote document and reveals its provided selection toolbar", async ({
+test("chart SOAP editor keeps one BlockNote document with a fixed formatting toolbar", async ({
   page,
 }) => {
   await page.goto(kongScenarioUrl);
@@ -6020,13 +6057,16 @@ test("chart SOAP editor keeps one BlockNote document and reveals its provided se
   await expect(soapDocument).toContainText(
     "보호자 진술상 전날 밤부터 구토 3회",
   );
+  const toolbar = page.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
+  await expect(toolbar).toBeVisible();
+  await expect(toolbar.getByRole("button", { name: "굵게" })).toBeVisible();
   await expect(page.locator(".bn-formatting-toolbar")).toHaveCount(0);
   await expect(soapDocument.locator(".ProseMirror-selectednode")).toHaveCount(0);
   await expect(soapEditor).not.toBeFocused();
 
   await soapDocument.locator('.bn-block-content[data-content-type="paragraph"]').first().click({ clickCount: 3 });
-  const soapSelectionToolbar = page.locator(".bn-formatting-toolbar");
-  await expect(soapSelectionToolbar).toBeVisible();
+  await expect(toolbar).toBeVisible();
+  await expect(page.locator(".bn-formatting-toolbar")).toHaveCount(0);
 });
 test("chart SOAP manual save persists through route-backed reload", async ({
   page,
@@ -6063,7 +6103,9 @@ test("chart SOAP manual save persists through route-backed reload", async ({
   await soapEditor.click();
   await page.keyboard.press("End");
   await page.keyboard.type(` ${savedText}`);
-  expect((await autosaveResponse).ok()).toBe(true);
+  const autosavedSoapResponse = await autosaveResponse;
+  expect(autosavedSoapResponse.ok()).toBe(true);
+  expect(autosavedSoapResponse.request().postDataJSON()?.editorCapability).toBe("media_table_v1");
   await expect(soapDocument).toContainText(savedText);
 
   const manualSaveResponse = page.waitForResponse((response) => {
@@ -6075,7 +6117,9 @@ test("chart SOAP manual save persists through route-backed reload", async ({
     );
   });
   await page.getByRole("button", { name: "SOAP 저장" }).click();
-  expect((await manualSaveResponse).ok()).toBe(true);
+  const manuallySavedResponse = await manualSaveResponse;
+  expect(manuallySavedResponse.ok()).toBe(true);
+  expect(manuallySavedResponse.request().postDataJSON()?.editorCapability).toBe("media_table_v1");
   await expect(page.getByTestId("chart-soap-status")).toContainText(
     /작성중|자동저장됨/,
   );
@@ -6172,7 +6216,7 @@ test("chart SOAP reconciles a committed response-loss retry without a false conf
   expect(readCount).toBeGreaterThanOrEqual(2);
 });
 
-test("chart SOAP slash command keeps content commands but omits nested SOAP templates", async ({
+test("chart SOAP toolbar inserts blank writing aids without nested SOAP sections", async ({
   page,
 }) => {
   await routePristineKongSoap(page);
@@ -6182,19 +6226,14 @@ test("chart SOAP slash command keeps content commands but omits nested SOAP temp
     .locator('.bn-block-content[data-content-type="paragraph"]')
     .last();
 
+  await expect(soapDocument.locator('[data-content-type="soapSection"]')).toHaveCount(4);
+  const initialSectionCount = await soapDocument.locator('[data-content-type="soapSection"]').count();
   await lastParagraph.click();
-  await page.keyboard.press("End");
-  await page.keyboard.press("Enter");
-  await page.keyboard.type("/");
-
-  const suggestionMenu = page.getByRole("listbox");
-  await expect(suggestionMenu).toBeVisible();
-  await expect(
-    suggestionMenu.getByRole("option", { name: /텍스트/ }),
-  ).toBeVisible();
-  await expect(
-    suggestionMenu.getByRole("option", { name: /SOAP 템플릿/ }),
-  ).toHaveCount(0);
+  await page.getByRole("button", { name: "상용구" }).click();
+  await page.getByRole("menuitem", { name: "증상 경과" }).click();
+  await expect(soapDocument).toContainText("증상 시작: [입력]");
+  await expect(soapDocument.locator('[data-content-type="soapSection"]')).toHaveCount(initialSectionCount);
+  await expect(page.getByRole("listbox", { name: "SOAP 블록 명령" })).toHaveCount(0);
 });
 
 test("chart SOAP keeps default and diagnosis-system input isolated across save and reload", async ({

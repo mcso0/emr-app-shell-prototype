@@ -74,6 +74,7 @@ export const chartSoapBlockSchema = BlockNoteSchema.create({
     checkListItem: defaultBlockSpecs.checkListItem,
     quote: defaultBlockSpecs.quote,
     divider: defaultBlockSpecs.divider,
+    table: defaultBlockSpecs.table,
     image: defaultBlockSpecs.image,
     video: defaultBlockSpecs.video,
     soapSection: soapSectionBlock(),
