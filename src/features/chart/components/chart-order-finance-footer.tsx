@@ -1,11 +1,18 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { CloseIcon } from "@/components/icons";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
@@ -172,8 +179,15 @@ export function ChartOrderBillingDetailAside({
   requesting: boolean;
   summary: ChartOrderBillingSummary;
 }) {
+  const [amountScope, setAmountScope] = useState<"all" | "confirmed" | "draft">("all");
   const counts = summary.orderCounts;
   const amounts = summary.amounts;
+  const selectedAmount = amountScope === "all"
+    ? amounts.confirmed + amounts.draft
+    : amounts[amountScope];
+  const countText = amountScope === "all"
+    ? `총 ${counts.total}건(확정 ${counts.confirmed} + 미확정 ${counts.draft})`
+    : `${amountScope === "confirmed" ? "확정 오더" : "미확정 오더"} ${counts[amountScope]}건`;
   const freshnessText = getBillingStatusText(displayState, freshness);
   const isInitialLoading = !hasAuthoritativeSummary && freshness === "loading";
   const isInitialError = !hasAuthoritativeSummary && freshness === "error";
@@ -228,20 +242,29 @@ export function ChartOrderBillingDetailAside({
                   id="billing-order-total-title"
                   title="총 오더 합계"
                 >
-                  <Badge
-                    size="md"
-                    variant="outline"
-                    className="rounded-[var(--clair-radius-full)] border-[var(--clair-color-atomic-black-alpha-8)] bg-[var(--clair-color-atomic-common-100)] px-[var(--clair-spacing-8)] text-[var(--clair-color-atomic-neutral-600)]"
-                  >
-                    청구 가능 오더만
-                  </Badge>
+                  <Select value={amountScope} onValueChange={(value) => setAmountScope(value as "all" | "confirmed" | "draft")}>
+                    <SelectTrigger
+                      aria-label="오더 합계 조회 범위"
+                      size="sm"
+                      className="min-w-[106px] bg-[var(--clair-color-atomic-common-100)]"
+                    >
+                      <SelectValue>
+                        {amountScope === "all" ? "전체" : amountScope === "confirmed" ? "확정 오더" : "미확정 오더"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent align="end" alignItemWithTrigger={false}>
+                      <SelectItem value="all">전체</SelectItem>
+                      <SelectItem value="confirmed">확정 오더</SelectItem>
+                      <SelectItem value="draft">미확정 오더</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </AmountDetailCardTitle>
-                <div className="flex flex-col gap-[var(--clair-spacing-4)]">
+                <div aria-live="polite" className="flex flex-col gap-[var(--clair-spacing-4)]">
                   <strong className="font-[var(--clair-typography-heading-1-font-weight)] text-[length:var(--clair-typography-heading-1-font-size)] leading-[var(--clair-typography-heading-1-line-height)] tracking-[var(--clair-typography-heading-1-letter-spacing)] tabular-nums text-[var(--clair-color-atomic-neutral-900)]">
-                    {formatWonSpaced(amounts.estimatedTotal)}
+                    {formatWonSpaced(selectedAmount)}
                   </strong>
                   <p className="emr-text-dense font-medium text-[var(--clair-color-atomic-neutral-500)]">
-                    총 {counts.total}건(확정 {counts.confirmed} + 미확정 {counts.draft})
+                    {countText}
                   </p>
                 </div>
               </AmountDetailCard>
@@ -272,7 +295,9 @@ export function ChartOrderBillingDetailAside({
                 <AmountDetailCardTitle
                   id="billing-composition-title"
                   title="금액 구성"
-                />
+                >
+                  <span className="emr-text-dense text-[var(--clair-color-atomic-neutral-500)]">전체 청구 기준</span>
+                </AmountDetailCardTitle>
                 <dl className="flex flex-col gap-[var(--clair-spacing-8)] pt-[var(--clair-spacing-8)]">
                   <MoneyRow label="총 금액" value={formatWonSpaced(amounts.gross)} />
                   <AmountDetailDivider />
@@ -286,8 +311,7 @@ export function ChartOrderBillingDetailAside({
                   <MoneyRow
                     label="할증"
                     testId="billing-surcharge-value"
-                    tone="adjustment"
-                    value={`- ${formatSurchargePercent(amounts.surcharge, amounts.gross)} %(${formatWon(amounts.surcharge)})`}
+                    value={`+ ${formatSurchargePercent(amounts.surcharge, amounts.gross)} %(${formatWon(amounts.surcharge)})`}
                   />
                 </dl>
               </AmountDetailCard>

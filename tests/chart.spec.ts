@@ -7051,7 +7051,7 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
   const detailFooter = detailAside.getByTestId(
     "chart-order-amount-detail-footer",
   );
-  await expect(totalCard).toContainText("청구 가능 오더만");
+  await expect(totalCard.getByRole("combobox", { name: "오더 합계 조회 범위" })).toHaveText("전체");
   await expect(totalCard).toContainText(
     /총 \d+건\(확정 \d+ \+ 미확정 \d+\)/,
   );
@@ -7067,12 +7067,8 @@ test("chart keeps confirmation selection-scoped and routes current-chart billing
     "color",
     "rgb(197, 48, 48)",
   );
-  await expect(detailAside.getByTestId("billing-surcharge-value")).toHaveCSS(
-    "color",
-    "rgb(197, 48, 48)",
-  );
   await expect(detailAside.getByTestId("billing-surcharge-value")).toHaveText(
-    /- \d+(?:\.\d)? %\([\d,]+원\)/,
+    /\+ \d+(?:\.\d)? %\([\d,]+원\)/,
   );
   await expect(detailAside).toHaveCSS("width", "360px");
   const [headerBox, totalBox, orderBox, compositionBox, footerBox] =
