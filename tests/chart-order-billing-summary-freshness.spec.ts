@@ -159,6 +159,19 @@ test("Plan/Order rows, counts, and money follow only the active chart", async ({
   ).toHaveCount(0);
   await expect(page.getByLabel("처방 조회 범위")).toHaveCount(0);
 
+  await footer.getByRole("button", { name: "금액 상세" }).click();
+  const detail = page.getByLabel("Plan/Order 금액 상세");
+  const totalCard = detail.getByTestId("chart-order-amount-detail-total-card");
+  const scope = totalCard.getByRole("combobox", { name: "오더 합계 조회 범위" });
+  await expect(scope).toHaveText("전체");
+  await scope.click();
+  await page.getByRole("option", { name: "확정 오더", exact: true }).click();
+  await expect(totalCard).toContainText("0 원");
+  await expect(totalCard).toContainText("확정 오더 0건");
+  await detail.getByTestId("chart-order-amount-detail-footer").getByRole("button", { name: "닫기" }).click();
+  await footer.getByRole("button", { name: "금액 상세" }).click();
+  await expect(scope).toHaveText("확정 오더");
+
   await openChart(page, chartBId);
   await expect(footer).toContainText("미확정 오더 1");
   await expect(footer).toContainText("35,000원");
@@ -168,6 +181,87 @@ test("Plan/Order rows, counts, and money follow only the active chart", async ({
   await expect(
     page.getByRole("checkbox", { name: "Maropitant 16mg T 선택" }),
   ).toHaveCount(0);
+  await footer.getByRole("button", { name: "금액 상세" }).click();
+  await expect(
+    page.getByLabel("Plan/Order 금액 상세")
+      .getByRole("combobox", { name: "오더 합계 조회 범위" }),
+  ).toHaveText("전체");
+});
+
+test("amount scope switches the top amount and count while detail rows and billing stay whole-chart", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await warmChartWorkspace(page);
+  const chartId = await createChart(page);
+  await page.route(`**/api/workspaces/${workspaceId}/chart/order-drafts*`, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+    const response = await route.fetch();
+    const body = (await response.json()) as { rows: Array<Record<string, unknown>> };
+    const rows = body.rows.slice(0, 2).map((row, index) => ({
+      ...row,
+      originChartId: chartId,
+      orderConfirmationStatus: index === 0 ? "confirmed" : "draft",
+      billingCandidateStatus: index === 0 ? "invoice_linked" : "pending",
+      parentOrderId: null,
+      rowType: "individual",
+    }));
+    await route.fulfill({ response, contentType: "application/json", body: JSON.stringify({ ...body, rows }) });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/chart/order-actions*`, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      ok: true,
+      status: 200,
+      etag: '"amount-scope-actions"',
+      rows: [],
+      orderActions: [],
+    }) });
+  });
+  await openChart(page, defaultChartId);
+  await openChart(page, chartId);
+  const footer = page.getByTestId("chart-order-footer");
+  await expect(footer).toContainText("39,500원");
+  await footer.getByRole("button", { name: "금액 상세" }).click();
+  const detail = page.getByLabel("Plan/Order 금액 상세");
+  const totalCard = detail.getByTestId("chart-order-amount-detail-total-card");
+  const scope = totalCard.getByRole("combobox", { name: "오더 합계 조회 범위" });
+  await expect(scope).toHaveText("전체");
+  await expect(totalCard).toContainText("39,500 원");
+  await expect(totalCard).toContainText("총 2건(확정 1 + 미확정 1)");
+  const compositionCard = detail.getByTestId("chart-order-amount-detail-composition-card");
+  const compositionText = (await compositionCard.textContent()) ?? "";
+  await scope.click();
+  await expect(page.getByRole("option", { name: "확정 오더", exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("order-amount-dropdown-open.png") });
+  await page.getByRole("option", { name: "확정 오더", exact: true }).click();
+  await expect(totalCard).toContainText("4,500 원");
+  await expect(totalCard).toContainText("확정 오더 1건");
+  await expect(detail.getByTestId("chart-order-amount-detail-order-card")).toContainText("35,000 원");
+  await expect(compositionCard).toContainText("전체 청구 기준");
+  await expect(compositionCard).toHaveText(compositionText);
+  await expect(scope).toHaveAttribute("aria-expanded", "false");
+  await scope.click();
+  await expect(scope).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(scope).toHaveText("확정 오더");
+  await scope.click();
+  await page.getByRole("option", { name: "미확정 오더" }).click();
+  await expect(totalCard).toContainText("35,000 원");
+  await expect(totalCard).toContainText("미확정 오더 1건");
+  await expect(detail.getByTestId("chart-order-amount-detail-order-card")).toContainText("4,500 원");
+  await expect(compositionCard).toHaveText(compositionText);
+  const refreshed = page.waitForResponse((response) => response.request().method() === "GET" && response.url().includes("chart/order-billing-summary"));
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await refreshed;
+  await expect(scope).toHaveText("미확정 오더");
+  await expect(totalCard).toContainText("35,000 원");
+  await detail.getByTestId("chart-order-amount-detail-footer").getByRole("button", { name: "전체 수납 청구" }).click();
+  await expect(page).toHaveURL(new RegExp(`/billing\\?.*encounterId=${encounterId}`));
 });
 
 test("included-order-sum set counts once and does not double-charge its parent", async ({
