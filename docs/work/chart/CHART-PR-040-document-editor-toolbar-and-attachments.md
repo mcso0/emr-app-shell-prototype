@@ -71,3 +71,10 @@ No real clinical fixtures, public bucket, broad role/permission changes, unrelat
 - Exact candidate SHA, PR, CI/deployment and final smoke evidence will be recorded in release closeout.
 
 The manual reconciler is dry-run by default and is not scheduled or run against remote clinical content in this release. Its three-hour expiry guard assumes the current two-hour Storage signed upload lifetime. Completed final files remain tracked even when no draft references them. Optical exam is a menu-only entry as requested; media format/size and one-file-at-a-time limits are in the design contract.
+
+## Remote migration evidence
+
+- Applied only this candidate migration to the verified existing Supabase project on 2026-09-22 with bounded lock/statement timeouts. Ledger version: `20260922080740`; local filename aligned to that actual applied version. SQL body SHA-256 remains `bb3b312142c72dcc5b68118c69f77ed50966498be2043db20fa358daadac9a6c`.
+- All 11 existing canonical documents remained valid (V1 3 / V2 8), with identical document and projection fingerprints before/after. No existing SOAP content was modified.
+- Effective grants verified: authenticated SELECT/INSERT only; anonymous no access; service role SELECT/INSERT/UPDATE/DELETE, no TRUNCATE. Existing Storage policies are bucket-specific and do not open this new private bucket.
+- Production server-only key is configured; current production code remains the previous Ready deployment until approved candidate checks and merge complete.

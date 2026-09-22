@@ -40,7 +40,7 @@ Approved through iterative HTML v7 review and implementation request on 2026-09-
 
 ## Storage and operational contract
 
-- The additive migration is `supabase/migrations/20260922090000_chart_soap_private_attachments.sql`, after the existing SOAP V1/V2 migrations. No new package dependency is required.
+- The additive migration is `supabase/migrations/20260922080740_chart_soap_private_attachments.sql`, after the existing SOAP V1/V2, permission-helper and multi-chart migrations. No new package dependency is required.
 - `chart-soap-attachments` is private. The session client authorizes a pending path; the server verifies size, content type and format signature, then promotes verified bytes to a distinct immutable final path using a server-only `SUPABASE_SERVICE_ROLE_KEY`.
 - Missing privileged storage configuration fails POST before upload begins. Never put this key in a browser/public environment variable. GET remains scoped by the current authenticated session and chart permission.
 - The stable application reference redirects to a 60-second Storage read URL with `private, no-store`. Existing bearer read URLs can remain valid for that short lifetime; revocation does not retroactively revoke an already issued URL.
