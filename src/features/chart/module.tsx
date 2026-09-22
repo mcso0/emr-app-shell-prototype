@@ -256,6 +256,7 @@ import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-bill
 import { useChartBillingSummaryRealtime } from "@/features/chart/chart-order-billing-summary-realtime";
 import { ChartLineTabGroup } from "@/features/chart/components/chart-line-tab-group";
 import { ChartSoapLiveBlockEditor } from "@/features/chart/components/chart-soap-live-block-editor";
+import type { ChartSoapRecordInsertionItem, ChartSoapRecordSource } from "@/features/chart/components/chart-soap-toolbar";
 import {
   createLegacySoapTemplateBlocks,
   createSystemSoapTemplateBlocks,
@@ -3243,6 +3244,7 @@ async function saveChartSoapNote({
         body: JSON.stringify({
           encounterId,
   chartId,
+          editorCapability: "media_table_v1",
           expectedUpdatedAt,
           mode,
           amendmentReason,
@@ -4340,6 +4342,8 @@ function SoapPanel({
   onRetryRead,
   onCollapse,
   onPersistedSoapNote,
+  recordInsertionItems,
+  recordSources,
   soapNote,
   writeDisabled: parentWriteDisabled,
   workspaceId,
@@ -4354,6 +4358,8 @@ function SoapPanel({
   onRetryRead: () => void;
   onCollapse: () => void;
   onPersistedSoapNote: (soapNote: SoapNote) => void;
+  recordInsertionItems?: readonly ChartSoapRecordInsertionItem[];
+  recordSources?: readonly ChartSoapRecordSource[];
   soapNote?: SoapNote;
   writeDisabled: boolean;
   workspaceId: string;
@@ -4512,6 +4518,8 @@ function SoapPanel({
           setSaveErrorMessage(
             failedResult?.denialReason === "permission_missing"
               ? "SOAP 저장 권한이 없어 서버에 반영하지 못했습니다."
+              : failedResult?.denialReason === "soap_editor_upgrade_required"
+                ? "현재 편집기 버전으로는 이 SOAP를 저장할 수 없습니다. 입력 내용을 보관한 뒤 화면을 새로 열어 주세요."
               : "입력한 내용은 화면에 남아 있지만 서버에 저장되지 않았습니다.",
           );
         } else {
@@ -4858,6 +4866,10 @@ function SoapPanel({
           onDocumentChange={handleDocumentChange}
           onNotice={(message) => toast.info(message)}
           onReady={handleEditorReady}
+          encounterId={encounterId}
+          recordInsertionItems={recordInsertionItems}
+          recordSources={recordSources}
+          workspaceId={workspaceId}
         />
       </div>
 
@@ -15504,6 +15516,11 @@ export function ChartContent({
     () => getDemoActorHeader(authSession),
     [authSession],
   );
+  const soapInsertionVitals = usePatientLatestVitalItems({
+    actorHeaders,
+    encounterId: activeEncounterId,
+    workspaceId,
+  });
   const {
     reload: reloadConsultationRooms,
     rooms: consultationCallRooms,
@@ -16641,6 +16658,64 @@ export function ChartContent({
     chartHistoryStatus === "ready"
       ? scopedChartHistoryRecords
       : undefined;
+  const soapRecordSources: ChartSoapRecordSource[] =
+    !allowMockFallback && chartHistoryScopeMatches && chartHistoryStatus === "ready"
+      ? scopedChartHistoryRecords.flatMap((record) => {
+          const chart = record.chart;
+          if (
+            record.encounter.id === currentBundle.encounter.id ||
+            !chart?.id ||
+            record.encounter.patientId !== currentBundle.patient.id ||
+            record.encounter.workspaceId !== workspaceId
+          ) return [];
+          const sourceLabel = `${getShortDateTime(chart.clinicalAt ?? chart.createdAt)} · 이전 SOAP`;
+          return [{
+            id: `history-${chart.id}`,
+            label: "이전 진료 SOAP",
+            sourceLabel,
+            load: async () => {
+              const result = await loadChartSoapNote({
+                actorHeaders,
+                encounterId: record.encounter.id,
+                chartId: chart.id,
+                workspaceId,
+              });
+              if (!result.ok || !result.soapNote || result.soapNote.encounterId !== record.encounter.id ||
+                result.soapNote.id !== chart.id) {
+                throw new Error("history_soap_unavailable");
+              }
+              const fields = [
+                ["subjective", "S · 주관적"],
+                ["objective", "O · 객관적"],
+                ["assessment", "A · 평가"],
+                ["plan", "P · 계획"],
+              ] as const;
+              return fields.flatMap(([field, label]) => {
+                const value = result.soapNote?.[field]?.trim();
+                if (!value) return [];
+                const excerpt = value.length > 2000
+                  ? `${value.slice(0, 2000)}\n[원문 일부만 삽입했습니다. 전체 내용은 원본 진료 기록에서 확인하세요.]`
+                  : value;
+                return [{ id: `${chart.id}-${field}`, label, sourceLabel, text: excerpt }];
+              });
+            },
+          }];
+        })
+      : [];
+  const soapRecordInsertionItems: ChartSoapRecordInsertionItem[] = [
+    ...(soapInsertionVitals.status === "ready" &&
+    soapInsertionVitals.vital?.encounterId === currentBundle.encounter.id
+      ? [{
+          id: "current-vitals",
+          label: "현재 활력징후",
+          sourceLabel: `${getShortDateTime(soapInsertionVitals.vital.measuredAt)} · 해당 진료 측정`,
+          text: soapInsertionVitals.items
+            .filter((item) => item.value !== "—" && item.value !== "-")
+            .map((item) => `${item.label}: ${item.value}`)
+            .join("\n"),
+        }]
+      : []),
+  ].filter((item) => item.text.length > 0);
   const baseChartHistoryRows = getChartHistoryRowsForBundle(
     currentBundle,
     liveHistoryRows,
@@ -17300,6 +17375,8 @@ export function ChartContent({
                   } : current);
                   requestChartHistoryRefresh();
                 }}
+                recordInsertionItems={soapRecordInsertionItems}
+                recordSources={soapRecordSources}
                 soapNote={effectiveLatestSoap}
                 writeDisabled={chartWriteDisabled || diagnosisPersistenceState.status === "saving"}
                 workspaceId={bundle.encounter.workspaceId}

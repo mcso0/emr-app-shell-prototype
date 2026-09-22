@@ -23,6 +23,7 @@ export type ChartSoapNoteInput = {
   amendmentReason?: string;
   expectedUpdatedAt?: string | null;
   blockDocument?: unknown;
+  editorCapability?: string;
   subjective?: string;
   objective?: string;
   assessment?: string;
@@ -30,7 +31,7 @@ export type ChartSoapNoteInput = {
   mode?: ChartSoapSaveMode;
 };
 
-export type ChartSoapConflictReason = "encounter_unavailable" | "soap_note_conflict" | "stale_status" | "chart_unavailable" | "chart_id_required" | "amendment_reason_required" | "unfinished_charts";
+export type ChartSoapConflictReason = "encounter_unavailable" | "soap_note_conflict" | "stale_status" | "chart_unavailable" | "chart_id_required" | "amendment_reason_required" | "unfinished_charts" | "soap_editor_upgrade_required";
 
 export type ChartSoapNoteGatewayResult =
   | {
@@ -54,6 +55,7 @@ export type ChartSoapNoteGateway = {
     chartId?: string;
     amendmentReason?: string;
     blockDocument: SoapBlockDocument;
+    editorCapability?: "media_table_v1";
     fields: SoapDocumentProjection;
     encounterId: string;
     expectedUpdatedAt?: string | null;
@@ -205,7 +207,7 @@ export async function saveChartSoapNote({
   workspaceId: string;
 }): Promise<ChartSoapNoteSaveResult> {
   const normalized = normalizeSoapInput(input);
-  const validation = validateSoapInput(normalized);
+  const validation = validateSoapInput(normalized, workspaceId);
 
   if (!validation.valid) {
     return {
@@ -215,7 +217,6 @@ export async function saveChartSoapNote({
       fieldErrors: validation.fieldErrors,
     };
   }
-
   const permission = resolveWorkspacePermission(permissionAdapter, {
     sessionUserId: actorUserId,
     workspaceId,
@@ -229,12 +230,16 @@ export async function saveChartSoapNote({
       denialReason: permission.denialReason ?? "permission_missing",
     };
   }
+  if (!normalized.editorCapability && hasRichSoapBlocks(validation.blockDocument)) {
+    return { ok: false, status: 409, denialReason: "soap_editor_upgrade_required" };
+  }
 
   const result = await gateway.saveSoapNote({
     actorUserId: actorUserId ?? "",
     chartId: normalized.chartId,
     amendmentReason: normalized.amendmentReason,
     blockDocument: validation.blockDocument,
+    editorCapability: normalized.editorCapability === "media_table_v1" ? "media_table_v1" : undefined,
     encounterId: normalized.encounterId,
     expectedUpdatedAt: normalized.expectedUpdatedAt,
     fields: validation.fields,
@@ -318,7 +323,7 @@ export function createMockChartSoapNoteGateway(
       if (chartId && !note) return { ok: false, status: 409, denialReason: "chart_unavailable" };
       return { ok: true, soapNote: note };
     },
-    async saveSoapNote({ actorUserId, chartId, amendmentReason, blockDocument, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
+    async saveSoapNote({ actorUserId, chartId, amendmentReason, blockDocument, editorCapability, encounterId, expectedUpdatedAt, fields, mode, workspaceId }) {
       const encounter = findEncounter(encounters, workspaceId, encounterId);
       if (!encounter) return { ok: false, status: 409, denialReason: "encounter_unavailable" };
       if (!canMutateChart(encounter)) return { ok: false, status: 409, denialReason: "stale_status" };
@@ -326,6 +331,9 @@ export function createMockChartSoapNoteGateway(
       const rows = getMockEncounterCharts(workspaceId, encounterId, seedSoapNotes);
       if (!chartId && rows.length > 1) return { ok: false, status: 409, denialReason: "chart_id_required" };
       const stored = chartId ? rows.find((note) => note.id === chartId) : rows[0];
+      if (!editorCapability && (hasRichSoapBlocks(stored?.blockDocument) || hasRichSoapBlocks(blockDocument))) {
+        return { ok: false, status: 409, denialReason: "soap_editor_upgrade_required" };
+      }
       if (chartId && !stored) return { ok: false, status: 409, denialReason: "chart_unavailable" };
       const isAmendment = stored?.status === "signed" || stored?.status === "amended";
       if (isAmendment && (mode !== "manual_save" || !amendmentReason?.trim())) {
@@ -372,7 +380,7 @@ export type SupabaseChartSoapNoteRpcClient = {
   }): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(functionName: "clair_save_chart_soap_note_v4", args: {
     p_workspace_id: string; p_actor_user_id: string; p_encounter_id: string; p_chart_id: string;
-    p_note: SoapDocumentProjection & { blockDocument: SoapBlockDocument };
+    p_note: SoapDocumentProjection & { blockDocument: SoapBlockDocument; editorCapability?: "media_table_v1" };
     p_expected_updated_at: string | null; p_mode: ChartSoapSaveMode;
     p_request_id: string | null; p_amendment_reason: string | null;
   }): Promise<{ data: unknown; error: { message?: string } | null }>;
@@ -389,7 +397,7 @@ export type SupabaseChartSoapNoteRpcClient = {
       p_workspace_id: string;
       p_actor_user_id: string;
       p_encounter_id: string;
-      p_note: SoapDocumentProjection & { blockDocument: SoapBlockDocument };
+      p_note: SoapDocumentProjection & { blockDocument: SoapBlockDocument; editorCapability?: "media_table_v1" };
       p_expected_updated_at?: string | null;
       p_mode: ChartSoapSaveMode;
       p_request_id?: string | null;
@@ -420,7 +428,7 @@ export function createSupabaseChartSoapNoteGateway(
 
       return { ok: true, soapNote: mapSoapNote(data) };
     },
-    async saveSoapNote({ actorUserId, chartId, amendmentReason, blockDocument, encounterId, expectedUpdatedAt, fields, mode, requestId, workspaceId }) {
+    async saveSoapNote({ actorUserId, chartId, amendmentReason, blockDocument, editorCapability, encounterId, expectedUpdatedAt, fields, mode, requestId, workspaceId }) {
       const args = {
         p_workspace_id: workspaceId,
         p_actor_user_id: actorUserId,
@@ -428,6 +436,7 @@ export function createSupabaseChartSoapNoteGateway(
         p_note: {
           ...fields,
           blockDocument,
+          ...(editorCapability ? { editorCapability } : {}),
         },
         p_expected_updated_at: expectedUpdatedAt ?? null,
         p_mode: mode,
@@ -534,6 +543,7 @@ function normalizeSoapInput(input: ChartSoapNoteInput) {
     amendmentReason: trimToUndefined(input.amendmentReason),
     expectedUpdatedAt: normalizeExpectedUpdatedAt(input.expectedUpdatedAt),
     blockDocument: input.blockDocument,
+    editorCapability: input.editorCapability,
     subjective: normalizeField(input.subjective),
     objective: normalizeField(input.objective),
     assessment: normalizeField(input.assessment),
@@ -542,7 +552,21 @@ function normalizeSoapInput(input: ChartSoapNoteInput) {
   };
 }
 
-function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
+function hasRichSoapBlocks(document: SoapBlockDocument | undefined): boolean {
+  if (!document) return false;
+  const roots = document.schemaVersion === 1
+    ? document.blocks
+    : document.scopes.flatMap((scope) => scope.blocks);
+  const visit = (blocks: unknown[]): boolean => blocks.some((block) => {
+    if (!block || typeof block !== "object" || Array.isArray(block)) return false;
+    const value = block as { type?: unknown; children?: unknown };
+    if (value.type === "image" || value.type === "video" || value.type === "table") return true;
+    return Array.isArray(value.children) && visit(value.children);
+  });
+  return visit(roots);
+}
+
+function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>, workspaceId: string) {
   const fieldErrors: Partial<Record<keyof ChartSoapNoteInput, string>> = {};
   let fields: SoapDocumentProjection = {
     assessment: input.assessment,
@@ -554,6 +578,7 @@ function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
   let blockCount: number | undefined;
 
   if (input.amendmentReason && input.amendmentReason.length > 2000) fieldErrors.amendmentReason = "수정 사유는 2,000자 이내로 입력해 주세요.";
+  if (input.editorCapability !== undefined && input.editorCapability !== "media_table_v1") fieldErrors.editorCapability = "지원하지 않는 SOAP 편집기입니다.";
   if (!input.encounterId) fieldErrors.encounterId = "진료 차트를 선택해 주세요.";
   if (input.expectedUpdatedAt !== undefined && input.expectedUpdatedAt !== null && Number.isNaN(Date.parse(input.expectedUpdatedAt))) {
     fieldErrors.expectedUpdatedAt = "SOAP 기준 저장 시각이 올바르지 않습니다.";
@@ -562,7 +587,10 @@ function validateSoapInput(input: ReturnType<typeof normalizeSoapInput>) {
   if (input.blockDocument === undefined) {
     fieldErrors.blockDocument = "SOAP 블록 문서가 필요합니다.";
   } else {
-    const documentResult = validateAndProjectSoapDocument(input.blockDocument);
+    const documentResult = validateAndProjectSoapDocument(input.blockDocument, {
+      workspaceId,
+      encounterId: input.encounterId,
+    });
     if (!documentResult.ok) {
       fieldErrors.blockDocument = getSoapDocumentValidationMessage(documentResult.error);
     } else {
@@ -684,6 +712,6 @@ function mapTransactionalSoapAudit(value: unknown) {
 }
 
 export function mapChartSoapConflict(message?: string): ChartSoapConflictReason | undefined {
-  return (["encounter_unavailable", "soap_note_conflict", "stale_status", "chart_unavailable", "chart_id_required", "amendment_reason_required", "unfinished_charts"] as const)
+  return (["encounter_unavailable", "soap_note_conflict", "stale_status", "chart_unavailable", "chart_id_required", "amendment_reason_required", "unfinished_charts", "soap_editor_upgrade_required"] as const)
     .find((reason) => message?.includes(reason));
 }
