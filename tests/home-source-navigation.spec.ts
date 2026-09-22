@@ -12,7 +12,7 @@ for (const destination of ["lab", "imaging", "dispensing"] as const) {
       const workItems = url.searchParams.get("queueType") === destination && (!selectedDate || selectedDate === date)
         ? ["first", "second"].map((id) => ({
           id, workspaceId, encounterId: "same-encounter", patientId: "same-patient", orderId: `order-${id}`,
-          queueType: module, status: "requested", requestCycle: 1, rowRevision: 1,
+          queueType: destination, status: "requested", requestCycle: 1, rowRevision: 1,
           requestedByUserId: "requester", createdAt: `${date}T09:00:00+09:00`, updatedAt: `${date}T09:00:00+09:00`,
           sourceSnapshot: { patientName: "합성 환자", guardianName: "합성 보호자", orderDisplayName: `${id} 검사`, requestingVetName: "합성 수의사" },
         })) : [];

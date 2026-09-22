@@ -9,7 +9,7 @@ source_docs:
   - "docs/engineering/data-model/home-operations-work-status-read-model.md"
 dependencies:
   - "HOME-PR-012"
-updated: "2026-09-12"
+updated: "2026-09-22"
 ---
 
 # Home Workspace And Personal Work
@@ -182,3 +182,22 @@ Clean branch `codex/home-board-leading-inset` starts at `7e53f5e377149bc440c1b72
 Clean branch `codex/home-kanban-bottom-scrollbar` starts at `82b7c21d3254e88ed012637d9f828eba1803314f`. Verification covers open and collapsed module panels at the reported `1327×880` viewport, exact bottom-edge alignment, zero native scrollbar gutter, zero horizontal scrollbar top border, retained track padding, Home regressions and production preflight. Smoke: `/login` and authenticated Cheongdam Home horizontal scrolling without business mutation. Rollback: the previous Ready Production deployment or a scoped revert. Stop on failed checks, candidate drift, non-Ready deployment or failed scoped smoke.
 
 Local verification passed: the focused bottom-edge check and all 18 Home browser regressions passed. At `1327×880`, both open and collapsed module-panel states place the workspace body, scroll viewport, first Kanban column and horizontal scrollbar on the same bottom coordinate; the native gutter and scrollbar top border are `0px`, while `2px` top and `1px` bottom track padding remain. The empty-board screenshot was visually inspected. Secret, docs, Korean UX copy, diff, lint, TypeScript and Production build checks passed; lint retains five unrelated warnings and the build retains the existing docs-reader tracing warning. Two related filter/source suites passed. The separate source-navigation suite remains blocked by its pre-existing `queueType: module` circular-JSON fixture error in all three destinations and was not changed in this release.
+
+## Hospital Status Board And Flat List — 2026-09-22
+
+승욱 approved the recommended design decisions and local implementation supervised by the parent agent, delegated to GPT-5.6 Sol High. This follow-up does not inherit historical release authorization. No commit, push, merge, deployment, DB migration or remote write is included.
+
+- Base: refreshed origin/main `a94e5683`; isolated branch `codex/home-status-board-list`. Preserve unrelated primary-checkout WIP.
+- Hospital-only redesign: date heading/calendar, work tabs, state-derived board, flat list, icon search/filter triggers, shared sort between completion and assignee, existing board/list switch and patient summary.
+- Accepted decisions: completion/cancellation opt-in separately; filter-builder work type AND tab; counts before tab/hidden columns; request timestamp plus elapsed tooltip; actor/workspace-scoped sort/tab and separate status-column preferences. See the owning product contract for exact sorting and state derivation.
+- Preserve personal-work grouping, source navigation, API permissions, workspace isolation, existing source data and loading/error/partial states.
+- Local implementation complete: hospital presentation helper, scoped store fields, existing cancellation request flag, date heading, state columns, flat table and shared sort. `EmrDateNavigator` has one optional selected-date label formatter; existing consumers keep the default. No dependency, API/DB or permission changes.
+- Final focused Playwright run: **45 passed** across `home.spec.ts`, `home-hospital-status.spec.ts`, `home-hospital-presentation.spec.ts`, `home-filter-state.spec.ts`, `home-operations-work-items-server.spec.ts`, and `home-source-navigation.spec.ts`. Includes filter/tab intersection and reset, included-but-empty terminal columns, cancellation opt-in, personal groups/restoration, source navigation, shared sort, date behavior, scoped preferences and narrow layouts.
+- Parent review corrected personal hidden-group restoration, narrow heading overlap, empty inclusion messaging and list row geometry. Desktop and 390/900/1024px synthetic screenshots reviewed. Shared date navigator default-format/hover regression also passed.
+- TypeScript, full lint (0 errors; 5 existing WP10 warnings), scoped final lint, docs links, Korean UX copy, secret scan and diff checks passed. Production build passed; it retains the existing docs-reader tracing warning.
+- Expanded checks: two `design-tokens.spec.ts` source-regex tests still fail on existing Home/hospital-admin direct tokens. Parent compared HEAD/current regex results: Home 11 matches identical; hospital-admin 1 match identical. No newly introduced match. The optional source-creation parity replay stops before Home at chart order confirmation with HTTP 409 `order_unavailable`; no chart fixture or business contract was changed to bypass it.
+- Browser verification uses synthetic API fixtures, not an authenticated production data smoke. Local implementation only; commit/PR/deployment and user acceptance remain separate.
+
+### Release Authorization — 2026-09-22
+
+After local implementation review, 승욱 explicitly requested final verification, commit, push, PR, merge to origin/main and approved deployment for this Home slice. Release scope is the reviewed hospital status board/list implementation and its focused tests/docs; unrelated primary-checkout WIP, DB/data changes and production settings remain excluded. The exact candidate, Release Check, Preview, rollback deployment and scoped smoke will be recorded before merge. Required smoke: `/login` plus Home access; authenticated synthetic Home interaction only when an existing authorized session is available, otherwise report the authentication boundary separately.

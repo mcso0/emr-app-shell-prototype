@@ -105,3 +105,74 @@
 
 /* Keep the initial title alignment while allowing columns through the leading inset. */
 .boardScrollFrame { margin-left: calc(-1 * var(--clair-spacing-48)); }
+
+/* Hospital status view. Personal work keeps the established grouped-list styles above. */
+.hospitalTitle { overflow: visible; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.024em; color: var(--clair-color-atomic-neutral-900); }
+.pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) { flex-wrap: wrap; }
+.pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:first-child { flex-shrink: 0; }
+.hospitalTitle .dateControl { width: auto; height: 40px; gap: 4px; border: 0; background: transparent; padding: 0; }
+.hospitalTitle .dateControl > button { min-height: 40px; height: 40px; border-radius: 8px; }
+.hospitalTitle .dateControl > button:first-child, .hospitalTitle .dateControl > button:last-child { width: 32px; }
+.hospitalTitle .dateControl > button[aria-haspopup] { width: auto; min-width: 196px; padding-inline: 12px; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.024em; color: inherit; }
+.hospitalTitle .dateControl button:hover { background: var(--clair-color-atomic-black-alpha-4); }
+.hospitalTitle .dateControl button:active { background: var(--clair-color-atomic-black-alpha-6); }
+.hospitalTitle .dateControl button:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: 2px; }
+.hospitalTitle .dateControl button[aria-expanded="true"] { background: var(--clair-color-atomic-black-alpha-6); }
+.hospitalTitle .dateControl button:disabled { opacity: .4; cursor: not-allowed; }
+.hospitalTitle .dateControl svg { flex-shrink: 0; }
+.hospitalTitle .dateControl > button[aria-haspopup] > svg:first-child { display: none; }
+.hospitalTitle .dateControl [data-slot="badge"] { font-size: 12px; line-height: 16px; }
+.workTypeTabs { display: flex; min-width: 0; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+.workTypeTabs button { display: inline-flex; height: 32px; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid var(--emr-border-default); border-radius: 999px; background: var(--emr-surface-panel); padding: 0 12px; color: var(--emr-text-secondary); font-size: 14px; font-weight: 500; white-space: nowrap; }
+.workTypeTabs button span { color: var(--emr-text-tertiary); font-size: 12px; }
+.workTypeTabs button:hover { background: var(--clair-color-atomic-black-alpha-4); }
+.workTypeTabs button:active, .workTypeTabs button[aria-pressed="true"] { border-color: var(--clair-color-atomic-neutral-900); background: var(--clair-color-atomic-neutral-900); color: var(--clair-color-atomic-common-100); }
+.workTypeTabs button[aria-pressed="true"] span { color: inherit; }
+.workTypeTabs button:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: -2px; }
+.hospitalFilterTrigger { display: flex; width: 32px; height: 32px; min-height: 32px; justify-content: center; padding: 0; }
+.hospitalSearchTrigger { width: 32px; height: 32px; min-height: 32px; padding: 0; }
+.hospitalFilterTrigger > span { display: none; }
+.hospitalFilterTrigger strong { position: absolute; margin: -24px 0 0 24px; border-radius: 50%; background: var(--emr-text-link); color: white; font-size: 10px; line-height: 14px; min-width: 14px; text-align: center; }
+.todayButton { height: 32px; }
+.sortButton { height: 32px; }
+.cancelFilter { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--emr-border-default); font-size: 14px; }
+.board .column { border: 0; background: color-mix(in srgb, var(--clair-color-atomic-common-0) 2%, transparent); box-shadow: var(--clair-shadow-xs); }
+.board .groupHeader h2 { font-weight: 500; }
+.board .groupHeader h2 > span:last-child { font-size: 14px; line-height: 20px; }
+.board .columnBody { padding-top: 12px; }
+.board .dividedHeader::after { background: var(--clair-color-atomic-neutral-200); }
+.noMatchNotice { display: flex; align-items: center; gap: 8px; padding: 4px 48px 8px; color: var(--emr-text-secondary); font-size: 14px; }
+.hospitalTable { min-width: 1410px; width: 100%; font-size: 14px; line-height: 20px; }
+.hospitalTableHeader, .hospitalRow { display: grid; grid-template-columns: 80px 80px 80px minmax(562px, 1fr) 80px 128px 88px 88px 80px; column-gap: 16px; align-items: center; }
+.hospitalTableHeader { min-height: 40px; padding: 0 8px; border-bottom: 1px solid var(--clair-color-atomic-neutral-100); color: var(--emr-text-tertiary); font-size: 12px; line-height: 16px; font-weight: 500; }
+.hospitalTableRows { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
+.hospitalRow { position: relative; min-height: 36px; padding: 8px; border-radius: 8px; color: var(--emr-text-primary); cursor: pointer; }
+.hospitalRow:not(:last-child)::after { content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 1px; background: var(--clair-color-atomic-neutral-100); }
+.hospitalRow:hover, .hospitalRow:focus-within { background: var(--clair-color-atomic-black-alpha-6); }
+.hospitalRow:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: -2px; }
+.hospitalRow > [role="cell"] { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.hospitalDetails { display: flex; align-items: center; gap: 8px; }
+.hospitalDetails > span { overflow: hidden; text-overflow: ellipsis; }
+.hospitalDetails > div { flex-shrink: 0; }
+.hospitalDetails [data-slot="badge"] { height: 20px; padding-block: 0; }
+.hospitalState { display: flex; align-items: center; gap: 4px; }
+.hospitalRowAction { display: flex; align-items: center; opacity: 0; }
+.hospitalRowAction button { width: 20px; height: 20px; min-height: 20px; padding: 0; }
+.hospitalRow:hover .hospitalRowAction, .hospitalRow:focus-within .hospitalRowAction { opacity: 1; }
+@media (hover: none) { .hospitalRowAction { opacity: 1; } }
+@media (max-width: 800px) {
+  .pageHeader:has(.workTypeTabs) { padding-inline: 16px; }
+  .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) { flex-wrap: wrap; }
+  .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:first-child { width: 100%; }
+  .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:last-child { width: 100%; justify-content: flex-start; }
+  .hospitalTitle .dateControl > button[aria-haspopup] { min-width: 196px; font-size: 20px; }
+  .hospitalTitle .dateControl [data-slot="badge"] { display: none; }
+  .toolbar:has(.workTypeTabs) { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+  .workTypeTabs { width: 100%; }
+  .toolbar:has(.workTypeTabs) .toolbarActions { width: 100%; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0; padding-bottom: 4px; scrollbar-width: thin; }
+  .toolbar:has(.workTypeTabs) .toolbarActions > * { flex-shrink: 0; }
+  .workspaceBody:has(.board) { padding-left: 16px; }
+  .listWorkspaceBody:has(.hospitalTable) { padding-inline: 16px; }
+  .board { padding-left: 16px; }
+  .boardScrollFrame { margin-left: -16px; }
+}

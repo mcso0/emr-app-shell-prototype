@@ -31,7 +31,7 @@ function HomeOperationsContent({ workspaceId, today, role }: { workspaceId: stri
   const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
   const operatingDate = view === "mine" ? today : query.date;
   const legacy = isLegacySalesDemoWorkspace(workspaceId);
-  const { loading, refresh, response } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: false, operatingDate, workspaceId, enabled: !legacy });
+  const { loading, refresh, response } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: view === "hospital" && query.includeCancelled, operatingDate, workspaceId, enabled: !legacy });
   const data = useMemo(() => {
     if (legacy) {
       const mock = getHomeMockData(role, workspaceId);
