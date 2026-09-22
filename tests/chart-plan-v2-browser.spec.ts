@@ -13,7 +13,7 @@ test("V2 chart plan confirms first, then records explicit actual after refresh",
   let actualContext: ChartActualContext = { workspaceId: "clair-demo", taskId: id, orderId: id, attemptNo: 1,
     clinicalOrderType: "consultation", planSnapshot: { detailSchemaVersion: 2 }, planSha256: "b".repeat(64), canAmend: false, canRecord: true, results: [] };
   const detailInputs = { responsibleClinicianId: "user-vet", occurrenceCount: 1, timing: "now", instructionSummary: "합성 계획 지시" };
-  const row = { orderId: id, workspaceId: "clair-demo", encounterId: "encounter-kong-260501", rowType: "individual" as const,
+  const row = { orderId: id, workspaceId: "clair-demo", encounterId: "encounter-kong-260501", originChartId: "soap-kong-260501", rowType: "individual" as const,
     orderType: "consultation", clinicalOrderType: "consultation", destinationModule: null, executionMode: "immediate_complete",
     detailInputs, detailSchemaVersion: 2, priority: "normal", billingEligible: false, revisionNo: 0, parentOrderId: null,
     sourceSetId: null, sourceSetRevisionId: null, sourceSetRevisionNo: null, sourceSetVersion: null, sourceSetRevisionItemId: null,
@@ -63,15 +63,24 @@ test("V2 chart plan confirms first, then records explicit actual after refresh",
   await expect(page.getByRole("checkbox", { name: `${name} 선택` })).toBeVisible();
   await page.getByRole("checkbox", { name: `${name} 선택` }).check();
   await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: /\d+개 Order 확정/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Order 확정 확인" });
+  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
   await expect(dialog.getByLabel(`${name} 실제 수행`, { exact: true })).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Order 확정", exact: true }).click();
+  await expect(dialog).toHaveCSS("opacity", "1");
+  await expect(dialog).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await page.screenshot({ path: "/tmp/order-confirmation-single.png", animations: "disabled" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(dialog.getByRole("button", { name: "1건 확정" })).toBeVisible();
+  await expect(dialog.locator('[data-slot="dialog-footer"]')).toHaveCSS("flex-direction", "row");
+  await page.screenshot({ path: "/tmp/order-confirmation-single-mobile.png", animations: "disabled" });
+  await dialog.getByRole("button", { name: "1건 확정", exact: true }).click();
   await expect(dialog).toBeHidden();
   expect(Object.keys(((posted as Record<string, unknown> | null)?.actualRecords ?? {}) as object)).toEqual([]);
   expect(requests).toBe(0);
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.reload();
-  await page.getByRole("checkbox", { name: `${name} 선택`, exact: true }).check();
-  await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: "이력", exact: true }).click();
+  await page.getByTestId(`chart-order-row-${id}`).hover();
+  await page.getByRole("group", { name: `${name} 행 작업` }).getByRole("button", { name: `${name} 더보기` }).click();
+  await page.getByRole("menuitem", { name: "이력" }).click();
   const history = page.getByRole("dialog", { name: `${name} 이력`, exact: true });
   await expect(history.getByText("계획이 확정되었습니다. 실제 수행 후 결과를 기록해 주세요.")).toBeVisible();
   await history.getByRole("button", { name: "수행 결과 기록", exact: true }).click();

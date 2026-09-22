@@ -12,7 +12,7 @@ test("chart confirmation requires explicit actual input and sends a separate att
   let requests = 0;
   let actualContext: ChartActualContext | null = null;
   const detailInputs = { responsibleClinicianId: "user-vet", occurrenceCount: 1, timing: "now", instructionSummary: "합성 계획 지시" };
-  const row = { orderId: id, workspaceId: "clair-demo", encounterId: "encounter-kong-260501", rowType: "individual" as const,
+  const row = { orderId: id, workspaceId: "clair-demo", encounterId: "encounter-kong-260501", originChartId: "soap-kong-260501", rowType: "individual" as const,
     orderType: "consultation", clinicalOrderType: "consultation", destinationModule: null, executionMode: "immediate_complete",
     detailInputs, detailSchemaVersion: 1, priority: "normal", billingEligible: false, revisionNo: 0, parentOrderId: null,
     sourceSetId: null, sourceSetRevisionId: null, sourceSetRevisionNo: null, sourceSetVersion: null, sourceSetRevisionItemId: null,
@@ -63,28 +63,47 @@ test("chart confirmation requires explicit actual input and sends a separate att
   });
   await page.goto("/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed");
   await expect(page.getByRole("checkbox", { name: `${name} 선택` })).toBeVisible();
+  await page.getByTestId(`chart-order-row-${id}`).hover();
+  const rowConfirmTrigger = page.getByRole("group", { name: `${name} 행 작업` }).getByRole("button", { name: `${name} 확정` });
+  await rowConfirmTrigger.click();
+  const rowActualDialog = page.getByRole("dialog", { name: "실제 수행 기록 입력" });
+  await expect(rowActualDialog.getByLabel(`${name} 실제 수행`, { exact: true })).toBeVisible();
+  await rowActualDialog.getByRole("button", { name: "취소" }).click();
+  expect(requests).toBe(0);
+  await expect(page.getByRole("checkbox", { name: `${name} 선택` })).not.toBeChecked();
+  await expect(rowConfirmTrigger).toBeFocused();
   await page.getByRole("checkbox", { name: `${name} 선택` }).check();
   await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: /\d+개 Order 확정/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Order 확정 확인" });
-  const confirm = dialog.getByRole("button", { name: "Order 확정", exact: true });
-  await expect(dialog.getByLabel(`${name} 실제 수행`, { exact: true })).toHaveValue("");
-  await expect(dialog.getByLabel(`${name} 실제 결과`, { exact: true })).toHaveValue("");
-  await expect(dialog.getByLabel(`${name} 실제 수행 시각`, { exact: true })).toHaveValue("");
-  await expect(confirm).toBeDisabled();
-  await dialog.getByLabel(`${name} 실제 수행`, { exact: true }).fill("합성 실제 진료 활동");
-  await dialog.getByLabel(`${name} 실제 결과`, { exact: true }).fill("합성 직접 입력 결과");
-  await dialog.getByLabel(`${name} 실제 수행 시각`, { exact: true }).fill("2026-09-06T09:00");
-  await expect(confirm).toBeDisabled();
-  await dialog.getByRole("switch").check();
-  await expect(confirm).toBeEnabled();
+  const actualDialog = page.getByRole("dialog", { name: "실제 수행 기록 입력" });
+  const continueButton = actualDialog.getByRole("button", { name: "오더 확인" });
+  await expect(actualDialog.getByLabel(`${name} 실제 수행`, { exact: true })).toHaveValue("");
+  await expect(actualDialog.getByLabel(`${name} 실제 결과`, { exact: true })).toHaveValue("");
+  await expect(actualDialog.getByLabel(`${name} 실제 수행 시각`, { exact: true })).toHaveValue("");
+  await expect(continueButton).toBeDisabled();
+  await actualDialog.getByLabel(`${name} 실제 수행`, { exact: true }).fill("합성 실제 진료 활동");
+  await actualDialog.getByLabel(`${name} 실제 결과`, { exact: true }).fill("합성 직접 입력 결과");
+  await actualDialog.getByLabel(`${name} 실제 수행 시각`, { exact: true }).fill("2026-09-06T09:00");
+  await expect(continueButton).toBeDisabled();
+  await actualDialog.getByRole("switch").check();
+  await expect(continueButton).toBeEnabled();
   await expect(page.getByRole("toolbar", { name: "선택 행 작업" })).toBeHidden();
   await page.screenshot({ path: "/tmp/wp07-chart-actual-confirmation.png" });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(confirm).toBeVisible();
-  const bounds = await dialog.boundingBox();
+  await expect(continueButton).toBeVisible();
+  const bounds = await actualDialog.boundingBox();
   expect(bounds?.y).toBeGreaterThanOrEqual(0);
   expect((bounds?.y ?? 0) + (bounds?.height ?? 0)).toBeLessThanOrEqual(844);
   await page.screenshot({ path: "/tmp/wp07-chart-actual-confirmation-mobile.png" });
+  await continueButton.click();
+  const dialog = page.getByRole("dialog", { name: "오더 1건을 확정할까요?" });
+  const confirm = dialog.getByRole("button", { name: "1건 확정", exact: true });
+  await expect(dialog.getByText(name, { exact: true })).toBeVisible();
+  await expect(dialog.getByText("0원", { exact: true })).toHaveCount(2);
+  await expect(dialog.locator(":focus")).toHaveCount(1);
+  await expect(dialog).toHaveCSS("opacity", "1");
+  await expect(dialog).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(dialog.locator('[data-slot="dialog-footer"]')).toHaveCSS("flex-direction", "row");
+  await page.screenshot({ path: "/tmp/order-confirmation-legacy-review-mobile.png", animations: "disabled" });
   await confirm.click();
   await expect.poll(() => posted).not.toBeNull();
   expect(posted).toMatchObject({ actualRecords: { [id]: { selfPerformed: true, payload: { performedActivity: "합성 실제 진료 활동", outcome: "합성 직접 입력 결과" } } } });
@@ -94,8 +113,9 @@ test("chart confirmation requires explicit actual input and sends a separate att
   await expect(dialog).toBeHidden();
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.reload();
-  await page.getByRole("checkbox", { name: `${name} 선택`, exact: true }).check();
-  await page.getByRole("toolbar", { name: "선택 행 작업" }).getByRole("button", { name: "이력", exact: true }).click();
+  await page.getByTestId(`chart-order-row-${id}`).hover();
+  await page.getByRole("group", { name: `${name} 행 작업` }).getByRole("button", { name: `${name} 더보기` }).click();
+  await page.getByRole("menuitem", { name: "이력" }).click();
   const history = page.getByRole("dialog", { name: `${name} 이력`, exact: true });
   await expect(history.getByText("실제 기록 v1", { exact: true })).toBeVisible();
   await expect(history.getByText("결과: 합성 직접 입력 결과", { exact: true })).toBeVisible();

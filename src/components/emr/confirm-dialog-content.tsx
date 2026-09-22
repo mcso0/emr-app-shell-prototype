@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 type EmrConfirmDialogPresentationProps = Pick<
   ComponentProps<typeof DialogContent>,
-  "motion" | "overlayClassName"
+  "finalFocus" | "motion" | "overlayClassName"
 >;
 
 type EmrConfirmDialogContentProps = {
@@ -38,6 +38,7 @@ export function EmrConfirmDialogContent({
   confirmButtonVariant,
   confirmLabel,
   description,
+  finalFocus,
   motion,
   onCancel,
   onConfirm,
@@ -47,6 +48,7 @@ export function EmrConfirmDialogContent({
   return (
     <DialogContent
       className={cn("overflow-hidden p-0 sm:max-w-[420px]", className)}
+      finalFocus={finalFocus}
       motion={motion}
       overlayClassName={overlayClassName}
       showCloseButton={false}

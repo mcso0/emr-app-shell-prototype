@@ -7,7 +7,7 @@ related_work:
   - CLINICAL-BILLING-PR-017
 source_figma_node: "28441:115889"
 prototype: order-selection-cab-interactive-prototype.html
-last_updated: 2026-09-20
+last_updated: 2026-09-22
 ---
 
 # Order Selection CAB Interaction Contract
@@ -52,6 +52,32 @@ last_updated: 2026-09-20
 부분 처리 결과는 다음 형식의 토스트를 사용한다.
 
 `3개 오더 처리 완료, 1개 오더 처리에 실패했습니다.`
+
+## Order confirmation review (approved 2026-09-22)
+
+The owner approved the [revised proposal and prototype](../screens/chart/planning/order-confirmation/index.html).
+This section owns the final confirmation UI for row and CAB entry points.
+
+- Title: `오더 N건을 확정할까요?`; the count matches the exact root IDs submitted.
+- Body: selected root order rows in table order; canonical order-type badge,
+  wrapped order name, and right-aligned KRW amount. Neutral generic `Badge`
+  metadata uses existing clinical-type labels, never name-based inference.
+- Set roots count once. Retain scoped charge accounting and do not add child
+  prices a second time. A conditional re-request indicator belongs to its row.
+- Summary: `선택 오더 합계 X원`, for the current selection, not a payment receipt.
+- Actions: `취소` and `N건 확정`; pending action uses `확정 중…`.
+- Remove patient/guardian/chart identity, category/quantity subtitles,
+  unselected-order notices, `재요청 없음`, and implementation jargon.
+- Use a 560px maximum width, existing semantic tokens, a scrollable list,
+  and stable title/actions. Preserve Dialog keyboard behavior and return focus.
+- Keep structured list content outside the long DialogDescription announcement.
+- Normal and deferred V2 orders open this review directly. Legacy V1 orders
+  requiring explicit actual records retain a separate preceding record step;
+  no fabricated timestamp/attestation, validation bypass, or API contract change.
+- Cancellation preserves existing selection and makes no confirmation request.
+  Existing permission, revision, save-in-flight and idempotency guards remain.
+
+Delivery is tracked in [CHART-PR-003](../../work/chart/CHART-PR-003-chart-safety-mvp-ux.md).
 
 ## Feedback rules
 
