@@ -309,7 +309,7 @@
   position: relative;
   z-index: 3;
   flex: none;
-  padding: 4px 8px;
+  padding: 8px;
   background: transparent;
 }
 
@@ -323,7 +323,7 @@
   gap: 4px;
   overflow: hidden;
   border-radius: var(--clair-radius-atomic-12);
-  background: var(--clair-color-atomic-neutral-100);
+  background: var(--clair-color-atomic-neutral-50);
   padding: 4px;
 }
 
