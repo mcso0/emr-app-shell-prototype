@@ -56,6 +56,11 @@
   opacity: 1;
 }
 
+.scrollbarRevealRoot
+  :global([data-emr-pinned-table-scrollbar] [data-slot="scroll-area-thumb"]) {
+  background-color: var(--emr-scrollbar-thumb);
+}
+
 .scrollbarRevealRoot :global([data-emr-pinned-table-scrollbar]) {
   opacity: 1;
 }

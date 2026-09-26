@@ -1,6 +1,6 @@
 ---
 id: CHART-PR-041
-status: implemented
+status: in_progress
 area: chart
 priority: P1
 updated: 2026-09-26
@@ -37,6 +37,7 @@ in and out.
 
 ## Done Criteria
 
+- All four scoped scrollbar thumbs use the shared `--emr-scrollbar-thumb` token.
 - Fine-pointer users see each scoped scrollbar when its area is hovered.
 - Keyboard focus also reveals the scoped scrollbar; coarse-pointer devices keep
   scrollbars visible without requiring hover.
@@ -58,6 +59,29 @@ in and out.
 - `npm run build`
 - Exact-candidate `Release Check`, Ready Preview, and scoped Production smoke
   follow the release runbooks.
+
+## Color Consistency Follow-up
+
+- Use `--emr-scrollbar-thumb`, mapped to Clair Neutral 300, for the Assessment,
+  SOAP, inline History, and Plan/Order scrollbar thumbs.
+- Keep reveal visibility and scroll-owner geometry unchanged. Custom ScrollArea
+  color overrides remain scoped to these chart regions.
+- The focused browser regression asserts the same rendered thumb color across
+  native and Base UI scrollbars.
+- Release evidence for this follow-up is recorded below after candidate checks.
+
+### Local verification
+
+- Before the color fix, the focused browser regression reproduced the mismatch:
+  History rendered `rgb(229, 229, 229)` instead of the shared target.
+- After the fix, `npx playwright test tests/chart-scrollbar-reveal.spec.ts
+  --reporter=line` passed. Assessment, SOAP, History, and Plan/Order all render
+  `rgb(212, 212, 212)` on hover, with viewport geometry unchanged.
+- `npm run security:secrets`, `npm run docs:check`, `git diff --check`, and
+  `npx tsc --noEmit` passed.
+- `npm run lint` passed with 0 errors and 5 warnings in untouched scripts.
+- `npm run build` passed. Turbopack retained the existing PRD document-reader
+  trace warning.
 
 ## Local Verification Results
 
