@@ -436,6 +436,13 @@
     width: 8px !important;
   }
 
+  /* Center the boundary hit zone on the shared 1px pinned divider. */
+  [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
+    [data-emr-column-resize-handle="true"] {
+    right: -3.5px !important;
+  }
+
   [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
     [data-emr-column-resize-handle="true"]::before {
     top: 4px !important;
