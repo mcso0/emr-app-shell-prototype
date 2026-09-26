@@ -172,7 +172,7 @@ export const ResponsiveAllTools1000: Story = {
     await waitFor(() => expect(canvas.queryByRole("button", { name: "도구 더보기" })).toBeNull());
     await expect(canvas.getByRole("button", { name: "표 삽입" })).toBeVisible();
     const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
-    await expect(toolbar.getBoundingClientRect().height).toBe(44);
+    await expect(toolbar.getBoundingClientRect().height).toBe(40);
   },
 };
 
