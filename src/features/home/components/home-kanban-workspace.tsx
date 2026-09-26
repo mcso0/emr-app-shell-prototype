@@ -266,7 +266,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
                   onToggle={() => updatePreferences({ collapsedStatuses: toggleValue(preferences.collapsedStatuses, status.id) })} onHide={() => updatePreferences({ hiddenStatuses: [...preferences.hiddenStatuses, status.id] })}
                   onNavigate={navigate} />)}
                 {visibleStatuses.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="표시할 상태를 선택해 주세요" />}
-              </div> : <div className={styles.list} data-testid="home-task-list">
+              </div> : <div className={cn(styles.list, view === "hospital" && tasks.length === 0 && styles.emptyHospitalList)} data-testid="home-task-list">
                 {view === "hospital" ? <HomeHospitalList tasks={tasks} date={operatingDate} onNavigate={navigate} /> : [
                   { id: "selected", label: "오늘 할 업무", items: tasks.filter((task) => !previous(task, operatingDate)) },
                   { id: "previous", label: "이전 미완료", items: tasks.filter((task) => previous(task, operatingDate)) },
@@ -425,9 +425,10 @@ function requestTime(task: HomeTask) {
 
 function HomeHospitalList({ tasks, date, onNavigate }: { tasks: HomeTask[]; date: string; onNavigate: (task: HomeTask) => void }) {
   const headings = ["업무", "환자", "보호자", "세부 업무", "상태", "요청 시각", "요청자", "담당자", ""];
-  return <div role="table" aria-label="원내 업무 목록" className={styles.hospitalTable} data-testid="home-hospital-table">
+  const isEmpty = tasks.length === 0;
+  return <div role="table" aria-label="원내 업무 목록" className={cn(styles.hospitalTable, isEmpty && styles.emptyHospitalTable)} data-testid="home-hospital-table">
     <div role="row" className={styles.hospitalTableHeader}>{headings.map((heading, index) => <span role="columnheader" key={`${heading}-${index}`}>{heading}</span>)}</div>
-    <div className={styles.hospitalTableRows}>
+    <div className={cn(styles.hospitalTableRows, isEmpty && styles.emptyHospitalTableRows)} data-testid="home-hospital-table-body">
       {tasks.map((task) => {
         const state = getHospitalStatus(task);
         const stateLabel = hospitalStatuses.find((item) => item.id === state)?.label ?? state;
@@ -444,7 +445,7 @@ function HomeHospitalList({ tasks, date, onNavigate }: { tasks: HomeTask[]; date
           <span role="cell" className={styles.hospitalRowAction}><Button variant="ghost" size="icon-xs" aria-label={`${task.patientName || "환자"} ${typeLabel(task)} 화면으로 이동`} onClick={(event) => { event.stopPropagation(); onNavigate(task); }}><ChevronRightIcon aria-hidden="true" /></Button></span>
         </div>;
       })}
-      {tasks.length === 0 && <EmrEmptyState kind="no-filter-results" surface="content" title="조건에 맞는 업무가 없습니다" />}
+      {isEmpty && <EmrEmptyState testId="home-hospital-empty-state" kind="no-filter-results" surface="content" title="조건에 맞는 업무가 없습니다" />}
     </div>
   </div>;
 }

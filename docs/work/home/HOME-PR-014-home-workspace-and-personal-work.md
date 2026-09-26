@@ -183,6 +183,14 @@ Clean branch `codex/home-kanban-bottom-scrollbar` starts at `82b7c21d3254e88ed01
 
 Local verification passed: the focused bottom-edge check and all 18 Home browser regressions passed. At `1327×880`, both open and collapsed module-panel states place the workspace body, scroll viewport, first Kanban column and horizontal scrollbar on the same bottom coordinate; the native gutter and scrollbar top border are `0px`, while `2px` top and `1px` bottom track padding remain. The empty-board screenshot was visually inspected. Secret, docs, Korean UX copy, diff, lint, TypeScript and Production build checks passed; lint retains five unrelated warnings and the build retains the existing docs-reader tracing warning. Two related filter/source suites passed. The separate source-navigation suite remains blocked by its pre-existing `queueType: module` circular-JSON fixture error in all three destinations and was not changed in this release.
 
+## Hospital List Empty-State Placement — 2026-09-27
+
+승욱 reported that “조건에 맞는 업무가 없습니다” sat at the upper-left of the hospital list and asked to center it within the table body. Keep the column headings at the top; when the hospital list has no rows, center the empty state in the available body below those headings. Populated hospital lists and personal-work views retain their existing layout and data behavior.
+
+Implemented on clean branch `codex/home-empty-state-center` from refreshed `origin/main` `dda69646` after `origin/main` advanced during preparation; the change was rebased before commit, preserving the dirty primary checkout. Scope is the Home hospital list component/CSS, one screenshot-sized geometry regression, and this work record. No API, DB, shared component or dependency changes.
+
+Local verification: 27 Home browser tests passed, including a 1896×1254 regression checking horizontal centering, body vertical centering, and separation from the header. Secret scan, docs links, Korean UX copy, lint, TypeScript, Production build and diff checks passed. Lint reports five existing WP10 warnings; build reports the existing docs-reader tracing warning. Exact-candidate Release Check, Ready Preview and current Production/rollback evidence remain to be recorded after push. The manual Production gate requires final approval of the exact candidate SHA before merge.
+
 ## Hospital Status Board And Flat List — 2026-09-22
 
 승욱 approved the recommended design decisions and local implementation supervised by the parent agent, delegated to GPT-5.6 Sol High. This follow-up does not inherit historical release authorization. No commit, push, merge, deployment, DB migration or remote write is included.
