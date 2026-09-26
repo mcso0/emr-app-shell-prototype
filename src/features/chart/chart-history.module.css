@@ -10,6 +10,10 @@
   opacity: 1;
 }
 
+.inlineHistoryScrollArea :global([data-slot="scroll-area-thumb"]) {
+  background-color: var(--emr-scrollbar-thumb);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .inlineHistoryScrollArea :global([data-slot="scroll-area-scrollbar"]) {
     opacity: 0;

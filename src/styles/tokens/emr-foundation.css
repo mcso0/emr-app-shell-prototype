@@ -527,6 +527,7 @@
   --emr-border-subtle: var(--clair-color-atomic-neutral-100);
   --emr-border-default: var(--clair-color-atomic-neutral-200);
   --emr-border-strong: var(--clair-color-atomic-neutral-300);
+  --emr-scrollbar-thumb: var(--clair-color-atomic-neutral-300);
   --emr-line-selected: var(--clair-color-atomic-sky-400);
   --emr-line-focus: var(--ring);
 

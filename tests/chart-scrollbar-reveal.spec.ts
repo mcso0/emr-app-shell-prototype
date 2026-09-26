@@ -2,6 +2,7 @@ import { expect, test, type Locator } from "@playwright/test";
 
 const chartRoute =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed";
+const scrollbarThumbColor = "rgb(212, 212, 212)";
 
 async function readLayout(locator: Locator) {
   return locator.evaluate((element) => {
@@ -37,6 +38,13 @@ async function expectNativeScrollbarReveal(
       ),
     )
     .not.toBe(hiddenColor);
+  await expect
+    .poll(() =>
+      scrollOwner.evaluate((element) =>
+        getComputedStyle(element, "::-webkit-scrollbar-thumb").backgroundColor,
+      ),
+    )
+    .toBe(scrollbarThumbColor);
   expect(await readLayout(scrollOwner)).toEqual(beforeLayout);
 }
 
@@ -54,6 +62,9 @@ async function expectOverlayScrollbarReveal(
   await hoverTarget.hover();
 
   await expect(scrollbar).toHaveCSS("opacity", "1");
+  await expect(
+    scrollbar.locator('[data-slot="scroll-area-thumb"]'),
+  ).toHaveCSS("background-color", scrollbarThumbColor);
   expect(await readLayout(scrollArea)).toEqual(beforeArea);
   expect(await readLayout(scrollbar)).toEqual(beforeScrollbar);
 }

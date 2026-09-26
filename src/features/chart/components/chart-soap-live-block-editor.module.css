@@ -51,7 +51,7 @@
 
   .editorBoundary:hover .editor:global(.bn-container),
   .editorBoundary:focus-within .editor:global(.bn-container) {
-    scrollbar-color: var(--clair-color-atomic-neutral-300) transparent;
+    scrollbar-color: var(--emr-scrollbar-thumb) transparent;
   }
 
   .editor:global(.bn-container)::-webkit-scrollbar-thumb {
@@ -62,7 +62,7 @@
 
   .editorBoundary:hover .editor:global(.bn-container)::-webkit-scrollbar-thumb,
   .editorBoundary:focus-within .editor:global(.bn-container)::-webkit-scrollbar-thumb {
-    background-color: var(--clair-color-atomic-neutral-300);
+    background-color: var(--emr-scrollbar-thumb);
   }
 
   .editor:global(.bn-container)::-webkit-scrollbar-track {
