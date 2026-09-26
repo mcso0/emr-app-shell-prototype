@@ -18,6 +18,44 @@
   scrollbar-gutter: auto;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .tableViewport {
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color var(--clair-motion-duration-fast)
+      var(--clair-motion-easing-standard);
+  }
+
+  .viewportRoot:hover .tableViewport,
+  .viewportRoot:focus-within .tableViewport {
+    scrollbar-color: var(--clair-color-atomic-neutral-300) transparent;
+  }
+
+  .tableViewport::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    transition: background-color var(--clair-motion-duration-fast)
+      var(--clair-motion-easing-standard);
+  }
+
+  .viewportRoot:hover .tableViewport::-webkit-scrollbar-thumb,
+  .viewportRoot:focus-within .tableViewport::-webkit-scrollbar-thumb {
+    background-color: var(--clair-color-atomic-neutral-300);
+  }
+
+  .tableViewport::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tableViewport {
+    transition: none;
+  }
+
+  .tableViewport::-webkit-scrollbar-thumb {
+    transition: none;
+  }
+}
+
 .table {
   --chart-assessment-content-inset: var(--clair-spacing-12);
   --chart-assessment-system-column: 100px;

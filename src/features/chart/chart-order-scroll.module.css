@@ -55,3 +55,34 @@
 .surface [data-emr-pinned-table-viewport="true"][data-overflow-y-end]::after {
   opacity: 1;
 }
+
+.scrollbarRevealRoot :global([data-emr-pinned-table-scrollbar]) {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .scrollbarRevealRoot :global([data-emr-pinned-table-scrollbar]) {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--clair-motion-duration-fast)
+      var(--clair-motion-easing-standard);
+  }
+
+  .scrollbarRevealRoot:hover
+    :global([data-emr-pinned-table-scrollbar]),
+  .scrollbarRevealRoot:focus-within
+    :global([data-emr-pinned-table-scrollbar]),
+  .scrollbarRevealRoot
+    :global([data-emr-pinned-table-scrollbar][data-hovering]),
+  .scrollbarRevealRoot
+    :global([data-emr-pinned-table-scrollbar][data-scrolling]) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrollbarRevealRoot :global([data-emr-pinned-table-scrollbar]) {
+    transition: none;
+  }
+}
