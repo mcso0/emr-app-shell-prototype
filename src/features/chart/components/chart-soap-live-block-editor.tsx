@@ -242,7 +242,7 @@ export function ChartSoapLiveBlockEditor({
         suggestionItems={suggestionItems}
       /> : null}
       <BlockNoteView
-        className={styles.editor}
+        className={`${styles.editor} scroll-fade-y scroll-fade-8`}
         editor={editor}
         editable={!disabled}
         formattingToolbar={false}
