@@ -202,7 +202,7 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
     sourceSnapshot: {
       detail: { breed: "푸들", age: "3세" },
       instruction: "CBC 우선 확인",
-      orderDisplayName: "CBC 검사",
+      effectiveDisplayName: "CBC 검사",
       serviceItemId: "svc-live-cbc",
     },
     status: "requested",
@@ -228,11 +228,12 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
     }
   );
 
-  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=closed`);
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=history`);
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("모카");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("CBC 검사");
+  await expect(page.locator("#lab-content-aside")).toContainText("CBC 검사");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("김민준");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("10:20");
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
@@ -654,7 +655,7 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
     sourceSnapshot: {
       detail: { bodyPart: "복부", modality: "초음파" },
       instruction: "복부 통증 평가",
-      orderDisplayName: "복부 초음파",
+      inHospitalOrderName: "복부 초음파",
       serviceItemId: "svc-live-us",
     },
     status: "requested",
@@ -680,11 +681,12 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
     }
   );
 
-  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/imaging?modulePanel=open&aside=closed`);
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/imaging?modulePanel=open&aside=history`);
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("하늘");
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("복부 초음파");
+  await expect(page.locator("#imaging-content-aside")).toContainText("복부 초음파");
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("김민준");
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("10:25");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);

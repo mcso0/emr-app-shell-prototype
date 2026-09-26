@@ -60,6 +60,7 @@ import {
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
 import {
+  getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
   PatientHistoryAside,
   usePatientFulfillmentHistory,
@@ -950,15 +951,7 @@ function readNonNegativeNumber(...values: unknown[]) {
 }
 
 function getFulfillmentDisplayName(workItem?: FulfillmentWorkItem) {
-  const snapshot = workItem?.sourceSnapshot;
-  return readNonEmptyString(
-    snapshot?.orderDisplayName,
-    snapshot?.displayName,
-    snapshot?.effectiveDisplayName,
-    snapshot?.inHospitalOrderName,
-    snapshot?.standardOrderName,
-    snapshot?.billingName,
-  );
+  return getFulfillmentOrderDisplayName(workItem?.sourceSnapshot);
 }
 
 function formatStrengthSnapshot(value: unknown) {
@@ -1310,7 +1303,7 @@ export function DispensingContentAside({
       : []
     : [...byTask.values()].map((taskItems) => {
         const first = taskItems[0];
-        const orderNames = taskItems.map((item) => item.sourceSnapshot.orderDisplayName || "오더명 없음");
+        const orderNames = taskItems.map((item) => getFulfillmentDisplayName(item) ?? "오더명 없음");
         const date = getOperatingDateFromIso(first.createdAt) ?? selectedDate;
         const targetModule = first.queueType === "treatment" ? "treatment" : "dispensing";
         return {

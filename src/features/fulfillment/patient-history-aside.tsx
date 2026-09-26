@@ -42,6 +42,24 @@ export type PatientHistoryEntry = {
 type HistoryReadStatus = "loading" | "ready" | "error" | "permission_denied";
 type HistoryQueueType = "lab" | "imaging" | "dispensing" | "treatment";
 
+export function getFulfillmentOrderDisplayName(snapshot?: {
+  billingName?: string;
+  displayName?: string;
+  effectiveDisplayName?: string;
+  inHospitalOrderName?: string;
+  orderDisplayName?: string;
+  standardOrderName?: string;
+} | null) {
+  return [
+    snapshot?.orderDisplayName,
+    snapshot?.displayName,
+    snapshot?.effectiveDisplayName,
+    snapshot?.inHospitalOrderName,
+    snapshot?.standardOrderName,
+    snapshot?.billingName,
+  ].find((name) => typeof name === "string" && name.trim())?.trim();
+}
+
 export function getPatientHistoryStatus(status: FulfillmentWorkItemStatus) {
   if (status === "requested") return "요청";
   if (status === "in_progress") return "진행 중";
