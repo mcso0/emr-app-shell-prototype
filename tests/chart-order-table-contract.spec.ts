@@ -329,7 +329,7 @@ test("Plan/Order keeps the boundary line and fixed area above the scroll layer",
       width: getComputedStyle(element, "::before").width,
     },
   }))).resolves.toEqual({
-    right: "0px",
+    right: "-3.5px",
     height: "22px",
     width: "8px",
     before: { top: "4px", left: "3.5px", height: "14px", width: "1px" },
@@ -362,9 +362,25 @@ test("Plan/Order keeps the boundary line and fixed area above the scroll layer",
   )).resolves.toBe("408px");
   await expect(root.locator('[data-emr-pinned-table-scrollbar="horizontal"]')).toHaveCSS("z-index", "1");
   await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toHaveCount(1);
-  await expect(table.locator('[data-emr-pinned-table-header-divider="true"]')).toBeVisible();
+  const headerDivider = table.locator('[data-emr-pinned-table-header-divider="true"]');
+  await expect(headerDivider).toBeVisible();
   await expect(handle).toHaveCSS("pointer-events", "auto");
   await expect(handle).toHaveCSS("z-index", "16");
+  await expect(handle.evaluate((element) => {
+    const handleBounds = element.getBoundingClientRect();
+    const dividerBounds = element
+      .closest("th")
+      ?.querySelector('[data-emr-pinned-table-header-divider="true"]')
+      ?.getBoundingClientRect();
+    return dividerBounds
+      ? Math.abs(
+          handleBounds.left + handleBounds.width / 2 -
+            (dividerBounds.left + dividerBounds.width / 2),
+        )
+      : Number.POSITIVE_INFINITY;
+  })).resolves.toBeLessThan(0.1);
+  await handle.hover();
+  await expect(handle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
 test("Plan/Order scroll columns keep a working header resize handle", async ({ page }) => {
@@ -379,6 +395,9 @@ test("Plan/Order scroll columns keep a working header resize handle", async ({ p
   const box = await statusHandle.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await expect.poll(() =>
+    statusHandle.evaluate((element) => getComputedStyle(element).backgroundColor),
+  ).not.toBe("rgba(0, 0, 0, 0)");
   await page.mouse.down();
   await page.mouse.move(box!.x + box!.width / 2 + 16, box!.y + box!.height / 2);
   await page.mouse.up();
