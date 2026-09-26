@@ -8678,6 +8678,38 @@ test("chart order catalog shows a visible loading state and count skeletons befo
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
 });
 
+test("chart order catalog preloads and reopens without another read", async ({ page }) => {
+  let catalogReads = 0;
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      catalogReads += 1;
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: true, rows: [], status: 200 },
+        status: 200,
+      });
+    },
+  );
+
+  await page.goto(kongScenarioUrl);
+  await expect.poll(() => catalogReads).toBe(1);
+
+  const openButton = page.getByRole("button", { name: "Order 추가", exact: true });
+  await openButton.click();
+  const dialog = page.getByRole("dialog", { name: "오더 추가" });
+  await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
+  await dialog.getByRole("button", { name: "오더 추가 닫기" }).click();
+  await expect(dialog).toBeHidden();
+
+  await openButton.click();
+  await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText("오더를 불러오는 중입니다", { exact: true }),
+  ).toHaveCount(0);
+  expect(catalogReads).toBe(1);
+});
+
 test("chart catalog dialog searches 108 service-review dispensing candidates at target scale", async ({
   page,
 }) => {

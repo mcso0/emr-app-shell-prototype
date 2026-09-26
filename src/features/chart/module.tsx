@@ -699,6 +699,7 @@ const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
 const chartOrderDiscreteSaveDelayMs = 150;
 const chartOrderContinuousSaveDelayMs = 700;
+const chartOrderCatalogFreshMs = 60_000;
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const emptyChartQueueItems: OrderQueueItem[] = [];
@@ -3474,6 +3475,57 @@ async function loadChartOrderCatalog({
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
   }
+}
+
+const chartOrderCatalogCache = new Map<
+  string,
+  { loadedAt: number; rows: ChartOrderCatalogSearchRow[] }
+>();
+const chartOrderCatalogRequests = new Map<
+  string,
+  Promise<ChartOrderCatalogRouteResponse>
+>();
+
+function getFreshChartOrderCatalog(cacheKey: string) {
+  const cached = chartOrderCatalogCache.get(cacheKey);
+  if (!cached) return null;
+  if (Date.now() - cached.loadedAt < chartOrderCatalogFreshMs) return cached.rows;
+  chartOrderCatalogCache.delete(cacheKey);
+  return null;
+}
+
+function loadCachedChartOrderCatalog({
+  actorHeaders,
+  cacheKey,
+  force = false,
+  workspaceId,
+}: {
+  actorHeaders?: Record<string, string>;
+  cacheKey: string;
+  force?: boolean;
+  workspaceId: string;
+}): Promise<ChartOrderCatalogRouteResponse> {
+  const cached = force ? null : getFreshChartOrderCatalog(cacheKey);
+  if (cached) return Promise.resolve({ ok: true, rows: cached });
+
+  const inFlight = chartOrderCatalogRequests.get(cacheKey);
+  if (inFlight) return inFlight;
+
+  const request = loadChartOrderCatalog({ actorHeaders, workspaceId })
+    .then((result) => {
+      if (result.ok) {
+        chartOrderCatalogCache.set(cacheKey, {
+          loadedAt: Date.now(),
+          rows: result.rows,
+        });
+      } else {
+        chartOrderCatalogCache.delete(cacheKey);
+      }
+      return result;
+    })
+    .finally(() => chartOrderCatalogRequests.delete(cacheKey));
+  chartOrderCatalogRequests.set(cacheKey, request);
+  return request;
 }
 
 async function loadChartOrderSetPreview({
@@ -11463,6 +11515,7 @@ const applyEncounterOrderDrafts = applyPersistedOrderDrafts;
 const applyEncounterOrderActions = applyPersistedOrderActions;
 
 function OrderArea({
+  actorKey,
   actorHeaders,
   bundle,
   chartId,
@@ -11476,6 +11529,7 @@ function OrderArea({
   orderGroups,
   writeDisabled: inheritedWriteDisabled,
 }: {
+  actorKey: string;
   actorHeaders?: Record<string, string>;
   bundle: ChartBundle;
   chartId?: string;
@@ -11621,11 +11675,15 @@ function OrderArea({
   useEffect(() => () => { setPreviewRequestSequenceRef.current += 1; }, []);
   const catalogRequestSequenceRef = useRef(0);
   useEffect(() => () => { catalogRequestSequenceRef.current += 1; }, []);
+  const catalogCacheKey = JSON.stringify([actorKey, bundle.encounter.workspaceId]);
+  const prefetchedCatalogScopeRef = useRef<string | undefined>(undefined);
   const [catalogRows, setCatalogRows] = useState<ChartOrderCatalogSearchRow[]>(
-    [],
+    () => getFreshChartOrderCatalog(catalogCacheKey) ?? [],
   );
   const [catalogSearchStatus, setCatalogSearchStatus] =
-    useState<ChartOrderCatalogStatus>("idle");
+    useState<ChartOrderCatalogStatus>(() =>
+      getFreshChartOrderCatalog(catalogCacheKey) ? "ready" : "idle",
+    );
   const [catalogRefreshing, setCatalogRefreshing] = useState(false);
   const [catalogRefreshError, setCatalogRefreshError] = useState(false);
   const catalogRefreshingRef = useRef(false);
@@ -12199,7 +12257,16 @@ function OrderArea({
       });
     });
   };
-  const loadCatalogRows = async ({ reuse = false } = {}) => {
+  const loadCatalogRows = useCallback(async ({ reuse = false, force = false } = {}) => {
+    if (catalogRefreshingRef.current) return;
+    const cached = force ? null : getFreshChartOrderCatalog(catalogCacheKey);
+    if (cached) {
+      setCatalogRows(cached);
+      setCatalogSearchStatus("ready");
+      setCatalogRefreshError(false);
+      return;
+    }
+
     const sequence = ++catalogRequestSequenceRef.current;
     const keepRows = reuse && catalogSearchStatus === "ready";
     catalogRefreshingRef.current = true;
@@ -12209,7 +12276,12 @@ function OrderArea({
       setCatalogRows([]);
       setCatalogSearchStatus("loading");
     }
-    const result = await loadChartOrderCatalog({ actorHeaders, workspaceId: bundle.encounter.workspaceId });
+    const result = await loadCachedChartOrderCatalog({
+      actorHeaders,
+      cacheKey: catalogCacheKey,
+      force,
+      workspaceId: bundle.encounter.workspaceId,
+    });
     if (sequence !== catalogRequestSequenceRef.current) return;
     catalogRefreshingRef.current = false;
     setCatalogRefreshing(false);
@@ -12225,7 +12297,15 @@ function OrderArea({
     }
     setCatalogRows(result.rows);
     setCatalogSearchStatus("ready");
-  };
+  }, [actorHeaders, bundle.encounter.workspaceId, catalogCacheKey, catalogSearchStatus]);
+  useEffect(() => {
+    if (writeDisabled || draftWriteDisabled || actorKey.startsWith("signed-out:") || prefetchedCatalogScopeRef.current === catalogCacheKey) return;
+    const prefetch = window.setTimeout(() => {
+      prefetchedCatalogScopeRef.current = catalogCacheKey;
+      void loadCatalogRows();
+    }, 0);
+    return () => window.clearTimeout(prefetch);
+  }, [actorKey, catalogCacheKey, draftWriteDisabled, loadCatalogRows, writeDisabled]);
   const openCatalogDialog = () => {
     if (writeDisabled || draftWriteDisabled) return;
     setCatalogInitialQuery("");
@@ -12240,7 +12320,7 @@ function OrderArea({
     setQuickAddReturn(false);
     setQuickAddOpen(true);
     setQuickAddActiveIndex(-1);
-    void loadCatalogRows({ reuse: true });
+    void loadCatalogRows({ reuse: true, force: true });
   };
   const closeQuickAdd = (restoreFocus = false) => {
     setQuickAddReturn(false);
@@ -14670,7 +14750,7 @@ function OrderArea({
 
                 >
                   {catalogRefreshing ? <div role="status" className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />최신 목록 확인 중</div> : null}
-                  {catalogRefreshError ? <EmrInlineAlert className="m-3" severity="warning" title="최신 목록을 확인하지 못했어요." action={<Button size="xs" variant="outline" onClick={() => void loadCatalogRows({ reuse: true })}>다시 시도</Button>}>다시 확인한 뒤 오더를 추가해 주세요.</EmrInlineAlert> : null}
+                  {catalogRefreshError ? <EmrInlineAlert className="m-3" severity="warning" title="최신 목록을 확인하지 못했어요." action={<Button size="xs" variant="outline" onClick={() => void loadCatalogRows({ reuse: true, force: true })}>다시 시도</Button>}>다시 확인한 뒤 오더를 추가해 주세요.</EmrInlineAlert> : null}
                   {quickAddQuery.trim() && catalogSearchStatus === "ready" ? (
                     <div className="flex items-center justify-between gap-2 px-3 py-2">
                       <span className="flex items-center gap-1.5 text-xs"><strong>검색 결과</strong><span className="text-[var(--emr-text-tertiary)]">{quickAddCandidates.length}건</span></span>
@@ -17467,6 +17547,7 @@ export function ChartContent({
           <div className="min-h-0 min-w-0">
             <OrderArea
               key={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${activeChartId}`}
+              actorKey={`${authSession?.role ?? "signed-out"}:${authSession?.id ?? "signed-out"}`}
               actorHeaders={actorHeaders}
               bundle={bundle}
               chartId={activeChartId || undefined}
