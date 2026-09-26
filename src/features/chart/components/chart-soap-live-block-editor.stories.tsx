@@ -19,6 +19,10 @@ const nestedBlock: ChartSoapPartialBlock[] = [{
   content: "상위 기록",
   children: [{ type: "paragraph", content: "중첩 기록" }],
 }];
+const overflowingBlocks: ChartSoapPartialBlock[] = Array.from({ length: 16 }, (_, index) => ({
+  type: "paragraph",
+  content: `스크롤 페이드 확인용 기록 ${index + 1}`,
+}));
 const toggleHeadingBlock: ChartSoapPartialBlock[] = [{
   type: "heading",
   props: { level: 2, isToggleable: true },
@@ -143,6 +147,22 @@ export const RepresentativeReview: Story = {
     }
     await expect(canvasElement.querySelector(".bn-side-menu")).toBeNull();
     await expect(canvasElement.querySelector(".bn-formatting-toolbar")).toBeNull();
+  },
+};
+
+export const OverflowingDocumentScrollFade: Story = {
+  args: { width: 566.5, initialContent: overflowingBlocks },
+  play: async ({ canvasElement }) => {
+    const viewport = canvasElement.querySelector<HTMLElement>(".bn-container");
+    if (!viewport) throw new Error("SOAP 에디터 스크롤 viewport를 찾지 못했습니다.");
+    await waitFor(() => expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight));
+    await expect(viewport).toHaveClass("scroll-fade-y");
+    await expect(viewport).toHaveClass("scroll-fade-8");
+    await expect(getComputedStyle(viewport).maskImage).not.toBe("none");
+    await expect(Number.parseFloat(getComputedStyle(viewport).getPropertyValue("--scroll-fade-b"))).toBeGreaterThan(0);
+    viewport.scrollTop = viewport.scrollHeight;
+    await waitFor(() => expect(viewport.scrollTop + viewport.clientHeight).toBeGreaterThanOrEqual(viewport.scrollHeight - 1));
+    await waitFor(() => expect(Number.parseFloat(getComputedStyle(viewport).getPropertyValue("--scroll-fade-b"))).toBe(0));
   },
 };
 
