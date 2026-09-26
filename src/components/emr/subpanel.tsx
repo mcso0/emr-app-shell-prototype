@@ -126,7 +126,7 @@ const emrDateNavigatorClassName =
 const emrDateNavigatorTriggerClassName =
   "emr-text-dense-label flex h-[var(--clair-control-height-md)] min-w-0 flex-1 items-center justify-center gap-[var(--clair-spacing-6)] rounded-[var(--clair-radius-md)] px-[var(--clair-spacing-10)] font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50";
 const emrDateNavigatorIconButtonClassName =
-  "rounded-[var(--clair-radius-md)] bg-transparent text-[var(--emr-text-tertiary)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
+  "h-10 w-8 p-0 rounded-[var(--clair-radius-md)] bg-transparent text-[var(--clair-color-atomic-neutral-600)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
 const emrDateNavigatorTodayBadgeClassName =
   "rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-6)] emr-text-metadata font-medium";
 const emrSubpanelHeaderIconButtonClassName =
@@ -301,7 +301,7 @@ export function EmrDateNavigator({
         disabled={!onPrevious}
         onClick={onPrevious}
       >
-        <CdsNavigationChevronLeftIcon />
+        <CdsNavigationChevronLeftIcon className="size-7" size={28} />
       </Button>
       {datePickerEnabled ? (
         <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -391,7 +391,7 @@ export function EmrDateNavigator({
         disabled={!onNext}
         onClick={onNext}
       >
-        <CdsNavigationChevronRightIcon />
+        <CdsNavigationChevronRightIcon className="size-7" size={28} />
       </Button>
     </div>
   );
