@@ -20,6 +20,7 @@ type EmrInstructionHeaderStackProps = {
   orderInfo: ReactNode;
   filters?: ReactNode;
   className?: string;
+  chartAligned?: boolean;
   resultDivider?: boolean;
 };
 
@@ -140,16 +141,17 @@ export function EmrInstructionHeaderStack({
   orderInfo,
   filters,
   className,
+  chartAligned = false,
   resultDivider = false,
 }: EmrInstructionHeaderStackProps) {
   return (
     <div data-slot="instruction-header-stack" className={cn("flex shrink-0 flex-col", className)}>
       <div data-slot="instruction-header-title-bar">{titleBar}</div>
-      <div data-slot="instruction-header-order-info" className="mt-3">
+      <div data-slot="instruction-header-order-info" className={cn(chartAligned ? "px-4" : "mt-3")}>
         {orderInfo}
       </div>
       {filters ? (
-        <div data-slot="instruction-header-filters" className="mt-3">
+        <div data-slot="instruction-header-filters" className={cn("mt-3", chartAligned && "px-4")}>
           {filters}
         </div>
       ) : null}

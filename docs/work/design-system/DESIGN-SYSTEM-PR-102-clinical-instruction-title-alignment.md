@@ -28,11 +28,15 @@ the chart title density shown in the user-approved local HTML comparison.
   or status action in all three screens. Render both menu actions disabled.
 - Keep 영상검사 PACS visible; retain existing 수행기록·이력 and status actions.
 - Verify wide and narrow title layouts and the disabled menu state.
+- Follow-up to the released title row: align the three content panes with the
+  chart's top edge and 16px horizontal inset, including the information card,
+  filters, result sections, and bottom breathing room.
 
 ## Out Of Scope
 
-- History side-panel content or interaction, patient context, order details,
-  filters, tables, API, persistence, auth, permissions, or real PDF/print output.
+- History side-panel content or interaction, patient context, information
+  fields, filter and table behavior, API, persistence, auth, permissions, or
+  real PDF/print output.
 - A new dependency or broad page-header redesign.
 
 ## Done Criteria
@@ -44,6 +48,9 @@ the chart title density shown in the user-approved local HTML comparison.
 - 영상검사 PACS and the existing workflow actions remain available.
 - Focused UI tests, lint, typecheck, build, docs, secret scan, and diff checks
   pass for the release candidate.
+- The title begins at the content pane's top edge; the first card begins at the
+  title's bottom edge. Cards, filters, and results share the 16px horizontal
+  inset at both the wide reference viewport and the compact viewport.
 
 ## Release Boundary
 
@@ -61,3 +68,10 @@ Release Check, smoke, and rollback gates.
   passed locally. The existing imaging assignment transition test fails at the
   same assertion on both this branch and the untouched `origin/main` baseline;
   it does not exercise the document title or output menu.
+- Content-spacing follow-up: measured the released chart and all three document
+  panes, then compared local mock screenshots at 2262×1254. The title starts at
+  the same pane edge and 48px height; information cards start 16px inside the
+  pane directly below it. The focused three-screen geometry and output-menu
+  checks pass at 1303×870, along with TypeScript, lint, build, docs, and diff
+  checks. The screenshots use synthetic mock data; no remote data or UI action
+  was changed by this follow-up.
