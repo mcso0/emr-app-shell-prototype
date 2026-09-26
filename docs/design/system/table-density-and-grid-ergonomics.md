@@ -23,6 +23,16 @@ Primary references:
 - MUI X Data Grid filtering: `https://mui.com/x/react-data-grid/filtering/`
 - AG Grid compactness: `https://www.ag-grid.com/javascript-data-grid/theming-compactness/`
 - AG Grid column menu: `https://www.ag-grid.com/javascript-data-grid/column-menu/`
+- AG Grid column resizing and custom headers:
+  `https://www.ag-grid.com/javascript-data-grid/column-sizing/` and
+  `https://www.ag-grid.com/javascript-data-grid/column-headers-components/`
+- MUI X column resizing and focus styling:
+  `https://mui.com/x/react-data-grid/column-dimensions/` and
+  `https://mui.com/x/react-data-grid/style-recipes/`
+- TanStack Table column resizing:
+  `https://tanstack.com/table/v8/docs/guide/column-sizing`
+- W3C WCAG focus visibility:
+  `https://www.w3.org/WAI/WCAG22/Understanding/focus-visible`
 - Ant Design Table: `https://ant.design/components/table/?locale=en`
 - TanStack Table overview/introduction: `https://tanstack.com/table/latest/docs/overview`
 
@@ -34,6 +44,7 @@ Research conclusions:
 - AG Grid treats compactness as a theme parameter and separates column menu behavior from grid data rendering.
 - Ant Design Table supports table `size`, horizontal/vertical scroll, fixed header, fixed columns, and sorter/filter patterns, which maps well to a contract-first table wrapper.
 - TanStack Table is headless, so CLAiR must own markup, density styling, scroll wrapper, and accessibility semantics when using it.
+- AG Grid documents an invisible pointer-resize widget and keyboard resizing from a focused column header. MUI X separates separator resizing from header focus styling and warns against removing visible keyboard focus. TanStack leaves the indicator presentation to the application and describes a small resize indicator as a common option. For CLAiR's persistent pinned divider, keep pointer feedback on the divider itself and move keyboard focus feedback into the header content.
 
 ## Density Model
 
@@ -183,9 +194,12 @@ the scrollable table region.
 
 - Keep the 1px pinned divider visible at every horizontal scroll position.
 - Center the 8px resize hit zone on the divider in the last left-pinned header.
-- Keep that hit zone active without a hover fill or internal grip indicator;
-  the persistent divider is the visible affordance. Preserve its resize cursor,
-  keyboard focus ring, and active-drag state.
+- Keep that hit zone active without hover fill, active-drag fill, an internal grip,
+  or a focus ring around the hit zone; the persistent divider is the pointer
+  affordance. Preserve its resize cursor and pointer/touch behavior.
+- Keep keyboard resizing available. When the resize button receives
+  `:focus-visible`, show the focus indicator on the header content, away from
+  the divider.
 - Keep non-boundary resize grip indicators and hover feedback visible.
 - Hide the left dimmer while the viewport is at its horizontal start. Show it
   only when the shared scroll-area root exposes `data-overflow-x-start`.

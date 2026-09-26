@@ -381,6 +381,17 @@ test("Plan/Order keeps the boundary line and fixed area above the scroll layer",
   })).resolves.toBeLessThan(0.1);
   await handle.hover();
   await expect(handle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await page.keyboard.press("Tab");
+  await handle.focus();
+  await expect(handle.evaluate((element) =>
+    element.matches(":focus-visible"),
+  )).resolves.toBe(true);
+  await expect(handle).toHaveCSS("outline-style", "none");
+  await expect(
+    table.locator(
+      'th[data-column-id="displayName"] [data-emr-table-content="true"]',
+    ),
+  ).toHaveCSS("outline-style", "solid");
 });
 
 test("Plan/Order scroll columns keep a working header resize handle", async ({ page }) => {
@@ -423,9 +434,16 @@ test("Plan/Order boundary drag resizes only Order name", async ({ page }) => {
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
+  await expect(handle).toHaveAttribute("data-resizing", "true");
+  await expect(handle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await page.mouse.move(box!.x + box!.width / 2 + 24, box!.y + box!.height / 2);
   await page.mouse.up();
   await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "204");
+  await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
+  await page.keyboard.press("Tab");
+  await handle.focus();
+  await handle.press("ArrowRight");
+  await expect(displayNameHeader).toHaveAttribute("data-emr-column-size", "212");
   await expect(statusHeader).toHaveAttribute("data-emr-column-size", "88");
 });
 
