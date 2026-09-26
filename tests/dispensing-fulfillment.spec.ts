@@ -624,7 +624,7 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     sourceSnapshot: {
       guardianName: "최보호",
       instruction: "식후 1일 2회",
-      orderDisplayName: "항생제 5일분",
+      inHospitalOrderName: "항생제 5일분",
       patientName: "루나",
       requestingVetName: "김민준",
     },
@@ -773,6 +773,7 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   const historyAside = page.locator("#dispensing-content-aside");
   await expect(historyAside).toContainText("조제/처치 이력");
   await expect(historyAside).toContainText("항생제 5일분");
+  await expect(historyAside).not.toContainText("오더명 없음");
   await expect(historyAside).toContainText("요청");
   await expect(historyAside).not.toContainText("조제 시작 확인");
   await expect(historyAside).not.toContainText("user-tech");

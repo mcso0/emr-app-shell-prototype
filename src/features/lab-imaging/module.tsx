@@ -95,6 +95,7 @@ import {
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
 import {
+  getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
   PatientHistoryAside,
   usePatientFulfillmentHistory,
@@ -406,6 +407,8 @@ type FulfillmentWorkItem = {
   requestCycle: number;
   rowRevision: number;
   sourceSnapshot?: {
+    billingName?: string;
+    displayName?: string;
     detail?: Record<string, unknown>;
     guardianName?: string;
     instruction?: string;
@@ -676,23 +679,7 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): QueueOrder {
     encounterId: workItem.encounterId,
     serviceItemId: workItem.sourceSnapshot?.serviceItemId,
     orderType: workItem.queueType,
-    displayName: getSnapshotString(
-      workItem.sourceSnapshot,
-      "orderDisplayName",
-      getSnapshotString(
-        workItem.sourceSnapshot,
-        "effectiveDisplayName",
-        getSnapshotString(
-          workItem.sourceSnapshot,
-          "inHospitalOrderName",
-          getSnapshotString(
-            workItem.sourceSnapshot,
-            "standardOrderName",
-            "검사명 정보 없음",
-          ),
-        ),
-      ),
-    ),
+    displayName: getFulfillmentOrderDisplayName(workItem.sourceSnapshot) ?? "검사명 정보 없음",
     status:
       workItem.status === "completed"
         ? "completed"
@@ -2959,7 +2946,7 @@ export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: She
         }))
     : history.workItems.map((item) => ({
         id: item.id,
-        title: item.sourceSnapshot.orderDisplayName,
+        title: getFulfillmentOrderDisplayName(item.sourceSnapshot) ?? "검사명 정보 없음",
         timestamp: item.createdAt,
         status: getPatientHistoryStatus(item.status),
         assignee: item.assignedToUserId
@@ -3936,9 +3923,10 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
     : history.workItems.map((item) => {
         const modality = item.sourceSnapshot.detail?.modality;
         const bodyPart = item.sourceSnapshot.detail?.bodyPart;
-        const title = typeof modality === "string" && typeof bodyPart === "string"
-          ? `${modality} · ${bodyPart}`
-          : item.sourceSnapshot.orderDisplayName;
+        const title = getFulfillmentOrderDisplayName(item.sourceSnapshot)
+          ?? (typeof modality === "string" && typeof bodyPart === "string"
+            ? `${modality} · ${bodyPart}`
+            : "검사명 정보 없음");
         return {
           id: item.id,
           title,
