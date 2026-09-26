@@ -2,6 +2,7 @@
 
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
+import styles from "./sonner.module.css"
 import {
   CircleCheckIcon,
   CircleCloseIcon,
@@ -16,7 +17,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
-      className="toaster group"
+      className={`toaster group ${styles.toaster}`}
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />
@@ -38,11 +39,17 @@ const Toaster = ({ ...props }: ToasterProps) => {
         {
           "--normal-bg": "var(--popover)",
           "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
+          "--normal-border": "var(--emr-border-strong)",
+          "--border-radius": "var(--clair-radius-lg)",
         } as React.CSSProperties
       }
       toastOptions={{
+        closeButton: true,
+        closeButtonAriaLabel: "토스트 닫기",
+        style: {
+          boxShadow: "var(--clair-shadow-xl)",
+          paddingRight: "44px",
+        },
         classNames: {
           toast: "cn-toast",
         },
