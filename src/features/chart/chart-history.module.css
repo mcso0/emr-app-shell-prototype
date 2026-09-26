@@ -6,6 +6,37 @@
   --emr-content-history-timeline-padding-right: 10px;
 }
 
+.inlineHistoryScrollArea :global([data-slot="scroll-area-scrollbar"]) {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .inlineHistoryScrollArea :global([data-slot="scroll-area-scrollbar"]) {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--clair-motion-duration-fast)
+      var(--clair-motion-easing-standard);
+  }
+
+  .inlineHistoryScrollArea:hover
+    :global([data-slot="scroll-area-scrollbar"]),
+  .inlineHistoryScrollArea:focus-within
+    :global([data-slot="scroll-area-scrollbar"]),
+  .inlineHistoryScrollArea
+    :global([data-slot="scroll-area-scrollbar"][data-hovering]),
+  .inlineHistoryScrollArea
+    :global([data-slot="scroll-area-scrollbar"][data-scrolling]) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inlineHistoryScrollArea :global([data-slot="scroll-area-scrollbar"]) {
+    transition: none;
+  }
+}
+
 .header {
   height: 48px;
   padding-inline: 4px;

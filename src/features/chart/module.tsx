@@ -2912,7 +2912,10 @@ function ChartInlineHistoryPanel({
       }
     >
       <ScrollArea
-        className="h-full bg-[var(--emr-surface-panel)]"
+        className={cn(
+          "h-full bg-[var(--emr-surface-panel)]",
+          historyStyles.inlineHistoryScrollArea,
+        )}
         data-testid="chart-inline-history-scroll-area"
         viewportClassName="scroll-fade-y scroll-fade-8"
       >
@@ -9124,7 +9127,14 @@ function ChartOrderTable({
       }}
       className="h-full overflow-hidden bg-[var(--emr-surface-panel)]"
     >
-      <div ref={quickAddSurfaceRef} className={cn("relative h-full min-h-0 min-w-0", orderScrollStyles.surface)}>
+      <div
+        ref={quickAddSurfaceRef}
+        className={cn(
+          "relative h-full min-h-0 min-w-0",
+          orderScrollStyles.surface,
+          orderScrollStyles.scrollbarRevealRoot,
+        )}
+      >
         <div className="flex h-full min-h-0">
         <EmrDataTable
           aria-label="처방/오더 테이블"

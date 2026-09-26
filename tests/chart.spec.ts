@@ -1565,6 +1565,8 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   await scrollContainer.evaluate((container) => {
     container.scrollLeft = 0;
   });
+  await page.locator("[data-slot='chart-order-table-surface']").hover();
+  await expect(horizontalScrollbar).toHaveCSS("opacity", "1");
   await horizontalScrollbar.click({
     position: {
       x: scrollbarBox!.width - 16,
