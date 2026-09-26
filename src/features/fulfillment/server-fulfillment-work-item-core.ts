@@ -220,6 +220,7 @@ export type FulfillmentWorkItemFilters = {
   date?: string | null;
   encounterId?: string | null;
   orderId?: string | null;
+  patientId?: string | null;
   queueType?: string | null;
   status?: string | null;
 };
@@ -518,6 +519,10 @@ export async function readFulfillmentWorkItems({
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
+  const workItems = normalized.patientId
+    ? result.workItems.filter((item) => item.patientId === normalized.patientId)
+    : result.workItems;
+
   return {
     ok: true,
     status: 200,
@@ -525,10 +530,10 @@ export async function readFulfillmentWorkItems({
     summary: getFulfillmentWorkItemReadSummary({
       filters: normalized,
       queueType,
-      workItems: result.workItems,
+      workItems,
       workspaceId,
     }),
-    workItems: result.workItems,
+    workItems,
   };
 }
 
@@ -1716,6 +1721,7 @@ function buildWorkItemFromOrder({
     id: `fulfill-${order.id}`,
     orderId: order.id,
     orderType: order.orderType,
+    patientId: encounter.patientId,
     priority: order.priority,
     queueType: order.orderType,
     reason: null,
@@ -2584,6 +2590,7 @@ function normalizeFilters(input: FulfillmentWorkItemFilters) {
     date: trimToUndefined(input.date),
     encounterId: trimToUndefined(input.encounterId),
     orderId: trimToUndefined(input.orderId),
+    patientId: trimToUndefined(input.patientId),
     queueType: trimToUndefined(input.queueType) as
       FulfillmentQueueType | undefined,
     status: trimToUndefined(input.status) as

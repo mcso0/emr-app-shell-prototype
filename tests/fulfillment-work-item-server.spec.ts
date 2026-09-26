@@ -700,6 +700,42 @@ test("fulfillment read filters work items by selected operating date", async () 
   });
 });
 
+test("patient history read returns only the requested patient's work items", async () => {
+  const gateway = createMockFulfillmentWorkItemGateway();
+  await syncFulfillmentWorkItemsFromOrders({
+    actorUserId: "user-vet",
+    gateway,
+    input: { encounterId, orderIds: [orderId] },
+    workspaceId,
+  });
+  const listed = await gateway.listWorkItems({ queueType: "dispensing", workspaceId });
+  expect(listed.ok).toBe(true);
+  if (!listed.ok) return;
+  const patientId = listed.workItems.find((item) => item.patientId)?.patientId;
+  expect(patientId).toBeTruthy();
+  if (!patientId) return;
+
+  const result = await readFulfillmentWorkItems({
+    actorUserId: "user-tech",
+    filters: { patientId, queueType: "dispensing" },
+    gateway,
+    workspaceId,
+  });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.workItems.length).toBeGreaterThan(0);
+  expect(result.workItems.every((item) => item.patientId === patientId)).toBe(true);
+  expect(result.summary.totalCount).toBe(result.workItems.length);
+
+  const absent = await readFulfillmentWorkItems({
+    actorUserId: "user-tech",
+    filters: { patientId: "another-patient", queueType: "dispensing" },
+    gateway,
+    workspaceId,
+  });
+  expect(absent).toMatchObject({ ok: true, workItems: [], summary: { totalCount: 0 } });
+});
+
 test("fulfillment read rejects invalid selected operating dates", async () => {
   const result = await readFulfillmentWorkItems({
     actorUserId: "user-tech",

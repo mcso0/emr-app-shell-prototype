@@ -39,14 +39,6 @@ import {
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
 import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
 import {
-  EmrContentAsideHeader,
-  EmrContentAsidePanel,
-} from "@/components/emr/content-aside-panel";
-import {
-  EmrContentHistoryGroup,
-  EmrContentHistoryItem,
-} from "@/components/emr/content-history-list";
-import {
   EmrDateNavigator,
   EmrListHeader,
   EmrListHeaderIconButton,
@@ -101,6 +93,12 @@ import {
   type FulfillmentTransitionOptions,
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
+import {
+  getPatientHistoryStatus,
+  PatientHistoryAside,
+  usePatientFulfillmentHistory,
+  type PatientHistoryEntry,
+} from "@/features/fulfillment/patient-history-aside";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
 import type {
   FulfillmentWorkItemAction,
@@ -253,15 +251,6 @@ const getActionableLabRows = (result: LabResult) =>
 type LabResultRow = LabResult["rows"][number];
 type LabJudgment = LabResultRow["judgment"];
 type LabAssignmentStatus = "requested" | "in_progress" | "completed";
-type LabHistoryGroup = {
-  count: number;
-  date: string;
-  items: Array<{
-    description: string;
-    title: string;
-  }>;
-};
-
 const currentLabAssignee = {
   id: "user-tech-hayun",
   name: getStaffName("user-tech-hayun") ?? "송하윤",
@@ -408,6 +397,7 @@ type FulfillmentWorkItem = {
   guardianName?: string | null;
   id: string;
   orderId: string;
+  patientId?: string | null;
   patientName?: string | null;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
@@ -597,7 +587,7 @@ function getLivePatientFromWorkItem(workItem: FulfillmentWorkItem): Patient {
   const now =
     workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
   return {
-    id: `live-patient-${workItem.id}`,
+    id: workItem.patientId ?? `live-patient-${workItem.id}`,
     patientNo: `LIVE-${workItem.id.slice(0, 8)}`,
     workspaceId: workItem.workspaceId,
     name:
@@ -1377,47 +1367,6 @@ const imagingStatusGroupColorToken: Record<ImagingStudyStatus, string> = {
   reviewed: "--emr-status-success-text",
 };
 
-const fallbackLabHistoryGroups = [
-  {
-    date: "26.04.11",
-    count: 2,
-    items: [
-      {
-        title: "[CBC] CBC 검사 세트",
-        description: "담당자명 · 담당자명 · 10:30 요청",
-      },
-      {
-        title: "[CHEM] 혈청화학 검사",
-        description: "ALT/BUN 결과 확인 · 10:42 완료",
-      },
-    ],
-  },
-  {
-    date: "26.03.12",
-    count: 2,
-    items: [
-      {
-        title: "[CBC] CBC 검사 세트",
-        description: "이전 결과 추적 · 10:30 요청",
-      },
-      {
-        title: "요검사",
-        description: "보호자 요청 검사 · 11:15 완료",
-      },
-    ],
-  },
-  {
-    date: "26.03.10",
-    count: 1,
-    items: [
-      {
-        title: "심장사상충 키트",
-        description: "예방 검사 · 09:40 완료",
-      },
-    ],
-  },
-];
-
 function getLabResultDocumentId(result: LabResult) {
   const suffix = result.id.replace("lab-result-", "").toUpperCase();
 
@@ -1470,28 +1419,6 @@ function getImagingDetailFromSearchParams(
           : null),
     queryImagingStudyId,
   };
-}
-
-function getLabHistoryGroups(detail: LabDetail): LabHistoryGroup[] {
-  const currentDate = formatShortDateTime(
-    detail.result.enteredAt ?? detail.result.receivedAt,
-  )
-    .slice(0, 8)
-    .trim();
-  const currentGroup = {
-    date: currentDate || "오늘",
-    count: 1,
-    items: [
-      {
-        title: `[CBC] ${detail.result.resultName}`,
-        description: `${detail.technicianName ?? "담당 미정"} · ${formatShortDateTime(
-          detail.result.receivedAt ?? detail.result.collectedAt,
-        )} 수신`,
-      },
-    ],
-  };
-
-  return [currentGroup, ...fallbackLabHistoryGroups];
 }
 
 const normalizeQueueSearchText = (value: string) =>
@@ -2987,70 +2914,69 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
   );
 }
 
-export function LabContentAside({ workspaceId }: ShellComponentProps) {
+export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const { detail } = useCurrentLabDetail(workspaceId);
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
   );
-  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
-    Set<string>
-  >(() => new Set());
-  const groups = detail ? getLabHistoryGroups(detail) : [];
-  const totalHistoryCount = groups.reduce(
-    (total, group) => total + group.count,
-    0,
-  );
-  const toggleHistoryGroup = (date: string) => {
-    setCollapsedHistoryGroups((current) => {
-      const next = new Set(current);
-
-      if (next.has(date)) {
-        next.delete(date);
-      } else {
-        next.add(date);
-      }
-
-      return next;
-    });
+  const selectedLabResultId = useLabImagingStore((state) => state.selectedLabResultId);
+  const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
+  const history = usePatientFulfillmentHistory(workspaceId, detail?.patient.id, ["lab"]);
+  const selectHistoryResult = (resultId: string, encounterId: string, timestamp: string) => {
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(buildWorkspaceSurfaceRoute({
+        moduleId: "lab",
+        params: { date: getOperatingDateFromIso(timestamp), encounterId, labResultId: resultId },
+        removeParams: ["imagingStudyId", "invoiceId", "workItemId"],
+        search: searchParams,
+        workspaceId,
+      }), "lab");
+    } else selectLabResult(resultId);
   };
 
   if (!detail) {
     return null;
   }
 
+  const legacyFixture = isLegacySalesDemoWorkspace(workspaceId);
+  const entries: PatientHistoryEntry[] = legacyFixture
+    ? getLabWorkItems()
+        .filter((item) => item.patient.id === detail.patient.id)
+        .map((item) => ({
+          id: item.result.id,
+          title: item.result.resultName,
+          timestamp: item.result.enteredAt ?? item.result.receivedAt ?? item.result.collectedAt ?? item.order?.requestedAt ?? item.encounter.createdAt,
+          status: getStatusLabel("labResult", item.result.status),
+          assignee: item.technicianName,
+          selected: item.result.id === selectedLabResultId,
+          onSelect: () => selectHistoryResult(
+            item.result.id,
+            item.encounter.id,
+            item.result.enteredAt ?? item.result.receivedAt ?? item.result.collectedAt ?? item.order?.requestedAt ?? item.encounter.createdAt,
+          ),
+        }))
+    : history.workItems.map((item) => ({
+        id: item.id,
+        title: item.sourceSnapshot.orderDisplayName,
+        timestamp: item.createdAt,
+        status: getPatientHistoryStatus(item.status),
+        assignee: item.assignedToUserId
+          ? history.assigneeNames[item.assignedToUserId] ?? getStaffName(item.assignedToUserId) ?? "확인 불가"
+          : undefined,
+        selected: `live-lab-${item.id}` === selectedLabResultId,
+        onSelect: () => selectHistoryResult(`live-lab-${item.id}`, item.encounterId, item.createdAt),
+      }));
+
   return (
-    <EmrContentAsidePanel id="lab-content-aside">
-      <EmrContentAsideHeader
-        count={totalHistoryCount}
-        label="임상병리검사 이력"
-        collapseAriaLabel="임상병리검사 이력 목록 접기"
-        onCollapse={() => setContentAsideOpen(false)}
-        actions={<QueueActions />}
-      />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-1">
-          {groups.map((group) => (
-            <EmrContentHistoryGroup
-              key={group.date}
-              collapsed={collapsedHistoryGroups.has(group.date)}
-              count={group.count}
-              dataTestId={`lab-history-group-${group.date}`}
-              label={group.date}
-              onToggle={() => toggleHistoryGroup(group.date)}
-            >
-              {group.items.map((item) => (
-                <EmrContentHistoryItem
-                  key={`${group.date}-${item.title}`}
-                  title={item.title}
-                  subtitle={item.description}
-                />
-              ))}
-            </EmrContentHistoryGroup>
-          ))}
-        </div>
-      </ScrollArea>
-    </EmrContentAsidePanel>
+    <PatientHistoryAside
+      id="lab-content-aside"
+      label="임상병리검사 이력"
+      actions={<QueueActions />}
+      entries={entries}
+      status={legacyFixture ? "ready" : history.status}
+      onCollapse={() => setContentAsideOpen(false)}
+    />
   );
 }
 
@@ -3608,7 +3534,7 @@ export function LabContent({
                 size="default"
                 variant="outline"
                 roundness="round"
-                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                className="border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
@@ -3677,7 +3603,7 @@ export function LabContent({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="relative bg-card data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
+                  className="relative bg-card data-[state=on]:border-[var(--emr-border-default)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
                   aria-controls="lab-receipt-panel"
                   aria-expanded={rightPanelOpen}
                   aria-pressed={rightPanelOpen}
@@ -3972,40 +3898,8 @@ export function ImagingHeader({
   );
 }
 
-type ImagingHistoryGroup = {
-  count: number;
-  date: string;
-  items: ImagingWorkItem[];
-};
-
-function getImagingHistoryGroups(
-  detail: ImagingDetail,
-  allItems: ImagingWorkItem[],
-): ImagingHistoryGroup[] {
-  const patientItems = allItems.filter(
-    (item) => item.patient.id === detail.patient.id,
-  );
-  const groupsByDate = new Map<string, ImagingWorkItem[]>();
-
-  patientItems.forEach((item) => {
-    const date =
-      formatShortDateTime(item.study.capturedAt ?? item.study.requestedAt)
-        .slice(0, 8)
-        .trim() || "오늘";
-    const groupItems = groupsByDate.get(date) ?? [];
-
-    groupItems.push(item);
-    groupsByDate.set(date, groupItems);
-  });
-
-  return Array.from(groupsByDate.entries()).map(([date, items]) => ({
-    count: items.length,
-    date,
-    items,
-  }));
-}
-
-export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
+export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }: ShellComponentProps) {
+  const searchParams = useSearchParams();
   const { detail } = useCurrentImagingDetail(workspaceId);
   const selectedImagingStudyId = useLabImagingStore(
     (state) => state.selectedImagingStudyId,
@@ -4016,80 +3910,63 @@ export function ImagingContentAside({ workspaceId }: ShellComponentProps) {
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
   );
-  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
-    Set<string>
-  >(() => new Set());
-  const allItems = useMemo(
-    () =>
-      isLegacySalesDemoWorkspace(workspaceId) ? getImagingWorkItems() : [],
-    [workspaceId],
-  );
-  const groups = detail ? getImagingHistoryGroups(detail, allItems) : [];
-  const totalHistoryCount = groups.reduce(
-    (total, group) => total + group.count,
-    0,
-  );
-  const toggleHistoryGroup = (date: string) => {
-    setCollapsedHistoryGroups((current) => {
-      const next = new Set(current);
-
-      if (next.has(date)) {
-        next.delete(date);
-      } else {
-        next.add(date);
-      }
-
-      return next;
-    });
+  const history = usePatientFulfillmentHistory(workspaceId, detail?.patient.id, ["imaging"]);
+  const selectHistoryStudy = (studyId: string, encounterId: string, timestamp: string) => {
+    if (onNavigateWorkspaceSurface) {
+      onNavigateWorkspaceSurface(buildWorkspaceSurfaceRoute({
+        moduleId: "imaging",
+        params: { date: getOperatingDateFromIso(timestamp), encounterId, imagingStudyId: studyId },
+        removeParams: ["invoiceId", "labResultId", "workItemId"],
+        search: searchParams,
+        workspaceId,
+      }), "imaging");
+    } else selectImagingStudy(studyId);
   };
 
   if (!detail) {
     return null;
   }
 
-  return (
-    <EmrContentAsidePanel id="imaging-content-aside">
-      <EmrContentAsideHeader
-        count={totalHistoryCount}
-        label="영상검사 이력"
-        collapseAriaLabel="영상검사 이력 목록 접기"
-        onCollapse={() => setContentAsideOpen(false)}
-        actions={<QueueActions />}
-      />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-1">
-          {groups.map((group) => (
-            <EmrContentHistoryGroup
-              key={group.date}
-              count={group.count}
-              dataTestId={`imaging-history-group-${group.date}`}
-              label={group.date}
-              collapsed={collapsedHistoryGroups.has(group.date)}
-              onToggle={() => toggleHistoryGroup(group.date)}
-            >
-              {group.items.map((item) => (
-                <EmrContentHistoryItem
-                  key={item.study.id}
-                  selected={item.study.id === selectedImagingStudyId}
-                  testId={`imaging-history-item-${item.study.id}`}
-                  title={`${item.study.modality} · ${item.study.bodyPart}`}
-                  subtitle={
-                    item.order?.displayName ??
-                    getStatusLabel("imagingStudy", item.study.status)
-                  }
-                  meta={`${item.radiologistName ?? "판독 미지정"} · ${formatShortDateTime(
-                    item.study.capturedAt ?? item.study.requestedAt,
-                  )}`}
-                  onSelect={() => selectImagingStudy(item.study.id)}
-                />
-              ))}
-            </EmrContentHistoryGroup>
-          ))}
-        </div>
-      </ScrollArea>
-    </EmrContentAsidePanel>
-  );
+  const legacyFixture = isLegacySalesDemoWorkspace(workspaceId);
+  const entries: PatientHistoryEntry[] = legacyFixture
+    ? getImagingWorkItems()
+        .filter((item) => item.patient.id === detail.patient.id)
+        .map((item) => ({
+          id: item.study.id,
+          title: `${item.study.modality} · ${item.study.bodyPart}`,
+          timestamp: item.study.capturedAt ?? item.study.requestedAt,
+          status: getStatusLabel("imagingStudy", item.study.status),
+          assignee: item.radiologistName,
+          selected: item.study.id === selectedImagingStudyId,
+          onSelect: () => selectHistoryStudy(item.study.id, item.encounter.id, item.study.capturedAt ?? item.study.requestedAt),
+        }))
+    : history.workItems.map((item) => {
+        const modality = item.sourceSnapshot.detail?.modality;
+        const bodyPart = item.sourceSnapshot.detail?.bodyPart;
+        const title = typeof modality === "string" && typeof bodyPart === "string"
+          ? `${modality} · ${bodyPart}`
+          : item.sourceSnapshot.orderDisplayName;
+        return {
+          id: item.id,
+          title,
+          timestamp: item.createdAt,
+          status: getPatientHistoryStatus(item.status),
+          assignee: item.assignedToUserId
+            ? history.assigneeNames[item.assignedToUserId] ?? getStaffName(item.assignedToUserId) ?? "확인 불가"
+            : undefined,
+          selected: `live-imaging-${item.id}` === selectedImagingStudyId,
+          onSelect: () => selectHistoryStudy(`live-imaging-${item.id}`, item.encounterId, item.createdAt),
+        };
+      });
+
+  return <PatientHistoryAside
+    id="imaging-content-aside"
+    label="영상검사 이력"
+    actions={<QueueActions />}
+    entries={entries}
+    status={legacyFixture ? "ready" : history.status}
+    onCollapse={() => setContentAsideOpen(false)}
+  />;
 }
 
 function getImagingDocumentId(study: ImagingStudy) {
@@ -4482,7 +4359,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                 size="default"
                 variant="outline"
                 roundness="round"
-                className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                className="border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"
                 disabled={fulfillmentQueue.status === "loading"}
                 onClick={() => void fulfillmentQueue.refresh()}
               >
