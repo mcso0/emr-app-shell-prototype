@@ -1,9 +1,9 @@
 ---
 id: "DESIGN-SYSTEM-PR-100"
-status: "active"
+status: "human_review"
 area: "design-system"
 priority: "P1"
-target_pr: "User-approved mockup / pinned boundary resize grip alignment"
+target_pr: "GitHub PR #825 / user-approved mockup"
 created: "2026-09-26"
 source_docs:
   - "docs/design/system/table-density-and-grid-ergonomics.md"
@@ -71,3 +71,5 @@ look like a separate grab mark beside the divider.
   isolated rerun timed out at the same wait.
 - Secret scan, docs links, UX-copy check, lint, TypeScript, production build,
   and `git diff --check` passed.
+- PR #825 Preview deployment `dpl_HbXeWHMCW8dHXfiG9bjVKT8HoiWc` reached Ready.
+- GitHub Release Check run `36223886472` passed for the reviewed PR candidate.
