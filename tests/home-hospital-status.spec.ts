@@ -47,6 +47,21 @@ test("hospital board uses one status column per task and list keeps the same per
 
 test("hospital completion, cancellation, and sort remain shared across board and list", async ({ page }) => {
   await openHome(page);
+  const assertSortControlNextToFilter = async () => {
+    const filter = page.getByRole("button", { name: "업무 필터 설정" });
+    const sort = page.getByRole("button", { name: "정렬" });
+    await expect(sort).toHaveCSS("width", "32px");
+    await expect(sort).toHaveCSS("height", "32px");
+    await expect(sort.locator("svg")).toHaveCSS("width", "16px");
+    await expect(sort).toHaveText("");
+    await expect(sort).toHaveAttribute("title", "정렬");
+    const filterBox = (await filter.boundingBox())!;
+    const sortBox = (await sort.boundingBox())!;
+    const gap = sortBox.x - filterBox.x - filterBox.width;
+    expect(gap).toBeGreaterThan(0);
+    expect(gap).toBeLessThanOrEqual(12);
+  };
+  await assertSortControlNextToFilter();
   await page.getByRole("button", { name: "완료 포함" }).click();
   await expect(page.getByTestId("home-kanban-task-lab:done")).toBeVisible();
   await page.getByRole("button", { name: "업무 필터 설정" }).click();
@@ -62,8 +77,9 @@ test("hospital completion, cancellation, and sort remain shared across board and
   await page.getByRole("button", { name: "리스트", exact: true }).click();
   const firstRow = page.getByTestId("home-hospital-table").getByRole("row").nth(1);
   await expect(firstRow).toContainText("취소 검사");
+  await assertSortControlNextToFilter();
   await page.getByRole("button", { name: "칸반", exact: true }).click();
-  await expect(page.getByRole("button", { name: "정렬" })).toContainText("최근 요청순");
+  await assertSortControlNextToFilter();
 });
 
 test("included terminal columns distinguish an empty result from a disabled inclusion", async ({ page }) => {
