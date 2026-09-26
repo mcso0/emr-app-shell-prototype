@@ -228,6 +228,14 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
                 onClose={() => { setFilterOpen(false); setFilterReady(false); setFilterAutoOpenConsumed(false); }} />
             </PopoverContent>
           </Popover>
+          {view === "hospital" && <DropdownMenu>
+            <DropdownMenuTrigger render={
+              <Button variant="outline" size="icon" aria-label="정렬" title="정렬" className={styles.sortButton}>
+                <ArrowDownUpIcon aria-hidden="true" className="size-4" />
+              </Button>
+            } />
+            <DropdownMenuContent align="end"><DropdownMenuRadioGroup value={hospitalSort} onValueChange={(sort) => setHospitalSort(sort as HospitalSort)}>{([ ["priority", "업무 우선순"], ["oldest", "오래된 요청순"], ["newest", "최근 요청순"] ] as const).map(([sort, label]) => <DropdownMenuRadioItem key={sort} value={sort}>{label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent>
+          </DropdownMenu>}
           {view === "hospital" && <Button variant="outline" size="default" className={styles.todayButton} disabled={query.date === today} onClick={() => updateQuery("hospital", { date: today, owners: null })}>오늘</Button>}
           <EmrFilterToggle
             pressed={query.includeCompleted}
@@ -236,9 +244,6 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             완료 포함
           </EmrFilterToggle>
           {view === "hospital" && <>
-            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" aria-label="정렬" className={styles.sortButton}><ArrowDownUpIcon aria-hidden="true" className="size-4" /><span>{hospitalSort === "priority" ? "업무 우선순" : hospitalSort === "oldest" ? "오래된 요청순" : "최근 요청순"}</span></Button>} />
-              <DropdownMenuContent align="end"><DropdownMenuRadioGroup value={hospitalSort} onValueChange={(sort) => setHospitalSort(sort as HospitalSort)}>{([ ["priority", "업무 우선순"], ["oldest", "오래된 요청순"], ["newest", "최근 요청순"] ] as const).map(([sort, label]) => <DropdownMenuRadioItem key={sort} value={sort}>{label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent>
-            </DropdownMenu>
             <HomeMultiSelect label="담당자" menuVariant="reception" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
           </>}
