@@ -163,6 +163,9 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toHaveValue("27");
   await expect(page.getByRole("columnheader", { name: "정상범위" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "담당자" })).toBeVisible();
+  await expect(page.getByRole("table", { name: "임상병리 검사 결과 입력" }).getByRole("columnheader")).toHaveCount(6);
+  await expect(page.getByRole("button", { name: "수정이력" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "차트에 복사하기" })).toBeDisabled();
   await expect(page.getByText("■ 혈구 검사")).toHaveCount(0);
   await expect(page.getByRole("row", { name: /WBC 18\.2 K\/uL .*정상 송하윤/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "검사 중", exact: true })).toBeVisible();
@@ -412,6 +415,8 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
   await page.getByLabel("WBC 결과값", { exact: true }).fill(String(rule.referenceInterval.low));
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row").getByText("정상", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("lab-result-row-frozen-wbc-row").getByRole("textbox")).toHaveCount(1);
+  await page.getByRole("button", { name: "WBC 추가 결과 정보" }).click();
   await page.getByLabel("WBC 부등호").selectOption("less_than");
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
   await page.getByTestId("lab-result-save-button").click();
@@ -420,7 +425,11 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
     rows: [{ rowId: "frozen-wbc-row", qualifier: "less_than", deviceFlag: null, resultState: "value" }] });
   await page.reload();
   await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(String(rule.referenceInterval.low));
+  await page.getByRole("button", { name: "WBC 추가 결과 정보" }).click();
   await expect(page.getByLabel("WBC 부등호")).toHaveValue("less_than");
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("WBC 부등호")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "WBC 추가 결과 정보" })).toBeFocused();
   expect(catalogRequests).toBe(0);
   await page.getByRole("button", { name: "WBC만 재검 요청" }).click();
   const retest = page.getByTestId("lab-atomic-retest-dialog");

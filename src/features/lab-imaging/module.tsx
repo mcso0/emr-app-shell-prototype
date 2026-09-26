@@ -17,6 +17,7 @@ import {
 import {
   CdsFilesFileIcon,
   CdsFilesImageIcon,
+  CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationChevronsRightIcon } from "@/components/cds-icons/navigation";
 import {
@@ -71,9 +72,11 @@ import {
 } from "@/components/emr/task-queue-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
@@ -2233,8 +2236,11 @@ function LabResultInputSection({
               setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
               setRowValueState({ resultId: "", values: {} }); setMetadataState({ resultId: "", rows: {} }); onCatalogRetry();
             }}>입력 초기화·재조회</Button> : null}
-          <Button variant="outline" size="xs" className="bg-card">
-            판정적용
+          <Button variant="outline" size="xs" disabled title="후속 단계에서 제공">
+            수정이력
+          </Button>
+          <Button variant="outline" size="xs" disabled title="후속 단계에서 제공">
+            차트에 복사하기
           </Button>
           <Button
             size="xs"
@@ -2340,6 +2346,118 @@ function LabResultInputSection({
   );
 }
 
+function LabResultValueControl({
+  row,
+  onValueChange,
+  onMetadataChange,
+}: {
+  row: LabResultRow;
+  onValueChange: (rowId: string, value: string) => void;
+  onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
+}) {
+  const rule = row.interpretationRule;
+  const noResult = row.resultPresence === "instrument_no_result";
+  const label = `${row.analyteName} 결과값`;
+
+  return (
+    <div className="flex w-full min-w-0 items-center gap-1.5">
+      {rule?.resultValueKind === "coded" ? (
+        <select
+          aria-label={label}
+          className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 emr-text-dense"
+          disabled={noResult}
+          value={row.value ?? ""}
+          onChange={(event) => onValueChange(row.id, event.target.value)}
+        >
+          <option value="">{noResult ? "측정 불가" : "선택 안 함"}</option>
+          {rule.codes.map((code) => (
+            <option key={code.code} value={code.code}>{code.label}</option>
+          ))}
+        </select>
+      ) : (
+        <Input
+          aria-label={label}
+          className="h-7 min-w-0 flex-1 emr-text-dense"
+          data-testid={`lab-result-input-${row.id}`}
+          disabled={noResult}
+          inputMode={rule?.resultValueKind === "numeric" || row.resultInputType === "number" ? "decimal" : undefined}
+          placeholder={noResult ? "측정 불가" : "검사 결과값 입력"}
+          value={row.value ?? ""}
+          onChange={(event) => onValueChange(row.id, event.target.value)}
+        />
+      )}
+      {!noResult && row.qualifier && row.qualifier !== "exact" ? (
+        <span className="emr-text-metadata shrink-0 text-muted-foreground">
+          {row.qualifier === "less_than" ? "미만" : "초과"}
+        </span>
+      ) : null}
+      {rule ? (
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`${row.analyteName} 추가 결과 정보`}
+              />
+            }
+          >
+            <CdsFilesMoreHorizontalIcon className="size-4" aria-hidden="true" />
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64">
+            <PopoverTitle className="emr-text-dense">{row.analyteName} 추가 결과 정보</PopoverTitle>
+            <label className="flex flex-col gap-1 emr-text-metadata text-muted-foreground">
+              결과 상태
+              <select
+                aria-label={`${row.analyteName} 결과 상태`}
+                className="h-8 rounded-md border border-input bg-background px-2 text-foreground"
+                value={row.resultPresence ?? "value"}
+                onChange={(event) => {
+                  const presence = event.target.value as "value" | "instrument_no_result";
+                  if (presence === "instrument_no_result") onValueChange(row.id, "");
+                  onMetadataChange(row.id, { resultPresence: presence, qualifier: "exact", deviceFlag: undefined });
+                }}
+              >
+                <option value="value">결과 입력</option>
+                <option value="instrument_no_result">측정 불가</option>
+              </select>
+            </label>
+            {rule.resultValueKind === "numeric" && !noResult ? (
+              <>
+                <label className="flex flex-col gap-1 emr-text-metadata text-muted-foreground">
+                  부등호
+                  <select
+                    aria-label={`${row.analyteName} 부등호`}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-foreground"
+                    value={row.qualifier ?? "exact"}
+                    onChange={(event) => onMetadataChange(row.id, { qualifier: event.target.value as LabResultRow["qualifier"] })}
+                  >
+                    <option value="exact">정확한 값</option>
+                    <option value="less_than">미만 (&lt;)</option>
+                    <option value="greater_than">초과 (&gt;)</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 emr-text-metadata text-muted-foreground">
+                  장비 경고
+                  <Input
+                    aria-label={`${row.analyteName} 장비 경고`}
+                    className="h-8"
+                    maxLength={200}
+                    placeholder="장비 경고(있는 경우)"
+                    value={row.deviceFlag ?? ""}
+                    onChange={(event) => onMetadataChange(row.id, { deviceFlag: event.target.value || undefined })}
+                  />
+                </label>
+              </>
+            ) : null}
+          </PopoverContent>
+        </Popover>
+      ) : null}
+    </div>
+  );
+}
+
 function LabResultDataTable({
   assigneeName,
   density,
@@ -2364,7 +2482,7 @@ function LabResultDataTable({
       {
         id: "analyteName",
         accessorKey: "analyteName",
-        size: 260,
+        size: 280,
         minSize: 180,
         enableSorting: false,
         enableResizing: false,
@@ -2374,11 +2492,18 @@ function LabResultDataTable({
           resize: "none",
           textMode: "two-line-if-long",
         },
-        cell: ({ row }) => (
-          <div className="min-w-0 whitespace-normal font-medium leading-5">
-            {row.original.analyteName}
-          </div>
-        ),
+        cell: ({ row }) => {
+          const savedRow = persistedResult.rows.find((saved) => saved.id === row.original.id);
+          return (
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
+              {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
+              (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
+                <AtomicLabRetestAction result={persistedResult} row={savedRow} />
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         id: "value",
@@ -2390,51 +2515,18 @@ function LabResultDataTable({
         header: "결과값",
         meta: { label: "결과값", resize: "none" },
         cell: ({ row }) => (
-          <div className="flex flex-col gap-1 py-1">
-          {row.original.interpretationRule?.resultValueKind === "coded" ? <select
-            className="h-8 rounded-md border bg-background px-2 text-sm"
-            aria-label={row.original.analyteName + " 결과값"} value={row.original.value ?? ""}
-            disabled={row.original.resultPresence === "instrument_no_result"}
-            onChange={event => onValueChange(row.original.id, event.target.value)}>
-            <option value="">선택 안 함</option>
-            {row.original.interpretationRule.codes.map(code => <option key={code.code} value={code.code}>{code.label}</option>)}
-          </select> : <Input
-            aria-label={row.original.analyteName + " 결과값"}
-            className="h-8 w-24"
-            data-testid={"lab-result-input-" + row.original.id}
-            value={row.original.value}
-            disabled={row.original.resultPresence === "instrument_no_result"}
-            onChange={(event) =>
-              onValueChange(row.original.id, event.target.value)
-            }
-          />}
-          {row.original.interpretationRule ? <>
-            <select aria-label={row.original.analyteName + " 결과 상태"} className="h-8 rounded-md border bg-background px-2 text-sm"
-              value={row.original.resultPresence ?? "value"} onChange={event => {
-                const presence = event.target.value as "value" | "instrument_no_result";
-                if (presence === "instrument_no_result") onValueChange(row.original.id, "");
-                onMetadataChange(row.original.id, { resultPresence: presence, qualifier: "exact", deviceFlag: undefined });
-              }}>
-              <option value="value">결과 입력</option><option value="instrument_no_result">측정 불가</option>
-            </select>
-            {row.original.interpretationRule.resultValueKind === "numeric" && row.original.resultPresence !== "instrument_no_result" ? <>
-              <select aria-label={row.original.analyteName + " 부등호"} className="h-8 rounded-md border bg-background px-2 text-sm"
-                value={row.original.qualifier ?? "exact"} onChange={event => onMetadataChange(row.original.id, { qualifier: event.target.value as LabResultRow["qualifier"] })}>
-                <option value="exact">정확한 값</option><option value="less_than">미만 (&lt;)</option><option value="greater_than">초과 (&gt;)</option>
-              </select>
-              <Input aria-label={row.original.analyteName + " 장비 경고"} className="h-8" placeholder="장비 경고(있는 경우)"
-                value={row.original.deviceFlag ?? ""} maxLength={200}
-                onChange={event => onMetadataChange(row.original.id, { deviceFlag: event.target.value || undefined })} />
-            </> : null}
-          </> : null}
-          </div>
+          <LabResultValueControl
+            row={row.original}
+            onValueChange={onValueChange}
+            onMetadataChange={onMetadataChange}
+          />
         ),
       },
       {
         id: "unit",
         accessorKey: "unit",
-        size: 80,
-        minSize: 72,
+        size: 120,
+        minSize: 80,
         enableSorting: false,
         enableResizing: false,
         header: "단위",
@@ -2444,12 +2536,13 @@ function LabResultDataTable({
       {
         id: "referenceRange",
         accessorKey: "referenceRange",
-        size: 260,
+        size: 278,
         minSize: 220,
         enableSorting: false,
         enableResizing: false,
         header: "정상범위",
         meta: {
+          align: "center",
           grow: true,
           label: "정상범위",
           resize: "none",
@@ -2459,7 +2552,7 @@ function LabResultDataTable({
       {
         id: "judgment",
         accessorKey: "judgment",
-        size: 110,
+        size: 120,
         minSize: 100,
         enableSorting: false,
         enableResizing: false,
@@ -2479,29 +2572,18 @@ function LabResultDataTable({
       {
         id: "assignee",
         accessorFn: () => assigneeName,
-        size: 120,
+        size: 160,
         minSize: 100,
         enableSorting: false,
         enableResizing: false,
         header: "담당자",
         meta: { label: "담당자", resize: "none" },
         cell: () => (
-          <span
-            aria-live="polite"
-            className="block min-w-0 truncate emr-text-dense text-foreground"
-          >
-            {assigneeName}
-          </span>
+          <Avatar size="sm" title={assigneeName} aria-label={assigneeName}>
+            <AvatarFallback>{assigneeName.slice(0, 2)}</AvatarFallback>
+          </Avatar>
         ),
       },
-      ...(persistedResult.resultDefinitionOrigin === "canonical" ? [{
-        id: "retest", header: "재검", size: 100, enableSorting: false,
-        cell: ({ row }: { row: { original: LabResultRow } }) => {
-          const savedRow = persistedResult.rows.find(saved => saved.id === row.original.id);
-          return savedRow && (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result")
-            ? <AtomicLabRetestAction result={persistedResult} row={savedRow} /> : null;
-        },
-      }] : []),
     ],
     [assigneeName, onValueChange, onMetadataChange, persistedResult],
   );
