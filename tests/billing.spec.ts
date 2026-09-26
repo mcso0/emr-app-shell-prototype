@@ -421,6 +421,24 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
+test("billing context opens the selected guardian and patient profiles", async ({ page }) => {
+  await page.goto("/w/clair-demo/billing?modulePanel=open&right=closed&aside=closed");
+  await page.getByTestId("billing-queue-item-invoice-coco-260501").click();
+  const contextBar = page.locator('[aria-label="보호자 수납 컨텍스트 정보"]');
+  const guardianButton = contextBar.getByRole("button", { name: "이지은 보호자 프로필 열기" });
+  await expect(guardianButton).toBeVisible();
+  await guardianButton.hover();
+  await expect(page.locator("[data-slot='chart-guardian-profile-preview']")).toBeVisible();
+  await guardianButton.click();
+  await expect(page.getByTestId("profile-side-panel")).toHaveAttribute("data-profile-kind", "guardian");
+  await page.keyboard.press("Escape");
+
+  const patientButton = contextBar.getByRole("button", { name: "코코 환자 프로필 열기" });
+  await expect(patientButton).toBeVisible();
+  await patientButton.click();
+  await expect(page.getByTestId("profile-side-panel")).toHaveAttribute("data-profile-kind", "patient");
+});
+
 test("billing side panel switches between waiting and closed queues", async ({
   page,
 }) => {

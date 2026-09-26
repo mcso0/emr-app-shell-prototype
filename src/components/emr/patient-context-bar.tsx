@@ -222,7 +222,7 @@ export function EmrPatientContextBar({
           >
             <PatientContextInfoSection
               dataSlot="patient-context-patient"
-              hoverAction={<CdsNavigationChevronRightIcon />}
+              hoverAction={patientInteraction ? <CdsNavigationChevronRightIcon /> : undefined}
               iconSrc={getAssetSrc(animalDogIcon)}
               interaction={patientInteraction}
             >
@@ -235,7 +235,7 @@ export function EmrPatientContextBar({
                 <PatientContextInfoSection
                   dataSlot="patient-context-guardian"
                   hoverAction={
-                    guardianIndicatorVisible ? (
+                    guardianIndicatorVisible && guardianInteraction ? (
                       <CdsNavigationChevronRightIcon />
                     ) : undefined
                   }
@@ -252,7 +252,7 @@ export function EmrPatientContextBar({
                 <PatientContextDivider />
                 <PatientContextInfoSection
                   dataSlot="patient-context-vitals"
-                  hoverAction={<CdsActionsPlusIcon />}
+                  hoverAction={vitalAction ? <CdsActionsPlusIcon /> : undefined}
                   iconSrc={getAssetSrc(vitalHeartPulseIcon)}
                   vitalAction={vitalAction}
                 >

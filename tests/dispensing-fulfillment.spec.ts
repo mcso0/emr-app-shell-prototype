@@ -1313,3 +1313,61 @@ test("dispensing treatment workspace keeps local state unchanged when fulfillmen
     page.getByRole("button", { name: "담당하기" }).first(),
   ).toBeVisible();
 });
+
+test("dispensing context opens the selected live profile and vital editor", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const patientId = "97090000-0000-4000-8000-000000000011";
+  const guardianId = "97090000-0000-4000-8000-000000000012";
+  const encounterId = "97090000-0000-4000-8000-000000000013";
+  const workItemId = "97090000-0000-4000-8000-000000000014";
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async (route) => {
+    const queueType = new URL(route.request().url()).searchParams.get("queueType");
+    await route.fulfill({ json: { ok: true, workItems: queueType === "dispensing" ? [{
+      id: workItemId, workspaceId, patientId, encounterId, orderId: workItemId,
+      queueType: "dispensing", requestCycle: 1, rowRevision: 1, status: "in_progress",
+      createdAt: "2026-09-07T01:30:00.000Z", updatedAt: "2026-09-07T01:30:00.000Z",
+      sourceSnapshot: { patientName: "루나", guardianName: "최보호", orderDisplayName: "항생제 5일분", requestingVetName: "김민준" },
+    }] : [] } });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, async (route) => {
+    await route.fulfill({ json: { ok: true, overview: {
+      subjectId: patientId, subjectType: "patient",
+      profile: { id: patientId, name: "루나", patientNo: "P-LUNA", status: "active" },
+      relationships: { guardians: [{ id: guardianId, name: "최보호", isPrimary: true }] },
+      access: { information: { allowed: true, requiredPermission: "patient:view" } },
+    } } });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/latest?*`, async (route) => {
+    await route.fulfill({ json: { ok: true, status: 200, canWriteVitals: true, vital: null } });
+  });
+  const writes: Array<Record<string, unknown>> = [];
+  await page.route(`**/api/workspaces/${workspaceId}/chart/encounter-vitals`, async (route) => {
+    const body = route.request().postDataJSON() as { encounterId: string; vitals: Record<string, unknown> };
+    writes.push(body.vitals);
+    await route.fulfill({ json: { ok: true, vital: {
+      id: "97090000-0000-4000-8000-000000000015",
+      patientId, encounterId: body.encounterId,
+      measuredAt: "2026-09-07T10:00:00+09:00",
+      ...Object.fromEntries(Object.entries(body.vitals).filter(([, value]) => value !== null)),
+    } } });
+  });
+
+  await page.goto(`/w/${workspaceId}/dispensing?date=2026-09-07&modulePanel=open&aside=closed&right=closed`);
+  await page.getByTestId(`order-queue-item-live-fulfillment-${workItemId}`).click();
+  await expect(page.getByRole("button", { name: "루나 환자 프로필 열기" })).toBeVisible();
+  await page.getByRole("button", { name: "루나 환자 프로필 열기" }).click();
+  await expect(page.getByTestId("profile-side-panel")).toHaveAttribute("data-profile-kind", "patient");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "최보호 보호자 프로필 열기" })).toBeVisible();
+  await page.locator("[data-slot='patient-context-vitals']").hover();
+  await page.getByRole("button", { name: "오늘 바이탈 입력" }).click();
+  const dialog = page.getByRole("dialog", { name: "오늘 바이탈 입력" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel("체중").fill("4.2");
+  await dialog.getByRole("button", { name: "저장" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator("[data-slot='patient-context-vitals']")).toContainText("4.20 kg");
+  expect(writes).toHaveLength(1);
+  expect(writes[0]?.weightKg).toBe(4.2);
+});

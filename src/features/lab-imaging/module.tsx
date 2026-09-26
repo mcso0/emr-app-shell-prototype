@@ -112,6 +112,8 @@ import { usePersistedLabResult } from "./use-persisted-lab-result";
 import { AtomicLabRetestAction } from "./components/atomic-retest-dialog";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
+import { useContextVitalEditor } from "@/features/patient-vitals/use-context-vital-editor";
+import { usePatientContextProfileInteractions } from "@/features/customer/use-patient-context-profile-interactions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getChartEncounter } from "@/features/chart/data";
 import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-handoff";
@@ -2822,6 +2824,12 @@ export function LabSlotAvailabilityProvider({
 
 export function LabHeader({ workspaceId }: ShellComponentProps) {
   const { detail } = useCurrentLabDetail(workspaceId);
+  const profileInteractions = usePatientContextProfileInteractions({
+    allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
+    guardian: detail?.primaryGuardian,
+    patient: detail?.patient,
+    workspaceId,
+  });
   const latestVitals = usePatientLatestVitalItems({
     encounterId: detail?.encounter.id,
     fallbackItems: isLegacySalesDemoWorkspace(workspaceId)
@@ -2834,20 +2842,30 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
       : undefined,
     workspaceId,
   });
+  const { vitalAction, vitalDialog } = useContextVitalEditor({
+    encounterId: detail?.encounter.id,
+    encounterIsActive: detail?.encounter.status === "in_consultation",
+    latestVitals,
+    workspaceId,
+  });
 
   if (!detail) {
     return <EmrMainContentHeader aria-hidden="true" heightMode="fixed" />;
   }
 
   return (
+    <>
     <EmrMainContentHeader heightMode="fixed">
       <EmrPatientContextBar
+        key={detail.encounter.id}
+        guardianInteraction={profileInteractions.guardianInteraction}
         guardianItems={[
           {
             label: "보호자",
             value: detail.primaryGuardian?.name ?? "보호자 미지정",
           },
         ]}
+        patientInteraction={profileInteractions.patientInteraction}
         patientItems={[
           { label: "환자", value: detail.patient.name },
           {
@@ -2857,6 +2875,7 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
           { label: "나이", value: getPatientDisplayAge(detail.patient) },
           { label: "성별", value: getPatientSexLabel(detail.patient) },
         ]}
+        vitalAction={vitalAction}
         vitalItems={latestVitals.items}
         memoActions={[
           {
@@ -2899,6 +2918,8 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
         ]}
       />
     </EmrMainContentHeader>
+    {vitalDialog}
+    </>
   );
 }
 
@@ -3788,6 +3809,12 @@ export function ImagingHeader({
   workspaceId,
 }: ShellComponentProps) {
   const { detail } = useCurrentImagingDetail(workspaceId);
+  const profileInteractions = usePatientContextProfileInteractions({
+    allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
+    guardian: detail?.primaryGuardian,
+    patient: detail?.patient,
+    workspaceId,
+  });
   const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const latestVitals = usePatientLatestVitalItems({
@@ -3802,20 +3829,30 @@ export function ImagingHeader({
       : undefined,
     workspaceId,
   });
+  const { vitalAction, vitalDialog } = useContextVitalEditor({
+    encounterId: detail?.encounter.id,
+    encounterIsActive: detail?.encounter.status === "in_consultation",
+    latestVitals,
+    workspaceId,
+  });
 
   if (!detail) {
     return <EmrMainContentHeader aria-hidden="true" heightMode="fixed" />;
   }
 
   return (
+    <>
     <EmrMainContentHeader heightMode="fixed">
       <EmrPatientContextBar
+        key={detail.encounter.id}
+        guardianInteraction={profileInteractions.guardianInteraction}
         guardianItems={[
           {
             label: "보호자",
             value: detail.primaryGuardian?.name ?? "보호자 미지정",
           },
         ]}
+        patientInteraction={profileInteractions.patientInteraction}
         patientItems={[
           { label: "환자", value: detail.patient.name },
           {
@@ -3825,6 +3862,7 @@ export function ImagingHeader({
           { label: "나이", value: getPatientDisplayAge(detail.patient) },
           { label: "성별", value: getPatientSexLabel(detail.patient) },
         ]}
+        vitalAction={vitalAction}
         vitalItems={latestVitals.items}
         memoActions={[
           {
@@ -3877,6 +3915,8 @@ export function ImagingHeader({
         rightPanelToggleLabel="종합소견"
       />
     </EmrMainContentHeader>
+    {vitalDialog}
+    </>
   );
 }
 

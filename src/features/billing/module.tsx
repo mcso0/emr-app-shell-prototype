@@ -63,6 +63,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -88,6 +89,8 @@ import {
   resolveBillingProtectedSnapshot,
 } from "@/features/billing/billing-protected-snapshot";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
+import { usePatientContextProfileInteractions } from "@/features/customer/use-patient-context-profile-interactions";
+import type { ContextBarProfileInteraction } from "@/components/emr/patient-context-bar";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import {
@@ -1963,11 +1966,6 @@ function getInvoiceBalanceAmount(invoice: Invoice, payments: Payment[]) {
 function getGuardianBillingHeaderSummary(detail: BillingDetail) {
   const invoices = detail.guardianGroup?.invoices ?? [detail.invoice];
   const payments = detail.guardianGroup?.payments ?? detail.payments;
-  const patientNames = detail.guardianGroup?.patients.length
-    ? detail.guardianGroup.patients.map((patient) => patient.name)
-    : detail.patient
-      ? [detail.patient.name]
-      : [];
   const waiting = invoices.reduce<BillingGuardianMetric>(
     (summary, invoice) => {
       if (getBillingFilterForInvoice(invoice) !== "waiting") return summary;
@@ -1999,7 +1997,6 @@ function getGuardianBillingHeaderSummary(detail: BillingDetail) {
     .at(0);
 
   return {
-    patientNames,
     recentPaymentAt: recentPayment?.paidAt,
     unpaid,
     waiting,
@@ -2067,12 +2064,89 @@ function BillingGuardianContextDivider() {
   );
 }
 
+function BillingContextProfileBadge({
+  interaction,
+  label,
+  value,
+}: {
+  interaction?: ContextBarProfileInteraction;
+  label: string;
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  if (!interaction) return <BillingGuardianContextBadge label={label} value={value} />;
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen, details) => {
+        if (details.reason === "trigger-press") {
+          setOpen(false);
+          interaction.onActivate();
+          return;
+        }
+        setOpen(nextOpen);
+      }}
+    >
+      <PopoverTrigger
+        openOnHover
+        delay={250}
+        closeDelay={150}
+        render={
+          <button
+            type="button"
+            className="rounded-[var(--clair-radius-atomic-6)] text-left hover:ring-1 hover:ring-[var(--emr-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={interaction.ariaLabel}
+          />
+        }
+      >
+        <BillingGuardianContextBadge label={label} value={value} />
+      </PopoverTrigger>
+      <PopoverContent align="start" side="bottom" sideOffset={8} className="w-[320px] gap-0 p-3">
+        {interaction.preview}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function BillingPatientContextBadge({
+  guardian,
+  patient,
+  workspaceId,
+}: {
+  guardian?: Guardian;
+  patient: Patient;
+  workspaceId: string;
+}) {
+  const { patientInteraction } = usePatientContextProfileInteractions({
+    allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
+    guardian,
+    patient,
+    workspaceId,
+  });
+  return (
+    <BillingContextProfileBadge
+      interaction={patientInteraction}
+      label="환자"
+      value={patient.name}
+    />
+  );
+}
+
 function BillingGuardianContextBar({ detail }: { detail: BillingDetail }) {
+  const params = useParams<{ workspaceId?: string | string[] }>();
+  const workspaceId = resolveWorkspaceRouteParam(params.workspaceId);
   const summary = getGuardianBillingHeaderSummary(detail);
   const guardianName = detail.guardian?.name ?? "보호자 미지정";
-  const patientNames = summary.patientNames.length
-    ? summary.patientNames.join(", ")
-    : "환자 미상";
+  const patients = detail.guardianGroup?.patients.length
+    ? detail.guardianGroup.patients
+    : detail.patient ? [detail.patient] : [];
+  const { guardianInteraction } = usePatientContextProfileInteractions({
+    allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
+    guardian: detail.guardian,
+    patient: detail.patient ?? patients[0],
+    workspaceId,
+  });
   const guardianMemoLabel =
     detail.guardian?.memo?.trim() ||
     (summary.unpaid.count > 0 ? "미납 주의" : "메모 없음");
@@ -2089,7 +2163,11 @@ function BillingGuardianContextBar({ detail }: { detail: BillingDetail }) {
               src={getAssetSrc(guardianPersonIcon)}
               alt=""
             />
-            <BillingGuardianContextBadge label="보호자" value={guardianName} />
+            <BillingContextProfileBadge
+              interaction={guardianInteraction}
+              label="보호자"
+              value={guardianName}
+            />
             <BillingGuardianContextBadge label="관계" value="주 보호자" />
             <BillingGuardianContextBadge
               label="연락처"
@@ -2102,7 +2180,14 @@ function BillingGuardianContextBar({ detail }: { detail: BillingDetail }) {
               src={getAssetSrc(animalDogIcon)}
               alt=""
             />
-            <BillingGuardianContextBadge label="환자" value={patientNames} />
+            {patients.length ? patients.map((patient) => (
+              <BillingPatientContextBadge
+                key={patient.id}
+                guardian={detail.guardian}
+                patient={patient}
+                workspaceId={workspaceId}
+              />
+            )) : <BillingGuardianContextBadge label="환자" value="환자 미상" />}
             <BillingGuardianContextBadge
               label="최근 수납"
               value={
