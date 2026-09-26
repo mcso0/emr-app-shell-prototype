@@ -152,7 +152,7 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(page.getByRole("button", { name: "임상병리검사 이력 패널 접기" })).toBeVisible();
   await page.getByRole("button", { name: "임상병리검사 이력 패널 접기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "임상병리검사 이력" })).toBeVisible();
-  await expect(page.getByTestId("lab-history-group-26.05.01")).toBeVisible();
+  await expect(page.getByTestId("lab-content-aside-group-2026-05-01")).toBeVisible();
   const labTitleBar = page.locator("[data-slot='instruction-header-title-bar']");
   await expect(labTitleBar.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await expect(labTitleBar.getByRole("heading", { name: "임상병리검사 결과지" })).toHaveCSS("font-size", "16px");
@@ -516,7 +516,7 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(page.getByRole("button", { name: "영상검사 이력 패널 접기" })).toBeVisible();
   await page.getByRole("button", { name: "영상검사 이력 패널 접기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "영상검사 이력" })).toBeVisible();
-  await expect(page.getByTestId("imaging-history-item-imaging-coco-thorax")).toBeVisible();
+  await expect(page.locator("#imaging-content-aside").getByRole("button", { name: /X-ray · 흉복부/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("흉부 방사선").first()).toBeVisible();
   await expect(page.getByTestId("imaging-study-status-label")).toHaveText("판독중");
@@ -603,6 +603,36 @@ test("imaging history aside keeps title count separate from evenly spaced action
   for (const gap of actionGaps) {
     expect(Math.abs(gap - actionGaps[0])).toBeLessThanOrEqual(1);
   }
+});
+
+test("clinical history panels keep the chart aside frame and card spacing", async ({ page }) => {
+  const panels = [
+    ["treatment", "chart-content-aside"],
+    ["lab", "lab-content-aside"],
+    ["imaging", "imaging-content-aside"],
+    ["dispensing", "dispensing-content-aside"],
+  ] as const;
+
+  for (const [moduleId, asideId] of panels) {
+    await page.goto(`/w/clair-demo/${moduleId}?date=2026-05-01&modulePanel=closed&aside=history${moduleId === "dispensing" ? "&workItemId=fulfill-order-coco-maropitant" : ""}`);
+    const aside = page.locator(`#${asideId}`);
+    await expect(aside).toBeVisible();
+    const metrics = await aside.evaluate((panel) => {
+      const header = panel.firstElementChild;
+      const style = getComputedStyle(panel);
+      return {
+        headerHeight: header?.getBoundingClientRect().height,
+        paddingLeft: style.paddingLeft,
+        width: panel.getBoundingClientRect().width,
+      };
+    });
+    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: "16px", width: 280 });
+    await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
+  }
+
+  await expect(page.locator("#dispensing-content-aside").getByRole("group", {
+    name: "조제/처치 이력 종류",
+  })).toBeVisible();
 });
 
 test("Cheongdam imaging workspace renders live fulfillment rows without legacy study fixtures", async ({

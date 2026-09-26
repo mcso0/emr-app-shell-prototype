@@ -17,26 +17,14 @@ import {
   PrinterIcon,
 } from "@/components/icons";
 import {
-  CdsActionsListFilterIcon,
   CdsActionsRefreshCcwIcon,
-  CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import {
-  EmrContentAsideHeader,
-  EmrContentAsidePanel,
-} from "@/components/emr/content-aside-panel";
 import { EmrEmptyState } from "@/components/emr/empty-state";
-import {
-  EmrContentHistoryGroup,
-  EmrContentHistoryItem,
-} from "@/components/emr/content-history-list";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
 import { EmrPatientContextBar } from "@/components/emr/patient-context-bar";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
-import { EmrListHeaderIconButton } from "@/components/emr/subpanel";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
@@ -72,6 +60,12 @@ import {
   type FulfillmentTransitionOptions,
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
+import {
+  getPatientHistoryStatus,
+  PatientHistoryAside,
+  usePatientFulfillmentHistory,
+  type PatientHistoryEntry,
+} from "@/features/fulfillment/patient-history-aside";
 import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
 import type {
   FulfillmentWorkItemAction,
@@ -100,7 +94,6 @@ import {
   allOrderRows,
   currentTechnician,
   getOrderTableGroupsForQueueItem,
-  historyGroups,
   patient,
   technicianUsers,
   type OrderTableGroup,
@@ -210,28 +203,6 @@ type DispensingFulfillmentQueueSnapshot = {
   status: DispensingFulfillmentQueueStatus;
   workItems: FulfillmentWorkItem[];
 };
-type FulfillmentWorkItemHistoryEvent = {
-  actorUserId: string | null;
-  createdAt: string;
-  id: string;
-  nextStatus: FulfillmentWorkItemStatus;
-  orderId: string;
-  previousStatus: FulfillmentWorkItemStatus | null;
-  reason: string | null;
-  source: "work_item_created" | "order_event";
-  workItemId: string;
-};
-type FulfillmentWorkItemHistoryCursor = {
-  createdAt: string;
-  eventId: string;
-};
-type FulfillmentWorkItemHistoryState = {
-  events: FulfillmentWorkItemHistoryEvent[];
-  hasMore: boolean;
-  loadingMore: boolean;
-  nextCursor: FulfillmentWorkItemHistoryCursor | null;
-  status: "idle" | "loading" | "ready" | "error" | "permission_denied";
-};
 type DispensingContentBodyProps = Pick<
   ShellComponentProps,
   "hasRightPanel" | "moduleId"
@@ -271,20 +242,6 @@ export function DispensingSlotAvailabilityProvider({
   );
 
   return children({ hasContentAside: Boolean(selectedQueueItemId) });
-}
-
-function splitHistoryItem(item: string) {
-  const [category, ...rest] = item.split(" ");
-
-  if (!rest.length || item.startsWith("[")) {
-    return { title: item, category: null, description: null };
-  }
-
-  return {
-    title: rest.join(" "),
-    category,
-    description: rest.join(" "),
-  };
 }
 
 function getQueueStatusLabel(moduleId: string, item: OrderQueueItem | null) {
@@ -537,108 +494,6 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   };
 }
 
-function useFulfillmentWorkItemHistory({
-  updatedAt,
-  workItemId,
-  workspaceId,
-}: {
-  updatedAt?: string;
-  workItemId?: string;
-  workspaceId: string;
-}) {
-  const [state, setState] = useState<FulfillmentWorkItemHistoryState>({
-    events: [],
-    hasMore: false,
-    loadingMore: false,
-    nextCursor: null,
-    status: "idle",
-  });
-
-  const load = useCallback(async (
-    append: boolean,
-    cursor: FulfillmentWorkItemHistoryCursor | null,
-  ) => {
-    if (!workItemId) {
-      setState({
-        events: [],
-        hasMore: false,
-        loadingMore: false,
-        nextCursor: null,
-        status: "idle",
-      });
-      return;
-    }
-
-    setState((current) => ({
-      ...current,
-      loadingMore: append,
-      status: append ? current.status : "loading",
-    }));
-    try {
-      const search = new URLSearchParams({ limit: "50" });
-      if (cursor) {
-        search.set("beforeCreatedAt", cursor.createdAt);
-        search.set("beforeEventId", cursor.eventId);
-      }
-      const response = await fetch(
-        `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/history?${search.toString()}`,
-        { headers: { "x-clair-demo-session-user-id": "user-tech" } },
-      );
-      const body = (await response.json()) as {
-        denialReason?: string;
-        history?: {
-          events?: FulfillmentWorkItemHistoryEvent[];
-          hasMore?: boolean;
-          nextCursor?: FulfillmentWorkItemHistoryCursor | null;
-        };
-        ok?: boolean;
-      };
-      if (!response.ok || !body.ok) {
-        setState((current) => ({
-          ...current,
-          loadingMore: false,
-          status:
-            response.status === 403 ||
-            body.denialReason === "permission_missing"
-              ? "permission_denied"
-              : "error",
-        }));
-        return;
-      }
-
-      const pageEvents = Array.isArray(body.history?.events)
-        ? body.history.events
-        : [];
-      setState((current) => ({
-        events: append ? [...pageEvents, ...current.events] : pageEvents,
-        hasMore: body.history?.hasMore === true,
-        loadingMore: false,
-        nextCursor: body.history?.nextCursor ?? null,
-        status: "ready",
-      }));
-    } catch {
-      setState((current) => ({
-        ...current,
-        loadingMore: false,
-        status: "error",
-      }));
-    }
-  }, [workItemId, workspaceId]);
-
-  const refresh = useCallback(() => load(false, null), [load]);
-  const loadMore = useCallback(
-    () => load(true, state.nextCursor),
-    [load, state.nextCursor],
-  );
-
-  useEffect(() => {
-    const timeoutId = window.setTimeout(() => void refresh(), 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [refresh, updatedAt]);
-
-  return { ...state, loadMore, refresh };
-}
-
 function findFulfillmentForQueueItem(
   item: OrderQueueItem | null,
   workItems: FulfillmentWorkItem[],
@@ -798,7 +653,7 @@ function getQueueItemsForWorkspace(
   });
 }
 
-function getFulfillmentAssigneeName(workItem: FulfillmentWorkItem) {
+function getFulfillmentAssigneeName(workItem: { assignedToUserId?: string | null }) {
   if (!workItem.assignedToUserId) return undefined;
   if (
     workItem.assignedToUserId === "user-tech" ||
@@ -1400,18 +1255,14 @@ function renderInstructionInfoCardValue(value: ReactNode) {
 
 export function DispensingContentAside({
   moduleId,
+  onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
-  const selectedQueueItemIds = useLayoutStore(
-    (state) => state.selectedQueueItemIds,
-  );
-  const setContentAsideOpen = useLayoutStore(
-    (state) => state.setContentAsideOpen,
-  );
-  const [collapsedHistoryGroups, setCollapsedHistoryGroups] = useState<
-    Set<string>
-  >(() => new Set());
+  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
+  const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
+  const setSelectedQueueItem = useLayoutStore((state) => state.setSelectedQueueItem);
+  const [filter, setFilter] = useState<"all" | "dispensing" | "treatment">("all");
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -1424,272 +1275,84 @@ export function DispensingContentAside({
     (allowLegacyFixtureFallback
       ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
       : null);
-  const selectedFulfillmentWorkItem = findFulfillmentForQueueItem(
+  const selectedWorkItem = findFulfillmentForQueueItem(
     selectedQueueItem,
     fulfillmentQueue.workItems,
   );
-  const fulfillmentHistory = useFulfillmentWorkItemHistory({
-    updatedAt: selectedFulfillmentWorkItem?.updatedAt,
-    workItemId: selectedFulfillmentWorkItem?.id,
+  const history = usePatientFulfillmentHistory(
     workspaceId,
-  });
+    selectedWorkItem?.patientId ?? undefined,
+    ["dispensing", "treatment"],
+  );
 
   if (!selectedQueueItem) return null;
 
-  const historyLabel = `${getDispensingInstructionType(selectedQueueItem)} 이력`;
-  const visibleFixtureHistoryGroups = allowLegacyFixtureFallback
-    ? historyGroups
-    : [];
-  const visibleLiveHistoryGroups = allowLegacyFixtureFallback
-    ? []
-    : groupFulfillmentHistoryEvents(fulfillmentHistory.events);
-  const totalHistoryCount = allowLegacyFixtureFallback
-    ? visibleFixtureHistoryGroups.reduce(
-        (total, group) => total + group.count,
-        0,
-      )
-    : fulfillmentHistory.events.length;
-  const toggleHistoryGroup = (date: string) => {
-    setCollapsedHistoryGroups((current) => {
-      const next = new Set(current);
-
-      if (next.has(date)) {
-        next.delete(date);
-      } else {
-        next.add(date);
-      }
-
-      return next;
-    });
-  };
-
-  return (
-    <EmrContentAsidePanel id="dispensing-content-aside">
-      <HistoryListHeader
-        count={totalHistoryCount}
-        label={historyLabel}
-        onCollapse={() => setContentAsideOpen(false)}
-      />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="flex flex-col gap-1">
-          {!allowLegacyFixtureFallback &&
-          fulfillmentHistory.status === "loading" ? (
-            <div className="p-3 emr-text-metadata text-[var(--emr-text-muted)]">
-              이력을 불러오는 중입니다.
-            </div>
-          ) : null}
-          {!allowLegacyFixtureFallback &&
-          fulfillmentHistory.status === "permission_denied" ? (
-            <EmrInlineAlert
-              severity="warning"
-              title="이력을 볼 권한이 없습니다."
-              testId="dispensing-history-state"
-            >
-              조제 또는 처치 조회 권한을 확인해 주세요.
-            </EmrInlineAlert>
-          ) : null}
-          {!allowLegacyFixtureFallback &&
-          fulfillmentHistory.status === "error" ? (
-            <EmrInlineAlert
-              severity="warning"
-              title="이력을 불러오지 못했습니다."
-              action={
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void fulfillmentHistory.refresh()}
-                >
-                  다시 확인
-                </Button>
-              }
-              testId="dispensing-history-state"
-            >
-              잠시 후 다시 시도해 주세요.
-            </EmrInlineAlert>
-          ) : null}
-          {!allowLegacyFixtureFallback &&
-          fulfillmentHistory.status === "ready" &&
-          visibleLiveHistoryGroups.length === 0 ? (
-            <div className="p-3 emr-text-metadata text-[var(--emr-text-muted)]">
-              기록된 이력이 없습니다.
-            </div>
-          ) : null}
-          {visibleFixtureHistoryGroups.map((group) => (
-            <EmrContentHistoryGroup
-              key={group.date}
-              collapsed={collapsedHistoryGroups.has(group.date)}
-              count={group.count}
-              dataTestId={`history-group-${group.date}`}
-              label={group.date}
-              onToggle={() => toggleHistoryGroup(group.date)}
-              toggleTestId={`history-group-toggle-${group.date}`}
-            >
-              {group.items.map((item) => (
-                <HistoryItem key={item} item={item} />
-              ))}
-            </EmrContentHistoryGroup>
-          ))}
-          {visibleLiveHistoryGroups.map((group) => (
-            <EmrContentHistoryGroup
-              key={group.date}
-              collapsed={collapsedHistoryGroups.has(group.date)}
-              count={group.items.length}
-              dataTestId={`history-group-${group.date}`}
-              label={group.label}
-              onToggle={() => toggleHistoryGroup(group.date)}
-              toggleTestId={`history-group-toggle-${group.date}`}
-            >
-              {group.items.map((item) => (
-                <FulfillmentHistoryItem
-                  key={item.id}
-                  instructionType={getDispensingInstructionType(
-                    selectedQueueItem,
-                  )}
-                  item={item}
-                />
-              ))}
-            </EmrContentHistoryGroup>
-          ))}
-          {!allowLegacyFixtureFallback && fulfillmentHistory.hasMore ? (
-            <div className="p-3">
-              <Button
-                className="w-full"
-                disabled={fulfillmentHistory.loadingMore}
-                size="sm"
-                variant="outline"
-                onClick={() => void fulfillmentHistory.loadMore()}
-              >
-                {fulfillmentHistory.loadingMore
-                  ? "이력을 더 불러오는 중입니다."
-                  : "이력 더보기"}
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </ScrollArea>
-    </EmrContentAsidePanel>
+  const historyItems = history.workItems.filter(
+    (item): item is typeof item & { queueType: FulfillmentQueueType } =>
+      item.queueType === "dispensing" || item.queueType === "treatment",
   );
-}
-
-function HistoryListHeader({
-  count,
-  label,
-  onCollapse,
-}: {
-  count: number;
-  label: string;
-  onCollapse: () => void;
-}) {
-  return (
-    <EmrContentAsideHeader
-      count={count}
-      label={label}
-      onCollapse={onCollapse}
-      actions={
-        <>
-          <EmrListHeaderIconButton ariaLabel="정렬">
-            <CdsUtilitiesSortIcon className="size-4" />
-          </EmrListHeaderIconButton>
-          <EmrListHeaderIconButton ariaLabel="필터">
-            <CdsActionsListFilterIcon className="size-4" />
-          </EmrListHeaderIconButton>
-          <EmrListHeaderIconButton ariaLabel="검색">
-            <CdsActionsSearchIcon className="size-4" />
-          </EmrListHeaderIconButton>
-        </>
-      }
-    />
-  );
-}
-
-function HistoryItem({ item }: { item: string }) {
-  const { title, category, description } = splitHistoryItem(item);
-
-  return (
-    <EmrContentHistoryItem
-      title={title}
-      subtitle="10:30 요청"
-      meta={
-        <>
-          {category ? <span className="truncate">{category}</span> : null}
-          {description ? <span className="truncate">{description}</span> : null}
-          <span className="truncate">담당 김지선</span>
-        </>
-      }
-    />
-  );
-}
-
-function groupFulfillmentHistoryEvents(
-  events: FulfillmentWorkItemHistoryEvent[],
-) {
-  const groups = new Map<
-    string,
-    { date: string; label: string; items: FulfillmentWorkItemHistoryEvent[] }
-  >();
-  for (const event of [...events].reverse()) {
-    const date = getOperatingDateFromIso(event.createdAt) ?? "날짜 미상";
-    const group = groups.get(date) ?? {
-      date,
-      label: date.replaceAll("-", "."),
-      items: [],
-    };
-    group.items.push(event);
-    groups.set(date, group);
+  const byTask = new Map<string, typeof historyItems>();
+  for (const item of historyItems) {
+    const key = item.taskId
+      ? `${item.queueType}:${item.taskId}:${item.taskAttemptNo ?? item.requestCycle}:${item.status}:${item.assignedToUserId ?? ""}`
+      : item.id;
+    byTask.set(key, [...(byTask.get(key) ?? []), item]);
   }
-  return [...groups.values()];
-}
+  const entries: PatientHistoryEntry[] = allowLegacyFixtureFallback && !selectedWorkItem
+    ? /^\d{2}:\d{2}$/.test(selectedQueueItem.time)
+      ? [{
+          id: selectedQueueItem.id,
+          category: selectedQueueItem.orderTypeCategory === "treatment" ? "treatment" : "dispensing",
+          title: selectedQueueItem.orderName,
+          timestamp: `${selectedDate}T${selectedQueueItem.time}:00+09:00`,
+          status: getQueueStatusLabel(moduleId, selectedQueueItem),
+          assignee: selectedQueueItem.assigneeName,
+        }]
+      : []
+    : [...byTask.values()].map((taskItems) => {
+        const first = taskItems[0];
+        const orderNames = taskItems.map((item) => item.sourceSnapshot.orderDisplayName || "오더명 없음");
+        const date = getOperatingDateFromIso(first.createdAt) ?? selectedDate;
+        const targetModule = first.queueType === "treatment" ? "treatment" : "dispensing";
+        return {
+          id: first.id,
+          category: first.queueType,
+          title: orderNames[0],
+          orderNames,
+          timestamp: first.createdAt,
+          status: getPatientHistoryStatus(first.status),
+          assignee: first.assignedToUserId
+            ? history.assigneeNames[first.assignedToUserId] ?? getFulfillmentAssigneeName(first) ?? "확인 불가"
+            : undefined,
+          selected: taskItems.some((item) => item.id === selectedWorkItem?.id),
+          onSelect: () => {
+            if (onNavigateWorkspaceSurface) {
+              onNavigateWorkspaceSurface(
+                buildWorkspaceSurfaceRoute({
+                  moduleId: targetModule,
+                  params: { date, encounterId: first.encounterId, workItemId: first.id },
+                  removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
+                  search: searchParams,
+                  workspaceId,
+                }),
+                targetModule,
+              );
+            } else if (date === selectedDate) {
+              setSelectedQueueItem(targetModule, `live-fulfillment-${first.id}`);
+            }
+          },
+        };
+      });
 
-function FulfillmentHistoryItem({
-  instructionType,
-  item,
-}: {
-  instructionType: "조제" | "처치";
-  item: FulfillmentWorkItemHistoryEvent;
-}) {
-  const statusLabel = getFulfillmentHistoryStatusLabel(
-    instructionType,
-    item.nextStatus,
-  );
-  const previousStatusLabel = item.previousStatus
-    ? getFulfillmentHistoryStatusLabel(instructionType, item.previousStatus)
-    : null;
-  const time = formatOperatingShortTime(item.createdAt);
-
-  return (
-    <EmrContentHistoryItem
-      title={statusLabel}
-      subtitle={`${time} ${statusLabel}`}
-      meta={
-        <>
-          {previousStatusLabel ? (
-            <span className="truncate">
-              {previousStatusLabel} → {statusLabel}
-            </span>
-          ) : null}
-          {item.reason ? (
-            <span className="truncate">사유 {item.reason}</span>
-          ) : null}
-          <span className="truncate">
-            수행자 {item.actorUserId ?? "삭제된 사용자"}
-          </span>
-        </>
-      }
-    />
-  );
-}
-
-function getFulfillmentHistoryStatusLabel(
-  instructionType: "조제" | "처치",
-  status: FulfillmentWorkItemStatus,
-) {
-  if (status === "requested") return "요청";
-  if (status === "in_progress") return `${instructionType} 시작`;
-  if (status === "paused") return "일시중지";
-  if (status === "completed") return `${instructionType} 완료`;
-  if (status === "cancelled") return "취소";
-  return "재요청 필요";
+  return <PatientHistoryAside
+    id="dispensing-content-aside"
+    label="조제/처치 이력"
+    entries={entries}
+    filter={filter}
+    onFilterChange={setFilter}
+    status={allowLegacyFixtureFallback && !selectedWorkItem ? "ready" : history.status}
+    onCollapse={() => setContentAsideOpen(false)}
+  />;
 }
 
 function cloneOrderTableGroups(queueItemId?: string): OrderTableGroup[] {
@@ -2292,7 +1955,7 @@ function DispensingContentBody({
                   size="default"
                   variant="outline"
                   roundness="round"
-                  className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
+                  className="border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"
                   disabled={fulfillmentQueue.status === "loading"}
                   onClick={() => void fulfillmentQueue.refresh()}
                 >

@@ -4,6 +4,26 @@ import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-s
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 import type { ExecutionContext, ExecutionResultVersion } from "../src/features/fulfillment/execution-result-contract";
 
+test("patient history combines dispensing and treatment orders and filters by category", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/dispensing?date=2026-05-01&workItemId=fulfill-order-coco-maropitant&modulePanel=closed&aside=history",
+  );
+
+  const aside = page.locator("#dispensing-content-aside");
+  await expect(aside).toContainText("조제/처치 이력");
+  await expect(aside).toContainText("Maropitant 16mg T");
+  await expect(aside).toContainText("피하 수액 처치");
+  await expect(aside).not.toContainText("user-tech");
+
+  await aside.getByRole("button", { name: "처치", exact: true }).click();
+  await expect(aside).toContainText("피하 수액 처치");
+  await expect(aside).not.toContainText("Maropitant 16mg T");
+
+  await aside.getByRole("button", { name: "조제", exact: true }).click();
+  await expect(aside).toContainText("Maropitant 16mg T");
+  await expect(aside).not.toContainText("피하 수액 처치");
+});
+
 test("actual execution UI starts empty, records completion, reloads history and appends an explicit correction", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
@@ -596,6 +616,7 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     encounterId: "encounter-cheongdam-live-001",
     id: "work-cheongdam-dispensing-001",
     orderId: "order-cheongdam-dispensing-001",
+    patientId: "patient-cheongdam-live-001",
     queueType: "dispensing",
     requestCycle: 1,
     requestedByUserId: "user-vet",
@@ -750,10 +771,11 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
     .getByRole("button", { name: "조제 이력 패널 열기" })
     .click();
   const historyAside = page.locator("#dispensing-content-aside");
-  await expect(historyAside).toContainText("조제 이력");
-  await expect(historyAside).toContainText("조제 시작");
-  await expect(historyAside).toContainText("조제 시작 확인");
-  await expect(historyAside).toContainText("수행자 user-tech");
+  await expect(historyAside).toContainText("조제/처치 이력");
+  await expect(historyAside).toContainText("항생제 5일분");
+  await expect(historyAside).toContainText("요청");
+  await expect(historyAside).not.toContainText("조제 시작 확인");
+  await expect(historyAside).not.toContainText("user-tech");
   await page.getByRole("button", { name: "담당하기" }).first().click();
   await expect.poll(() => lifecycleActions).toEqual(["claim"]);
   await page

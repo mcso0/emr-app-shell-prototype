@@ -60,6 +60,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       date: url.searchParams.get("date"),
       encounterId: url.searchParams.get("encounterId"),
       orderId: url.searchParams.get("orderId"),
+      patientId: url.searchParams.get("patientId"),
       queueType: url.searchParams.get("queueType"),
       status: url.searchParams.get("status"),
     },

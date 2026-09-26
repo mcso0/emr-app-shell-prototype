@@ -336,7 +336,7 @@ test("reception module uses semantic color tokens instead of direct local colors
 test("lab workspace source uses semantic color tokens instead of direct local colors", async () => {
   const source = await fs.promises.readFile("src/features/lab-imaging/module.tsx", "utf8");
   const labSource = [
-    extractSourceRange(source, "const getActionableLabRows", "type ImagingQueueView"),
+    extractSourceRange(source, "const getActionableLabRows", "const currentLabAssignee"),
     extractSourceRange(source, "function LabQueueGroup", "function ImagingQueueItem"),
     extractSourceRange(source, "export function LabSidePanel", "export function ImagingSidePanel"),
     extractSourceRange(source, "function LabResultInputSection", "function useCurrentImagingDetail"),
@@ -350,7 +350,7 @@ test("lab workspace source uses semantic color tokens instead of direct local co
 test("imaging workspace source uses semantic color tokens instead of direct local colors", async () => {
   const source = await fs.promises.readFile("src/features/lab-imaging/module.tsx", "utf8");
   const imagingSource = [
-    extractSourceRange(source, "const imagingStatusOrder", "const fallbackLabHistoryGroups"),
+    extractSourceRange(source, "const imagingStatusOrder", "function getLabResultDocumentId"),
     extractSourceRange(source, "function ImagingQueueItem", "export function LabSidePanel"),
     extractSourceRange(source, "export function ImagingSidePanel", "function LabResultInputSection"),
     extractSourceToEnd(source, "function useCurrentImagingDetail"),
