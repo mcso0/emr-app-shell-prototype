@@ -36,6 +36,7 @@
 .statusHeader > svg:last-child { width: 12px; height: 12px; margin-left: auto; }
 .cards { display: flex; flex-direction: column; gap: 8px; }
 .list, .period { display: flex; flex-direction: column; gap: 16px; }
+.emptyHospitalList { height: 100%; min-height: 0; }
 .periodTitle { display: flex; align-items: center; gap: 4px; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--emr-text-secondary); }
 .periodTitle span { font-size: 12px; color: var(--emr-text-tertiary); }
 .listGroup { min-width: 0; width: 100%; overflow: hidden; flex-shrink: 0; }
@@ -143,9 +144,11 @@
 .board .dividedHeader::after { background: var(--clair-color-atomic-neutral-200); }
 .noMatchNotice { display: flex; align-items: center; gap: 8px; padding: 4px 48px 8px; color: var(--emr-text-secondary); font-size: 14px; }
 .hospitalTable { min-width: 1410px; width: 100%; font-size: 14px; line-height: 20px; }
+.emptyHospitalTable { display: flex; height: 100%; min-height: 0; flex-direction: column; }
 .hospitalTableHeader, .hospitalRow { display: grid; grid-template-columns: 80px 80px 80px minmax(562px, 1fr) 80px 128px 88px 88px 80px; column-gap: 16px; align-items: center; }
 .hospitalTableHeader { min-height: 40px; padding: 0 8px; border-bottom: 1px solid var(--clair-color-atomic-neutral-100); color: var(--emr-text-tertiary); font-size: 12px; line-height: 16px; font-weight: 500; }
 .hospitalTableRows { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
+.emptyHospitalTableRows { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; gap: 0; padding: 0; }
 .hospitalRow { position: relative; min-height: 36px; padding: 8px; border-radius: 8px; color: var(--emr-text-primary); cursor: pointer; }
 .hospitalRow:not(:last-child)::after { content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 1px; background: var(--clair-color-atomic-neutral-100); }
 .hospitalRow:hover, .hospitalRow:focus-within { background: var(--clair-color-atomic-black-alpha-6); }

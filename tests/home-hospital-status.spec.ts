@@ -14,12 +14,12 @@ const items = [
   { ...base, id: "chart:one", sourceId: "chart", sourceType: "consultation", title: "진료 기록", progressState: "in_progress", requestedAt: time(8), requesterName: undefined },
 ];
 
-async function openHome(page: Page) {
+async function openHome(page: Page, sourceItems = items) {
   await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
     const url = new URL(route.request().url());
     const includeCompleted = url.searchParams.get("includeCompleted") === "true";
     const includeCancelled = url.searchParams.get("includeCancelled") === "true";
-    await route.fulfill({ json: { ok: true, workspaceId, operatingDate: today, sourceStatus: "live", items: items.filter((item) => item.progressState !== "completed" || includeCompleted).filter((item) => item.progressState !== "cancelled" || includeCancelled), currentPatients: { present: 2, waiting: 1, inProgress: 1 } } });
+    await route.fulfill({ json: { ok: true, workspaceId, operatingDate: today, sourceStatus: "live", items: sourceItems.filter((item) => item.progressState !== "completed" || includeCompleted).filter((item) => item.progressState !== "cancelled" || includeCancelled), currentPatients: { present: 2, waiting: 1, inProgress: 1 } } });
   });
   await page.goto(`/w/${workspaceId}/home`);
   await expect(page.getByTestId("home-workspace")).toHaveAttribute("aria-busy", "false");
@@ -43,6 +43,34 @@ test("hospital board uses one status column per task and list keeps the same per
   await expect(page.getByTestId("home-hospital-row-chart:one")).toContainText("—");
   await page.getByRole("button", { name: "칸반", exact: true }).click();
   await expect(page.getByTestId("home-kanban-task-chart:one")).toBeVisible();
+});
+
+test("hospital list centers its empty state in the body below the column headers", async ({ page }) => {
+  await page.setViewportSize({ width: 1896, height: 1254 });
+  await openHome(page, []);
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+
+  const table = page.getByTestId("home-hospital-table");
+  const header = table.getByRole("row").first();
+  const body = page.getByTestId("home-hospital-table-body");
+  const emptyState = page.getByTestId("home-hospital-empty-state");
+  const viewport = page.getByTestId("home-workspace-scroll");
+  await expect(table.getByRole("columnheader", { name: "업무", exact: true })).toBeVisible();
+  await expect(emptyState).toBeVisible();
+
+  const [headerBox, bodyBox, emptyBox, viewportBox] = await Promise.all([
+    header.boundingBox(),
+    body.boundingBox(),
+    emptyState.boundingBox(),
+    viewport.boundingBox(),
+  ]);
+  expect(headerBox).not.toBeNull();
+  expect(bodyBox).not.toBeNull();
+  expect(emptyBox).not.toBeNull();
+  expect(viewportBox).not.toBeNull();
+  expect(emptyBox!.x + emptyBox!.width / 2).toBeCloseTo(viewportBox!.x + viewportBox!.width / 2, 0);
+  expect(emptyBox!.y + emptyBox!.height / 2).toBeCloseTo(bodyBox!.y + bodyBox!.height / 2, 0);
+  expect(emptyBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
 });
 
 test("hospital completion, cancellation, and sort remain shared across board and list", async ({ page }) => {
