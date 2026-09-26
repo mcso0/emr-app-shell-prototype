@@ -395,19 +395,18 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
     await expect(page.getByTestId("lab-result-save-status")).toContainText("서버 저장됨");
   });
 
-  await test.step("technician sees dispensing fulfillment readback in the execution screen", async () => {
+  await test.step("technician sees the selected dispensing order in the instruction table", async () => {
     await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
     const liveDispensingQueueItem = page.getByTestId(
       "order-queue-item-live-fulfillment-ui-api-dispensing-maropitant",
     );
     await expect(liveDispensingQueueItem).toContainText("API Lab Kong");
     await liveDispensingQueueItem.click();
-    await expect(page.getByTestId("dispensing-fulfillment-readback")).toContainText(
-      "조제 업무 큐",
-    );
-    await expect(page.getByTestId("dispensing-fulfillment-readback")).toContainText(
-      "오더 order-ui-api-maropitant",
-    );
+    await expect(
+      page.getByTestId(
+        "order-row-section-0-live-order-row-ui-api-dispensing-maropitant",
+      ),
+    ).toContainText("DEN-194 maropitant dispensing API");
   });
 
   await test.step("front desk sees API billing and checkout state", async () => {

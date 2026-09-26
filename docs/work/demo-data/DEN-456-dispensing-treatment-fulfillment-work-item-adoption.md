@@ -13,7 +13,7 @@ source_docs:
 dependencies:
   - "UI-PR-002"
   - "DEN-455"
-updated: "2026-06-25"
+updated: "2026-09-26"
 ---
 
 # Dispensing/Treatment Fulfillment Work Item Adoption
@@ -25,12 +25,12 @@ Make the dispensing/treatment execution screen read visible queue state from `or
 ## Scope
 
 - Read both `dispensing` and `treatment` fulfillment queues from `/api/workspaces/[workspaceId]/fulfillment/work-items`.
-- Overlay the server readback onto the existing execution screen while leaving legacy fallback cleanup to DEMO-DATA-PR-002.
-- Show visible fulfillment readback for the selected work item, including queue type, server status, assignee, and order id.
+- Project server work items into the existing execution queue and instruction/table status while leaving legacy fallback cleanup to DEMO-DATA-PR-002.
+- Show the selected work item's operational status and assignee through the existing queue and instruction UI; keep opaque patient, encounter, order, and Task IDs out of the instruction header.
 - Persist status transitions through `/api/workspaces/[workspaceId]/fulfillment/work-items/[workItemId]`.
 - Keep local execution state unchanged when server mutation fails.
 - Add visible loading, empty, retryable failure, and permission-denied read states for the fulfillment queue.
-- Add focused Playwright coverage for readback display, persisted status refresh, permission denial, and mutation failure handling.
+- Add focused Playwright coverage for selected order display, persisted status refresh, permission denial, and mutation failure handling.
 
 ## Out Of Scope
 
@@ -43,7 +43,7 @@ Make the dispensing/treatment execution screen read visible queue state from `or
 ## Done Criteria
 
 - `clair-demo` dispensing/treatment fulfillment work items can appear in the visible execution queue.
-- A selected fulfillment item shows server readback in the instruction header area.
+- A selected fulfillment item shows its order details and operational status in the existing instruction/table surfaces.
 - Status mutation is saved through the API boundary and re-read before the UI claims the new server state.
 - Permission-denied reads are visible and distinct from retryable read failures.
 - Failed status mutation does not locally mark the work as started or completed.
@@ -58,6 +58,8 @@ Make the dispensing/treatment execution screen read visible queue state from `or
 
 ## Result
 
-DEN-456 makes the dispensing/treatment screen API-aware at the execution surface. The screen now combines the existing fixture queue with fulfillment work-item readback, shows selected server state, saves status changes through the route boundary, and exposes read/mutation failures without silently mutating local state.
+DEN-456 makes the dispensing/treatment screen API-aware at the execution surface. The screen now combines the existing fixture queue with fulfillment work-item readback, shows selected work through the existing instruction/table surfaces, saves status changes through the route boundary, and exposes read/mutation failures without silently mutating local state.
 
 2026-06-25 follow-up: the fulfillment work-items read response now includes a server readback `summary` with total and status counts. Lab/imaging and dispensing/treatment queue empty states can use that API-backed source count to distinguish true no-work days from filtered or transformed-empty UI states.
+
+2026-09-26 follow-up: the selected work item's extra read-only diagnostics row was removed from the dispensing/treatment instruction screen. Queue fetching, operational actions, and mutation/error notices remain; the existing instruction and order table present the work details.
