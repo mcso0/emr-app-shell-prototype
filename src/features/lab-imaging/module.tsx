@@ -23,10 +23,11 @@ import {
   CdsUtilitiesHistoryIcon,
   CdsUtilitiesSortIcon,
 } from "@/components/cds-icons/utilities-and-misc";
-import { ChevronDownIcon, DownloadIcon, PrinterIcon } from "@/components/icons";
+import { ChevronDownIcon } from "@/components/icons";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
+  EmrInstructionOutputMenu,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
@@ -3570,8 +3571,6 @@ export function LabContent({
         titleBar={
           <EmrInstructionTitleBar
             title="임상병리검사 결과지"
-            className="h-auto min-h-9 flex-wrap gap-2"
-            titleClassName="text-[16px] leading-6"
             icon={
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix="임상병리검사 이력"
@@ -3584,21 +3583,14 @@ export function LabContent({
             badge={
               <Badge
                 variant="secondary"
-                className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
+                className="h-[22px] max-w-40 truncate rounded-md px-2 text-xs text-muted-foreground"
+                title={getLabResultDocumentId(displayDetail.result)}
               >
                 {getLabResultDocumentId(displayDetail.result)}
               </Badge>
             }
             actions={
               <>
-                <Button variant="outline" size="sm" className="bg-card">
-                  <DownloadIcon data-icon="inline-start" />
-                  PDF 다운로드
-                </Button>
-                <Button variant="outline" size="sm" className="bg-card">
-                  <PrinterIcon data-icon="inline-start" />
-                  출력하기
-                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -3646,6 +3638,7 @@ export function LabContent({
                     onCancelAssignment={cancelAssignment}
                   />
                 )}
+                <EmrInstructionOutputMenu />
               </>
             }
           />
@@ -4387,7 +4380,6 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
         titleBar={
           <EmrInstructionTitleBar
             title="영상검사 Order 상세"
-            className="h-auto min-h-9 flex-wrap gap-2"
             icon={
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix="영상검사 이력"
@@ -4400,7 +4392,8 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
             badge={
               <Badge
                 variant="secondary"
-                className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
+                className="h-[22px] max-w-40 truncate rounded-md px-2 text-xs text-muted-foreground"
+                title={getImagingDocumentId(detail.study)}
               >
                 {getImagingDocumentId(detail.study)}
               </Badge>
@@ -4437,6 +4430,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                     onCancelAssignment={cancelAssignment}
                   />
                 )}
+                <EmrInstructionOutputMenu />
               </>
             }
           />
