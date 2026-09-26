@@ -53,6 +53,45 @@ for (const item of cases) {
     expect(geometry.moreSize).toBe(28);
     expect(geometry.overflows).toBe(false);
 
+    const layout = await page.locator('[data-slot="instruction-header-stack"]').evaluate((stack) => {
+      const root = stack.parentElement!;
+      const title = stack.querySelector('[data-slot="emr-page-header"]')!;
+      const history = title.querySelector('button[aria-label*="이력 패널"]')!;
+      const info = stack.querySelector('[data-slot="instruction-info-card"]')!;
+      const filters = stack.querySelector('[data-slot="instruction-header-filters"]');
+      const result = root.querySelector('[data-slot="instruction-result-scroll-content"]')!;
+      const rootRect = root.getBoundingClientRect();
+      const titleRect = title.getBoundingClientRect();
+      const infoRect = info.getBoundingClientRect();
+      const resultStyle = getComputedStyle(result);
+      return {
+        titleInset: [titleRect.x - rootRect.x, titleRect.y - rootRect.y],
+        historyInset: history.getBoundingClientRect().x - rootRect.x,
+        infoInset: [infoRect.x - rootRect.x, infoRect.y - titleRect.bottom],
+        infoHeight: infoRect.height,
+        firstCellInset: getComputedStyle(info.firstElementChild!).paddingLeft,
+        lastCellInset: getComputedStyle(info.lastElementChild!).paddingRight,
+        filterInset: filters ? filters.getBoundingClientRect().x - rootRect.x + parseFloat(getComputedStyle(filters).paddingLeft) : null,
+        filterTopGap: filters ? getComputedStyle(filters).marginTop : null,
+        resultInset: result.getBoundingClientRect().x - rootRect.x + parseFloat(resultStyle.paddingLeft),
+        resultTopPadding: resultStyle.paddingTop,
+        resultSectionGap: resultStyle.rowGap,
+        bottomPadding: getComputedStyle(root).paddingBottom,
+      };
+    });
+    expect(layout.titleInset).toEqual([0, 0]);
+    expect(layout.historyInset).toBe(16);
+    expect(layout.infoInset).toEqual([16, 0]);
+    expect(layout.infoHeight).toBeGreaterThanOrEqual(72);
+    expect(layout.firstCellInset).toBe("0px");
+    expect(layout.lastCellInset).toBe("0px");
+    expect(layout.filterInset).toBe(item.name === "영상검사" ? null : 16);
+    expect(layout.filterTopGap).toBe(item.name === "영상검사" ? null : "12px");
+    expect(layout.resultInset).toBe(16);
+    expect(layout.resultTopPadding).toBe("16px");
+    expect(layout.resultSectionGap).toBe("16px");
+    expect(layout.bottomPadding).toBe("8px");
+
     if (item.name === "영상검사") {
       await expect(titleBar.getByRole("button", { name: "PACS" })).toBeVisible();
     }

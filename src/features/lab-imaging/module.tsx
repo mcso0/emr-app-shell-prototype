@@ -3553,10 +3553,12 @@ export function LabContent({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
       <EmrInstructionHeaderStack
+        chartAligned
         titleBar={
           <EmrInstructionTitleBar
+            className="px-4"
             title="임상병리검사 결과지"
             icon={
               <EmrInstructionHistoryToggle
@@ -3631,7 +3633,7 @@ export function LabContent({
           />
         }
         orderInfo={
-          <div className="grid [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
+          <div data-slot="instruction-info-card" className="grid min-h-[72px] [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
             {[
               [
                 "요청 일시",
@@ -3687,7 +3689,7 @@ export function LabContent({
             ].map(([label, value]) => (
               <div
                 key={label as string}
-                className="min-w-0 border-r border-border px-3 last:border-r-0"
+                className="min-w-0 border-r border-border px-3 first:pl-0 last:border-r-0 last:pr-0"
               >
                 <div className="emr-text-metadata font-medium text-muted-foreground">
                   {label}
@@ -3719,7 +3721,7 @@ export function LabContent({
       />
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
-        <div className="flex flex-col gap-4 pb-10 pt-4">
+        <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 px-4 pb-10 pt-4">
           {displayDetail.result.resultProfileLabel ? <p className="text-sm text-muted-foreground" data-testid="lab-frozen-profile">{displayDetail.result.resultProfileLabel}</p> : null}
           <LabResultInputSection
             assigneeName={
@@ -4363,10 +4365,12 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] px-4 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
       <EmrInstructionHeaderStack
+        chartAligned
         titleBar={
           <EmrInstructionTitleBar
+            className="px-4"
             title="영상검사 Order 상세"
             icon={
               <EmrInstructionHistoryToggle
@@ -4424,7 +4428,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
           />
         }
         orderInfo={
-          <div className="grid [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
+          <div data-slot="instruction-info-card" className="grid min-h-[72px] [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
             {[
               [
                 "요청 일시",
@@ -4471,7 +4475,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
             ].map(([label, value]) => (
               <div
                 key={label as string}
-                className="min-w-0 border-r border-border px-3 last:border-r-0"
+                className="min-w-0 border-r border-border px-3 first:pl-0 last:border-r-0 last:pr-0"
               >
                 <div className="emr-text-metadata font-medium text-muted-foreground">
                   {label}
@@ -4488,7 +4492,7 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
         data-slot="imaging-result-scroll-area"
         className="min-h-0 flex-1"
       >
-        <div className="flex flex-col gap-4 pb-10 pt-4">
+        <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 px-4 pb-10 pt-4">
           <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 emr-text-dense font-medium leading-5 text-[var(--emr-status-warning-text)]">
             병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
           </section>
