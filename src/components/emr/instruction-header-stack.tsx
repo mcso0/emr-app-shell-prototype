@@ -1,9 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
+import { DownloadIcon, PrinterIcon } from "@/components/icons";
 import { EmrPageHeader } from "@/components/emr/page-header";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
@@ -44,11 +52,18 @@ export function EmrInstructionTitleBar({
   return (
     <EmrPageHeader
       actions={actions}
+      actionsClassName="ml-auto gap-2"
       badge={badge}
-      className={className}
+      className={cn(
+        "min-h-12 flex-wrap gap-x-4 gap-y-2 py-2.5 [&>div:first-child]:gap-2",
+        className,
+      )}
       icon={icon}
       title={title}
-      titleClassName={titleClassName}
+      titleClassName={cn(
+        "text-base leading-6 tracking-normal text-foreground",
+        titleClassName,
+      )}
     />
   );
 }
@@ -69,7 +84,7 @@ export function EmrInstructionHistoryToggle({
             type="button"
             variant="outline"
             size="icon-sm"
-            className="size-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] [&_svg]:size-4"
+            className="size-[var(--clair-control-height-xs)] rounded-[var(--clair-radius-atomic-6)] bg-card shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] [&_svg]:size-3.5"
             aria-label={`${ariaLabelPrefix} 패널 ${expanded ? "접기" : "열기"}`}
             aria-controls={controls}
             aria-expanded={expanded}
@@ -78,7 +93,7 @@ export function EmrInstructionHistoryToggle({
             data-state={expanded ? "on" : "off"}
             onClick={onClick}
           >
-            <CdsUtilitiesHistoryIcon className="size-4" />
+            <CdsUtilitiesHistoryIcon className="size-3.5" />
           </Button>
         }
       />
@@ -86,6 +101,37 @@ export function EmrInstructionHistoryToggle({
         {tooltipLabel}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+export function EmrInstructionOutputMenu() {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="size-7 rounded-lg text-[var(--emr-text-secondary)] [&_svg]:size-4"
+            aria-label="문서 추가 작업"
+            data-testid="instruction-output-menu-trigger"
+          />
+        }
+      >
+        <CdsFilesMoreHorizontalIcon aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
+          <DownloadIcon aria-hidden="true" />
+          PDF 다운로드
+        </DropdownMenuItem>
+        <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
+          <PrinterIcon aria-hidden="true" />
+          출력하기
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

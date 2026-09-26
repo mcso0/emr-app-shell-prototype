@@ -12,9 +12,7 @@ import { useSearchParams } from "next/navigation";
 import {
   CheckIcon,
   ChevronDownIcon,
-  DownloadIcon,
   MenuIcon,
-  PrinterIcon,
 } from "@/components/icons";
 import {
   CdsActionsRefreshCcwIcon,
@@ -28,6 +26,7 @@ import { EmrStatusBadge } from "@/components/emr/status-badge";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
+  EmrInstructionOutputMenu,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
@@ -2111,7 +2110,8 @@ function DispensingContentBody({
             badge={
               <Badge
                 variant="secondary"
-                className="emr-text-metadata h-[22px] rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-label)]"
+                className="emr-text-metadata h-[22px] max-w-40 truncate rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-label)]"
+                title={instructionId}
               >
                 {instructionId}
               </Badge>
@@ -2121,7 +2121,7 @@ function DispensingContentBody({
                 {hasRightPanel && instructionType === "처치" ? (
                   <Button
                     variant="outline"
-                    size="default"
+                    size="sm"
                     className="bg-card"
                     aria-label={
                       rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"
@@ -2131,14 +2131,6 @@ function DispensingContentBody({
                     {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
                   </Button>
                 ) : null}
-                <Button variant="outline" size="default" className="bg-card">
-                  <DownloadIcon data-icon="inline-start" />
-                  PDF 다운로드
-                </Button>
-                <Button variant="outline" size="default" className="bg-card">
-                  <PrinterIcon data-icon="inline-start" />
-                  출력하기
-                </Button>
                 {selectedFulfillmentWorkItem ? (
                   <FulfillmentExecutionActions
                     workspaceId={selectedFulfillmentWorkItem.workspaceId}
@@ -2173,6 +2165,7 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
+                <EmrInstructionOutputMenu />
               </>
             }
           />

@@ -26,6 +26,7 @@ Current files:
 - `table-density-and-grid-ergonomics.md`: table density, scroll width, header role, resize, and cell text policy.
 - `table-sort-filter-behavior.md`: real table sort/filter behavior contract for selected EMR data grids.
 - `side-panel-header-contract.md`: shared `EmrSubpanelTitle` height and padding contract for module side panels.
+- `instruction-title-header.md`: chart-aligned clinical document title geometry and disabled output menu placement.
 
 ## Current Storybook State
 
