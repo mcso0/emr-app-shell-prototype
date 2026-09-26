@@ -88,6 +88,8 @@ import {
 } from "@/features/order-queue/data";
 import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
+import { useContextVitalEditor } from "@/features/patient-vitals/use-context-vital-editor";
+import { usePatientContextProfileInteractions } from "@/features/customer/use-patient-context-profile-interactions";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import {
@@ -1141,10 +1143,15 @@ export function DispensingHeader({
     (allowLegacyFixtureFallback
       ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
       : null);
-  const selectedEncounterId = getQueueItemEncounterId(
+  const selectedWorkItem = findFulfillmentForQueueItem(
     selectedQueueItem,
     fulfillmentQueue.workItems,
   );
+  const selectedEncounterId = selectedWorkItem?.encounterId;
+  const profileInteractions = usePatientContextProfileInteractions({
+    patientId: selectedWorkItem?.patientId,
+    workspaceId,
+  });
   const latestVitals = usePatientLatestVitalItems({
     encounterId: selectedEncounterId,
     fallbackItems: allowLegacyFixtureFallback
@@ -1170,20 +1177,34 @@ export function DispensingHeader({
       : undefined,
     workspaceId,
   });
+  const { vitalAction, vitalDialog } = useContextVitalEditor({
+    encounterId: selectedEncounterId,
+    encounterIsActive: Boolean(
+      selectedWorkItem &&
+        selectedWorkItem.status !== "completed" &&
+        selectedWorkItem.status !== "cancelled",
+    ),
+    latestVitals,
+    workspaceId,
+  });
 
   if (!selectedQueueItem) {
     return <EmrMainContentHeader aria-hidden="true" heightMode="fixed" />;
   }
 
   return (
+    <>
     <EmrMainContentHeader heightMode="fixed">
       <EmrPatientContextBar
+        key={selectedEncounterId ?? selectedQueueItem.id}
+        guardianInteraction={profileInteractions.guardianInteraction}
         guardianItems={[
           {
             label: "보호자",
             value: selectedQueueItem?.guardianName ?? patient.guardian,
           },
         ]}
+        patientInteraction={profileInteractions.patientInteraction}
         patientItems={[
           {
             label: "환자",
@@ -1202,6 +1223,7 @@ export function DispensingHeader({
             value: selectedQueueItem?.patientSex ?? patient.sex,
           },
         ]}
+        vitalAction={vitalAction}
         vitalItems={latestVitals.items}
         memoActions={[
           {
@@ -1228,6 +1250,8 @@ export function DispensingHeader({
         ]}
       />
     </EmrMainContentHeader>
+    {vitalDialog}
+    </>
   );
 }
 

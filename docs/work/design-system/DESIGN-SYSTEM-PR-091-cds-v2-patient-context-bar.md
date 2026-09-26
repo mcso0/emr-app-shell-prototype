@@ -64,4 +64,8 @@ The shared patient bar now follows the approved CDS.V2 composition while preserv
 
 ## CHART-PR-023 Follow-up
 
-The shared component now exposes optional patient/guardian preview activation and vital-action contracts. It still owns no data fetching, profile state, permissions, or persistence. The chart opts into those contracts with feature-owned preview, drawer, and vital-dialog components; dispensing, lab, imaging, and treatment omit them and therefore keep the original display-only rendering and layout.
+The shared component now exposes optional patient/guardian preview activation and vital-action contracts. It still owns no data fetching, profile state, permissions, or persistence. CHART-PR-023 originally enabled these contracts only in chart; that was the scope of that release.
+
+## 2026-09-27 Local Follow-up
+
+Lab, imaging, and dispensing now opt into the existing profile preview, profile drawer, and vital dialog contracts. Live profile actions appear only after the selected work item resolves to a real patient ID and the workspace-scoped profile read succeeds. Billing keeps its guardian-centered summary layout and adds the same preview and drawer behavior to each identified guardian/patient badge. Vital actions continue through the existing permissioned latest-vital read and guarded chart vital writer; completed work is disabled in the context bar. This follow-up is implemented locally and has not been delivered to the production deployment.

@@ -303,7 +303,7 @@ test("vital API routes and migration keep writes server-owned and auditable", ()
   );
 });
 
-test("patient context bars keep display-only defaults and expose opt-in chart actions", () => {
+test("patient context bars expose opt-in profile and vital actions across clinical modules", () => {
   const contextBar = readFileSync("src/components/emr/patient-context-bar.tsx", "utf8");
   const chart = readFileSync("src/features/chart/module.tsx", "utf8");
   const dispensing = readFileSync("src/features/dispensing/module.tsx", "utf8");
@@ -323,9 +323,11 @@ test("patient context bars keep display-only defaults and expose opt-in chart ac
   expect(chart).toContain("patientInteraction");
   expect(chart).toContain("vitalAction");
   expect(dispensing).toContain("usePatientLatestVitalItems");
-  expect(dispensing).not.toContain("vitalAction=");
+  expect(dispensing).toContain("vitalAction={vitalAction}");
+  expect(dispensing).toContain("patientInteraction={profileInteractions.patientInteraction}");
   expect(labImaging).toContain("usePatientLatestVitalItems");
-  expect(labImaging).not.toContain("vitalAction=");
+  expect(labImaging).toContain("vitalAction={vitalAction}");
+  expect(labImaging).toContain("patientInteraction={profileInteractions.patientInteraction}");
   expect(latestVitalHook).toContain("useWorkspaceVitalSettings");
   expect(latestVitalHook).toContain("formatPatientVitalDisplayItemsForSettings");
 });

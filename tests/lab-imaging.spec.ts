@@ -239,6 +239,7 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await expect(page.getByText("모카").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "모카 환자 프로필 열기" })).toHaveCount(0);
 
   await sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`).click();
   await expect.poll(() => {
@@ -728,3 +729,83 @@ test("imaging workspace prioritizes Kong abdomen study from demo query", async (
   await expect(page.getByTestId("imaging-summary-panel")).toContainText("복부 초음파");
   await expect(page.getByTestId("imaging-summary-panel").getByText("kong-abdomen-ultrasound.png")).toBeVisible();
 });
+
+for (const queueType of ["lab", "imaging"] as const) {
+  test(`${queueType} context opens authorized patient and guardian profiles`, async ({ page }) => {
+    await grantCheongdamWorkspaceAccess(page);
+    const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+    const patientId = "97090000-0000-4000-8000-000000000001";
+    const guardianId = "97090000-0000-4000-8000-000000000002";
+    const encounterId = "97090000-0000-4000-8000-000000000003";
+    const workItem = {
+      id: `context-${queueType}`,
+      workspaceId,
+      encounterId,
+      patientId,
+      orderId: `order-context-${queueType}`,
+      queueType,
+      requestCycle: 1,
+      status: "requested",
+      createdAt: "2026-09-07T01:20:00.000Z",
+      updatedAt: "2026-09-07T01:20:00.000Z",
+      sourceSnapshot: {
+        patientName: "초코",
+        guardianName: "최도현",
+        orderDisplayName: queueType === "lab" ? "CBC 검사" : "흉부 영상",
+        requestingVetName: "송민재",
+        detail: { breed: "포메라니안", age: "3세" },
+      },
+    };
+    const overview = {
+      ok: true,
+      overview: {
+        subjectId: patientId,
+        subjectType: "patient",
+        profile: { id: patientId, name: "초코", patientNo: "P-CONTEXT", breed: "포메라니안", estimatedAgeText: "3세", sex: "male", status: "active" },
+        relationships: { guardians: [{ id: guardianId, name: "최도현", mobilePhone: "010-1234-5678", isPrimary: true }] },
+        access: { information: { allowed: true, requiredPermission: "patient:view" } },
+      },
+    };
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async (route) => {
+      const requestedType = new URL(route.request().url()).searchParams.get("queueType");
+      await route.fulfill({ json: { ok: true, workItems: requestedType === queueType ? [workItem] : [] } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, async (route) => {
+      await route.fulfill({ json: overview });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/customer/guardian/${guardianId}/profile-overview`, async (route) => {
+      await route.fulfill({ json: { ok: true, overview: {
+        subjectId: guardianId,
+        subjectType: "guardian",
+        profile: { id: guardianId, name: "최도현", mobilePhone: "010-1234-5678", status: "active" },
+        relationships: { patients: [{ id: patientId, name: "초코" }] },
+        access: { information: { allowed: true, requiredPermission: "patient:view" } },
+      } } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/latest?*`, async (route) => {
+      await route.fulfill({ json: { ok: true, status: 200, canWriteVitals: false, vital: null } });
+    });
+
+    await page.goto(`/w/${workspaceId}/${queueType}?date=2026-09-07&modulePanel=open&aside=closed&right=closed`);
+    const patientButton = page.getByRole("button", { name: "초코 환자 프로필 열기" });
+    await expect(patientButton).toBeVisible();
+    await patientButton.hover();
+    await expect(page.locator("[data-slot='chart-patient-profile-preview']")).toContainText("P-CONTEXT");
+    await patientButton.click();
+    await expect(page.getByTestId("profile-side-panel")).toHaveAttribute("data-profile-kind", "patient");
+    await expect(page.getByTestId("profile-side-panel")).toContainText("초코");
+    await page.keyboard.press("Escape");
+
+    const guardianButton = page.getByRole("button", { name: "최도현 보호자 프로필 열기" });
+    await expect(guardianButton).toBeVisible();
+    await guardianButton.hover();
+    await expect(page.locator("[data-slot='chart-guardian-profile-preview']")).toContainText("010-1234-5678");
+    await guardianButton.click();
+    await expect(page.getByTestId("profile-side-panel")).toHaveAttribute("data-profile-kind", "guardian");
+    await expect(page.getByTestId("profile-side-panel")).toContainText("최도현");
+    await page.keyboard.press("Escape");
+
+    await page.locator("[data-slot='patient-context-vitals']").hover();
+    await expect(page.getByRole("button", { name: "오늘 바이탈 입력" })).toHaveAttribute("aria-disabled", "true");
+  });
+}
