@@ -429,6 +429,15 @@
     opacity: 0;
   }
 
+  [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]:has(
+      > [data-emr-column-resize-handle="true"]:focus-visible
+    )
+    > [data-emr-table-content="true"] {
+    border-radius: 4px;
+    outline: 2px solid color-mix(in srgb, var(--ring) 50%, transparent);
+    outline-offset: 2px;
+  }
+
   [data-emr-data-table="true"][data-emr-data-table-column-gap="8"]
     [data-emr-column-resize-handle="true"] {
     right: 0 !important;

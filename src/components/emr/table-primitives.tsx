@@ -290,9 +290,10 @@ export function EmrTableHeaderCell({
           type="button"
           aria-label={resizeLabel ?? `${label} 컬럼 너비 조절`}
           className={cn(
-            "absolute right-[-4px] top-1/2 z-[16] h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
-            !pinnedHeaderBoundary &&
-              "hover:bg-[var(--clair-color-atomic-black-alpha-6)]",
+            "absolute right-[-4px] top-1/2 z-[16] h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)]",
+            pinnedHeaderBoundary
+              ? "focus-visible:outline-none focus-visible:ring-0"
+              : "hover:bg-[var(--clair-color-atomic-black-alpha-6)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
             hidePinnedBoundaryResizeIndicator && "before:opacity-0",
           )}
           data-resizing={isResizing ? "true" : undefined}
