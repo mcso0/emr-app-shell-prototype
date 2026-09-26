@@ -111,10 +111,11 @@
 .hospitalTitle { overflow: visible; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.024em; color: var(--clair-color-atomic-neutral-900); }
 .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) { flex-wrap: wrap; }
 .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:first-child { flex-shrink: 0; }
-.hospitalTitle .dateControl { width: auto; height: 40px; gap: 4px; border: 0; background: transparent; padding: 0; }
+.hospitalTitle .dateControl { width: 290px; height: 40px; gap: 4px; border: 0; background: transparent; padding: 0; }
 .hospitalTitle .dateControl > button { min-height: 40px; height: 40px; border-radius: 8px; }
 .hospitalTitle .dateControl > button:first-child, .hospitalTitle .dateControl > button:last-child { width: 32px; }
-.hospitalTitle .dateControl > button[aria-haspopup] { width: auto; min-width: 196px; padding-inline: 12px; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.024em; color: inherit; }
+.hospitalTitle .dateControl > button[aria-haspopup] { width: 218px; min-width: 218px; flex: 0 0 218px; gap: 10px; padding: 4px 10px 4px 12px; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.552px; color: inherit; }
+.hospitalTitle .dateControl > button[aria-haspopup] > span:nth-child(2) { flex: 1; min-width: 0; overflow: visible; text-overflow: clip; white-space: nowrap; }
 .hospitalTitle .dateControl button:hover { background: var(--clair-color-atomic-black-alpha-4); }
 .hospitalTitle .dateControl button:active { background: var(--clair-color-atomic-black-alpha-6); }
 .hospitalTitle .dateControl button:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: 2px; }
@@ -122,7 +123,7 @@
 .hospitalTitle .dateControl button:disabled { opacity: .4; cursor: not-allowed; }
 .hospitalTitle .dateControl svg { flex-shrink: 0; }
 .hospitalTitle .dateControl > button[aria-haspopup] > svg:first-child { display: none; }
-.hospitalTitle .dateControl [data-slot="badge"] { font-size: 12px; line-height: 16px; }
+.hospitalTitle .dateControl [data-slot="badge"] { width: 42px; height: 28px; flex-shrink: 0; border: 1px solid var(--clair-color-atomic-black-alpha-8); border-radius: var(--clair-radius-atomic-6); background: var(--clair-color-atomic-common-100); padding: var(--clair-spacing-2) var(--clair-spacing-8); color: var(--clair-color-atomic-neutral-900); font-size: 15px; font-weight: 500; line-height: 22px; letter-spacing: normal; }
 .workTypeTabs { display: flex; min-width: 0; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
 .workTypeTabs button { display: inline-flex; height: 32px; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid var(--emr-border-default); border-radius: 999px; background: var(--emr-surface-panel); padding: 0 12px; color: var(--emr-text-secondary); font-size: 14px; font-weight: 500; white-space: nowrap; }
 .workTypeTabs button span { color: var(--emr-text-tertiary); font-size: 12px; }
@@ -168,7 +169,8 @@
   .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) { flex-wrap: wrap; }
   .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:first-child { width: 100%; }
   .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:last-child { width: 100%; justify-content: flex-start; }
-  .hospitalTitle .dateControl > button[aria-haspopup] { min-width: 196px; font-size: 20px; }
+  .hospitalTitle .dateControl { width: auto; }
+  .hospitalTitle .dateControl > button[aria-haspopup] { width: auto; min-width: 196px; flex: 1 1 auto; gap: 6px; padding: 0 12px; font-size: 20px; letter-spacing: -0.024em; }
   .hospitalTitle .dateControl [data-slot="badge"] { display: none; }
   .toolbar:has(.workTypeTabs) { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
   .workTypeTabs { width: 100%; }
