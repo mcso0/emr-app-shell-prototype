@@ -773,12 +773,12 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   ]);
   expect(patchBodies[0]).toMatchObject({ action: "claim", expectedRevision: 1 });
   expect(patchBodies[1]).toMatchObject({ action: "unassign", expectedRevision: 2 });
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("서버 상태 진행중");
+  await expect(page.getByTestId("instruction-status-label")).toContainText(
+    "진행중",
+  );
 });
 
-test("dispensing treatment workspace shows server readback and refreshes after persisted status mutation", async ({
+test("dispensing treatment workspace refreshes server-backed status after persisted mutation", async ({
   page,
 }) => {
   let dispensingStatus: FulfillmentWorkItemStatus = "requested";
@@ -881,15 +881,10 @@ test("dispensing treatment workspace shows server readback and refreshes after p
   await page
     .getByTestId("order-queue-item-live-fulfillment-den456-dispensing")
     .click();
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("조제 업무 큐");
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("서버 상태 요청");
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("오더 order-den456-dispensing");
+  const orderRow = page.getByTestId(
+    "order-row-section-0-live-order-row-den456-dispensing",
+  );
+  await expect(orderRow).toContainText("DEN-456 항구토제 조제");
 
   await page.getByRole("button", { name: "담당하기" }).first().click();
   await expect
@@ -899,9 +894,11 @@ test("dispensing treatment workspace shows server readback and refreshes after p
     .toBe("claim");
   await page.getByRole("button", { name: "조제 시작" }).click();
   await expect.poll(() => lifecycleActions.join(",")).toBe("claim,start");
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("서버 상태 진행중");
+  await expect
+    .poll(() => dispensingReads, {
+      message: "successful status mutation should refresh the dispensing queue",
+    })
+    .toBeGreaterThan(1);
   await expect(
     page.getByRole("button", { name: /조제 중|처치 중/ }).first(),
   ).toBeVisible();
@@ -981,8 +978,10 @@ test("dispensing queue reconciles server totals with visible type-filter counts"
     .getByTestId("order-queue-item-live-fulfillment-reconcile-dispensing-1")
     .click();
   await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("오더 order-reconcile-dispensing-1");
+    page.getByTestId(
+      "order-row-section-0-live-order-row-reconcile-dispensing-1",
+    ),
+  ).toContainText("정합성 조제 1");
 
   await typeFilter.getByRole("button", { name: /처치\s*2/ }).click();
   await expect(queueRows).toHaveCount(2);
@@ -994,7 +993,7 @@ test("dispensing queue reconciles server totals with visible type-filter counts"
   ).toBeVisible();
 });
 
-test("dispensing readback shows only reviewed immutable medication facts and no guessed execution fields", async ({
+test("dispensing order table shows prescription details without guessed execution fields", async ({
   page,
 }) => {
   const dispensingLineage = {
@@ -1081,27 +1080,10 @@ test("dispensing readback shows only reviewed immutable medication facts and no 
     .getByTestId("order-queue-item-live-fulfillment-pr017-reviewed-dispensing")
     .click();
 
-  const facts = page.getByTestId("dispensing-reviewed-medication-facts");
-  await expect(facts).toContainText("제품 검토 완료 약품");
-  await expect(facts).toContainText("함량 25 mg");
-  await expect(facts).toContainText("제형 Tablet");
-  await expect(facts).toContainText("경로 oral");
-  await expect(facts).toContainText("대상종 dog, cat");
-  await expect(facts).toContainText("임상 검토 확인");
-  const readback = page.getByTestId("dispensing-fulfillment-readback");
-  await expect(readback).toContainText("환자 patient-pr017-reviewed");
-  await expect(readback).toContainText("진료 enc-den456");
-  await expect(readback).toContainText("오더 order-pr017-reviewed-dispensing");
-  await expect(readback).toContainText(
-    "Task task-pr017-reviewed-dispensing / 시도 3",
-  );
-  await expect(readback).toContainText("Task 상태 부분완료");
-  await expect(readback).toContainText("처방 총량 7");
-  await expect(readback).toContainText("청구 수량 2");
-  await expect(readback).toContainText("청구 단위 per_each");
   const prescriptionRow = page.getByTestId(
     "order-row-section-0-live-order-row-pr017-reviewed-dispensing",
   );
+  await expect(prescriptionRow).toContainText("Tablet");
   await expect(prescriptionRow).toContainText("0.5 ml");
   await expect(prescriptionRow).toContainText("하루 2회");
   await expect(prescriptionRow).toContainText("7");
@@ -1110,7 +1092,7 @@ test("dispensing readback shows only reviewed immutable medication facts and no 
   await expect(prescriptionRow).toContainText(
     "식후에 1회 0.5mL씩 하루 2회, 7일간 투여하세요.",
   );
-  await expect(readback).not.toContainText(/lot|expiry|BUD|로트|유효기간/i);
+  await expect(prescriptionRow).not.toContainText(/lot|expiry|BUD|로트|유효기간/i);
 });
 
 test("dispensing projects frozen set display and confirmed product-unit billing without changing prescribed total", async ({
@@ -1188,17 +1170,14 @@ test("dispensing projects frozen set display and confirmed product-unit billing 
   await expect(queueItem).toContainText("현재 요청자명");
   await queueItem.click();
 
-  const readback = page.getByTestId("dispensing-fulfillment-readback");
-  await expect(readback).toContainText("처방 총량 2");
-  await expect(readback).toContainText("청구 수량 3");
-  await expect(readback).toContainText("청구 단위 tablet");
-  await expect(readback).not.toContainText("청구 수량 1");
-  await expect(readback).not.toContainText("청구 단위 per_each");
-  await expect(
-    page.getByTestId(
-      `order-row-section-0-live-order-row-${workItem.id}`,
-    ),
-  ).toContainText("조제 세트 리허설 제품");
+  const orderRow = page.getByTestId(
+    `order-row-section-0-live-order-row-${workItem.id}`,
+  );
+  await expect(orderRow).toContainText("조제 세트 리허설 제품");
+  await expect(orderRow).toContainText("tablet");
+  await expect(orderRow.getByRole("cell", { name: "2", exact: true })).toBeVisible();
+  await expect(orderRow.getByRole("cell", { name: "3", exact: true })).toBeVisible();
+  await expect(orderRow).not.toContainText("per_each");
   expect(sourceSnapshot).toMatchObject({
     quantity: 1,
     salesUnit: "per_each",
@@ -1296,18 +1275,17 @@ test("dispensing treatment workspace keeps local state unchanged when fulfillmen
   await page
     .getByTestId("order-queue-item-live-fulfillment-den456-mutation-denied")
     .click();
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("서버 상태 요청");
+  const orderRow = page.getByTestId(
+    "order-row-section-0-live-order-row-den456-mutation-denied",
+  );
+  await expect(orderRow).toContainText("DEN-456 저장 실패 검증");
 
   await page.getByRole("button", { name: "담당하기" }).first().click();
 
   await expect(
     page.getByTestId("dispensing-fulfillment-mutation-state"),
   ).toContainText("저장하지 못했습니다");
-  await expect(
-    page.getByTestId("dispensing-fulfillment-readback"),
-  ).toContainText("서버 상태 요청");
+  await expect(orderRow).toContainText("DEN-456 저장 실패 검증");
   await expect(
     page.getByRole("button", { name: "담당하기" }).first(),
   ).toBeVisible();

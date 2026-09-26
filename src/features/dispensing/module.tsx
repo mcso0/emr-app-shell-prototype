@@ -1957,32 +1957,6 @@ function GroupStatusAction({
   );
 }
 
-function getFulfillmentQueueTypeLabel(queueType?: FulfillmentQueueType) {
-  if (queueType === "treatment") return "처치 업무 큐";
-  if (queueType === "dispensing") return "조제 업무 큐";
-  return "업무 큐";
-}
-
-function getFulfillmentStatusLabel(status?: FulfillmentWorkItemStatus) {
-  if (status === "requested") return "요청";
-  if (status === "in_progress") return "진행중";
-  if (status === "paused") return "일시중지";
-  if (status === "completed") return "완료";
-  if (status === "cancelled") return "취소";
-  if (status === "returned") return "재요청";
-  return "미연결";
-}
-
-function getUniversalTaskStatusLabel(status?: UniversalOrderTaskStatus | null) {
-  if (status === "pending") return "대기";
-  if (status === "in_progress") return "진행중";
-  if (status === "paused") return "일시중지";
-  if (status === "partial_complete") return "부분완료";
-  if (status === "complete") return "완료";
-  if (status === "cancelled") return "취소";
-  return "미연결";
-}
-
 function DispensingFulfillmentQueueNotice({
   onRetry,
   status,
@@ -2146,12 +2120,6 @@ function DispensingContentBody({
     && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
     && !selectedFulfillmentWorkItem.sourceSnapshot.detailInputs.linkedMedicationOrderId
     && selectedFulfillmentWorkItem.status === "requested";
-  const reviewedMedicationFacts = getReviewedMedicationFacts(
-    selectedFulfillmentWorkItem,
-  );
-  const dispensingQuantityFacts = getDispensingQuantityFacts(
-    selectedFulfillmentWorkItem,
-  );
   const initialTableGroups = useMemo(() =>
     selectedFulfillmentWorkItem
       ? createLiveOrderTableGroups(
@@ -2569,86 +2537,6 @@ function DispensingContentBody({
                 </div>
               ))}
             </div>
-            {selectedFulfillmentWorkItem ? (
-              <div
-                data-testid="dispensing-fulfillment-readback"
-                className="flex flex-wrap items-center gap-2 rounded-md border bg-[var(--emr-surface-panel)] px-3 py-2 emr-text-metadata text-muted-foreground"
-              >
-                <Badge variant="secondary">
-                  {getFulfillmentQueueTypeLabel(
-                    selectedFulfillmentWorkItem.queueType,
-                  )}
-                </Badge>
-                <Badge variant="outline">
-                  서버 상태{" "}
-                  {getFulfillmentStatusLabel(
-                    selectedFulfillmentWorkItem.status,
-                  )}
-                </Badge>
-                <span>담당 {instructionAssignee}</span>
-                {selectedFulfillmentWorkItem.patientId ? (
-                  <span>환자 {selectedFulfillmentWorkItem.patientId}</span>
-                ) : null}
-                <span>진료 {selectedFulfillmentWorkItem.encounterId}</span>
-                <span>오더 {selectedFulfillmentWorkItem.orderId}</span>
-                {selectedFulfillmentWorkItem.taskId ? (
-                  <span>
-                    Task {selectedFulfillmentWorkItem.taskId}
-                    {selectedFulfillmentWorkItem.taskAttemptNo
-                      ? ` / 시도 ${selectedFulfillmentWorkItem.taskAttemptNo}`
-                      : ""}
-                  </span>
-                ) : null}
-                {selectedFulfillmentWorkItem.taskStatus ? (
-                  <Badge variant="outline">
-                    Task 상태{" "}
-                    {getUniversalTaskStatusLabel(
-                      selectedFulfillmentWorkItem.taskStatus,
-                    )}
-                  </Badge>
-                ) : null}
-                {dispensingQuantityFacts?.prescribedTotal !== undefined ? (
-                  <span>
-                    처방 총량 {dispensingQuantityFacts.prescribedTotal}
-                  </span>
-                ) : null}
-                {dispensingQuantityFacts?.billingQuantity !== undefined ? (
-                  <span>
-                    청구 수량 {dispensingQuantityFacts.billingQuantity}
-                  </span>
-                ) : null}
-                {dispensingQuantityFacts?.billingUnit ? (
-                  <span>청구 단위 {dispensingQuantityFacts.billingUnit}</span>
-                ) : null}
-                {reviewedMedicationFacts ? (
-                  <span
-                    data-testid="dispensing-reviewed-medication-facts"
-                    className="contents"
-                  >
-                    {reviewedMedicationFacts.productName ? (
-                      <span>제품 {reviewedMedicationFacts.productName}</span>
-                    ) : null}
-                    {reviewedMedicationFacts.strength ? (
-                      <span>함량 {reviewedMedicationFacts.strength}</span>
-                    ) : null}
-                    {reviewedMedicationFacts.dosageForm ? (
-                      <span>제형 {reviewedMedicationFacts.dosageForm}</span>
-                    ) : null}
-                    {reviewedMedicationFacts.routes.length ? (
-                      <span>
-                        경로 {reviewedMedicationFacts.routes.join(", ")}
-                      </span>
-                    ) : null}
-                    {reviewedMedicationFacts.species.length ? (
-                      <span>
-                        대상종 {reviewedMedicationFacts.species.join(", ")}
-                      </span>
-                    ) : null}
-                    <Badge variant="outline">임상 검토 확인</Badge>
-                  </span>
-                ) : null}
-              </div>
-            ) : null}
           </div>
         }
         filters={
