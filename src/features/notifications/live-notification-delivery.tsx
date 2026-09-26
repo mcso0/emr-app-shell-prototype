@@ -48,6 +48,27 @@ export function LiveNotificationDelivery({
   const initialized = useRef(false);
   const audio = useRef<AudioContext | null>(null);
   const canPlay = useRef(false);
+  const toastStackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const stackElement = toastStackRef.current;
+    const root = document.documentElement;
+    if (!ready || !stackElement) {
+      root.style.removeProperty("--live-notification-toast-stack-height");
+      return;
+    }
+    const observer = new ResizeObserver(([entry]) => {
+      root.style.setProperty(
+        "--live-notification-toast-stack-height",
+        `${Math.ceil(entry.contentRect.height)}px`,
+      );
+    });
+    observer.observe(stackElement);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--live-notification-toast-stack-height");
+    };
+  }, [ready]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -236,6 +257,7 @@ export function LiveNotificationDelivery({
 
   return (
     <div
+      ref={toastStackRef}
       aria-label="새 알림"
       className="fixed right-4 bottom-4 z-40 grid gap-2"
     >

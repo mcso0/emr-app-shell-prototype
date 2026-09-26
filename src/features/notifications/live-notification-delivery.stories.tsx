@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fn, userEvent } from "storybook/test";
+import { expect, fn, userEvent, waitFor } from "storybook/test";
 import { Button } from "@/components/ui/button";
 import { LiveNotificationDelivery } from "./live-notification-delivery";
 import { defaultNotificationPreferences } from "./notification-preferences";
@@ -110,8 +110,25 @@ export const NewNotification: Story = {
       canvas.getByRole("button", { name: "일반 알림 생성" }),
     );
     await expect(await canvas.findByText("예시 일반 알림")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        Number.parseInt(
+          document.documentElement.style.getPropertyValue(
+            "--live-notification-toast-stack-height",
+          ),
+          10,
+        ),
+      ).toBeGreaterThan(0),
+    );
     await userEvent.click(canvas.getByRole("button", { name: "닫기" }));
     await expect(canvas.queryByText("예시 일반 알림")).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        document.documentElement.style.getPropertyValue(
+          "--live-notification-toast-stack-height",
+        ),
+      ).toBe("0px"),
+    );
     await expect(canvas.getByText("알림함 기록: 1")).toBeVisible();
   },
 };

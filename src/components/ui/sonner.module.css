@@ -1,0 +1,16 @@
+.toaster :global([data-sonner-toast][data-styled="true"] [data-close-button]) {
+  top: 12px;
+  right: 12px;
+  left: auto;
+  width: 24px;
+  height: 24px;
+  transform: none;
+  border: 0;
+  border-radius: var(--clair-radius-sm);
+  background: transparent;
+  color: var(--emr-text-secondary);
+}
+
+.toaster :global([data-sonner-toast][data-styled="true"] [data-close-button]:hover) {
+  background: var(--emr-state-hover);
+}

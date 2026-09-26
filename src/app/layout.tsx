@@ -39,7 +39,20 @@ export default function RootLayout({
         <TooltipProvider>
           <WorkspaceEntrySplashProvider>
             {children}
-            <Toaster position="top-right" visibleToasts={3} />
+            <Toaster
+              position="bottom-right"
+              visibleToasts={3}
+              offset={{
+                right: 24,
+                bottom:
+                  "calc(68px + var(--live-notification-toast-stack-height, 0px))",
+              }}
+              mobileOffset={{
+                right: 16,
+                bottom:
+                  "calc(64px + var(--live-notification-toast-stack-height, 0px) + env(safe-area-inset-bottom))",
+              }}
+            />
           </WorkspaceEntrySplashProvider>
         </TooltipProvider>
       </body>
