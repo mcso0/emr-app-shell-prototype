@@ -9173,7 +9173,6 @@ function ChartOrderTable({
             `${row.original.order.displayName} 행 작업`
           }
           rowOverlayWidth={114}
-          rowOverlaySide="start"
           renderRowOverlay={({ row }) => {
             const orderRow = row.original;
             const { order } = orderRow;

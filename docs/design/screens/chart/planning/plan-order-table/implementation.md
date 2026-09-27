@@ -192,9 +192,9 @@ Required behavior:
   `요청 수의사` column in both the header and every row. Keep the 26 data-column
   widths and labels unchanged. The avatar-only `요청 수의사` column has no resize
   handle; its sorting remains available.
-- Keep each row's 114px action overlay at the viewport's left scroll boundary,
-  immediately after the pinned columns. Horizontal scrolling must not move it
-  or cover the pinned selection and identity controls.
+- Keep each row's 114px action overlay at the viewport's right scroll boundary,
+  including over the trailing 110px space on hover. Horizontal scrolling must
+  not move the overlay or cover the pinned selection and identity controls.
 - Do not replace the current bounded table viewport with a feature-local
   `ScrollArea` or an additional vertical scroll owner.
 - Keep header and body column starts aligned after horizontal scroll, column

@@ -185,6 +185,20 @@ absent while sorting stays available. The 110px trailing-space and three-slot
 row-action checks pass (3/3). Secret scan, docs check, diff check, lint (five
 existing script warnings), TypeScript and production build pass.
 
+## 2026-09-27 right row actions correction
+
+The owner corrected the intended side to the viewport's right edge. Place the
+zero-width row-action anchor after the 110px presentation-only trailing space
+in the header, body, skeleton and colgroup. Keep the action group's right edge
+fixed to the scroll viewport at the start, middle and end scroll positions,
+including the narrow unpinned layout. The 110px space remains visible when the
+row is idle; hovering a row presents its 114px action group at the viewport
+edge. Keep the final column's resize handle absent and sorting available.
+Local Chromium confirms the action group's right edge matches the scroll
+viewport at the start, middle and end positions and at both narrow-layout
+ends. The 110px trailing-space, final-column and three-slot row-action checks
+pass (3/3); the rightmost hovered-row screenshot was visually inspected.
+
 ## Release dependency and rollback boundaries
 
 The owner authorized code delivery after TDD and subsequently approved the scoped
