@@ -21,6 +21,10 @@ import { getAuditRequestId } from "@/features/audit/server-mutation-audit";
 import type { ReceptionWalkInEncounterInput } from "@/features/reception/walk-in-encounter";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import {
+  createSupabaseWorkspaceVitalSettingsGateway,
+  type SupabaseWorkspaceVitalSettingsClient,
+} from "@/features/hospital-admin/vital-settings/server-workspace-vital-settings-core";
 
 type RouteContext = {
   params: Promise<{
@@ -67,10 +71,19 @@ export async function POST(request: Request, { params }: RouteContext) {
         sessionUserId: identity.actorUserId,
       })
     : undefined;
+  const vitalSettingsResult = client
+    ? await createSupabaseWorkspaceVitalSettingsGateway(
+        client as unknown as SupabaseWorkspaceVitalSettingsClient,
+      ).get(workspaceId)
+    : null;
+  if (vitalSettingsResult && !vitalSettingsResult.ok) {
+    return Response.json({ ok: false, error: "db_read_failed" }, { status: 500 });
+  }
   const result = await createReceptionWalkInEncounter({
     actorUserId: identity.actorUserId,
     workspaceId,
     input,
+    vitalSettings: vitalSettingsResult?.ok ? vitalSettingsResult.snapshot : undefined,
     permissionAdapter,
     gateway: client
       ? createSupabaseReceptionWalkInEncounterGateway(

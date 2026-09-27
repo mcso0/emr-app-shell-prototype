@@ -7,6 +7,7 @@ import {
   createSupabaseReceptionWalkInEncounterGateway,
   createReceptionWalkInEncounter,
 } from "../src/features/reception/server-walk-in-encounter-core";
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 import type { ReceptionWalkInEncounterInput } from "../src/features/reception/walk-in-encounter";
 
 type SupabaseWalkInClient = Parameters<
@@ -265,6 +266,30 @@ test("walk-in encounter core validates nested vitals before gateway access", asy
     });
   }
   expect(gatewayCalls).toBe(0);
+});
+
+test("walk-in encounter requires both blood pressure values when the workspace requires blood pressure", async () => {
+  const vitalSettings = createDefaultWorkspaceVitalSettingsSnapshot();
+  vitalSettings.items = vitalSettings.items.map((item) => item.key === "blood_pressure"
+    ? { ...item, inputRequired: true }
+    : item);
+  const result = await createReceptionWalkInEncounter({
+    actorUserId: "user-front-desk",
+    workspaceId: "clair-demo",
+    input: {
+      ...validWalkInInput,
+      vitals: { bloodPressure: { systolicMmhg: 132 } },
+    },
+    vitalSettings,
+  });
+
+  expect(result).toMatchObject({
+    ok: false,
+    status: 400,
+    fieldErrors: {
+      "vitals.bloodPressure.diastolicMmhg": "이완기 혈압을 입력해 주세요.",
+    },
+  });
 });
 
 test("walk-in encounter core omits an empty nested vitals object", async () => {

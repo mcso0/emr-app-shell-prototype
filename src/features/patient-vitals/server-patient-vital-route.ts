@@ -14,6 +14,10 @@ import {
   writePatientVital,
   type SupabasePatientVitalClient,
 } from "@/features/patient-vitals/server-patient-vital";
+import {
+  createSupabaseWorkspaceVitalSettingsGateway,
+  type SupabaseWorkspaceVitalSettingsClient,
+} from "@/features/hospital-admin/vital-settings/server-workspace-vital-settings-core";
 import { createClient } from "@/lib/supabase/server";
 
 export async function handlePatientVitalPatch({
@@ -70,6 +74,12 @@ export async function handlePatientVitalPatch({
     sessionUserId: identity.actorUserId,
     workspaceId,
   });
+  const vitalSettingsResult = await createSupabaseWorkspaceVitalSettingsGateway(
+    client as unknown as SupabaseWorkspaceVitalSettingsClient,
+  ).get(workspaceId);
+  if (!vitalSettingsResult.ok) {
+    return Response.json({ ok: false, error: "db_read_failed" }, { status: 500 });
+  }
   const vitalClient = client as unknown as SupabasePatientVitalClient;
   const result = await writePatientVital({
     actorUserId: identity.actorUserId,
@@ -80,6 +90,7 @@ export async function handlePatientVitalPatch({
         : createSupabaseChartPatientVitalWriteGateway(vitalClient),
     input: body?.vitals,
     permissionAdapter,
+    vitalSettings: vitalSettingsResult.snapshot,
     workspaceId,
   });
 

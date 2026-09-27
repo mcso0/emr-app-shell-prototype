@@ -28,6 +28,7 @@ test("workspace vital settings allow member reads and report manage eligibility"
       "temperature",
       "heart_rate",
       "respiratory_rate",
+      "blood_pressure",
     ]);
   }
 });
@@ -69,18 +70,9 @@ test("workspace vital settings validate supported units and unique order before 
   expect(result).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
 });
 
-test("workspace vital settings reject missing or disabled required presets before writing", async () => {
-  let gatewayCalled = false;
-  const gateway = {
-    async get() {
-      return { ok: false as const, error: "db_read_failed" as const };
-    },
-    async replace() {
-      gatewayCalled = true;
-      return { ok: false as const, error: "db_write_failed" as const };
-    },
-  };
+test("workspace vital settings allow removing and disabling presets", async () => {
   const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+  const gateway = createMockWorkspaceVitalSettingsGateway();
 
   for (const items of [
     snapshot.items.filter((item) => item.key !== "weight")
@@ -88,6 +80,7 @@ test("workspace vital settings reject missing or disabled required presets befor
     snapshot.items.map((item) => item.key === "temperature"
       ? { ...item, enabled: false }
       : item),
+    [],
   ]) {
     const result = await replaceWorkspaceVitalSettings({
       actorUserId,
@@ -97,9 +90,42 @@ test("workspace vital settings reject missing or disabled required presets befor
       gateway,
     });
 
-    expect(result).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
+    expect(result).toMatchObject({ ok: true, status: 200, items });
   }
-  expect(gatewayCalled).toBe(false);
+});
+
+test("workspace vital settings reject required items that are disabled", async () => {
+  const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+  const result = await replaceWorkspaceVitalSettings({
+    actorUserId,
+    workspaceId,
+    items: snapshot.items.map((item) => item.key === "temperature"
+      ? { ...item, enabled: false, inputRequired: true }
+      : item),
+    permissionAdapter: permissionAdapter("hospital_admin"),
+    gateway: createMockWorkspaceVitalSettingsGateway(),
+  });
+
+  expect(result).toMatchObject({ ok: false, status: 400, error: "invalid_input" });
+});
+
+test("workspace vital settings normalize an older optional client payload", async () => {
+  const items = createDefaultWorkspaceVitalSettingsSnapshot().items.map((item) => ({
+    key: item.key,
+    enabled: item.enabled,
+    displayUnit: item.displayUnit,
+    sortOrder: item.sortOrder,
+  }));
+  const result = await replaceWorkspaceVitalSettings({
+    actorUserId,
+    workspaceId,
+    items,
+    permissionAdapter: permissionAdapter("hospital_admin"),
+    gateway: createMockWorkspaceVitalSettingsGateway(),
+  });
+
+  expect(result.ok).toBe(true);
+  if (result.ok) expect(result.items.every((item) => item.inputRequired === false)).toBe(true);
 });
 
 test("Supabase vital settings gateway uses only workspace-scoped read and replace RPCs", async () => {

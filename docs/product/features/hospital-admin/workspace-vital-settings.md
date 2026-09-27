@@ -11,8 +11,9 @@ related_work:
   - "HOSPITAL-ADMIN-LIVE-PR-018"
   - "HOSPITAL-ADMIN-LIVE-PR-019"
   - "HOSPITAL-ADMIN-PR-008"
+  - "HOSPITAL-ADMIN-LIVE-PR-024"
   - "RECEPTION-QA-PR-014"
-last_updated: 2026-09-14
+last_updated: 2026-09-27
 ---
 
 # Workspace Vital Settings
@@ -25,15 +26,13 @@ Give each hospital one workspace-wide list of vital fields. Administrators choos
 
 - Scope is one configuration per workspace. It is not user-, role-, room-, or species-specific.
 - Members with `hospital_settings:view` can read the configuration. Only members with `hospital_settings:manage` can save it.
-- Every measurement remains optional during patient entry. A required workspace preset never makes its patient value mandatory.
-- `weight` and `temperature` are required workspace presets: they always remain configured and enabled, while retaining reorder and allowed-unit controls.
-- Optional presets can be disabled while remaining configured, or removed from the workspace list.
-- Disabling or removing an optional preset hides it from new entry and current summary surfaces. Existing measurements remain stored and reappear when the preset is enabled or added again.
+- Each configured preset has independent `enabled` and `inputRequired` states. Only an enabled preset may be required. All five presets can be disabled or removed.
+- Disabling or removing a preset hides it from new entry and current summary surfaces. Existing measurements remain stored and reappear when the preset is enabled or added again.
 - Product presets are curated centrally. Workspace users cannot create arbitrary field definitions.
 - The first supported preset catalog is `weight`, `temperature`, `heart_rate`, `respiratory_rate`, and `blood_pressure`.
-- New workspaces receive weight, temperature, heart rate, and respiratory rate in that order. Blood pressure is available from `추가`.
-- Blood pressure accepts systolic alone; diastolic is optional and is invalid without systolic.
-- No enabled vital is required during reception or chart entry.
+- New workspaces receive all five presets in catalog order, enabled with `inputRequired: false`.
+- Blood pressure is one workspace setting. When optional, systolic alone is valid and diastolic cannot exist without systolic. When required, both systolic and diastolic values must be entered.
+- Current workspace requirements apply to reception, chart creation, and chart edits, including edits to older measurements. Read-only history is unaffected.
 
 ## Units And Storage
 
@@ -49,7 +48,7 @@ Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to 
 
 ## Reception Entry Feedback
 
-- Empty measurements remain optional and neutral.
+- Empty measurements remain neutral for optional presets. Required presets show a label marker and a field error when empty.
 - Invalid formats, non-positive values, unsupported precision, storage overflow, diastolic-only blood pressure, and diastolic values greater than or equal to systolic values block creation with field-level errors.
 - Dog and cat values far outside broad input-plausibility guardrails show a warning but remain creatable through `확인하고 생성`. This is an entry-review aid, not a diagnosis or clinical decision-support rule.
 - The initial broad guardrails are weight below `0.05 kg` or above `200 kg`, temperature below `30°C` or above `45°C`, heart rate below `20 bpm` or above `400 bpm`, respiratory rate below `5 rpm` or above `200 rpm`, systolic pressure below `20 mmHg` or above `400 mmHg`, and diastolic pressure below `10 mmHg` or above `300 mmHg`.
@@ -63,15 +62,18 @@ Storage remains canonical. The UI converts grams to kilograms and Fahrenheit to 
 - `변경 전으로 되돌리기` confirms before restoring the last saved snapshot.
 - `변경사항 저장` opens a confirmation dialog that names the enabled vital list and explains that reception/chart input will change while historical records remain.
 - `사용할 바이탈 목록` contains the only `바이탈 추가` action, placed in the card footer.
-- Rows expose a six-dot drag handle and display-unit control. Required rows show the visual badge `기본` with an accessible “항상 사용” label; optional rows show an enabled switch and `목록에서 제거` menu.
-- Removing an optional row changes only the draft, offers toast undo, and is persisted through the existing save confirmation. The confirmation explains that historical measurements remain.
+- Every row exposes a six-dot drag handle, display-unit control, `활성` switch, and action menu. `inputRequired` rows show a `필수 입력` badge with a tooltip explaining the entry requirement.
+- The action menu changes between `필수 입력으로 설정` and `필수 입력 해제`, plus `삭제하기`. Unit changes remain in the existing unit select; the separate unit-setting menu is outside this slice.
+- Disabling a required row asks for confirmation, then clears both `enabled` and `inputRequired`. Requiring a disabled row asks for confirmation, then enables both. Cancel leaves the draft unchanged.
+- Removing any row asks for confirmation, then changes only the draft and offers toast undo. Existing measurements remain. Re-adding starts enabled and optional with the canonical unit at the bottom of the list.
 - Reordering must support pointer, touch, and keyboard interaction through a maintained drag-and-drop library.
 
 ## Data And Audit
 
 - A product preset table owns labels, descriptions, canonical units, supported units, and default order/state.
-- A workspace setting table owns inclusion, enabled state, display unit, and sort order.
+- A workspace setting table owns inclusion, enabled state, input requirement, display unit, and sort order. A saved empty configuration remains empty rather than falling back to defaults.
 - Reads are workspace-member scoped. Replacement is server-authorized, actor-bound, validated against the preset catalog, and audit-emitting.
+- Server entry validation and a database write boundary enforce current requirements. Existing incomplete historical rows are checked only if edited; setting changes do not rewrite them.
 - Direct browser writes to configuration tables are not an accepted security boundary.
 
 ## Out Of Scope

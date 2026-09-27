@@ -82,7 +82,7 @@ export function ChartPreconsultationContextPanel({
   primaryActionBusy: boolean;
   workspaceId: string;
 }) {
-  const { snapshot: vitalSettings } = useWorkspaceVitalSettings({ actorHeaders, workspaceId });
+  const { snapshot: vitalSettings, status: vitalSettingsStatus } = useWorkspaceVitalSettings({ actorHeaders, workspaceId });
   const [contextState, setContextState] = useState<ContextState>({ status: "loading" });
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [vitalDialogEncounterId, setVitalDialogEncounterId] = useState<
@@ -201,7 +201,7 @@ export function ChartPreconsultationContextPanel({
             <MemoSection context={context} />
             <SectionDivider />
             <VitalSection
-              canWrite={canWriteVitals}
+              canWrite={canWriteVitals && vitalSettingsStatus === "ready"}
               context={context}
               onOpenVitalDialog={() => setVitalDialogEncounterId(encounterId)}
               vitalSettings={vitalSettings}

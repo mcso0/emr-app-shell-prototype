@@ -33,7 +33,7 @@ export function usePatientLatestVitalItems({
   fallbackItems?: PatientVitalDisplayItem[];
   workspaceId: string;
 }) {
-  const { snapshot: vitalSettings } = useWorkspaceVitalSettings({ workspaceId });
+  const { snapshot: vitalSettings, status: vitalSettingsStatus } = useWorkspaceVitalSettings({ workspaceId });
   const requestIdRef = useRef(0);
   const [result, setResult] = useState<
     | { encounterId?: string; status: "loading" }
@@ -136,6 +136,7 @@ export function usePatientLatestVitalItems({
           ? result.vital
           : null,
       vitalSettings,
+      vitalSettingsStatus,
     }),
     [
       encounterId,
@@ -144,6 +145,7 @@ export function usePatientLatestVitalItems({
       replaceVital,
       result,
       vitalSettings,
+      vitalSettingsStatus,
     ],
   );
 }

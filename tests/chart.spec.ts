@@ -16,6 +16,7 @@ import {
   getCurrentOperatingDate,
 } from "../src/lib/emr-domain/demo-date";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
@@ -478,9 +479,11 @@ async function confirmChartOrderCatalogSelection(
 test("waiting chart saves and clears only today's vital values through the dialog", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   const workspaceId = "clair-demo";
   const encounterId = "encounter-haru-260430";
   let vital: Record<string, unknown> | null = null;
+  let requireBloodPressure = false;
   const writes: Record<string, unknown>[] = [];
   const context = () => ({
     encounter: {
@@ -507,6 +510,17 @@ test("waiting chart saves and clears only today's vital values through the dialo
     priorEncounterCount: 1,
     vitals: vital ? [vital] : [],
     history: [],
+  });
+
+  await page.route("**/api/workspaces/*/vital-settings", async (route) => {
+    const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+    snapshot.items = snapshot.items.map((item) => item.key === "blood_pressure"
+      ? { ...item, inputRequired: requireBloodPressure }
+      : item);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, status: 200, ...snapshot }),
+    });
   });
 
   await page.route(
@@ -600,6 +614,27 @@ test("waiting chart saves and clears only today's vital values through the dialo
     respiratoryRateRpm: null,
     bloodPressureSystolicMmhg: null,
     bloodPressureDiastolicMmhg: null,
+  });
+
+  requireBloodPressure = true;
+  await page.reload();
+  await lockedState.getByRole("button", { name: "오늘 바이탈 수정" }).click();
+  const requiredEditDialog = page.getByRole("dialog", { name: "오늘 바이탈 수정" });
+  const systolic = requiredEditDialog.getByLabel("수축기 혈압");
+  const diastolic = requiredEditDialog.getByLabel("이완기 혈압");
+  await expect(systolic).toHaveAttribute("aria-required", "true");
+  await expect(diastolic).toHaveAttribute("aria-required", "true");
+  await systolic.fill("132");
+  await requiredEditDialog.getByRole("button", { name: "저장" }).click();
+  await expect(requiredEditDialog).toContainText("이완기 혈압을 입력해 주세요.");
+  expect(writes).toHaveLength(2);
+  await diastolic.fill("84");
+  await requiredEditDialog.getByRole("button", { name: "저장" }).click();
+  await expect(requiredEditDialog).toHaveCount(0);
+  expect(writes).toHaveLength(3);
+  expect(writes[2]).toMatchObject({
+    bloodPressureSystolicMmhg: 132,
+    bloodPressureDiastolicMmhg: 84,
   });
 });
 

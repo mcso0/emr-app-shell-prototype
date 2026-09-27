@@ -11,6 +11,7 @@ import {
   writePatientVital,
   type SupabasePatientVitalClient,
 } from "../src/features/patient-vitals/server-patient-vital";
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 import type { PermissionId } from "../src/types/emr-domain";
 
 const workspaceId = "clair-demo";
@@ -150,6 +151,27 @@ test("today vital validation keeps field clearing possible and allows systolic-o
   expect(invalid.valid).toBe(false);
   if (invalid.valid) return;
   expect(invalid.fieldErrors.bloodPressureDiastolicMmhg).toContain("수축기");
+});
+
+test("today vital validation applies current required settings to both blood pressure values", () => {
+  const settings = createDefaultWorkspaceVitalSettingsSnapshot();
+  settings.items = settings.items.map((item) => item.key === "blood_pressure"
+    ? { ...item, inputRequired: true }
+    : item);
+
+  const invalid = validatePatientVitalWriteInput({
+    bloodPressureSystolicMmhg: 132,
+    bloodPressureDiastolicMmhg: null,
+  }, settings);
+  expect(invalid.valid).toBe(false);
+  if (invalid.valid) return;
+  expect(invalid.fieldErrors.bloodPressureDiastolicMmhg).toContain("이완기");
+
+  const valid = validatePatientVitalWriteInput({
+    bloodPressureSystolicMmhg: 132,
+    bloodPressureDiastolicMmhg: 86,
+  }, settings);
+  expect(valid.valid).toBe(true);
 });
 
 test("today vital validation rejects values that the stored column would round", () => {

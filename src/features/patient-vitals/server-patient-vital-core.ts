@@ -8,6 +8,10 @@ import {
   type PatientVitalMeasurement,
   type PatientVitalWriteInput,
 } from "@/features/patient-vitals/patient-vital-types";
+import {
+  getRequiredWorkspaceVitalFieldErrors,
+  type WorkspaceVitalSettingsSnapshot,
+} from "@/features/patient-vitals/workspace-vital-settings";
 
 export const patientVitalWritePermission = "vital:write" as const;
 
@@ -110,7 +114,10 @@ export function canWritePatientVitals({
   } as const;
 }
 
-export function validatePatientVitalWriteInput(value: unknown):
+export function validatePatientVitalWriteInput(
+  value: unknown,
+  vitalSettings?: WorkspaceVitalSettingsSnapshot,
+):
   | { valid: true; values: PatientVitalWriteInput }
   | { valid: false; fieldErrors: PatientVitalWriteFieldErrors } {
   if (!isRecord(value)) {
@@ -155,6 +162,12 @@ export function validatePatientVitalWriteInput(value: unknown):
   if (hasDiastolic && values.bloodPressureSystolicMmhg === null) {
     fieldErrors.bloodPressureDiastolicMmhg = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
   }
+  if (vitalSettings) {
+    Object.assign(fieldErrors, {
+      ...getRequiredWorkspaceVitalFieldErrors(vitalSettings, values),
+      ...fieldErrors,
+    });
+  }
 
   return Object.keys(fieldErrors).length
     ? { valid: false, fieldErrors }
@@ -167,6 +180,7 @@ export async function writePatientVital({
   gateway,
   input,
   permissionAdapter,
+  vitalSettings,
   workspaceId,
 }: {
   actorUserId: string | null;
@@ -174,9 +188,10 @@ export async function writePatientVital({
   gateway: PatientVitalWriteGateway | null;
   input: unknown;
   permissionAdapter: WorkspacePermissionAdapter;
+  vitalSettings?: WorkspaceVitalSettingsSnapshot;
   workspaceId: string;
 }): Promise<PatientVitalWriteResult> {
-  const validation = validatePatientVitalWriteInput(input);
+  const validation = validatePatientVitalWriteInput(input, vitalSettings);
   if (!validation.valid) {
     return { ok: false, status: 400, error: "invalid_input", fieldErrors: validation.fieldErrors };
   }

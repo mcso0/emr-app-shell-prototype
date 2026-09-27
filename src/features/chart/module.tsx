@@ -1970,11 +1970,16 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const vitalActionDisabled =
     isHistoricalReadOnlyView ||
     !vitalWriteStateAllowed ||
-    !latestVitals.canWriteVitals;
+    !latestVitals.canWriteVitals ||
+    latestVitals.vitalSettingsStatus !== "ready";
   const vitalActionDisabledReason = isHistoricalReadOnlyView
     ? "과거 차트 보기에서는 바이탈을 수정할 수 없어요."
     : !vitalWriteStateAllowed
       ? "진료 중인 접수에서만 바이탈을 입력할 수 있어요."
+      : latestVitals.vitalSettingsStatus === "error"
+        ? "바이탈 필수 입력 설정을 불러오지 못했어요. 다시 시도해 주세요."
+      : latestVitals.vitalSettingsStatus === "loading"
+        ? "바이탈 필수 입력 설정을 확인하는 중이에요."
       : latestVitals.status === "loading"
         ? "바이탈 입력 권한을 확인하고 있어요."
         : latestVitals.status === "error"

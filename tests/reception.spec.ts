@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 
 type MockKakaoPostcodeResult = {
   readonly address: string;
@@ -5570,6 +5571,42 @@ test("walk-in empty vital draft creates without a measurement payload", async ({
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).not.toHaveProperty("vitals");
   expect(walkInCreate.latestBody).not.toHaveProperty("weightKg");
+});
+
+test("walk-in required vital marks the field and blocks creation until it is entered", async ({ page }) => {
+  const settings = createDefaultWorkspaceVitalSettingsSnapshot();
+  settings.items = settings.items.map((item) => item.key === "weight"
+    ? { ...item, inputRequired: true }
+    : item);
+  await page.route("**/api/workspaces/clair-demo/vital-settings", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, status: 200, ...settings }),
+    });
+  });
+  const walkInCreate = await mockReceptionWalkInCreate(page, {
+    checkedInAt: "2026-05-01T10:45:00+09:00",
+    encounterId: "encounter-required-weight-walkin-dubu",
+    guardianId: "guardian-jung-harin",
+    patientId: "patient-dubu",
+    queueId: "queue-required-weight-walkin-dubu",
+  });
+
+  await page.goto("/w/clair-demo/reception");
+  await openWalkInReceptionForm(page);
+  const form = page.getByTestId("walk-in-reception-dialog");
+  await form.getByLabel("환자 검색").fill("두부");
+  await page.getByRole("option", { name: /두부.*정하린/ }).click();
+  const weight = form.getByTestId("walk-in-vital-rows").getByLabel("체중");
+  await expect(weight).toHaveAttribute("aria-required", "true");
+  await weight.fill("");
+  await form.getByLabel("방문목적").fill("필수 체중 확인 접수");
+  await expect(page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true })).toBeDisabled();
+  await expect(form).toContainText("체중을 입력해 주세요.");
+  expect(walkInCreate.count).toBe(0);
+  await weight.fill("8.40");
+  await page.getByTestId("reception-right-panel").getByRole("button", { name: "생성", exact: true }).click();
+  await expect.poll(() => walkInCreate.count).toBe(1);
 });
 
 test("walk-in vital validation preserves input and explains only non-empty errors", async ({

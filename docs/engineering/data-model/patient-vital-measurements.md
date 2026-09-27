@@ -14,8 +14,9 @@ related_work:
   - CHART-PR-023
   - HOSPITAL-ADMIN-LIVE-PR-018
   - HOSPITAL-ADMIN-LIVE-PR-019
+  - HOSPITAL-ADMIN-LIVE-PR-024
   - RECEPTION-LIVE-PR-017
-last_updated: 2026-08-15
+last_updated: 2026-09-27
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -35,7 +36,7 @@ Each row is workspace-, patient-, and encounter-scoped and contains:
 - mutable current-record attribution: `updated_at`, `updated_by_user_id`
 - whole-row value-clear attribution: `cleared_at`, `cleared_by_user_id`
 
-Values must be positive. Weight accepts up to two decimal places, temperature up to one, and heart rate/respiratory rate/blood pressure are integers. Blood pressure accepts systolic alone; diastolic is optional and cannot exist without systolic. A new measurement needs at least one value. When every value on an existing current record is cleared, the row remains with all values null and both clearing fields set; it is not deleted.
+Values must be positive. Weight accepts up to two decimal places, temperature up to one, and heart rate/respiratory rate/blood pressure are integers. Blood pressure accepts systolic alone while its workspace setting is optional; diastolic cannot exist without systolic. If blood pressure is required, both values are mandatory. A new measurement needs at least one value. When every value on an existing current record is cleared, the row remains with all values null and both clearing fields set only when current workspace requirements permit it; it is not deleted.
 
 ## Write Boundary
 
@@ -61,7 +62,7 @@ The direct table remains RLS-protected with direct authenticated table privilege
 
 The chart context bar can opt into a vital write action for its selected waiting or active consultation. Dispensing, lab, imaging, and treatment consumers remain display-only because they omit the shared component's opt-in action. A successful chart save replaces the current latest-vital result immediately; later screen selection/load still uses the shared server read model rather than real-time push.
 
-Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit, disabling an optional preset, or removing an optional preset from the workspace list never rewrites or deletes historical rows. Re-adding the preset makes the same stored values visible again. `required_in_workspace` means the preset must remain configured and enabled; it does not make a patient measurement mandatory.
+Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit, disabling a preset, or removing it from the workspace list never rewrites or deletes historical rows. Re-adding the preset makes the same stored values visible again. The workspace setting `input_required` governs entry validation for enabled fields. All five product presets have `required_in_workspace = false`, and new workspaces start with all five enabled and `input_required = false`. The reception and chart server boundaries read current workspace settings before writes. The reception RPC validates required fields even if no measurement row would otherwise be created; a deferred measurement trigger validates final row values for chart writes and reception upserts. Historical rows remain readable, and an edit is checked against current requirements.
 
 ## Compatibility Snapshot
 
@@ -98,3 +99,11 @@ had `vital:write` only in the latter. Canonical forward migration
 `20260815103052`) adds that permission to the matching legacy clinical role
 policies. It does not add the permission to front desk and does not change either
 RPC's encounter-state rules.
+
+The `20260927123000_workspace_vital_input_required` migration is a local forward
+candidate. It preserves existing workspace settings and measurement history,
+materializes the legacy four-item fallback for pre-existing workspaces without
+saved rows, adds the per-workspace requirement flag, and changes the fallback for
+new workspaces to five enabled optional presets. Its empty-configuration marker
+keeps an intentionally saved empty list distinct from a new workspace. This
+migration has not been applied remotely in this work item.
