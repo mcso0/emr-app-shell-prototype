@@ -150,6 +150,7 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toBeVisible();
   await expect(sidePanel.getByText("차트별 검사")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "임상병리검사 이력 패널 접기" })).toBeVisible();
+  await expect(page.locator("#lab-content-aside")).toContainText("임상검사 이력");
   await page.getByRole("button", { name: "임상병리검사 이력 패널 접기" }).hover();
   await expect(page.locator("[data-slot='tooltip-content']").filter({ hasText: "임상병리검사 이력" })).toBeVisible();
   await expect(page.getByTestId("lab-content-aside-group-2026-05-01")).toBeVisible();
