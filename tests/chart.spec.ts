@@ -1809,21 +1809,29 @@ test("chart Order all tab renders the approved order confirmation and work-state
     await scrollOwner.evaluate((element, fraction) => {
       element.scrollLeft = (element.scrollWidth - element.clientWidth) * fraction;
     }, scrollFraction);
-    await maropitantRow.locator('[data-column-id="displayName"]').hover();
+    const [viewportBox, rowBox] = await Promise.all([
+      scrollOwner.boundingBox(),
+      maropitantRow.boundingBox(),
+    ]);
+    expect(viewportBox).not.toBeNull();
+    expect(rowBox).not.toBeNull();
+    await page.mouse.move(
+      viewportBox!.x + viewportBox!.width - 150,
+      rowBox!.y + rowBox!.height / 2,
+    );
     await expect(
       overlay.getByRole("button", { name: "Maropitant 16mg T 확정" }),
     ).toBeVisible();
-    const [pinnedEdge, overlayBox] = await Promise.all([
-      maropitantRow.locator('[data-column-id="displayName"]').boundingBox(),
-      overlay.boundingBox(),
-    ]);
-    expect(pinnedEdge).not.toBeNull();
+    await expect(overlay).toHaveCSS("opacity", "1");
+    const overlayBox = await overlay.boundingBox();
     expect(overlayBox).not.toBeNull();
-    expect(Math.abs(overlayBox!.x - (pinnedEdge!.x + pinnedEdge!.width))).toBeLessThanOrEqual(2);
-    overlayPositions.push(overlayBox!.x);
+    const overlayRight = overlayBox!.x + overlayBox!.width;
+    const viewportRight = viewportBox!.x + viewportBox!.width;
+    expect(Math.abs(overlayRight - viewportRight)).toBeLessThanOrEqual(2);
+    overlayPositions.push(overlayRight);
   }
   expect(Math.max(...overlayPositions) - Math.min(...overlayPositions)).toBeLessThanOrEqual(2);
-  await page.screenshot({ path: "test-results/chart-order-left-row-actions.png" });
+  await page.screenshot({ path: "test-results/chart-order-right-row-actions.png" });
 
   await page.setViewportSize({ width: 580, height: 870 });
   await expect(table).toHaveAttribute("data-emr-pinning", "none");
@@ -1839,11 +1847,17 @@ test("chart Order all tab renders the approved order confirmation and work-state
     ]);
     expect(viewportBox).not.toBeNull();
     expect(rowBox).not.toBeNull();
-    await page.mouse.move(viewportBox!.x + 4, rowBox!.y + rowBox!.height / 2);
+    await page.mouse.move(
+      viewportBox!.x + viewportBox!.width - 150,
+      rowBox!.y + rowBox!.height / 2,
+    );
+    await expect(overlay).toHaveCSS("opacity", "1");
     const overlayBox = await overlay.boundingBox();
     expect(overlayBox).not.toBeNull();
-    expect(Math.abs(overlayBox!.x - viewportBox!.x)).toBeLessThanOrEqual(2);
-    narrowPositions.push(overlayBox!.x);
+    const overlayRight = overlayBox!.x + overlayBox!.width;
+    const viewportRight = viewportBox!.x + viewportBox!.width;
+    expect(Math.abs(overlayRight - viewportRight)).toBeLessThanOrEqual(2);
+    narrowPositions.push(overlayRight);
   }
   expect(Math.max(...narrowPositions) - Math.min(...narrowPositions)).toBeLessThanOrEqual(2);
 });

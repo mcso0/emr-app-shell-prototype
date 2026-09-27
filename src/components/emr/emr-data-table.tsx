@@ -103,7 +103,6 @@ export type EmrDataTableProps<TData> = {
   }) => React.ReactNode;
   getRowOverlayAriaLabel?: (row: Row<TData>) => string;
   rowOverlayWidth?: number | string;
-  rowOverlaySide?: "start" | "end";
   renderSelectionActionBar?: (context: {
     selectedRows: Row<TData>[];
     table: TanStackTable<TData>;
@@ -344,22 +343,12 @@ function toCssLength(value: number | string) {
   return typeof value === "number" ? `${value}px` : value;
 }
 
-function EmrDataTableOverlayHeader({
-  side,
-  leftOffset,
-}: {
-  side: "start" | "end";
-  leftOffset: number;
-}) {
+function EmrDataTableOverlayHeader() {
   return (
     <TableHead
       aria-hidden="true"
-      className={cn(
-        "sticky z-[16] !h-0 !w-0 !min-w-0 !max-w-0 !border-0 !p-0",
-        side === "end" && "right-0",
-      )}
+      className="sticky right-0 z-[16] !h-0 !w-0 !min-w-0 !max-w-0 !border-0 !p-0"
       data-emr-data-table-overlay-anchor="header"
-      style={side === "start" ? { left: leftOffset } : undefined}
     />
   );
 }
@@ -368,27 +357,19 @@ function EmrDataTableRowOverlay({
   ariaLabel,
   children,
   onTouchOpenChange,
-  side,
-  leftOffset,
   touchOpen,
   width,
 }: {
   ariaLabel: string;
   children: React.ReactNode;
   onTouchOpenChange: (open: boolean) => void;
-  side: "start" | "end";
-  leftOffset: number;
   touchOpen: boolean;
   width: number | string;
 }) {
   return (
     <TableCell
-      className={cn(
-        "sticky z-[15] !w-0 !min-w-0 !max-w-0 overflow-visible !border-0 !p-0",
-        side === "end" && "right-0",
-      )}
+      className="sticky right-0 z-[15] !w-0 !min-w-0 !max-w-0 overflow-visible !border-0 !p-0"
       data-emr-data-table-overlay-anchor="row"
-      style={side === "start" ? { left: leftOffset } : undefined}
     >
       <div
         aria-label={ariaLabel}
@@ -511,7 +492,6 @@ function EmrDataTableSkeletonRows<TData>({
   columnGap,
   hasRowOverlay,
   leadingInset,
-  rowOverlaySide,
   rowCount,
   table,
   trailingSpace,
@@ -519,7 +499,6 @@ function EmrDataTableSkeletonRows<TData>({
   columnGap: number;
   hasRowOverlay: boolean;
   leadingInset: number;
-  rowOverlaySide: "start" | "end";
   rowCount: number;
   table: TanStackTable<TData>;
   trailingSpace: number;
@@ -533,13 +512,6 @@ function EmrDataTableSkeletonRows<TData>({
       className="bg-[var(--emr-table-data-row-surface)]"
       data-emr-data-table-skeleton-row="true"
     >
-      {hasRowOverlay && rowOverlaySide === "start" ? (
-        <TableCell
-          aria-hidden="true"
-          className="!w-0 !min-w-0 !max-w-0 !border-0 !p-0"
-          data-emr-data-table-overlay-anchor="skeleton"
-        />
-      ) : null}
       {columns.map((column, columnIndex) => {
         const meta = getColumnMeta(column);
         const effectiveColumnGap =
@@ -604,18 +576,18 @@ function EmrDataTableSkeletonRows<TData>({
           </TableCell>
         );
       })}
-      {hasRowOverlay && rowOverlaySide === "end" ? (
-        <TableCell
-          aria-hidden="true"
-          className="!w-0 !min-w-0 !max-w-0 !border-0 !p-0"
-          data-emr-data-table-overlay-anchor="skeleton"
-        />
-      ) : null}
       {trailingSpace > 0 ? (
         <TableCell
           aria-hidden="true"
           className="!p-0"
           data-emr-table-trailing-space="true"
+        />
+      ) : null}
+      {hasRowOverlay ? (
+        <TableCell
+          aria-hidden="true"
+          className="!w-0 !min-w-0 !max-w-0 !border-0 !p-0"
+          data-emr-data-table-overlay-anchor="skeleton"
         />
       ) : null}
     </TableRow>
@@ -627,16 +599,12 @@ function EmrDataTableHeader<TData>({
   group,
   hasRowOverlay,
   leadingInset,
-  leftPinnedColumnWidth,
-  rowOverlaySide,
   trailingSpace,
 }: {
   columnGap: number;
   group: HeaderGroup<TData>;
   hasRowOverlay: boolean;
   leadingInset: number;
-  leftPinnedColumnWidth: number;
-  rowOverlaySide: "start" | "end";
   trailingSpace: number;
 }) {
   return (
@@ -645,12 +613,6 @@ function EmrDataTableHeader<TData>({
       className="border-0 bg-[var(--emr-table-header-surface)] hover:bg-[var(--emr-table-header-surface)]"
       data-emr-data-table-header="true"
     >
-      {hasRowOverlay && rowOverlaySide === "start" ? (
-        <EmrDataTableOverlayHeader
-          side="start"
-          leftOffset={leftPinnedColumnWidth}
-        />
-      ) : null}
       {group.headers.map((header: Header<TData, unknown>) => {
         const column = header.column;
         const visibleColumns = getOrderedVisibleColumns(header.getContext().table);
@@ -770,9 +732,6 @@ function EmrDataTableHeader<TData>({
           </EmrTableHeaderCell>
         );
       })}
-      {hasRowOverlay && rowOverlaySide === "end" ? (
-        <EmrDataTableOverlayHeader side="end" leftOffset={0} />
-      ) : null}
       {trailingSpace > 0 ? (
         <TableHead
           aria-hidden="true"
@@ -780,6 +739,7 @@ function EmrDataTableHeader<TData>({
           data-emr-table-trailing-space="true"
         />
       ) : null}
+      {hasRowOverlay ? <EmrDataTableOverlayHeader /> : null}
     </TableRow>
   );
 }
@@ -792,8 +752,6 @@ function EmrDataTableBodyRow<TData>({
   onTouchOverlayOpenChange,
   row,
   rowOverlayWidth,
-  rowOverlaySide,
-  leftPinnedColumnWidth,
   leadingInset,
   renderRowOverlay,
   renderAfterRow,
@@ -808,8 +766,6 @@ function EmrDataTableBodyRow<TData>({
   onTouchOverlayOpenChange: (open: boolean) => void;
   row: Row<TData>;
   rowOverlayWidth: number | string;
-  rowOverlaySide: "start" | "end";
-  leftPinnedColumnWidth: number;
   leadingInset: number;
   renderRowOverlay?: EmrDataTableProps<TData>["renderRowOverlay"];
   renderAfterRow?: EmrDataTableProps<TData>["renderAfterRow"];
@@ -824,18 +780,6 @@ function EmrDataTableBodyRow<TData>({
   return (
     <React.Fragment key={row.id}>
       <TableRow {...getSafeRowProps(row, rowState, getRowProps)}>
-        {renderRowOverlay && rowOverlaySide === "start" ? (
-          <EmrDataTableRowOverlay
-            ariaLabel={getRowOverlayAriaLabel?.(row) ?? `${row.id} 행 작업`}
-            onTouchOpenChange={onTouchOverlayOpenChange}
-            side="start"
-            leftOffset={leftPinnedColumnWidth}
-            touchOpen={touchOverlayOpen}
-            width={rowOverlayWidth}
-          >
-            {rowOverlay}
-          </EmrDataTableRowOverlay>
-        ) : null}
         {cells.map((cell, cellIndex) => {
           const meta = getColumnMeta(cell.column);
           const role = meta?.role ?? "data";
@@ -926,24 +870,22 @@ function EmrDataTableBodyRow<TData>({
             </TableCell>
           );
         })}
-        {renderRowOverlay && rowOverlaySide === "end" ? (
-          <EmrDataTableRowOverlay
-            ariaLabel={getRowOverlayAriaLabel?.(row) ?? `${row.id} 행 작업`}
-            onTouchOpenChange={onTouchOverlayOpenChange}
-            side="end"
-            leftOffset={0}
-            touchOpen={touchOverlayOpen}
-            width={rowOverlayWidth}
-          >
-            {rowOverlay}
-          </EmrDataTableRowOverlay>
-        ) : null}
         {trailingSpace > 0 ? (
           <TableCell
             aria-hidden="true"
             className="!p-0"
             data-emr-table-trailing-space="true"
           />
+        ) : null}
+        {renderRowOverlay ? (
+          <EmrDataTableRowOverlay
+            ariaLabel={getRowOverlayAriaLabel?.(row) ?? `${row.id} 행 작업`}
+            onTouchOpenChange={onTouchOverlayOpenChange}
+            touchOpen={touchOverlayOpen}
+            width={rowOverlayWidth}
+          >
+            {rowOverlay}
+          </EmrDataTableRowOverlay>
         ) : null}
       </TableRow>
       {renderAfterRow?.(row)}
@@ -971,7 +913,6 @@ export function EmrDataTable<TData>({
   renderAfterRow,
   renderAfterRows,
   rowOverlayWidth = 166,
-  rowOverlaySide = "end",
   selectionActionBarAriaLabel = "선택 행 작업",
   skeletonRowCount = 6,
   trailingSpace = 0,
@@ -1052,9 +993,6 @@ export function EmrDataTable<TData>({
       }
     >
       <colgroup>
-        {hasRowOverlay && rowOverlaySide === "start" ? (
-          <col style={{ width: 0 }} />
-        ) : null}
         {columns.map((column, columnIndex) => (
           <col
             key={column.id}
@@ -1068,10 +1006,8 @@ export function EmrDataTable<TData>({
             }
           />
         ))}
-        {hasRowOverlay && rowOverlaySide === "end" ? (
-          <col style={{ width: 0 }} />
-        ) : null}
         {trailingSpace > 0 ? <col style={{ width: `${trailingSpace}px` }} /> : null}
+        {hasRowOverlay ? <col style={{ width: 0 }} /> : null}
       </colgroup>
       <TableHeader className="sticky top-0 z-10">
         {headerGroups.map((group) => (
@@ -1081,8 +1017,6 @@ export function EmrDataTable<TData>({
             group={group}
             hasRowOverlay={hasRowOverlay}
             leadingInset={leadingInset}
-            leftPinnedColumnWidth={leftPinnedColumnWidth}
-            rowOverlaySide={rowOverlaySide}
             trailingSpace={trailingSpace}
           />
         ))}
@@ -1093,7 +1027,6 @@ export function EmrDataTable<TData>({
             columnGap={columnGap}
             hasRowOverlay={hasRowOverlay}
             leadingInset={leadingInset}
-            rowOverlaySide={rowOverlaySide}
             rowCount={skeletonRowCount}
             table={table}
             trailingSpace={trailingSpace}
@@ -1113,8 +1046,6 @@ export function EmrDataTable<TData>({
               renderAfterRow={renderAfterRow}
               row={row}
               rowOverlayWidth={rowOverlayWidth}
-              rowOverlaySide={rowOverlaySide}
-              leftPinnedColumnWidth={leftPinnedColumnWidth}
               leadingInset={leadingInset}
               table={table}
               touchOverlayOpen={activeTouchOverlayRowId === row.id}
@@ -1139,7 +1070,6 @@ export function EmrDataTable<TData>({
       )}
       data-emr-data-table="true"
       data-emr-data-table-has-row-overlay={hasRowOverlay ? "true" : "false"}
-      data-emr-data-table-row-overlay-side={rowOverlaySide}
       data-emr-data-table-column-gap={columnGap || undefined}
       data-emr-data-table-leading-inset={leadingInset || undefined}
       data-emr-data-table-pinning={hasPinnedColumns ? "columns" : "none"}
