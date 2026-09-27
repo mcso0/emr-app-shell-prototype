@@ -2,6 +2,13 @@
 
 Updated: 2026-09-12
 
+Lab result sheet phase 2 has a local candidate on `codex/lab-result-sheet-phase2`
+as of 2026-09-27. Item/overall findings, read-only retest history, and private
+row-owned attachments are implemented and locally checked. The new migration
+and storage policies have **not** been applied remotely; authenticated storage
+smoke, release review, and deployment remain pending. See
+[LAB-PR-003](../work/lab/LAB-PR-003-result-sheet-phase-2.md) for exact evidence.
+
 Latest local fulfillment-queue remediation restores separate workspace-scoped
 patient/guardian/requester display context, URL-owned operating dates, exact
 queue selection ids, and Asia/Seoul timestamps across lab, imaging,
