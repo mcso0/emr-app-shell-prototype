@@ -5,11 +5,12 @@ import {
   createDefaultWorkspaceVitalSettingsSnapshot,
   fromCanonicalVitalValue,
   getEnabledWorkspaceVitalSettings,
+  getRequiredWorkspaceVitalFieldErrors,
   parseWorkspaceVitalSettingsSnapshot,
   toCanonicalVitalValue,
 } from "../src/features/patient-vitals/workspace-vital-settings";
 
-test("workspace vital defaults enable the four approved presets in input order", () => {
+test("workspace vital defaults enable all five presets without required inputs", () => {
   const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
 
   expect(snapshot.items.map((item) => [item.key, item.enabled, item.displayUnit])).toEqual([
@@ -17,7 +18,9 @@ test("workspace vital defaults enable the four approved presets in input order",
     ["temperature", true, "°C"],
     ["heart_rate", true, "bpm"],
     ["respiratory_rate", true, "rpm"],
+    ["blood_pressure", true, "mmHg"],
   ]);
+  expect(snapshot.items.every((item) => !item.inputRequired)).toBe(true);
   expect(snapshot.presets.map((preset) => preset.key)).toEqual([
     "weight",
     "temperature",
@@ -26,8 +29,8 @@ test("workspace vital defaults enable the four approved presets in input order",
     "blood_pressure",
   ]);
   expect(snapshot.presets.map((preset) => [preset.key, preset.requiredInWorkspace])).toEqual([
-    ["weight", true],
-    ["temperature", true],
+    ["weight", false],
+    ["temperature", false],
     ["heart_rate", false],
     ["respiratory_rate", false],
     ["blood_pressure", false],
@@ -48,19 +51,41 @@ test("workspace vital parser rejects unknown presets and unsupported display uni
   })).toBeNull();
 });
 
-test("workspace vital parser rejects snapshots that omit or disable a required preset", () => {
+test("workspace vital parser allows deletion and disabling but rejects required disabled items", () => {
   const valid = createDefaultWorkspaceVitalSettingsSnapshot();
 
   expect(parseWorkspaceVitalSettingsSnapshot({
     ...valid,
     items: valid.items.filter((item) => item.key !== "weight"),
-  })).toBeNull();
+  })?.items).toHaveLength(4);
   expect(parseWorkspaceVitalSettingsSnapshot({
     ...valid,
     items: valid.items.map((item) => item.key === "temperature"
       ? { ...item, enabled: false }
       : item),
+  })?.items.find((item) => item.key === "temperature")?.enabled).toBe(false);
+  expect(parseWorkspaceVitalSettingsSnapshot({ ...valid, items: [] })?.items).toEqual([]);
+  expect(parseWorkspaceVitalSettingsSnapshot({
+    ...valid,
+    items: valid.items.map((item) => item.key === "temperature"
+      ? { ...item, enabled: false, inputRequired: true }
+      : item),
   })).toBeNull();
+});
+
+test("required vital validation includes both blood pressure values", () => {
+  const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+  snapshot.items = snapshot.items.map((item) => item.key === "blood_pressure"
+    ? { ...item, inputRequired: true }
+    : item);
+
+  expect(getRequiredWorkspaceVitalFieldErrors(snapshot, {
+    bloodPressureSystolicMmhg: 120,
+  })).toEqual({ bloodPressureDiastolicMmhg: "이완기 혈압을 입력해 주세요." });
+  expect(getRequiredWorkspaceVitalFieldErrors(snapshot, {
+    bloodPressureSystolicMmhg: 120,
+    bloodPressureDiastolicMmhg: 80,
+  })).toEqual({});
 });
 
 test("workspace vital units convert through canonical storage without rewriting the source model", () => {
@@ -74,9 +99,9 @@ test("workspace vital units convert through canonical storage without rewriting 
 test("enabled vital selection follows saved order and keeps disabled items configured", () => {
   const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
   snapshot.items = [
-    { key: "temperature", enabled: true, displayUnit: "°C", sortOrder: 0 },
-    { key: "weight", enabled: false, displayUnit: "kg", sortOrder: 1 },
-    { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 2 },
+    { key: "temperature", enabled: true, inputRequired: false, displayUnit: "°C", sortOrder: 0 },
+    { key: "weight", enabled: false, inputRequired: false, displayUnit: "kg", sortOrder: 1 },
+    { key: "heart_rate", enabled: true, inputRequired: false, displayUnit: "bpm", sortOrder: 2 },
   ];
 
   expect(getEnabledWorkspaceVitalSettings(snapshot).map((item) => item.key)).toEqual([
@@ -89,10 +114,10 @@ test("enabled vital selection follows saved order and keeps disabled items confi
 test("patient context vital items follow workspace visibility, order, units, and systolic-only blood pressure", () => {
   const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
   snapshot.items = [
-    { key: "temperature", enabled: true, displayUnit: "°F", sortOrder: 0 },
-    { key: "weight", enabled: false, displayUnit: "g", sortOrder: 1 },
-    { key: "blood_pressure", enabled: true, displayUnit: "mmHg", sortOrder: 2 },
-    { key: "heart_rate", enabled: true, displayUnit: "bpm", sortOrder: 3 },
+    { key: "temperature", enabled: true, inputRequired: false, displayUnit: "°F", sortOrder: 0 },
+    { key: "weight", enabled: false, inputRequired: false, displayUnit: "g", sortOrder: 1 },
+    { key: "blood_pressure", enabled: true, inputRequired: false, displayUnit: "mmHg", sortOrder: 2 },
+    { key: "heart_rate", enabled: true, inputRequired: false, displayUnit: "bpm", sortOrder: 3 },
   ];
 
   expect(formatPatientVitalDisplayItemsForSettings({

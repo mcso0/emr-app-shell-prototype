@@ -25,6 +25,11 @@ import {
   isReceptionDurationMinutesValid,
   receptionDurationValidationMessage,
 } from "@/features/reception/reception-duration";
+import {
+  createDefaultWorkspaceVitalSettingsSnapshot,
+  getRequiredWorkspaceVitalFieldErrors,
+  type WorkspaceVitalSettingsSnapshot,
+} from "@/features/patient-vitals/workspace-vital-settings";
 import type {
   Encounter,
   Guardian,
@@ -139,6 +144,7 @@ export async function createReceptionWalkInEncounter({
   auditRequestId,
   gateway = createMockReceptionWalkInEncounterGateway(),
   input,
+  vitalSettings = createDefaultWorkspaceVitalSettingsSnapshot(),
   permissionAdapter = createDemoReceptionWalkInPermissionAdapter(),
   workspaceId,
 }: {
@@ -148,10 +154,11 @@ export async function createReceptionWalkInEncounter({
   auditRequestId?: LiveMutationAuditOptions["auditRequestId"];
   gateway?: ReceptionWalkInEncounterGateway;
   input: ReceptionWalkInEncounterInput;
+  vitalSettings?: WorkspaceVitalSettingsSnapshot;
   permissionAdapter?: WorkspacePermissionAdapter;
   workspaceId: string;
 }): Promise<ReceptionWalkInEncounterResult> {
-  const validation = validateWalkInInput(input);
+  const validation = validateWalkInInput(input, vitalSettings);
 
   if (!validation.valid) {
     return {
@@ -528,7 +535,10 @@ function normalizeSupabaseWalkInRpcInput(
   return input;
 }
 
-function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
+function validateWalkInInput(
+  input: ReceptionWalkInEncounterInput,
+  vitalSettings: WorkspaceVitalSettingsSnapshot,
+) {
   const fieldErrors: ReceptionWalkInEncounterFieldErrors = {};
 
   const rawAssignedStaffUserIds = (input as { assignedStaffUserIds?: unknown })
@@ -556,6 +566,20 @@ function validateWalkInInput(input: ReceptionWalkInEncounterInput) {
     fieldErrors.plannedStartAt = "접수 예정 시간을 확인해 주세요.";
   }
   validateVitals(input, fieldErrors);
+  const requiredErrors = getRequiredWorkspaceVitalFieldErrors(vitalSettings, {
+    weightKg: input.vitals?.weightKg,
+    temperatureC: input.vitals?.temperatureC,
+    heartRateBpm: input.vitals?.heartRateBpm,
+    respiratoryRateRpm: input.vitals?.respiratoryRateRpm,
+    bloodPressureSystolicMmhg: input.vitals?.bloodPressure?.systolicMmhg,
+    bloodPressureDiastolicMmhg: input.vitals?.bloodPressure?.diastolicMmhg,
+  });
+  for (const [key, message] of Object.entries(requiredErrors)) {
+    const fieldKey = key.startsWith("bloodPressure")
+      ? `vitals.bloodPressure.${key === "bloodPressureSystolicMmhg" ? "systolicMmhg" : "diastolicMmhg"}`
+      : `vitals.${key}`;
+    fieldErrors[fieldKey as ReceptionWalkInEncounterFieldErrorKey] ??= message;
+  }
 
   if (Object.keys(fieldErrors).length > 0) {
     return { valid: false as const, fieldErrors };

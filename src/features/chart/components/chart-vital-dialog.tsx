@@ -17,6 +17,7 @@ import {
 import {
   fromCanonicalVitalValue,
   getEnabledWorkspaceVitalSettings,
+  getRequiredWorkspaceVitalFieldErrors,
   toCanonicalVitalValue,
   type WorkspaceVitalKey,
   type WorkspaceVitalSettingsSnapshot,
@@ -85,15 +86,24 @@ function OpenChartVitalDialog({
   );
   const [fieldErrors, setFieldErrors] = useState<VitalFieldErrors>({});
   const [saving, setSaving] = useState(false);
+  const hasRequiredVitals = vitalSettings.items.some((item) => item.enabled && item.inputRequired);
+
+  const showFieldErrors = (errors: VitalFieldErrors) => {
+    setFieldErrors(errors);
+    const firstKey = Object.keys(errors).find((key) => key !== "vitals");
+    if (firstKey) {
+      window.requestAnimationFrame(() => document.getElementById(`chart-vital-${firstKey}`)?.focus());
+    }
+  };
 
   const saveVital = async () => {
     const parsed = parseVitalDialogDraft(draft, vitalSettings);
     if (!parsed.ok) {
-      setFieldErrors(parsed.fieldErrors);
+      showFieldErrors(parsed.fieldErrors);
       return;
     }
     if (!measurement && !hasPatientVitalValue(parsed.values)) {
-      setFieldErrors({ vitals: "새 바이탈은 한 가지 이상 입력해 주세요." });
+      showFieldErrors({ vitals: "새 바이탈은 한 가지 이상 입력해 주세요." });
       return;
     }
 
@@ -108,7 +118,7 @@ function OpenChartVitalDialog({
     setSaving(false);
 
     if (!result.ok) {
-      setFieldErrors(
+      showFieldErrors(
         result.fieldErrors ?? {
           vitals: getVitalSaveErrorMessage(result.error),
         },
@@ -136,9 +146,11 @@ function OpenChartVitalDialog({
             : "현재 진료 중인 접수에 저장됩니다. 이전 내원 값은 바뀌지 않습니다."
         }
         footerMeta={
-          measurement
-            ? "모든 값을 비우면 오늘 바이탈 행은 유지되고 값만 미표시로 바뀝니다."
-            : "병원에서 사용하는 바이탈 중 실제로 측정한 항목만 입력해 주세요."
+          hasRequiredVitals
+            ? "필수 입력 항목을 모두 채운 뒤 저장해 주세요. 기존 기록 수정에도 현재 설정이 적용됩니다."
+            : measurement
+              ? "모든 값을 비우면 오늘 바이탈 행은 유지되고 값만 미표시로 바뀝니다."
+              : "병원에서 사용하는 바이탈 중 실제로 측정한 항목만 입력해 주세요."
         }
         secondaryAction={
           <Button
@@ -230,7 +242,7 @@ function VitalEntryFields({
   return (
     <div className="space-y-4">
       <p className="text-sm leading-5 text-[var(--emr-text-tertiary)]">
-        실제로 측정한 값만 입력해 주세요. 입력하지 않은 값은 표에서 미표시로 보여요.
+        필수 입력으로 설정된 항목은 모두 입력해 주세요. 그 밖의 값은 선택할 수 있습니다.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         {enabledSettings.flatMap((setting) => {
@@ -247,6 +259,7 @@ function VitalEntryFields({
                 inputKey="bloodPressureSystolicMmhg"
                 key="bloodPressureSystolicMmhg"
                 label="수축기 혈압"
+                required={setting.inputRequired}
                 onChange={onChange}
                 unit={setting.displayUnit}
               />,
@@ -256,7 +269,8 @@ function VitalEntryFields({
                 inputMode="numeric"
                 inputKey="bloodPressureDiastolicMmhg"
                 key="bloodPressureDiastolicMmhg"
-                label="이완기 혈압 (선택)"
+                label={setting.inputRequired ? "이완기 혈압" : "이완기 혈압 (선택)"}
+                required={setting.inputRequired}
                 onChange={onChange}
                 unit={setting.displayUnit}
               />,
@@ -276,6 +290,7 @@ function VitalEntryFields({
               inputKey={inputKey}
               key={setting.key}
               label={preset.label}
+              required={setting.inputRequired}
               onChange={onChange}
               unit={setting.displayUnit}
             />,
@@ -297,6 +312,7 @@ function VitalDialogInput({
   inputKey,
   inputMode,
   label,
+  required,
   onChange,
   unit,
 }: {
@@ -305,17 +321,21 @@ function VitalDialogInput({
   inputKey: keyof PatientVitalWriteInput;
   inputMode: "decimal" | "numeric";
   label: string;
+  required: boolean;
   onChange: (key: keyof PatientVitalWriteInput, value: string) => void;
   unit: string;
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={`chart-vital-${inputKey}`}>{label}</Label>
+      <Label htmlFor={`chart-vital-${inputKey}`}>
+        {label}{required ? <span aria-hidden="true" className="ml-1 text-destructive">*</span> : null}
+      </Label>
       <div className="relative">
         <Input
           id={`chart-vital-${inputKey}`}
           aria-describedby={errors[inputKey] ? `chart-vital-${inputKey}-error` : undefined}
           aria-invalid={Boolean(errors[inputKey])}
+          aria-required={required || undefined}
           inputMode={inputMode}
           placeholder="미입력"
           value={draft[inputKey]}
@@ -413,6 +433,10 @@ function parseVitalDialogDraft(
   ) {
     fieldErrors.bloodPressureSystolicMmhg =
       "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
+  }
+  const requiredErrors = getRequiredWorkspaceVitalFieldErrors(settings, draft);
+  for (const [key, message] of Object.entries(requiredErrors)) {
+    fieldErrors[key as keyof PatientVitalWriteInput] ??= message;
   }
 
   return Object.keys(fieldErrors).length

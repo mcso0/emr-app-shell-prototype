@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -20,11 +20,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { IconReorderAlt } from "obra-icons-react";
 import { toast } from "sonner";
-import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsActionsPlusIcon, CdsActionsTrash2Icon } from "@/components/cds-icons/actions-and-controls";
 import { CdsFilesMoreVerticalIcon } from "@/components/cds-icons/files-and-layout";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -40,6 +39,7 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -50,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HospitalSettingsPage } from "@/features/hospital-admin/settings/hospital-settings-page";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
 import {
@@ -84,6 +85,12 @@ export function WorkspaceVitalSettingsScreen({
     null,
   );
   const [addOpen, setAddOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    key: WorkspaceVitalKey;
+    kind: "delete" | "disable-required" | "enable-required";
+  } | null>(null);
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
+  const actionReturnRef = useRef<HTMLElement | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const setSettingsDirty = useHospitalAdminStore(
@@ -166,6 +173,7 @@ export function WorkspaceVitalSettingsScreen({
       {
         key,
         enabled: true,
+        inputRequired: false,
         displayUnit: preset.canonicalUnit,
         sortOrder: draft.items.length,
       },
@@ -176,7 +184,7 @@ export function WorkspaceVitalSettingsScreen({
     const removedIndex = draft.items.findIndex((item) => item.key === key);
     const removedItem = draft.items[removedIndex];
     const preset = draft.presets.find((item) => item.key === key);
-    if (!removedItem || !preset || preset.requiredInWorkspace) return;
+    if (!removedItem || !preset) return;
 
     setDraft((current) =>
       current
@@ -202,6 +210,32 @@ export function WorkspaceVitalSettingsScreen({
           }),
       },
     });
+  };
+  const closePendingAction = () => {
+    setPendingAction(null);
+    window.requestAnimationFrame(() => actionReturnRef.current?.focus());
+  };
+  const confirmPendingAction = () => {
+    if (!pendingAction) return;
+    if (pendingAction.kind === "delete") {
+      removeItem(pendingAction.key);
+    } else if (pendingAction.kind === "disable-required") {
+      updateItem(pendingAction.key, { enabled: false, inputRequired: false });
+    } else {
+      updateItem(pendingAction.key, { enabled: true, inputRequired: true });
+    }
+    closePendingAction();
+  };
+  const requestAction = (
+    key: WorkspaceVitalKey,
+    kind: "delete" | "disable-required" | "enable-required",
+  ) => {
+    actionReturnRef.current = kind === "delete"
+      ? addButtonRef.current
+      : document.querySelector<HTMLElement>(
+          `[data-testid="vital-setting-${kind === "disable-required" ? "switch" : "more"}-${key}"]`,
+        );
+    setPendingAction({ key, kind });
   };
   const handleSave = async () => {
     setSaving(true);
@@ -268,7 +302,7 @@ export function WorkspaceVitalSettingsScreen({
                 사용할 바이탈 목록
               </h2>
               <p className="text-sm leading-5 font-medium tracking-[0.014em] text-muted-foreground">
-                체중과 체온은 항상 사용되며, 실제 측정값 입력은 선택입니다.
+                필수 입력으로 설정한 항목은 접수와 바이탈 기록 시 입력해야 합니다.
                 그립을 잡아 표시 순서를 바꿀 수 있습니다.
               </p>
             </div>
@@ -294,13 +328,19 @@ export function WorkspaceVitalSettingsScreen({
                         key={item.key}
                         label={preset.label}
                         onEnabledChange={(enabled) =>
-                          updateItem(item.key, { enabled })
+                          item.inputRequired && !enabled
+                            ? requestAction(item.key, "disable-required")
+                            : updateItem(item.key, { enabled })
                         }
-                        onRemove={() => removeItem(item.key)}
+                        onRemove={() => requestAction(item.key, "delete")}
+                        onRequiredChange={() =>
+                          !item.inputRequired && !item.enabled
+                            ? requestAction(item.key, "enable-required")
+                            : updateItem(item.key, { inputRequired: !item.inputRequired })
+                        }
                         onUnitChange={(displayUnit) =>
                           updateItem(item.key, { displayUnit })
                         }
-                        requiredInWorkspace={preset.requiredInWorkspace}
                         units={preset.allowedDisplayUnits}
                       />
                     );
@@ -314,6 +354,7 @@ export function WorkspaceVitalSettingsScreen({
                 data-testid="vital-settings-add"
                 disabled={!canManage || availablePresets.length === 0}
                 onClick={() => setAddOpen(true)}
+                ref={addButtonRef}
                 size="sm"
                 variant="ghost"
               >
@@ -339,7 +380,7 @@ export function WorkspaceVitalSettingsScreen({
           <DialogHeader>
             <DialogTitle>바이탈 추가</DialogTitle>
             <DialogDescription>
-              병원에서 추가로 기록할 항목을 선택하세요.
+              제거한 항목은 사용 켜짐·필수 입력 해제·기본 단위로 목록 맨 아래에 다시 추가됩니다. 기존 측정 기록은 유지됩니다.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2">
@@ -357,6 +398,39 @@ export function WorkspaceVitalSettingsScreen({
               </button>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        onOpenChange={(open) => { if (!open) closePendingAction(); }}
+        open={pendingAction !== null}
+      >
+        <DialogContent data-testid="vital-settings-action-dialog">
+          <DialogHeader>
+            <DialogTitle>
+              {pendingAction?.kind === "delete"
+                ? `${draft.presets.find((preset) => preset.key === pendingAction.key)?.label ?? "바이탈"}을 목록에서 제거할까요?`
+                : pendingAction?.kind === "disable-required"
+                  ? "필수 입력 항목을 비활성화할까요?"
+                  : "사용하지 않는 항목을 필수 입력으로 설정할까요?"}
+            </DialogTitle>
+            <DialogDescription>
+              {pendingAction?.kind === "delete"
+                ? "제거하면 필수 입력도 해제되고 새 입력 화면에서 숨겨집니다. 기존 측정 기록은 유지되며, + 바이탈 추가에서 기본값으로 다시 추가할 수 있습니다."
+                : pendingAction?.kind === "disable-required"
+                  ? "계속하면 필수 입력을 해제하고 사용도 끕니다. 기존 측정 기록은 유지됩니다."
+                  : "계속하면 사용과 필수 입력을 함께 켭니다. 기존 기록은 그대로 조회되고, 수정 저장에는 현재 필수 규칙이 적용됩니다."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={closePendingAction} variant="outline">취소</Button>
+            <Button
+              onClick={confirmPendingAction}
+              variant={pendingAction?.kind === "delete" ? "destructive" : "default"}
+            >
+              {pendingAction?.kind === "delete" ? "목록에서 제거" : pendingAction?.kind === "disable-required" ? "필수 입력 해제 후 비활성화" : "사용 켜고 필수 입력으로 설정"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -420,8 +494,8 @@ function SortableVitalRow({
   label,
   onEnabledChange,
   onRemove,
+  onRequiredChange,
   onUnitChange,
-  requiredInWorkspace,
   units,
 }: {
   canManage: boolean;
@@ -429,8 +503,8 @@ function SortableVitalRow({
   label: string;
   onEnabledChange(enabled: boolean): void;
   onRemove(): void;
+  onRequiredChange(): void;
   onUnitChange(unit: WorkspaceVitalUnit): void;
-  requiredInWorkspace: boolean;
   units: WorkspaceVitalUnit[];
 }) {
   const {
@@ -455,7 +529,7 @@ function SortableVitalRow({
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
         <Button
           {...attributes}
           {...listeners}
@@ -469,11 +543,31 @@ function SortableVitalRow({
         >
           <IconReorderAlt />
         </Button>
-        <span className="text-[15px] leading-5 font-medium tracking-[0.014em]">
+        <span className="whitespace-nowrap text-[15px] leading-5 font-medium tracking-[0.014em]">
           {label}
         </span>
+        {item.inputRequired ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  aria-label={`${label} 필수 입력 안내`}
+                  className="shrink-0 rounded-md bg-black/[0.04] px-2 py-0.5 text-sm font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  type="button"
+                >
+                  필수 입력
+                </button>
+              }
+            />
+            <TooltipContent>
+              {item.key === "blood_pressure"
+                ? "접수·바이탈 기록 시 수축기와 이완기 값이 모두 필요합니다"
+                : "환자 접수 시, 필수 입력 값입니다"}
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
       </div>
-      <div className="flex w-full items-center justify-between gap-3 md:w-[282px] md:justify-end md:gap-4">
+      <div className="flex w-full items-center justify-between gap-3 md:w-[305px] md:justify-end md:gap-4">
         <Select
           disabled={!canManage || !item.enabled}
           onValueChange={(value) => onUnitChange(value as WorkspaceVitalUnit)}
@@ -481,7 +575,7 @@ function SortableVitalRow({
         >
           <SelectTrigger
             aria-label={`${label} 표시 단위`}
-            className="min-w-0 flex-1 md:w-[180px] md:flex-none"
+            className="min-w-0 flex-1 md:w-[144px] md:flex-none"
             size="sm"
           >
             <SelectValue />
@@ -494,42 +588,25 @@ function SortableVitalRow({
             ))}
           </SelectContent>
         </Select>
-        {requiredInWorkspace ? (
-          <Badge
-            aria-label={`${label} 항상 사용`}
-            className="border-0 bg-black/[0.04] text-foreground"
-            size="md"
-            variant="secondary"
-          >
-            기본
-          </Badge>
-        ) : (
+        <span aria-hidden="true" className="h-6 w-px shrink-0 bg-border" />
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-sm font-medium">활성</span>
           <Switch
             aria-label={`${label} 사용`}
-            className="!h-[19px] !w-[38px] [&_[data-slot=switch-thumb]]:h-4 [&_[data-slot=switch-thumb]]:w-5"
             checked={item.enabled}
+            data-testid={`vital-setting-switch-${item.key}`}
             disabled={!canManage}
             onCheckedChange={onEnabledChange}
+            size="md"
           />
-        )}
-        {requiredInWorkspace ? (
-          <Button
-            aria-label={`${label} 기본 항목`}
-            className="size-8 text-muted-foreground disabled:opacity-100"
-            disabled
-            size="icon"
-            type="button"
-            variant="ghost"
-          >
-            <CdsFilesMoreVerticalIcon />
-          </Button>
-        ) : (
+        </div>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button
                   aria-label={`${label} 작업`}
                   className="size-8 text-muted-foreground"
+                  data-testid={`vital-setting-more-${item.key}`}
                   disabled={!canManage}
                   size="icon"
                   type="button"
@@ -539,15 +616,18 @@ function SortableVitalRow({
             >
               <CdsFilesMoreVerticalIcon />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuGroup>
+                <DropdownMenuItem onClick={onRequiredChange}>
+                  {item.inputRequired ? "필수 입력 해제" : "필수 입력으로 설정"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onRemove} variant="destructive">
-                  목록에서 제거
+                  <CdsActionsTrash2Icon />삭제하기
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
       </div>
     </div>
   );

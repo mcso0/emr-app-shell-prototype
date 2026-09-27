@@ -21,6 +21,7 @@ export type WorkspaceVitalPreset = {
 export type WorkspaceVitalSetting = {
   displayUnit: WorkspaceVitalUnit;
   enabled: boolean;
+  inputRequired: boolean;
   key: WorkspaceVitalKey;
   sortOrder: number;
 };
@@ -38,7 +39,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "환자의 현재 체중",
     canonicalUnit: "kg",
     allowedDisplayUnits: ["kg", "g"],
-    requiredInWorkspace: true,
+    requiredInWorkspace: false,
   },
   {
     key: "temperature",
@@ -46,7 +47,7 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
     description: "체온계로 측정한 체온",
     canonicalUnit: "°C",
     allowedDisplayUnits: ["°C", "°F"],
-    requiredInWorkspace: true,
+    requiredInWorkspace: false,
   },
   {
     key: "heart_rate",
@@ -66,20 +67,15 @@ export const defaultWorkspaceVitalPresets: WorkspaceVitalPreset[] = [
   },
   {
     key: "blood_pressure",
-    label: "혈압",
-    description: "수축기 단독 또는 수축기/이완기",
+    label: "혈압(수축기/이완기)",
+    description: "수축기와 이완기 혈압",
     canonicalUnit: "mmHg",
     allowedDisplayUnits: ["mmHg"],
     requiredInWorkspace: false,
   },
 ];
 
-const defaultConfiguredKeys: WorkspaceVitalKey[] = [
-  "weight",
-  "temperature",
-  "heart_rate",
-  "respiratory_rate",
-];
+const defaultConfiguredKeys: WorkspaceVitalKey[] = [...workspaceVitalKeys];
 
 export function createDefaultWorkspaceVitalSettingsSnapshot(
   canManage = true,
@@ -92,6 +88,7 @@ export function createDefaultWorkspaceVitalSettingsSnapshot(
       return {
         key,
         enabled: true,
+        inputRequired: false,
         displayUnit: preset.canonicalUnit,
         sortOrder,
       };
@@ -138,6 +135,8 @@ export function parseWorkspaceVitalSettingsSnapshot(
     if (
       !preset ||
       typeof item.enabled !== "boolean" ||
+      (item.inputRequired !== undefined && typeof item.inputRequired !== "boolean") ||
+      (item.inputRequired === true && !item.enabled) ||
       !isWorkspaceVitalUnit(item.displayUnit) ||
       !preset.allowedDisplayUnits.includes(item.displayUnit) ||
       typeof item.sortOrder !== "number" ||
@@ -149,6 +148,7 @@ export function parseWorkspaceVitalSettingsSnapshot(
     return [{
       key: item.key,
       enabled: item.enabled,
+      inputRequired: item.inputRequired === true,
       displayUnit: item.displayUnit,
       sortOrder: item.sortOrder,
     }];
@@ -181,6 +181,37 @@ export function getEnabledWorkspaceVitalSettings(snapshot: WorkspaceVitalSetting
   return snapshot.items
     .filter((item) => item.enabled)
     .sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export type RequiredVitalValueKey =
+  | "weightKg"
+  | "temperatureC"
+  | "heartRateBpm"
+  | "respiratoryRateRpm"
+  | "bloodPressureSystolicMmhg"
+  | "bloodPressureDiastolicMmhg";
+
+export function getRequiredWorkspaceVitalFieldErrors(
+  snapshot: WorkspaceVitalSettingsSnapshot,
+  values: Partial<Record<RequiredVitalValueKey, number | string | null>>,
+): Partial<Record<RequiredVitalValueKey, string>> {
+  const errors: Partial<Record<RequiredVitalValueKey, string>> = {};
+  const missing = (key: RequiredVitalValueKey) =>
+    values[key] === undefined || values[key] === null ||
+    (typeof values[key] === "string" && !(values[key] as string).trim());
+
+  for (const item of snapshot.items) {
+    if (!item.enabled || !item.inputRequired) continue;
+    if (item.key === "weight" && missing("weightKg")) errors.weightKg = "체중을 입력해 주세요.";
+    if (item.key === "temperature" && missing("temperatureC")) errors.temperatureC = "체온을 입력해 주세요.";
+    if (item.key === "heart_rate" && missing("heartRateBpm")) errors.heartRateBpm = "심박수를 입력해 주세요.";
+    if (item.key === "respiratory_rate" && missing("respiratoryRateRpm")) errors.respiratoryRateRpm = "호흡수를 입력해 주세요.";
+    if (item.key === "blood_pressure") {
+      if (missing("bloodPressureSystolicMmhg")) errors.bloodPressureSystolicMmhg = "수축기 혈압을 입력해 주세요.";
+      if (missing("bloodPressureDiastolicMmhg")) errors.bloodPressureDiastolicMmhg = "이완기 혈압을 입력해 주세요.";
+    }
+  }
+  return errors;
 }
 
 export function toCanonicalVitalValue(

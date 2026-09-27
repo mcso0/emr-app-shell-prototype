@@ -214,6 +214,7 @@ import type {
 import {
   fromCanonicalVitalValue,
   getEnabledWorkspaceVitalSettings,
+  getRequiredWorkspaceVitalFieldErrors,
   toCanonicalVitalValue,
   type WorkspaceVitalKey,
   type WorkspaceVitalSettingsSnapshot,
@@ -2246,6 +2247,13 @@ const buildReceptionVitalInput = (
         };
       }
     }
+  }
+
+  if (settings) {
+    Object.assign(fieldErrors, {
+      ...getRequiredWorkspaceVitalFieldErrors(settings, draft.values),
+      ...fieldErrors,
+    });
   }
 
   const isDogOrCat = patient?.species === "dog" || patient?.species === "cat";
@@ -7890,6 +7898,11 @@ function ReceptionWalkInFormDrawer({
   );
   const createBlockMessage =
     timeBlockMessage ??
+    (vitalSettingsStatus === "error"
+      ? "바이탈 필수 입력 설정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요."
+      : vitalSettingsStatus !== "ready"
+        ? "바이탈 필수 입력 설정을 확인하는 중입니다."
+      : undefined) ??
     (operatingScheduleStatus === "loading"
       ? "운영시간을 확인하는 중입니다."
       : operatingScheduleStatus === "error"
@@ -8125,6 +8138,9 @@ function ReceptionWalkInFormDrawer({
               current.shownErrors,
             ),
           }));
+          window.requestAnimationFrame(() =>
+            document.getElementById(`walk-in-vital-${responseVitalErrorKeys[0]}`)?.focus(),
+          );
         }
         toast.error(getWalkInRouteErrorMessage(result));
         return;
@@ -8148,6 +8164,9 @@ function ReceptionWalkInFormDrawer({
           current.shownErrors,
         ),
       }));
+      window.requestAnimationFrame(() =>
+        document.getElementById(`walk-in-vital-${vitalErrorKeys[0]}`)?.focus(),
+      );
       return;
     }
     const vitalWarningKeys = Object.keys(
@@ -10663,12 +10682,14 @@ function ReceptionCreateVitalFields({
   const addTriggerRef = useRef<HTMLButtonElement | null>(null);
   const firstMenuItemRef = useRef<HTMLButtonElement | null>(null);
   const inputRefs = useRef<Partial<Record<ReceptionCreateVitalId, HTMLElement | null>>>({});
-  const enabledIds = getEnabledWorkspaceVitalSettings(vitalSettings).map((item) =>
-    workspaceVitalKeyToReceptionId(item.key),
-  );
-  const configuredOptions = enabledIds.flatMap((id) => {
+  const configuredOptions = getEnabledWorkspaceVitalSettings(vitalSettings).flatMap((setting) => {
+    const id = workspaceVitalKeyToReceptionId(setting.key);
     const option = receptionCreateVitalOptions.find((candidate) => candidate.id === id);
-    return option ? [{ ...option, unit: getReceptionVitalUnit(vitalSettings, workspaceVitalKeyByReceptionId[id]) }] : [];
+    return option ? [{
+      ...option,
+      required: setting.inputRequired,
+      unit: getReceptionVitalUnit(vitalSettings, workspaceVitalKeyByReceptionId[id]),
+    }] : [];
   });
   const availableOptions: typeof configuredOptions = [];
   const removable = false;
@@ -10758,6 +10779,7 @@ function ReceptionCreateVitalFields({
     label: string,
     unit: string,
     inputMode: "decimal" | "numeric",
+    required: boolean,
   ) => {
     const key =
       id === "weight"
@@ -10787,6 +10809,8 @@ function ReceptionCreateVitalFields({
           aria-describedby={describedBy}
           aria-label={label}
           aria-invalid={Boolean(error) || undefined}
+          aria-required={required || undefined}
+          id={`walk-in-vital-${key}`}
           inputMode={inputMode}
           placeholder={placeholder}
           unit={unit}
@@ -10804,6 +10828,8 @@ function ReceptionCreateVitalFields({
             aria-describedby={describedBy}
             aria-label={label}
             aria-invalid={Boolean(error) || undefined}
+            aria-required={required || undefined}
+            id={`walk-in-vital-${key}`}
             className="h-9 bg-card pr-12"
             inputMode={inputMode}
             placeholder={placeholder}
@@ -10844,7 +10870,7 @@ function ReceptionCreateVitalFields({
     );
   };
 
-  const renderBloodPressureInput = () => {
+  const renderBloodPressureInput = (required: boolean) => {
     const systolicError = draft.shownErrors.bloodPressureSystolicMmhg
       ? fieldErrors.bloodPressureSystolicMmhg
       : undefined;
@@ -10878,6 +10904,8 @@ function ReceptionCreateVitalFields({
               }
               aria-label="수축기 혈압"
               aria-invalid={Boolean(systolicError) || undefined}
+              aria-required={required || undefined}
+              id="walk-in-vital-bloodPressureSystolicMmhg"
               className={cn(
                 presentation === "side-panel"
                   ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
@@ -10902,6 +10930,8 @@ function ReceptionCreateVitalFields({
               }
               aria-label="이완기 혈압"
               aria-invalid={Boolean(diastolicError) || undefined}
+              aria-required={required || undefined}
+              id="walk-in-vital-bloodPressureDiastolicMmhg"
               className={cn(
                 presentation === "side-panel"
                   ? "bg-[var(--emr-reception-create-field-bg)] font-medium"
@@ -10965,20 +10995,21 @@ function ReceptionCreateVitalFields({
           if (!option) return null;
           const content =
             id === "bloodPressure"
-              ? renderBloodPressureInput()
-              : renderSingleInput(id, option.label, option.unit, option.inputMode);
+              ? renderBloodPressureInput(option.required)
+              : renderSingleInput(id, option.label, option.unit, option.inputMode, option.required);
 
           return presentation === "side-panel" ? (
             <ReceptionSidePanelField
               key={id}
               icon={getReceptionCreateVitalIcon(id)}
               label={option.label}
+              required={option.required}
               variant="create"
             >
               {content}
             </ReceptionSidePanelField>
           ) : (
-            <RegistrationFormField key={id} label={option.label}>
+            <RegistrationFormField key={id} label={option.label} required={option.required}>
               {content}
             </RegistrationFormField>
           );
