@@ -74,6 +74,10 @@ Verification on 2026-09-27:
   back. Checks confirmed five optional catalog defaults, preservation of
   existing workspace settings and legacy four-item fallbacks, required-value
   rejection, and authenticated empty-list save/readback.
+- A final rollback-only replay checked the old app's settings payload, which
+  omits `inputRequired`: saves remain accepted, existing required flags stay
+  set, and an old payload cannot silently delete a required row. This keeps
+  the database-first release window compatible with the current app.
 - `npm run lint` passed with five pre-existing script warnings and no errors.
   `npm run build -- --webpack`, standalone `tsc --noEmit`, `npm run docs:check`,
   `npm run security:secrets`, and `git diff --check` passed. Webpack was used

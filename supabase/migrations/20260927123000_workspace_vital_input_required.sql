@@ -211,6 +211,9 @@ declare
   v_index integer := 0;
   v_key text;
   v_unit text;
+  v_required boolean;
+  v_legacy_request boolean := false;
+  v_normalized_items jsonb := '[]'::jsonb;
 begin
   begin
     v_actor_user_id := nullif(p_actor_user_id, '')::uuid;
@@ -245,17 +248,31 @@ begin
   end if;
 
   for v_item in select value from jsonb_array_elements(p_items) loop
+    v_key := v_item->>'key';
+    v_required := case
+      when v_item ? 'inputRequired' then
+        case when jsonb_typeof(v_item->'inputRequired') = 'boolean'
+          then (v_item->>'inputRequired')::boolean
+          else false
+        end
+      else coalesce((
+        select setting.input_required
+        from public.workspace_vital_settings setting
+        where setting.workspace_id = p_workspace_id
+          and setting.vital_key = v_key
+      ), false)
+    end;
+    v_legacy_request := v_legacy_request or not (v_item ? 'inputRequired');
     if jsonb_typeof(v_item) <> 'object'
       or jsonb_typeof(v_item->'enabled') <> 'boolean'
-      or jsonb_typeof(v_item->'inputRequired') <> 'boolean'
-      or ((v_item->>'inputRequired')::boolean and not (v_item->>'enabled')::boolean)
+      or (v_item ? 'inputRequired' and jsonb_typeof(v_item->'inputRequired') <> 'boolean')
+      or (v_required and not (v_item->>'enabled')::boolean)
       or jsonb_typeof(v_item->'sortOrder') <> 'number'
       or (v_item->>'sortOrder')::integer <> v_index
     then
       raise exception 'invalid_vital_settings';
     end if;
 
-    v_key := v_item->>'key';
     v_unit := v_item->>'displayUnit';
     if not exists (
       select 1
@@ -265,8 +282,27 @@ begin
     ) then
       raise exception 'invalid_vital_settings';
     end if;
+    v_normalized_items := v_normalized_items || jsonb_build_array(
+      v_item || jsonb_build_object('inputRequired', v_required)
+    );
     v_index := v_index + 1;
   end loop;
+
+  -- The previous app omits inputRequired. Keep existing requirements during
+  -- the migration-to-deployment window and after a possible app rollback.
+  if v_legacy_request and exists (
+    select 1
+    from public.workspace_vital_settings setting
+    where setting.workspace_id = p_workspace_id
+      and setting.input_required
+      and not exists (
+        select 1
+        from jsonb_array_elements(v_normalized_items) item
+        where item->>'key' = setting.vital_key
+      )
+  ) then
+    raise exception 'invalid_vital_settings';
+  end if;
 
   if exists (
     select 1
@@ -289,7 +325,7 @@ begin
   delete from public.workspace_vital_settings
   where workspace_id = p_workspace_id;
 
-  for v_item in select value from jsonb_array_elements(p_items) loop
+  for v_item in select value from jsonb_array_elements(v_normalized_items) loop
     insert into public.workspace_vital_settings (
       workspace_id, vital_key, enabled, input_required, display_unit, sort_order
     ) values (
@@ -317,7 +353,7 @@ begin
     'hospital.vital_settings_updated',
     'workspace',
     p_workspace_id,
-    p_after_snapshot => jsonb_build_object('items', p_items)
+    p_after_snapshot => jsonb_build_object('items', v_normalized_items)
   );
 
   return public.clair_get_workspace_vital_settings(p_workspace_id);
