@@ -4,6 +4,43 @@ import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-s
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 import type { ExecutionContext, ExecutionResultVersion } from "../src/features/fulfillment/execution-result-contract";
 
+test("copied treatment link reopens the exact instruction when an encounter has multiple work items", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+  const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+  const encounterId = "97090000-0000-4000-8000-000000000031";
+  const dispensingId = "97090000-0000-4000-8000-000000000032";
+  const treatmentId = "97090000-0000-4000-8000-000000000033";
+  const date = "2026-09-07";
+  const requestedDates: string[] = [];
+
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    requestedDates.push(params.get("date") ?? "");
+    const queueType = params.get("queueType");
+    const id = queueType === "treatment" ? treatmentId : dispensingId;
+    await route.fulfill({ json: { ok: true, workItems: params.get("date") === date ? [{
+      id, workspaceId, encounterId, orderId: id, queueType, requestCycle: 1,
+      rowRevision: 1, status: "requested", createdAt: "2026-09-07T01:30:00.000Z",
+      updatedAt: "2026-09-07T01:30:00.000Z",
+      sourceSnapshot: { patientName: "초코", guardianName: "보호자", orderDisplayName: queueType === "treatment" ? "피하 수액" : "경구약" },
+    }] : [] } });
+  });
+
+  await page.goto(`/w/${workspaceId}/dispensing?date=${date}&encounterId=${encounterId}&queueItemId=live-fulfillment-${treatmentId}&modulePanel=closed&aside=closed`);
+  await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  await page.getByRole("button", { name: "처치 지시서 링크 복사" }).click();
+  const copiedLink = await page.evaluate(() => navigator.clipboard.readText());
+  const copiedUrl = new URL(copiedLink);
+  expect(copiedUrl.searchParams.get("queueItemId")).toBe(`live-fulfillment-${treatmentId}`);
+  expect(copiedUrl.searchParams.get("date")).toBe(date);
+  expect(copiedUrl.searchParams.get("modulePanel")).toBe("closed");
+
+  await page.goto(copiedLink);
+  await expect(page.getByRole("heading", { name: "처치 지시서" })).toBeVisible();
+  expect(requestedDates).toContain(date);
+});
+
 test("patient history combines dispensing and treatment orders and filters by category", async ({ page }) => {
   await page.goto(
     "/w/clair-demo/dispensing?date=2026-05-01&workItemId=fulfill-order-coco-maropitant&modulePanel=closed&aside=history",

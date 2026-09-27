@@ -18,6 +18,7 @@ import {
   CdsActionsRefreshCcwIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import { EmrOrderQueueSidePanel } from "@/components/emr/order-queue-side-panel";
@@ -36,7 +37,6 @@ import {
   getTaskQueueEventKindFromStatus,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ButtonGroup,
@@ -207,10 +207,11 @@ type DispensingFulfillmentQueueSnapshot = {
 };
 type DispensingContentBodyProps = Pick<
   ShellComponentProps,
-  "hasRightPanel" | "moduleId"
+  "hasRightPanel" | "moduleId" | "workspaceId"
 > & {
   allowLegacyFixtureFallback: boolean;
   queueItemCount: number;
+  selectedDate: string;
   selectedQueueItem: OrderQueueItem | null;
 };
 
@@ -239,11 +240,19 @@ export function DispensingSlotAvailabilityProvider({
   children,
   moduleId,
 }: WorkspaceSlotAvailabilityProviderProps) {
+  const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
+
+  return children({ hasContentAside: Boolean(selectedQueueItemId) });
+}
+
+function useSelectedDispensingQueueItemId(moduleId: string) {
+  const searchParams = useSearchParams();
   const selectedQueueItemId = useLayoutStore(
     (state) => state.selectedQueueItemIds[moduleId],
   );
-
-  return children({ hasContentAside: Boolean(selectedQueueItemId) });
+  const queryQueueItemId = searchParams.get("queueItemId");
+  const queryWorkItemId = searchParams.get("workItemId");
+  return queryQueueItemId ?? (queryWorkItemId ? `live-fulfillment-${queryWorkItemId}` : selectedQueueItemId);
 }
 
 function getQueueStatusLabel(moduleId: string, item: OrderQueueItem | null) {
@@ -1008,6 +1017,7 @@ export function DispensingSidePanel({
   const searchParams = useSearchParams();
   const queryEncounterId = searchParams.get("encounterId");
   const queryWorkItemId = searchParams.get("workItemId");
+  const queryQueueItemId = searchParams.get("queueItemId");
   const { selectedQueueItemIds, setModulePanelOpen, setSelectedQueueItem } =
     useLayoutStore();
   const { selectDate, selectedDate, todayDate } =
@@ -1024,18 +1034,17 @@ export function DispensingSidePanel({
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
-    const queryQueueItem = queryWorkItemId ? items.find((item) => item.id === `live-fulfillment-${queryWorkItemId}`) : findQueueItemByEncounterId(
-      items,
-      fulfillmentQueue.workItems,
-      queryEncounterId,
-    );
+    const queryQueueItem =
+      (queryQueueItemId ? items.find((item) => item.id === queryQueueItemId) : undefined) ??
+      (queryWorkItemId ? items.find((item) => item.id === `live-fulfillment-${queryWorkItemId}`) : undefined) ??
+      findQueueItemByEncounterId(items, fulfillmentQueue.workItems, queryEncounterId);
 
     if (queryQueueItem) {
       setSelectedQueueItem("dispensing", queryQueueItem.id);
       return;
     }
 
-    if (queryEncounterId || queryWorkItemId) {
+    if (queryEncounterId || queryWorkItemId || queryQueueItemId) {
       setSelectedQueueItem("dispensing", "");
       return;
     }
@@ -1048,6 +1057,7 @@ export function DispensingSidePanel({
     items,
     queryEncounterId,
     queryWorkItemId,
+    queryQueueItemId,
     selectedQueueItemIds.dispensing,
     setSelectedQueueItem,
   ]);
@@ -1059,14 +1069,15 @@ export function DispensingSidePanel({
       fulfillmentQueue.workItems,
     );
 
-    if (workItem && onNavigateWorkspaceSurface) {
+    if (onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
         buildWorkspaceSurfaceRoute({
           moduleId: "dispensing",
           params: {
             date: selectedDate,
-            encounterId: workItem.encounterId,
-            workItemId: workItem.id,
+            encounterId: workItem?.encounterId,
+            workItemId: workItem?.id,
+            queueItemId: itemId,
           },
           removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
           search: searchParams,
@@ -1095,6 +1106,7 @@ export function DispensingSidePanel({
           "labResultId",
           "patientId",
           "workItemId",
+          "queueItemId",
         ],
         search: searchParams,
         workspaceId,
@@ -1115,7 +1127,7 @@ export function DispensingSidePanel({
       sourceTotalCount={fulfillmentQueue.sourceTotalCount}
       title="조제/처치"
       selectedDate={selectedDate}
-      selectedItemId={selectedQueueItemIds.dispensing}
+      selectedItemId={queryQueueItemId ?? selectedQueueItemIds.dispensing}
       todayDate={todayDate}
       typeFilterPlacement="list-header"
       onCollapse={() => setModulePanelOpen(false)}
@@ -1130,7 +1142,7 @@ export function DispensingHeader({
   workspaceId,
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
-  const { selectedQueueItemIds } = useLayoutStore();
+  const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -1139,9 +1151,9 @@ export function DispensingHeader({
     [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem =
-    items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
+    items.find((item) => item.id === selectedQueueItemId) ??
     (allowLegacyFixtureFallback
-      ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
+      ? getSelectedOrderQueueItem(moduleId, selectedQueueItemId)
       : null);
   const selectedWorkItem = findFulfillmentForQueueItem(
     selectedQueueItem,
@@ -1275,7 +1287,7 @@ export function DispensingContentAside({
   workspaceId,
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
-  const selectedQueueItemIds = useLayoutStore((state) => state.selectedQueueItemIds);
+  const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const setSelectedQueueItem = useLayoutStore((state) => state.setSelectedQueueItem);
   const [filter, setFilter] = useState<"all" | "dispensing" | "treatment">("all");
@@ -1287,9 +1299,9 @@ export function DispensingContentAside({
     [fulfillmentQueue.workItems, workspaceId],
   );
   const selectedQueueItem =
-    items.find((item) => item.id === selectedQueueItemIds[moduleId]) ??
+    items.find((item) => item.id === selectedQueueItemId) ??
     (allowLegacyFixtureFallback
-      ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
+      ? getSelectedOrderQueueItem(moduleId, selectedQueueItemId)
       : null);
   const selectedWorkItem = findFulfillmentForQueueItem(
     selectedQueueItem,
@@ -1725,9 +1737,7 @@ export function DispensingContent({
   workspaceId,
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
-  const selectedQueueItemIds = useLayoutStore(
-    (state) => state.selectedQueueItemIds,
-  );
+  const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -1738,17 +1748,17 @@ export function DispensingContent({
   const selectedQueueItem = useMemo(() => {
     return (
       currentWorkspaceQueueItems.find(
-        (item) => item.id === selectedQueueItemIds[moduleId],
+        (item) => item.id === selectedQueueItemId,
       ) ??
       (allowLegacyFixtureFallback
-        ? getSelectedOrderQueueItem(moduleId, selectedQueueItemIds[moduleId])
+        ? getSelectedOrderQueueItem(moduleId, selectedQueueItemId)
         : null)
     );
   }, [
     allowLegacyFixtureFallback,
     currentWorkspaceQueueItems,
     moduleId,
-    selectedQueueItemIds,
+    selectedQueueItemId,
   ]);
 
   return (
@@ -1760,6 +1770,8 @@ export function DispensingContent({
       key={selectedQueueItem?.id ?? "default"}
       hasRightPanel={hasRightPanel}
       moduleId={moduleId}
+      workspaceId={workspaceId}
+      selectedDate={selectedDate}
       allowLegacyFixtureFallback={allowLegacyFixtureFallback}
       queueItemCount={currentWorkspaceQueueItems.length}
       selectedQueueItem={selectedQueueItem}
@@ -1773,6 +1785,8 @@ function DispensingContentBody({
   hasRightPanel,
   fulfillmentQueue,
   moduleId,
+  workspaceId,
+  selectedDate,
   queueItemCount,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
@@ -1907,7 +1921,6 @@ function DispensingContentBody({
   const instructionRequestedAt =
     primaryGroup?.rows[0]?.requestedAt ?? "2026.04.14 10:30";
   const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
-  const instructionId = selectedQueueItem?.instructionId ?? "RX-260414-0008";
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
   const instructionAssignee =
     selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
@@ -2127,13 +2140,17 @@ function DispensingContentBody({
               />
             }
             badge={
-              <Badge
-                variant="secondary"
-                className="emr-text-metadata h-[22px] max-w-40 truncate rounded-[var(--emr-context-bar-chip-radius)] bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-label)]"
-                title={instructionId}
-              >
-                {instructionId}
-              </Badge>
+              <EmrCopyLinkButton
+                ariaLabel={`${instructionType} 지시서 링크 복사`}
+                date={selectedDate}
+                moduleId="dispensing"
+                params={{
+                  encounterId: selectedFulfillmentWorkItem?.encounterId,
+                  workItemId: selectedFulfillmentWorkItem?.id,
+                  queueItemId: selectedQueueItem.id,
+                }}
+                workspaceId={workspaceId}
+              />
             }
             actions={
               <>

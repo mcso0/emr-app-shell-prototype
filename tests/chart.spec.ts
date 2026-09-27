@@ -1067,9 +1067,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(historyToggle.locator("svg")).toHaveCSS("height", "14px");
 
   const visitBadge = page.getByTestId("chart-visit-badge");
-  const encounterNumberBadge = page.getByTestId(
-    "chart-encounter-number-badge",
-  );
+  const copyLinkButton = page.getByRole("button", { name: "차트 링크 복사" });
   await expect(visitBadge).toHaveText(/^(초진|재진)$/);
   await expect(visitBadge).toHaveCSS("border-width", "1px");
   await expect(visitBadge).toHaveCSS("border-style", "solid");
@@ -1078,11 +1076,8 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
       Number.parseFloat(getComputedStyle(element).borderRadius),
     ),
   ).toBeGreaterThanOrEqual(11);
-  await expect(encounterNumberBadge).toHaveText(/^E-/);
-  await expect(encounterNumberBadge).toHaveCSS(
-    "border-color",
-    "rgba(0, 0, 0, 0)",
-  );
+  await expect(copyLinkButton).toBeVisible();
+  await expect(copyLinkButton).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(actionBar).toContainText("진료 시작 일시");
   await expect(page.getByRole("button", { name: "입원 수속" })).toHaveCount(0);
   await expect(
@@ -2921,7 +2916,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect
     .poll(() => new URL(page.url()).searchParams.get("chartId"))
     .toBe(oldChartId);
-  await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 링크 복사" })).toBeVisible();
   await expect(page.getByTestId("chart-historical-readonly-badge")).toBeVisible();
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCSS(
     "border-width",
@@ -2979,12 +2974,17 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(page.getByRole("tooltip")).toBeHidden();
   await newChartDialog.getByRole("button", { name: "취소" }).click();
   await page.reload();
-  await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
+  const copyChartLink = page.getByRole("button", { name: "차트 링크 복사" });
+  await expect(copyChartLink).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  await copyChartLink.click();
+  expect(new URL(await page.evaluate(() => navigator.clipboard.readText())).searchParams.get("encounterId")).toBe(oldEncounterId);
   await expect(oldHistoryItem).toHaveAttribute("data-selected", "true");
   await currentHistoryItem.click();
   await expect(page).not.toHaveURL(/historyEncounterId=/);
   await expect(page).toHaveURL(new RegExp(`chartId=${currentChartId}`));
-  await expect(page.getByText(current.encounter.encounterNo).first()).toBeVisible();
+  await copyChartLink.click();
+  expect(new URL(await page.evaluate(() => navigator.clipboard.readText())).searchParams.get("encounterId")).toBe(current.encounter.id);
 
   await expect(inlineHistoryItem).toContainText("26.09.08");
   await expect(inlineHistoryItem).not.toContainText("15:00");
@@ -3165,7 +3165,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(
     page.getByTestId("chart-historical-readonly-badge"),
   ).toBeVisible();
-  await expect(page.getByText(oldEncounterNo).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 링크 복사" })).toBeVisible();
 
   await expect.poll(() => soapWriteEncounterIds.length).toBeGreaterThan(0);
   expect(soapWriteEncounterIds.every((id) => id === current.encounter.id)).toBe(true);
@@ -3174,9 +3174,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(page.getByTestId("chart-historical-readonly-badge")).toHaveCount(
     0,
   );
-  await expect(
-    page.getByText(current.encounter.encounterNo).first(),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "차트 링크 복사" })).toBeVisible();
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText("이력 전환 직전 작성한 기록");
   const soapToolbar = page.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
   const recordButton = soapToolbar.getByRole("button", { name: "기록 삽입" });

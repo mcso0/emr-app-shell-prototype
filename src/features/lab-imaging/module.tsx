@@ -71,6 +71,7 @@ import {
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
+import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -1359,12 +1360,6 @@ const imagingStatusGroupColorToken: Record<ImagingStudyStatus, string> = {
   read: "--emr-status-success-text",
   reviewed: "--emr-status-success-text",
 };
-
-function getLabResultDocumentId(result: LabResult) {
-  const suffix = result.id.replace("lab-result-", "").toUpperCase();
-
-  return `LAB-${suffix}`;
-}
 
 function getLabDetailFromSearchParams(
   searchParams: { get: (name: string) => string | null },
@@ -3673,13 +3668,16 @@ export function LabContent({
               />
             }
             badge={
-              <Badge
-                variant="secondary"
-                className="h-[22px] max-w-40 truncate rounded-md px-2 text-xs text-muted-foreground"
-                title={getLabResultDocumentId(displayDetail.result)}
-              >
-                {getLabResultDocumentId(displayDetail.result)}
-              </Badge>
+              <EmrCopyLinkButton
+                ariaLabel="임상병리검사 결과지 링크 복사"
+                date={getOperatingDateFromIso(
+                  detail?.result.enteredAt ?? detail?.result.receivedAt ??
+                  displayDetail.result.enteredAt ?? displayDetail.result.receivedAt,
+                ) ?? selectedDate}
+                moduleId="lab"
+                params={{ labResultId: detail?.result.id ?? displayDetail.result.id }}
+                workspaceId={workspaceId}
+              />
             }
             actions={
               <>
@@ -3825,7 +3823,6 @@ export function LabContent({
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 px-4 pb-10 pt-4">
-          {displayDetail.result.resultProfileLabel ? <p className="text-sm text-muted-foreground" data-testid="lab-frozen-profile">{displayDetail.result.resultProfileLabel}</p> : null}
           <LabResultInputSection
             assigneeName={
               allowDemoContent
@@ -4072,12 +4069,6 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
     status={legacyFixture ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}
   />;
-}
-
-function getImagingDocumentId(study: ImagingStudy) {
-  const suffix = study.id.replace("imaging-", "").toUpperCase();
-
-  return `IMG-${suffix}`;
 }
 
 function ImagingOrderDetailTable({
@@ -4504,13 +4495,13 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
               />
             }
             badge={
-              <Badge
-                variant="secondary"
-                className="h-[22px] max-w-40 truncate rounded-md px-2 text-xs text-muted-foreground"
-                title={getImagingDocumentId(detail.study)}
-              >
-                {getImagingDocumentId(detail.study)}
-              </Badge>
+              <EmrCopyLinkButton
+                ariaLabel="영상검사 Order 상세 링크 복사"
+                date={getOperatingDateFromIso(detail.study.requestedAt) ?? selectedDate}
+                moduleId="imaging"
+                params={{ imagingStudyId: detail.study.id }}
+                workspaceId={workspaceId}
+              />
             }
             actions={
               <>
