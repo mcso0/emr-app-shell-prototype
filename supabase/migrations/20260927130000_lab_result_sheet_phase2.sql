@@ -213,7 +213,9 @@ create table public.lab_result_attachments (
 create index lab_result_attachments_active_idx on public.lab_result_attachments
   (workspace_id, lab_result_entry_id, row_id, ready_at) where deleted_at is null;
 alter table public.lab_result_attachments enable row level security;
+revoke all on public.lab_result_attachments from public, anon, authenticated, service_role;
 grant select, insert on public.lab_result_attachments to authenticated;
+grant select, insert, update, delete on public.lab_result_attachments to service_role;
 create policy lab_result_attachments_select on public.lab_result_attachments
   for select to authenticated using (
     private.clair_is_active_workspace_member(workspace_id) and deleted_at is null
@@ -280,6 +282,11 @@ end;
 $$;
 create trigger log_lab_result_attachment after update on public.lab_result_attachments
   for each row execute function private.clair_log_lab_result_attachment();
+
+revoke all on function private.clair_log_lab_result_row_change() from public, anon, authenticated;
+revoke all on function private.clair_log_lab_retest_snapshot() from public, anon, authenticated;
+revoke all on function private.clair_guard_lab_result_attachment() from public, anon, authenticated;
+revoke all on function private.clair_log_lab_result_attachment() from public, anon, authenticated;
 
 insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
 values ('lab-result-attachments', 'lab-result-attachments', false, 20971520,
