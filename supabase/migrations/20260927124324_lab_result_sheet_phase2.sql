@@ -1,5 +1,5 @@
 -- LAB-PR-003: result findings, immutable change history and private row attachments.
--- Local candidate only. No remote migration is applied by this file.
+-- Applied to the linked staging project as migration 20260927124324.
 set lock_timeout = '5s';
 set statement_timeout = '120s';
 

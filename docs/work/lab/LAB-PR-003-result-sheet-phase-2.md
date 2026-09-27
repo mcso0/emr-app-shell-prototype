@@ -25,7 +25,7 @@ Implement the approved phase-2 result sheet: item findings, an independent overa
 
 ## Boundaries
 
-- Remote Supabase migration replay and production data work require their own explicit approval. The PR and Production release follow the exact candidate gates in the release runbook.
+- Remote Supabase migration replay and Production require explicit approval. The migration was approved and applied to the linked staging project; the PR and Production release still follow the exact candidate gates in the release runbook.
 - No chart-copy implementation, provider delivery, or upload of real patient files.
 - The exact backup retention period is an operations setting and is not invented here.
 
@@ -38,7 +38,7 @@ Implement the approved phase-2 result sheet: item findings, an independent overa
 
 ## Authorization
 
-승욱 approved the phase-2 report decisions and local implementation on 2026-09-27. 승욱 then requested commit, push, PR, `origin/main` merge, and deployment approval for this phase-2 scope. This does not authorize the separate remote Supabase migration/RLS/storage change.
+승욱 approved the phase-2 report decisions and local implementation on 2026-09-27, then requested commit, push, PR, `origin/main` merge, and deployment. After the explicit staging migration target and scope were presented separately, 승욱 approved deployment, including the migration. A changed PR head still requires the exact candidate Production gate.
 
 ## Local Candidate
 
@@ -52,8 +52,9 @@ Implement the approved phase-2 result sheet: item findings, an independent overa
 - Focused Chromium tests passed: lab result entry/detail layout and two attachment metadata/content checks.
 - The migration applied to an isolated local PostgreSQL clone with stubbed newer prerequisite columns/table because the shared local schema predates the atomic retest migration. A rolled-back synthetic transaction verified row change history, overall-finding save, retest snapshot lookup from the new result, and blank new overall finding. This is local SQL behavior evidence, not a remote replay or full storage integration test.
 - `npm audit` currently reports 30 dependency advisories; none target the two added viewer packages or `pdfjs-dist`. No dependency-wide update was attempted in this scoped change.
+- Migration `20260927124324_lab_result_sheet_phase2` was applied to the linked staging Supabase project after approval. Read-only checks confirmed all three new tables, attachment RLS, service-role read/write/delete grants, no anonymous table read, and the private storage bucket. Security advisor findings for two internal RPC-only tables report intentional no-policy RLS; performance advisor findings are informational foreign-key and unused-index notices on the new tables.
 
 ## Remaining Release Boundary
 
-- Apply the migration only after the exact target schema and permissions are reviewed under the release gate, then run authenticated upload, reload, preview, download, delete, and retest smoke against synthetic data. Validate the private bucket policies and schedule the reconciliation script for pending/tombstoned objects before considering remote delivery complete.
-- The remote migration and authenticated storage smoke remain pending separate authorization. Human review remains pending until the exact release candidate and remote dependencies are resolved.
+- Run authenticated upload, reload, preview, download, delete, and retest smoke against synthetic data. Verify the private bucket policies in that workflow and arrange bounded reconciliation for pending/tombstoned objects before considering remote delivery complete.
+- Authenticated storage smoke and Production deployment remain pending. Human review remains pending until the exact release candidate and remote dependencies are resolved.
