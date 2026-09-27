@@ -170,6 +170,21 @@ action checks passed. Secret scan, docs check, and `git diff --check` passed.
 Lint passed with five existing script warnings; TypeScript and production build
 passed.
 
+## 2026-09-27 left row actions follow-up
+
+The owner requested removal of the final `요청 수의사` resize handle and a stable
+left-side position for the floating row actions. Keep the avatar-only column's
+sorting, width and 110px trailing space. Anchor the existing 114px action group
+at the left edge of the scrolling region after the four pinned columns, so
+horizontal scrolling does not move it or cover pinned row controls. Preserve
+the shared table's default right-side overlay for other callers and verify the
+start, middle and end scroll positions plus existing row actions.
+Local Chromium verified fixed overlay coordinates at all three scroll positions
+and both ends of the narrow unpinned layout; the last-column resize handle is
+absent while sorting stays available. The 110px trailing-space and three-slot
+row-action checks pass (3/3). Secret scan, docs check, diff check, lint (five
+existing script warnings), TypeScript and production build pass.
+
 ## Release dependency and rollback boundaries
 
 The owner authorized code delivery after TDD and subsequently approved the scoped

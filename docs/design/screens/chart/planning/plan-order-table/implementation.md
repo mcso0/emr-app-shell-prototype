@@ -190,7 +190,11 @@ Required behavior:
 - Let the existing horizontal scroll owner absorb overflow.
 - At the rightmost scroll position, show 110px of empty table space after the
   `요청 수의사` column in both the header and every row. Keep the 26 data-column
-  widths, resize handles, and labels unchanged.
+  widths and labels unchanged. The avatar-only `요청 수의사` column has no resize
+  handle; its sorting remains available.
+- Keep each row's 114px action overlay at the viewport's left scroll boundary,
+  immediately after the pinned columns. Horizontal scrolling must not move it
+  or cover the pinned selection and identity controls.
 - Do not replace the current bounded table viewport with a feature-local
   `ScrollArea` or an additional vertical scroll owner.
 - Keep header and body column starts aligned after horizontal scroll, column
@@ -222,7 +226,7 @@ Plan/Order enables the capability. Its metadata is:
 - `선택`, `분류`, `확정 여부`: `resize: "none"`.
 - `Order 명`: `resize: "pinned-order-boundary"`.
 - Scrollable data columns with an approved Figma width: `resize:
-  "data-column"`.
+  "data-column"`, except the avatar-only `요청 수의사` column.
 
 Other tables leave `enabled` false unless they explicitly opt in. The body
 8px gutter is part of this same table-level geometry contract and should not be
