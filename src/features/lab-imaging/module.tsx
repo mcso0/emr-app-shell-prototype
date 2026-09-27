@@ -3062,7 +3062,7 @@ export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: She
   return (
     <PatientHistoryAside
       id="lab-content-aside"
-      label="임상병리검사 이력"
+      label="임상검사 이력"
       actions={<QueueActions />}
       entries={entries}
       status={legacyFixture ? "ready" : history.status}
