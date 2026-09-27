@@ -188,6 +188,9 @@ Required behavior:
 - Keep four columns pinned while minimum fixed content + boundary +240px
   scroll viewport fits; use the accepted narrow-viewport unpin fallback otherwise.
 - Let the existing horizontal scroll owner absorb overflow.
+- At the rightmost scroll position, show 110px of empty table space after the
+  `요청 수의사` column in both the header and every row. Keep the 26 data-column
+  widths, resize handles, and labels unchanged.
 - Do not replace the current bounded table viewport with a feature-local
   `ScrollArea` or an additional vertical scroll owner.
 - Keep header and body column starts aligned after horizontal scroll, column

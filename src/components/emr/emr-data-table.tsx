@@ -89,6 +89,7 @@ export type EmrDataTableProps<TData> = {
   className?: string;
   columnGap?: number;
   leadingInset?: number;
+  trailingSpace?: number;
   initialLoading?: boolean;
   growLastColumn?: boolean;
   skeletonRowCount?: number;
@@ -493,12 +494,14 @@ function EmrDataTableSkeletonRows<TData>({
   leadingInset,
   rowCount,
   table,
+  trailingSpace,
 }: {
   columnGap: number;
   hasRowOverlay: boolean;
   leadingInset: number;
   rowCount: number;
   table: TanStackTable<TData>;
+  trailingSpace: number;
 }) {
   const columns = getOrderedVisibleColumns(table);
 
@@ -580,6 +583,13 @@ function EmrDataTableSkeletonRows<TData>({
           data-emr-data-table-overlay-anchor="skeleton"
         />
       ) : null}
+      {trailingSpace > 0 ? (
+        <TableCell
+          aria-hidden="true"
+          className="!p-0"
+          data-emr-table-trailing-space="true"
+        />
+      ) : null}
     </TableRow>
   ));
 }
@@ -589,11 +599,13 @@ function EmrDataTableHeader<TData>({
   group,
   hasRowOverlay,
   leadingInset,
+  trailingSpace,
 }: {
   columnGap: number;
   group: HeaderGroup<TData>;
   hasRowOverlay: boolean;
   leadingInset: number;
+  trailingSpace: number;
 }) {
   return (
     <TableRow
@@ -721,6 +733,13 @@ function EmrDataTableHeader<TData>({
         );
       })}
       {hasRowOverlay ? <EmrDataTableOverlayHeader /> : null}
+      {trailingSpace > 0 ? (
+        <TableHead
+          aria-hidden="true"
+          className="!p-0"
+          data-emr-table-trailing-space="true"
+        />
+      ) : null}
     </TableRow>
   );
 }
@@ -738,6 +757,7 @@ function EmrDataTableBodyRow<TData>({
   renderAfterRow,
   table,
   touchOverlayOpen,
+  trailingSpace,
 }: {
   columnGap: number;
   getRowProps?: EmrDataTableProps<TData>["getRowProps"];
@@ -751,6 +771,7 @@ function EmrDataTableBodyRow<TData>({
   renderAfterRow?: EmrDataTableProps<TData>["renderAfterRow"];
   table: TanStackTable<TData>;
   touchOverlayOpen: boolean;
+  trailingSpace: number;
 }) {
   const cells = getVisibleCells(table, row);
   const rowState = getRowState?.(row) ?? "normal";
@@ -859,6 +880,13 @@ function EmrDataTableBodyRow<TData>({
             {rowOverlay}
           </EmrDataTableRowOverlay>
         ) : null}
+        {trailingSpace > 0 ? (
+          <TableCell
+            aria-hidden="true"
+            className="!p-0"
+            data-emr-table-trailing-space="true"
+          />
+        ) : null}
       </TableRow>
       {renderAfterRow?.(row)}
     </React.Fragment>
@@ -887,6 +915,7 @@ export function EmrDataTable<TData>({
   rowOverlayWidth = 166,
   selectionActionBarAriaLabel = "선택 행 작업",
   skeletonRowCount = 6,
+  trailingSpace = 0,
   viewportMode,
 }: EmrDataTableProps<TData>) {
   const tableRootRef = React.useRef<HTMLDivElement>(null);
@@ -902,7 +931,8 @@ export function EmrDataTable<TData>({
   const selectedRows = table.getSelectedRowModel().rows;
   const hasPinnedColumns = table.getIsSomeColumnsPinned();
   const hasRowOverlay = Boolean(renderRowOverlay);
-  const visibleColumnCount = columns.length + (hasRowOverlay ? 1 : 0);
+  const visibleColumnCount =
+    columns.length + (hasRowOverlay ? 1 : 0) + (trailingSpace > 0 ? 1 : 0);
   const leftPinnedColumns = table.getLeftVisibleLeafColumns();
   const leftPinnedColumnWidth =
     leadingInset +
@@ -948,15 +978,15 @@ export function EmrDataTable<TData>({
       density={density}
       layout="scroll"
       minWidth={
-        visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap
+        visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap + trailingSpace
       }
       overscrollAxes={hasPinnedColumns ? "none" : overscrollAxes}
       pinning={hasPinnedColumns ? "columns" : "none"}
       style={
         !growLastColumn
           ? {
-              width: `${visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap}px`,
-              maxWidth: `${visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap}px`,
+              width: `${visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap + trailingSpace}px`,
+              maxWidth: `${visibleColumnWidth + Math.max(0, columns.length - 1) * columnGap + trailingSpace}px`,
               tableLayout: "fixed",
             }
           : undefined
@@ -977,6 +1007,7 @@ export function EmrDataTable<TData>({
           />
         ))}
         {hasRowOverlay ? <col style={{ width: 0 }} /> : null}
+        {trailingSpace > 0 ? <col style={{ width: `${trailingSpace}px` }} /> : null}
       </colgroup>
       <TableHeader className="sticky top-0 z-10">
         {headerGroups.map((group) => (
@@ -986,6 +1017,7 @@ export function EmrDataTable<TData>({
             group={group}
             hasRowOverlay={hasRowOverlay}
             leadingInset={leadingInset}
+            trailingSpace={trailingSpace}
           />
         ))}
       </TableHeader>
@@ -997,6 +1029,7 @@ export function EmrDataTable<TData>({
             leadingInset={leadingInset}
             rowCount={skeletonRowCount}
             table={table}
+            trailingSpace={trailingSpace}
           />
         ) : (
           rows.map((row) => (
@@ -1016,6 +1049,7 @@ export function EmrDataTable<TData>({
               leadingInset={leadingInset}
               table={table}
               touchOverlayOpen={activeTouchOverlayRowId === row.id}
+              trailingSpace={trailingSpace}
             />
           ))
         )}

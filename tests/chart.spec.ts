@@ -1671,6 +1671,56 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   }
 });
 
+test("chart Plan/Order shows 110px after the last header and row at scroll end", async ({ page }) => {
+  await page.setViewportSize({ width: 1386, height: 870 });
+  await page.goto(chartFigmaVisualFixture.route);
+
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const row = table.locator('tbody tr[data-emr-data-table-row="true"]').first();
+  await expect(row).toBeVisible();
+  const scrollOwner = page.locator(
+    '[data-slot="chart-order-table-surface"] [data-emr-pinned-table-scroll-owner="true"]',
+  );
+  await scrollOwner.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth - element.clientWidth;
+  });
+  for (const selector of [
+    'thead [data-column-id="requestedBy"]',
+    'thead [data-emr-table-trailing-space="true"]',
+    'tbody tr[data-emr-data-table-row="true"] [data-column-id="requestedBy"]',
+    'tbody tr[data-emr-data-table-row="true"] [data-emr-table-trailing-space="true"]',
+  ]) {
+    await expect(table.locator(selector).first()).toHaveCount(1);
+  }
+
+  const geometry = await table.evaluate((element) => {
+    const header = element.querySelector<HTMLElement>('thead [data-column-id="requestedBy"]')!;
+    const headerSpace = element.querySelector<HTMLElement>('thead [data-emr-table-trailing-space="true"]')!;
+    const row = element.querySelector<HTMLElement>('tbody tr[data-emr-data-table-row="true"]')!;
+    const cell = row.querySelector<HTMLElement>('[data-column-id="requestedBy"]')!;
+    const rowSpace = row.querySelector<HTMLElement>('[data-emr-table-trailing-space="true"]')!;
+    const viewport = element.closest('[data-emr-pinned-table-viewport="true"]')!
+      .querySelector<HTMLElement>('[data-emr-pinned-table-scroll-owner="true"]')!;
+    const rect = (node: HTMLElement) => node.getBoundingClientRect();
+    return {
+      headerGap: rect(headerSpace).left - rect(header).right,
+      headerSpaceWidth: rect(headerSpace).width,
+      rowGap: rect(rowSpace).left - rect(cell).right,
+      rowSpaceWidth: rect(rowSpace).width,
+      visibleSpace: rect(viewport).right - rect(headerSpace).left,
+      scrollEnd: viewport.scrollWidth - viewport.clientWidth - viewport.scrollLeft,
+    };
+  });
+  expect(Math.abs(geometry.headerGap)).toBeLessThanOrEqual(1);
+  expect(Math.abs(geometry.rowGap)).toBeLessThanOrEqual(1);
+  expect(geometry.headerSpaceWidth).toBeCloseTo(110, 0);
+  expect(geometry.rowSpaceWidth).toBeCloseTo(110, 0);
+  expect(geometry.visibleSpace).toBeGreaterThanOrEqual(109);
+  expect(geometry.visibleSpace).toBeLessThanOrEqual(111);
+  expect(geometry.scrollEnd).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: "test-results/chart-order-trailing-space.png" });
+});
+
 test("chart Order all tab renders the approved order confirmation and work-state columns", async ({
   page,
 }) => {
@@ -1750,7 +1800,7 @@ test("chart Order all tab renders the approved order confirmation and work-state
     name: "Maropitant 16mg T 행 작업",
   });
   await expect(
-    overlay.getByRole("button", { name: "Maropitant 16mg T 상세" }),
+    overlay.getByRole("button", { name: "Maropitant 16mg T 확정" }),
   ).toBeVisible();
   const [ownerBox, overlayBox] = await Promise.all([
     scrollOwner.boundingBox(),
@@ -1760,7 +1810,7 @@ test("chart Order all tab renders the approved order confirmation and work-state
   expect(overlayBox).not.toBeNull();
   expect(
     Math.abs(
-      overlayBox!.x + overlayBox!.width - (ownerBox!.x + ownerBox!.width),
+      overlayBox!.x + overlayBox!.width - (ownerBox!.x + ownerBox!.width - 110),
     ),
   ).toBeLessThanOrEqual(2);
 });
