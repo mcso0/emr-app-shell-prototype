@@ -408,9 +408,18 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
       await route.fulfill({ json: result });
     }
   });
-  const url = `/w/${workspaceId}/lab?modulePanel=open&aside=closed&labResultId=live-lab-${wi.id}`;
+  const url = `/w/${workspaceId}/lab?date=2026-09-06&modulePanel=open&aside=closed&labResultId=live-lab-${wi.id}`;
   await page.goto(url);
-  await expect(page.getByTestId("lab-frozen-profile")).toContainText("수동 입력 / 장비 미연동 / 합성 테스트용");
+  await expect(page.getByTestId("lab-frozen-profile")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "임상병리검사 결과지 링크 복사" })).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  await page.getByRole("button", { name: "임상병리검사 결과지 링크 복사" }).click();
+  const resultLink = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(resultLink.pathname).toBe(`/w/${workspaceId}/lab`);
+  expect(resultLink.searchParams.get("labResultId")).toBe(`live-lab-${wi.id}`);
+  expect(resultLink.searchParams.get("date")).toBe("2026-09-06");
+  await page.goto(resultLink.href);
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue("");
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
   await page.getByLabel("WBC 결과값", { exact: true }).fill(String(rule.referenceInterval.low));

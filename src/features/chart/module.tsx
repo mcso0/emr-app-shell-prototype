@@ -16845,7 +16845,9 @@ export function ChartContent({
             chartDate={chartDate}
             doctorName={effectiveLatestSoap ? effectiveLatestSoap.authorDisplayName ?? getChartStaffName(effectiveLatestSoap.authorUserId) ?? (effectiveLatestSoap.authorUserId ? "작성자 이름 미확인" : "작성자 미기록") : getChartBundleVeterinarianName(currentBundle)}
             timeLabel="진료 시작 일시"
-            encounterNo={currentBundle.encounter.encounterNo}
+            encounterId={currentBundle.encounter.id}
+            operatingDate={getOperatingDateFromIso(chartCheckedInAt) ?? selectedDate}
+            workspaceId={workspaceId}
             historyAction={
               <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!border-[var(--clair-color-atomic-neutral-200)] [&_button]:!bg-[var(--clair-color-atomic-common-100)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
                 <EmrInstructionHistoryToggle

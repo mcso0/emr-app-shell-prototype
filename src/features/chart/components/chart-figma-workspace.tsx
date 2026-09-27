@@ -12,6 +12,7 @@ import {
 } from "@/components/emr/patient-context-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
 import {
   Tooltip,
   TooltipContent,
@@ -122,22 +123,26 @@ export function ChartActionBar({
   chartDate,
   completionAction,
   doctorName,
-  encounterNo,
+  encounterId,
   historyAction,
+  operatingDate,
   pendingIndicator,
   startTime,
   timeLabel = "진료 시작 일시",
   visitLabel,
+  workspaceId,
 }: {
   chartDate: string;
   completionAction?: ReactNode;
   doctorName: string;
-  encounterNo: string;
+  encounterId: string;
   historyAction: ReactNode;
+  operatingDate: string;
   pendingIndicator?: ReactNode;
   startTime: string;
   timeLabel?: string;
   visitLabel: string;
+  workspaceId: string;
 }) {
   return (
     <div
@@ -157,14 +162,13 @@ export function ChartActionBar({
         >
           {visitLabel}
         </Badge>
-        <Badge
-          variant="ghost"
-          size="md"
-          className="max-w-40 truncate px-2 text-muted-foreground"
-          data-testid="chart-encounter-number-badge"
-        >
-          {encounterNo}
-        </Badge>
+        <EmrCopyLinkButton
+          ariaLabel="차트 링크 복사"
+          date={operatingDate}
+          moduleId="treatment"
+          params={{ encounterId }}
+          workspaceId={workspaceId}
+        />
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {pendingIndicator}
