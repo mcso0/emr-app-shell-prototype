@@ -1792,27 +1792,60 @@ test("chart Order all tab renders the approved order confirmation and work-state
   const scrollOwner = table.locator(
     "xpath=ancestor::*[@data-emr-pinned-table-viewport='true']/*[@data-emr-pinned-table-scroll-owner='true']",
   );
-  await scrollOwner.evaluate((element) => {
-    element.scrollLeft = element.scrollWidth - element.clientWidth;
-  });
-  await maropitantRow.hover();
+  await expect(
+    table.getByRole("button", { name: "요청 수의사 컬럼 너비 조절" }),
+  ).toHaveCount(0);
+  await expect(
+    table.getByRole("button", { name: "요청 수의사 오름차순 정렬" }),
+  ).toBeVisible();
+  await expect(
+    table.getByRole("columnheader", { name: "요청 수의사" }),
+  ).toBeVisible();
   const overlay = page.getByRole("group", {
     name: "Maropitant 16mg T 행 작업",
   });
-  await expect(
-    overlay.getByRole("button", { name: "Maropitant 16mg T 확정" }),
-  ).toBeVisible();
-  const [ownerBox, overlayBox] = await Promise.all([
-    scrollOwner.boundingBox(),
-    overlay.boundingBox(),
-  ]);
-  expect(ownerBox).not.toBeNull();
-  expect(overlayBox).not.toBeNull();
-  expect(
-    Math.abs(
-      overlayBox!.x + overlayBox!.width - (ownerBox!.x + ownerBox!.width - 110),
-    ),
-  ).toBeLessThanOrEqual(2);
+  const overlayPositions: number[] = [];
+  for (const scrollFraction of [0, 0.5, 1]) {
+    await scrollOwner.evaluate((element, fraction) => {
+      element.scrollLeft = (element.scrollWidth - element.clientWidth) * fraction;
+    }, scrollFraction);
+    await maropitantRow.locator('[data-column-id="displayName"]').hover();
+    await expect(
+      overlay.getByRole("button", { name: "Maropitant 16mg T 확정" }),
+    ).toBeVisible();
+    const [pinnedEdge, overlayBox] = await Promise.all([
+      maropitantRow.locator('[data-column-id="displayName"]').boundingBox(),
+      overlay.boundingBox(),
+    ]);
+    expect(pinnedEdge).not.toBeNull();
+    expect(overlayBox).not.toBeNull();
+    expect(Math.abs(overlayBox!.x - (pinnedEdge!.x + pinnedEdge!.width))).toBeLessThanOrEqual(2);
+    overlayPositions.push(overlayBox!.x);
+  }
+  expect(Math.max(...overlayPositions) - Math.min(...overlayPositions)).toBeLessThanOrEqual(2);
+  await page.screenshot({ path: "test-results/chart-order-left-row-actions.png" });
+
+  await page.setViewportSize({ width: 580, height: 870 });
+  await expect(table).toHaveAttribute("data-emr-pinning", "none");
+  const narrowScrollOwner = table.locator("xpath=..");
+  const narrowPositions: number[] = [];
+  for (const scrollFraction of [0, 1]) {
+    await narrowScrollOwner.evaluate((element, fraction) => {
+      element.scrollLeft = (element.scrollWidth - element.clientWidth) * fraction;
+    }, scrollFraction);
+    const [viewportBox, rowBox] = await Promise.all([
+      narrowScrollOwner.boundingBox(),
+      maropitantRow.boundingBox(),
+    ]);
+    expect(viewportBox).not.toBeNull();
+    expect(rowBox).not.toBeNull();
+    await page.mouse.move(viewportBox!.x + 4, rowBox!.y + rowBox!.height / 2);
+    const overlayBox = await overlay.boundingBox();
+    expect(overlayBox).not.toBeNull();
+    expect(Math.abs(overlayBox!.x - viewportBox!.x)).toBeLessThanOrEqual(2);
+    narrowPositions.push(overlayBox!.x);
+  }
+  expect(Math.max(...narrowPositions) - Math.min(...narrowPositions)).toBeLessThanOrEqual(2);
 });
 
 const actualDispenseUiCases = [

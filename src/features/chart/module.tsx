@@ -9041,6 +9041,7 @@ function ChartOrderTable({
           getChartStaffName(row.order.requestedByUserId) ?? "미기록",
         size: getChartOrderColumnSize("requestedBy"),
         minSize: getChartOrderColumnSize("requestedBy"),
+        enableResizing: false,
         header: chartOrderSortLabels.requestedBy,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "requestedBy"),
@@ -9056,7 +9057,6 @@ function ChartOrderTable({
         meta: {
           label: chartOrderSortLabels.requestedBy,
           headerInteraction: "sortable",
-          resize: "data-column",
         },
       },
       ];
@@ -9173,6 +9173,7 @@ function ChartOrderTable({
             `${row.original.order.displayName} 행 작업`
           }
           rowOverlayWidth={114}
+          rowOverlaySide="start"
           renderRowOverlay={({ row }) => {
             const orderRow = row.original;
             const { order } = orderRow;

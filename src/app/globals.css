@@ -709,6 +709,28 @@
   }
 
   [data-slot="chart-order-table-surface"]
+    [data-emr-data-table-row-overlay-side="start"]
+    .emr-data-table-row-overlay {
+    inset-inline-start: 0;
+    inset-inline-end: auto;
+    justify-content: flex-start;
+    padding: 0 var(--clair-spacing-20) 0 var(--clair-spacing-10);
+    background:
+      linear-gradient(
+        90deg,
+        var(--emr-table-row-interaction-surface) 0,
+        var(--emr-table-row-interaction-surface) 91.851%,
+        transparent 94.531%
+      ),
+      linear-gradient(
+        90deg,
+        var(--emr-table-row-state-surface) 0,
+        var(--emr-table-row-state-surface) 91.851%,
+        transparent 94.531%
+      );
+  }
+
+  [data-slot="chart-order-table-surface"]
     .emr-data-table-row-overlay-actions {
     gap: var(--clair-spacing-6);
   }
