@@ -156,6 +156,20 @@ twice inside a transaction, executes the synthetic RPC contract fixture and
 requires both the PASS marker and ROLLBACK. It is not a remote migration runner
 or evidence of a fresh replay of the entire repository migration history.
 
+## 2026-09-27 trailing-space follow-up
+
+The owner requested 110px of visible empty space after the final Plan/Order
+column when horizontally scrolled to the right edge, then commit, PR, and
+`origin/main` delivery after verification. The implementation uses a
+presentation-only terminal table space shared by header and rows; the 26 data
+columns and their widths remain unchanged. Verify its measured width and
+visibility in Chromium at the rightmost scroll position before delivery.
+The isolated local Chromium run measured 110px in both header and row at
+1386px viewport width; the four focused Plan/Order geometry, column, and row
+action checks passed. Secret scan, docs check, and `git diff --check` passed.
+Lint passed with five existing script warnings; TypeScript and production build
+passed.
+
 ## Release dependency and rollback boundaries
 
 The owner authorized code delivery after TDD and subsequently approved the scoped

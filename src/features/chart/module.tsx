@@ -9143,6 +9143,7 @@ function ChartOrderTable({
           density={density}
           growLastColumn={false}
           leadingInset={0}
+          trailingSpace={110}
           initialLoading={loading && rows.length === 0}
           overscrollAxes="horizontal"
           renderAfterRows={({ visibleColumnCount }) =>
