@@ -417,6 +417,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | LAB-PR-001                  | done         | lab                  | P1       | PR 1                 | `docs/work/lab/LAB-PR-001-result-workspace-structure.md`                                               |
 | LAB-PR-002                  | human_review | lab                  | P1       | PR TBD               | `docs/work/lab/LAB-PR-002-result-sheet-figma-phase-1.md`                                              |
 | LAB-PR-003                  | human_review | lab                  | P1       | Retest chart origin fix  | `docs/work/lab/LAB-PR-003-result-sheet-phase-2.md`                                                     |
+| LAB-PR-004 | human_review | lab | P1 | Verified V5 alignment; delivery and human acceptance | `docs/work/lab/LAB-PR-004-result-sheet-figma-alignment.md` |
 | IMAGING-PR-001              | done         | imaging              | P1       | PR 1                 | `docs/work/imaging/IMAGING-PR-001-workspace-restructure.md`                                            |
 | HOSPITAL-ADMIN-PR-001       | done         | hospital-admin       | P1       | PR 1                 | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-001-order-management-catalog.md`                           |
 | HOSPITAL-ADMIN-PR-002       | human_review | hospital-admin       | P0       | User goal / settings hub planning and screen concepts | `docs/work/hospital-admin/HOSPITAL-ADMIN-PR-002-settings-hub-screen-concepts.md` |
