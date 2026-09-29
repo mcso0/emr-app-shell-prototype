@@ -40,6 +40,7 @@ import {
 import { ShellMain } from "@/shell/shell-main";
 import {
   buildWorkspaceHomeRoute,
+  readProfileDrawerParam,
   buildWorkspaceSwitchRoute,
 } from "@/shell/workspace-surface-route";
 import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
@@ -51,6 +52,8 @@ type AppShellProps = {
 
 type PendingUrlState = {
   search: string;
+  activeDrawer?: string | null;
+  activeProfileDrawer?: string | null;
   contentAsideOpen?: boolean;
   modulePanelOpen?: boolean;
   rightPanelOpen?: boolean;
@@ -169,6 +172,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const {
     activeDrawer,
+    activeProfileDrawer,
     contentAsideOpen,
     enterModule,
     moduleRefreshActions,
@@ -176,6 +180,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     notificationNavigationDirty,
     rightPanelOpen,
     setActiveDrawer,
+    setActiveProfileDrawer,
     setContentAsideOpen,
     setModulePanelOpen,
     setNotificationNavigationDirty,
@@ -282,7 +287,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   useLayoutEffect(() => {
     enterModule();
-  }, [enterModule, moduleDefinition.id]);
+  }, [enterModule, moduleDefinition.id, workspaceId]);
 
   useLayoutEffect(() => {
     urlStateReadyRef.current = false;
@@ -291,6 +296,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const aside = urlParams.get("aside") ?? urlParams.get("context");
     const right = urlParams.get("right");
     const drawer = urlParams.get("drawer");
+    const legacyProfile = readProfileDrawerParam(drawer);
+    const profile = readProfileDrawerParam(urlParams.get("profile")) ?? legacyProfile;
     const receptionRightPanelDrawerFromUrl =
       drawer?.startsWith("reception-appointment:") ||
       drawer?.startsWith("reception-appointment-check-in-form:") ||
@@ -337,20 +344,29 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       }
       setRightPanelOpen(nextRightPanelOpen);
     }
-    if (
-      drawer &&
-      currentLayoutState.activeDrawer?.rightPanelPresentation?.persistToUrl !== false
-    ) {
-      const separatorIndex = drawer.indexOf(":");
-      const type = separatorIndex >= 0 ? drawer.slice(0, separatorIndex) : "";
-      const id = separatorIndex >= 0 ? drawer.slice(separatorIndex + 1) : "";
-      if (type && id) {
-        const nextDrawer =
-          currentLayoutState.activeDrawer?.type === type && currentLayoutState.activeDrawer.id === id
-            ? currentLayoutState.activeDrawer
-            : { type, id };
-        setActiveDrawer(nextDrawer);
+    if (currentLayoutState.activeDrawer?.rightPanelPresentation?.persistToUrl !== false) {
+      if (drawer && !legacyProfile) {
+        const separatorIndex = drawer.indexOf(":");
+        const type = separatorIndex >= 0 ? drawer.slice(0, separatorIndex) : "";
+        const id = separatorIndex >= 0 ? drawer.slice(separatorIndex + 1) : "";
+        if (type && id) {
+          setActiveDrawer(currentLayoutState.activeDrawer?.type === type && currentLayoutState.activeDrawer.id === id
+            ? currentLayoutState.activeDrawer : { type, id });
+        }
+      } else {
+        setActiveDrawer(null);
       }
+      if (profile) {
+        setActiveProfileDrawer(currentLayoutState.activeProfileDrawer?.type === profile.type && currentLayoutState.activeProfileDrawer.id === profile.id
+          ? currentLayoutState.activeProfileDrawer : profile);
+      } else if (currentLayoutState.activeProfileDrawer?.type !== "staff-operational-profile") {
+        setActiveProfileDrawer(null);
+      }
+      const hydratedLayout = useLayoutStore.getState();
+      pendingUrlState.activeDrawer = hydratedLayout.activeDrawer
+        ? `${hydratedLayout.activeDrawer.type}:${hydratedLayout.activeDrawer.id}` : null;
+      pendingUrlState.activeProfileDrawer = hydratedLayout.activeProfileDrawer
+        ? `${hydratedLayout.activeProfileDrawer.type}:${hydratedLayout.activeProfileDrawer.id}` : null;
     }
     pendingUrlStateRef.current = pendingUrlState;
     const syncReadyTimer = window.setTimeout(() => {
@@ -364,6 +380,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }, [
     search,
     setActiveDrawer,
+    setActiveProfileDrawer,
     setContentAsideOpen,
     setModulePanelOpen,
     setRightPanelOpen,
@@ -373,6 +390,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     moduleDefinition.id,
     moduleDefinition.sidePanel,
     moduleDefinition.rightPanel,
+    workspaceId,
   ]);
 
   useEffect(() => {
@@ -388,7 +406,11 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         (pendingUrlState.contentAsideOpen === undefined ||
           pendingUrlState.contentAsideOpen === contentAsideOpen) &&
         (pendingUrlState.rightPanelOpen === undefined ||
-          pendingUrlState.rightPanelOpen === rightPanelOpen);
+          pendingUrlState.rightPanelOpen === rightPanelOpen) &&
+        (pendingUrlState.activeDrawer === undefined ||
+          pendingUrlState.activeDrawer === (activeDrawer ? `${activeDrawer.type}:${activeDrawer.id}` : null)) &&
+        (pendingUrlState.activeProfileDrawer === undefined ||
+          pendingUrlState.activeProfileDrawer === (activeProfileDrawer ? `${activeProfileDrawer.type}:${activeProfileDrawer.id}` : null));
 
       if (!pendingStateApplied) return;
 
@@ -417,13 +439,29 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     } else {
       params.delete("drawer");
     }
+    if (activeProfileDrawer && activeProfileDrawer.type !== "staff-operational-profile") {
+      params.set("profile", `${activeProfileDrawer.type}:${activeProfileDrawer.id}`);
+    } else {
+      params.delete("profile");
+    }
     const nextSearch = params.toString();
     if (search !== nextSearch) {
       if (window.location.pathname !== pathname) return;
-      router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+      const previousTaskParams = new URLSearchParams(search);
+      previousTaskParams.delete("profile");
+      if (readProfileDrawerParam(previousTaskParams.get("drawer"))) previousTaskParams.delete("drawer");
+      const nextTaskParams = new URLSearchParams(params);
+      nextTaskParams.delete("profile");
+      if (previousTaskParams.toString() === nextTaskParams.toString()) {
+        // Profile-only changes must not reload the mounted business task.
+        window.history.replaceState(null, "", `${pathname}?${nextSearch}`);
+      } else {
+        router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+      }
     }
   }, [
     activeDrawer,
+    activeProfileDrawer,
     contentAsideOpen,
     moduleDefinition.contentAside,
     moduleDefinition.rightPanel,
@@ -437,6 +475,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   function navigateToTabRoute(route: string | null) {
     if (!route) return;
+    setActiveProfileDrawer(null);
     pendingTabRouteRef.current = route;
     router.push(route, { scroll: false });
   }

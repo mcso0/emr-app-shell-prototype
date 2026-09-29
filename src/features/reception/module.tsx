@@ -162,11 +162,9 @@ import {
   type CalendarOverlapLayout,
 } from "@/features/reception/calendar-overlap-layout";
 import {
-  GuardianProfileDrawer,
   RegistrationFormField,
   RegistrationFormSection,
   NewUnifiedRegistrationButton,
-  PatientProfileDrawer,
 } from "@/features/reception/profile-drawer";
 import { useAuthClient } from "@/features/auth/auth-client";
 import { useMockAuthStore } from "@/features/auth/session-store";
@@ -278,7 +276,7 @@ import type {
   Patient,
   PatientGuardian,
 } from "@/types/emr-domain";
-import type { DrawerState, ShellComponentProps } from "@/types/emr";
+import type { DrawerState, ProfileDrawerState, ShellComponentProps } from "@/types/emr";
 
 const allVeterinarians = mockStaffUsers.filter(
   (user) => user.role === "veterinarian",
@@ -3499,6 +3497,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   );
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const authSession = useMockAuthStore((state) => state.session);
   const setModulePanelOpen = useLayoutStore(
@@ -3906,11 +3905,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
                   return;
                 }
 
-                setActiveDrawer({
-                  type: "reception-patient",
-                  id: item.patient.id,
-                  subtitle: item.patient.patientNo,
-                });
+                setActiveProfileDrawer({ type: "patient", id: item.patient.id });
               }}
               onToggle={() => toggleQueueGroup(group.statusGroup)}
             />
@@ -6756,6 +6751,7 @@ export function ReceptionContent() {
     (state) => state.clearModuleRefreshAction,
   );
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const setModuleRefreshAction = useLayoutStore(
     (state) => state.setModuleRefreshAction,
@@ -6918,24 +6914,11 @@ export function ReceptionContent() {
   };
   const openStaffOperationalProfile = useCallback(
     (staffMember: ReceptionStaffMember | Veterinarian, opener: HTMLElement | null) => {
-      const returnFocusId =
-        opener?.id || `staff-operational-profile-trigger-${staffMember.id}`;
+      const returnFocusId = opener?.id || `staff-operational-profile-trigger-${staffMember.id}`;
       if (opener && !opener.id) opener.id = returnFocusId;
-
-      setActiveDrawer({
-        type: "staff-operational-profile",
-        id: staffMember.id,
-        rightPanelPresentation: {
-          gap: 10,
-          mobileFullWidth: true,
-          persistToUrl: false,
-          returnFocusId,
-          width: 380,
-        },
-      });
-      setRightPanelOpen(true);
+      setActiveProfileDrawer({ type: "staff-operational-profile", id: staffMember.id, returnFocusId });
     },
-    [setActiveDrawer, setRightPanelOpen],
+    [setActiveProfileDrawer],
   );
   function clearCalendarTransientSelection() {
     dispatchReceptionCalendarDragClear();
@@ -9996,14 +9979,9 @@ function ReceptionAppointmentCheckInFormDrawer({
   );
 }
 
-export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponentProps) {
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
-  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
-  const setCalendarDraftSelection = useReceptionStore(
-    (state) => state.setCalendarDraftSelection,
-  );
+export function ReceptionStaffProfileDrawer({ workspaceId }: ShellComponentProps) {
+  const activeProfileDrawer = useLayoutStore((state) => state.activeProfileDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const persistedCalendarAppointments = useReceptionStore(
     (state) => state.persistedCalendarAppointments,
@@ -10013,9 +9991,6 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     (state) => state.patientGuardians,
   );
   const patients = usePatientProfileStore((state) => state.patients);
-  const [isEditing, setIsEditing] = useState(false);
-  const title = getReceptionRightPanelTitle(activeDrawer);
-  const usesReturnHeader = Boolean(activeDrawer?.returnTo);
   const searchParams = useSearchParams();
   const authSession = useMockAuthStore((state) => state.session);
   const operatingDateOverride = useReceptionStore(
@@ -10032,7 +10007,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     [guardians, patientGuardians, patients],
   );
   const calendarAppointmentWork = useMemo<StaffCalendarAppointmentWork[]>(() => {
-    if (activeDrawer?.type !== "staff-operational-profile") return [];
+    if (activeProfileDrawer?.type !== "staff-operational-profile") return [];
 
     const appointmentWork = getTodayAppointments(
       draftCheckIns.filter(isReceptionDraftCalendarActive),
@@ -10041,7 +10016,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     )
       .filter(
         (appointment) =>
-          isAppointmentAssignedToStaff(appointment, activeDrawer.id) &&
+          isAppointmentAssignedToStaff(appointment, activeProfileDrawer.id) &&
           appointment.status !== "cancelled" &&
           appointment.status !== "no_show",
       )
@@ -10074,7 +10049,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
           !encounter.appointmentId &&
           getOperatingDateFromIso(encounter.checkedInAt ?? encounter.createdAt) === operatingDate &&
           encounter.status !== "cancelled" &&
-          isEncounterAssignedToStaff(encounter, activeDrawer.id)
+          isEncounterAssignedToStaff(encounter, activeProfileDrawer.id)
         );
       })
       .map((encounter): StaffCalendarAppointmentWork => {
@@ -10109,7 +10084,7 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       left.scheduledStartAt.localeCompare(right.scheduledStartAt),
     );
   }, [
-    activeDrawer,
+    activeProfileDrawer,
     draftCheckIns,
     operatingDate,
     persistedCalendarAppointments,
@@ -10117,27 +10092,56 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     workspaceId,
   ]);
 
-  const closeStaffProfile = useCallback(() => {
-    const returnFocusId = activeDrawer?.rightPanelPresentation?.returnFocusId;
-    setActiveDrawer(null);
-    setRightPanelOpen(false);
-    window.setTimeout(() => {
-      if (returnFocusId) document.getElementById(returnFocusId)?.focus();
-    }, 0);
-  }, [activeDrawer?.rightPanelPresentation?.returnFocusId, setActiveDrawer, setRightPanelOpen]);
+  if (activeProfileDrawer?.type === "staff-operational-profile") {
+    return (
+      <StaffOperationalProfilePanel
+        key={`${workspaceId}:${activeProfileDrawer.id}`}
+        actorUserId={
+          isPreparedEmptyClinicWorkspace(workspaceId)
+            ? authSession?.id
+            : getReceptionDemoActorId(authSession?.role)
+        }
+        calendarAppointments={calendarAppointmentWork}
+        date={defaultOperatingDate}
+        onClose={() => setActiveProfileDrawer(null)}
+        todayDate={defaultOperatingDate}
+        userId={activeProfileDrawer.id}
+        workspaceId={workspaceId}
+      />
+    );
+  }
+
+  return null;
+}
+
+export function ReceptionRightPanel({ moduleLabel, moduleId }: ShellComponentProps) {
+  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const setCalendarDraftSelection = useReceptionStore(
+    (state) => state.setCalendarDraftSelection,
+  );
+  const [isEditing, setIsEditing] = useState(false);
+  const title = getReceptionRightPanelTitle(activeDrawer);
+  const usesReturnHeader = Boolean(activeDrawer?.returnTo);
   const returnFromReceptionPanel = useCallback(() => {
     setDiscardConfirmOpen(false);
     setCalendarDraftSelection(undefined);
     const returnDrawer = getReceptionReturnDrawer(activeDrawer);
     if (returnDrawer) {
-      setActiveDrawer(returnDrawer);
-      setRightPanelOpen(true);
+      setActiveDrawer(null);
+      setActiveProfileDrawer(returnDrawer);
       return;
     }
+    if (moduleId !== "reception") setActiveDrawer(null);
     setRightPanelOpen(false);
   }, [
     activeDrawer,
+    moduleId,
     setActiveDrawer,
+    setActiveProfileDrawer,
     setCalendarDraftSelection,
     setRightPanelOpen,
   ]);
@@ -10148,25 +10152,6 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     }
     returnFromReceptionPanel();
   }, [activeDrawer?.hasUnsavedChanges, returnFromReceptionPanel]);
-
-  if (activeDrawer?.type === "staff-operational-profile") {
-    return (
-      <StaffOperationalProfilePanel
-        key={`${workspaceId}:${activeDrawer.id}`}
-        actorUserId={
-          isPreparedEmptyClinicWorkspace(workspaceId)
-            ? authSession?.id
-            : getReceptionDemoActorId(authSession?.role)
-        }
-        calendarAppointments={calendarAppointmentWork}
-        date={defaultOperatingDate}
-        onClose={closeStaffProfile}
-        todayDate={defaultOperatingDate}
-        userId={activeDrawer.id}
-        workspaceId={workspaceId}
-      />
-    );
-  }
 
   return (
     <>
@@ -11738,11 +11723,11 @@ function getReceptionEncounterVitalIcon(label: string) {
   return <CdsMedicalActivityIcon className="size-3.5" />;
 }
 
-function getReceptionReturnDrawer(drawer: DrawerState): DrawerState {
+function getReceptionReturnDrawer(drawer: DrawerState): ProfileDrawerState {
   if (!drawer?.returnTo) return null;
 
   return {
-    type: drawer.returnTo.type,
+    type: "patient",
     id: drawer.returnTo.id,
     profileTab: drawer.returnTo.profileTab,
   };
@@ -11761,6 +11746,7 @@ export function ReceptionDrawer({
   const searchParams = useSearchParams();
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const treatmentRefreshAction = useLayoutStore(
     (state) => state.moduleRefreshActions.treatment,
@@ -12027,29 +12013,32 @@ export function ReceptionDrawer({
     setCalendarDraftSelection(undefined);
     const returnDrawer = getReceptionReturnDrawer(activeDrawer);
     if (returnDrawer) {
-      setActiveDrawer(returnDrawer);
-      setRightPanelOpen(true);
+      setActiveDrawer(null);
+      setActiveProfileDrawer(returnDrawer);
       return;
     }
     setActiveDrawer(null);
-  }, [activeDrawer, setActiveDrawer, setCalendarDraftSelection, setRightPanelOpen]);
+  }, [activeDrawer, setActiveDrawer, setActiveProfileDrawer, setCalendarDraftSelection]);
   const closeDetailFlow = useCallback(() => {
     const returnDrawer = getReceptionReturnDrawer(activeDrawer);
     if (returnDrawer) {
-      setActiveDrawer(returnDrawer);
-      setRightPanelOpen(true);
+      setActiveDrawer(null);
+      setActiveProfileDrawer(returnDrawer);
       return;
     }
     if (presentation === "side-panel") {
       setCalendarDraftSelection(undefined);
+      if (!pathname.endsWith("/reception")) setActiveDrawer(null);
       setRightPanelOpen(false);
       return;
     }
     setActiveDrawer(null);
   }, [
     activeDrawer,
+    pathname,
     presentation,
     setActiveDrawer,
+    setActiveProfileDrawer,
     setCalendarDraftSelection,
     setRightPanelOpen,
   ]);
@@ -12088,14 +12077,6 @@ export function ReceptionDrawer({
     },
     [activeDrawer, setActiveDrawer],
   );
-  if (activeDrawer?.type === "reception-patient") {
-    return <PatientProfileDrawer patientId={activeDrawer.id} />;
-  }
-
-  if (activeDrawer?.type === "reception-guardian") {
-    return <GuardianProfileDrawer guardianId={activeDrawer.id} />;
-  }
-
   if (activeDrawer?.type === "reception-form") {
     const initialPatientId =
       activeDrawer.initialPatientId ??

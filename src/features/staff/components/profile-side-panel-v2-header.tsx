@@ -169,6 +169,7 @@ export function StatusMessageEditor({
               }
               if (event.key === "Escape") {
                 event.preventDefault();
+                event.stopPropagation();
                 cancel();
               }
             }}

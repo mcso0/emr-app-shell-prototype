@@ -1,8 +1,8 @@
 ---
 id: DESIGN-SYSTEM-STAFF-OPERATIONAL-PROFILE-DRAWER
 type: Design Contract
-title: Staff Operational Profile Side Panel V2
-description: Defines the non-modal staff profile side panel, truthful workspace data, self-service status/avatar controls, and assigned-work timeline.
+title: Staff Operational Profile Drawer V2
+description: Defines the non-modal staff profile overlay drawer, truthful workspace data, self-service status/avatar controls, and assigned-work timeline.
 status: active
 area: design-system
 doc_type: design-contract
@@ -14,14 +14,16 @@ tags:
   - workspace-membership
   - fulfillment
 created: 2026-07-14
-last_updated: 2026-07-20
+last_updated: 2026-09-29
 ---
 
-# Staff Operational Profile Side Panel V2
+# Staff Operational Profile Drawer V2
 
 ## Decision
 
-The staff operational profile is a detached, non-modal workspace side panel. V2
+The staff operational profile is a non-modal overlay drawer above the workspace.
+It shares the profile host with patient and guardian profiles without reserving
+layout width or replacing a mounted reception/reservation task. V2
 replaces the 336px read-only panel and disabled placeholder tabs with the
 approved Figma contract and three usable tabs: `프로필`, `업무현황`, and `일정`.
 
@@ -61,9 +63,9 @@ metadata, or inferred clinical competence.
 
 | Area               | Contract                                                                                                                             |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| desktop panel      | width `380px`, content gap `10px`, independent right-side layout column                                                              |
+| desktop panel      | width `380px`, full viewport height, fixed right-edge overlay; main content width remains unchanged                                  |
 | mobile/narrow      | full viewport width and height, no backdrop, no modal focus trap, no background `inert`                                              |
-| panel surface      | workspace side-panel semantic surface, 1px semantic border, 12px radius on desktop, shell-owned shadow                               |
+| panel surface      | shared Sheet surface and shadow, 1px semantic left border; feature content retains existing semantic tokens                          |
 | header             | height `150px`, 16px horizontal padding, bottom border                                                                               |
 | avatar             | `84px` square, 6px radius, cover crop; compose locally instead of adding a global Avatar size                                        |
 | presence           | `20px` badge with dot and text for online, offline, or unknown                                                                       |
@@ -82,11 +84,16 @@ aliases, when needed, belong in `emr-foundation.css`; never edit generated
 
 - Reception opens the panel as transient shell state and does not persist the
   target user ID to the URL.
-- Only one right-side panel is active at a time.
+- One profile drawer is active at a time. `activeProfileDrawer` is independent
+  from the reception/reservation `activeDrawer` and `rightPanelOpen` state.
+- Opening or closing a profile preserves the mounted business panel, its input
+  draft, selected record, and URL-owned `drawer` selection.
 - Opening focuses the close control. Close and `Escape` return focus to the
   exact opener when it still exists.
-- The panel is non-modal at every viewport. No Sheet overlay, backdrop, blur,
-  `aria-hidden`, or background `inert` is allowed.
+- The Sheet is non-modal at every viewport, with no backdrop, blur, modal focus
+  trap, or background `inert`. Outside clicks/focus do not dismiss it.
+- Nested menus/dialogs and status-message editing consume their own `Escape`
+  before the profile drawer closes.
 - Background workspace content remains reachable on desktop. On narrow screens
   the panel fills the viewport but still uses the non-modal shell contract.
 - 200% zoom and long names, contact values, status messages, and labels must not

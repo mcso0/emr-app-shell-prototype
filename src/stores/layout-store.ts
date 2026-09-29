@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { DrawerState } from "@/types/emr";
+import type { DrawerState, ProfileDrawerState } from "@/types/emr";
 import { SHELL_LAYOUT } from "@/shell/layout-contract";
 
 export type ModuleRefreshAction = {
@@ -12,6 +12,7 @@ export type ModuleRefreshAction = {
 
 type LayoutStore = {
   activeDrawer: DrawerState;
+  activeProfileDrawer: ProfileDrawerState;
   contentAsideOpen: boolean;
   moduleRefreshActions: Record<string, ModuleRefreshAction | undefined>;
   modulePanelOpen: boolean;
@@ -22,6 +23,7 @@ type LayoutStore = {
   contentAsideWidth: number;
   rightPanelWidth: number;
   setActiveDrawer: (drawer: DrawerState) => void;
+  setActiveProfileDrawer: (drawer: ProfileDrawerState) => void;
   setContentAsideOpen: (open: boolean) => void;
   setModuleRefreshAction: (
     moduleId: string,
@@ -37,6 +39,7 @@ type LayoutStore = {
 
 export const useLayoutStore = create<LayoutStore>()((set) => ({
   activeDrawer: null,
+  activeProfileDrawer: null,
   contentAsideOpen: false,
   moduleRefreshActions: {},
   modulePanelOpen: true,
@@ -67,6 +70,23 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
       }
 
       return { activeDrawer };
+    }),
+  setActiveProfileDrawer: (drawer) =>
+    set((state) => {
+      if (!drawer) return state.activeProfileDrawer ? { activeProfileDrawer: null } : state;
+
+      let returnFocusId = drawer.returnFocusId ?? state.activeProfileDrawer?.returnFocusId;
+      if (typeof document !== "undefined") {
+        const opener = document.activeElement;
+        if (opener instanceof HTMLElement && opener !== document.body &&
+            !opener.closest('[data-testid="workspace-profile-drawer"]')) {
+          if (!opener.id) opener.id = `profile-drawer-opener-${crypto.randomUUID()}`;
+          returnFocusId = drawer.returnFocusId ?? opener.id;
+        }
+      }
+      const activeProfileDrawer = { ...drawer, returnFocusId };
+      if (JSON.stringify(state.activeProfileDrawer) === JSON.stringify(activeProfileDrawer)) return state;
+      return { activeProfileDrawer };
     }),
   setContentAsideOpen: (contentAsideOpen) =>
     set((state) =>
@@ -114,5 +134,9 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
           }
     ),
   enterModule: () =>
-    set((state) => (state.activeDrawer === null ? state : { activeDrawer: null })),
+    set((state) =>
+      state.activeDrawer === null && state.activeProfileDrawer === null
+        ? state
+        : { activeDrawer: null, activeProfileDrawer: null },
+    ),
 }));

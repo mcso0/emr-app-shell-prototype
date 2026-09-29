@@ -1207,15 +1207,16 @@ export function ProfileSidePanel({
   };
 
   useEffect(() => {
+    if (embedded) return;
     const closeOnEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented) return;
 
       onClose();
     };
 
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+  }, [embedded, onClose]);
 
   return (
     <section
