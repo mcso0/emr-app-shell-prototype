@@ -2,15 +2,17 @@
 
 Updated: 2026-09-29
 
-Lab result sheet phase 2 and its scoped upload preparation fix were merged in
-PRs #848 and #851 on 2026-09-29. PR #851 deployed to Ready Production at
-`debcfca58c2226ef17dcbd72962e1fe97f8daddf`; authenticated synthetic preparation
-and private object upload succeeded, but finalize and discard failed. Both
-attachment routes had a malformed UUID validator that rejected their own
-generated IDs. A code-only follow-up on `codex/lab-attachment-lifecycle-uuid`
-corrects the validators and adds lifecycle/boundary regression tests. No new DB
-change or permission widening is included. Full attachment integration and retest
-smoke are not accepted yet; one private synthetic upload remains pending cleanup. See
+Lab result sheet phase 2 and attachment fixes were merged in PRs #848, #851,
+and #853 on 2026-09-29. PR #853 deployed to Ready Production at
+`f3d9c647b84336dac863c42f2ad83cdf609a8fa4`. Authenticated synthetic upload,
+reload, preview, zoom, byte-identical download, deletion/storage removal,
+item/overall findings, and revision history passed. Current synthetic findings
+were cleared; immutable audit remains. Retest creation failed with
+`chart_id_required`: its RPC omits the prior order's chart origin when inserting
+the new draft. A local, guarded migration on `codex/lab-retest-chart-origin`
+preserves that origin and passes an isolated SQL regression fixture. Remote DB
+apply and the changed candidate's release require approval. One private pending
+upload from the earlier failed smoke still needs bounded reconciliation. See
 [LAB-PR-003](../work/lab/LAB-PR-003-result-sheet-phase-2.md) for exact evidence.
 
 Latest local fulfillment-queue remediation restores separate workspace-scoped
