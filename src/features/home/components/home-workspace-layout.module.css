@@ -116,7 +116,7 @@
 .hospitalTitle .dateControl > button { min-height: 40px; height: 40px; border-radius: 8px; }
 .hospitalTitle .dateControl > button:first-child, .hospitalTitle .dateControl > button:last-child { width: 32px; }
 .hospitalTitle .dateControl > button[aria-haspopup] { width: 218px; min-width: 218px; flex: 0 0 218px; gap: 10px; padding: 4px 10px 4px 12px; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.552px; color: inherit; }
-.hospitalTitle .dateControl > button[aria-haspopup] > span:nth-child(2) { flex: 1; min-width: 0; overflow: visible; text-overflow: clip; white-space: nowrap; }
+.hospitalTitle .dateControl > button[aria-haspopup] > span:nth-child(2) { flex: 1; min-width: 0; overflow: visible; text-overflow: clip; white-space: nowrap; transform: translateY(calc(-1 * var(--clair-spacing-2))); }
 .hospitalTitle .dateControl button:hover { background: var(--clair-color-atomic-black-alpha-4); }
 .hospitalTitle .dateControl button:active { background: var(--clair-color-atomic-black-alpha-6); }
 .hospitalTitle .dateControl button:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: 2px; }
