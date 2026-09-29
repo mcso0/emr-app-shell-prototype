@@ -232,10 +232,12 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
 
 test("dispensing no-work empty state hides history aside", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
+  let queueReadCount = 0;
 
   await page.route(
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items?*`,
     async (route) => {
+      queueReadCount += 1;
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -261,6 +263,16 @@ test("dispensing no-work empty state hides history aside", async ({ page }) => {
   await expect(
     emptyState.getByRole("heading", { name: "조제/처치 업무가 없습니다" }),
   ).toBeVisible();
+  const refreshButton = emptyState.getByRole("button", { name: "새로고침" });
+  await expect(refreshButton).toBeEnabled();
+  await expect(page.getByTestId("dispensing-fulfillment-state")).toHaveCount(0);
+
+  const initialQueueReadCount = queueReadCount;
+  await refreshButton.click();
+  await expect.poll(() => queueReadCount).toBeGreaterThan(initialQueueReadCount);
+  await expect(refreshButton).toBeEnabled();
+  await expect(page.getByTestId("dispensing-fulfillment-state")).toHaveCount(0);
+  await expect(emptyState).toBeVisible();
 });
 
 test("dispensing keeps the exact work item when one encounter has multiple queue rows", async ({ page }) => {

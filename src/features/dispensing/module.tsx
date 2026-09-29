@@ -1655,7 +1655,7 @@ function DispensingFulfillmentQueueNotice({
   onRetry: () => void;
   status: DispensingFulfillmentQueueStatus;
 }) {
-  if (status === "ready" || status === "idle") return null;
+  if (status === "ready" || status === "idle" || status === "empty") return null;
 
   if (status === "permission_denied") {
     return (
@@ -1690,30 +1690,6 @@ function DispensingFulfillmentQueueNotice({
       >
         기존 지시서 fallback은 유지하지만, 실제 업무 큐 상태는 다시 확인해야
         합니다.
-      </EmrInlineAlert>
-    );
-  }
-
-  if (status === "empty") {
-    return (
-      <EmrInlineAlert
-        severity="warning"
-        title="조제/처치 업무 큐가 비어 있습니다."
-        action={
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="bg-card"
-            data-testid="dispensing-fulfillment-retry-button"
-            onClick={onRetry}
-          >
-            다시 확인
-          </Button>
-        }
-        testId="dispensing-fulfillment-state"
-      >
-        선택된 진료 오더가 아직 fulfillment work item으로 전달되지 않았습니다.
       </EmrInlineAlert>
     );
   }
