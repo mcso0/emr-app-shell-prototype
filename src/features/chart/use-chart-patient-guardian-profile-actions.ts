@@ -16,21 +16,21 @@ export function useChartPatientGuardianProfileActions({
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
   );
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
 
   const openPatientProfile = useCallback(() => {
     if (!patient) return;
 
     applyPatientGuardianLookupItem({ patient, primaryGuardian });
-    setActiveDrawer({ type: "patient", id: patient.id });
-  }, [applyPatientGuardianLookupItem, patient, primaryGuardian, setActiveDrawer]);
+    setActiveProfileDrawer({ type: "patient", id: patient.id });
+  }, [applyPatientGuardianLookupItem, patient, primaryGuardian, setActiveProfileDrawer]);
 
   const openGuardianProfile = useCallback(() => {
     if (!patient || !primaryGuardian) return;
 
     applyPatientGuardianLookupItem({ patient, primaryGuardian });
-    setActiveDrawer({ type: "guardian", id: primaryGuardian.id });
-  }, [applyPatientGuardianLookupItem, patient, primaryGuardian, setActiveDrawer]);
+    setActiveProfileDrawer({ type: "guardian", id: primaryGuardian.id });
+  }, [applyPatientGuardianLookupItem, patient, primaryGuardian, setActiveProfileDrawer]);
 
   return {
     guardianProfileAvailable: Boolean(patient && primaryGuardian),

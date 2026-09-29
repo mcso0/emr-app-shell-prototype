@@ -98,7 +98,7 @@ test("clean cancel restores the same patient profile tab", async ({ page }) => {
 
   await openPatientReceptionMenu(page);
   await page.getByRole("menuitem", { name: "접수하기" }).click();
-  await page.getByRole("button", { name: "취소" }).click();
+  await page.getByRole("button", { name: "취소", exact: true }).click();
 
   await expect(page.getByTestId("profile-side-panel")).toBeVisible();
   await expect(page.getByRole("tab", { name: "예약" })).toHaveAttribute(
@@ -116,14 +116,14 @@ test("dirty walk-in asks before discarding and keeps the draft when continued", 
 
   const purpose = page.getByRole("textbox", { name: "방문목적" });
   await purpose.fill("기침 재진");
-  await page.getByRole("button", { name: "취소" }).click();
+  await page.getByRole("button", { name: "취소", exact: true }).click();
 
   const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버릴까요?" });
   await expect(confirm).toBeVisible();
   await confirm.getByRole("button", { name: "계속 작성" }).click();
   await expect(purpose).toHaveValue("기침 재진");
 
-  await page.getByRole("button", { name: "취소" }).click();
+  await page.getByRole("button", { name: "취소", exact: true }).click();
   await confirm.getByRole("button", { name: "나가기" }).click();
   await expect(page.getByTestId("profile-side-panel")).toBeVisible();
 });

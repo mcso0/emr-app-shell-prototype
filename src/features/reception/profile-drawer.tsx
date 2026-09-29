@@ -1827,8 +1827,8 @@ export function PatientProfileDrawer({
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
   );
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const bundle = getProfileBundle(patientId, patients, guardians, patientGuardians, !preparedWorkspace);
   const liveRead = useCustomerProfileOverview({
     enabled: preparedWorkspace,
@@ -1942,16 +1942,14 @@ export function PatientProfileDrawer({
       patient: editablePatient,
       primaryGuardian: editablePrimaryGuardian,
     });
+    setActiveProfileDrawer(null);
     setActiveDrawer({
       type,
       id: `patient-profile:${editablePatient.id}`,
       initialOperatingDate: getWorkspaceOperatingDate(workspaceId),
       initialPatientId: editablePatient.id,
       returnTo: {
-        type:
-          activeDrawer?.type === "reception-patient"
-            ? "reception-patient"
-            : "patient",
+        type: "patient",
         id: editablePatient.id,
         profileTab: activeTab,
       },
@@ -1991,7 +1989,7 @@ export function PatientProfileDrawer({
       onBeginEdit={editablePatient ? beginEdit : undefined}
       onCancelEdit={cancelEdit}
       onSaveEdit={editablePatient ? saveEdit : undefined}
-      onClose={() => setActiveDrawer(null)}
+      onClose={() => setActiveProfileDrawer(null)}
       onHeaderAction={(action) => {
         if (action === "message") {
           showMockAction("카카오톡 발송");
@@ -2004,7 +2002,7 @@ export function PatientProfileDrawer({
         );
       }}
       onTabChange={setActiveTab}
-      onOpenRelated={(item) => setActiveDrawer({ type: "guardian", id: item.id })}
+      onOpenRelated={(item) => setActiveProfileDrawer({ type: "guardian", id: item.id })}
       editContent={editablePatient ? (
         <PatientSummaryFields
           patient={editablePatient}
@@ -2098,7 +2096,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
   const consents = usePatientProfileStore((state) => state.consents);
   const updateGuardian = usePatientProfileStore((state) => state.updateGuardian);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const bundle = getGuardianProfileBundle(guardianId, patients, guardians, patientGuardians, consents, !preparedWorkspace);
   const liveRead = useCustomerProfileOverview({
     enabled: preparedWorkspace,
@@ -2218,9 +2216,9 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       onBeginEdit={editableGuardian ? beginEdit : undefined}
       onCancelEdit={cancelEdit}
       onSaveEdit={editableGuardian ? saveEdit : undefined}
-      onClose={() => setActiveDrawer(null)}
+      onClose={() => setActiveProfileDrawer(null)}
       onHeaderAction={() => showMockAction("카카오톡 발송")}
-      onOpenRelated={(item) => setActiveDrawer({ type: "patient", id: item.id })}
+      onOpenRelated={(item) => setActiveProfileDrawer({ type: "patient", id: item.id })}
       editContent={editableGuardian ? (
         <GuardianSummaryFields
           draft={editing ? draft : {
@@ -2265,7 +2263,7 @@ export function NewPatientDialog({
     (state) => state.hasDuplicatePatientNameForGuardian
   );
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState<NewPatientDraft>(() =>
     createNewPatientDraft({
@@ -2345,7 +2343,7 @@ export function NewPatientDialog({
 
     if (result.patientId) {
       if (openPatientDrawerOnCreated) {
-        setActiveDrawer({ type: "patient", id: result.patientId });
+        setActiveProfileDrawer({ type: "patient", id: result.patientId });
       }
       onCreated?.(result.patientId);
     }
@@ -2709,7 +2707,7 @@ function NewGuardianDialog({
   const addGuardian = usePatientProfileStore((state) => state.addGuardian);
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore((state) => state.patientGuardians);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState({
     addressDetail: "",
@@ -2784,7 +2782,7 @@ function NewGuardianDialog({
       }
     }
     if (result.guardianId && openGuardianDrawerOnCreated) {
-      setActiveDrawer({ type: "guardian", id: result.guardianId });
+      setActiveProfileDrawer({ type: "guardian", id: result.guardianId });
     }
     close(false);
   };
@@ -2880,7 +2878,7 @@ function NewGuardianDialog({
 	                        className="bg-card"
 	                        onClick={() => {
 	                          close(false);
-	                          setActiveDrawer({ type: "guardian", id: duplicateGuardian.id });
+	                          setActiveProfileDrawer({ type: "guardian", id: duplicateGuardian.id });
 	                        }}
 	                      >
 	                        보호자 상세 보기
@@ -3423,7 +3421,7 @@ function PatientGuardianRegistrationButton({
     (state) => state.applyPatientGuardianRegistration
   );
   const authSession = useMockAuthStore((state) => state.session);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getRegistrationWorkspaceId(params.workspaceId);
   const registrationReferenceDate = getWorkspaceOperatingDate(workspaceId);
@@ -3789,7 +3787,7 @@ function PatientGuardianRegistrationButton({
       },
       cancel: {
         label: "환자 상세 보기",
-        onClick: () => setActiveDrawer({ type: "patient", id: patientId }),
+        onClick: () => setActiveProfileDrawer({ type: "patient", id: patientId }),
       },
     });
   };

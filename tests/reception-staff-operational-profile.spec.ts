@@ -135,6 +135,7 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
 }) => {
   await mockStaffProfileApis(page);
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
+  const originalContentWidth = (await page.getByTestId("workspace-main-content").boundingBox())!.width;
   const { trigger } = await openStaffProfile(page);
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
@@ -202,19 +203,20 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
   await expect(
     page.getByRole("dialog", { name: "직원 운영 프로필" }),
-  ).toHaveCount(0);
+  ).toBeVisible();
 
   const contentBox = await page
     .getByTestId("workspace-main-content")
     .boundingBox();
   const panelBox = await page
-    .getByTestId("workspace-right-panel")
+    .getByTestId("workspace-profile-drawer")
     .boundingBox();
   expect(contentBox).not.toBeNull();
   expect(panelBox).not.toBeNull();
   expect(panelBox!.width).toBeCloseTo(380, 0);
-  expect(panelBox!.x - (contentBox!.x + contentBox!.width)).toBeCloseTo(10, 0);
-  await expect(page.getByTestId("workspace-right-panel")).toHaveCSS(
+  expect(contentBox!.width).toBeCloseTo(originalContentWidth, 0);
+  expect(panelBox!.x + panelBox!.width).toBe(page.viewportSize()!.width);
+  await expect(page.getByTestId("workspace-profile-drawer")).toHaveCSS(
     "backdrop-filter",
     "none",
   );
@@ -652,6 +654,10 @@ test("staff profile reflows at a 200 percent zoom equivalent without hiding long
   await openStaffProfile(page);
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
+  await expect.poll(async () => {
+    const box = await panel.boundingBox();
+    return box ? box.x + box.width : Infinity;
+  }).toBeLessThanOrEqual(640);
   const panelBox = await panel.boundingBox();
   expect(panelBox).not.toBeNull();
   expect(panelBox!.x).toBeGreaterThanOrEqual(0);

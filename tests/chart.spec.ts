@@ -3925,7 +3925,7 @@ test("active chart context bar previews actual profiles and saves current encoun
   const profilePanel = page.getByTestId("profile-side-panel");
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
   await expect(profilePanel).toContainText("초코");
-  await expect(page).toHaveURL(/drawer=patient/);
+  await expect(page).toHaveURL(/profile=patient/);
   await page.keyboard.press("Escape");
 
   const guardianSection = page.getByRole("button", {
@@ -3939,7 +3939,7 @@ test("active chart context bar previews actual profiles and saves current encoun
   await expect(guardianPreview).toContainText("guardian@example.test");
   await guardianSection.click();
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");
-  await expect(page).toHaveURL(/drawer=guardian/);
+  await expect(page).toHaveURL(/profile=guardian/);
   await page.keyboard.press("Escape");
 
   const vitalSection = page.locator("[data-slot='patient-context-vitals']");
@@ -5843,9 +5843,9 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
   await expect(profilePanel).toContainText("초코");
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "환자 프로필", exact: true })).toBeVisible();
   await expect(page).toHaveURL(
-    /drawer=patient%3Apatient-choco-call-flow|drawer=patient:patient-choco-call-flow/,
+    /profile=patient%3Apatient-choco-call-flow|profile=patient:patient-choco-call-flow/,
   );
   await page
     .getByTestId("chart-start-locked-state")
@@ -5855,7 +5855,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(profilePanel).toContainText("최도현");
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   await expect(page).toHaveURL(
-    /drawer=guardian%3Aguardian-choi-dohyun|drawer=guardian:guardian-choi-dohyun/,
+    /profile=guardian%3Aguardian-choi-dohyun|profile=guardian:guardian-choi-dohyun/,
   );
   await page.keyboard.press("Escape");
   await expect(profilePanel).toHaveCount(0);

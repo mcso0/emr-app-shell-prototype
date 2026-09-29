@@ -245,8 +245,8 @@ function PatientTable({
   readStatus: CustomerTableReadStatus;
   rows: CustomerPatientRow[];
 }) {
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const activeProfileDrawer = useLayoutStore((state) => state.activeProfileDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const columns = useMemo(() => createCustomerPatientColumns(), []);
 
   return (
@@ -256,12 +256,11 @@ function PatientTable({
       emptyLabel="동물 정보가 없습니다."
       getRowLabel={(row) => row.name}
       isActiveRow={(row) =>
-        activeDrawer?.id === row.id &&
-        (activeDrawer.type === "patient" ||
-          activeDrawer.type === "reception-patient")
+        activeProfileDrawer?.id === row.id &&
+        (activeProfileDrawer.type === "patient")
       }
       loading={loading}
-      onOpenRow={(row) => setActiveDrawer({ type: "patient", id: row.id })}
+      onOpenRow={(row) => setActiveProfileDrawer({ type: "patient", id: row.id })}
       onRetry={onRetry}
       pinnedIdentityColumnId="name"
       readStatus={readStatus}
@@ -284,8 +283,8 @@ function GuardianTable({
   readStatus: CustomerTableReadStatus;
   rows: CustomerGuardianRow[];
 }) {
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const activeProfileDrawer = useLayoutStore((state) => state.activeProfileDrawer);
+  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const columns = useMemo(() => createCustomerGuardianColumns(), []);
 
   return (
@@ -295,12 +294,11 @@ function GuardianTable({
       emptyLabel="보호자 정보가 없습니다."
       getRowLabel={(row) => row.name}
       isActiveRow={(row) =>
-        activeDrawer?.id === row.id &&
-        (activeDrawer.type === "guardian" ||
-          activeDrawer.type === "reception-guardian")
+        activeProfileDrawer?.id === row.id &&
+        (activeProfileDrawer.type === "guardian")
       }
       loading={loading}
-      onOpenRow={(row) => setActiveDrawer({ type: "guardian", id: row.id })}
+      onOpenRow={(row) => setActiveProfileDrawer({ type: "guardian", id: row.id })}
       onRetry={onRetry}
       pinnedIdentityColumnId="name"
       readStatus={readStatus}

@@ -1,6 +1,13 @@
 import type { ComponentType, ReactNode } from "react";
 import type { AppIcon } from "@/components/icons";
 
+export type ProfileDrawerState = {
+  type: "patient" | "guardian" | "staff-operational-profile";
+  id: string;
+  profileTab?: "info" | "history" | "reservations" | "billing";
+  returnFocusId?: string;
+} | null;
+
 export type DrawerState = {
   type: string;
   id: string;
