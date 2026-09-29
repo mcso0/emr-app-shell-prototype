@@ -93,6 +93,8 @@ import {
   type LabWorkItem,
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
+import { LabOverallFinding, LabResultHistoryDialog, LabResultRowDetail } from "@/features/lab-imaging/components/lab-result-phase2";
+import { useLabResultPhase2, type LabResultPhase2Data } from "@/features/lab-imaging/use-lab-result-phase2";
 import {
   FulfillmentWorkLifecycleAction,
   type FulfillmentTransitionOptions,
@@ -250,11 +252,6 @@ function getImagingTaskQueueCardItem({
     testId,
   };
 }
-
-const getActionableLabRows = (result: LabResult) =>
-  result.rows.filter(
-    (row) => row.judgment !== "normal" && row.judgment !== "not_judged",
-  );
 
 type LabResultRow = LabResult["rows"][number];
 type LabJudgment = LabResultRow["judgment"];
@@ -2104,6 +2101,9 @@ function LabResultInputSection({
   emptyRowsKind = "no-data",
   onCatalogRetry,
   onSave,
+  phase2,
+  phase2Status,
+  onPhase2Refresh,
   result,
 }: {
   assigneeName: string;
@@ -2114,9 +2114,14 @@ function LabResultInputSection({
     rows: LabResultRow[],
     requestId: string,
   ) => Promise<LabResultSaveOutcome>;
+  phase2: LabResultPhase2Data | null;
+  phase2Status: "loading" | "ready" | "error" | "permission_denied";
+  onPhase2Refresh: () => void;
   result: LabResult;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
   const [saveRequestId, setSaveRequestId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<{
@@ -2231,7 +2236,7 @@ function LabResultInputSection({
               setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
               setRowValueState({ resultId: "", values: {} }); setMetadataState({ resultId: "", rows: {} }); onCatalogRetry();
             }}>입력 초기화·재조회</Button> : null}
-          <Button variant="outline" size="xs" disabled title="후속 단계에서 제공">
+          <Button variant="outline" size="xs" disabled={!phase2} onClick={() => setHistoryOpen(true)}>
             수정이력
           </Button>
           <Button variant="outline" size="xs" disabled title="후속 단계에서 제공">
@@ -2304,6 +2309,10 @@ function LabResultInputSection({
             ) : null}
           </div>
         ) : null}
+        {phase2Status === "error" || phase2Status === "permission_denied" ? <div role="alert" className="mb-3 flex items-center justify-between gap-2 rounded-md border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] px-3 py-2 emr-text-metadata text-[var(--emr-status-danger-text)]">
+          <span>{phase2Status === "permission_denied" ? "소견과 첨부자료를 볼 권한이 없습니다." : "소견과 첨부자료를 불러오지 못했습니다."}</span>
+          {phase2Status === "error" ? <Button variant="outline" size="xs" onClick={onPhase2Refresh}>다시 불러오기</Button> : null}
+        </div> : null}
         <LabResultDataTable
           assigneeName={assigneeName}
           density={density}
@@ -2334,8 +2343,13 @@ function LabResultInputSection({
               };
             });
           }}
+          expandedRowId={expandedRowId}
+          onExpandedRowChange={setExpandedRowId}
+          phase2={phase2}
+          onPhase2Refresh={onPhase2Refresh}
           rows={rows}
         />
+        <LabResultHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} result={result} events={phase2?.events ?? []} />
       </div>
     </EmrOrderGroupSection>
   );
@@ -2461,6 +2475,10 @@ function LabResultDataTable({
   onValueChange,
   onMetadataChange,
   persistedResult,
+  expandedRowId,
+  onExpandedRowChange,
+  phase2,
+  onPhase2Refresh,
   rows,
 }: {
   assigneeName: string;
@@ -2470,6 +2488,10 @@ function LabResultDataTable({
   onValueChange: (rowId: string, value: string) => void;
   onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
   persistedResult: LabResult;
+  expandedRowId: string | null;
+  onExpandedRowChange: (rowId: string | null) => void;
+  phase2: LabResultPhase2Data | null;
+  onPhase2Refresh: () => void;
   rows: LabResultRow[];
 }) {
   const columns = useMemo<ColumnDef<LabResultRow, unknown>[]>(
@@ -2492,6 +2514,14 @@ function LabResultDataTable({
           return (
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
+              <Button type="button" variant="outline" size="xs" aria-expanded={expandedRowId === row.original.id}
+                aria-controls={`lab-result-detail-${row.original.id}`}
+                className={expandedRowId === row.original.id
+                  ? "bg-[var(--clair-color-atomic-black-alpha-4)]"
+                  : "bg-[var(--clair-color-atomic-white-alpha-8)]"}
+                onClick={() => onExpandedRowChange(expandedRowId === row.original.id ? null : row.original.id)}>
+                검사 소견 {expandedRowId === row.original.id ? "접기" : "펼치기"}
+              </Button>
               {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
               (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
                 <AtomicLabRetestAction result={persistedResult} row={savedRow} />
@@ -2580,7 +2610,7 @@ function LabResultDataTable({
         ),
       },
     ],
-    [assigneeName, onValueChange, onMetadataChange, persistedResult],
+    [assigneeName, onValueChange, onMetadataChange, persistedResult, expandedRowId, onExpandedRowChange],
   );
   // TanStack Table owns the result grid controller.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -2615,6 +2645,17 @@ function LabResultDataTable({
           </TableRow>
         ) : null
       }
+      renderAfterRow={(tableRow) => expandedRowId === tableRow.original.id ? (
+        <TableRow className="border-border bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
+          <TableCell colSpan={tableRow.getVisibleCells().length} className="!p-0">
+            <div id={`lab-result-detail-${tableRow.original.id}`}>
+              <LabResultRowDetail result={persistedResult} row={tableRow.original} finding={tableRow.original.note ?? ""}
+                onFindingChange={value => onMetadataChange(tableRow.original.id, { note: value })}
+                phase2={phase2} refresh={onPhase2Refresh} />
+            </div>
+          </TableCell>
+        </TableRow>
+      ) : null}
       skeletonRowCount={5}
       table={table}
       viewportMode="content"
@@ -2732,49 +2773,6 @@ function NormalRangeChart({
   );
 }
 
-function LabResultCommentSection({
-  result,
-  allowDemoContent = false,
-}: {
-  result: LabResult;
-  allowDemoContent?: boolean;
-}) {
-  if (!allowDemoContent) {
-    return (
-      <section className="rounded-lg border bg-card p-4">
-        <h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>
-        <p className="mt-2 emr-text-dense text-muted-foreground">
-          종합소견 저장은 아직 지원하지 않습니다. 검사 결과는 결과표에서 입력해
-          주세요.
-        </p>
-      </section>
-    );
-  }
-  const abnormalRows = getActionableLabRows(result);
-  const defaultComment = abnormalRows.length
-    ? `${abnormalRows.map((row) => row.analyteName).join(", ")} 항목이 참고치 밖입니다. 임상 증상과 함께 재평가가 필요합니다.`
-    : "";
-
-  return (
-    <section className="rounded-lg border bg-card">
-      <div className="flex h-11 items-center justify-between border-b px-4">
-        <div className="flex items-center gap-2">
-          <h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>
-          <Badge variant="secondary">담당자 코멘트</Badge>
-        </div>
-      </div>
-      <div className="p-4">
-        <Textarea
-          aria-label="검사결과 종합소견"
-          className="min-h-24 resize-y bg-background emr-text-dense leading-5"
-          defaultValue={defaultComment}
-          placeholder="검사자가 결과 해석, 재검 필요 여부, 보호자 안내 메모를 입력합니다."
-        />
-      </div>
-    </section>
-  );
-}
-
 type AttachmentPreviewItem = {
   fileName: string;
   fileSizeBytes?: number;
@@ -2795,10 +2793,12 @@ function AttachmentStrip({
   attachments,
   showImageExample = false,
   allowDemoContent = false,
+  title = "첨부자료",
 }: {
   attachments: EmrAttachment[];
   showImageExample?: boolean;
   allowDemoContent?: boolean;
+  title?: string;
 }) {
   const displayAttachments: AttachmentPreviewItem[] = [
     ...attachments.map((attachment) => ({
@@ -2817,7 +2817,7 @@ function AttachmentStrip({
     <section className="rounded-lg border bg-card">
       <div className="flex h-11 items-center justify-between border-b px-4">
         <div className="flex items-center gap-2">
-          <h2 className="emr-text-body font-semibold">첨부자료</h2>
+          <h2 className="emr-text-body font-semibold">{title}</h2>
           <Badge variant="secondary">{displayAttachments.length}</Badge>
         </div>
         <Button
@@ -3451,6 +3451,8 @@ export function LabContent({
       },
     };
   }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
+  const phase2 = useLabResultPhase2(workspaceId, effectiveDetail?.result.id, !allowDemoContent && Boolean(persistedResult.result));
+  const refreshPhase2 = phase2.refresh;
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
     workspaceId: string;
     resultId: string;
@@ -3487,6 +3489,7 @@ export function LabContent({
           revision: outcome.entryWriteRevision,
         });
         if (!allowDemoContent) reloadPersistedResult();
+        refreshPhase2();
       }
       return outcome;
     },
@@ -3497,6 +3500,7 @@ export function LabContent({
       workspaceId,
       reloadPersistedResult,
       allowDemoContent,
+      refreshPhase2,
     ],
   );
   const [resultTab, setResultTab] = useState<LabResultTab>("all");
@@ -3838,16 +3842,15 @@ export function LabContent({
             result={displayDetail.result}
             onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
             onSave={saveResultRows}
+            phase2={phase2.data}
+            phase2Status={phase2.status}
+            onPhase2Refresh={phase2.refresh}
           />
-          <LabResultCommentSection
-            result={displayDetail.result}
-            allowDemoContent={allowDemoContent}
-          />
-          <AttachmentStrip
-            allowDemoContent={allowDemoContent}
-            attachments={displayDetail.attachments}
-            showImageExample
-          />
+          <LabOverallFinding result={displayDetail.result} phase2={phase2.data} refresh={phase2.refresh} />
+          {displayDetail.attachments.length || allowDemoContent ? <AttachmentStrip
+            allowDemoContent={allowDemoContent} attachments={displayDetail.attachments}
+            showImageExample title="공통 첨부자료"
+          /> : null}
         </div>
       </ScrollArea>
     </div>

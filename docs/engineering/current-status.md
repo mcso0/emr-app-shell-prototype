@@ -2,6 +2,15 @@
 
 Updated: 2026-09-12
 
+Lab result sheet phase 2 has a PR candidate on `codex/lab-result-sheet-phase2`
+as of 2026-09-27. Item/overall findings, read-only retest history, and private
+row-owned attachments are implemented and checked locally. Migration
+`20260927124324` was applied to the linked staging Supabase project; the new
+tables, RLS, service-role grants, and private bucket passed read-only checks.
+Authenticated attachment smoke, exact-candidate release review, and Production
+deployment remain pending. See
+[LAB-PR-003](../work/lab/LAB-PR-003-result-sheet-phase-2.md) for exact evidence.
+
 Latest local fulfillment-queue remediation restores separate workspace-scoped
 patient/guardian/requester display context, URL-owned operating dates, exact
 queue selection ids, and Asia/Seoul timestamps across lab, imaging,
