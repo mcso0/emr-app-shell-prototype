@@ -444,8 +444,6 @@
 
 .toolButton:hover:not([aria-disabled="true"]),
 .toolButton:focus-visible,
-.menuItem:hover:not([aria-disabled="true"]),
-.menuItem:focus-visible,
 .toolMenu button:hover,
 .toolMenu button:focus-visible {
   background: var(--emr-state-hover);
@@ -453,18 +451,15 @@
 }
 
 .toolButton:focus-visible,
-.menuItem:focus-visible,
 .toolMenu button:focus-visible {
   box-shadow: inset 0 0 0 1px var(--emr-border-strong);
 }
 
-.toolButton[aria-pressed="true"],
-.menuItem[aria-checked="true"] {
+.toolButton[aria-pressed="true"] {
   background: var(--emr-state-selected);
 }
 
-.toolButton[aria-disabled="true"],
-.menuItem[aria-disabled="true"] {
+.toolButton[aria-disabled="true"] {
   color: var(--emr-text-disabled);
   cursor: not-allowed;
 }
@@ -511,7 +506,6 @@
   gap: 2px;
 }
 
-.menuItem,
 .toolMenu button {
   display: flex;
   min-height: 32px;
@@ -529,26 +523,10 @@
   padding: 5px 8px;
 }
 
-.menuItem svg {
-  flex: none;
-  color: var(--emr-text-secondary);
-}
-
-.menuItem small {
-  color: var(--emr-text-tertiary);
-}
-
 .menuNote {
   color: var(--emr-text-tertiary);
   font-size: 12px;
   padding: 8px;
-}
-
-.menuHeading {
-  margin: 2px 8px 6px;
-  color: var(--emr-text-tertiary);
-  font-size: 11px;
-  font-weight: 600;
 }
 
 .linkForm {

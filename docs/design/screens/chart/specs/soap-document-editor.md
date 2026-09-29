@@ -17,7 +17,7 @@ Approved through iterative HTML v7 review and implementation request on 2026-09-
 - Neutral icon color for every action. Active formatting uses a selected background; unavailable actions use disabled styling and cannot execute.
 - Every icon has an accessible name and hover/focus tooltip. Escape dismisses menus/tooltips with focus returned appropriately.
 - Keep high-priority writing actions and photo/video entry visible as space permits. Move remaining actions to the final overflow button, never wrap or shrink all targets to fit.
-- Overflow includes icon + Korean label, the same enabled/pressed state and command behavior, keyboard access, and no duplicate action. Wider panels restore original placement.
+- Overflow uses shared DropdownMenu items with left-aligned icon + Korean label, a compact 160px surface and no visible group heading. Formatting toggles use shared checkbox items. Preserve enabled/pressed state, stable open-list membership, keyboard access, selection and editor-focus return after execution. Wider panels restore original placement.
 - Remove floating selection toolbar, left block add/drag controls and slash-command popups. Preserve normal document editing, headings/lists, links, keyboard shortcuts and existing stored blocks.
 
 ## Writing aids and records
