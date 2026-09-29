@@ -17004,7 +17004,7 @@ export function ChartContent({
             operatingDate={getOperatingDateFromIso(chartCheckedInAt) ?? selectedDate}
             workspaceId={workspaceId}
             historyAction={
-              <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!border-[var(--clair-color-atomic-neutral-200)] [&_button]:!bg-[var(--clair-color-atomic-common-100)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
+              <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
                 <EmrInstructionHistoryToggle
                   ariaLabelPrefix="차트 이력"
                   controls="chart-content-aside"
