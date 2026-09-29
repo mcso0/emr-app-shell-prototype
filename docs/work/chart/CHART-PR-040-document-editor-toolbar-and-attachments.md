@@ -78,3 +78,44 @@ The manual reconciler is dry-run by default and is not scheduled or run against 
 - All 11 existing canonical documents remained valid (V1 3 / V2 8), with identical document and projection fingerprints before/after. No existing SOAP content was modified.
 - Effective grants verified: authenticated SELECT/INSERT only; anonymous no access; service role SELECT/INSERT/UPDATE/DELETE, no TRUNCATE. Existing Storage policies are bucket-specific and do not open this new private bucket.
 - Production server-only key is configured; current production code remains the previous Ready deployment until approved candidate checks and merge complete.
+
+
+## Approved S/O panel follow-up — 2026-09-29
+
+승욱 approved the iterated standalone S/O prototype, requested GPT-6 Luna at maximum reasoning under parent orchestration, and authorized scoped implementation, commit/push/PR and Production delivery after verification. Parent owns integration, visual/behavior review and release gates. The exact candidate packet is prepared after implementation; no remote schema or data migration is in this follow-up.
+
+Baseline: `origin/main` `5c3db5e9696299dbf866d862015db9848df8bdbd`; branch `codex/soap-panel-fidelity`. Preserve the unrelated dirty primary checkout. Work from the isolated checkout and port no complete stale files.
+
+### Scope and contracts
+
+- New default/system documents start with one valid blank paragraph and `S/O 내용을 입력해주세요`. Existing V1/V2 and legacy structured notes retain their contents and section provenance. Mount/read alone must not save.
+- Replace the header save icon with `+` and a searchable multi-select diagnosis-system picker using the real catalog. Existing system tabs are unavailable choices. Persist explicit empty scopes; use existing `systemId` identities to avoid duplicates when a diagnosis is later chosen. Reset clears only the current scope; tabs and other scope contents remain.
+- Preserve the existing autosave coordinator, chart/workspace permissions, optimistic concurrency, amendment state and media capability guard. Keep legacy S/O/A/P projections unchanged. Read neutral freeform default-scope content for record presence, diagnosis context and previous-record insertion without inventing a clinical S/O classification.
+- Match the approved reference geometry: panel reference 476.5 × 373; header38; tabs44 plus divider1; toolbar wrapper58/bar42/buttons32; body14/22 and inset4/16. Live panel resizing remains supported.
+- S/O tabs scroll with directional fade; fixed ghost `더보기` appears for overflow. Its heading is `숨긴 진단계통`; selecting an item activates and reveals the existing tab.
+- Preserve all 23 real toolbar commands. Use a centered content-width row when it fits; otherwise horizontal scrolling with directional fade and a fixed ghost vertical More button. Partially visible tools remain actionable. One activation executes the command and minimally reveals the tool; focus navigation does not execute it. Use actual editor selection state, preserve selection and return focus to the editor after formatting. Overflow invokes the same commands and retains a stable list while open.
+- Reuse BlockNote and existing shared primitives; do not port the standalone contenteditable/execCommand demo, add dependencies or weaken attachment/record boundaries.
+
+### Verification plan
+
+- Document and server tests: blank default, saved empty system scopes, legacy hydration, neutral extraction, projections unchanged, save/reload, scope isolation, concurrent updates and read-only guards.
+- UI/Storybook: reference/narrow/wide geometry, overflow and fades, partial-button click, arrow navigation versus Enter/Space execution, editor selection/focus, real active state, menu/Escape handling, multi-add and later diagnosis reuse, reset, existing attachments and previous-record insertion.
+- Candidate gates: secrets, docs, UX copy, whitespace, lint, typecheck, production build, focused tests, exact GitHub Release Check and Ready PR Preview. Record candidate/rollback/smoke before protected main merge. Production smoke must be read-only except an explicitly scoped synthetic test chart; never edit the user's selected existing chart.
+
+Implementation and verification evidence will be recorded here as the steps complete.
+
+
+### Follow-up baseline evidence
+
+- Before implementation, isolated Node24/mock-route SOAP autosave, persistence-server and attachment specs: 34 passed. This is local synthetic baseline proof, not production save proof.
+- Initial Production baseline: source `5c3db5e9696299dbf866d862015db9848df8bdbd`, GitHub deployment6731018013 successful, Vercel `dpl_DFadJJc2VMheKTkUEeL5kSym4nLo` Ready and serving the production alias. Reconfirm the live rollback candidate before the merge packet.
+
+### Follow-up implementation and local review
+
+- GPT-6 Luna (maximum reasoning) implemented the two owned source slices under parent review. Only the scoped editor, document adapter, S/O panel, tests and owning docs changed; dependencies, server APIs, database schema and permission policy are unchanged.
+- Document contract tests: 13 passed. Autosave coordinator, note persistence server, private attachments and chart completion persistence: 40 passed.
+- Editor Storybook: 23 passed, including reference geometry, blank/cleared placeholder, 320/420/720/1000px layouts, overflow threshold, partial activation, roving keyboard, selected-text formatting/history, prior records and attachment success/failure/retry/cancel/read-only.
+- Parent browser verification used the real editor component: 476.5 × 373 frame, toolbar wrapper58/bar42/button32; wide1000 frame has an818px centered toolbar with no More or fades; a physically clicked partial button executes before15px reveal; selected-text bold and overflow italic preserve range and return editor focus. Enter opens the style menu without applying its first item, and Escape restores trigger focus. These are local synthetic/component checks, not Production persistence proof.
+- Full lint passed with five unchanged warnings in unrelated operational scripts. Typecheck, local secret scan (4478 tracked files), docs (1053 files), Korean UX copy and whitespace checks passed. Production build passed (existing PRD-viewer file-tracing warning only). Seven focused route-backed SOAP browser tests passed, including save/reload, response-loss retry, manual scope creation, later diagnosis reuse, reset and overflow keyboard behavior. Exact remote candidate checks follow.
+- Post-build browser checks for Figma panel chrome and independent panel collapse passed (2). The Figma test had two stale Plan/Order baseline expectations: source already used10px left inset and6 buttons on origin/main. Only those test expectations were aligned; Plan/Order production code is unchanged. Total focused local coverage:53 domain/server tests,9 chart browser tests and23 editor stories.
+- Rollback baseline reconfirmed before candidate creation: main source remains `5c3db5e9696299dbf866d862015db9848df8bdbd`; Vercel `dpl_DFadJJc2VMheKTkUEeL5kSym4nLo` remains Ready behind the Production alias.

@@ -24,6 +24,20 @@ export type SoapDocumentFieldKind = (typeof soapDocumentFieldKinds)[number];
 
 export type SoapDocumentProjection = Record<SoapDocumentFieldKind, string>;
 
+export function createEmptySoapParagraphBlock() {
+  return {
+    id: globalThis.crypto.randomUUID(),
+    type: "paragraph" as const,
+    props: {
+      backgroundColor: "default",
+      textColor: "default",
+      textAlignment: "left",
+    },
+    content: [],
+    children: [],
+  };
+}
+
 // New notes start empty; persisted note content is hydrated separately.
 export const defaultSoapWritingPrompts: SoapDocumentProjection = {
   subjective: "",
@@ -387,6 +401,10 @@ export function createLegacySoapDocumentInput(
     },
   ];
 
+  if (!sections.some(({ value }) => value.trim())) {
+    return [createEmptySoapParagraphBlock()];
+  }
+
   return sections.map(({ kind, label, value }) => ({
     type: "soapSection" as const,
     props: {
@@ -569,6 +587,70 @@ export function hasMeaningfulSoapScopeContent(scope: SoapBlockDocumentScope) {
     });
 
   return visit(scope.blocks);
+}
+
+/** Reads only neutral, freeform text from a document's default scope. */
+export function getFreeformSoapDocumentText(value: unknown) {
+  if (!isRecord(value)) return "";
+
+  const scopes = value.schemaVersion === SOAP_BLOCK_DOCUMENT_LEGACY_SCHEMA_VERSION
+    ? [value.blocks]
+    : value.schemaVersion === SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION && Array.isArray(value.scopes)
+      ? value.scopes.flatMap((scope) =>
+          isRecord(scope) && scope.scope === "default" && scope.scopeKey === SOAP_DEFAULT_SCOPE_KEY
+            ? [scope.blocks]
+            : [],
+        )
+      : [];
+  const text: string[] = [];
+
+  const visit = (blocks: unknown[]) => {
+    for (const block of blocks) {
+      if (!isRecord(block) || block.type === "soapSection") continue;
+
+      if (block.type === "table") {
+        const table = validateTableContent(block.content);
+        if (table.ok && table.text.trim()) text.push(table.text.trim());
+      } else if (typeof block.type === "string" && inlineBlockTypes.has(block.type)) {
+        const inline = validateInlineContent(block.content);
+        if (inline.ok && inline.text.trim()) text.push(inline.text.trim());
+      }
+
+      if (Array.isArray(block.children)) visit(block.children);
+    }
+  };
+
+  for (const blocks of scopes) {
+    if (Array.isArray(blocks)) visit(blocks);
+  }
+
+  return text.join("\n");
+}
+
+export function hasMeaningfulSoapBlockDocumentContent(value: unknown) {
+  if (!isRecord(value)) return false;
+
+  const scopes = value.schemaVersion === SOAP_BLOCK_DOCUMENT_LEGACY_SCHEMA_VERSION
+    ? [value.blocks]
+    : value.schemaVersion === SOAP_BLOCK_DOCUMENT_SCHEMA_VERSION && Array.isArray(value.scopes)
+      ? value.scopes.flatMap((scope) => isRecord(scope) ? [scope.blocks] : [])
+      : [];
+
+  const hasTextOrMedia = (blocks: unknown[]): boolean => blocks.some((block) => {
+    if (!isRecord(block)) return false;
+    if (block.type === "table") {
+      const table = validateTableContent(block.content);
+      if (table.ok && table.text.trim()) return true;
+    } else if (typeof block.type === "string" && inlineBlockTypes.has(block.type)) {
+      const inline = validateInlineContent(block.content);
+      if (inline.ok && inline.text.trim()) return true;
+    }
+    if ((block.type === "image" || block.type === "video") &&
+      isRecord(block.props) && parseSoapAttachmentUrl(block.props.url)) return true;
+    return Array.isArray(block.children) && hasTextOrMedia(block.children);
+  });
+
+  return scopes.some((blocks) => Array.isArray(blocks) && hasTextOrMedia(blocks));
 }
 
 function createDefaultScope(blocks: unknown[]): SoapBlockDocumentScope {

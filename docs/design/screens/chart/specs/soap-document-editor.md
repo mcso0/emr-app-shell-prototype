@@ -4,12 +4,12 @@ title: SOAP document editor
 description: Approved single-row SOAP toolbar and private attachment behavior.
 status: implemented
 related_work: CHART-PR-040
-updated: 2026-09-22
+updated: 2026-09-29
 ---
 
 # SOAP document editor
 
-Approved through iterative HTML v7 review and implementation request on 2026-09-22. The existing scoped SOAP document and empty S/O/A/P section defaults remain authoritative; this changes editing controls, not clinical observations.
+Approved through iterative HTML v7 review and implementation request on 2026-09-22. The 2026-09-29 approved S/O follow-up changes new-note defaults and panel interactions as specified below. Existing stored section documents and clinical observations remain intact.
 
 ## Toolbar
 
@@ -61,3 +61,16 @@ Design approval is not proof of BlockNote selection/IME behavior, persistence, R
 - [SAP toolbar prioritization](https://experience.sap.com/fiori-design-web/toolbar-overview/)
 - [BlockNote static toolbar](https://www.blocknotejs.org/examples/ui-components/static-formatting-toolbar)
 - [Vercel function limits](https://vercel.com/docs/functions/limitations)
+
+
+## Approved S/O follow-up (2026-09-29)
+
+New notes and manually added system scopes use a blank paragraph, not automatic S/O/A/P sections. The placeholder is `S/O 내용을 입력해주세요`; it is never persisted as content. Existing documents restore without deleting empty or populated sections. Freeform text remains canonical block content with a neutral reader; no implicit assignment to subjective/objective or modification of legacy projections.
+
+The header `+` opens a catalog-backed searchable multi-select `S/O 추가` dialog. Stored scopes and selected diagnoses define existing system identities. Existing systems are disabled, and choosing a later diagnosis with the same systemId preserves that tab, order and text. Explicit empty scopes survive reload. Reset affects the active scope's content only.
+
+Tabs use horizontal scrolling and edge fade with a fixed ghost `더보기` control only when overflowing. The menu heading is `숨긴 진단계통`. Selecting a hidden tab reveals it.
+
+This follow-up supersedes the previous priority-based toolbar partition: keep real commands in a single scrollable row, use a fixed ghost vertical More action for clipped tools, and hug/center the row when it fits. Edge fade is pointer-transparent. Partially visible buttons remain clickable; one activation executes and minimally reveals the item. Keyboard focus navigation reveals without executing. Active state reflects the editor selection, and formatting preserves selection with editor-focus return. Overflow and inline actions share commands.
+
+Reference dimensions: header38, tabs44+1, toolbar wrapper58, toolbar42, controls32, body inset4/16 and typography14/22. No global token changes. Validate the 476.5×373 reference and narrow/wide layouts in the actual editor, not only the standalone HTML.

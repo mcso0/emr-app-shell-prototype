@@ -114,8 +114,8 @@ export function ChartSoapLiveBlockEditor({
       ...ko,
       placeholders: {
         ...ko.placeholders,
-        default: "내용을 입력하세요",
-        emptyDocument: "내용을 입력하세요",
+        default: "S/O 내용을 입력해주세요",
+        emptyDocument: "S/O 내용을 입력해주세요",
       },
     },
   });
@@ -240,7 +240,7 @@ export function ChartSoapLiveBlockEditor({
         recordInsertionItems={recordInsertionItems}
         recordSources={recordSources}
         suggestionItems={suggestionItems}
-      /> : null}
+      /> : <div className={styles.toolbarWrap} aria-hidden="true" data-read-only-toolbar-slot />}
       <BlockNoteView
         className={`${styles.editor} scroll-fade-y scroll-fade-8`}
         editor={editor}

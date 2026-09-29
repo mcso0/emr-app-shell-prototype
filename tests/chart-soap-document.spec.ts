@@ -4,9 +4,12 @@ import {
   SOAP_BLOCK_DOCUMENT_MAX_BLOCKS,
   areSoapBlockDocumentsEqual,
   buildSystemSoapScopeKey,
+  createEmptySoapParagraphBlock,
   createSoapBlockDocumentV2,
   createLegacySoapDocumentInput,
+  getFreeformSoapDocumentText,
   getSoapDocumentScope,
+  hasMeaningfulSoapBlockDocumentContent,
   hasMeaningfulSoapScopeContent,
   replaceSoapDocumentScope,
   validateAndProjectSoapDocument,
@@ -349,7 +352,7 @@ test("SOAP V1 counts Unicode code points and uses the SQL boundary-whitespace co
   });
 });
 
-test("legacy SOAP fields hydrate into the four default BlockNote sections without backfill IDs", () => {
+test("legacy SOAP scalar values hydrate into their existing labeled sections", () => {
   const blocks = createLegacySoapDocumentInput({
     subjective: "기존 S",
     objective: "기존 O",
@@ -368,10 +371,118 @@ test("legacy SOAP fields hydrate into the four default BlockNote sections withou
   expect(blocks[0]).not.toHaveProperty("id");
 });
 
-test("new SOAP documents contain empty input paragraphs", () => {
+test("new SOAP documents start with one valid empty paragraph and no labeled sections", () => {
   const blocks = createLegacySoapDocumentInput(null);
 
-  expect(blocks.map((block) => block.children[0]?.content)).toEqual(["", "", "", ""]);
+  expect(blocks).toHaveLength(1);
+  expect(blocks[0]).toMatchObject({
+    type: "paragraph",
+    props: {
+      backgroundColor: "default",
+      textColor: "default",
+      textAlignment: "left",
+    },
+    content: [],
+    children: [],
+  });
+  expect(blocks[0]).not.toHaveProperty("props.kind");
+  expect(blocks[0]).toHaveProperty("id");
+  expect(validateAndProjectSoapDocument({
+    schemaVersion: 2,
+    scopes: [{ scopeKey: "default", scope: "default", systemLabel: "기본 SOAP", blocks }],
+  })).toMatchObject({ ok: true, projection: { subjective: "", objective: "", assessment: "", plan: "" } });
+});
+
+test("freeform SOAP text reads default paragraphs, visible links, and tables without relabeling sections", () => {
+  const systemId = "c427a4b5-2181-4454-9655-6d2695c6768d";
+  const document = {
+    schemaVersion: 2 as const,
+    scopes: [
+      {
+        scopeKey: "default",
+        scope: "default" as const,
+        systemLabel: "기본 SOAP",
+        blocks: [
+          textBlock("freeform", "자유 입력 "),
+          {
+            id: "linked-text",
+            type: "paragraph",
+            props: { backgroundColor: "default", textColor: "default", textAlignment: "left" },
+            content: [{
+              type: "link",
+              href: "https://example.com/source",
+              content: [{ type: "text", text: "원문 링크", styles: {} }],
+            }],
+            children: [],
+          },
+          {
+            id: "freeform-table",
+            type: "table",
+            props: { textColor: "default" },
+            content: {
+              type: "tableContent",
+              columnWidths: [120, 120],
+              rows: [{ cells: [
+                { type: "tableCell", content: [{ type: "text", text: "검사", styles: {} }], props: { backgroundColor: "default", textColor: "default", textAlignment: "left", colspan: 1, rowspan: 1 } },
+                { type: "tableCell", content: [{ type: "text", text: "결과", styles: {} }], props: { backgroundColor: "default", textColor: "default", textAlignment: "left", colspan: 1, rowspan: 1 } },
+              ] }],
+            },
+            children: [],
+          },
+          section("labeled-section", "subjective", "기존 S 라벨 내용"),
+        ],
+      },
+      {
+        scopeKey: buildSystemSoapScopeKey(systemId),
+        scope: "system" as const,
+        systemId,
+        systemLabel: "근골격계",
+        blocks: [textBlock("system-freeform", "계통 전용 자유 입력")],
+      },
+    ],
+  };
+
+  expect(getFreeformSoapDocumentText(document)).toBe("자유 입력\n원문 링크\n검사\t결과");
+  expect(hasMeaningfulSoapBlockDocumentContent(document)).toBe(true);
+  expect(validateAndProjectSoapDocument(document)).toMatchObject({
+    ok: true,
+    projection: { subjective: "기존 S 라벨 내용" },
+  });
+});
+
+test("SOAP record existence includes system text and media-only documents", () => {
+  const systemId = "c427a4b5-2181-4454-9655-6d2695c6768d";
+  const systemText = {
+    schemaVersion: 2 as const,
+    scopes: [
+      { scopeKey: "default", scope: "default" as const, systemLabel: "기본 SOAP", blocks: [createEmptySoapParagraphBlock()] },
+      { scopeKey: buildSystemSoapScopeKey(systemId), scope: "system" as const, systemId, systemLabel: "근골격계", blocks: [textBlock("system-text", "근골격 내용")] },
+    ],
+  };
+  const mediaOnly = {
+    schemaVersion: 2 as const,
+    scopes: [{
+      scopeKey: "default",
+      scope: "default" as const,
+      systemLabel: "기본 SOAP",
+      blocks: [{
+        id: "photo",
+        type: "image",
+        props: {
+          backgroundColor: "default",
+          textAlignment: "left",
+          name: "photo.png",
+          url: "/api/workspaces/workspace-1/chart/soap-attachments/123e4567-e89b-42d3-a456-426614174000?encounterId=123e4567-e89b-42d3-a456-426614174001",
+          caption: "",
+          showPreview: true,
+        },
+        children: [],
+      }],
+    }],
+  };
+
+  expect(hasMeaningfulSoapBlockDocumentContent(systemText)).toBe(true);
+  expect(hasMeaningfulSoapBlockDocumentContent(mediaOnly)).toBe(true);
 });
 
 test("SOAP canonical comparison ignores JSON object key order but not content", () => {
