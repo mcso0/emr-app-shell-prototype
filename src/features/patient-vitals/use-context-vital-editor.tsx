@@ -21,10 +21,12 @@ export function useContextVitalEditor({
 }) {
   const [openEncounterId, setOpenEncounterId] = useState<string | null>(null);
   const isCurrentMeasurement = latestVitals.vital?.encounterId === encounterId;
-  const disabled = !encounterIsActive || !latestVitals.canWriteVitals;
+  const disabled = !encounterIsActive || !latestVitals.canWriteVitals || latestVitals.vitalSettingsStatus !== "ready";
   const disabledReason = !encounterIsActive
     ? "진료가 끝난 접수의 바이탈은 여기서 수정할 수 없어요."
-    : latestVitals.status === "loading"
+    : latestVitals.vitalSettingsStatus !== "ready"
+      ? "바이탈 입력 설정을 확인하지 못했어요."
+      : latestVitals.status === "loading"
       ? "바이탈 입력 권한을 확인하고 있어요."
       : latestVitals.status === "error"
         ? "바이탈 입력 권한을 확인하지 못했어요."
@@ -47,9 +49,9 @@ export function useContextVitalEditor({
         mode="in_consultation"
         open={openEncounterId === encounterId}
         onOpenChange={(open) => setOpenEncounterId(open ? encounterId : null)}
-        onSaved={(vital) => {
-          latestVitals.replaceVital(vital);
-          toast.success("오늘 바이탈을 저장했어요.");
+        onSaved={async (vital) => {
+          await latestVitals.replaceVital(vital);
+          toast.success("바이탈을 저장했어요.");
         }}
         vitalSettings={latestVitals.vitalSettings}
         workspaceId={workspaceId}

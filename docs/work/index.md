@@ -530,5 +530,6 @@ See `docs/work/inbox.md`.
 | CHART-PR-037 | in_progress | chart | P0 | PR #743 deployed; uncalled waiting-reception history and past-call guard are a release candidate | `docs/work/chart/CHART-PR-037-encounter-multi-chart.md` |
 | CHART-PR-038 | in_progress | chart | P1 | Approved 26-column table contract; supervised TDD implementation and scoped delivery | `docs/work/chart/CHART-PR-038-plan-order-table-contract.md` |
 | CHART-PR-039 | in_progress | chart | P0 | Workspace-managed consultation rooms; TDD implementation and production delivery | `docs/work/chart/CHART-PR-039-workspace-consultation-room-adoption.md` |
+| CHART-PR-040 | in_progress | chart | P0 | Approved Figma vital history dialog and per-field latest values | `docs/work/chart/CHART-PR-040-vital-history-dialog.md` |
 | CHART-PR-040 | human_review | chart | P1 | Approved SOAP document toolbar and private attachments | `docs/work/chart/CHART-PR-040-document-editor-toolbar-and-attachments.md` |
 | CHART-PR-041 | in_progress | chart | P1 | Four chart regions reveal scrollbars on hover with a shared thumb color token | `docs/work/chart/CHART-PR-041-chart-scrollbar-hover-reveal.md` |

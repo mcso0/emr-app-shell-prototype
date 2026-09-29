@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils";
 type PatientContextDatum = {
   label: ReactNode;
   value: ReactNode;
+  measurementTooltip?: string;
 };
 
 type PatientContextMemoAction = {
@@ -411,6 +412,7 @@ function PatientContextDatumGroup({ items }: { items: PatientContextDatum[] }) {
           key={`${String(item.label)}-${String(item.value)}-${index}`}
           label={item.label}
           value={item.value}
+          measurementTooltip={item.measurementTooltip}
         />
       ))}
     </div>
@@ -601,8 +603,8 @@ function PatientContextInlineSummary({
   );
 }
 
-function PatientContextDatumBadge({ label, value }: PatientContextDatum) {
-  return (
+function PatientContextDatumBadge({ label, value, measurementTooltip }: PatientContextDatum) {
+  const badge = (
     <Badge
       variant="secondary"
       className="emr-text-metadata h-[var(--emr-context-bar-chip-height)] shrink-0 gap-[var(--clair-spacing-2)] rounded-[var(--emr-context-bar-chip-radius)] border-transparent bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] py-[3px] font-medium"
@@ -610,6 +612,13 @@ function PatientContextDatumBadge({ label, value }: PatientContextDatum) {
       <span className="text-[var(--emr-context-bar-chip-label)]">{label}</span>
       <span className="text-[var(--emr-context-bar-chip-value)]">{value}</span>
     </Badge>
+  );
+  if (!measurementTooltip) return badge;
+  return (
+    <Tooltip>
+      <TooltipTrigger render={badge} tabIndex={0} />
+      <TooltipContent>{measurementTooltip}</TooltipContent>
+    </Tooltip>
   );
 }
 

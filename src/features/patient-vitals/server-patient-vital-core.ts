@@ -6,6 +6,7 @@ import {
 import {
   emptyPatientVitalWriteInput,
   type PatientVitalMeasurement,
+  type PatientVitalSummary,
   type PatientVitalWriteInput,
 } from "@/features/patient-vitals/patient-vital-types";
 import {
@@ -41,7 +42,7 @@ export type PatientLatestVitalGateway = {
     encounterId: string;
     workspaceId: string;
   }): Promise<
-    | { ok: true; vital: PatientVitalMeasurement | null }
+    | { ok: true; vital: PatientVitalMeasurement | null; summary?: PatientVitalSummary }
     | { ok: false; error: "db_read_failed" | "encounter_unavailable" }
   >;
 };
@@ -78,6 +79,7 @@ export type PatientLatestVitalReadResult =
       canWriteVitals: boolean;
       enforcedBy: "patient-latest-vital-read";
       vital: PatientVitalMeasurement | null;
+      summary?: PatientVitalSummary;
     }
   | {
       ok: false;
@@ -272,6 +274,7 @@ export async function readPatientLatestVital({
     }).allowed,
     enforcedBy: "patient-latest-vital-read",
     vital: result.vital,
+    summary: result.summary,
   };
 }
 

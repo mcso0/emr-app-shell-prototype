@@ -4,7 +4,7 @@ import {
   type PatientLatestVitalGateway,
   type PatientVitalWriteGateway,
 } from "@/features/patient-vitals/server-patient-vital-core";
-import type { PatientVitalMeasurement, PatientVitalWriteInput } from "@/features/patient-vitals/patient-vital-types";
+import { emptyPatientVitalWriteInput, type PatientVitalMeasurement, type PatientVitalSummary, type PatientVitalWriteInput } from "@/features/patient-vitals/patient-vital-types";
 
 export type SupabasePatientVitalClient = {
   rpc(
@@ -103,11 +103,11 @@ export function createSupabasePatientLatestVitalGateway(
         };
       }
       if (!isRecord(data)) return { ok: false as const, error: "db_read_failed" as const };
-      if (data.vital === null || data.vital === undefined) return { ok: true as const, vital: null };
+      if (data.vital === null || data.vital === undefined) return { ok: true as const, vital: null, summary: parsePatientVitalSummary(data.summary) };
 
       const vital = parsePatientVitalMeasurement(data.vital);
       return vital
-        ? { ok: true as const, vital }
+        ? { ok: true as const, vital, summary: parsePatientVitalSummary(data.summary) }
         : { ok: false as const, error: "db_read_failed" as const };
     },
   };
@@ -122,6 +122,9 @@ export function parsePatientVitalMeasurement(value: unknown): PatientVitalMeasur
   if (!id || !patientId || !encounterId || !measuredAt) return null;
 
   const vital: PatientVitalMeasurement = { id, patientId, encounterId, measuredAt };
+  vital.updatedAt = getString(value.updatedAt);
+  vital.createdAt = getString(value.createdAt);
+  vital.recordedByName = getString(value.recordedByName);
   assignOptionalNumber(vital, "weightKg", value.weightKg);
   assignOptionalNumber(vital, "temperatureC", value.temperatureC);
   assignOptionalNumber(vital, "heartRateBpm", value.heartRateBpm);
@@ -129,6 +132,20 @@ export function parsePatientVitalMeasurement(value: unknown): PatientVitalMeasur
   assignOptionalNumber(vital, "bloodPressureSystolicMmhg", value.bloodPressureSystolicMmhg);
   assignOptionalNumber(vital, "bloodPressureDiastolicMmhg", value.bloodPressureDiastolicMmhg);
   return vital;
+}
+
+function parsePatientVitalSummary(value: unknown): PatientVitalSummary | undefined {
+  if (!isRecord(value) || !isRecord(value.values) || !isRecord(value.measuredAtByField)) return undefined;
+  const summary: PatientVitalSummary = { values: {}, measuredAtByField: {} };
+  for (const key of Object.keys(emptyPatientVitalWriteInput) as (keyof PatientVitalWriteInput)[]) {
+    const number = value.values[key];
+    const time = value.measuredAtByField[key];
+    if (typeof number === "number" && Number.isFinite(number) && typeof time === "string") {
+      summary.values[key] = number;
+      summary.measuredAtByField[key] = time;
+    }
+  }
+  return summary;
 }
 
 function assignOptionalNumber<T extends Record<string, unknown>>(
