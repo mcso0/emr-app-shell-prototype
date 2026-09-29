@@ -7,7 +7,7 @@ source_docs:
   - "docs/work/lab/LAB-PR-002-result-sheet-figma-phase-1.md"
   - "2026-09-27 approved phase-2 implementation report and interactive prototype"
 dependencies: []
-updated: "2026-09-27"
+updated: "2026-09-29"
 ---
 
 # Lab Result Sheet Phase 2
@@ -54,7 +54,22 @@ Implement the approved phase-2 result sheet: item findings, an independent overa
 - `npm audit` currently reports 30 dependency advisories; none target the two added viewer packages or `pdfjs-dist`. No dependency-wide update was attempted in this scoped change.
 - Migration `20260927124324_lab_result_sheet_phase2` was applied to the linked staging Supabase project after approval. Read-only checks confirmed all three new tables, attachment RLS, service-role read/write/delete grants, no anonymous table read, and the private storage bucket. Security advisor findings for two internal RPC-only tables report intentional no-policy RLS; performance advisor findings are informational foreign-key and unused-index notices on the new tables.
 
+## Production Checkpoint (2026-09-29)
+
+- Exact head `fc384ebdcdddcbb9146db7e52c5757cdaffe2f68` passed Release Check `36320114374` and was approved, then squash-merged as PR #848. `origin/main` was exactly merge SHA `e249463c3bf81ba22fc7057b2d43bedfad1299e2` at the checkpoint.
+- Production `dpl_9poef6xbv7wQhHgK4wNJk4ieTUkF` is Ready and serves the official alias. Build logs show `main` / `e249463`; `/login` returned HTTP 200. Prior Ready rollback candidate: `dpl_7i9B2LVuBgYx33if87kx8YY2aPaX`.
+- Authenticated synthetic smoke displayed the new item finding, overall finding, history, and upload surfaces. Item-finding save succeeded. A 179-byte synthetic PNG reached the delayed uploading UI, then prepare returned HTTP 409. No attachment metadata or object was created. Preview, download, deletion, overall save, and retest integration were not completed after that failure. The synthetic item finding was cleared through the UI and a scoped read verified no synthetic marker remains. Its save/clear audit events remain, and result status is now entered; this is not a full state rollback.
+- Root cause: attachment APIs directly selected RPC-only result tables; both `authenticated` and `service_role` have no direct SELECT grants there. Signed upload preparation must also use the server-only storage client because its prior authenticated metadata policy depended on those unreadable tables.
+
+## Forward-Fix Candidate
+
+- Migration `20260929055945_lab_attachment_scoped_context.sql` adds an authenticated, permission-checked context RPC and an atomic prepare RPC. Both enforce workspace/canonical-result/row ownership; prepare locks the result and checks editable status, permissions, actor, metadata constraints, and derived object path. Existing direct table grants and RLS remain unchanged.
+- The API resolves result/row ownership through the session RPC, commits pending metadata through the atomic prepare RPC, and creates the signed upload URL with the existing server-only client. Read/download/delete use the same resolver. No new dependency or permission-policy change.
+- Four focused server regression tests pass: RPC-only resolution, trusted signing, denied/foreign selectors, and a concurrent status rejection that prevents signing. A rolled-back fixture in a disposable local PostgreSQL database verified authorized RPC execution, denied direct reads, foreign workspace/result/row rejection, closed-result rejection, viewer-upload rejection, anonymous rejection, and immutable actor/path. The fixture uses representative constrained tables and permission stubs, not a full Supabase replay.
+
+- Local release preflight passed: lint (0 errors, 5 unrelated warnings), TypeScript, production build, secret scan, docs links, UX copy, and diff checks. The approved migration was applied as `20260929055945` to the linked project on 2026-09-29. Remote definitions and authenticated-only EXECUTE were verified; anonymous/service EXECUTE and direct result-table reads remain denied. Exact-candidate release verification remains pending.
+
 ## Remaining Release Boundary
 
 - Run authenticated upload, reload, preview, download, delete, and retest smoke against synthetic data. Verify the private bucket policies in that workflow and arrange bounded reconciliation for pending/tombstoned objects before considering remote delivery complete.
-- Authenticated storage smoke and Production deployment remain pending. Human review remains pending until the exact release candidate and remote dependencies are resolved.
+- The scoped-context migration is approved and applied. Approve the final exact forward-fix candidate for Production after release checks. Full authenticated storage/retest smoke remains pending. Human acceptance is not inferred from Ready deployment. The reconciliation script remains manual; no scheduled runner or real-file upload is approved.
