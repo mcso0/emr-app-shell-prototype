@@ -15,27 +15,23 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!context.ok) return context.response;
   const rateLimited = enforceWorkspaceMutationRateLimit({ request, actorUserId: context.actorUserId, workspaceId, operation: `lab_result_attachment_${body.action}` });
   if (rateLimited) return rateLimited;
-  const entry = await resolveLabResultEntry(context.client, workspaceId, body.resultId);
+  if (body.action === "prepare" && (typeof body.rowId !== "string" || !body.rowId || body.rowId.length > 200)) return invalid();
+  const entry = await resolveLabResultEntry(context.client, workspaceId, body.resultId, body.action === "prepare" ? body.rowId as string : undefined);
   if (!entry || (body.action !== "discard" && !["received", "entered"].includes(entry.result_status))) {
     return Response.json({ ok: false, error: "result_unavailable" }, { status: 409 });
   }
   if (body.action === "prepare") {
-    if (typeof body.rowId !== "string" || !body.rowId || body.rowId.length > 200) return invalid();
     const metadata = validateLabResultAttachment({ name: body.name, mimeType: body.mimeType, size: body.size });
     if (!metadata.ok) return Response.json(metadata, { status: metadata.status });
-    const row = await context.client.from("lab_result_entry_rows").select("row_id")
-      .eq("workspace_id", workspaceId).eq("lab_result_entry_id", entry.id).eq("row_id", body.rowId).maybeSingle();
-    if (row.error || !row.data) return Response.json({ ok: false, error: "row_unavailable" }, { status: 404 });
     const attachmentId = randomUUID();
     const path = labResultAttachmentPath(workspaceId, entry.id, attachmentId, metadata.mimeType);
-    const inserted = await context.client.from("lab_result_attachments").insert({
-      id: attachmentId, workspace_id: workspaceId, lab_result_entry_id: entry.id,
-      row_id: body.rowId, uploaded_by_user_id: context.actorUserId,
-      file_name: metadata.name, mime_type: metadata.mimeType, byte_size: metadata.size,
-      storage_path: path,
+    const inserted = await context.client.rpc("clair_prepare_lab_result_attachment", {
+      p_workspace_id: workspaceId, p_result_id: body.resultId, p_row_id: body.rowId,
+      p_attachment_id: attachmentId, p_file_name: metadata.name,
+      p_mime_type: metadata.mimeType, p_byte_size: metadata.size,
     });
-    if (inserted.error) return Response.json({ ok: false, error: "attachment_prepare_failed" }, { status: 500 });
-    const signed = await context.client.storage.from(LAB_RESULT_ATTACHMENT_BUCKET).createSignedUploadUrl(path);
+    if (inserted.error || inserted.data !== path) return Response.json({ ok: false, error: "attachment_prepare_failed" }, { status: 500 });
+    const signed = await context.trusted!.storage.from(LAB_RESULT_ATTACHMENT_BUCKET).createSignedUploadUrl(path);
     if (signed.error || !signed.data?.token) {
       await context.trusted!.from("lab_result_attachments").delete().eq("workspace_id", workspaceId).eq("id", attachmentId).is("ready_at", null);
       return Response.json({ ok: false, error: "upload_sign_failed" }, { status: 500 });

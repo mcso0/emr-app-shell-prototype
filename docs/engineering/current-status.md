@@ -1,14 +1,15 @@
 # MVP Current Status
 
-Updated: 2026-09-12
+Updated: 2026-09-29
 
-Lab result sheet phase 2 has a PR candidate on `codex/lab-result-sheet-phase2`
-as of 2026-09-27. Item/overall findings, read-only retest history, and private
-row-owned attachments are implemented and checked locally. Migration
-`20260927124324` was applied to the linked staging Supabase project; the new
-tables, RLS, service-role grants, and private bucket passed read-only checks.
-Authenticated attachment smoke, exact-candidate release review, and Production
-deployment remain pending. See
+Lab result sheet phase 2 was merged in PR #848 and deployed to Ready Production
+on 2026-09-29. Item-finding save succeeded in authenticated synthetic smoke,
+but attachment prepare returned HTTP 409: both session and service roles lack
+direct SELECT on the RPC-only result tables. A scoped forward-fix candidate on
+`codex/lab-attachment-storage-context` adds ownership/atomic-prepare RPCs and uses
+the existing server-only storage signer, without widening table grants. Its new
+migration and exact-candidate Production release remain pending approval; full
+attachment integration and retest smoke are not accepted yet. See
 [LAB-PR-003](../work/lab/LAB-PR-003-result-sheet-phase-2.md) for exact evidence.
 
 Latest local fulfillment-queue remediation restores separate workspace-scoped

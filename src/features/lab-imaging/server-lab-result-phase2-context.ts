@@ -44,10 +44,17 @@ export async function loadLabResultPhase2Context(request: Request, workspaceId: 
   return { ok: true as const, actorUserId: identity.actorUserId, canWrite, client, trusted };
 }
 
-export async function resolveLabResultEntry(client: NonNullable<Awaited<ReturnType<typeof createClient>>>, workspaceId: string, resultId: string) {
+export async function resolveLabResultEntry(client: NonNullable<Awaited<ReturnType<typeof createClient>>>, workspaceId: string, resultId: string, rowId?: string) {
   if (!resultId || resultId.length > 200) return null;
-  const { data, error } = await client.from("lab_result_entries")
-    .select("id, workspace_id, result_id, order_id, result_status, result_definition_origin")
-    .eq("workspace_id", workspaceId).eq("result_id", resultId).maybeSingle();
-  return error || data?.result_definition_origin !== "canonical" ? null : data;
+  // Result tables are RPC-only for both session and service roles. Resolve
+  // ownership through the scoped RPC instead of widening table grants.
+  const { data, error } = await client.rpc("clair_get_lab_result_attachment_context", {
+    p_workspace_id: workspaceId, p_result_id: resultId, p_row_id: rowId ?? null,
+  });
+  if (error || !data || typeof data !== "object" || Array.isArray(data)) return null;
+  const entry = data as Record<string, unknown>;
+  return typeof entry.id === "string" && entry.workspace_id === workspaceId && entry.result_id === resultId
+    && entry.result_definition_origin === "canonical" && typeof entry.result_status === "string"
+    && (rowId === undefined || entry.row_id === rowId)
+    ? { id: entry.id, result_status: entry.result_status } : null;
 }
