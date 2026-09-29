@@ -444,14 +444,23 @@ function PatientContextInfoSection({
   vitalAction?: ContextBarVitalAction;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
-  const className =
-    "group relative flex h-9 shrink-0 items-center gap-[var(--emr-context-bar-item-gap)] overflow-hidden rounded-[var(--emr-context-bar-button-radius)] p-[var(--clair-spacing-6)] text-left hover:bg-[var(--emr-context-bar-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-within:bg-[var(--emr-context-bar-hover-bg)]";
+  const className = cn(
+    "group relative flex h-9 shrink-0 items-center gap-[var(--emr-context-bar-item-gap)] overflow-hidden rounded-[var(--emr-context-bar-button-radius)] p-[var(--clair-spacing-6)] text-left hover:bg-[var(--emr-context-bar-hover-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1",
+    vitalAction
+      ? "has-[:focus-visible]:bg-[var(--emr-context-bar-hover-bg)]"
+      : "focus-within:bg-[var(--emr-context-bar-hover-bg)]",
+  );
   const content = (
     <>
       <IllustrationIcon
         src={iconSrc}
         alt=""
-        className="group-hover:bg-[var(--emr-context-bar-hover-icon-bg)] group-focus-within:bg-[var(--emr-context-bar-hover-icon-bg)]"
+        className={cn(
+          "group-hover:bg-[var(--emr-context-bar-hover-icon-bg)]",
+          vitalAction
+            ? "group-has-[:focus-visible]:bg-[var(--emr-context-bar-hover-icon-bg)]"
+            : "group-focus-within:bg-[var(--emr-context-bar-hover-icon-bg)]",
+        )}
       />
       {children}
       {vitalAction ? (
@@ -523,11 +532,11 @@ function PatientContextVitalActionButton({
 }) {
   const disabledReasonId = useId();
   const positionClassName =
-    "absolute right-0 top-1/2 flex h-[var(--emr-context-bar-control-size)] -translate-y-1/2 items-center opacity-0 outline-none group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100";
+    "group/vital-action absolute right-0 top-1/2 flex h-[var(--emr-context-bar-control-size)] -translate-y-1/2 items-center opacity-0 outline-none group-hover:opacity-100 focus-visible:opacity-100";
   const buttonClassName =
     "flex h-[var(--emr-context-bar-control-size)] items-center bg-[linear-gradient(to_right,transparent,var(--emr-context-bar-hover-bg)_var(--clair-spacing-8))] pl-[var(--clair-spacing-16)] pr-[var(--clair-spacing-6)] text-[var(--emr-text-secondary)] outline-none disabled:cursor-not-allowed [&_svg]:size-[var(--emr-context-bar-hover-action-icon-size)]";
   const buttonContent = (
-    <span className="flex size-[var(--emr-context-bar-control-size)] items-center justify-center rounded-[var(--emr-context-bar-control-radius)] hover:bg-[var(--emr-context-bar-hover-icon-bg)] focus-visible:ring-2 focus-visible:ring-ring/40">
+    <span className="flex size-[var(--emr-context-bar-control-size)] items-center justify-center rounded-[var(--emr-context-bar-control-radius)] hover:bg-[var(--emr-context-bar-hover-icon-bg)] group-focus-visible/vital-action:ring-2 group-focus-visible/vital-action:ring-ring/40">
       {children}
     </span>
   );
