@@ -2,6 +2,10 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-09-29
+
+- `added`: [Lab result sheet reference](screens/lab/specs/result-sheet.md) consolidates the accepted V5 design and Figma annotations for LAB-PR-004.
+
 ## 2026-08-25
 
 - `changed`: Static backgrounds now use the equal-channel Neutral surface

@@ -48,8 +48,8 @@ function routeHarness({ denied = false, foreignRow = false, prepareError = false
     },
   };
   const trusted = { storage: { from(bucket) {
-    calls.push({ bucket }); return { async createSignedUploadUrl(path) {
-      calls.push({ signedPath: path }); return { data: { token: "synthetic-token" }, error: null };
+      calls.push({ bucket }); return { async createSignedUploadUrl(path) {
+      calls.push({ signedPath: path }); return { data: { token: "synthetic-token", signedUrl: "https://storage.example.test/upload/signed" }, error: null };
     } };
   } }, from() { throw Error("Unexpected metadata table access"); } };
   const route = load(routePath, {
@@ -76,6 +76,7 @@ test("prepare uses the authenticated ownership RPC and server-only storage signe
   assert.equal(response.status, 201);
   const body = await response.json();
   assert.match(body.objectPath, /^workspace-a\/entry-a\/[a-f0-9-]+\.png$/);
+  assert.equal(body.uploadUrl, "https://storage.example.test/upload/signed");
   assert.equal(harness.calls[1].name, "clair_prepare_lab_result_attachment");
   assert.equal(harness.calls[1].args.p_row_id, "row-a");
   assert.equal(harness.calls.find(call => call.signedPath)?.signedPath, body.objectPath);

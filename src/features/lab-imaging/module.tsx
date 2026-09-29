@@ -8,18 +8,20 @@ import {
 } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { toast } from "sonner";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
   CdsActionsRefreshCcwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsContentLink2Icon } from "@/components/cds-icons/content-and-editor";
 import {
   CdsFilesFileIcon,
   CdsFilesImageIcon,
   CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
-import { CdsNavigationChevronsRightIcon } from "@/components/cds-icons/navigation";
+import { CdsNavigationArrowDownIcon, CdsNavigationChevronsRightIcon } from "@/components/cds-icons/navigation";
 import {
   CdsUtilitiesHistoryIcon,
   CdsUtilitiesSortIcon,
@@ -2071,6 +2073,9 @@ function getDatedQueueEmptyStateTitle({
 
 function LabResultInputSection({
   assigneeName,
+  routeResultId,
+  search,
+  staffInstruction,
   catalogStatus = "idle",
   emptyRowsKind = "no-data",
   onCatalogRetry,
@@ -2081,6 +2086,9 @@ function LabResultInputSection({
   result,
 }: {
   assigneeName: string;
+  routeResultId: string;
+  search: string;
+  staffInstruction?: string;
   catalogStatus?: LabResultSheetCatalogStatus;
   emptyRowsKind?: Extract<EmrEmptyStateKind, "no-data" | "upstream-pending">;
   onCatalogRetry?: () => void;
@@ -2126,6 +2134,20 @@ function LabResultInputSection({
       : initialRowValues;
   const [metadataState, setMetadataState] = useState<{ resultId: string; rows: Record<string, Partial<LabResultRow>> }>({ resultId: result.id, rows: {} });
   const rowMetadata = useMemo(() => metadataState.resultId === result.id ? metadataState.rows : {}, [metadataState, result.id]);
+  const handleMetadataChange = useCallback((rowId: string, patch: Partial<LabResultRow>) => {
+    setSaveRequestId(null);
+    setMetadataState(current => ({ resultId: result.id, rows: {
+      ...(current.resultId === result.id ? current.rows : {}),
+      [rowId]: { ...(current.resultId === result.id ? current.rows[rowId] : {}), ...patch },
+    } }));
+  }, [result.id]);
+  const handleValueChange = useCallback((rowId: string, value: string) => {
+    setSaveRequestId(null);
+    setRowValueState(current => {
+      const currentValues = current.resultId === result.id ? current.values : initialRowValues;
+      return { resultId: result.id, values: { ...currentValues, [rowId]: value } };
+    });
+  }, [initialRowValues, result.id]);
   const rows = useMemo(
     () =>
       result.rows.map((row) => {
@@ -2188,6 +2210,7 @@ function LabResultInputSection({
 
   return (
     <EmrOrderGroupSection
+      className="lab-result-sheet-order-group [&>section]:px-4 [&>section]:pt-3 [&>section]:!pb-3 [&>section>div:first-child]:h-7 [&>section>div:first-child]:px-0 [&>section>div:first-child]:py-0"
       title={`${result.resultName} 세트`}
       titleClassName="emr-text-body leading-5"
       count={rows.length}
@@ -2205,6 +2228,12 @@ function LabResultInputSection({
       actions={
         <>
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          <LabResultTableLinkButton
+            date={getOperatingDateFromIso(result.enteredAt ?? result.receivedAt ?? result.collectedAt) ?? new URLSearchParams(search).get("date") ?? undefined}
+            resultId={routeResultId}
+            search={search}
+            workspaceId={result.workspaceId}
+          />
           {result.resultDefinitionOrigin === "canonical" && onCatalogRetry ? <Button variant="outline" size="xs" disabled={currentSaveState === "saving"}
             onClick={() => {
               setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
@@ -2289,34 +2318,13 @@ function LabResultInputSection({
         </div> : null}
         <LabResultDataTable
           assigneeName={assigneeName}
+          staffInstruction={staffInstruction}
           density={density}
           persistedResult={result}
           emptyRowsKind={emptyRowsKind}
           initialLoading={catalogStatus === "loading" && rows.length === 0}
-          onMetadataChange={(rowId, patch) => {
-            setSaveRequestId(null);
-            setMetadataState(current => ({ resultId: result.id, rows: {
-              ...(current.resultId === result.id ? current.rows : {}),
-              [rowId]: { ...(current.resultId === result.id ? current.rows[rowId] : {}), ...patch },
-            } }));
-          }}
-          onValueChange={(rowId, value) => {
-            setSaveRequestId(null);
-            setRowValueState((current) => {
-              const currentValues =
-                current.resultId === result.id
-                  ? current.values
-                  : initialRowValues;
-
-              return {
-                resultId: result.id,
-                values: {
-                  ...currentValues,
-                  [rowId]: value,
-                },
-              };
-            });
-          }}
+          onMetadataChange={handleMetadataChange}
+          onValueChange={handleValueChange}
           expandedRowId={expandedRowId}
           onExpandedRowChange={setExpandedRowId}
           phase2={phase2}
@@ -2347,7 +2355,7 @@ function LabResultValueControl({
       {rule?.resultValueKind === "coded" ? (
         <select
           aria-label={label}
-          className="h-7 min-w-0 flex-1 rounded-md border border-input bg-background px-2 emr-text-dense"
+          className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 !text-[12px] !leading-4 !tracking-[0.3px]"
           disabled={noResult}
           value={row.value ?? ""}
           onChange={(event) => onValueChange(row.id, event.target.value)}
@@ -2360,7 +2368,7 @@ function LabResultValueControl({
       ) : (
         <Input
           aria-label={label}
-          className="h-7 min-w-0 flex-1 emr-text-dense"
+          className="h-7 min-w-0 flex-1 bg-card !text-[12px] !leading-4 !tracking-[0.3px]"
           data-testid={`lab-result-input-${row.id}`}
           disabled={noResult}
           inputMode={rule?.resultValueKind === "numeric" || row.resultInputType === "number" ? "decimal" : undefined}
@@ -2441,8 +2449,39 @@ function LabResultValueControl({
   );
 }
 
+function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
+  date?: string;
+  resultId: string;
+  search: string;
+  workspaceId: string;
+}) {
+  const copyLink = async () => {
+    const route = buildWorkspaceSurfaceRoute({
+      moduleId: "lab",
+      params: { date, labResultId: resultId },
+      removeParams: ["scenario", "patientId", "encounterId", "queueItemId", "workItemId", "labResultId", "imagingStudyId", "invoiceId", "orderId", "taskId", "historyEncounterId", "drawer", "context"],
+      search,
+      workspaceId,
+    });
+    const url = new URL(route, window.location.origin);
+    url.hash = "lab-result-table";
+    try {
+      await navigator.clipboard.writeText(url.href);
+      toast.success("결과표 링크를 복사했어요.");
+    } catch {
+      toast.error("결과표 링크를 복사하지 못했어요.");
+    }
+  };
+
+  return <Button type="button" variant="ghost" size="xs" className="h-7 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+    aria-label="검사 결과표 링크 복사" onClick={() => void copyLink()}>
+    <CdsContentLink2Icon className="size-3.5" aria-hidden="true" />결과표 링크
+  </Button>;
+}
+
 function LabResultDataTable({
   assigneeName,
+  staffInstruction,
   density,
   emptyRowsKind,
   initialLoading,
@@ -2456,6 +2495,7 @@ function LabResultDataTable({
   rows,
 }: {
   assigneeName: string;
+  staffInstruction?: string;
   density: EmrTableDensity;
   emptyRowsKind: Extract<EmrEmptyStateKind, "no-data" | "upstream-pending">;
   initialLoading: boolean;
@@ -2470,6 +2510,24 @@ function LabResultDataTable({
 }) {
   const columns = useMemo<ColumnDef<LabResultRow, unknown>[]>(
     () => [
+      {
+        id: "disclosure",
+        size: 24,
+        minSize: 24,
+        maxSize: 24,
+        enableSorting: false,
+        enableResizing: false,
+        header: () => <span className="sr-only">검사 소견</span>,
+        meta: { label: "소견 펼치기", resize: "none", align: "center", cellPadding: "none" },
+        cell: ({ row }) => {
+          const expanded = expandedRowId === row.original.id;
+          return <Button type="button" variant="ghost" size="icon-xs" className="mx-auto" aria-expanded={expanded}
+            aria-controls={`lab-result-detail-${row.original.id}`} aria-label={`${row.original.analyteName} 검사 소견 ${expanded ? "접기" : "펼치기"}`}
+            onClick={() => onExpandedRowChange(expanded ? null : row.original.id)}>
+            <CdsNavigationArrowDownIcon className={cn("size-4", expanded && "rotate-180")} aria-hidden="true" />
+          </Button>;
+        },
+      },
       {
         id: "analyteName",
         accessorKey: "analyteName",
@@ -2488,14 +2546,6 @@ function LabResultDataTable({
           return (
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
-              <Button type="button" variant="outline" size="xs" aria-expanded={expandedRowId === row.original.id}
-                aria-controls={`lab-result-detail-${row.original.id}`}
-                className={expandedRowId === row.original.id
-                  ? "bg-[var(--clair-color-atomic-black-alpha-4)]"
-                  : "bg-[var(--clair-color-atomic-white-alpha-8)]"}
-                onClick={() => onExpandedRowChange(expandedRowId === row.original.id ? null : row.original.id)}>
-                검사 소견 {expandedRowId === row.original.id ? "접기" : "펼치기"}
-              </Button>
               {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
               (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
                 <AtomicLabRetestAction result={persistedResult} row={savedRow} />
@@ -2535,7 +2585,7 @@ function LabResultDataTable({
       {
         id: "referenceRange",
         accessorKey: "referenceRange",
-        size: 278,
+        size: 254,
         minSize: 220,
         enableSorting: false,
         enableResizing: false,
@@ -2598,9 +2648,11 @@ function LabResultDataTable({
   });
 
   return (
+    <div id="lab-result-table" data-testid="lab-result-table-anchor" tabIndex={-1} className="lab-result-sheet-table-anchor mt-3 scroll-mt-2 outline-none [&_[data-slot=table-head][data-column-id=disclosure]_[data-emr-table-content]]:sr-only">
     <EmrDataTable
       aria-label="임상병리 검사 결과 입력"
       className="table-fixed"
+      containerClassName="overflow-x-auto overflow-y-hidden rounded-lg bg-[var(--emr-surface-muted)] px-2 pb-2 pt-1"
       density={density}
       initialLoading={initialLoading}
       renderAfterRows={({ visibleColumnCount }) =>
@@ -2623,7 +2675,7 @@ function LabResultDataTable({
         <TableRow className="border-border bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
           <TableCell colSpan={tableRow.getVisibleCells().length} className="!p-0">
             <div id={`lab-result-detail-${tableRow.original.id}`}>
-              <LabResultRowDetail result={persistedResult} row={tableRow.original} finding={tableRow.original.note ?? ""}
+              <LabResultRowDetail result={persistedResult} row={tableRow.original} staffInstruction={staffInstruction} finding={tableRow.original.note ?? ""}
                 onFindingChange={value => onMetadataChange(tableRow.original.id, { note: value })}
                 phase2={phase2} refresh={onPhase2Refresh} />
             </div>
@@ -2638,6 +2690,7 @@ function LabResultDataTable({
         "data-testid": "lab-result-row-" + row.original.id,
       })}
     />
+    </div>
   );
 }
 
@@ -3379,9 +3432,11 @@ export function LabContent({
   const allowDemoContent =
     isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const searchParams = useSearchParams();
+  const routeSearch = searchParams.toString();
   const selectedLabResultId = useLabImagingStore(
     (state) => state.selectedLabResultId,
   );
+  const focusedTableLink = useRef<string | null>(null);
   const selectLabResult = useLabImagingStore((state) => state.selectLabResult);
   const contentAsideOpen = useLayoutStore((state) => state.contentAsideOpen);
   const setContentAsideOpen = useLayoutStore(
@@ -3574,6 +3629,35 @@ export function LabContent({
       selectLabResult(queryLabResultId);
     }
   }, [queryLabResultId, selectLabResult, selectedLabResultId]);
+
+  useEffect(() => {
+    let frame = 0;
+    const syncTableLinkFocus = () => {
+      const params = new URLSearchParams(routeSearch);
+      const targetResultId = params.get("labResultId");
+      if (!targetResultId || targetResultId !== detail?.result.id || window.location.hash !== "#lab-result-table") {
+        focusedTableLink.current = null;
+        return;
+      }
+      if (!allowDemoContent && persistedResult.status === "loading") return;
+      const identity = `${workspaceId}:${targetResultId}:${params.get("date") ?? ""}`;
+      if (focusedTableLink.current === identity) return;
+      const target = document.getElementById("lab-result-table");
+      if (!target) return;
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        target.focus({ preventScroll: true });
+        target.scrollIntoView({ block: "start" });
+        focusedTableLink.current = identity;
+      });
+    };
+    syncTableLinkFocus();
+    window.addEventListener("hashchange", syncTableLinkFocus);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("hashchange", syncTableLinkFocus);
+    };
+  }, [allowDemoContent, detail?.result.id, persistedResult.status, routeSearch, workspaceId]);
 
   if (fulfillmentQueue.status === "loading" && !effectiveDetail) {
     return <EmrContentLoadingState testId="lab-content-loading-state" title="검사 업무를 불러오는 중입니다" />;
@@ -3814,11 +3898,14 @@ export function LabContent({
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 px-4 pb-10 pt-4">
           <LabResultInputSection
+            routeResultId={detail?.result.id ?? selectedLabResultId ?? displayDetail.result.id}
             assigneeName={
               allowDemoContent
                 ? assignment.assigneeName
-                : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"
+              : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"
             }
+            search={routeSearch}
+            staffInstruction={displayDetail.order?.instruction}
             catalogStatus={
               !allowDemoContent ? persistedResult.status : detail?.result.rows.length === 0
                 ? catalogRowsState.status

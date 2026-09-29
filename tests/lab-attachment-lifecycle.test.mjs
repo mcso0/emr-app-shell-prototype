@@ -45,7 +45,7 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
     storage: { from(bucket) {
       assert.equal(bucket, core.LAB_RESULT_ATTACHMENT_BUCKET);
       return {
-        async createSignedUploadUrl() { return { data: { token: "synthetic-token" }, error: null }; },
+        async createSignedUploadUrl() { return { data: { token: "synthetic-token", signedUrl: "https://storage.example.test/upload/signed" }, error: null }; },
         async download(path) { return { data: objects.get(path), error: objects.has(path) ? null : { message: "missing" } }; },
         async remove(paths) {
           if (cleanupFails) return { error: { message: "unavailable" } };

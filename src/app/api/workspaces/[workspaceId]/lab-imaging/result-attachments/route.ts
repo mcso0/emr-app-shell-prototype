@@ -32,11 +32,11 @@ export async function POST(request: Request, { params }: RouteContext) {
     });
     if (inserted.error || inserted.data !== path) return Response.json({ ok: false, error: "attachment_prepare_failed" }, { status: 500 });
     const signed = await context.trusted!.storage.from(LAB_RESULT_ATTACHMENT_BUCKET).createSignedUploadUrl(path);
-    if (signed.error || !signed.data?.token) {
+    if (signed.error || !signed.data?.token || !signed.data?.signedUrl) {
       await context.trusted!.from("lab_result_attachments").delete().eq("workspace_id", workspaceId).eq("id", attachmentId).is("ready_at", null);
       return Response.json({ ok: false, error: "upload_sign_failed" }, { status: 500 });
     }
-    return Response.json({ ok: true, attachmentId, objectPath: path, uploadToken: signed.data.token }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
+    return Response.json({ ok: true, attachmentId, objectPath: path, uploadToken: signed.data.token, uploadUrl: signed.data.signedUrl }, { status: 201, headers: { "Cache-Control": "private, no-store" } });
   }
   if (body.action === "finalize" && typeof body.attachmentId === "string" && uuid.test(body.attachmentId)) {
     const found = await context.trusted!.from("lab_result_attachments")

@@ -13,3 +13,7 @@ Use `docs/design/screens/<screen-slug>/` for screen-specific material.
 - `qa/`: screen-level QA notes that are not broad enough for `docs/design/qa/`.
 
 Prefer this structure for new screens so future planning docs are easy to find and can be promoted from `planning/` to `specs/` without changing the screen folder.
+
+## Laboratory
+
+- [Result sheet: approved visual contract](lab/specs/result-sheet.md) — accepted V5 corrections, Figma annotations, and implementation boundaries.
