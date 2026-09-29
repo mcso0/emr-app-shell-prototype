@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
 import { ReceptionRightPanel } from "@/features/reception/module";
 import { WorkspaceProfileDrawer } from "@/shell/workspace-profile-drawer";
@@ -31,6 +31,7 @@ export function WorkspaceFrame({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: WorkspaceFrameProps) {
+  const [frameElement, setFrameElement] = useState<HTMLElement | null>(null);
   const {
     activeDrawer,
     contentAsideOpen,
@@ -133,6 +134,7 @@ export function WorkspaceFrame({
 
         return (
           <main
+            ref={setFrameElement}
             className={cn(
               "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
               !instantRightPanel && "transition-[grid-template-columns]",
@@ -222,7 +224,7 @@ export function WorkspaceFrame({
               </div>
             </aside>
 
-            <WorkspaceProfileDrawer {...slotProps} />
+            <WorkspaceProfileDrawer {...slotProps} frameElement={frameElement} />
 
             <AnimatePresence>
               {shouldRenderWorkspaceDrawer ? (

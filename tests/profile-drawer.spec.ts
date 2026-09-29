@@ -1,5 +1,44 @@
 import { expect, test, type Page } from "@playwright/test";
 
+async function expectBodyAlignedProfile(page: Page) {
+  await expect.poll(async () => {
+    const frame = await page.locator("main.emr-workspace-frame-responsive").boundingBox();
+    const drawer = await page.getByTestId("workspace-profile-drawer").boundingBox();
+    if (!frame || !drawer) return Infinity;
+    return Math.max(
+      Math.abs(drawer.y - frame.y),
+      Math.abs(drawer.y + drawer.height - frame.y - frame.height),
+      Math.abs(drawer.x + drawer.width - frame.x - frame.width),
+      Math.abs(drawer.width - Math.min(380, frame.width)),
+    );
+  }).toBeLessThanOrEqual(1);
+}
+
+for (const moduleId of ["home", "reception", "treatment", "lab", "imaging", "dispensing", "orders", "billing", "inpatient", "customer"]) {
+  for (const profile of ["patient:patient-coco", "guardian:guardian-lee-jieun"]) {
+    test(`${moduleId} aligns ${profile.split(":")[0]} profile with its workspace body`, async ({ page }) => {
+      await page.goto(`/w/clair-demo/${moduleId}?modulePanel=open&aside=closed&profile=${encodeURIComponent(profile)}`);
+      await expectBodyAlignedProfile(page);
+    });
+  }
+}
+
+test("open profile follows workspace resizing without changing content width", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+  const width = (await page.getByTestId("workspace-main-content").boundingBox())!.width;
+  await page.getByTestId("customer-patient-row-patient-dubu").click();
+  await expectBodyAlignedProfile(page);
+  expect((await page.getByTestId("workspace-main-content").boundingBox())!.width).toBeCloseTo(width, 0);
+  await page.getByRole("button", { name: "사이드 패널 접기", exact: true }).click();
+  await expectBodyAlignedProfile(page);
+  await page.getByRole("button", { name: "사이드 패널 펼치기", exact: true }).click();
+  await expectBodyAlignedProfile(page);
+  for (const size of [{ width: 1280, height: 900 }, { width: 1000, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(size);
+    await expectBodyAlignedProfile(page);
+  }
+});
+
 async function openStaffProfile(page: Page) {
   await page.route("**/staff/*/operational-profile?**", (route) =>
     route.fulfill({
@@ -31,6 +70,8 @@ test("profile drawer preserves the mounted reservation draft and right-panel sel
   const main = page.getByTestId("workspace-main-content");
   const originalWidth = (await main.boundingBox())!.width;
   const opener = await openStaffProfile(page);
+
+  await expectBodyAlignedProfile(page);
 
   await expect(reservation).toBeAttached();
   await expect(reservation).toHaveAttribute("data-mount-probe", "original");
@@ -90,13 +131,13 @@ test("legacy profile links become non-modal overlay drawers without reserving la
   await expect(profile).toHaveCount(0);
 });
 
-test("narrow profile drawer fills the viewport while reception detail stays a side panel", async ({ page }) => {
+test("narrow profile drawer stays within the workspace body while reception detail stays a side panel", async ({ page }) => {
   await page.setViewportSize({ width: 1000, height: 800 });
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430&profile=patient%3Apatient-coco");
   const overlay = page.getByTestId("workspace-profile-drawer");
   const detail = page.getByTestId("reception-right-panel");
   await expect(overlay).toBeVisible();
-  await expect.poll(async () => (await overlay.boundingBox())!.width).toBe(1000);
+  await expectBodyAlignedProfile(page);
   await expect(detail).toBeAttached();
   await page.getByTestId("profile-side-panel").getByRole("button", { name: "상세 닫기" }).click();
   await expect(overlay).toHaveCount(0);
