@@ -9,14 +9,14 @@
   min-width: 0;
   padding: var(--clair-spacing-8);
   border-radius: var(--clair-radius-atomic-8);
-  margin-bottom: 9px;
+  margin-bottom: 5px;
 }
 
 .row::after {
   content: "";
   position: absolute;
   inset-inline: 0;
-  bottom: -5px;
+  bottom: -3px;
   height: 1px;
   background: var(--clair-color-atomic-black-alpha-4);
 }

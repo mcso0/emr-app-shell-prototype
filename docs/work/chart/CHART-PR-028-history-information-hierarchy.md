@@ -9,7 +9,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
 dependencies:
   - "CHART-PR-025"
-updated: "2026-09-17"
+updated: "2026-09-29"
 ---
 
 # Diagnosis And Chart History Information Hierarchy
@@ -135,3 +135,9 @@ This supersedes the earlier B-layout visual contract, following the user's revie
 - Stop on mandatory check failure, unexpected scope, failed Preview/Production readiness, or failed scoped smoke. Rollback candidate is pre-release `origin/main` `b000e0d338d54c1435cac7b806918c2dad045e02` and its previous Ready production deployment, recorded before merge.
 - PASS locally: isolated-port History browser regression 1 case, patient-history server/permission boundary 8 cases, focused ESLint, TypeScript, docs links, secret scan, diff check, repository lint with 0 errors and 5 pre-existing WP10 script warnings, and the default Turbopack production build. The existing broad NFT trace warning remained non-blocking. Remote exact-candidate and deployment evidence remains the delivery gate.
 - Rollback deployment baseline: Ready production `dpl_GwyCFZnVwQPFH9coMUP5WKgWPJzY`, aliased to `https://emr-app-shell-prototype.vercel.app` before this release.
+
+## 2026-09-29 Approved Row Spacing Reduction
+
+- The user approved reducing both spaces around the inline History divider from 4px to 2px, then requested commit, push, PR, and merge to `origin/main` for this scope.
+- Keep each row 40px high and the divider 1px high; set row margin-bottom to 5px and divider bottom to -3px for a 45px repeat interval. The current screen specification supersedes the earlier 49px spacing.
+- The existing focused History browser regression passed with the updated geometry assertions. Exact-candidate release checks and deployment evidence belong in the PR.
