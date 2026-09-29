@@ -215,7 +215,8 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   expect(panelBox).not.toBeNull();
   expect(panelBox!.width).toBeCloseTo(380, 0);
   expect(contentBox!.width).toBeCloseTo(originalContentWidth, 0);
-  expect(panelBox!.x + panelBox!.width).toBe(page.viewportSize()!.width);
+  const frameBox = (await page.locator("main.emr-workspace-frame-responsive").boundingBox())!;
+  expect(panelBox!.x + panelBox!.width).toBeCloseTo(frameBox.x + frameBox.width, 0);
   await expect(page.getByTestId("workspace-profile-drawer")).toHaveCSS(
     "backdrop-filter",
     "none",
@@ -590,7 +591,7 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
   await expect(drawer).not.toContainText("예약 진료");
 });
 
-test("touch viewport keeps the lane action visible and uses a full-width panel", async ({
+test("touch viewport keeps the lane action visible and fits the profile within the workspace body", async ({
   page,
 }) => {
   await mockStaffProfileApis(page);
@@ -606,14 +607,18 @@ test("touch viewport keeps the lane action visible and uses a full-width panel",
   await trigger.click();
   await page.getByRole("menuitem", { name: "운영 프로필 보기" }).click();
 
-  const drawer = page.getByRole("region", { name: "직원 운영 프로필" });
-  await expect
-    .poll(async () => (await drawer.boundingBox())?.x ?? 999)
-    .toBeLessThanOrEqual(1);
-  const box = await drawer.boundingBox();
-  expect(box).not.toBeNull();
-  expect(box!.x).toBeLessThanOrEqual(1);
-  expect(box!.width).toBeGreaterThanOrEqual(389);
+  const drawer = page.getByTestId("workspace-profile-drawer");
+  await expect.poll(async () => {
+    const frame = await page.locator("main.emr-workspace-frame-responsive").boundingBox();
+    const box = await drawer.boundingBox();
+    if (!frame || !box) return Infinity;
+    return Math.max(
+      Math.abs(box.x - frame.x),
+      Math.abs(box.y - frame.y),
+      Math.abs(box.width - Math.min(380, frame.width)),
+      Math.abs(box.height - frame.height),
+    );
+  }).toBeLessThanOrEqual(1);
 });
 
 test("staff profile reflows at a 200 percent zoom equivalent without hiding long content or self actions", async ({

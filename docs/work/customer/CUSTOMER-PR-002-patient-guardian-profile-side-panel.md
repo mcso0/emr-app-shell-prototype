@@ -29,7 +29,7 @@ Preserve the CDS V2 patient and guardian profile content, read/edit, and navigat
 - Add operating-date grouping for encounter history, including missing or invalid dates.
 - Add invoice/payment hierarchy to billing cards while retaining the Figma card surface.
 - Verify the source viewport against the provided Figma captures with pixel comparison and record explicit masks for the two approved content exceptions.
-- Reuse the shared Sheet as a 380 px right-edge profile overlay, full viewport width at 1100 px and below, without reserving main-content width.
+- Reuse the shared Sheet as a right-edge profile overlay aligned with each workspace body's top, bottom, and right bounds. Width is 380 px or the body width if narrower, without reserving main-content width.
 - Keep profile selection separate from reception detail, appointment detail, and reception/reservation creation; these remain workspace side panels.
 
 ## Out Of Scope
@@ -47,6 +47,7 @@ Preserve the CDS V2 patient and guardian profile content, read/edit, and navigat
 - Patient and guardian profiles render in `workspace-profile-drawer`; reception/reservation tasks retain `workspace-right-panel` and their mounted drafts.
 - Treatment preconsultation profile actions open the selected encounter's patient or primary guardian in the shared panel instead of the retired chart-specific information sheet.
 - Opening the profile preserves main workspace width and the same overlay position when navigating between patient and guardian profiles.
+- The global profile host follows workspace geometry in every module and on resize/sidebar changes, without viewport-top placement or clipping nested menus/dialogs.
 - Focused lint, typecheck, Playwright, Storybook build, and pixel-comparison evidence are recorded.
 - Pixel differences are iterated to the approved threshold; any remaining mismatch is reported, not described as exact.
 
@@ -120,3 +121,44 @@ overlay verification is recorded in the 2026-09-29 follow-up below.
   header count, dispensing title fixture, reception readback fixture, and
   workspace-tab history navigation. These remain outside this placement change;
   the complete repository browser suite is not claimed green.
+
+## 2026-09-29 Global Body Alignment Follow-up
+
+- Authorization: 승욱 accepted the HTML body-aligned design and explicitly
+  approved investigation, TDD implementation, commit/push/PR, `origin/main`
+  merge, and Production deployment after passing verification.
+- Scope: the shared patient, guardian, and staff operational profile host in
+  every workspace module, including home, reception, treatment, lab, imaging,
+  dispensing, orders, billing, inpatient, and customer. Reception/appointment
+  details and reception/reservation creation keep their existing side panels.
+- Root cause: the shared Sheet portal renders under `body` with viewport-fixed
+  vertical bounds. Nesting its React declaration inside WorkspaceFrame did
+  not constrain the popup to the workspace body.
+- Implementation: WorkspaceFrame supplies its mounted main element; the
+  profile host measures its top/right/height and clamps width to
+  `min(380px, body width)`. ResizeObserver and resize/capture-scroll listeners
+  keep geometry current and are disconnected on close/unmount. A measured
+  initial position is required before the popup opens; closing keeps the
+  last bounds for its exit transition. Existing shared Sheet API and focus
+  behavior remain in place.
+- Keep the body portal: installed Base UI 1.7.0 nests portals under the parent
+  portal by default. Moving the profile portal into the overflow-clipped
+  workspace would also constrain its nested menus/popovers.
+- RED: representative patient, staff-with-reservation-draft, and narrow
+  reception scenarios failed their body-boundary assertions before the fix.
+- Current tests cover both URL-backed profile kinds across all ten registered
+  workspace modules, sidebar changes, open resize down to 390px, unchanged
+  content width, nested Escape, opener restoration, preserved reservation
+  drafts and independent reception detail. Staff checks retain horizontal
+  scroll locks, touch, and 200 percent zoom behavior.
+- New patient/guardian host stories exercise body-height changes and close
+  focus restoration. No data/API/DB/RLS/permission/dependency changes.
+- GREEN: all 53 focused browser scenarios passed across final runs (27 global
+  profile, 13 staff, 11 profile-origin reception/reservation, and 2 avatar
+  contracts). Two host Storybook stories passed; existing shared Sheet stories
+  also passed. Touch geometry waits for the opening transition to settle.
+- A first-run retry precondition timeout passed on untouched latest main and
+  then in the complete 13-scenario patient/avatar rerun. No broader data fix
+  was needed.
+- Final candidate, exact Release Check, Ready Preview/Production, smoke and
+  rollback evidence are recorded in the delivery PR.
