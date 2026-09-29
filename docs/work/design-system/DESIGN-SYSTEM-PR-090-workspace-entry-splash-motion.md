@@ -22,8 +22,9 @@ Implement the approved assembly and diagonal light sequence in the existing post
 - The broad, matte light band starts entirely outside and above the logo. Move down/right at 25 degrees from vertical; only the intersected logo area becomes lighter.
 - First light pass also fades from opacity 0 to 1 over 900ms while travelling. Use the approved pale-gray tone, not a white/glossy stripe.
 - Light travel repeats every 2600ms. Both endpoints are outside the entire icon slot, making the loop reset invisible.
-- After 2000ms still loading, reveal `진료 공간을 준비하고 있어요` using `emr-text-metadata`, `font-medium`, and `--emr-text-tertiary`.
+- After 2000ms still loading, reveal `진료 공간을 준비하고 있어요` using `emr-text-metadata`, `font-medium`, and `--clair-color-atomic-neutral-500`.
 - Typography: app `font-sans` (self-hosted Pretendard Variable), Label 2 alias chain: 12px, approximately 16px line-height, 0.025em tracking, weight 500.
+- Place the message 10px below the 104px logo slot.
 - Readiness interrupts any phase: freeze the current frame and fade the overlay out over 180ms. Do not delay readiness for an assembly or light cycle.
 - Reduced motion: static unlit logo, no assembly or light, immediate exit on readiness.
 

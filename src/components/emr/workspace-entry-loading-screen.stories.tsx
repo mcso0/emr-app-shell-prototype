@@ -89,6 +89,10 @@ export const InfiniteLoading: Story = {
     await expect(type.fontWeight).toBe("500");
     await expect(type.letterSpacing).toBe("0.3px");
     await expect(Number.parseFloat(type.lineHeight)).toBeCloseTo(16, 2);
+    const logoSlot = splash.querySelector<HTMLElement>("[data-splash-logo]")!;
+    const gap = message.getBoundingClientRect().top - logoSlot.getBoundingClientRect().bottom;
+    await expect(gap).toBe(10);
+    await expect(type.color).toBe("rgb(115, 115, 115)");
     await expect(splash).toBeVisible();
   }
 };
