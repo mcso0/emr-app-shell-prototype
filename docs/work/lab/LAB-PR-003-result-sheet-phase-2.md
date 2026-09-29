@@ -63,13 +63,13 @@ Implement the approved phase-2 result sheet: item findings, an independent overa
 
 ## Forward-Fix Candidate
 
-- Migration `20260929060000_lab_attachment_scoped_context.sql` adds an authenticated, permission-checked context RPC and an atomic prepare RPC. Both enforce workspace/canonical-result/row ownership; prepare locks the result and checks editable status, permissions, actor, metadata constraints, and derived object path. Existing direct table grants and RLS remain unchanged.
+- Migration `20260929055945_lab_attachment_scoped_context.sql` adds an authenticated, permission-checked context RPC and an atomic prepare RPC. Both enforce workspace/canonical-result/row ownership; prepare locks the result and checks editable status, permissions, actor, metadata constraints, and derived object path. Existing direct table grants and RLS remain unchanged.
 - The API resolves result/row ownership through the session RPC, commits pending metadata through the atomic prepare RPC, and creates the signed upload URL with the existing server-only client. Read/download/delete use the same resolver. No new dependency or permission-policy change.
 - Four focused server regression tests pass: RPC-only resolution, trusted signing, denied/foreign selectors, and a concurrent status rejection that prevents signing. A rolled-back fixture in a disposable local PostgreSQL database verified authorized RPC execution, denied direct reads, foreign workspace/result/row rejection, closed-result rejection, viewer-upload rejection, anonymous rejection, and immutable actor/path. The fixture uses representative constrained tables and permission stubs, not a full Supabase replay.
 
-- Local release preflight passed: lint (0 errors, 5 unrelated warnings), TypeScript, production build, secret scan, docs links, UX copy, and diff checks. Remote migration and exact-candidate release verification remain pending.
+- Local release preflight passed: lint (0 errors, 5 unrelated warnings), TypeScript, production build, secret scan, docs links, UX copy, and diff checks. The approved migration was applied as `20260929055945` to the linked project on 2026-09-29. Remote definitions and authenticated-only EXECUTE were verified; anonymous/service EXECUTE and direct result-table reads remain denied. Exact-candidate release verification remains pending.
 
 ## Remaining Release Boundary
 
 - Run authenticated upload, reload, preview, download, delete, and retest smoke against synthetic data. Verify the private bucket policies in that workflow and arrange bounded reconciliation for pending/tombstoned objects before considering remote delivery complete.
-- Approve and apply only the new scoped-context migration, then approve the exact forward-fix candidate for Production. Full authenticated storage/retest smoke remains pending. Human acceptance is not inferred from Ready deployment. The reconciliation script remains manual; no scheduled runner or real-file upload is approved.
+- The scoped-context migration is approved and applied. Approve the final exact forward-fix candidate for Production after release checks. Full authenticated storage/retest smoke remains pending. Human acceptance is not inferred from Ready deployment. The reconciliation script remains manual; no scheduled runner or real-file upload is approved.

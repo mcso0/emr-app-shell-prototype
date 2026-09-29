@@ -32,7 +32,7 @@ insert into public.lab_result_entries values('00000000-0000-4000-8000-0000000000
 insert into public.lab_result_entry_rows values('00000000-0000-4000-8000-000000000001','scope-a','row-a'),
   ('00000000-0000-4000-8000-000000000002','scope-b','row-b'),
   ('00000000-0000-4000-8000-000000000003','scope-a','row-closed');
-\ir ../supabase/migrations/20260929060000_lab_attachment_scoped_context.sql
+\ir ../supabase/migrations/20260929055945_lab_attachment_scoped_context.sql
 set local test.actor = '00000000-0000-4000-8000-000000000099';
 set local test.workspace = 'scope-a';
 set local test.editor = 'yes';
