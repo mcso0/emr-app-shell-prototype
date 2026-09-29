@@ -1146,7 +1146,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   );
   await expect(subjectActionButtons.nth(2)).toHaveAttribute(
     "aria-label",
-    "SOAP 저장",
+    "S/O 추가",
   );
   await expect(subjectActionButtons.nth(3)).toHaveAttribute(
     "aria-label",
@@ -1222,7 +1222,8 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   ]) {
     const heading = panel.getByRole("heading", { name });
     const header = heading.locator("xpath=..");
-    await expect(header).toHaveCSS("padding-left", "12px");
+    const expectedLeftInset = name === "Plan/Order" ? 10 : 12;
+    await expect(header).toHaveCSS("padding-left", `${expectedLeftInset}px`);
     await expect(header).toHaveCSS("padding-right", "12px");
     await expect(header).toHaveCSS("padding-top", "8px");
     await expect(header).toHaveCSS("padding-bottom", "2px");
@@ -1239,7 +1240,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
       };
     });
 
-    expect(titleInsets).toEqual({ bottom: 6, left: 12, top: 12 });
+    expect(titleInsets).toEqual({ bottom: 6, left: expectedLeftInset, top: 12 });
   }
 
   const orderActionButtons = orderPanel.locator(
@@ -1323,15 +1324,15 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "1px",
   );
 
-  const soapSaveTrigger = subjectPanel.getByRole("button", {
-    name: "SOAP 저장",
+  const soapAddTrigger = subjectPanel.getByRole("button", {
+    name: "S/O 추가",
   });
   await page.mouse.move(1, 1);
   await subjectCollapseButton.focus();
   await page.keyboard.press("Tab");
   await expect(subjectActions).toHaveCSS("opacity", "1");
   await page.keyboard.press("Tab");
-  await expect(soapSaveTrigger).toBeFocused();
+  await expect(soapAddTrigger).toBeFocused();
   await expect(subjectActions).toHaveCSS("opacity", "1");
   await page.keyboard.press("Tab");
   await expect(
@@ -1343,7 +1344,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
     "[data-slot='chart-order-toolbar-actions']",
   );
   const orderToolbarButtons = orderToolbar.getByRole("button");
-  await expect(orderToolbarButtons).toHaveCount(7);
+  await expect(orderToolbarButtons).toHaveCount(6);
   for (const button of await orderToolbarButtons.all()) {
     await expect(button).toHaveCSS("height", "28px");
   }
@@ -2320,7 +2321,7 @@ test("chart clinical panels collapse independently without unmounting their cont
   await soapPanel.hover();
   await expect(soapCollapseButton).toHaveCSS("opacity", "1");
   await page.mouse.move(0, 0);
-  await page.getByRole("button", { name: "SOAP 저장" }).focus();
+  await page.getByRole("button", { name: "S/O 추가" }).focus();
   await tabBackwardTo(page, soapCollapseButton, 2);
   await expect(soapCollapseButton).toBeFocused();
   await expect(soapCollapseButton).toHaveCSS("opacity", "1");
@@ -6177,6 +6178,7 @@ test("chart diagnosis panel omits comment and plan text areas", async ({
 test("chart SOAP editor keeps one BlockNote document with a fixed formatting toolbar", async ({
   page,
 }) => {
+  await routePristineKongSoap(page);
   await page.goto(kongScenarioUrl);
 
   const soapDocument = page.getByLabel("SOAP 블록 문서");
@@ -6199,7 +6201,7 @@ test("chart SOAP editor keeps one BlockNote document with a fixed formatting too
   await expect(toolbar).toBeVisible();
   await expect(page.locator(".bn-formatting-toolbar")).toHaveCount(0);
 });
-test("chart SOAP manual save persists through route-backed reload", async ({
+test("chart SOAP autosave persists through route-backed reload", async ({
   page,
 }) => {
   const initialSoapResponse = page.waitForResponse(
@@ -6239,18 +6241,6 @@ test("chart SOAP manual save persists through route-backed reload", async ({
   expect(autosavedSoapResponse.request().postDataJSON()?.editorCapability).toBe("media_table_v1");
   await expect(soapDocument).toContainText(savedText);
 
-  const manualSaveResponse = page.waitForResponse((response) => {
-    const request = response.request();
-    return (
-      request.method() === "PATCH" &&
-      response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
-      request.postDataJSON()?.mode === "manual_save"
-    );
-  });
-  await page.getByRole("button", { name: "SOAP 저장" }).click();
-  const manuallySavedResponse = await manualSaveResponse;
-  expect(manuallySavedResponse.ok()).toBe(true);
-  expect(manuallySavedResponse.request().postDataJSON()?.editorCapability).toBe("media_table_v1");
   await expect(page.getByTestId("chart-soap-status")).toContainText(
     /작성중|자동저장됨/,
   );
@@ -6373,6 +6363,7 @@ test("chart SOAP keeps default and diagnosis-system input isolated across save a
   test.setTimeout(60_000);
   let storedBlockDocument: unknown;
   let revision = 0;
+  let diagnosisWrites = 0;
   const buildSoapNote = () => ({
     id: "soap-kong-260501",
     encounterId: kongEncounterId,
@@ -6420,7 +6411,51 @@ test("chart SOAP keeps default and diagnosis-system input isolated across save a
     },
   );
 
+  await page.route("**/api/workspaces/clair-demo/chart/diagnoses**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        json: { ok: true, status: 200, diagnoses: [], assessments: [], version: "v1" },
+      });
+      return;
+    }
+    diagnosisWrites += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: { ok: true, status: 200, diagnoses: [], assessments: [], version: "v2" },
+    });
+  });
+
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        systems: [{ id: "system-digestive", name: "소화기", count: 1 }],
+        diagnoses: [],
+        nextCursor: null,
+      },
+    });
+  });
+
   await page.goto(kongScenarioUrl);
+  const addTrigger = page.getByRole("button", { name: "S/O 추가" });
+  await addTrigger.click();
+  const picker = page.getByRole("dialog", { name: "S/O 추가" });
+  await picker.getByRole("checkbox", { name: "소화기 진단계통" }).check();
+  const scopeSave = page.waitForResponse((response) =>
+    response.request().method() === "PATCH" &&
+    response.url().includes("/chart/soap-notes") &&
+    response.request().postDataJSON()?.mode === "autosave",
+  );
+  await picker.getByRole("button", { name: "추가 (1)" }).click();
+  expect((await scopeSave).ok()).toBe(true);
+  expect(diagnosisWrites).toBe(0);
+
   const defaultText = `default-scope-${Date.now()}`;
   const systemText = `digestive-scope-${Date.now()}`;
   const getFirstParagraph = () =>
@@ -6441,12 +6476,13 @@ test("chart SOAP keeps default and diagnosis-system input isolated across save a
     expect((await autosave).ok()).toBe(true);
   };
 
+  await page.getByRole("tab", { name: "기본 S/O", exact: true }).click();
   await typeAndWaitForAutosave(defaultText);
   await page.getByRole("tab", { name: "소화기", exact: true }).click();
   await expect(page.getByLabel("SOAP 블록 문서")).not.toContainText(defaultText);
   await expect(
-    page.getByText("주관적 · 보호자 진술", { exact: true }),
-  ).toBeVisible();
+    page.getByLabel("SOAP 블록 문서").locator('[data-content-type="soapSection"]'),
+  ).toHaveCount(0);
 
   await expect(page.getByLabel("SOAP 블록 문서").locator(".ProseMirror-selectednode")).toHaveCount(0);
   await expect(page.getByLabel("SOAP 블록 문서").locator('[contenteditable="true"]').first()).not.toBeFocused();
@@ -6461,6 +6497,352 @@ test("chart SOAP keeps default and diagnosis-system input isolated across save a
   await expect(page.getByLabel("SOAP 블록 문서")).toContainText(systemText);
   await expect(page.getByLabel("SOAP 블록 문서")).not.toContainText(defaultText);
 });
+
+test("chart SOAP adds empty scopes together, retains their text when diagnosis arrives, and resets picker state", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  let storedBlockDocument: unknown;
+  let soapRevision = 0;
+  let storedDiagnoses: Array<Record<string, unknown>> = [];
+  let diagnosisWrites = 0;
+
+  await page.route("**/api/workspaces/clair-demo/chart/soap-notes**", async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        json: {
+          ok: true,
+          status: 200,
+          soapNote: {
+            id: "soap-kong-260501",
+            encounterId: kongEncounterId,
+            authorUserId: "user-vet-suji",
+            ...kongSoapFields,
+            blockDocument: storedBlockDocument,
+            status: "autosaved",
+            autosavedAt: `2026-09-03T10:00:${String(soapRevision).padStart(2, "0")}.000Z`,
+            createdAt: "2026-05-01T09:40:00+09:00",
+            updatedAt: `2026-09-03T10:00:${String(soapRevision).padStart(2, "0")}.000Z`,
+          },
+        },
+      });
+      return;
+    }
+
+    const input = request.postDataJSON() as { blockDocument: unknown };
+    storedBlockDocument = input.blockDocument;
+    soapRevision += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        auditRecorded: true,
+        soapNote: {
+          id: "soap-kong-260501",
+          encounterId: kongEncounterId,
+          authorUserId: "user-vet-suji",
+          ...kongSoapFields,
+          blockDocument: storedBlockDocument,
+          status: "autosaved",
+          autosavedAt: `2026-09-03T10:00:${String(soapRevision).padStart(2, "0")}.000Z`,
+          createdAt: "2026-05-01T09:40:00+09:00",
+          updatedAt: `2026-09-03T10:00:${String(soapRevision).padStart(2, "0")}.000Z`,
+        },
+      },
+    });
+  });
+
+  await page.route("**/api/workspaces/clair-demo/chart/diagnoses**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        json: { ok: true, status: 200, diagnoses: storedDiagnoses, assessments: storedDiagnoses, version: "v1" },
+      });
+      return;
+    }
+
+    diagnosisWrites += 1;
+    const input = route.request().postDataJSON() as { diagnoses: Array<Record<string, unknown>> };
+    storedDiagnoses = input.diagnoses.map((diagnosis, index) => ({
+      ...diagnosis,
+      id: `diagnosis-${index + 1}`,
+      systemId: "system-respiratory",
+      systemLabel: "호흡기",
+    }));
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: { ok: true, status: 200, diagnoses: storedDiagnoses, assessments: storedDiagnoses, version: `v${diagnosisWrites + 1}` },
+    });
+  });
+
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: {
+        ok: true,
+        status: 200,
+        systems: [
+          { id: "system-digestive", name: "소화기", count: 2 },
+          { id: "system-respiratory", name: "호흡기", count: 1 },
+          { id: "system-musculoskeletal", name: "근골격계", count: 1 },
+          { id: "system-endocrine", name: "내분비", count: 1 },
+        ],
+        diagnoses: [{
+          catalogId: "dx-bronchitis",
+          masterId: "master-bronchitis",
+          masterRevision: 1,
+          name: "기관지염",
+          synonyms: [],
+          system: { id: "system-respiratory", name: "호흡기" },
+          diseaseGroup: { id: "group-respiratory", name: "호흡기 질환" },
+        }],
+        nextCursor: null,
+      },
+    });
+  });
+
+  await page.goto(kongScenarioUrl);
+  const addTrigger = page.getByRole("button", { name: "S/O 추가" });
+  await addTrigger.click();
+  const picker = page.getByRole("dialog", { name: "S/O 추가" });
+  const search = picker.getByRole("textbox", { name: "진단계통 검색" });
+  await expect(search).toBeFocused();
+  await search.fill("근골격계");
+  await picker.getByRole("checkbox", { name: "근골격계 진단계통" }).check();
+  await page.keyboard.press("Escape");
+  await expect(picker).toBeHidden();
+  await expect(addTrigger).toBeFocused();
+
+  await addTrigger.click();
+  await expect(picker.getByRole("textbox", { name: "진단계통 검색" })).toHaveValue("");
+  await expect(picker.getByRole("checkbox", { name: "근골격계 진단계통" })).not.toBeChecked();
+  await picker.getByRole("checkbox", { name: "소화기 진단계통" }).check();
+  await picker.getByRole("checkbox", { name: "호흡기 진단계통" }).check();
+  const scopeSave = page.waitForResponse((response) =>
+    response.request().method() === "PATCH" &&
+    response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
+    response.request().postDataJSON()?.mode === "autosave",
+  );
+  await picker.getByRole("button", { name: "추가 (2)" }).click();
+  expect((await scopeSave).ok()).toBe(true);
+  expect(diagnosisWrites).toBe(0);
+  expect(soapRevision).toBe(1);
+
+  const persistedScopes = (storedBlockDocument as {
+    scopes: Array<{ scopeKey: string; systemId?: string; blocks: Array<Record<string, unknown>> }>;
+  }).scopes;
+  expect(persistedScopes.map((scope) => scope.scopeKey)).toEqual([
+    "default",
+    "system:system-digestive",
+    "system:system-respiratory",
+  ]);
+  expect(persistedScopes.slice(1).map((scope) => scope.blocks)).toEqual([
+    [expect.objectContaining({ type: "paragraph", content: [], children: [] })],
+    [expect.objectContaining({ type: "paragraph", content: [], children: [] })],
+  ]);
+
+  await addTrigger.click();
+  await expect(picker.getByRole("checkbox", { name: "호흡기 진단계통" })).toBeDisabled();
+  await picker.getByRole("checkbox", { name: "내분비 진단계통" }).check();
+  await picker.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(addTrigger).toBeFocused();
+  await addTrigger.click();
+  await expect(picker.getByRole("textbox", { name: "진단계통 검색" })).toHaveValue("");
+  await expect(picker.getByRole("checkbox", { name: "내분비 진단계통" })).not.toBeChecked();
+  await picker.getByRole("button", { name: "취소", exact: true }).click();
+
+  await page.getByRole("tab", { name: "호흡기", exact: true }).click();
+  const systemEditor = page.getByLabel("SOAP 블록 문서").locator('.bn-block-content[data-content-type="paragraph"]').first();
+  const systemText = `manual-tab-${Date.now()}`;
+  const textSave = page.waitForResponse((response) =>
+    response.request().method() === "PATCH" &&
+    response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
+    response.request().postDataJSON()?.mode === "autosave",
+  );
+  await systemEditor.click();
+  await page.keyboard.type(systemText);
+  expect((await textSave).ok()).toBe(true);
+
+  const diagnosisPanel = page.getByLabel("진단명 관리");
+  await diagnosisPanel.getByLabel("진단명 검색").fill("기관지염");
+  await page.getByRole("option", { name: /기관지염/ }).click();
+  await expect(page.getByRole("tab", { name: "호흡기", exact: true })).toHaveCount(1);
+  expect(diagnosisWrites).toBe(1);
+  await page.getByRole("tab", { name: "호흡기", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(systemText);
+
+  await page.reload();
+  await expect(page.getByRole("tab", { name: "호흡기", exact: true })).toHaveCount(1);
+  await page.getByRole("tab", { name: "호흡기", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(systemText);
+
+  await page.getByRole("button", { name: "SOAP 작업" }).click();
+  await page.getByRole("menuitem", { name: "내용 초기화" }).click();
+  const resetDialog = page.getByRole("dialog", { name: "호흡기 내용 초기화" });
+  const resetSave = page.waitForResponse((response) =>
+    response.request().method() === "PATCH" &&
+    response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
+    response.request().postDataJSON()?.mode === "autosave",
+  );
+  await resetDialog.getByRole("button", { name: "초기화" }).click();
+  expect((await resetSave).ok()).toBe(true);
+  await expect(page.getByRole("tab", { name: "호흡기", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("tab", { name: "소화기", exact: true })).toHaveCount(1);
+  await expect(page.getByLabel("SOAP 블록 문서")).not.toContainText(systemText);
+  await page.getByRole("tab", { name: "기본 S/O", exact: true }).click();
+  await expect(page.getByLabel("SOAP 블록 문서")).toContainText(kongSoapFields.subjective);
+});
+
+test("chart SOAP starts empty and reveals overflow tabs with keyboard navigation", async ({ page }) => {
+  test.setTimeout(60_000);
+  const systems = Array.from({ length: 10 }, (_, index) => ({
+    id: `overflow-system-${index + 1}`,
+    name: `진단계통 ${String(index + 1).padStart(2, "0")} 긴 이름`,
+    count: 1,
+  }));
+  let storedBlockDocument: unknown;
+  let soapPatches = 0;
+  let diagnosisWrites = 0;
+  const soapNote = () => ({
+    id: "soap-kong-260501",
+    encounterId: kongEncounterId,
+    authorUserId: "user-vet-suji",
+    subjective: "",
+    objective: "",
+    assessment: "",
+    plan: "",
+    blockDocument: storedBlockDocument,
+    status: "autosaved",
+    autosavedAt: "2026-09-03T10:00:00.000Z",
+    createdAt: "2026-05-01T09:40:00+09:00",
+    updatedAt: "2026-09-03T10:00:00.000Z",
+  });
+
+  await page.route("**/api/workspaces/clair-demo/chart/soap-notes**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        json: { ok: true, status: 200, soapNote: soapNote() },
+      });
+      return;
+    }
+    const input = route.request().postDataJSON() as { blockDocument: unknown };
+    storedBlockDocument = input.blockDocument;
+    soapPatches += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: { ok: true, status: 200, auditRecorded: true, soapNote: soapNote() },
+    });
+  });
+  await page.route("**/api/workspaces/clair-demo/chart/diagnoses**", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        json: { ok: true, status: 200, diagnoses: [], assessments: [], version: "v1" },
+      });
+      return;
+    }
+    diagnosisWrites += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: { ok: true, status: 200, diagnoses: [], assessments: [], version: "v2" },
+    });
+  });
+  await page.route("**/chart/diagnosis-catalog**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      json: { ok: true, status: 200, systems, diagnoses: [], nextCursor: null },
+    });
+  });
+
+  await page.goto(kongScenarioUrl);
+  const editor = page.getByLabel("SOAP 블록 문서");
+  await expect(editor.locator('[data-content-type="soapSection"]')).toHaveCount(0);
+  await expect(editor.locator('.bn-block-content[data-content-type="paragraph"]').first()).toBeVisible();
+  await page.waitForTimeout(800);
+  expect(soapPatches).toBe(0);
+
+  const picker = page.getByRole("dialog", { name: "S/O 추가" });
+  await page.getByRole("button", { name: "S/O 추가" }).click();
+  for (const system of systems) {
+    await picker.getByRole("checkbox", { name: `${system.name} 진단계통` }).check();
+  }
+  const scopeSave = page.waitForResponse((response) =>
+    response.request().method() === "PATCH" &&
+    response.url().includes("/api/workspaces/clair-demo/chart/soap-notes") &&
+    response.request().postDataJSON()?.mode === "autosave",
+  );
+  await picker.getByRole("button", { name: `추가 (${systems.length})` }).click();
+  expect((await scopeSave).ok()).toBe(true);
+  expect(diagnosisWrites).toBe(0);
+  expect(soapPatches).toBe(1);
+
+  const tablist = page.getByRole("tablist", { name: "진단계통 탭" });
+  const shell = tablist.locator("xpath=../../..");
+  const more = page.getByRole("button", { name: "숨긴 진단계통 더보기" });
+  await page.setViewportSize({ width: 1280, height: 1080 });
+  await expect(more).toBeVisible();
+  await more.click();
+  await expect(page.getByText("숨긴 진단계통", { exact: true })).toBeVisible();
+  const lastLabel = systems[systems.length - 1]!.name;
+  const lastMenuItem = page.getByRole("menuitemradio", { name: lastLabel, exact: true });
+  await lastMenuItem.click();
+  await expect(lastMenuItem).toHaveCount(0);
+  const lastTab = page.getByRole("tab", { name: lastLabel, exact: true });
+  await expect(lastTab).toHaveAttribute("aria-selected", "true");
+  await expect(lastTab).toBeFocused();
+  const fullyVisible = async () => lastTab.evaluate((element) => {
+    const viewport = element.parentElement?.parentElement;
+    if (!viewport) return false;
+    const bounds = viewport.getBoundingClientRect();
+    const tab = element.getBoundingClientRect();
+    return tab.left >= bounds.left - 1 && tab.right <= bounds.right + 1;
+  });
+  await expect.poll(fullyVisible).toBe(true);
+
+  const viewport = tablist.locator("xpath=..");
+  await viewport.evaluate((element) => {
+    const node = element as HTMLElement;
+    node.scrollLeft = 0;
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await more.click();
+  await lastMenuItem.click();
+  await expect(lastTab).toBeFocused();
+  await expect.poll(fullyVisible).toBe(true);
+
+  await lastTab.press("Home");
+  const firstTab = page.getByRole("tab", { name: "기본 S/O", exact: true });
+  await expect(firstTab).toHaveAttribute("aria-selected", "true");
+  await expect(firstTab).toBeFocused();
+  await firstTab.press("End");
+  await expect(lastTab).toHaveAttribute("aria-selected", "true");
+  await expect(lastTab).toBeFocused();
+  await expect.poll(fullyVisible).toBe(true);
+
+  const trackWidth = await tablist.evaluate((element) => element.scrollWidth);
+  await shell.evaluate((element, width) => {
+    const node = element as HTMLElement;
+    node.style.flex = `0 0 ${width}px`;
+    node.style.width = `${width}px`;
+    node.style.maxWidth = `${width}px`;
+  }, trackWidth + 2);
+  await expect(more).toHaveCount(0);
+});
+
 test("chart diagnosis search recommends, adds, marks, and removes session diagnoses", async ({
   page,
 }) => {

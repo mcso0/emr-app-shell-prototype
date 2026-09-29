@@ -61,7 +61,6 @@ import {
   CdsActionsCheckIcon,
   CdsActionsRefreshCcwIcon,
   CdsActionsRotateCcwIcon,
-  CdsActionsSaveIcon,
   CdsActionsTrash2Icon,
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
@@ -113,6 +112,7 @@ import {
   type EmrRowActionMenuItem,
 } from "@/components/emr/row-action-menu";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -270,9 +270,11 @@ import {
   areSoapBlockDocumentsEqual,
   buildLegacySoapSystemId,
   buildSystemSoapScopeKey,
+  createEmptySoapParagraphBlock,
   createSoapBlockDocumentV2,
+  getFreeformSoapDocumentText,
   getSoapDocumentScope,
-  hasMeaningfulSoapScopeContent,
+  hasMeaningfulSoapBlockDocumentContent,
   replaceSoapDocumentScope,
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
@@ -908,8 +910,6 @@ const getSoapSystemLabel = (diagnosis: Diagnosis) =>
     ? diagnosis.systemLabel
     : getDiagnosisSystemLabel(diagnosis);
 
-const SOAP_VISIBLE_SYSTEM_TAB_COUNT = 3;
-
 type DiagnosisCatalogItem = AssessmentClassificationCatalogItem;
 
 type EditableDiagnosis = ChartAssessmentDiagnosis;
@@ -939,6 +939,7 @@ const getDiagnosisSearchResults = (
     soapNote?.objective,
     soapNote?.assessment,
     soapNote?.plan,
+    getFreeformSoapDocumentText(soapNote?.blockDocument),
   ]
     .filter(Boolean)
     .join(" ");
@@ -3157,7 +3158,7 @@ const hasSavedSoapContent = (soapNote?: SoapNote | null) =>
       soapNote.assessment,
       soapNote.plan,
     ].some((value) => Boolean(value?.trim())),
-  );
+  ) || hasMeaningfulSoapBlockDocumentContent(soapNote?.blockDocument);
 
 function getSoapSystemIdentities(diagnoses: Diagnosis[]) {
   const identities = new Map<string, { systemId: string; systemLabel: string }>();
@@ -4395,6 +4396,8 @@ function SoapPanel({
   actorHeaders,
   collapseContentId,
   diagnoses,
+  diagnosisCatalogStatus,
+  diagnosisSystems,
   encounterId,
   chartId,
   loading,
@@ -4411,6 +4414,8 @@ function SoapPanel({
   actorHeaders?: Record<string, string>;
   collapseContentId: string;
   diagnoses: Diagnosis[];
+  diagnosisCatalogStatus: AssessmentClassificationCatalogStatus;
+  diagnosisSystems: AssessmentClassificationCatalogPage["systems"];
   encounterId: string;
   chartId?: string;
   loading: boolean;
@@ -4427,6 +4432,10 @@ function SoapPanel({
   const [amendmentReason, setAmendmentReason] = useState("");
   const [amendmentDraft, setAmendmentDraft] = useState("");
   const [amendmentDialogOpen, setAmendmentDialogOpen] = useState(false);
+  const [systemPickerOpen, setSystemPickerOpen] = useState(false);
+  const [systemSearch, setSystemSearch] = useState("");
+  const [selectedSystemIds, setSelectedSystemIds] = useState<string[]>([]);
+  const systemPickerTriggerRef = useRef<HTMLButtonElement>(null);
   const isSigned = soapNote?.status === "signed" || soapNote?.status === "amended";
   const writeDisabled = parentWriteDisabled || !chartId || (isSigned && !amendmentReason);
   const [soapDocument, setSoapDocument] = useState<SoapBlockDocumentV2>(() =>
@@ -4456,15 +4465,10 @@ function SoapPanel({
       string,
       { id: string; label: string; systemId: string }
     >();
-    for (const identity of diagnosisSystemIdentities) {
-      const id = buildSystemSoapScopeKey(identity.systemId);
-      tabs.set(id, { id, label: identity.systemLabel, systemId: identity.systemId });
-    }
     for (const scope of soapDocument.scopes) {
       if (
         scope.scope !== "system" ||
-        !scope.systemId ||
-        !hasMeaningfulSoapScopeContent(scope)
+        !scope.systemId
       ) {
         continue;
       }
@@ -4474,26 +4478,24 @@ function SoapPanel({
         systemId: scope.systemId,
       });
     }
+    for (const identity of diagnosisSystemIdentities) {
+      const id = buildSystemSoapScopeKey(identity.systemId);
+      const legacyLabelAlreadyPresent = identity.systemId.startsWith("legacy-label:") &&
+        Array.from(tabs.values()).some((tab) => tab.label === identity.systemLabel);
+      if (!tabs.has(id) && !legacyLabelAlreadyPresent) {
+        tabs.set(id, { id, label: identity.systemLabel, systemId: identity.systemId });
+      }
+    }
     return Array.from(tabs.values());
   }, [diagnosisSystemIdentities, soapDocument.scopes]);
-  const visibleSystemTabs = diagnosisSystemTabs.slice(
-    0,
-    SOAP_VISIBLE_SYSTEM_TAB_COUNT,
-  );
-  const overflowSystemTabs = diagnosisSystemTabs.slice(
-    SOAP_VISIBLE_SYSTEM_TAB_COUNT,
-  );
   const resolvedActiveSoapId =
     activeSoapId === SOAP_DEFAULT_SCOPE_KEY ||
     diagnosisSystemTabs.some((tab) => tab.id === activeSoapId)
       ? activeSoapId
       : SOAP_DEFAULT_SCOPE_KEY;
-  const activeInOverflow = overflowSystemTabs.some(
-    (tab) => tab.id === resolvedActiveSoapId,
-  );
   const soapTabItems = [
     { value: SOAP_DEFAULT_SCOPE_KEY, label: "기본 S/O" },
-    ...visibleSystemTabs.map((tab) => ({
+    ...diagnosisSystemTabs.map((tab) => ({
       value: tab.id,
       label: tab.label,
     })),
@@ -4504,8 +4506,46 @@ function SoapPanel({
   const activeScope = getSoapDocumentScope(soapDocument, resolvedActiveSoapId);
   const editorContent = (activeScope?.blocks ??
     (activeSystemTab
-      ? createSystemSoapTemplateBlocks(activeSystemTab.label)
+      ? createSystemSoapTemplateBlocks()
       : createLegacySoapTemplateBlocks(soapNote))) as ChartSoapPartialBlock[];
+  const existingSystemIds = useMemo(
+    () => {
+      const legacyDiagnosisLabels = new Set(
+        diagnosisSystemIdentities
+          .filter((identity) => identity.systemId.startsWith("legacy-label:"))
+          .map((identity) => identity.systemLabel.toLocaleLowerCase("ko-KR")),
+      );
+      return new Set([
+        ...diagnosisSystemIdentities.map((identity) => identity.systemId),
+        ...diagnosisSystems.flatMap((system) =>
+          legacyDiagnosisLabels.has(system.name.toLocaleLowerCase("ko-KR"))
+            ? [system.systemId ?? system.id]
+            : [],
+        ),
+        ...soapDocument.scopes.flatMap((scope) =>
+          scope.scope === "system" && scope.systemId ? [scope.systemId] : [],
+        ),
+      ]);
+    },
+    [diagnosisSystemIdentities, diagnosisSystems, soapDocument.scopes],
+  );
+  const filteredDiagnosisSystems = useMemo(() => {
+    const query = systemSearch.trim().toLocaleLowerCase("ko-KR");
+    return diagnosisSystems.filter((system) =>
+      !query || system.name.toLocaleLowerCase("ko-KR").includes(query),
+    );
+  }, [diagnosisSystems, systemSearch]);
+  const canAddSystemScopes = !writeDisabled && !loading && !readError &&
+    diagnosisCatalogStatus === "ready";
+  const handleSystemPickerOpenChange = (open: boolean) => {
+    setSystemPickerOpen(open);
+    if (open) {
+      setSystemSearch("");
+      setSelectedSystemIds([]);
+    } else {
+      requestAnimationFrame(() => systemPickerTriggerRef.current?.focus({ preventScroll: true }));
+    }
+  };
 
   const coordinator = useMemo(
     () =>
@@ -4659,7 +4699,7 @@ function SoapPanel({
         locallyEditedRef.current = true;
         coordinator.change(mergeActiveScope(blocks));
       } else {
-        coordinator.hydrate(soapDocumentRef.current);
+        coordinator.hydrate(mergeActiveScope(blocks));
       }
     },
     [coordinator, mergeActiveScope],
@@ -4677,11 +4717,59 @@ function SoapPanel({
     [coordinator, mergeActiveScope, writeDisabled],
   );
 
+  const addSelectedSystemScopes = () => {
+    if (!canAddSystemScopes) return;
+
+    const currentDocument = soapDocumentRef.current;
+    const addedSystemIds = new Set([
+      ...existingSystemIds,
+      ...diagnosisSystemIdentities.map((identity) => identity.systemId),
+      ...currentDocument.scopes.flatMap((scope) =>
+        scope.scope === "system" && scope.systemId ? [scope.systemId] : [],
+      ),
+    ]);
+    let nextDocument = currentDocument;
+    let firstAddedScopeKey: string | null = null;
+    let addedCount = 0;
+
+    for (const selectedSystemId of selectedSystemIds) {
+      const system = diagnosisSystems.find(
+        (candidate) => (candidate.systemId ?? candidate.id) === selectedSystemId,
+      );
+      if (!system || addedSystemIds.has(selectedSystemId)) continue;
+
+      const scopeKey = buildSystemSoapScopeKey(selectedSystemId);
+      nextDocument = replaceSoapDocumentScope({
+        blocks: [createEmptySoapParagraphBlock()],
+        document: nextDocument,
+        scopeKey,
+        systemId: selectedSystemId,
+        systemLabel: system.name,
+      });
+      addedSystemIds.add(selectedSystemId);
+      firstAddedScopeKey ??= scopeKey;
+      addedCount += 1;
+    }
+
+    if (nextDocument === currentDocument) {
+      handleSystemPickerOpenChange(false);
+      return;
+    }
+
+    soapDocumentRef.current = nextDocument;
+    setSoapDocument(nextDocument);
+    setActiveSoapId(firstAddedScopeKey ?? SOAP_DEFAULT_SCOPE_KEY);
+    locallyEditedRef.current = true;
+    coordinator.change(nextDocument);
+    setSelectedSystemIds([]);
+    setSystemSearch("");
+    handleSystemPickerOpenChange(false);
+    toast.success(`${addedCount}개 진단계통 탭을 추가했습니다.`);
+  };
+
   const confirmReset = () => {
     if (writeDisabled) return;
-    const resetBlocks = activeSystemTab
-      ? createSystemSoapTemplateBlocks(activeSystemTab.label)
-      : createLegacySoapTemplateBlocks(null);
+    const resetBlocks = [createEmptySoapParagraphBlock()];
     const nextDocument = replaceSoapDocumentScope({
       blocks: resetBlocks,
       document: soapDocumentRef.current,
@@ -4695,7 +4783,7 @@ function SoapPanel({
     setEditorVersion((current) => current + 1);
     setResetDialogOpen(false);
     toast.success(
-      `${activeSystemTab?.label ?? "기본 SOAP"} 템플릿으로 초기화했습니다.`,
+      `${activeSystemTab?.label ?? "기본 S/O"} 내용을 초기화했습니다.`,
     );
   };
 
@@ -4754,14 +4842,19 @@ function SoapPanel({
             panelId="soap"
           />
           <ChartPanelIconButton label="패널 확대 준비 중" disabled />
-          <ChartPanelIconButton
-            label="SOAP 저장"
-            disabled={writeDisabled}
-            iconSize="md"
-            onClick={() => coordinator.saveNow()}
+          <Button
+            ref={systemPickerTriggerRef}
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-label="S/O 추가"
+            title="S/O 추가"
+            disabled={!canAddSystemScopes}
+            className="size-7 rounded-lg text-[var(--clair-color-atomic-neutral-900)] hover:!text-[var(--clair-color-atomic-neutral-900)] disabled:opacity-50 [&_svg]:!size-4"
+            onClick={() => handleSystemPickerOpenChange(true)}
           >
-            <CdsActionsSaveIcon />
-          </ChartPanelIconButton>
+            <CdsActionsPlusIcon />
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -4783,7 +4876,7 @@ function SoapPanel({
                 onClick={() => setResetDialogOpen(true)}
               >
                 <CdsActionsRotateCcwIcon data-icon="inline-start" />
-                기본 템플릿으로 초기화
+                내용 초기화
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem className="h-8" disabled>
@@ -4796,45 +4889,15 @@ function SoapPanel({
 
       <div
         data-slot="chart-soap-toolbar"
-        className="relative z-20 flex h-11 min-h-11 shrink-0 items-stretch border-b border-[var(--emr-border-default)] px-3"
+        className="relative z-20 flex h-[45px] min-h-[45px] shrink-0 items-stretch border-b border-[var(--emr-border-default)] px-3"
       >
         <div className="relative z-20 flex min-w-0 flex-1 items-stretch gap-2.5">
           <ChartLineTabGroup
-            aria-label="SOAP 분류"
+            aria-label="진단계통 탭"
             items={soapTabItems}
             value={resolvedActiveSoapId}
             onValueChange={setActiveSoapId}
           />
-          {overflowSystemTabs.length ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label="SOAP 더보기"
-                aria-pressed={activeInOverflow}
-                className={cn(
-                  "inline-flex h-full shrink-0 items-center gap-1 px-2 emr-text-body font-semibold outline-none transition-colors hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50",
-                  activeInOverflow
-                    ? "text-foreground"
-                    : "text-muted-foreground",
-                )}
-              >
-                더보기
-                <Badge variant="outline" className="ml-1 px-1.5 text-[10px]">
-                  {overflowSystemTabs.length}
-                </Badge>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
-                {overflowSystemTabs.map((tab) => (
-                  <DropdownMenuItem
-                    key={tab.id}
-                    className="h-8 cursor-pointer"
-                    onClick={() => setActiveSoapId(tab.id)}
-                  >
-                    {tab.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
         </div>
       </div>
 
@@ -4914,7 +4977,12 @@ function SoapPanel({
         </div>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]">
+      <div
+        id="chart-soap-editor-panel"
+        role="tabpanel"
+        aria-label={activeSystemTab?.label ?? "기본 S/O"}
+        className="flex min-h-0 flex-1 flex-col bg-[var(--emr-surface-panel)]"
+      >
         <span className="sr-only" aria-live="polite">
           {activeStatusText}
         </span>
@@ -4935,14 +5003,85 @@ function SoapPanel({
 
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <EmrConfirmDialogContent
-          title={`${activeSystemTab?.label ?? "기본 SOAP"} 템플릿으로 초기화`}
-          description="현재 탭의 주관적, 객관적, 평가, 계획 내용을 빈 템플릿으로 바꾸고 자동저장합니다. 다른 탭의 내용은 유지됩니다."
+          title={`${activeSystemTab?.label ?? "기본 S/O"} 내용 초기화`}
+          description="현재 탭의 내용만 비우고 자동저장합니다. 탭과 다른 진단계통의 내용은 유지됩니다."
           cancelLabel="취소"
           confirmLabel="초기화"
           confirmDisabled={writeDisabled}
           onCancel={() => setResetDialogOpen(false)}
           onConfirm={confirmReset}
         />
+      </Dialog>
+      <Dialog
+        open={systemPickerOpen}
+        onOpenChange={handleSystemPickerOpenChange}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>S/O 추가</DialogTitle>
+            <DialogDescription>
+              추가할 진단계통을 선택해주세요. 여러 개 선택할 수 있어요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            <CdsActionsSearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              autoFocus
+              aria-label="진단계통 검색"
+              className="pl-9"
+              placeholder="진단계통 검색"
+              value={systemSearch}
+              onChange={(event) => setSystemSearch(event.target.value)}
+            />
+          </div>
+          <div
+            aria-label="진단계통 선택"
+            className="max-h-72 overflow-y-auto rounded-lg border border-[var(--emr-border-default)]"
+            role="group"
+          >
+            {filteredDiagnosisSystems.length ? filteredDiagnosisSystems.map((system) => {
+              const systemId = system.systemId ?? system.id;
+              const alreadyExists = existingSystemIds.has(systemId);
+              const selected = selectedSystemIds.includes(systemId);
+              return (
+                <div
+                  key={systemId}
+                  className="flex min-h-11 items-center gap-3 border-b border-[var(--emr-border-default)] px-3 last:border-b-0"
+                >
+                  <Checkbox
+                    aria-label={`${system.name} 진단계통`}
+                    checked={selected}
+                    disabled={alreadyExists || !canAddSystemScopes}
+                    onCheckedChange={(checked) => {
+                      setSelectedSystemIds((current) => checked
+                        ? current.includes(systemId) ? current : [...current, systemId]
+                        : current.filter((id) => id !== systemId));
+                    }}
+                  />
+                  <span className="min-w-0 flex-1 truncate emr-text-body">{system.name}</span>
+                  {alreadyExists ? (
+                    <span className="shrink-0 emr-text-metadata text-muted-foreground">이미 추가됨</span>
+                  ) : null}
+                </div>
+              );
+            }) : (
+              <p className="px-3 py-8 text-center emr-text-body text-muted-foreground">
+                {diagnosisCatalogStatus === "loading"
+                  ? "진단계통을 불러오는 중입니다."
+                  : "검색 결과가 없습니다."}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => handleSystemPickerOpenChange(false)}>취소</Button>
+            <Button
+              disabled={!canAddSystemScopes || selectedSystemIds.length === 0}
+              onClick={addSelectedSystemScopes}
+            >
+              추가{selectedSystemIds.length ? ` (${selectedSystemIds.length})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
     </section>
   );
@@ -16786,7 +16925,7 @@ export function ChartContent({
                 ["assessment", "A · 평가"],
                 ["plan", "P · 계획"],
               ] as const;
-              return fields.flatMap(([field, label]) => {
+              const scalarItems = fields.flatMap(([field, label]) => {
                 const value = result.soapNote?.[field]?.trim();
                 if (!value) return [];
                 const excerpt = value.length > 2000
@@ -16794,6 +16933,16 @@ export function ChartContent({
                   : value;
                 return [{ id: `${chart.id}-${field}`, label, sourceLabel, text: excerpt }];
               });
+              const freeformText = getFreeformSoapDocumentText(result.soapNote.blockDocument);
+              const freeformExcerpt = freeformText.length > 2000
+                ? `${freeformText.slice(0, 2000)}\n[원문 일부만 삽입했습니다. 전체 내용은 원본 진료 기록에서 확인하세요.]`
+                : freeformText;
+              return [
+                ...scalarItems,
+                ...(freeformExcerpt.trim()
+                  ? [{ id: `${chart.id}-freeform`, label: "자유 서술", sourceLabel, text: freeformExcerpt }]
+                  : []),
+              ];
             },
           }];
         })
@@ -17457,6 +17606,8 @@ export function ChartContent({
                 actorHeaders={actorHeaders}
                 collapseContentId="chart-soap-panel-content"
                 diagnoses={chartDiagnosisRows}
+                diagnosisCatalogStatus={diagnosisCatalogState.status}
+                diagnosisSystems={diagnosisCatalogState.page.systems}
                 encounterId={bundle.encounter.id}
                 chartId={activeChartId}
                 loading={soapLoading}

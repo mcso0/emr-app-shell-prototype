@@ -2,6 +2,7 @@ import { BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
 
 import {
+  createEmptySoapParagraphBlock,
   createLegacySoapDocumentInput,
   defaultSoapWritingPrompts,
 } from "@/features/chart/chart-soap-document";
@@ -198,39 +199,8 @@ export function createDefaultSoapTemplateBlocks(
   ];
 }
 
-export function createSystemSoapTemplateBlocks(
-  systemLabel: string,
-): ChartSoapPartialBlock[] {
-  return [
-    createSectionBlock({
-      content: "",
-      kind: "subjective",
-      label: "주관적 · 보호자 진술",
-      systemLabel,
-      scope: "system",
-    }),
-    createSectionBlock({
-      content: "",
-      kind: "objective",
-      label: "객관적 · 신체검사 소견",
-      systemLabel,
-      scope: "system",
-    }),
-    createSectionBlock({
-      content: "",
-      kind: "assessment",
-      label: "평가 · 임상 판단",
-      systemLabel,
-      scope: "system",
-    }),
-    createSectionBlock({
-      content: "",
-      kind: "plan",
-      label: "계획 · 치료 및 추적",
-      systemLabel,
-      scope: "system",
-    }),
-  ];
+export function createSystemSoapTemplateBlocks(): ChartSoapPartialBlock[] {
+  return [createEmptySoapParagraphBlock() as ChartSoapPartialBlock];
 }
 
 export function createDefaultSoapBasicBlockTemplateBlocks(

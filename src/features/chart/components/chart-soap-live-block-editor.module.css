@@ -84,7 +84,7 @@
   width: 100%;
   min-width: 0;
   min-height: 100%;
-  padding: 16px 18px 56px 20px;
+  padding: 4px 16px 56px;
   border-radius: 0;
   font-size: 14px;
   line-height: 22px;
@@ -93,6 +93,7 @@
 .editor :global(.bn-block-outer) {
   min-width: 0;
   margin-block: 0;
+  line-height: 22px;
 }
 
 .editor :global(.bn-block) {
@@ -100,13 +101,27 @@
 }
 
 .editor :global(.bn-block-content[data-content-type="paragraph"]) {
-  min-height: 24px;
-  padding-block: 1px;
+  padding-block: 0;
+}
+
+.editor :global(.bn-inline-content) {
+  padding-inline: 0;
+}
+
+.editor :global(.bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after) {
+  color: var(--clair-color-atomic-neutral-400);
+  font-style: normal;
+  margin-inline: 0;
+}
+
+.editor :global(.bn-block-content[data-content-type="paragraph"]) {
+  min-height: 22px;
+  padding-block: 0;
 }
 
 .editor :global(.bn-inline-content) {
   min-width: 0;
-  padding-inline: 3px;
+  padding-inline: 0;
   color: var(--emr-text-primary);
   font-family: var(--bn-font-family);
   font-size: 14px;
@@ -307,31 +322,100 @@
 
 .toolbarWrap {
   position: relative;
+  display: flex;
   z-index: 3;
   flex: none;
-  padding: 8px;
+  width: 100%;
+  height: 58px;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 8px 12px;
   background: transparent;
 }
 
-.toolbar {
+.toolbarShell {
+  position: relative;
   display: flex;
-  width: 100%;
-  height: 40px;
-  min-width: 0;
+  width: max-content;
+  max-width: 100%;
+  height: 42px;
+  flex: none;
   align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-  overflow: hidden;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid var(--clair-color-atomic-neutral-100);
   border-radius: var(--clair-radius-atomic-12);
   background: var(--clair-color-atomic-neutral-50);
   padding: 4px;
 }
 
+.toolbarShell[data-overflow="true"] {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.toolbarViewport {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  height: 32px;
+  min-width: 0;
+  flex: none;
+  align-items: center;
+  overflow: hidden;
+}
+
+.toolbarShell[data-overflow="true"] .toolbarViewport {
+  width: calc(100% - 36px);
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.toolbarViewport::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar {
+  display: flex;
+  width: max-content;
+  height: 32px;
+  min-width: max-content;
+  flex: none;
+  align-items: center;
+}
+
+.toolGroup {
+  display: flex;
+  height: 32px;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolGroup + .toolGroup {
+  margin-left: 4px;
+}
+
+.toolSeparator {
+  display: block;
+  width: 1px;
+  height: 24px;
+  flex: none;
+  margin-right: 2px;
+  background: color-mix(in srgb, var(--clair-color-atomic-neutral-900) 10%, transparent);
+}
+
 .toolButton {
   position: relative;
   display: inline-flex;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
   flex: none;
   align-items: center;
   justify-content: center;
@@ -342,10 +426,20 @@
   font-family: inherit;
   font-size: 14px;
   font-weight: 600;
+  padding: 8px;
 }
 
-.toolButton:last-child {
-  margin-left: auto;
+.toolbarMore {
+  position: relative;
+  z-index: 3;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  flex: none;
+  margin-left: 4px;
+  border-radius: var(--emr-radius-control);
+  color: var(--emr-text-secondary);
+  padding: 8px;
 }
 
 .toolButton:hover:not([aria-disabled="true"]),
@@ -377,6 +471,25 @@
 
 .toolButton .menuLabel {
   display: none;
+}
+
+.toolbarFade {
+  position: absolute;
+  z-index: 2;
+  top: 5px;
+  bottom: 5px;
+  width: 20px;
+  pointer-events: none;
+}
+
+.toolbarFadeLeft {
+  left: 5px;
+  background: linear-gradient(90deg, var(--clair-color-atomic-neutral-50), transparent);
+}
+
+.toolbarFadeRight {
+  right: 41px;
+  background: linear-gradient(270deg, var(--clair-color-atomic-neutral-50), transparent);
 }
 
 .toolMenu {
@@ -429,6 +542,13 @@
   color: var(--emr-text-tertiary);
   font-size: 12px;
   padding: 8px;
+}
+
+.menuHeading {
+  margin: 2px 8px 6px;
+  color: var(--emr-text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .linkForm {

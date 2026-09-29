@@ -32,6 +32,7 @@ const toggleHeadingBlock: ChartSoapPartialBlock[] = [{
 
 type HarnessProps = {
   width: number;
+  height?: number;
   initialContent?: ChartSoapPartialBlock[];
   disabled?: boolean;
   interactiveWidth?: boolean;
@@ -44,6 +45,7 @@ type HarnessProps = {
 
 function LiveEditorHarness({
   width,
+  height = 452,
   initialContent = emptyBlock,
   disabled = false,
   interactiveWidth = false,
@@ -85,7 +87,7 @@ function LiveEditorHarness({
       {[320, 420, 566.5, 720].map((option) => <button key={option} type="button" aria-pressed={activeWidth === option} onClick={() => setActiveWidth(option)}>{option}px</button>)}
     </div> : null}
     {toggleReadOnly ? <button type="button" onClick={() => setReadOnly((current) => !current)}>읽기 전용 전환</button> : null}
-    <section className={styles.frame} style={{ width: `${activeWidth}px` }} aria-label={`${activeWidth}px SOAP 에디터 검토 프레임`} data-testid="soap-story-frame">
+    <section className={styles.frame} style={{ width: `${activeWidth}px`, height: `${height}px` }} aria-label={`${activeWidth}px SOAP 에디터 검토 프레임`} data-testid="soap-story-frame">
       <header className={styles.header}>
         <h1>Subject/Object</h1>
         <div className={styles.headerActions} aria-label="패널 작업">
@@ -150,6 +152,56 @@ export const RepresentativeReview: Story = {
   },
 };
 
+export const ReferencePanelGeometry476: Story = {
+  args: { width: 476.5, height: 373, initialContent: emptyBlock },
+  play: async ({ canvasElement }) => {
+    const frame = within(canvasElement).getByTestId("soap-story-frame");
+    const wrap = canvasElement.querySelector<HTMLElement>("[data-toolbar-wrap]");
+    const shell = canvasElement.querySelector<HTMLElement>("[data-toolbar-shell]");
+    const button = canvasElement.querySelector<HTMLElement>('[data-toolbar-control="style"]');
+    const editor = canvasElement.querySelector<HTMLElement>(".bn-editor");
+    const outerBlock = canvasElement.querySelector<HTMLElement>(".bn-block-outer");
+    const blockContent = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"]');
+    const inlineContent = canvasElement.querySelector<HTMLElement>(".bn-inline-content");
+    if (!wrap || !shell || !button || !editor || !outerBlock || !blockContent || !inlineContent) {
+      throw new Error("S/O 도구 또는 편집기 geometry 요소를 찾지 못했습니다.");
+    }
+    await expect(frame.getBoundingClientRect().width).toBe(476.5);
+    await expect(frame.getBoundingClientRect().height).toBe(373);
+    await expect(wrap.getBoundingClientRect().height).toBe(58);
+    await expect(shell.getBoundingClientRect().height).toBe(42);
+    await expect(button.getBoundingClientRect().width).toBe(32);
+    await expect(button.getBoundingClientRect().height).toBe(32);
+    await expect(getComputedStyle(editor).paddingTop).toBe("4px");
+    await expect(getComputedStyle(editor).paddingLeft).toBe("16px");
+    await expect(getComputedStyle(outerBlock).lineHeight).toBe("22px");
+    await expect(getComputedStyle(blockContent).paddingTop).toBe("0px");
+    await expect(getComputedStyle(inlineContent).paddingLeft).toBe("0px");
+    await expect(getComputedStyle(blockContent, "::after").content).toContain("S/O 내용을 입력해주세요");
+    await expect(getComputedStyle(blockContent, "::after").fontStyle).toBe("normal");
+  },
+};
+
+export const PlaceholderAfterClearing: Story = {
+  args: { width: 476.5, height: 373, initialContent: selectionBlock },
+  play: async ({ canvasElement }) => {
+    const text = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"] .bn-inline-content');
+    const editor = canvasElement.querySelector<HTMLElement>(".bn-editor");
+    const blockContent = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"]');
+    if (!text || !editor || !blockContent) throw new Error("입력 placeholder 대상 편집기를 찾지 못했습니다.");
+    await userEvent.click(text);
+    const selection = canvasElement.ownerDocument.getSelection();
+    const range = canvasElement.ownerDocument.createRange();
+    range.selectNodeContents(text);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    await userEvent.keyboard("{Backspace}");
+    await waitFor(() => expect(text.textContent).toBe(""));
+    await expect(getComputedStyle(blockContent, "::after").content).toContain("S/O 내용을 입력해주세요");
+    await expect(getComputedStyle(blockContent, "::after").fontStyle).toBe("normal");
+  },
+};
+
 export const OverflowingDocumentScrollFade: Story = {
   args: { width: 566.5, initialContent: overflowingBlocks },
   play: async ({ canvasElement }) => {
@@ -173,13 +225,32 @@ export const ResponsiveNarrow320: Story = {
     const documentBody = within(canvasElement.ownerDocument.body);
     const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
     await expect(toolbar.getBoundingClientRect().width).toBeLessThanOrEqual(320);
-    await userEvent.click(canvas.getByRole("button", { name: "도구 더보기" }));
-    const menu = documentBody.getByRole("menu", { name: "도구 더보기" });
+    await userEvent.click(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" }));
+    const menu = documentBody.getByRole("menu", { name: "가려진 서식 도구" });
     await waitFor(() => expect(menu).toBeVisible());
+    await expect(documentBody.getByRole("heading", { name: "가려진 서식 도구" })).toBeVisible();
     await expect(within(menu).getByRole("menuitem", { name: "구분선" })).toBeVisible();
+    const snapshot = Array.from(menu.querySelectorAll<HTMLElement>("[data-overflow-tool-id]"), (item) => item.dataset.overflowToolId);
+    const viewport = canvasElement.querySelector<HTMLElement>("[data-toolbar-viewport]");
+    if (!viewport) throw new Error("SOAP 도구 scroll viewport를 찾지 못했습니다.");
+    const initialFade = canvasElement.querySelector<HTMLElement>('[data-toolbar-fade="right"]');
+    if (!initialFade) throw new Error("SOAP 도구의 오른쪽 페이드를 찾지 못했습니다.");
+    const initialFadeRight = initialFade.getBoundingClientRect().right;
+    await expect(getComputedStyle(initialFade).pointerEvents).toBe("none");
+    viewport.scrollLeft = (viewport.scrollWidth - viewport.clientWidth) / 2;
+    fireEvent.scroll(viewport);
+    await waitFor(() => expect(Array.from(menu.querySelectorAll<HTMLElement>("[data-overflow-tool-id]"), (item) => item.dataset.overflowToolId)).toEqual(snapshot));
+    const leftFade = canvasElement.querySelector<HTMLElement>('[data-toolbar-fade="left"]');
+    if (!leftFade) throw new Error("SOAP 도구의 왼쪽 페이드를 찾지 못했습니다.");
+    await expect(Math.abs(leftFade.getBoundingClientRect().left - viewport.getBoundingClientRect().left)).toBeLessThanOrEqual(2);
+    await expect(Math.abs(initialFade.getBoundingClientRect().right - initialFadeRight)).toBeLessThanOrEqual(0.5);
+    viewport.scrollLeft = viewport.scrollWidth;
+    fireEvent.scroll(viewport);
+    await waitFor(() => expect(canvasElement.querySelector('[data-toolbar-fade="right"]')).toBeNull());
+    await expect(Math.abs(leftFade.getBoundingClientRect().left - viewport.getBoundingClientRect().left)).toBeLessThanOrEqual(2);
     await userEvent.keyboard("{Escape}");
     await expect(menu).not.toBeInTheDocument();
-    await expect(canvas.getByRole("button", { name: "도구 더보기" })).toHaveFocus();
+    await expect(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" })).toHaveFocus();
   },
 };
 
@@ -189,10 +260,81 @@ export const ResponsiveAllTools1000: Story = {
   args: { width: 1000, initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.queryByRole("button", { name: "도구 더보기" })).toBeNull());
+    await waitFor(() => expect(canvas.queryByRole("button", { name: "가려진 서식 도구 더보기" })).toBeNull());
     await expect(canvas.getByRole("button", { name: "표 삽입" })).toBeVisible();
     const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
-    await expect(toolbar.getBoundingClientRect().height).toBe(40);
+    await expect(toolbar.getBoundingClientRect().height).toBe(58);
+  },
+};
+
+export const OverflowThresholdDoesNotReserveMore: Story = {
+  args: { width: 1000, initialContent: emptyBlock },
+  play: async ({ canvasElement }) => {
+    const frame = within(canvasElement).getByTestId("soap-story-frame");
+    const wrap = canvasElement.querySelector<HTMLElement>("[data-toolbar-wrap]");
+    const track = canvasElement.querySelector<HTMLElement>("[data-toolbar-track]");
+    const shell = canvasElement.querySelector<HTMLElement>("[data-toolbar-shell]");
+    if (!wrap || !track || !shell) throw new Error("SOAP 도구의 overflow geometry 요소를 찾지 못했습니다.");
+    const thresholdWidth = Math.ceil(track.getBoundingClientRect().width + 36);
+    frame.style.width = `${thresholdWidth}px`;
+    await waitFor(() => expect(shell).toHaveAttribute("data-overflow", "false"));
+    await expect(within(canvasElement).queryByRole("button", { name: "가려진 서식 도구 더보기" })).toBeNull();
+    frame.style.width = `${thresholdWidth - 1}px`;
+    await waitFor(() => expect(shell).toHaveAttribute("data-overflow", "true"));
+    await expect(within(canvasElement).getByRole("button", { name: "가려진 서식 도구 더보기" })).toBeVisible();
+  },
+};
+
+export const PartialOverflowToolActivation: Story = {
+  args: { width: 320, initialContent: emptyBlock },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const viewport = canvasElement.querySelector<HTMLElement>("[data-toolbar-viewport]");
+    const target = canvas.getByRole("button", { name: "번호 목록" });
+    if (!viewport) throw new Error("SOAP 도구 scroll viewport를 찾지 못했습니다.");
+    const initialTarget = target.getBoundingClientRect();
+    const initialViewport = viewport.getBoundingClientRect();
+    const visibleRight = initialViewport.right;
+    const targetContentRight = initialTarget.right + viewport.scrollLeft;
+    const partialScrollLeft = Math.max(0, targetContentRight - (visibleRight + 16));
+    viewport.scrollLeft = partialScrollLeft;
+    fireEvent.scroll(viewport);
+    await waitFor(() => {
+      const targetBounds = target.getBoundingClientRect();
+      expect(targetBounds.left).toBeLessThan(visibleRight);
+      expect(targetBounds.right).toBeGreaterThan(visibleRight);
+    });
+    const before = canvas.getByTestId("soap-document-json").textContent;
+    const partialBounds = target.getBoundingClientRect();
+    fireEvent.mouseDown(target, { button: 0, clientX: visibleRight - 8, clientY: partialBounds.top + partialBounds.height / 2 });
+    fireEvent.mouseUp(target, { button: 0, clientX: visibleRight - 8, clientY: partialBounds.top + partialBounds.height / 2 });
+    fireEvent.click(target, { button: 0, clientX: visibleRight - 8, clientY: partialBounds.top + partialBounds.height / 2 });
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"numberedListItem"'));
+    await expect(canvas.getByTestId("soap-document-json").textContent).not.toBe(before);
+    await waitFor(() => expect(target.getBoundingClientRect().right).toBeLessThanOrEqual(viewport.getBoundingClientRect().right + 1));
+  },
+};
+
+export const ToolbarRovingKeyboard: Story = {
+  args: { width: 1000, initialContent: emptyBlock },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
+    const styleButton = canvas.getByRole("button", { name: "문단 스타일" });
+    const bulletButton = canvas.getByRole("button", { name: "글머리 목록" });
+    const initialDocument = canvas.getByTestId("soap-document-json").textContent;
+    const tabStops = toolbar.querySelectorAll('button[data-toolbar-control][tabindex="0"]');
+    await expect(tabStops).toHaveLength(1);
+    styleButton.focus();
+    await userEvent.keyboard("{ArrowRight}");
+    await expect(bulletButton).toHaveFocus();
+    await expect(canvas.getByTestId("soap-document-json").textContent).toBe(initialDocument);
+    await userEvent.keyboard(" ");
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"bulletListItem"'));
+    await expect(canvas.getByRole("textbox")).toHaveFocus();
+    styleButton.focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(within(canvasElement.ownerDocument.body).getByRole("menu", { name: "style" })).toBeVisible();
   },
 };
 
@@ -210,10 +352,13 @@ export const FormattingAndHistory: Story = {
     await userEvent.click(canvas.getByRole("button", { name: "굵게" }));
     await expect(canvas.getByRole("button", { name: "굵게" })).toHaveAttribute("aria-pressed", "true");
     await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"bold":true');
+    await waitFor(() => expect(canvas.getByRole("textbox")).toHaveFocus());
+    await expect(selection?.toString()).toBe("보호자 진술과 진료 소견을 직접 기록합니다.");
     await userEvent.click(canvas.getByRole("button", { name: "실행 취소" }));
     await waitFor(() => expect(canvas.getByTestId("soap-document-json")).not.toHaveTextContent('"bold":true'));
     await userEvent.click(canvas.getByRole("button", { name: "다시 실행" }));
     await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"bold":true');
+    await waitFor(() => expect(canvas.getByRole("textbox")).toHaveFocus());
   },
 };
 
@@ -238,7 +383,7 @@ export const BoundedTableInsertion: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const documentBody = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "도구 더보기" }));
+    await userEvent.click(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" }));
     await userEvent.click(await documentBody.findByRole("menuitem", { name: "표 삽입" }));
     await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"table"'));
     await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"tableContent"');
@@ -263,7 +408,7 @@ export const PriorRecordInsertion: Story = {
     const recordButton = canvas.queryByRole("button", { name: "기록 삽입" });
     if (recordButton) await userEvent.click(recordButton);
     else {
-      await userEvent.click(canvas.getByRole("button", { name: "도구 더보기" }));
+      await userEvent.click(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" }));
       await userEvent.click(documentBody.getByRole("menuitem", { name: "기록 삽입" }));
     }
     await userEvent.click(documentBody.getByRole("menuitem", { name: /이전 진료 평가/ }));
