@@ -9,7 +9,7 @@ source_docs:
   - "docs/engineering/data-model/home-operations-work-status-read-model.md"
 dependencies:
   - "HOME-PR-012"
-updated: "2026-09-22"
+updated: "2026-09-29"
 ---
 
 # Home Workspace And Personal Work
@@ -209,3 +209,41 @@ Local verification: 27 Home browser tests passed, including a 1896×1254 regress
 ### Release Authorization — 2026-09-22
 
 After local implementation review, 승욱 explicitly requested final verification, commit, push, PR, merge to origin/main and approved deployment for this Home slice. Release scope is the reviewed hospital status board/list implementation and its focused tests/docs; unrelated primary-checkout WIP, DB/data changes and production settings remain excluded. The exact candidate, Release Check, Preview, rollback deployment and scoped smoke will be recorded before merge. Required smoke: `/login` plus Home access; authenticated synthetic Home interaction only when an existing authorized session is available, otherwise report the authentication boundary separately.
+
+## Responsive Toolbar Follow-up — 2026-09-29
+
+Approval: 승욱 accepted the static toolbar study and requested source inspection,
+implementation, focused verification, commit/push/PR, origin/main merge and
+Production deployment. The delivery slice starts from clean origin/main
+`5e7bc001d9ae8393762b356515a71ae8212f2f08` on `codex/home-toolbar-scroll`.
+The primary checkout's Home and unrelated WIP remains untouched.
+
+Scope and plan:
+
+- Home-local single-row toolbar, 20/8/6px group/control/icon spacing.
+- Scrolling category/personal tabs with edge fades, mouse drag click suppression,
+  native touch/wheel, keyboard focus and selected-item reveal.
+- Container-width (<900px) compact actions with retained names and state hints.
+- Preserve inline search in both views; width 200–280px, clear/close/Escape/focus.
+- Retain existing filter/date/query/navigation/data contracts. No new dependency,
+  shared component API, DB migration, remote business write or sidebar collapse.
+- Focused `tests/home.spec.ts`, full local release preflight, exact manual Release
+  Check, Ready Preview and scoped smoke before the approved main release.
+- Rollback baseline: previous main `5e7bc001`; revert the scoped PR if necessary.
+
+Local verification:
+
+- All 22 Home browser tests passed, including exact toolbar widths 900/899px,
+  20px separation, inline search, sub-600px action panning/portal hints, drag
+  without selection, keyboard edge fades and focused-tab reveal after resize.
+- Full ESLint passed with five existing unrelated script warnings; TypeScript
+  and production build passed. The existing docs-reader tracing warning remains.
+- Docs references, Korean UX copy, secret scan and diff whitespace passed.
+- Read-only source review identified resize/focus clipping and small-width hint
+  clipping; both were corrected and included in the passing tests.
+- Source APIs, data, shared component defaults and primary-checkout WIP unchanged.
+
+Delivery: the exact candidate, manual Release Check, Ready Preview, merge,
+Production smoke and rollback deployment are recorded in the scoped PR. The
+request explicitly authorizes this work branch's direct main release; no fixed
+staging alias or branch is included.
