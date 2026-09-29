@@ -63,3 +63,20 @@ the badge is 42×28px with a 15px/22px label.
 Merging to `main` is a Production release. Prepare the exact candidate,
 verification, scoped smoke, and rollback packet before requesting any remaining
 Production approval.
+
+## 2026-09-29 Optical Alignment Follow-up
+
+승욱 approved the proposed Home date-label correction and requested commit,
+push, PR, merge to `origin/main`, and Production deployment in the same chat.
+
+- The 40px button and 32px date-label line box were centered; the rendered
+  date glyphs appeared lower than the adjacent chevrons.
+- Apply `translateY(calc(-1 * var(--clair-spacing-2)))` only to the existing
+  Home hospital date-label span. The computed offset is -2px.
+- Storybook readback: date-label center moved from 36px to 34px; button,
+  chevron-button, and today-badge centers stayed at 36px. The trigger remains
+  218×40px and the badge remains 42×28px.
+- Home and sidebar Storybook checks passed (2/2). The sidebar date label has
+  no transform. Date-picker opening and Escape closing were verified locally.
+- The exact follow-up PR records release checks, Preview readiness, Production
+  smoke, and the prior Ready deployment or merge-revert rollback candidate.
