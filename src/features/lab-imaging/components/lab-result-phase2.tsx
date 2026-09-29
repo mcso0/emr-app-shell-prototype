@@ -57,13 +57,13 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
           <label htmlFor={`lab-finding-${row.id}`}>검사 소견</label>
         </div>
         <div className="p-2.5">
-          <Textarea id={`lab-finding-${row.id}`} className="h-[76px] min-h-[76px] max-h-[76px] resize-none overflow-y-auto bg-card emr-text-dense" maxLength={4096}
+          <Textarea id={`lab-finding-${row.id}`} className="h-[76px] min-h-[76px] max-h-[76px] resize-none overflow-y-auto bg-card p-[7px] !text-[12px] !leading-4 !tracking-[0.3px] font-medium shadow-[var(--clair-shadow-xs)]" maxLength={4096}
             disabled={phase2 !== null && !phase2.canEdit}
             value={finding} onChange={event => onFindingChange(event.target.value)}
             placeholder="항목별 검사 소견을 입력하세요. 결과표의 저장 버튼으로 저장됩니다." />
         </div>
       </div>
-      <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--emr-border-subtle)] opacity-60" /></div>
+      <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>
       <LabResultAttachmentArea key={`${result.workspaceId}:${result.id}:${row.id}`} result={result} row={row} attachments={attachments} enabled={phase2 !== null} canEdit={phase2?.canEdit ?? false} refresh={refresh} />
     </div>
   </div>;
@@ -223,9 +223,9 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
         </AttachmentFileViewport>
       </div>
     </> : <div className="px-2.5 py-2.5">
-      {canEdit ? <button type="button" disabled={!enabled} className="flex h-[78px] w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-black-alpha-4)] emr-text-dense text-muted-foreground hover:bg-[var(--emr-state-hover)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed" onClick={() => fileInput.current?.click()}>
+      {canEdit ? <button type="button" disabled={!enabled} className="flex h-[76px] w-full items-center justify-center gap-1 rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--emr-state-hover)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed" onClick={() => fileInput.current?.click()}>
         <CdsActionsUploadIcon className="size-3" aria-hidden="true" /><span>첨부자료 업로드</span>
-      </button> : <div className="flex h-[78px] items-center justify-center rounded-md border border-dashed border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-black-alpha-4)] emr-text-dense text-muted-foreground">첨부 자료가 없습니다.</div>}
+      </button> : <div className="flex h-[76px] items-center justify-center rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground">첨부 자료가 없습니다.</div>}
     </div>}
     {preview ? <LabAttachmentViewer item={preview} url={attachmentPath(result.workspaceId, result.id, preview.id)} canDelete={canEdit}
       onClose={() => setPreview(null)} onDownload={() => window.open(attachmentPath(result.workspaceId, result.id, preview.id, true), "_blank", "noopener")}

@@ -14,7 +14,7 @@ This document records the accepted design and the scoped implementation decision
 
 ## Sources And Precedence
 
-1. User corrections accepted through V5: existing ghost button; bounded attachment height; distinct card/list upload states; full fill and no gradient at 100%; no staff-notice shadow.
+1. User corrections accepted through V5 and the 2026-09-29 AS-IS → TO-BE follow-up below: existing ghost button; bounded attachment height; distinct card/list upload states; full fill and no gradient at 100%; no staff-notice shadow; transparent default upload surface.
 2. [Figma section 28532:118340](https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28532-118340), including annotations. Main specimen: `28532:127712` (`listHeader`, width 1246px).
 3. Accepted V5 standalone reconstruction. Its multiple expanded examples demonstrate states; they do not request multiple simultaneously expanded product rows. Report navigation, demo sliders, specimen filenames, percentages, avatars, and toolbar mock actions are not product requirements.
 4. Existing data, permission, persistence, and interaction contracts remain authoritative where the design does not define behavior.
@@ -26,8 +26,8 @@ The temporary review URL is not a durable source dependency. V5 artifact SHA-256
 | Area | Final rule |
 | --- | --- |
 | 소견/첨부 entry | Reuse `Button variant="ghost" size="xs"` for `+ 검사소견 및 첨부자료`. Preserve shared hover, focus, disabled, and disclosure semantics. Eligibility still needs an authoritative mapping. |
-| Empty attachment | 78px upload surface. Keep the permission-aware read-only empty state. |
-| Finding | 76px textarea with internal text scrolling; preserve controlled `row.note`, maximum length, and explicit result-save behavior. |
+| Empty attachment | 76px upload surface, transparent by default and gray on hover. Keep the permission-aware read-only empty state. |
+| Finding | 76px textarea with 12/16px text, 7px internal padding plus border, and input shadow; preserve controlled `row.note`, maximum length, and explicit result-save behavior. |
 | Cards | Grow with content up to two rendered rows, then scroll only the file viewport. |
 | List | Grow up to six 32px rows with 4px gaps, then scroll only file rows. Title, tools, and column header remain outside that scrolling area. |
 | Overflow cue | Show the bottom fade only when actual overflow exists and more content remains below. Remove it at the bottom and after shrink. |
@@ -46,7 +46,7 @@ CHG identifiers match the earlier comparison report. Code observations use the p
 | CHG-001 | Name cell contains an outline `검사 소견 펼치기` button; six columns. | Add a leading 24px disclosure column. Keep a single expanded row, stable row IDs, and keyboard activation. |
 | CHG-002 | `LabResultValueControl` renders a coded select or value input. | Eligible narrative-only orders use the existing ghost button in the value cell. **Do not infer eligibility from `text`**; text values and `row.note` are separate fields. |
 | CHG-003 | Detail contains finding and attachments, with no staff-notice source. | Optional full-width staff notice above the columns; no shadow. Use the selected order instruction mapped from fulfillment source metadata; omit blank content. |
-| CHG-004 | Finding and file viewport are both fixed at 144px. | Apply the approved 76px / 78px / two-card-row / six-list-row rules above. |
+| CHG-004 | Finding and file viewport are both fixed at 144px. | Apply the approved 76px / two-card-row / six-list-row rules above. |
 | CHG-005 | Detail padding/gap 16px; no center divider. | Feature-local spacing, label slots, and a 1px center divider matching the reference below. |
 | CHG-006 | Text buttons `카드 / 목록 / ＋ 추가`; hover/focus/touch visibility already exists. | CDS icon controls, selected-view state, and count. Preserve accessible labels and visibility behavior. Bulk download remains disabled; per-file actions stay available. |
 | CHG-007 | Cards 105px tall, 64px thumbnail, 8px grid gap. | Match reference card proportions, black-alpha surface, and 10px grid gap. |
@@ -56,7 +56,7 @@ CHG identifiers match the earlier comparison report. Code observations use the p
 | CHG-011 | Upload task has no percent; text/character loading state. | Real measured progress, rotating icon, and separate list/card designs. Preserve prepare/upload/finalize/cancel cleanup. |
 | CHG-012 | Image or `PDF`/`FILE` text; image failure has no fallback. | Supported image/PDF/other icons and explicit image fallback. Video requires a separate capability decision. |
 | CHG-013 | Result title already copies a scoped result link; table has no order-target link. | Table `링크 복사` must restore the relevant result/order and target its table. Reuse existing deep-link contract after checking target restoration. |
-| CHG-014 | Result input/select uses 14/20 text. | Local control text 12/16 with 0.3px tracking; retain 28px control height and existing input/validation semantics. Row and finding text stay 14/20. |
+| CHG-014 | Result input/select uses 14/20 text. | Local input/select and finding text 12/16 with 0.3px tracking; retain 28px result control height and existing input/validation semantics. Row text stays 14/20. |
 
 ## Reference Geometry And Tokens
 
@@ -64,17 +64,20 @@ Values below describe a **1246px component**, not a fixed page width. Avoid a sc
 
 | Surface | Reference |
 | --- | --- |
-| Outer group | Padding 12px vertical / 16px horizontal, radius 12px; toolbar 28px, 12px gap before table. |
+| Outer group | Padding 12px vertical / 16px horizontal, radius 12px, no outer border; toolbar 28px, 12px gap before table. |
+| Toolbar | Three outline actions in order: 기본 간격 82px / 수정이력 79px / 링크 복사 82px; height 28px, gap 8px, radius 8px, icon 12px. Save/retry/status and reset/reload overflow remain below the group. |
+| Group title | Fold 24px with 14px icon and 6px radius; title 14/20 medium; fold/title gap 8px, title/count gap 6px, count/status gap 8px. Count height 20px, horizontal padding 6px, radius 6px, black-alpha 4%. |
 | Table | 1214px surface; padding 4px top / 8px other sides; radius 8px; inner row width 1198px. |
 | Columns | Disclosure 24, item 280, result 240, unit 120, range 254, judgment 120, actor 160px. Range remains the flexible column. |
-| Header / row | 36px header / 40px default row. Preserve the existing density selector rather than forcing every density to 40px. |
+| Header / row | 36px header / 40px default row. Body item/unit inset 14px; other body and header text inset 10px. Result input width 220px; additional result information remains in the item cell. Preserve the existing density selector rather than forcing every density to 40px. |
+| Row groups | Header divider 1px; expanded parent has no lower border. Expanded detail has a 1px lower border only when another row follows; final detail has 6px lower corners. Only one row opens at a time. |
 | Detail | Padding top/x 10px, bottom 16px; 12px gap between optional staff block and columns. Two 572.5px sections, 17px separator slot, 8px gaps. |
-| Detail contents | 28px label slot; 10px content padding. Finding inner width 552.5px at the reference size; center separator 1px. |
+| Detail contents | 28px label slot; 10px content padding. Finding/upload both 76px tall and 552.5px wide at reference size; visible box gap 53px, bottom inset 26px. Center separator 1px black-alpha 6%, inset 8px, 108px tall for an empty detail without staff notice. |
 | Staff body | 36px single-line reference height, 8px horizontal inset, 1px border, radius 8px, no shadow. Recommended long-content behavior: wrap and grow without hiding instructions. |
 | Card | 130.625 × 108.552px; padding 8px, radius 6px, grid gap 10px. Thumbnail 114.625 × 64.552px, aspect ratio 190:107, radius 3px. |
 | Card text / actor | 12/16px, tracking 0.3px; actor 20 × 20px, bottom/right 8px. Shared Avatar has no assumed `xs` API; apply supported local sizing. |
 | List | 32px rows, 4px gaps, padding 4px vertical / 8px horizontal. Columns: flexible filename, 72px size, 88px time, 48px actor, 24px menu; 8px gaps. Header 24px with 10/14px text. |
-| Typography | Existing Pretendard; row/finding 14/20px, tracking 0.196px; labels/control text 12/16px, tracking 0.3px. |
+| Typography | Existing Pretendard; row 14/20px, tracking 0.196px; finding/labels/control text 12/16px, tracking 0.3px. |
 
 At reference dimensions, two card rows occupy approximately **227.104px** (`2 × 108.552 + 10`) and six list rows **212px** (`6 × 32 + 5 × 4`). These are **file viewport limits**, excluding labels, tools, padding, and the list header. Header plus 4px separation makes the list content 240px before outer padding.
 
@@ -127,6 +130,12 @@ Investigation during LAB-PR-004 resolved the existing-field and transport mappin
 
 ## Preserved Product Contracts
 
-Keep result save/reload and revision conflicts, numeric/coded/text values, qualifiers, device flags, `instrument_no_result`, clinical range/judgment semantics, retest eligibility, overall finding and history. Their omission from a Figma specimen does not authorize removal. `차트에 복사하기` remains a separate unavailable action, not an alias for link copying.
+Keep result save/reload and revision conflicts, numeric/coded/text values, qualifiers, device flags, `instrument_no_result`, clinical range/judgment semantics, retest eligibility, overall finding and history. Their omission from a Figma specimen does not authorize removal. The unavailable `차트에 복사하기` placeholder is omitted from the approved three-action toolbar; chart copying remains an unimplemented capability.
+
+## AS-IS → TO-BE Follow-Up — 2026-09-29
+
+The user approved the detailed HTML comparison and authorized TDD, commit, push, PR, main merge, and production deployment after passing verification. Sources are Figma toolbar [28532:127678](https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28532-127678), table [28532:131185](https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28532-131185), and expanded section [28574:126129](https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28574-126129).
+
+The geometry above supersedes the earlier V5 empty-upload height and finding typography. Only the normal-range column absorbs extra width; the lab table reserves no scrollbar gutter when it does not need one. Feature-scoped CSS leaves shared table defaults intact. Existing attachment presentation, transport, permission and persistence contracts remain unchanged.
 
 Keep workspace/result/row isolation, `canEdit`, server permission checks and RPC ownership checks, protected preview/download, deletion confirmation, upload metadata/byte validation, and cleanup. Supported types remain JPEG/PNG/WebP/PDF/CSV/TXT; existing limits are 20MiB PDF and 5MiB for other supported files. This design does not authorize schema, RLS, storage policy, or real-data changes.

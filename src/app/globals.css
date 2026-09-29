@@ -344,6 +344,49 @@
     scrollbar-gutter: stable;
   }
 
+  /* Result-sheet geometry is local to lab; shared table defaults stay intact. */
+  .lab-result-sheet-order-group > section {
+    border: 0;
+    border-radius: 12px;
+  }
+
+  .lab-result-sheet-order-group > section > div:first-child > div:last-child {
+    gap: 8px;
+  }
+
+  .lab-result-sheet-order-group > section > div:first-child > div:first-child > button {
+    border-radius: 6px;
+  }
+
+  .lab-result-sheet-order-group > section > div:first-child > div:first-child > div {
+    gap: 6px;
+  }
+
+  .lab-result-sheet-order-group > section > div:first-child [data-slot="badge"] {
+    padding-inline: 6px;
+    border-radius: 6px;
+    background-color: var(--clair-color-atomic-black-alpha-4);
+  }
+
+  .lab-result-sheet-order-group > section > div:first-child [data-slot="badge"] + span {
+    margin-left: 2px;
+  }
+
+  .lab-result-sheet-table-anchor .emr-table-scroll-container {
+    scrollbar-gutter: auto;
+  }
+
+  .lab-result-sheet-table-anchor [data-column-id="referenceRange"] {
+    width: auto !important;
+    min-width: 254px !important;
+    max-width: none !important;
+  }
+
+  .lab-result-sheet-table-anchor tbody [data-column-id="analyteName"] [data-emr-table-content],
+  .lab-result-sheet-table-anchor tbody [data-column-id="unit"] [data-emr-table-content] {
+    padding-left: 14px;
+  }
+
   [data-emr-pinned-table-viewport="true"] [data-slot="table-container"] {
     background-color: var(--emr-surface-workspace);
     background-image: linear-gradient(

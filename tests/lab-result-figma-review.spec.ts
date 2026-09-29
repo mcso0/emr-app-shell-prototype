@@ -6,7 +6,7 @@ const rowId = "figma-review-row";
 const resultId = "figma-review-result";
 const instruction = "합성 검수용 직원 전달사항입니다.";
 
-async function openReview(page: Page, count: number, canEdit = true) {
+async function openReview(page: Page, count: number, canEdit = true, rowCount = 1) {
   await page.addInitScript(({ key, workspaceId }) => {
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검수 공간", representativeName: "합성 관리자",
@@ -22,7 +22,7 @@ async function openReview(page: Page, count: number, canEdit = true) {
   const result = { ok: true, workspaceId, resultId, orderId: workItem.orderId,
     encounterId: workItem.encounterId, workItemId: workItem.id, entryWriteRevision: 0,
     resultDefinitionSnapshot: { schemaVersion: 1 },
-    rows: [{ id: rowId, analyteName: "합성 항목", value: null, resultValueKind: "text", judgment: "not_judged", note: "" }] };
+    rows: Array.from({ length: rowCount }, (_, i) => ({ id: i === 0 ? rowId : `${rowId}-${i}`, analyteName: i === 0 ? "합성 항목" : `합성 항목 ${i + 1}`, value: null, resultValueKind: "text", judgment: "not_judged", note: "" })) };
   const attachments = Array.from({ length: count }, (_, index) => ({ id: `review-file-${index}`, rowId,
     name: index === 0 ? "긴-첨부자료-파일명-겹침-검수-문서.pdf" : `합성첨부-${index}.txt`,
     mimeType: index === 0 ? "application/pdf" : "text/plain", size: 1024 * (index + 1),
@@ -81,7 +81,7 @@ test("accepted empty detail geometry preserves plain staff notice and text resul
   const finding = detail.getByRole("textbox", { name: "검사 소견", exact: true });
   const drop = detail.getByRole("button", { name: "첨부자료 업로드", exact: true });
   await expect(finding).toHaveCSS("height", "76px");
-  await expect(drop).toHaveCSS("height", "78px");
+  await expect(drop).toHaveCSS("height", "76px");
   const a = await finding.boundingBox(); const b = await drop.boundingBox();
   expect(Math.abs(a!.y - b!.y)).toBeLessThanOrEqual(1);
   await expect(detail.getByTestId("lab-attachment-overflow-fade")).toHaveCount(0);
@@ -351,4 +351,88 @@ test("attachment container resize recomputes two-column row height and overflow"
   await area.evaluate(el => { el.style.width = ""; });
   await expect.poll(() => grid.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(" ").length)).toBe(4);
   await expect(detail.getByTestId("lab-attachment-overflow-fade")).toHaveCount(0);
+});
+
+
+// Approved 2026-09-29 AS-IS → TO-BE follow-up: rendered outcomes, not CSS snapshots.
+test("layout follow-up: toolbar has three aligned actions and save/reload remain reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 1782, height: 1254 });
+  await openReview(page, 0);
+  const group = page.getByTestId("lab-result-table-anchor").locator("xpath=ancestor::section[1]");
+  const actions = group.locator(":scope > div").first().locator(":scope > div").last();
+  await expect(actions.getByRole("button")).toHaveCount(3);
+  await expect(actions.getByRole("button")).toHaveText(["기본 간격", "수정이력", "링크 복사"]);
+  const buttons = await actions.getByRole("button").all();
+  for (const button of buttons) expect((await button.boundingBox())!.height).toBe(28);
+  const boxes = await Promise.all(buttons.map(button => button.boundingBox()));
+  expect(boxes[1]!.x - boxes[0]!.x - boxes[0]!.width).toBeCloseTo(8, 0);
+  expect(boxes[2]!.x - boxes[1]!.x - boxes[1]!.width).toBeCloseTo(8, 0);
+  await expect(page.getByTestId("lab-result-save-button")).toBeVisible();
+  expect((await page.getByTestId("lab-result-save-button").boundingBox())!.y).toBeGreaterThan((await group.boundingBox())!.y + (await group.boundingBox())!.height);
+  await page.getByRole("button", { name: "검사 결과 추가 작업", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "입력 초기화·재조회", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "수정이력", exact: true })).toBeEnabled();
+});
+
+test("layout follow-up: only normal range grows and both table edges retain eight pixels", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1100 });
+  await openReview(page, 0);
+  const anchor = page.getByTestId("lab-result-table-anchor");
+  const group = anchor.locator("xpath=ancestor::section[1]");
+  await page.setViewportSize({ width: Math.round(1600 + 1246 - (await group.boundingBox())!.width), height: 1100 });
+  await expect.poll(async () => (await group.boundingBox())!.width).toBe(1246);
+  const table = page.getByRole("table", { name: "임상병리 검사 결과 입력" });
+  const container = anchor.locator('[data-slot="table-container"]');
+  const tableBox = (await table.boundingBox())!; const containerBox = (await container.boundingBox())!;
+  expect(tableBox.width).toBeCloseTo(1198, 0);
+  expect(tableBox.x - containerBox.x).toBeCloseTo(8, 0);
+  expect(containerBox.x + containerBox.width - tableBox.x - tableBox.width).toBeCloseTo(8, 0);
+  const widths = () => table.locator('thead [data-column-id]').evaluateAll(nodes => nodes.map(n => n.getBoundingClientRect().width));
+  const baseline = await widths();
+  [24, 280, 240, 120, 254, 120, 160].forEach((width, i) => expect(baseline[i]).toBeCloseTo(width, 0));
+  const input = page.getByRole("textbox", { name: "합성 항목 결과값", exact: true });
+  expect((await input.boundingBox())!.width).toBeCloseTo(220, 0);
+  const viewport = page.viewportSize()!;
+  await page.setViewportSize({ width: viewport.width + 143, height: viewport.height });
+  const wide = await widths();
+  [0,1,2,3,5,6].forEach(i => expect(wide[i]).toBeCloseTo(baseline[i], 0));
+  expect(wide[4] - baseline[4]).toBeCloseTo(143, 0);
+});
+
+test("layout follow-up: empty upload is transparent until hover and matches finding geometry", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1782, height: 1254 });
+  const { detail } = await openReview(page, 0);
+  const finding = detail.getByRole("textbox", { name: "검사 소견", exact: true });
+  const upload = detail.getByRole("button", { name: "첨부자료 업로드", exact: true });
+  await page.mouse.move(0,0);
+  await expect(upload).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const a = (await finding.boundingBox())!; const b = (await upload.boundingBox())!;
+  expect(a.height).toBe(76); expect(b.height).toBe(76);
+  expect(a.y).toBe(b.y); expect(a.width).toBeCloseTo(b.width, 0);
+  expect(b.x - a.x - a.width).toBeCloseTo(53, 0);
+  expect((await detail.boundingBox())!.y + (await detail.boundingBox())!.height - a.y - a.height).toBeCloseTo(26, 0);
+  await expect(finding).toHaveCSS("font-size", "12px");
+  await expect(finding).toHaveCSS("line-height", "16px");
+  await upload.hover();
+  await expect(upload).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await upload.focus(); await expect(upload).toBeFocused();
+  await detail.screenshot({ path: testInfo.outputPath("aligned-empty-hover.png") });
+});
+
+test("layout follow-up: dividers belong to complete row groups and disclosure remains single-open", async ({ page }) => {
+  const { row, detail } = await openReview(page, 0, true, 2);
+  await expect(row).toHaveCSS("border-bottom-width", "0px");
+  const expanded = detail.locator("xpath=ancestor::tr[1]");
+  await expect(expanded).toHaveCSS("border-bottom-width", "1px");
+  const nextRow = page.getByTestId(`lab-result-row-${rowId}-1`);
+  await nextRow.getByRole("button", { name: /소견.*펼치기/ }).click();
+  await expect(detail).toHaveCount(0);
+  await expect(row.getByRole("button", { name: /소견.*펼치기/ })).toHaveAttribute("aria-expanded", "false");
+  const lastDetail = page.getByTestId(`lab-result-detail-${rowId}-1`);
+  await expect(lastDetail).toBeVisible();
+  await expect(nextRow).toHaveCSS("border-bottom-width", "0px");
+  await expect(lastDetail.locator("xpath=ancestor::tr[1]")).toHaveCSS("border-bottom-width", "0px");
+  await nextRow.getByRole("button", { name: /소견.*접기/ }).press("Enter");
+  await expect(lastDetail).toHaveCount(0);
 });
