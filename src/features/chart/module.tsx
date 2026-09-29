@@ -2109,9 +2109,9 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
         onOpenChange={(open) =>
           setVitalDialogEncounterId(open ? bundle.encounter.id : null)
         }
-        onSaved={(vital) => {
-          latestVitals.replaceVital(vital);
-          toast.success("오늘 바이탈을 저장했어요.");
+        onSaved={async (vital) => {
+          await latestVitals.replaceVital(vital);
+          toast.success("바이탈을 저장했어요.");
         }}
         vitalSettings={latestVitals.vitalSettings}
         workspaceId={workspaceId}

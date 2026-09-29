@@ -12,11 +12,12 @@ related_work:
   - CHART-PR-015
   - CHART-PR-016
   - CHART-PR-023
+  - CHART-PR-040
   - HOSPITAL-ADMIN-LIVE-PR-018
   - HOSPITAL-ADMIN-LIVE-PR-019
   - HOSPITAL-ADMIN-LIVE-PR-024
   - RECEPTION-LIVE-PR-017
-last_updated: 2026-09-27
+last_updated: 2026-09-29
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -64,7 +65,46 @@ The chart context bar can opt into a vital write action for its selected waiting
 
 Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit, disabling a preset, or removing it from the workspace list never rewrites or deletes historical rows. Re-adding the preset makes the same stored values visible again. The workspace setting `input_required` governs entry validation for enabled fields. All five product presets have `required_in_workspace = false`, and new workspaces start with all five enabled and `input_required = false`. The reception and chart server boundaries read current workspace settings before writes. The reception RPC validates required fields even if no measurement row would otherwise be created; a deferred measurement trigger validates final row values for chart writes and reception upserts. Historical rows remain readable, and an edit is checked against current requirements.
 
-## Compatibility Snapshot
+## Vital history dialog candidate (CHART-PR-040)
+
+The approved desktop dialog is implemented locally. Migration
+`20260929103000_patient_vital_history_dialog.sql` is a local candidate, **not an
+applied remote migration**. Existing live readers/writers retain the contracts
+above until this migration is applied through a separately authorized rollout.
+
+- `clair_list_patient_vital_history` resolves the patient from the selected
+  workspace-scoped encounter and returns 100 measurement rows per cursor page,
+  grouped in the client by Seoul measurement date. Cancelled and mismatched
+  encounter/patient links are excluded. Original author and timestamps are returned.
+- `clair_write_patient_vital_measurement` creates a new record with a client-generated
+  UUID for safe retry, or corrects an exact record ID using `expectedUpdatedAt`.
+  Corrections preserve `measured_at`, original author, and encounter linkage.
+  A revision mismatch fails with 409; it never silently overwrites another edit.
+- Both API and RPC enforce the existing patient:view / vital:write permissions;
+  write still requires clinical/admin eligibility and an active same-patient
+  waiting or consultation context. Historical completed encounters can be corrected
+  through that active context, but arbitrary patients/workspaces cannot be targeted.
+- New writes append a transactional `patient.vital_measured` / `patient.vital_corrected`
+  audit event with before/after snapshots. The audit constraint extension preserves
+  all existing event types. The public audit helper rejects these two new internal
+  events; only the checked measurement writer inserts them. Existing public audit
+  event behavior and grants remain unchanged. Legacy encounter upsert RPCs remain unchanged.
+- The latest reader retains its raw `vital` record and adds `summary`: most recent
+  non-null values independently for each stored field, with `measuredAtByField`.
+  Only the context-bar display uses the summary. Record editing uses raw values.
+  Entirely cleared values fall back to earlier values in the summary only.
+- The new writer recomputes the patient's newest non-null weight;
+  an old corrected weight cannot replace a newer compatibility snapshot.
+- Workspace units/order/visibility remain authoritative. Unrendered disabled fields
+  are preserved during correction. No physiological range thresholds are introduced.
+
+Automated tests and DB execution have not been requested for this slice. Local
+typecheck/build and compiled-component visual review are distinct from remote
+persistence proof. Current workspace `input_required` settings govern mandatory values for both new
+and corrected records. Reuse the existing client/server validator and DB deferred
+trigger. Only non-required fields may be omitted for partial repeat measurements.
+
+## Existing Compatibility Snapshot
 
 When a submitted vital includes weight, the writer updates `patients.weight_kg` for existing reception/profile compatibility. Clearing a current vital weight does not erase that patient snapshot; the latest-vital read model still renders the cleared value as unshown.
 

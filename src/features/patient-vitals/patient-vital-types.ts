@@ -13,6 +13,9 @@ export type PatientVitalMeasurement = {
   id: string;
   heartRateBpm?: number;
   measuredAt: string;
+  updatedAt?: string;
+  createdAt?: string;
+  recordedByName?: string;
   patientId: string;
   respiratoryRateRpm?: number;
   temperatureC?: number;
@@ -31,6 +34,12 @@ export type PatientVitalWriteInput = {
 export type PatientVitalDisplayItem = {
   label: string;
   value: string;
+  measurementTooltip?: string;
+};
+
+export type PatientVitalSummary = {
+  values: Partial<Record<keyof PatientVitalWriteInput, number>>;
+  measuredAtByField: Partial<Record<keyof PatientVitalWriteInput, string>>;
 };
 
 type PatientVitalDisplayMeasurement = Pick<

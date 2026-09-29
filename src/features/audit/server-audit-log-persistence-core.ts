@@ -22,6 +22,8 @@ export const liveAuditEventTypes = [
   "workspace.job_position_reactivated",
   "workspace.last_admin_change_blocked",
   "user.profile_updated",
+  "patient.vital_measured",
+  "patient.vital_corrected",
   "reception.patient_guardian_registered",
   "reception.walk_in_created",
   "reception.appointment_created",
@@ -60,6 +62,7 @@ export type LiveAuditTargetType =
   | "workspace_invitation"
   | "membership"
   | "user_profile"
+  | "patient_vital_measurement"
   | "patient"
   | "guardian"
   | "appointment"

@@ -5,6 +5,7 @@ import {
   formatPatientVitalDisplayItemsForSettings,
   type PatientVitalDisplayItem,
   type PatientVitalMeasurement,
+  type PatientVitalSummary,
 } from "@/features/patient-vitals/patient-vital-types";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import {
@@ -19,6 +20,7 @@ type PatientLatestVitalResponse =
       status: 200;
       canWriteVitals: boolean;
       vital: PatientVitalMeasurement | null;
+      summary?: PatientVitalSummary;
     }
   | { ok: false; status: number; denialReason?: string; error?: string };
 
@@ -33,17 +35,19 @@ export function usePatientLatestVitalItems({
   fallbackItems?: PatientVitalDisplayItem[];
   workspaceId: string;
 }) {
+  const scope = `${workspaceId}:${encounterId ?? ""}`;
   const { snapshot: vitalSettings, status: vitalSettingsStatus } = useWorkspaceVitalSettings({ workspaceId });
   const requestIdRef = useRef(0);
   const [result, setResult] = useState<
-    | { encounterId?: string; status: "loading" }
+    | { scope?: string; status: "loading"; vital?: PatientVitalMeasurement | null; summary?: PatientVitalSummary }
     | {
         canWriteVitals: boolean;
-        encounterId: string;
+        scope: string;
         status: "ready";
         vital: PatientVitalMeasurement | null;
+        summary?: PatientVitalSummary;
       }
-    | { encounterId?: string; status: "error" }
+    | { scope?: string; status: "error"; vital?: PatientVitalMeasurement | null; summary?: PatientVitalSummary }
   >({ status: "loading" });
 
   const requestLatestVital = useCallback(async () => {
@@ -69,77 +73,71 @@ export function usePatientLatestVitalItems({
         if (requestIdRef.current !== requestId) return;
         setResult({
           canWriteVitals: body.canWriteVitals,
-          encounterId,
+          scope,
           status: "ready",
           vital: body.vital,
+          summary: body.summary,
         });
       })
       .catch(() => {
         if (requestIdRef.current !== requestId) return;
-        setResult({ encounterId, status: "error" });
+        setResult({ scope, status: "error" });
       });
-  }, [encounterId, requestLatestVital]);
+    return () => { requestIdRef.current += 1; };
+  }, [encounterId, requestLatestVital, scope]);
 
   const refresh = useCallback(async () => {
     if (!encounterId) return;
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
-    setResult({ encounterId, status: "loading" });
+    setResult((current) => current.scope === scope
+      ? { ...current, status: "loading" }
+      : { scope, status: "loading" });
     try {
       const body = await requestLatestVital();
       if (requestIdRef.current !== requestId) return;
       setResult({
         canWriteVitals: body.canWriteVitals,
-        encounterId,
+        scope,
         status: "ready",
         vital: body.vital,
+        summary: body.summary,
       });
-    } catch {
+    } catch (error) {
       if (requestIdRef.current !== requestId) return;
-      setResult({ encounterId, status: "error" });
+      setResult((current) => ({ ...current, scope, status: "error" }));
+      throw error;
     }
-  }, [encounterId, requestLatestVital]);
+  }, [encounterId, requestLatestVital, scope]);
 
-  const replaceVital = useCallback(
-    (vital: PatientVitalMeasurement) => {
-      if (!encounterId) return;
-      setResult((current) => ({
-        canWriteVitals:
-          current.status === "ready" && current.encounterId === encounterId
-            ? current.canWriteVitals
-            : false,
-        encounterId,
-        status: "ready",
-        vital,
-      }));
-    },
-    [encounterId],
-  );
+  // Keep the existing callback contract. A corrected old row must not replace
+  // the latest summary; refresh the authoritative per-field projection.
+  const replaceVital: (vital: PatientVitalMeasurement) => Promise<void> = refresh;
 
   return useMemo(
     () => ({
       canWriteVitals:
-        result.status === "ready" && result.encounterId === encounterId
+        result.status === "ready" && result.scope === scope
           ? result.canWriteVitals
           : false,
       items:
-        result.status === "ready" && result.encounterId === encounterId
-          ? formatPatientVitalDisplayItemsForSettings(result.vital, vitalSettings)
+        result.scope === scope && result.vital !== undefined
+          ? formatLatestSummaryItems(result.summary, result.vital, vitalSettings)
           : fallbackItems
             ? orderFallbackVitalItems(fallbackItems, vitalSettings)
             : formatPatientVitalDisplayItemsForSettings(undefined, vitalSettings),
       refresh,
       replaceVital,
-      status: result.encounterId === encounterId ? result.status : "loading",
+      status: result.scope === scope ? result.status : "loading",
       vital:
-        result.status === "ready" && result.encounterId === encounterId
+        result.status === "ready" && result.scope === scope
           ? result.vital
           : null,
       vitalSettings,
       vitalSettingsStatus,
     }),
     [
-      encounterId,
+      scope,
       fallbackItems,
       refresh,
       replaceVital,
@@ -148,6 +146,28 @@ export function usePatientLatestVitalItems({
       vitalSettingsStatus,
     ],
   );
+}
+
+function formatLatestSummaryItems(
+  summary: PatientVitalSummary | undefined,
+  vital: PatientVitalMeasurement | null,
+  settings: WorkspaceVitalSettingsSnapshot,
+) {
+  const items = formatPatientVitalDisplayItemsForSettings(summary?.values ?? vital, settings);
+  const fieldsByLabel = {
+    체중: ["weightKg"], 체온: ["temperatureC"], 심박수: ["heartRateBpm"], 호흡: ["respiratoryRateRpm"],
+    혈압: ["bloodPressureSystolicMmhg", "bloodPressureDiastolicMmhg"],
+  } as const;
+  return items.map((item) => {
+    const fields = fieldsByLabel[item.label as keyof typeof fieldsByLabel] ?? [];
+    const times = fields.flatMap((field) => {
+      const time = summary?.measuredAtByField[field];
+      if (!time) return [];
+      const label = field === "bloodPressureSystolicMmhg" ? "수축기 " : field === "bloodPressureDiastolicMmhg" ? "이완기 " : "";
+      return [`${label}${new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(time))} 측정`];
+    });
+    return { ...item, measurementTooltip: times.length ? times.join(" · ") : undefined };
+  });
 }
 
 const fallbackLabelsByKey: Record<WorkspaceVitalKey, string[]> = {
