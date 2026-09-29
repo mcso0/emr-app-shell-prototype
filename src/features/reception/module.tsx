@@ -1,5 +1,7 @@
 "use client";
 
+import { parsePatientVitalDraft, getPatientVitalFieldWarnings, type PatientVitalField } from "@/features/patient-vitals/patient-vital-validation";
+
 import {
   useCallback,
   useEffect,
@@ -214,8 +216,6 @@ import type {
 import {
   fromCanonicalVitalValue,
   getEnabledWorkspaceVitalSettings,
-  getRequiredWorkspaceVitalFieldErrors,
-  toCanonicalVitalValue,
   type WorkspaceVitalKey,
   type WorkspaceVitalSettingsSnapshot,
   type WorkspaceVitalUnit,
@@ -2108,211 +2108,24 @@ const buildReceptionVitalInput = (
   fieldWarnings: ReceptionCreateVitalFieldWarnings;
   input?: ReceptionVitalMeasurementInput;
 } => {
-  const selected = new Set(draft.selectedIds);
-  const fieldErrors: ReceptionCreateVitalFieldErrors = {};
-  const fieldWarnings: ReceptionCreateVitalFieldWarnings = {};
+  const fieldsById: Record<ReceptionCreateVitalId, PatientVitalField[]> = {
+    weight: ["weightKg"], temperature: ["temperatureC"], heartRate: ["heartRateBpm"],
+    respiration: ["respiratoryRateRpm"], bloodPressure: ["bloodPressureSystolicMmhg", "bloodPressureDiastolicMmhg"],
+  };
+  const { values, fieldErrors } = parsePatientVitalDraft({
+    draft: draft.values, settings, enabledFields: draft.selectedIds.flatMap((id) => fieldsById[id]),
+  });
   const input: ReceptionVitalMeasurementInput = {};
-
-  const readPositiveNumber = (
-    key: keyof ReceptionCreateVitalDraft["values"],
-    {
-      integer = false,
-      maxValue,
-      maxDecimals,
-      precisionMessage,
-    }: {
-      integer?: boolean;
-      maxValue?: number;
-      maxDecimals?: number;
-      precisionMessage?: string;
-    } = {},
-  ) => {
-    const raw = draft.values[key].trim();
-    if (!raw) return undefined;
-    const value = Number(raw);
-
-    if (!Number.isFinite(value)) {
-      fieldErrors[key] = "숫자로 입력해 주세요.";
-      return undefined;
-    }
-    if (value <= 0) {
-      fieldErrors[key] = "0보다 크게 입력해 주세요.";
-      return undefined;
-    }
-    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(raw)) {
-      fieldErrors[key] = "숫자로 입력해 주세요.";
-      return undefined;
-    }
-    if (integer && !Number.isInteger(value)) {
-      fieldErrors[key] = "정수로 입력해 주세요.";
-      return undefined;
-    }
-    if (maxValue !== undefined && value > maxValue) {
-      fieldErrors[key] = "저장할 수 있는 범위를 넘었어요.";
-      return undefined;
-    }
-    const decimalPlaces = raw.split(".")[1]?.length ?? 0;
-    if (
-      maxDecimals !== undefined &&
-      decimalPlaces > maxDecimals &&
-      precisionMessage
-    ) {
-      fieldErrors[key] = precisionMessage;
-      return undefined;
-    }
-
-    return value;
-  };
-
-  if (selected.has("weight")) {
-    const value = readPositiveNumber("weightKg", {
-      maxDecimals: 2,
-      precisionMessage: "소수 둘째 자리까지 입력해 주세요.",
-    });
-    if (value !== undefined) {
-      const canonicalValue = toCanonicalVitalValue(
-        "weight",
-        value,
-        getReceptionVitalUnit(settings, "weight"),
-      );
-      if (canonicalValue > 9_999.99) {
-        fieldErrors.weightKg = "저장할 수 있는 범위를 넘었어요.";
-      } else {
-        input.weightKg = canonicalValue;
-      }
-    }
+  if (values.weightKg !== null) input.weightKg = values.weightKg;
+  if (values.temperatureC !== null) input.temperatureC = values.temperatureC;
+  if (values.heartRateBpm !== null) input.heartRateBpm = values.heartRateBpm;
+  if (values.respiratoryRateRpm !== null) input.respiratoryRateRpm = values.respiratoryRateRpm;
+  if (values.bloodPressureSystolicMmhg !== null && !fieldErrors.bloodPressureDiastolicMmhg) {
+    input.bloodPressure = { systolicMmhg: values.bloodPressureSystolicMmhg,
+      ...(values.bloodPressureDiastolicMmhg === null ? {} : { diastolicMmhg: values.bloodPressureDiastolicMmhg }) };
   }
-  if (selected.has("temperature")) {
-    const value = readPositiveNumber("temperatureC", {
-      maxDecimals: 1,
-      precisionMessage: "소수 첫째 자리까지 입력해 주세요.",
-    });
-    if (value !== undefined) {
-      const canonicalValue = toCanonicalVitalValue(
-        "temperature",
-        value,
-        getReceptionVitalUnit(settings, "temperature"),
-      );
-      if (canonicalValue > 999.9) {
-        fieldErrors.temperatureC = "저장할 수 있는 범위를 넘었어요.";
-      } else {
-        input.temperatureC = canonicalValue;
-      }
-    }
-  }
-  if (selected.has("heartRate")) {
-    const value = readPositiveNumber("heartRateBpm", {
-      integer: true,
-      maxValue: 2_147_483_647,
-    });
-    if (value !== undefined) input.heartRateBpm = value;
-  }
-  if (selected.has("respiration")) {
-    const value = readPositiveNumber("respiratoryRateRpm", {
-      integer: true,
-      maxValue: 2_147_483_647,
-    });
-    if (value !== undefined) input.respiratoryRateRpm = value;
-  }
-  if (selected.has("bloodPressure")) {
-    const systolicRaw = draft.values.bloodPressureSystolicMmhg.trim();
-    const diastolicRaw = draft.values.bloodPressureDiastolicMmhg.trim();
-    if (!systolicRaw && diastolicRaw) {
-      fieldErrors.bloodPressureDiastolicMmhg = "수축기를 먼저 입력해 주세요.";
-    } else if (systolicRaw) {
-      const systolic = readPositiveNumber("bloodPressureSystolicMmhg", {
-        integer: true,
-        maxValue: 2_147_483_647,
-      });
-      const diastolic = diastolicRaw
-        ? readPositiveNumber("bloodPressureDiastolicMmhg", {
-            integer: true,
-            maxValue: 2_147_483_647,
-          })
-        : undefined;
-      if (
-        systolic !== undefined &&
-        diastolic !== undefined &&
-        diastolic >= systolic
-      ) {
-        fieldErrors.bloodPressureDiastolicMmhg =
-          "수축기보다 작게 입력해 주세요.";
-      } else if (
-        systolic !== undefined &&
-        (!diastolicRaw || diastolic !== undefined)
-      ) {
-        input.bloodPressure = {
-          systolicMmhg: systolic,
-          ...(diastolic === undefined ? {} : { diastolicMmhg: diastolic }),
-        };
-      }
-    }
-  }
-
-  if (settings) {
-    Object.assign(fieldErrors, {
-      ...getRequiredWorkspaceVitalFieldErrors(settings, draft.values),
-      ...fieldErrors,
-    });
-  }
-
-  const isDogOrCat = patient?.species === "dog" || patient?.species === "cat";
-  if (isDogOrCat) {
-    const weightUnit = getReceptionVitalUnit(settings, "weight");
-    const temperatureUnit = getReceptionVitalUnit(settings, "temperature");
-    const priorWeightKg = patient?.weightKg;
-    if (
-      input.weightKg !== undefined &&
-      (input.weightKg < 0.05 ||
-        input.weightKg > 200 ||
-        (priorWeightKg !== undefined &&
-          (input.weightKg < priorWeightKg / 4 || input.weightKg > priorWeightKg * 4)))
-    ) {
-      fieldWarnings.weightKg = `기존 체중과 차이가 커요. ${weightUnit} 단위와 측정값을 확인해 주세요.`;
-    }
-    if (
-      input.temperatureC !== undefined &&
-      (input.temperatureC < 30 || input.temperatureC > 45)
-    ) {
-      fieldWarnings.temperatureC = `체온이 매우 이례적이에요. ${temperatureUnit} 단위를 확인해 주세요.`;
-    }
-    if (
-      input.heartRateBpm !== undefined &&
-      (input.heartRateBpm < 20 || input.heartRateBpm > 400)
-    ) {
-      fieldWarnings.heartRateBpm =
-        "심박수가 매우 이례적이에요. 측정값을 확인해 주세요.";
-    }
-    if (
-      input.respiratoryRateRpm !== undefined &&
-      (input.respiratoryRateRpm < 5 || input.respiratoryRateRpm > 200)
-    ) {
-      fieldWarnings.respiratoryRateRpm =
-        "호흡수가 매우 이례적이에요. 측정값을 확인해 주세요.";
-    }
-    if (
-      input.bloodPressure?.systolicMmhg !== undefined &&
-      (input.bloodPressure.systolicMmhg < 20 ||
-        input.bloodPressure.systolicMmhg > 400)
-    ) {
-      fieldWarnings.bloodPressureSystolicMmhg =
-        "수축기 혈압이 매우 이례적이에요. 측정값을 확인해 주세요.";
-    }
-    if (
-      input.bloodPressure?.diastolicMmhg !== undefined &&
-      (input.bloodPressure.diastolicMmhg < 10 ||
-        input.bloodPressure.diastolicMmhg > 300)
-    ) {
-      fieldWarnings.bloodPressureDiastolicMmhg =
-        "이완기 혈압이 매우 이례적이에요. 측정값을 확인해 주세요.";
-    }
-  }
-
-  return {
-    fieldErrors,
-    fieldWarnings,
-    input: Object.keys(input).length > 0 ? input : undefined,
-  };
+  return { fieldErrors, fieldWarnings: getPatientVitalFieldWarnings(values, patient, settings),
+    input: Object.keys(input).length > 0 ? input : undefined };
 };
 
 const walkInVitalResponseFieldMap = {
