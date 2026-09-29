@@ -197,3 +197,26 @@ App build, secret scan, docs and Korean UX copy checks also passed. Full ESLint:
 0 errors / the same 5 unrelated script warnings. Existing docs/NFT tracing and
 synthetic preview bundle-size warnings remain. Production approval will apply to
 the new exact PR candidate; no new DB migration is needed.
+
+## 2026-09-29 context-bar focus follow-up
+
+승욱 approved fixing the lingering hover appearance after closing the vital dialog,
+including commit, push, PR, origin/main merge and Production deployment.
+
+- The vital action regains focus when the Base UI dialog closes. Unconditional
+  `focus-within` on its summary previously kept the background, icon and + visible
+  even after a pointer dismissal away from the summary.
+- The vital summary now highlights on actual hover or descendant `focus-visible`.
+  The + uses hover or its own `focus-visible`; its inner control ring follows the
+  button's keyboard focus rather than an unfocusable span.
+- Preserve dialog focus restoration, keyboard access, disabled-action explanations,
+  patient/guardian section styles, data/API contracts and permissions. UI-only;
+  no dependency or DB change. Reuse the clean managed release worktree at fresh main.
+
+Local evidence: changed-file ESLint, TypeScript, build, secrets, docs, Korean UX copy
+and diff checks passed. Full ESLint has 0 errors / 5 existing unrelated warnings;
+the existing docs/NFT build warning remains. Manual local synthetic preview uses
+the actual context bar and dialog shell: pointer-close restores focus but yields
+`hover=false`, `focusWithin=true`, `focusVisible=false`, transparent background and
++ opacity 0. Actual hover and Tab/Escape both show the action; keyboard return
+retains a 2px focus ring. No automated tests or remote patient-data writes ran.
