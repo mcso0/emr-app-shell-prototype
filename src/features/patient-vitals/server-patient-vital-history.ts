@@ -59,7 +59,12 @@ export async function handlePatientVitalHistoryRequest({ request, workspaceId }:
     if (!isRecord(data) || !Array.isArray(data.measurements)) return historyError(undefined, "db_read_failed");
     const measurements = data.measurements.map(parsePatientVitalMeasurement);
     if (measurements.some((item) => !item)) return historyError(undefined, "db_read_failed");
-    return Response.json({ ok: true, measurements, nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null, canWriteVitals: writeAccess.allowed });
+    if (!isRecord(data.patient) || typeof data.patient.species !== "string" ||
+      (data.patient.weightKg !== null && (typeof data.patient.weightKg !== "number" || !Number.isFinite(data.patient.weightKg)))) {
+      return historyError(undefined, "db_read_failed");
+    }
+    const patient = { species: data.patient.species, weightKg: data.patient.weightKg as number | null };
+    return Response.json({ ok: true, measurements, patient, nextCursor: typeof data.nextCursor === "string" ? data.nextCursor : null, canWriteVitals: writeAccess.allowed });
   }
   const settings = await createSupabaseWorkspaceVitalSettingsGateway(client as unknown as SupabaseWorkspaceVitalSettingsClient).get(workspaceId);
   if (!settings.ok) return historyError(undefined, "db_read_failed");
@@ -99,6 +104,9 @@ function historyError(message: string | undefined, fallback: string) {
   }
   if (message?.includes("required_vital_value_missing")) {
     return Response.json({ ok: false, error: "invalid_input", reloadSettings: true, fieldErrors: { vitals: "바이탈 필수 입력 설정이 바뀌었어요. 다시 불러온 뒤 필수 항목을 입력해 주세요." } }, { status: 400 });
+  }
+  if (message?.includes("invalid_blood_pressure")) {
+    return Response.json({ ok: false, error: "invalid_input", fieldErrors: { bloodPressureDiastolicMmhg: "수축기보다 작게 입력해 주세요." } }, { status: 400 });
   }
   if (message?.includes("invalid_vitals") || message?.includes("out of range")) {
     return Response.json({ ok: false, error: "invalid_input", fieldErrors: { vitals: "입력한 수치를 다시 확인해 주세요." } }, { status: 400 });

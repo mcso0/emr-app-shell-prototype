@@ -1,3 +1,4 @@
+import { getPatientVitalValueError, getPatientVitalBloodPressureErrors } from "./patient-vital-validation";
 import {
   resolveWorkspacePermission,
   type WorkspacePermissionAdapter,
@@ -135,34 +136,14 @@ export function validatePatientVitalWriteInput(
       values[key] = null;
       continue;
     }
-    if (typeof rawValue !== "number" || !Number.isFinite(rawValue) || rawValue <= 0) {
-      fieldErrors[key] = "0보다 큰 숫자를 입력해 주세요.";
-      continue;
-    }
-    if (key === "weightKg" && !hasAtMostDecimalPlaces(rawValue, 2)) {
-      fieldErrors[key] = "소수점 둘째 자리까지 입력해 주세요.";
-      continue;
-    }
-    if (key === "temperatureC" && !hasAtMostDecimalPlaces(rawValue, 1)) {
-      fieldErrors[key] = "소수점 첫째 자리까지 입력해 주세요.";
-      continue;
-    }
-    if (
-      (key === "respiratoryRateRpm" ||
-        key === "heartRateBpm" ||
-        key === "bloodPressureSystolicMmhg" ||
-        key === "bloodPressureDiastolicMmhg") &&
-      !Number.isInteger(rawValue)
-    ) {
-      fieldErrors[key] = "정수로 입력해 주세요.";
-      continue;
-    }
-    values[key] = rawValue;
+    const error = getPatientVitalValueError(key, rawValue);
+    if (error) fieldErrors[key] = error;
+    else values[key] = rawValue as number;
   }
 
-  const hasDiastolic = values.bloodPressureDiastolicMmhg !== null;
-  if (hasDiastolic && values.bloodPressureSystolicMmhg === null) {
-    fieldErrors.bloodPressureDiastolicMmhg = "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
+  // Disabled historical fields are retained; current visible BP fields use reception rules.
+  if (!vitalSettings || vitalSettings.items.some((item) => item.key === "blood_pressure" && item.enabled)) {
+    Object.assign(fieldErrors, getPatientVitalBloodPressureErrors(values.bloodPressureSystolicMmhg, values.bloodPressureDiastolicMmhg));
   }
   if (vitalSettings) {
     Object.assign(fieldErrors, {
@@ -280,9 +261,4 @@ export async function readPatientLatestVital({
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function hasAtMostDecimalPlaces(value: number, decimalPlaces: number) {
-  const factor = 10 ** decimalPlaces;
-  return Math.abs(value * factor - Math.round(value * factor)) < Number.EPSILON * factor * 8;
 }

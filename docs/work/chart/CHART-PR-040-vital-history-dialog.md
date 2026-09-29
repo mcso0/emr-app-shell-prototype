@@ -114,3 +114,54 @@ TypeScript, build and diff checks passed. Full ESLint: 0 errors / 5 existing
 warnings in unrelated scripts; focused changed-file lint: no warnings. Compiled
 synthetic preview retained 519×496, history client/scroll width both 195, input
 height 36 and configured required aria state. No automated tests or remote writes.
+
+## 2026-09-29 feedback follow-up
+
+승욱 authorized implementing the loading/empty/read-error states, missing reception
+validation feedback, and removal of backdrop blur, then commit/push/PR/main delivery.
+The earlier exact release approval covered the original candidate; this follow-up
+prepares a new candidate and a separate forward-only DB migration for review.
+
+- Reuse `EmrContentLoadingState` for the initial load and `EmrEmptyState` for no
+  measurements or initial read failure. Keep header/footer and approved 519×496
+  geometry. Empty history retains the existing + 바이탈 entry point after permission
+  resolves. Partial pagination failure keeps loaded records and provides inline retry.
+- Extract existing reception rules into `patient-vital-validation.ts`: finite positive
+  values, decimal/integer shape, storage bounds, required settings and BP dependency/
+  ordering. Use the same rules in reception, dialog and patient-vital API validation.
+- Show field errors while nonempty invalid values are entered; show missing required
+  errors after that field loses focus. Errors block save. Reuse reception dog/cat
+  warning messages/ranges and the existing warning token; warnings permit deliberate
+  `확인하고 저장`. No new medical thresholds (31°C remains inside the existing 30–45 range).
+- History returns only species and the existing weight snapshot for warning context,
+  after resolving the patient from the workspace-scoped encounter. No client-selected
+  patient ID or new permissions. Warnings are advisory, never permission enforcement.
+- The local migration replaces only `clair_list_patient_vital_history` and
+  `clair_write_patient_vital_measurement`. The writer rejects inverted BP for new or
+  changed BP tuples, preserving unchanged historical tuples. UI/API validate enabled
+  BP items; unchanged disabled/hidden historical BP remains retained. No row rewrite
+  or new global constraint on historical data.
+- Feature-local `overlayClassName` removes blur on the main dialog and its nested
+  confirmations. Shared Dialog defaults and other product dialogs are unchanged.
+- Scope excludes real patient data mutation. Remote migration and exact Production
+  approval are pending until the concrete candidate/checks/backout packet is ready.
+
+Follow-up local evidence:
+
+- TypeScript and focused ESLint passed. Full ESLint has 0 errors and the same 5
+  unrelated script warnings. App build passed with the existing docs/NFT tracing warning.
+  Secret scan, docs, Korean UX copy and diff checks passed; no automated tests ran.
+- Manual actual-component synthetic preview: range overflow appears immediately and
+  blocks save; BP 123/132 displays the ordering error; temp 46 / heart rate 123123123
+  show advisory messages and `확인하고 저장`; historical confirmation still appears.
+- Empty history supports new draft entry; missing required field reports after blur;
+  initial error retries successfully; initial loading is centered. Dialog remains
+  519×496. Main and confirmation overlays both compute `backdrop-filter: none`.
+- Manual hidden-BP fixture permits changing temperature while retaining the hidden
+  original fields in source. Synthetic in-memory save succeeded; no remote record
+  write or persisted-data proof is claimed.
+- Read-only security review found no actionable issue within the specified hidden-BP
+  policy. The new migration remains required before the new API is deployed.
+- Current rollback: Ready Production `dpl_3CgaZDNvUzc87RwesErW5TEDH3W5`, source
+  `7ed99f0ee5df7c6a5aa889c376a58371563a3031`. Prior function definitions captured
+  privately for an approved rollback; no patient rows included.

@@ -7,6 +7,8 @@ import { CdsMedicalHeartPulseIcon, CdsMedicalThermometerIcon, CdsMedicalWeightIc
 import { CdsNavigationChevronUpIcon } from "@/components/cds-icons/navigation";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
+import { EmrContentLoadingState, EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { hasPatientVitalValue, toPatientVitalWriteInput, type PatientVitalMeasurement, type PatientVitalWriteInput } from "@/features/patient-vitals/patient-vital-types";
-import { fromCanonicalVitalValue, getEnabledWorkspaceVitalSettings, getRequiredWorkspaceVitalFieldErrors, toCanonicalVitalValue, type WorkspaceVitalKey, type WorkspaceVitalSettingsSnapshot } from "@/features/patient-vitals/workspace-vital-settings";
+import { parsePatientVitalDraft, getPatientVitalFieldWarnings, workspaceVitalKeyByField, type PatientVitalValidationContext } from "@/features/patient-vitals/patient-vital-validation";
+import { fromCanonicalVitalValue, getEnabledWorkspaceVitalSettings, type WorkspaceVitalKey, type WorkspaceVitalSettingsSnapshot } from "@/features/patient-vitals/workspace-vital-settings";
 import { cn } from "@/lib/utils";
 import styles from "./chart-vital-dialog.module.css";
 
@@ -25,7 +28,7 @@ type VitalMeasurementInput = Pick<PatientVitalMeasurement, keyof PatientVitalWri
 type VitalFieldErrors = Partial<Record<keyof PatientVitalWriteInput | "vitals", string>>;
 type DraftMeasurement = { id: string; measuredAt: string };
 type Confirmation = { kind: "discard"; action: () => void } | { kind: "save"; clear: boolean; past: boolean };
-type HistoryPage = { ok: boolean; measurements: PatientVitalMeasurement[]; nextCursor: string | null; canWriteVitals: boolean };
+type HistoryPage = { ok: boolean; measurements: PatientVitalMeasurement[]; nextCursor: string | null; canWriteVitals: boolean; patient: PatientVitalValidationContext };
 type VitalDialogProps = {
   actorHeaders?: Record<string, string>;
   encounterId: string;
@@ -51,6 +54,8 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [canWrite, setCanWrite] = useState(false);
+  const [patient, setPatient] = useState<PatientVitalValidationContext>();
+  const [touched, setTouched] = useState<Set<keyof PatientVitalWriteInput>>(new Set());
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
@@ -69,6 +74,15 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
   const dirty = JSON.stringify(draft) !== JSON.stringify(initialDraft);
   const parsed = parseVitalDialogDraft(draft, vitalSettings, selected);
   const valid = parsed.ok && (!newRecord || hasPatientVitalValue(parsed.values));
+  const warnings = getPatientVitalFieldWarnings(parsed.values, patient, vitalSettings);
+  const visibleErrors: VitalFieldErrors = { ...errors };
+  for (const [rawKey, message] of Object.entries(parsed.fieldErrors)) {
+    const key = rawKey as keyof PatientVitalWriteInput;
+    if (draft[key].trim() || touched.has(key)) visibleErrors[key] = message;
+  }
+  const hasWarnings = Object.keys(warnings).some((key) => !visibleErrors[key as keyof PatientVitalWriteInput]);
+  const showBodyState = records.length === 0 && !newRecord;
+  const retryHistory = () => { setStatus("loading"); setLoadVersion((value) => value + 1); };
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/patient-vitals/history`;
 
   useEffect(() => {
@@ -83,6 +97,8 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
       setRecords(body.measurements);
       setNextCursor(body.nextCursor);
       setCanWrite(body.canWriteVitals);
+      setPatient(body.patient);
+      setTouched(new Set());
       const first = body.measurements.find((item) => item.encounterId === encounterId) ?? body.measurements[0];
       setSelectedId(first?.id ?? null);
       setNewRecord(null);
@@ -109,7 +125,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
       setNextCursor(body.nextCursor);
       setFeedback("");
     } catch {
-      if (mountedRef.current) { setMoreFailed(true); setFeedback("이전 이력을 불러오지 못했어요. 다시 시도해 주세요."); }
+      if (mountedRef.current) { setMoreFailed(true); }
     } finally {
       moreRequestRef.current = false;
       if (mountedRef.current) setLoadingMore(false);
@@ -127,6 +143,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
       setNewRecord(null);
       setSelectedId(record.id);
       setDraft(createVitalDialogDraft(record, vitalSettings));
+      setTouched(new Set());
       setErrors({});
       setFeedback("");
     });
@@ -136,6 +153,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
     setNewRecord(record);
     setSelectedId(null);
     setDraft(createVitalDialogDraft(undefined, vitalSettings));
+    setTouched(new Set());
     setExpanded((current) => new Set([...current, seoulDay(record.measuredAt)]));
     setErrors({});
     setFeedback("");
@@ -143,7 +161,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
   });
 
   const saveVital = async () => {
-    if (!active || saving || !canWrite || !parsed.ok) return;
+    if (!active || saving || status !== "ready" || !canWrite || !parsed.ok) return;
     if (newRecord && !hasPatientVitalValue(parsed.values)) {
       setErrors({ vitals: "새 바이탈은 한 가지 이상 입력해 주세요." });
       return;
@@ -170,6 +188,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
       setNewRecord(null);
       setSelectedId(vital.id);
       setDraft(createVitalDialogDraft(vital, vitalSettings));
+      setTouched(new Set());
       setFeedback("바이탈을 저장했어요.");
       try { await onSaved(vital); } catch { setFeedback("바이탈은 저장됐지만 화면을 갱신하지 못했어요."); }
     } catch {
@@ -193,26 +212,32 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) discardThen(() => onOpenChange(false)); }}>
       <EmrDialogShell variant="form" title="바이탈 이력" showCloseButton={false} initialFocus={false}
-        className={styles.dialog} headerClassName={styles.header} bodyClassName={styles.body} footerClassName={styles.footer}
-        footer={<><Button variant="outline" disabled={status !== "ready" || !canWrite || saving} onClick={startMeasurement}><CdsActionsPlusIcon className="size-4" />바이탈</Button><div className={styles.footerActions}><Button variant="ghost" disabled={saving} onClick={() => discardThen(() => onOpenChange(false))}>취소</Button><Button disabled={status !== "ready" || !canWrite || saving || !active || !dirty || !valid} onClick={requestSave}>{saving ? "저장 중" : "저장"}</Button></div></>}
+        overlayClassName="supports-backdrop-filter:backdrop-blur-none" className={styles.dialog} headerClassName={styles.header} bodyClassName={styles.body} footerClassName={styles.footer}
+        footer={<><Button variant="outline" disabled={status !== "ready" || !canWrite || saving} onClick={startMeasurement}><CdsActionsPlusIcon className="size-4" />바이탈</Button><div className={styles.footerActions}><Button variant="ghost" disabled={saving} onClick={() => discardThen(() => onOpenChange(false))}>취소</Button><Button disabled={status !== "ready" || !canWrite || saving || !active || !dirty || !valid} onClick={requestSave}>{saving ? "저장 중" : hasWarnings ? "확인하고 저장" : "저장"}</Button></div></>}
         data-testid="chart-vital-dialog" data-mode={mode}>
         <DialogClose render={<Button variant="ghost" size="icon-sm" className={styles.close} disabled={saving} aria-label="바이탈 이력 닫기" />}><CdsActionsXIcon className="size-4" /></DialogClose>
+        {showBodyState ? <div className={styles.bodyState}>
+          {status === "loading" ? <EmrContentLoadingState title="바이탈 이력을 불러오고 있어요." testId="chart-vital-history-loading" />
+            : status === "error" ? <EmrEmptyState kind="read-error" surface="content" size="sm" reserveActionSpace={false} title="바이탈 이력을 불러오지 못했어요." primaryAction={<Button variant="outline" size="sm" onClick={retryHistory}>다시 시도</Button>} testId="chart-vital-history-error" />
+              : <EmrEmptyState kind="no-data" surface="content" size="sm" reserveActionSpace={false} title="측정한 바이탈 이력이 없어요." testId="chart-vital-history-empty" />}
+        </div> : <>
         <VitalHistoryList groups={groups} expanded={expanded} activeId={active?.id} newId={newRecord?.id} saving={saving} status={status}
           nextCursor={nextCursor} loadingMore={loadingMore} moreFailed={moreFailed} onLoadMore={loadMore}
-          onRetry={() => { setStatus("loading"); setLoadVersion((value) => value + 1); }}
           onToggle={(day) => setExpanded((current) => { const next = new Set(current); if (next.has(day)) next.delete(day); else next.add(day); return next; })}
           onSelect={(record) => { if ("encounterId" in record) selectRecord(record); }} />
-        <form className={styles.editor} onSubmit={(event) => { event.preventDefault(); if (dirty && valid && !saving && canWrite) requestSave(); }}>
+        <form className={styles.editor} onSubmit={(event) => { event.preventDefault(); if (status === "ready" && dirty && valid && !saving && canWrite) requestSave(); }}>
           <div className={styles.editorHeader}><span className={styles.editorTitle}>바이탈 정보</span>{active ? <Badge size="md" variant="secondary" className={cn(styles.timestamp, newRecord && styles.draftTimestamp)}><CdsFilesClockIcon className="size-3" />{newRecord ? `${seoulTime(active.measuredAt)} 미저장` : `${shortDay(active.measuredAt)} ${seoulTime(active.measuredAt)} 측정`}</Badge> : null}</div>
-          <VitalEntryFields draft={draft} errors={errors} disabled={!active || !canWrite || saving} firstInputRef={firstInputRef}
+          {status !== "ready" ? <EmrInlineAlert severity={status === "error" ? "error" : "info"} title={status === "error" ? "이력을 다시 불러오지 못했어요." : "이력을 다시 불러오고 있어요."} action={status === "error" ? <Button variant="outline" size="sm" onClick={() => discardThen(retryHistory)}>다시 시도</Button> : undefined} /> : null}
+          <VitalEntryFields draft={draft} errors={visibleErrors} warnings={warnings} disabled={status !== "ready" || !active || !canWrite || saving} firstInputRef={firstInputRef}
             onChange={(key, value) => { setDraft((current) => ({ ...current, [key]: value })); setErrors((current) => ({ ...current, [key]: undefined, vitals: undefined })); setFeedback(""); }}
-            onBlur={() => { if (!parsed.ok) setErrors(parsed.fieldErrors); }} vitalSettings={vitalSettings} />
+            onBlur={(key) => setTouched((current) => new Set([...current, key]))} vitalSettings={vitalSettings} />
           {errors.vitals || settingsRefreshRequired ? <FieldError className={styles.formFeedback}>{errors.vitals ?? "필수 입력 설정을 다시 확인해 주세요."}<Button type="button" variant="ghost" size="sm" onClick={() => discardThen(() => { if (settingsRefreshRequired) { window.location.reload(); return; } setStatus("loading"); setLoadVersion((value) => value + 1); })}>{settingsRefreshRequired ? "설정 새로고침" : "다시 불러오기"}</Button></FieldError> : null}
           {feedback ? <p className={styles.formFeedback} role="status">{feedback}</p> : null}
         </form>
+        </>}
       </EmrDialogShell>
       <Dialog open={Boolean(confirmation)} onOpenChange={(nextOpen) => { if (!nextOpen) setConfirmation(null); }}>
-        <EmrConfirmDialogContent title={confirmation?.kind === "discard" ? "작성 중인 내용을 취소할까요?" : confirmation?.kind === "save" && confirmation.past ? "과거 바이탈 이력을 수정할까요?" : "바이탈 값을 모두 비울까요?"}
+        <EmrConfirmDialogContent overlayClassName="supports-backdrop-filter:backdrop-blur-none" title={confirmation?.kind === "discard" ? "작성 중인 내용을 취소할까요?" : confirmation?.kind === "save" && confirmation.past ? "과거 바이탈 이력을 수정할까요?" : "바이탈 값을 모두 비울까요?"}
           description={confirmation?.kind === "discard" ? "저장하지 않은 변경사항은 사라집니다." : <>{selected ? `${shortDay(selected.measuredAt)} ${seoulTime(selected.measuredAt)} 측정 기록에 수정값을 반영합니다.` : null}{confirmation?.kind === "save" && confirmation.clear ? " 측정 기록은 유지되고 입력값만 비워집니다." : null}</>}
           cancelLabel="돌아가기" confirmLabel={confirmation?.kind === "discard" ? "취소하기" : "저장"}
           onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation; setConfirmation(null); if (action?.kind === "discard") action.action(); else if (action?.kind === "save") void saveVital(); }} />
@@ -221,11 +246,11 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
   );
 }
 
-function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, nextCursor, loadingMore, moreFailed, onLoadMore, onRetry, onToggle, onSelect }: {
+function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, nextCursor, loadingMore, moreFailed, onLoadMore, onToggle, onSelect }: {
   groups: [string, (PatientVitalMeasurement | DraftMeasurement)[]][];
   expanded: Set<string>; activeId?: string; newId?: string; saving: boolean;
   status: "loading" | "ready" | "error"; nextCursor: string | null; loadingMore: boolean; moreFailed: boolean;
-  onLoadMore: () => void; onRetry: () => void; onToggle: (day: string) => void; onSelect: (record: PatientVitalMeasurement | DraftMeasurement) => void;
+  onLoadMore: () => void; onToggle: (day: string) => void; onSelect: (record: PatientVitalMeasurement | DraftMeasurement) => void;
 }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ top: false, bottom: false });
@@ -258,7 +283,6 @@ function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, n
   return <ScrollArea className={styles.history} viewportRef={viewportRef} viewportClassName={styles.historyViewport}
     viewportStyle={{ overflowX: "hidden", maskImage: `linear-gradient(to bottom, ${fade.top ? "transparent" : "#000"} 0, #000 44px, #000 calc(100% - 44px), ${fade.bottom ? "transparent" : "#000"} 100%)` }}>
     <nav className={styles.historyContent} aria-label="날짜별 바이탈 측정 기록">
-      {status === "loading" ? <p className={styles.historyMessage} role="status">이력을 불러오고 있어요.</p> : status === "error" ? <div className={styles.historyMessage} role="alert">이력을 불러오지 못했어요.<Button variant="ghost" size="sm" onClick={onRetry}>다시 시도</Button></div> : groups.length === 0 ? <p className={styles.historyMessage}>측정 이력이 없어요.</p> : null}
       {groups.map(([day, records]) => <section key={day} className={styles.day}>
         <Button variant="ghost" className={styles.dayToggle} aria-expanded={expanded.has(day)} aria-controls={`vital-day-${day}`} disabled={saving} onClick={() => onToggle(day)}>
           <CdsFilesCalendarIcon className="size-3.5" /><span className={styles.dayDetails}><span className={styles.dayLabel}>{day.slice(2).replaceAll("-", ".")}</span><span className={styles.dayCount}>{records.filter((record) => record.id !== newId).length}</span></span><span className={styles.chevron}><CdsNavigationChevronUpIcon className="size-3.5" /></span>
@@ -268,14 +292,15 @@ function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, n
           <Badge size="sm" variant="outline" className={styles.author}><CdsPeopleUserIcon className="size-3" />{"recordedByName" in record ? record.recordedByName ?? "작성자 미상" : "미저장"}</Badge>
         </Button>)}</div> : null}
       </section>)}
-      {nextCursor ? <div data-vital-history-sentinel className={styles.historyMessage}><Button variant="ghost" size="sm" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "불러오는 중" : "이전 이력 불러오기"}</Button></div> : null}
+      {moreFailed ? <EmrInlineAlert severity="error" title="이전 이력을 불러오지 못했어요." className={styles.historyFeedback} action={<Button variant="ghost" size="sm" onClick={onLoadMore}>다시 시도</Button>} /> : null}
+      {nextCursor && !moreFailed ? <div data-vital-history-sentinel className={styles.historyMessage}><Button variant="ghost" size="sm" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "불러오는 중" : "이전 이력 불러오기"}</Button></div> : null}
     </nav>
   </ScrollArea>;
 }
 
-function VitalEntryFields({ draft, errors, disabled, firstInputRef, onChange, onBlur, vitalSettings }: {
-  draft: VitalDialogDraft; errors: VitalFieldErrors; disabled: boolean; firstInputRef: React.Ref<HTMLInputElement>;
-  onChange: (key: keyof PatientVitalWriteInput, value: string) => void; onBlur: () => void; vitalSettings: WorkspaceVitalSettingsSnapshot;
+function VitalEntryFields({ draft, errors, warnings, disabled, firstInputRef, onChange, onBlur, vitalSettings }: {
+  draft: VitalDialogDraft; errors: VitalFieldErrors; warnings: VitalFieldErrors; disabled: boolean; firstInputRef: React.Ref<HTMLInputElement>;
+  onChange: (key: keyof PatientVitalWriteInput, value: string) => void; onBlur: (key: keyof PatientVitalWriteInput) => void; vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
   const rows = getEnabledWorkspaceVitalSettings(vitalSettings).flatMap<{ key: keyof PatientVitalWriteInput; label: string; unit: string; required: boolean; icon: ReactNode }>((setting) => {
     const preset = vitalSettings.presets.find((item) => item.key === setting.key);
@@ -291,11 +316,11 @@ function VitalEntryFields({ draft, errors, disabled, firstInputRef, onChange, on
   return <div className={styles.fields}>{rows.map((field, index) => <div key={field.key} className={styles.fieldRow}>
     <Label htmlFor={`chart-vital-${field.key}`} className={styles.fieldLabel}>{field.icon}{field.label}{field.required ? <span className={styles.basicMark} aria-label="필수 입력">*</span> : null}</Label>
     <div className={styles.fieldControl}><Input id={`chart-vital-${field.key}`} ref={index === 0 ? firstInputRef : undefined} className={styles.input}
-      aria-describedby={errors[field.key] ? `chart-vital-${field.key}-error` : undefined} aria-required={field.required || undefined} aria-invalid={Boolean(errors[field.key])}
+      aria-describedby={errors[field.key] ? `chart-vital-${field.key}-error` : warnings[field.key] ? `chart-vital-${field.key}-warning` : undefined} aria-required={field.required || undefined} aria-invalid={Boolean(errors[field.key])}
       disabled={disabled} inputMode={field.key === "weightKg" || field.key === "temperatureC" ? "decimal" : "numeric"}
-      placeholder="수치입력" value={draft[field.key]} onChange={(event) => onChange(field.key, event.target.value)} onBlur={onBlur} />
+      placeholder="수치입력" value={draft[field.key]} onChange={(event) => onChange(field.key, event.target.value)} onBlur={() => onBlur(field.key)} />
       <span className={styles.unit}>{field.unit}</span></div>
-    {errors[field.key] ? <FieldError id={`chart-vital-${field.key}-error`} className={styles.fieldError}>{errors[field.key]}</FieldError> : null}
+    {errors[field.key] ? <FieldError id={`chart-vital-${field.key}-error`} className={styles.fieldError}>{errors[field.key]}</FieldError> : warnings[field.key] ? <p id={`chart-vital-${field.key}-warning`} role="status" className={cn(styles.fieldWarning, "emr-text-micro font-medium text-[var(--emr-status-warning-text)]")}>{warnings[field.key]}</p> : null}
   </div>)}</div>;
 }
 
@@ -350,78 +375,19 @@ function parseVitalDialogDraft(
   draft: VitalDialogDraft,
   settings: WorkspaceVitalSettingsSnapshot,
   measurement?: VitalMeasurementInput,
-): { ok: true; values: PatientVitalWriteInput } | { ok: false; fieldErrors: VitalFieldErrors } {
-  const values: PatientVitalWriteInput = toPatientVitalWriteInput(measurement);
-  const fieldErrors: VitalFieldErrors = {};
-
-  for (const key of Object.keys(values) as (keyof PatientVitalWriteInput)[]) {
-    const setting = getVitalSettingForInputKey(settings, key);
-    if (!setting?.enabled) continue;
-    const rawValue = draft[key].trim();
-    values[key] = null;
-    if (!rawValue) continue;
-    const parsed = Number(rawValue);
-    if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(rawValue) || !Number.isFinite(parsed) || parsed <= 0) {
-      fieldErrors[key] = "0보다 큰 숫자를 입력해 주세요.";
-      continue;
-    }
-    if (key === "weightKg" && !hasAtMostVitalDecimalPlaces(parsed, 2)) {
-      fieldErrors[key] = "소수점 둘째 자리까지 입력해 주세요.";
-      continue;
-    }
-    if (key === "temperatureC" && !hasAtMostVitalDecimalPlaces(parsed, 1)) {
-      fieldErrors[key] = "소수점 첫째 자리까지 입력해 주세요.";
-      continue;
-    }
-    if (
-      (key === "respiratoryRateRpm" ||
-        key === "heartRateBpm" ||
-        key === "bloodPressureSystolicMmhg" ||
-        key === "bloodPressureDiastolicMmhg") &&
-      !Number.isInteger(parsed)
-    ) {
-      fieldErrors[key] = "정수로 입력해 주세요.";
-      continue;
-    }
-    values[key] = setting
-      ? toCanonicalVitalValue(setting.key, parsed, setting.displayUnit)
-      : parsed;
-    if (values[key] <= 0) fieldErrors[key] = "저장할 수 있는 0보다 큰 수치를 입력해 주세요.";
-  }
-
-  if (
-    values.bloodPressureSystolicMmhg === null &&
-    values.bloodPressureDiastolicMmhg !== null
-  ) {
-    fieldErrors.bloodPressureDiastolicMmhg =
-      "이완기 혈압을 입력하려면 수축기 혈압이 필요합니다.";
-  }
-
-  const requiredErrors = getRequiredWorkspaceVitalFieldErrors(settings, draft);
-  for (const [key, message] of Object.entries(requiredErrors)) {
-    fieldErrors[key as keyof PatientVitalWriteInput] ??= message;
-  }
-
-  return Object.keys(fieldErrors).length
-    ? { ok: false, fieldErrors }
-    : { ok: true, values };
+) {
+  const retainedValues = toPatientVitalWriteInput(measurement);
+  const enabledFields = (Object.keys(retainedValues) as (keyof PatientVitalWriteInput)[])
+    .filter((key) => getVitalSettingForInputKey(settings, key)?.enabled);
+  const result = parsePatientVitalDraft({ draft, settings, enabledFields, retainedValues });
+  return { ...result, ok: Object.keys(result.fieldErrors).length === 0 };
 }
 
 function getVitalSettingForInputKey(
   settings: WorkspaceVitalSettingsSnapshot,
   inputKey: keyof PatientVitalWriteInput,
 ) {
-  const key =
-    inputKey === "weightKg"
-      ? "weight"
-      : inputKey === "temperatureC"
-        ? "temperature"
-        : inputKey === "heartRateBpm"
-          ? "heart_rate"
-          : inputKey === "respiratoryRateRpm"
-            ? "respiratory_rate"
-            : "blood_pressure";
-  return settings.items.find((item) => item.key === key);
+  return settings.items.find((item) => item.key === workspaceVitalKeyByField[inputKey]);
 }
 
 function getVitalSaveErrorMessage(error?: string) {
@@ -437,12 +403,4 @@ function getVitalSaveErrorMessage(error?: string) {
     return "바이탈을 입력할 권한이 없어요.";
   }
   return "바이탈을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.";
-}
-
-function hasAtMostVitalDecimalPlaces(value: number, decimalPlaces: number) {
-  const factor = 10 ** decimalPlaces;
-  return (
-    Math.abs(value * factor - Math.round(value * factor)) <
-    Number.EPSILON * factor * 8
-  );
 }

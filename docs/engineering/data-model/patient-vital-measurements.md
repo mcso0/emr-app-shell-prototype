@@ -147,3 +147,21 @@ saved rows, adds the per-workspace requirement flag, and changes the fallback fo
 new workspaces to five enabled optional presets. Its empty-configuration marker
 keeps an intentionally saved empty list distinct from a new workspace. This
 migration has not been applied remotely in this work item.
+
+## Vital history feedback follow-up (2026-09-29)
+
+The history DTO includes `patient: { species, weightKg }` for the existing reception
+warning rules. The reader derives that patient from the selected workspace-scoped
+encounter under membership and `patient:view` enforcement; it does not accept a
+caller-selected patient ID. No additional patient identity fields are returned.
+
+Reception and the history editor share positive/format/precision/storage-bound and
+blood-pressure validation. Field errors block writes; existing dog/cat unusual-value
+warnings remain advisory with explicit confirmation in the save button. Required
+fields continue to use current workspace `inputRequired` policy. Enabled BP requires
+diastolic below systolic. An unchanged disabled historical BP tuple is retained;
+new or changed inverted BP is rejected by the exact-record SQL writer as well.
+
+The additive `20260929180000_patient_vital_validation_feedback.sql` replaces the two
+existing functions without changing grants, role policy, audit, revision checks, or
+historical attribution. Apply only with separately recorded remote migration approval.
