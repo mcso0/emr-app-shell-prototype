@@ -176,6 +176,35 @@ test("shared date navigator uses the semantic hover state token", async ({ page 
   expect(expectedColors.hover).not.toBe(expectedColors.muted);
 });
 
+for (const moduleId of ["treatment", "lab", "imaging", "dispensing", "billing"]) {
+  test(`compact date navigator preserves sidebar sizing and navigation in ${moduleId}`, async ({ page }) => {
+    await page.goto(`/w/clair-demo/${moduleId}?date=2026-05-01&modulePanel=open&aside=closed&right=closed`);
+    const sidePanel = page.locator("aside").first();
+    const dateTrigger = sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택", exact: true });
+    await expect(dateTrigger).toBeVisible();
+    const navigator = dateTrigger.locator("..");
+    await expect(navigator).toHaveCSS("height", "48px");
+    await expect(navigator).toHaveCSS("padding-left", "16px");
+    await expect(navigator).toHaveCSS("padding-right", "16px");
+    for (const name of ["이전 날짜", "다음 날짜"]) {
+      const arrow = sidePanel.getByRole("button", { name, exact: true });
+      await expect(arrow).toHaveCSS("width", "32px");
+      await expect(arrow).toHaveCSS("height", "32px");
+      await expect(arrow).toHaveCSS("border-radius", "8px");
+      await expect(arrow.locator("svg")).toHaveCSS("width", "16px");
+      await expect(arrow.locator("svg")).toHaveCSS("height", "16px");
+      await expect(arrow.locator("svg")).toHaveCSS("color", "rgb(82, 82, 82)");
+    }
+    const next = sidePanel.getByRole("button", { name: "다음 날짜", exact: true });
+    await next.focus();
+    await expect(next).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(sidePanel.getByRole("button", { name: "26.05.02(토) 날짜 선택", exact: true })).toBeVisible();
+    await sidePanel.getByRole("button", { name: "이전 날짜", exact: true }).click();
+    await expect(dateTrigger).toBeVisible();
+  });
+}
+
 test("runtime surfaces use semantic aliases instead of legacy state names or local neutrals", async () => {
   const sourceFiles = (await collectSourceFiles("src")).filter(
     (filePath) =>

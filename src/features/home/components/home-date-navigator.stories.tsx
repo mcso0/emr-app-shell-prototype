@@ -25,6 +25,7 @@ export const HospitalDateNavigator: Story = {
   render: () => (
     <div className={styles.hospitalTitle}>
       <EmrDateNavigator
+        appearance="home"
         className={styles.dateControl}
         dateLabel="2026-09-27"
         formatSelectedDateLabel={() => "26년 9월 27일"}
@@ -36,5 +37,21 @@ export const HospitalDateNavigator: Story = {
         onNext={() => undefined}
       />
     </div>
+  ),
+};
+
+export const SidebarDateNavigator: Story = {
+  render: () => (
+    <EmrDateNavigator
+      appearance="compact"
+      className="w-[288px]"
+      dateLabel="26.09.27(일)"
+      selectedDate="2026-09-27"
+      todayDate="2026-09-27"
+      todayLabel="오늘"
+      onDateChange={() => undefined}
+      onPrevious={() => undefined}
+      onNext={() => undefined}
+    />
   ),
 };

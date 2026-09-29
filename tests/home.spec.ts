@@ -114,6 +114,13 @@ test("home toolbar uses full-size controls and shared filter builder across boar
   await expect(filter).toHaveCSS("height", "32px");
   await expect(filter.locator("svg")).toHaveCSS("width", "16px");
   await expect(page.getByRole("button", { name: "이전 날짜", exact: true })).toHaveCSS("width", "32px");
+  for (const name of ["이전 날짜", "다음 날짜"]) {
+    const arrow = page.getByRole("button", { name, exact: true });
+    await expect(arrow).toHaveCSS("height", "40px");
+    await expect(arrow.locator("svg")).toHaveCSS("width", "28px");
+    await expect(arrow.locator("svg")).toHaveCSS("height", "28px");
+    await expect(arrow.locator("svg")).toHaveCSS("color", "rgb(82, 82, 82)");
+  }
   const dateTrigger = page.getByRole("button", { name: /날짜 선택$/ });
   expect((await dateTrigger.boundingBox())!.width).toBeGreaterThanOrEqual(196);
   await page.evaluate(() => document.fonts.ready);
