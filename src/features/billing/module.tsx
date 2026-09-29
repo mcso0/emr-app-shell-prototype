@@ -29,7 +29,7 @@ import {
 import { EmrContentHistoryGroup } from "@/components/emr/content-history-list";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
-import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrEmptyState, EmrContentLoadingState } from "@/components/emr/empty-state";
 import {
   EmrInstructionHeaderStack,
   EmrInstructionHistoryToggle,
@@ -48,6 +48,7 @@ import {
   EmrListHeader,
   EmrListHeaderIconButton,
   EmrQueueEmptyState,
+  EmrQueueLoadingState,
   EmrListSearchEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
@@ -81,7 +82,6 @@ import {
   type BillingCheckoutLine,
   type BillingCheckoutGroup,
   type BillingGuardianLedgerRow,
-  type BillingQueueRow,
 } from "@/features/billing/data";
 import { resolveBillingAmountInclusion } from "@/features/billing/billing-data-contract";
 import {
@@ -92,6 +92,7 @@ import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { usePatientContextProfileInteractions } from "@/features/customer/use-patient-context-profile-interactions";
 import type { ContextBarProfileInteraction } from "@/components/emr/patient-context-bar";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
+import type { BillingQueueItem } from "./billing-queue";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
 import {
   createPersonalProfileSession,
@@ -213,6 +214,7 @@ type BillingApiRequestState = {
 };
 
 type BillingWorkspaceApiState = {
+  orderSummary: BillingApiRequestState;
   invoiceLines: BillingApiRequestState;
   paymentStatus: BillingApiRequestState;
   retrySnapshots: () => void;
@@ -878,7 +880,9 @@ function createLiveCandidateBillingDetail({
   if (!encounterId) return null;
 
   const persistedHandoff = readChartLiveEncounterHandoff(encounterId);
-  const context = summary?.context;
+  const context = summary?.workspaceId === workspaceId && summary.encounterId === encounterId && summary.context?.encounter.id === encounterId
+    ? summary.context
+    : undefined;
   const handoff = persistedHandoff ?? (context ? {
     encounter: { ...context.encounter, workspaceId } as Encounter,
     patient: {
@@ -951,7 +955,8 @@ function createServerBackedBillingDetail({
   summary?: ChartOrderBillingSummary;
 }): BillingDetail | null {
   const context = summary?.context;
-  if (!context || !invoice) return null;
+  if (!context || !invoice || summary.workspaceId !== invoice.workspaceId ||
+    summary.encounterId !== invoice.encounterId || context.encounter.id !== invoice.encounterId) return null;
   const encounter = {
     ...context.encounter,
     workspaceId: summary.workspaceId,
@@ -1082,6 +1087,8 @@ function useBillingWorkspaceData() {
     ownerKey: string;
     payments: Payment[];
   }>();
+  const [orderSummaryState, setOrderSummaryState] =
+    useState<BillingApiRequestState>(billingApiIdleState);
   const [invoiceLinesState, setInvoiceLinesState] =
     useState<BillingApiRequestState>(billingApiIdleState);
   const [paymentStatusState, setPaymentStatusState] =
@@ -1233,6 +1240,7 @@ function useBillingWorkspaceData() {
     let cancelled = false;
 
     async function loadPersistedCandidates() {
+      setOrderSummaryState(billingApiLoadingState);
       const [candidateResult, summaryResult] = await Promise.all([
         loadBillingInvoiceCandidates({
           actorHeaders,
@@ -1260,6 +1268,7 @@ function useBillingWorkspaceData() {
       } else {
         setPersistedCandidates({ candidates: [], ownerKey: protectedOwnerKey });
       }
+      setOrderSummaryState(summaryResult.ok ? billingApiReadyState : getBillingApiFailureState(summaryResult));
       setProtectedOrderBillingSummary(
         summaryResult.ok
           ? { ownerKey: protectedOwnerKey, summary: summaryResult.summary }
@@ -1279,6 +1288,7 @@ function useBillingWorkspaceData() {
     queryEncounterId,
     protectedOwnerKey,
     queryOrderIds,
+    snapshotReloadKey,
     workspaceId,
   ]);
   useEffect(() => {
@@ -1400,6 +1410,7 @@ function useBillingWorkspaceData() {
     applyInvoiceSnapshot: applyWorkspaceInvoiceSnapshot,
     applyPaymentStatusSnapshot: applyWorkspacePaymentSnapshot,
     apiState: {
+      orderSummary: orderSummaryState,
       invoiceLines: invoiceLinesState,
       paymentStatus: paymentStatusState,
       retrySnapshots,
@@ -1614,11 +1625,11 @@ function groupBillingLedgerRowsByDate(rows: BillingGuardianLedgerRow[]) {
   }, []);
 }
 
-function getBillingReceptionTypeLabel(row: BillingQueueRow) {
-  return row.encounter.appointmentId ? "예약" : "외래";
+function getBillingReceptionTypeLabel(row: BillingQueueItem) {
+  return row.encounter.receptionType === "appointment" || ("appointmentId" in row.encounter && row.encounter.appointmentId) ? "예약" : "외래";
 }
 
-function getBillingQueueEventKind(row: BillingQueueRow): EmrTaskQueueEventKind {
+function getBillingQueueEventKind(row: BillingQueueItem): EmrTaskQueueEventKind {
   return row.invoice.status === "voided" ? "cancel" : "request";
 }
 
@@ -1637,8 +1648,57 @@ function matchesBillingQueueSearch(searchText: string, query: string) {
   return tokens.every((token) => normalizedSearchText.includes(token));
 }
 
+type BillingQueueState = { status: "loading" | "ready" | "error" | "permission_denied"; rows: BillingQueueItem[] };
+const billingQueueListeners = new Map<string, Set<(value: BillingQueueState) => void>>();
+const billingQueueRequestIds = new Map<string, number>();
+const emptyBillingQueue: BillingQueueState = { status: "loading", rows: [] };
+
+function useBillingQueue(workspaceId: string) {
+  const searchParams = useSearchParams();
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
+  const { session } = useAuthClient();
+  const ownerKey = getBillingProtectedSnapshotOwnerKey(session, workspaceId);
+  const scopeKey = `${ownerKey}:${selectedDate}`;
+  const actorHeaders = useMemo(() => getDemoActorHeader(session), [session]);
+  const seq = useRef(0);
+  const [state, setState] = useState({ scopeKey, value: emptyBillingQueue });
+  const value = state.scopeKey === scopeKey ? state.value : emptyBillingQueue;
+  const load = useCallback(async () => {
+    const requestSeq = ++seq.current;
+    const requestId = (billingQueueRequestIds.get(scopeKey) ?? 0) + 1;
+    billingQueueRequestIds.set(scopeKey, requestId);
+    let next: BillingQueueState;
+    try {
+      const response = await fetch(`/api/workspaces/${workspaceId}/billing/queue?date=${selectedDate}`, { headers: actorHeaders });
+      const body = await response.json() as { ok?: boolean; rows?: BillingQueueItem[] };
+      next = response.ok && body.ok && Array.isArray(body.rows)
+        ? { status: "ready", rows: body.rows.filter(row => row.invoice.workspaceId === workspaceId) }
+        : { status: response.status === 401 || response.status === 403 ? "permission_denied" : "error", rows: [] };
+    } catch { next = { status: "error", rows: [] }; }
+    if (billingQueueRequestIds.get(scopeKey) !== requestId) return;
+    if (seq.current === requestSeq) setState({ scopeKey, value: next });
+    billingQueueListeners.get(scopeKey)?.forEach(listener => listener(next));
+  }, [actorHeaders, scopeKey, selectedDate, workspaceId]);
+  const refresh = useCallback(() => {
+    setState(current => ({ scopeKey, value: { status: "loading", rows: current.scopeKey === scopeKey ? current.value.rows : [] } }));
+    return load();
+  }, [scopeKey, load]);
+  useEffect(() => {
+    void load();
+    return () => { seq.current += 1; };
+  }, [load]);
+  useEffect(() => {
+    const listener = (value: BillingQueueState) => setState({ scopeKey, value });
+    const listeners = billingQueueListeners.get(scopeKey) ?? new Set();
+    listeners.add(listener);
+    billingQueueListeners.set(scopeKey, listeners);
+    return () => { listeners.delete(listener); if (!listeners.size) billingQueueListeners.delete(scopeKey); };
+  }, [scopeKey]);
+  return { ...value, refresh, selectedDate };
+}
+
 function getBillingQueueSearchText(
-  row: BillingQueueRow,
+  row: BillingQueueItem,
   assigneeName?: string,
 ) {
   return [
@@ -1667,7 +1727,7 @@ function QueueItem({
 }: {
   assigneeName?: string;
   onSelect: () => void;
-  row: BillingQueueRow;
+  row: BillingQueueItem;
   selected: boolean;
 }) {
   const guardianName = row.guardian?.name ?? "보호자 미지정";
@@ -1718,7 +1778,8 @@ export function BillingSidePanel({
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { selectDate, selectedDate, todayDate } =
-    useSelectedOperatingDate(workspaceId);
+    useSelectedOperatingDate(workspaceId, searchParams.get("date"));
+  const billingQueue = useBillingQueue(workspaceId);
   const legacySalesDemo = isLegacySalesDemoWorkspace(workspaceId);
   const baseGroupedRows = useMemo(
     () =>
@@ -1726,9 +1787,9 @@ export function BillingSidePanel({
         ...group,
         rows: legacySalesDemo
           ? getBillingQueueRows(invoices, invoiceLines, payments, group.value)
-          : [],
+          : billingQueue.rows.filter(row => getBillingFilterForInvoice(row.invoice) === group.value),
       })),
-    [invoiceLines, invoices, payments, legacySalesDemo],
+    [billingQueue.rows, invoiceLines, invoices, payments, legacySalesDemo],
   );
   const groupedRows = useMemo(
     () =>
@@ -1767,11 +1828,13 @@ export function BillingSidePanel({
     selectInvoice(queryInvoiceId);
   }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId]);
   function handleSelectInvoice(invoiceId: string) {
+    const row = baseGroupedRows.flatMap(group => group.rows).find(item => item.invoice.id === invoiceId);
     if (onNavigateWorkspaceSurface) {
       onNavigateWorkspaceSurface(
         buildWorkspaceSurfaceRoute({
           moduleId: "billing",
-          params: { invoiceId },
+          params: { invoiceId, encounterId: row?.invoice.encounterId, date: selectedDate },
+          removeParams: ["orderIds", "scenario", "patientId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1781,6 +1844,13 @@ export function BillingSidePanel({
     }
 
     selectInvoice(invoiceId);
+  }
+  function handleSelectDate(date: string) {
+    selectDate(date);
+    selectInvoice("");
+    onNavigateWorkspaceSurface?.(buildWorkspaceSurfaceRoute({
+      moduleId: "billing", params: { date }, removeParams: ["invoiceId", "encounterId", "orderIds", "scenario", "patientId"], search: searchParams, workspaceId,
+    }), "billing");
   }
   const toggleGroup = (groupId: BillingFilter) => {
     setCollapsedGroupIds((current) => {
@@ -1808,18 +1878,9 @@ export function BillingSidePanel({
         selectedDate={selectedDate}
         todayDate={todayDate}
         todayLabel={selectedDate === todayDate ? "오늘" : undefined}
-        onDateChange={(date) => {
-          selectDate(date);
-          selectInvoice("");
-        }}
-        onNext={() => {
-          selectDate(addDaysToIsoDate(selectedDate, 1));
-          selectInvoice("");
-        }}
-        onPrevious={() => {
-          selectDate(addDaysToIsoDate(selectedDate, -1));
-          selectInvoice("");
-        }}
+        onDateChange={handleSelectDate}
+        onNext={() => handleSelectDate(addDaysToIsoDate(selectedDate, 1))}
+        onPrevious={() => handleSelectDate(addDaysToIsoDate(selectedDate, -1))}
       />
       <EmrListHeader
         label="전체"
@@ -1862,7 +1923,11 @@ export function BillingSidePanel({
         }
       />
       <EmrSubpanelBody density="queue">
-        {baseRowCount > 0 && totalRowCount === 0 && searchQuery.trim() ? (
+        {billingQueue.status === "loading" && baseRowCount === 0 ? (
+          <EmrQueueLoadingState placement="panel-center" title="수납 업무를 불러오는 중입니다" />
+        ) : billingQueue.status === "error" || billingQueue.status === "permission_denied" ? (
+          <EmrQueueEmptyState placement="panel-center" title={billingQueue.status === "permission_denied" ? "수납 업무를 볼 권한이 없습니다" : "수납 업무를 불러오지 못했습니다"} />
+        ) : baseRowCount > 0 && totalRowCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="수납 대기열 항목"
             placement="panel-center"
@@ -1888,7 +1953,7 @@ export function BillingSidePanel({
               invoiceAssignees={invoiceAssignees}
               label={group.label}
               rows={group.rows}
-              selectedInvoiceId={selectedInvoiceId}
+              selectedInvoiceId={queryInvoiceId ?? selectedInvoiceId}
               onSelectInvoice={handleSelectInvoice}
               onToggle={() => toggleGroup(group.value)}
             />
@@ -1913,7 +1978,7 @@ function BillingQueueGroup({
   colorToken: string;
   invoiceAssignees: Record<string, string | undefined>;
   label: string;
-  rows: BillingQueueRow[];
+  rows: BillingQueueItem[];
   selectedInvoiceId: string;
   onSelectInvoice: (invoiceId: string) => void;
   onToggle: () => void;
@@ -3323,6 +3388,7 @@ export function BillingContent({
     queryInvoiceId,
     selectedInvoiceId,
   } = useBillingWorkspaceData();
+  const billingQueue = useBillingQueue(workspaceId);
   const { session: authSession } = useAuthClient();
   const actorHeaders = useMemo(
     () => getDemoActorHeader(authSession),
@@ -3476,8 +3542,23 @@ export function BillingContent({
     setFilter(getBillingFilterForInvoice(invoice));
   }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId, setFilter]);
 
+  const detailReads = queryInvoiceId
+    ? [apiState.invoiceLines, apiState.paymentStatus, apiState.orderSummary]
+    : [];
+  if (!effectiveDetail && (billingQueue.status === "loading" || detailReads.some(read => read.status === "loading"))) {
+    return <EmrContentLoadingState testId="billing-content-loading-state" title="수납 업무를 불러오는 중입니다" />;
+  }
+  if (!effectiveDetail && (billingQueue.status === "error" || billingQueue.status === "permission_denied" || detailReads.some(read => read.status === "error" || read.status === "permission_denied"))) {
+    const denied = billingQueue.status === "permission_denied" || detailReads.some(read => read.status === "permission_denied");
+    return <div className="flex h-full items-center justify-center px-6 py-10"><EmrEmptyState
+      kind={denied ? "no-permission" : "read-error"} surface="content" size="md" role="alert"
+      title={denied ? "수납 업무를 볼 권한이 없습니다" : "수납 업무를 불러오지 못했습니다"}
+      primaryAction={denied ? undefined : <Button variant="outline" onClick={() => { void billingQueue.refresh(); apiState.retrySnapshots(); }}>재시도</Button>}
+    /></div>;
+  }
+
   if (!effectiveDetail) {
-    const hasBillingRows = legacySalesDemo && invoices.length > 0;
+    const hasBillingRows = (legacySalesDemo && invoices.length > 0) || billingQueue.rows.length > 0;
 
     return (
       <div className="flex h-full items-center justify-center bg-[var(--emr-surface-workspace)] emr-text-dense text-muted-foreground">
@@ -3498,7 +3579,7 @@ export function BillingContent({
                 variant="outline"
                 roundness="round"
                 className="border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-white-alpha-8)] shadow-[var(--clair-shadow-xs)]"
-                onClick={apiState.retrySnapshots}
+                onClick={() => { void billingQueue.refresh(); apiState.retrySnapshots(); }}
               >
                 <CdsActionsRefreshCcwIcon
                   data-icon="inline-start"

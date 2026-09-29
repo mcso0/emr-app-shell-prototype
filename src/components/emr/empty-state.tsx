@@ -8,7 +8,7 @@ import folderFileSearchMotionIcon from "../../../icons/motionIcon/folder-file-se
 import folderFileMotionIcon from "../../../icons/motionIcon/folder-file.json";
 import searchDocumentTextMotionIcon from "../../../icons/motionIcon/search-document-text.json";
 import searchNotFoundMotionIcon from "../../../icons/motionIcon/search-not-found.json";
-import { CdsAlertsAlertTriangleIcon } from "@/components/cds-icons/alerts-and-status";
+import { CdsAlertsLoaderIcon, CdsAlertsAlertTriangleIcon } from "@/components/cds-icons/alerts-and-status";
 import { cn } from "@/lib/utils";
 
 import { EmrMotionIcon } from "./motion-icon";
@@ -364,5 +364,23 @@ export function EmrEmptyState({
         ) : null}
       </div>
     </section>
+  );
+}
+
+/** The same centered pending surface used by the chart workspace. */
+export function EmrContentLoadingState({ title, testId }: { title: string; testId: string }) {
+  return (
+    <div aria-live="polite" className="flex h-full min-h-0 min-w-0 items-center justify-center px-6 py-10">
+      <EmrEmptyState
+        icon={<CdsAlertsLoaderIcon className="size-6 motion-safe:animate-spin motion-reduce:animate-none" aria-hidden="true" />}
+        kind="upstream-pending"
+        reserveActionSpace={false}
+        role="status"
+        size="md"
+        surface="content"
+        testId={testId}
+        title={title}
+      />
+    </div>
   );
 }

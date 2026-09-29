@@ -10,7 +10,7 @@ related_work:
   - DEN-341
 supersedes: []
 superseded_by: []
-last_updated: 2026-05-31
+last_updated: 2026-09-29
 ---
 
 # Guardian-Centered Billing Checkout Flow
@@ -93,6 +93,20 @@ Do not show animal vitals, breed, age, or sex as primary billing header fields.
 ### Left Queue: Billing Work Queue
 
 Use `수납대기`, `미납`, and `완료` as the primary queue groups.
+
+The selected operating date scopes live queue discovery. Waiting/unpaid invoices
+carry forward from their billing request date; terminal invoices appear on that
+request date. Date changes clear invoice/encounter/order selection. While the
+new scope is pending and no current detail is selected, show the same centered
+`md` loading surface as chart. A successful empty response alone shows no work;
+permission denial and failed reads show their own states.
+
+Queue discovery reads minimal card fields through a `billing:view` RPC. It must
+not create candidates or prepare checkout. Selecting an invoice starts the
+existing detail flow; invoice and encounter context must match before display.
+The 2026-09-29 implementation and rolled-back synthetic SQL proof are local:
+[DEN-455 follow-up](../../work/demo-data/DEN-455-billing-ux-loading-failure-retry-payment-state-clarity.md#approved-follow-up--2026-09-29).
+Remote migration application and deployment remain pending.
 
 Queue row should show:
 

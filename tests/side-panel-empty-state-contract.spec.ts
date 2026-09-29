@@ -52,6 +52,10 @@ async function mockEmptyQueues(page: Page) {
   };
 
   await page.route(
+    `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/billing/queue?*`,
+    route => route.fulfill({ json: { ok: true, rows: [] } }),
+  );
+  await page.route(
     `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
     async (route) => route.fulfill(emptyResponse),
   );
