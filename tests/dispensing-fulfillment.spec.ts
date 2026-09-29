@@ -1285,7 +1285,7 @@ test("dispensing treatment workspace surfaces fulfillment read permission denial
     page.getByRole("heading", {
       name: "조제/처치 대기열에서 항목을 선택해 주세요",
     }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 });
 
 test("dispensing treatment workspace keeps local state unchanged when fulfillment mutation fails", async ({

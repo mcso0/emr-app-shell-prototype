@@ -68,6 +68,7 @@ async function grantCheongdamWorkspaceAccess(page: Page) {
 
 test("billing no-work empty state hides history aside", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
+  await page.route("**/billing/queue?*", route => route.fulfill({ json: { ok: true, rows: [] } }));
 
   await page.goto(
     `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/billing?modulePanel=open&aside=history&right=closed`

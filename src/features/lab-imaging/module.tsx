@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCoreRowModel,
   useReactTable,
@@ -54,6 +54,7 @@ import {
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import {
   EmrEmptyState,
+  EmrContentLoadingState,
   type EmrEmptyStateKind,
 } from "@/components/emr/empty-state";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
@@ -436,9 +437,10 @@ type FulfillmentWorkItemReadSummary = {
 };
 type FulfillmentQueueSnapshot = {
   summary?: FulfillmentWorkItemReadSummary;
+  status?: FulfillmentQueueReadStatus;
   workItems: FulfillmentWorkItem[];
 };
-type FulfillmentQueueReadStatus = "loading" | "ready";
+type FulfillmentQueueReadStatus = "loading" | "ready" | "error" | "permission_denied";
 
 async function loadFulfillmentEligibleAssigneesRoute({
   workItemId,
@@ -513,6 +515,7 @@ const labResultTabItems = [
 ];
 
 const fulfillmentQueueCache = new Map<string, FulfillmentQueueSnapshot>();
+const fulfillmentQueueRequestIds = new Map<string, number>();
 const fulfillmentQueueListeners = new Map<
   string,
   Set<(snapshot: FulfillmentQueueSnapshot) => void>
@@ -713,89 +716,60 @@ function useFulfillmentQueue(
     queueType,
     effectiveDate,
   );
-  const cachedSnapshot = fulfillmentQueueCache.get(cacheKey);
+  const requestSeq = useRef(0);
   const [queueState, setQueueState] = useState<{
     cacheKey: string;
     snapshot: FulfillmentQueueSnapshot;
     status: FulfillmentQueueReadStatus;
-  }>(() => ({
-    cacheKey,
-    snapshot: cachedSnapshot ?? emptyFulfillmentQueueSnapshot,
-    status: cachedSnapshot ? "ready" : "loading",
-  }));
-  const fallbackSnapshot = fulfillmentQueueCache.get(cacheKey);
-  const snapshot =
-    queueState.cacheKey === cacheKey
-      ? queueState.snapshot
-      : (fallbackSnapshot ?? emptyFulfillmentQueueSnapshot);
-  const status =
-    queueState.cacheKey === cacheKey
-      ? queueState.status
-      : fallbackSnapshot
-        ? "ready"
-        : "loading";
+  }>(() => ({ cacheKey, snapshot: emptyFulfillmentQueueSnapshot, status: "loading" }));
+  const snapshot = queueState.cacheKey === cacheKey ? queueState.snapshot : emptyFulfillmentQueueSnapshot;
+  const status = queueState.cacheKey === cacheKey ? queueState.status : "loading";
 
-  const loadQueueSnapshot =
-    useCallback(async (): Promise<FulfillmentQueueSnapshot> => {
-      const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
-
-      try {
-        const response = await fetch(
-          `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
-          { headers: { "x-clair-demo-session-user-id": "user-tech" } },
-        );
-        const body = (await response.json()) as {
-          ok?: boolean;
-          summary?: FulfillmentWorkItemReadSummary;
-          workItems?: FulfillmentWorkItem[];
-        };
-        const nextSnapshot =
-          response.ok && body.ok && Array.isArray(body.workItems)
-            ? { summary: body.summary, workItems: body.workItems }
-            : (previousSnapshot ?? emptyFulfillmentQueueSnapshot);
-        return nextSnapshot;
-      } catch {
-        return previousSnapshot ?? emptyFulfillmentQueueSnapshot;
+  const loadQueueSnapshot = useCallback(async (): Promise<FulfillmentQueueSnapshot> => {
+    const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
+        { headers: { "x-clair-demo-session-user-id": "user-tech" } },
+      );
+      const body = await response.json() as { ok?: boolean; denialReason?: string; summary?: FulfillmentWorkItemReadSummary; workItems?: FulfillmentWorkItem[] };
+      if (!response.ok || !body.ok || !Array.isArray(body.workItems)) {
+        return { ...(previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: response.status === 401 || response.status === 403 || body.denialReason === "permission_missing" ? "permission_denied" : "error" };
       }
-    }, [cacheKey, effectiveDate, queueType, workspaceId]);
+      return { summary: body.summary, workItems: body.workItems, status: "ready" };
+    } catch {
+      return { ...(previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: "error" };
+    }
+  }, [cacheKey, effectiveDate, queueType, workspaceId]);
 
-  const applyQueueSnapshot = useCallback(
-    (nextSnapshot: FulfillmentQueueSnapshot) => {
-      setCachedFulfillmentQueue(cacheKey, nextSnapshot);
-      setQueueState({ cacheKey, snapshot: nextSnapshot, status: "ready" });
-    },
-    [cacheKey],
-  );
+  const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    const requestId = (fulfillmentQueueRequestIds.get(cacheKey) ?? 0) + 1;
+    fulfillmentQueueRequestIds.set(cacheKey, requestId);
+    const nextSnapshot = await loadQueueSnapshot();
+    if (fulfillmentQueueRequestIds.get(cacheKey) !== requestId) return;
+    setCachedFulfillmentQueue(cacheKey, nextSnapshot);
+    if (seq === requestSeq.current) {
+      setQueueState({ cacheKey, snapshot: nextSnapshot, status: nextSnapshot.status ?? "ready" });
+    }
+  }, [cacheKey, loadQueueSnapshot]);
 
-  const refresh = useCallback(async () => {
-    applyQueueSnapshot(await loadQueueSnapshot());
-  }, [applyQueueSnapshot, loadQueueSnapshot]);
+  const refresh = useCallback(() => {
+    setQueueState(current => ({ cacheKey, snapshot: current.cacheKey === cacheKey ? current.snapshot : emptyFulfillmentQueueSnapshot, status: "loading" }));
+    return load();
+  }, [cacheKey, load]);
 
   useEffect(() => {
-    let canceled = false;
-
-    // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
-    async function loadInitialQueue() {
-      const nextSnapshot = await loadQueueSnapshot();
-      if (canceled) return;
-      applyQueueSnapshot(nextSnapshot);
-    }
-
-    void loadInitialQueue();
-
-    return () => {
-      canceled = true;
-    };
-  }, [applyQueueSnapshot, loadQueueSnapshot]);
+    void load();
+    return () => { requestSeq.current += 1; };
+  }, [load]);
 
   useEffect(() => {
     const listener = (nextSnapshot: FulfillmentQueueSnapshot) =>
-      setQueueState({ cacheKey, snapshot: nextSnapshot, status: "ready" });
-
+      setQueueState({ cacheKey, snapshot: nextSnapshot, status: nextSnapshot.status ?? "ready" });
     const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
     listeners.add(listener);
     fulfillmentQueueListeners.set(cacheKey, listeners);
-
     return () => {
       listeners.delete(listener);
       if (listeners.size === 0) fulfillmentQueueListeners.delete(cacheKey);
@@ -3601,6 +3575,18 @@ export function LabContent({
     }
   }, [queryLabResultId, selectLabResult, selectedLabResultId]);
 
+  if (fulfillmentQueue.status === "loading" && !effectiveDetail) {
+    return <EmrContentLoadingState testId="lab-content-loading-state" title="검사 업무를 불러오는 중입니다" />;
+  }
+  if (!effectiveDetail && (fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied")) {
+    const denied = fulfillmentQueue.status === "permission_denied";
+    return <div className="flex h-full items-center justify-center px-6 py-10"><EmrEmptyState
+      kind={denied ? "no-permission" : "read-error"} surface="content" size="md" role="alert"
+      title={denied ? "검사 업무를 볼 권한이 없습니다" : "검사 업무를 불러오지 못했습니다"}
+      primaryAction={denied ? undefined : <Button variant="outline" onClick={() => void fulfillmentQueue.refresh()}>재시도</Button>}
+    /></div>;
+  }
+
   if (!effectiveDetail) {
     const labWorkItemCount =
       fulfillmentQueue.summary?.totalCount ?? fulfillmentQueue.workItems.length;
@@ -4434,6 +4420,18 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
       selectImagingStudy(queryImagingStudyId);
     }
   }, [queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
+
+  if (fulfillmentQueue.status === "loading" && !detail) {
+    return <EmrContentLoadingState testId="imaging-content-loading-state" title="영상 업무를 불러오는 중입니다" />;
+  }
+  if (!detail && (fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied")) {
+    const denied = fulfillmentQueue.status === "permission_denied";
+    return <div className="flex h-full items-center justify-center px-6 py-10"><EmrEmptyState
+      kind={denied ? "no-permission" : "read-error"} surface="content" size="md" role="alert"
+      title={denied ? "영상 업무를 볼 권한이 없습니다" : "영상 업무를 불러오지 못했습니다"}
+      primaryAction={denied ? undefined : <Button variant="outline" onClick={() => void fulfillmentQueue.refresh()}>재시도</Button>}
+    /></div>;
+  }
 
   if (!detail) {
     const imagingWorkItemCount =

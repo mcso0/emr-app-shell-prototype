@@ -78,7 +78,7 @@ export const isReasonBackedUnpaidInvoice = (invoice: Invoice) =>
   invoice.paymentState === "failed" ||
   Boolean(invoice.unpaidReason);
 
-export const getBillingFilterForInvoice = (invoice: Invoice): BillingFilter => {
+export const getBillingFilterForInvoice = (invoice: Pick<Invoice, "status" | "paymentState" | "unpaidReason">): BillingFilter => {
   const lifecycleStatus = resolveBillingLifecycleStatus(invoice);
   if (lifecycleStatus === "paid" || lifecycleStatus === "refunded" || lifecycleStatus === "voided") {
     return "closed";

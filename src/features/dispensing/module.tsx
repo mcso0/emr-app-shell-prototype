@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
   type SetStateAction,
@@ -17,7 +18,7 @@ import {
 import {
   CdsActionsRefreshCcwIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrEmptyState, EmrContentLoadingState } from "@/components/emr/empty-state";
 import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
@@ -285,6 +286,7 @@ const fulfillmentQueueCache = new Map<
   string,
   DispensingFulfillmentQueueSnapshot
 >();
+const dispensingQueueRequestIds = new Map<string, number>();
 const fulfillmentQueueListeners = new Map<
   string,
   Set<(snapshot: DispensingFulfillmentQueueSnapshot) => void>
@@ -328,20 +330,20 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   const workspaceId = getWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
   const cacheKey = getFulfillmentQueueCacheKey(workspaceId, effectiveDate);
-  const [queueState, setQueueState] =
-    useState<DispensingFulfillmentQueueSnapshot>(
-      () =>
-        fulfillmentQueueCache.get(cacheKey) ?? emptyFulfillmentQueueSnapshot,
-    );
-  const snapshot = fulfillmentQueueCache.get(cacheKey) ?? queueState;
+  const requestSeq = useRef(0);
+  const [queueState, setQueueState] = useState<{ cacheKey: string; snapshot: DispensingFulfillmentQueueSnapshot }>(() => ({ cacheKey, snapshot: { ...emptyFulfillmentQueueSnapshot, status: "loading" } }));
+  const snapshot = queueState.cacheKey === cacheKey ? queueState.snapshot : { ...emptyFulfillmentQueueSnapshot, status: "loading" as const };
 
-  const refresh = useCallback(async () => {
+  const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
+    const requestId = (dispensingQueueRequestIds.get(cacheKey) ?? 0) + 1;
+    dispensingQueueRequestIds.set(cacheKey, requestId);
+    const apply = (next: DispensingFulfillmentQueueSnapshot) => {
+      if (dispensingQueueRequestIds.get(cacheKey) !== requestId) return;
+      setCachedDispensingFulfillmentQueue(cacheKey, next);
+      if (seq === requestSeq.current) setQueueState({ cacheKey, snapshot: next });
+    };
     try {
-      setCachedDispensingFulfillmentQueue(cacheKey, {
-        sourceTotalCount: fulfillmentQueueCache.get(cacheKey)?.sourceTotalCount,
-        status: "loading",
-        workItems: fulfillmentQueueCache.get(cacheKey)?.workItems ?? [],
-      });
       const [dispensingResponse, treatmentResponse] = await Promise.all([
         fetch(
           `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
@@ -373,7 +375,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
       if (!dispensingResponse.ok || !dispensingBody.ok) {
         const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
 
-        setCachedDispensingFulfillmentQueue(cacheKey, {
+        apply({
           sourceTotalCount: previousSnapshot?.sourceTotalCount,
           status: getFulfillmentReadFailureStatus({
             denialReason: dispensingBody.denialReason,
@@ -386,7 +388,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
       if (!treatmentResponse.ok || !treatmentBody.ok) {
         const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
 
-        setCachedDispensingFulfillmentQueue(cacheKey, {
+        apply({
           sourceTotalCount: previousSnapshot?.sourceTotalCount,
           status: getFulfillmentReadFailureStatus({
             denialReason: treatmentBody.denialReason,
@@ -413,7 +415,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
           (Array.isArray(treatmentBody.workItems)
             ? treatmentBody.workItems.length
             : 0));
-      setCachedDispensingFulfillmentQueue(cacheKey, {
+      apply({
         sourceTotalCount,
         status: nextItems.length ? "ready" : "empty",
         workItems: nextItems,
@@ -421,7 +423,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
     } catch {
       const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
 
-      setCachedDispensingFulfillmentQueue(cacheKey, {
+      apply({
         sourceTotalCount: previousSnapshot?.sourceTotalCount,
         status: "error",
         workItems: previousSnapshot?.workItems ?? [],
@@ -429,14 +431,20 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
     }
   }, [cacheKey, effectiveDate, workspaceId]);
 
+  const refresh = useCallback(() => {
+    setQueueState(current => ({ cacheKey, snapshot: { ...(current.cacheKey === cacheKey ? current.snapshot : emptyFulfillmentQueueSnapshot), status: "loading" } }));
+    return load();
+  }, [cacheKey, load]);
+
   useEffect(() => {
     // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
-    void refresh();
-  }, [refresh]);
+    void load();
+    return () => { requestSeq.current += 1; };
+  }, [load]);
 
   useEffect(() => {
     const listener = (nextSnapshot: DispensingFulfillmentQueueSnapshot) =>
-      setQueueState(nextSnapshot);
+      setQueueState({ cacheKey, snapshot: nextSnapshot });
     const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
 
     listeners.add(listener);
@@ -1655,7 +1663,7 @@ function DispensingFulfillmentQueueNotice({
   onRetry: () => void;
   status: DispensingFulfillmentQueueStatus;
 }) {
-  if (status === "ready" || status === "idle" || status === "empty") return null;
+  if (status === "ready" || status === "idle" || status === "empty" || status === "loading") return null;
 
   if (status === "permission_denied") {
     return (
@@ -1694,16 +1702,7 @@ function DispensingFulfillmentQueueNotice({
     );
   }
 
-  return (
-    <EmrInlineAlert
-      severity="info"
-      title="조제/처치 업무 큐를 불러오는 중입니다."
-      testId="dispensing-fulfillment-state"
-    >
-      order_fulfillment_work_items readback으로 현재 업무 상태를 확인하고
-      있습니다.
-    </EmrInlineAlert>
-  );
+  return null;
 }
 
 export function DispensingContent({
@@ -1931,6 +1930,14 @@ function DispensingContentBody({
       current.map((group) => (group.id === groupId ? updater(group) : group)),
     );
   };
+
+  if (fulfillmentQueue.status === "loading" && !selectedQueueItem) {
+    return <EmrContentLoadingState testId="dispensing-content-loading-state" title="조제/처치 업무를 불러오는 중입니다" />;
+  }
+
+  if (!selectedQueueItem && (fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied")) {
+    return <div className="flex h-full min-h-0 flex-col px-4 py-3"><DispensingFulfillmentQueueNotice status={fulfillmentQueue.status} onRetry={fulfillmentQueue.refresh} /></div>;
+  }
 
   if (!selectedQueueItem) {
     const sourceQueueItemCount =
