@@ -188,7 +188,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   }
   function toggleGroup(key: string) { updatePreferences({ collapsed: toggleValue(preferences.collapsed, key) }); }
   const collapsed = (key: string) => preferences.collapsed.includes(key);
-  const dateControl = <EmrDateNavigator className={styles.dateControl} dateLabel={query.date} formatSelectedDateLabel={hospitalDateLabel} selectedDate={query.date} todayDate={today} todayLabel={query.date === today ? "오늘" : undefined}
+  const dateControl = <EmrDateNavigator appearance="home" className={styles.dateControl} dateLabel={query.date} formatSelectedDateLabel={hospitalDateLabel} selectedDate={query.date} todayDate={today} todayLabel={query.date === today ? "오늘" : undefined}
     onDateChange={(date) => updateQuery(view, { date, owners: null })}
     onPrevious={() => updateQuery(view, { date: offsetDate(query.date, -1), owners: null })}
     onNext={() => updateQuery(view, { date: offsetDate(query.date, 1), owners: null })} />;

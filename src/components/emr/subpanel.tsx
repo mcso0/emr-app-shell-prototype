@@ -59,6 +59,7 @@ type EmrSubpanelTitleProps = {
 
 type EmrDateNavigatorProps = {
   dateLabel: ReactNode;
+  appearance?: "compact" | "home";
   formatSelectedDateLabel?: (date: string) => ReactNode;
   className?: string;
   onDateChange?: (date: string) => void;
@@ -126,7 +127,7 @@ const emrDateNavigatorClassName =
 const emrDateNavigatorTriggerClassName =
   "emr-text-dense-label flex h-[var(--clair-control-height-md)] min-w-0 flex-1 items-center justify-center gap-[var(--clair-spacing-6)] rounded-[var(--clair-radius-md)] px-[var(--clair-spacing-10)] font-medium tabular-nums text-foreground outline-none transition-[scale,background-color] duration-150 ease-out hover:bg-[var(--emr-state-hover)] focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-50";
 const emrDateNavigatorIconButtonClassName =
-  "h-10 w-8 p-0 rounded-[var(--clair-radius-md)] bg-transparent text-[var(--clair-color-atomic-neutral-600)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
+  "p-0 rounded-[var(--clair-radius-md)] bg-transparent text-[var(--clair-color-atomic-neutral-600)] shadow-none transition-transform hover:bg-[var(--emr-state-hover)] hover:text-[var(--emr-text-secondary)] active:scale-[0.96]";
 const emrDateNavigatorTodayBadgeClassName =
   "rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--clair-color-atomic-black-alpha-4)] px-[var(--clair-spacing-6)] emr-text-metadata font-medium";
 const emrSubpanelHeaderIconButtonClassName =
@@ -227,6 +228,7 @@ function EmrSubpanelHeaderIconButton({
 }
 
 export function EmrDateNavigator({
+  appearance = "compact",
   dateLabel,
   formatSelectedDateLabel,
   className,
@@ -240,6 +242,12 @@ export function EmrDateNavigator({
   todayDate,
   todayLabel,
 }: EmrDateNavigatorProps) {
+  const iconButtonClassName = cn(
+    emrDateNavigatorIconButtonClassName,
+    appearance === "home"
+      ? "h-[var(--clair-control-height-xl)] w-[var(--clair-control-height-md)]"
+      : "size-[var(--clair-control-height-md)]",
+  );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [pickerMonthDate, setPickerMonthDate] = useState(selectedDate ?? "");
   const datePickerEnabled = Boolean(selectedDate && onDateChange);
@@ -292,16 +300,26 @@ export function EmrDateNavigator({
   );
 
   return (
-    <div className={cn(emrDateNavigatorClassName, className)}>
+    <div
+      className={cn(
+        emrDateNavigatorClassName,
+        appearance === "compact" && "px-[var(--clair-spacing-16)]",
+        className,
+      )}
+    >
       <Button
         variant="ghost"
         size="icon"
-        className={emrDateNavigatorIconButtonClassName}
+        className={iconButtonClassName}
         aria-label={previousLabel}
         disabled={!onPrevious}
         onClick={onPrevious}
       >
-        <CdsNavigationChevronLeftIcon className="size-7" size={28} />
+        <CdsNavigationChevronLeftIcon
+          className={appearance === "home" ? "size-7" : "size-4"}
+          size={appearance === "home" ? 28 : 16}
+          aria-hidden="true"
+        />
       </Button>
       {datePickerEnabled ? (
         <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -386,12 +404,16 @@ export function EmrDateNavigator({
       <Button
         variant="ghost"
         size="icon"
-        className={emrDateNavigatorIconButtonClassName}
+        className={iconButtonClassName}
         aria-label={nextLabel}
         disabled={!onNext}
         onClick={onNext}
       >
-        <CdsNavigationChevronRightIcon className="size-7" size={28} />
+        <CdsNavigationChevronRightIcon
+          className={appearance === "home" ? "size-7" : "size-4"}
+          size={appearance === "home" ? 28 : 16}
+          aria-hidden="true"
+        />
       </Button>
     </div>
   );
