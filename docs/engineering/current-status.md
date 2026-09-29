@@ -2,15 +2,15 @@
 
 Updated: 2026-09-29
 
-Lab result sheet phase 2 was merged in PR #848 and deployed to Ready Production
-on 2026-09-29. Item-finding save succeeded in authenticated synthetic smoke,
-but attachment prepare returned HTTP 409: both session and service roles lack
-direct SELECT on the RPC-only result tables. A scoped forward-fix candidate on
-`codex/lab-attachment-storage-context` adds ownership/atomic-prepare RPCs and uses
-the existing server-only storage signer, without widening table grants. Its new
-migration was approved and applied as `20260929055945`; the final exact-candidate
-Production release remains pending approval. Full
-attachment integration and retest smoke are not accepted yet. See
+Lab result sheet phase 2 and its scoped upload preparation fix were merged in
+PRs #848 and #851 on 2026-09-29. PR #851 deployed to Ready Production at
+`debcfca58c2226ef17dcbd72962e1fe97f8daddf`; authenticated synthetic preparation
+and private object upload succeeded, but finalize and discard failed. Both
+attachment routes had a malformed UUID validator that rejected their own
+generated IDs. A code-only follow-up on `codex/lab-attachment-lifecycle-uuid`
+corrects the validators and adds lifecycle/boundary regression tests. No new DB
+change or permission widening is included. Full attachment integration and retest
+smoke are not accepted yet; one private synthetic upload remains pending cleanup. See
 [LAB-PR-003](../work/lab/LAB-PR-003-result-sheet-phase-2.md) for exact evidence.
 
 Latest local fulfillment-queue remediation restores separate workspace-scoped

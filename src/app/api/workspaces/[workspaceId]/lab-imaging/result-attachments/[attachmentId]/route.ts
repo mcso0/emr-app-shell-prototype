@@ -3,7 +3,7 @@ import { loadLabResultPhase2Context, resolveLabResultEntry } from "@/features/la
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 
 type RouteContext = { params: Promise<{ workspaceId: string; attachmentId: string }> };
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{12}$/;
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export async function GET(request: Request, { params }: RouteContext) {
   const { workspaceId, attachmentId } = await params;
