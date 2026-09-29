@@ -4,7 +4,7 @@ title: "History compact diagnosis rows"
 description: "Approved single-line history layout, adaptive diagnosis badges, hover action, search emphasis and tooltip contract"
 tags: ["chart", "history", "diagnosis", "design-system"]
 status: "approved"
-last_updated: "2026-09-17"
+last_updated: "2026-09-29"
 ---
 
 # History Compact Diagnosis Rows
@@ -23,7 +23,7 @@ This replaces the earlier B layout after the user reviewed the Figma frame and a
 - Preserve responsive panel sizing; the source frame is 305 by 452px, not a fixed app panel size. Reserve a minimum 305px History track when expanded and 240px for the other clinical panels so the wider History does not squeeze them; use the existing panel-group horizontal scrolling when space is insufficient. The existing below-1180px 360px tracks remain unchanged.
 - Header 38px; toolbar 44px with 12px horizontal and 8px vertical inset. Keep `History` rather than the source typo `Histroy`.
 - Toolbar controls are 28px tall, with 10px gaps: 79px diagnosis selector, flexible `키워드 입력`, 1 by 18px divider, 58px disabled filter. Filtering options remain unimplemented.
-- List inset: 12px horizontal, 8px top. One encounter per 40px row with 8px inner padding and 8px radius. Adjacent rows repeat every 49px: 4px space, 1px separator, 4px space. Include the final separator.
+- List inset: 12px horizontal, 8px top. One encounter per 40px row with 8px inner padding and 8px radius. Adjacent rows repeat every 45px: 2px space, 1px separator, 2px space, following the user-approved spacing reduction on 2026-09-29. Include the final separator.
 - Date group: render a plain, non-badge 12px calendar icon plus `YY.MM.DD` text with a 4px gap, 16px height, Neutral 500 text and no padding, radius or background. The group is 68px wide for the standard date label. Use the existing checked-in/created-at fallback and date formatting. Same-day encounters remain separate rows.
 - The diagnosis area begins 20px after the date group. Badges are 24px high with 6px horizontal/4px vertical inset, 6px radius, 6px gap, 12px/16px medium text and black-alpha-4 background.
 - Do not show time, veterinarian, status or encounter number in each inline row. Keep those authoritative fields available in the existing chart/aside and retain veterinarian query matching.

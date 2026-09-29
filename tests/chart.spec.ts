@@ -3125,12 +3125,12 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(inlineHistoryItem).not.toHaveAttribute("data-selected");
   await expect(inlineHistoryItem).toHaveCSS("height", "40px");
   await expect(inlineHistoryItem).toHaveCSS("border-radius", "8px");
-  await expect(inlineHistoryItem).toHaveCSS("margin-bottom", "9px");
+  await expect(inlineHistoryItem).toHaveCSS("margin-bottom", "5px");
   expect(
     await inlineHistoryItem.evaluate((element) =>
       getComputedStyle(element, "::after").bottom,
     ),
-  ).toBe("-5px");
+  ).toBe("-3px");
   const historyDate = inlineHistoryItem.getByTestId(
     `chart-history-date-${oldEncounterId}`,
   );
