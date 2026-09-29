@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { CdsActionsPlusIcon, CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsFilesCalendarIcon, CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
@@ -10,6 +11,7 @@ import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content
 import { EmrContentLoadingState, EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
+import { EMR_SIDE_PANEL_COLLAPSE_EASE, EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE } from "@/components/emr/side-panel-collapsible-group";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose } from "@/components/ui/dialog";
@@ -189,7 +191,7 @@ function OpenChartVitalDialog({ actorHeaders, encounterId, mode, onOpenChange, o
       setSelectedId(vital.id);
       setDraft(createVitalDialogDraft(vital, vitalSettings));
       setTouched(new Set());
-      setFeedback("바이탈을 저장했어요.");
+      setFeedback("");
       try { await onSaved(vital); } catch { setFeedback("바이탈은 저장됐지만 화면을 갱신하지 못했어요."); }
     } catch {
       if (mountedRef.current) setErrors({ vitals: getVitalSaveErrorMessage() });
@@ -252,6 +254,17 @@ function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, n
   status: "loading" | "ready" | "error"; nextCursor: string | null; loadingMore: boolean; moreFailed: boolean;
   onLoadMore: () => void; onToggle: (day: string) => void; onSelect: (record: PatientVitalMeasurement | DraftMeasurement) => void;
 }) {
+  const reduceMotion = useReducedMotion();
+  const contentTransition = reduceMotion ? { duration: 0 } : {
+    height: { duration: 0.24, ease: EMR_SIDE_PANEL_COLLAPSE_EASE },
+    opacity: { duration: 0.14, ease: "easeOut" },
+    y: { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE },
+  };
+  const contentExitTransition = reduceMotion ? { duration: 0 } : {
+    height: { duration: 0.18, ease: EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE },
+    opacity: { duration: 0.12, ease: "easeIn" },
+    y: { duration: 0.16, ease: EMR_SIDE_PANEL_COLLAPSE_EXIT_EASE },
+  };
   const viewportRef = useRef<HTMLDivElement>(null);
   const [fade, setFade] = useState({ top: false, bottom: false });
   const updateFade = useCallback(() => {
@@ -285,12 +298,17 @@ function VitalHistoryList({ groups, expanded, activeId, newId, saving, status, n
     <nav className={styles.historyContent} aria-label="날짜별 바이탈 측정 기록">
       {groups.map(([day, records]) => <section key={day} className={styles.day}>
         <Button variant="ghost" className={styles.dayToggle} aria-expanded={expanded.has(day)} aria-controls={`vital-day-${day}`} disabled={saving} onClick={() => onToggle(day)}>
-          <CdsFilesCalendarIcon className="size-3.5" /><span className={styles.dayDetails}><span className={styles.dayLabel}>{day.slice(2).replaceAll("-", ".")}</span><span className={styles.dayCount}>{records.filter((record) => record.id !== newId).length}</span></span><span className={styles.chevron}><CdsNavigationChevronUpIcon className="size-3.5" /></span>
+          <CdsFilesCalendarIcon className="size-3.5" /><span className={styles.dayDetails}><span className={styles.dayLabel}>{day.slice(2).replaceAll("-", ".")}</span><span className={styles.dayCount}>{records.filter((record) => record.id !== newId).length}</span></span><motion.span className={styles.chevron} initial={false} animate={{ rotate: expanded.has(day) ? 0 : 180 }} transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EMR_SIDE_PANEL_COLLAPSE_EASE }}><CdsNavigationChevronUpIcon className="size-3.5" /></motion.span>
         </Button>
-        {expanded.has(day) ? <div id={`vital-day-${day}`} className={styles.dayRecords}>{records.map((record) => <Button key={record.id} variant="ghost" className={cn(styles.record, record.id === activeId && styles.selected)} aria-pressed={record.id === activeId} disabled={saving} onClick={() => onSelect(record)}>
+        <motion.div id={`vital-day-${day}`} className={styles.dayMotion} initial={false}
+          animate={{ height: expanded.has(day) ? "auto" : 0, opacity: expanded.has(day) ? 1 : 0, y: expanded.has(day) ? 0 : -4 }}
+          transition={expanded.has(day) ? contentTransition : contentExitTransition}
+          aria-hidden={!expanded.has(day)} inert={expanded.has(day) ? undefined : true}>
+        <div className={styles.dayRecords}>{records.map((record) => <Button key={record.id} variant="ghost" className={cn(styles.record, record.id === activeId && styles.selected)} aria-pressed={record.id === activeId} disabled={saving} onClick={() => onSelect(record)}>
           <span className={styles.recordTime}><CdsFilesClockIcon className="size-3" />{seoulTime(record.measuredAt)} {record.id === newId ? "미저장" : "측정"}</span>
           <Badge size="sm" variant="outline" className={styles.author}><CdsPeopleUserIcon className="size-3" />{"recordedByName" in record ? record.recordedByName ?? "작성자 미상" : "미저장"}</Badge>
-        </Button>)}</div> : null}
+        </Button>)}</div>
+        </motion.div>
       </section>)}
       {moreFailed ? <EmrInlineAlert severity="error" title="이전 이력을 불러오지 못했어요." className={styles.historyFeedback} action={<Button variant="ghost" size="sm" onClick={onLoadMore}>다시 시도</Button>} /> : null}
       {nextCursor && !moreFailed ? <div data-vital-history-sentinel className={styles.historyMessage}><Button variant="ghost" size="sm" disabled={loadingMore} onClick={onLoadMore}>{loadingMore ? "불러오는 중" : "이전 이력 불러오기"}</Button></div> : null}

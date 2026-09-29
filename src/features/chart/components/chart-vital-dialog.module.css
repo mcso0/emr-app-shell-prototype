@@ -49,7 +49,7 @@
 .dayLabel { min-width: 60px; }
 .dayCount { color: var(--clair-color-atomic-neutral-400); }
 .chevron { display: grid; place-items: center; width: 24px; height: 24px; margin-left: auto; flex-shrink: 0; }
-.dayToggle[aria-expanded="false"] .chevron { transform: rotate(180deg); }
+.dayMotion { overflow: hidden; }
 .dayRecords { display: flex; flex-direction: column; gap: 4px; min-width: 0; margin-top: 2px; margin-left: 10.5px; padding-left: 8px; border-left: 1px solid var(--emr-border-default); }
 .record { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; width: 100%; height: 48px; min-width: 0; padding: 4px; border: 0; border-radius: 8px; color: var(--clair-color-atomic-neutral-600); text-align: left; }
 .record:hover, .selected { background: var(--clair-color-atomic-black-alpha-6); }

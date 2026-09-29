@@ -165,3 +165,35 @@ Follow-up local evidence:
 - Current rollback: Ready Production `dpl_3CgaZDNvUzc87RwesErW5TEDH3W5`, source
   `7ed99f0ee5df7c6a5aa889c376a58371563a3031`. Prior function definitions captured
   privately for an approved rollback; no patient rows included.
+
+## 2026-09-29 disclosure motion follow-up
+
+승욱 requested matching the chart/lab history disclosure interaction and removing
+the inline `바이탈을 저장했어요.` success text below the vital inputs.
+
+- Chart history and lab/imaging history both use `EmrContentHistoryGroup`:
+  height 240ms on expand / 180ms on collapse, opacity 140ms / 120ms, vertical
+  offset −4px to 0 over 200ms / 160ms, and chevron rotation over 200ms.
+- Reuse the installed Framer Motion and existing side-panel easing constants
+  (`[0.16, 1, 0.3, 1]` enter / `[0.32, 0, 0.67, 0]` exit), which match those
+  history groups. Keep the vital-specific approved geometry and markup.
+- Animate a persistent clipped wrapper so a rapid reverse starts from its current
+  height. Closed contents are immediately inert and hidden from accessibility;
+  initial render does not animate. Reduced-motion preference uses duration zero.
+- Existing content ResizeObserver updates scroll fades during height changes.
+  Selected measurement, editor draft and unsaved-change confirmation are unchanged.
+- Successful save clears inline feedback. Save/validation errors and the existing
+  post-save refresh failure explanation remain available when needed.
+- UI-only scope: no new dependency, shared-component change, API, permissions or
+  migration. Base source is merged PR859 at `5e7bc001`.
+
+Local evidence: TypeScript, changed-file ESLint and diff checks passed. Rebuilt
+actual-component synthetic preview confirms intermediate collapse height
+102→77.17→0px, inert/aria-hidden immediately on collapse, reverse/expand recovery,
+unchanged 519×496 dialog and history client/scroll widths both 195px. Synthetic
+historical save retains the confirmation, updates the input and disables save
+without displaying the former success text. No automated tests or real record write.
+App build, secret scan, docs and Korean UX copy checks also passed. Full ESLint:
+0 errors / the same 5 unrelated script warnings. Existing docs/NFT tracing and
+synthetic preview bundle-size warnings remain. Production approval will apply to
+the new exact PR candidate; no new DB migration is needed.
