@@ -225,10 +225,21 @@ export const ResponsiveNarrow320: Story = {
     const documentBody = within(canvasElement.ownerDocument.body);
     const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
     await expect(toolbar.getBoundingClientRect().width).toBeLessThanOrEqual(320);
-    await userEvent.click(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" }));
-    const menu = documentBody.getByRole("menu", { name: "가려진 서식 도구" });
+    await userEvent.click(canvas.getByRole("button", { name: "서식 도구 더보기" }));
+    const menu = documentBody.getByRole("menu", { name: "서식 도구 더보기" });
     await waitFor(() => expect(menu).toBeVisible());
-    await expect(documentBody.getByRole("heading", { name: "가려진 서식 도구" })).toBeVisible();
+    await expect(documentBody.queryByRole("heading", { name: "가려진 서식 도구" })).toBeNull();
+    await expect(menu).toHaveAttribute("data-slot", "dropdown-menu-content");
+    await waitFor(() => expect(menu.getBoundingClientRect().width).toBe(160));
+    for (const item of menu.querySelectorAll<HTMLElement>("[data-overflow-tool-id]")) {
+      const icon = item.children[item.getAttribute("role") === "menuitemcheckbox" ? 1 : 0];
+      await expect(getComputedStyle(item).justifyContent).toBe("flex-start");
+      await expect(icon.getBoundingClientRect().left - item.getBoundingClientRect().left).toBeLessThanOrEqual(8);
+    }
+    await userEvent.keyboard("{ArrowDown}{End}");
+    await expect(within(menu).getByRole("menuitem", { name: "기록 삽입" })).toHaveFocus();
+    await userEvent.keyboard("{Home}");
+    await expect(menu.querySelector("[data-overflow-tool-id]")).toHaveFocus();
     await expect(within(menu).getByRole("menuitem", { name: "구분선" })).toBeVisible();
     const snapshot = Array.from(menu.querySelectorAll<HTMLElement>("[data-overflow-tool-id]"), (item) => item.dataset.overflowToolId);
     const viewport = canvasElement.querySelector<HTMLElement>("[data-toolbar-viewport]");
@@ -250,7 +261,7 @@ export const ResponsiveNarrow320: Story = {
     await expect(Math.abs(leftFade.getBoundingClientRect().left - viewport.getBoundingClientRect().left)).toBeLessThanOrEqual(2);
     await userEvent.keyboard("{Escape}");
     await expect(menu).not.toBeInTheDocument();
-    await expect(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" })).toHaveFocus();
+    await expect(canvas.getByRole("button", { name: "서식 도구 더보기" })).toHaveFocus();
   },
 };
 
@@ -260,7 +271,7 @@ export const ResponsiveAllTools1000: Story = {
   args: { width: 1000, initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await waitFor(() => expect(canvas.queryByRole("button", { name: "가려진 서식 도구 더보기" })).toBeNull());
+    await waitFor(() => expect(canvas.queryByRole("button", { name: "서식 도구 더보기" })).toBeNull());
     await expect(canvas.getByRole("button", { name: "표 삽입" })).toBeVisible();
     const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
     await expect(toolbar.getBoundingClientRect().height).toBe(58);
@@ -278,10 +289,10 @@ export const OverflowThresholdDoesNotReserveMore: Story = {
     const thresholdWidth = Math.ceil(track.getBoundingClientRect().width + 36);
     frame.style.width = `${thresholdWidth}px`;
     await waitFor(() => expect(shell).toHaveAttribute("data-overflow", "false"));
-    await expect(within(canvasElement).queryByRole("button", { name: "가려진 서식 도구 더보기" })).toBeNull();
+    await expect(within(canvasElement).queryByRole("button", { name: "서식 도구 더보기" })).toBeNull();
     frame.style.width = `${thresholdWidth - 1}px`;
     await waitFor(() => expect(shell).toHaveAttribute("data-overflow", "true"));
-    await expect(within(canvasElement).getByRole("button", { name: "가려진 서식 도구 더보기" })).toBeVisible();
+    await expect(within(canvasElement).getByRole("button", { name: "서식 도구 더보기" })).toBeVisible();
   },
 };
 
@@ -334,7 +345,7 @@ export const ToolbarRovingKeyboard: Story = {
     await expect(canvas.getByRole("textbox")).toHaveFocus();
     styleButton.focus();
     await userEvent.keyboard("{Enter}");
-    await expect(within(canvasElement.ownerDocument.body).getByRole("menu", { name: "style" })).toBeVisible();
+    await waitFor(() => expect(within(canvasElement.ownerDocument.body).getByRole("menu", { name: "style" })).toBeVisible());
   },
 };
 
@@ -362,6 +373,47 @@ export const FormattingAndHistory: Story = {
   },
 };
 
+export const OverflowFormattingAndLink: Story = {
+  args: { width: 320, initialContent: selectionBlock },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    const text = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"] .bn-inline-content');
+    if (!text) throw new Error("서식 선택 대상을 찾지 못했습니다.");
+    const selection = canvasElement.ownerDocument.getSelection();
+    const range = canvasElement.ownerDocument.createRange();
+    range.selectNodeContents(text);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    const more = canvas.getByRole("button", { name: "서식 도구 더보기" });
+    await userEvent.click(more);
+    await userEvent.click(await body.findByRole("menuitemcheckbox", { name: "기울임" }));
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"italic":true'));
+    await waitFor(() => expect(canvas.getByRole("textbox")).toHaveFocus());
+    await expect(selection?.toString()).toBe("보호자 진술과 진료 소견을 직접 기록합니다.");
+    const viewport = canvasElement.querySelector<HTMLElement>("[data-toolbar-viewport]");
+    if (!viewport) throw new Error("SOAP 도구 scroll viewport를 찾지 못했습니다.");
+    viewport.scrollLeft = 0;
+    fireEvent.scroll(viewport);
+    await waitFor(() => expect(canvasElement.querySelector('[data-toolbar-fade="left"]')).toBeNull());
+    await userEvent.click(more);
+    await expect(await body.findByRole("menuitemcheckbox", { name: "기울임" })).toHaveAttribute("aria-checked", "true");
+    await userEvent.click(body.getByRole("menuitem", { name: "링크 삽입" }));
+    const url = await body.findByLabelText("링크 주소");
+    await waitFor(() => expect(url).toHaveFocus());
+    const popup = url.closest('[data-slot="popover-content"]');
+    if (!popup) throw new Error("링크 입력 패널을 찾지 못했습니다.");
+    await waitFor(() => expect(Math.abs(popup.getBoundingClientRect().right - more.getBoundingClientRect().right)).toBeLessThanOrEqual(1));
+    await userEvent.keyboard("{Escape}");
+    await expect(more).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(body.getByRole("menu", { name: "서식 도구 더보기" })).toBeVisible());
+    await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"italic":true');
+    await userEvent.keyboard("{Escape}");
+    await expect(more).toHaveFocus();
+  },
+};
+
 export const BlockStylesAndPlainAids: Story = {
   args: { initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
@@ -383,7 +435,7 @@ export const BoundedTableInsertion: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const documentBody = within(canvasElement.ownerDocument.body);
-    await userEvent.click(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" }));
+    await userEvent.click(canvas.getByRole("button", { name: "서식 도구 더보기" }));
     await userEvent.click(await documentBody.findByRole("menuitem", { name: "표 삽입" }));
     await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"table"'));
     await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"tableContent"');
@@ -408,7 +460,7 @@ export const PriorRecordInsertion: Story = {
     const recordButton = canvas.queryByRole("button", { name: "기록 삽입" });
     if (recordButton) await userEvent.click(recordButton);
     else {
-      await userEvent.click(canvas.getByRole("button", { name: "가려진 서식 도구 더보기" }));
+      await userEvent.click(canvas.getByRole("button", { name: "서식 도구 더보기" }));
       await userEvent.click(documentBody.getByRole("menuitem", { name: "기록 삽입" }));
     }
     await userEvent.click(documentBody.getByRole("menuitem", { name: /이전 진료 평가/ }));

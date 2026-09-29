@@ -4,6 +4,13 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as Rea
 import { HistoryExtension } from "@blocknote/core/extensions";
 import { useEditorState } from "@blocknote/react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -116,6 +123,7 @@ export function ChartSoapToolbar({
   const toolbarViewportRef = useRef<HTMLDivElement>(null);
   const toolbarWrapRef = useRef<HTMLDivElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const moreFinalFocusRef = useRef<HTMLElement | null>(null);
   const toolButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [edges, setEdges] = useState<ToolbarEdges>(initialEdges);
   const [rovingId, setRovingId] = useState("style");
@@ -196,7 +204,7 @@ export function ChartSoapToolbar({
   }, []);
 
   useEffect(() => {
-    if (!menu) return;
+    if (!menu || menu === "more") return;
     // Move focus after the trigger's keyup, so Enter activation cannot also
     // activate the first menu item as focus enters the newly mounted popup.
     const focusFrame = requestAnimationFrame(() => {
@@ -355,47 +363,72 @@ export function ChartSoapToolbar({
 
   const toolButton = (tool: Tool, overflow = false) => {
     const unavailable = tool.disabled || (!state.hasText && ["bold", "italic", "strike", "underline", "highlight", "link"].includes(tool.id));
+    const run = (target: HTMLElement) => {
+      rememberTrigger(target);
+      if (unavailable) return;
+      if (overflow) moreFinalFocusRef.current = toolsThatRestoreEditorFocus.has(tool.id) ? editor.domElement ?? null : null;
+      tool.run();
+      revealTool(tool.id);
+      if (toolsThatRestoreEditorFocus.has(tool.id)) editor.focus();
+      if (overflow && !toolsThatOpenMenus.has(tool.id)) {
+        setMenu(null);
+        // The menu's focus manager must release the popup before editor focus returns.
+        if (toolsThatRestoreEditorFocus.has(tool.id)) requestAnimationFrame(() => editor.focus());
+      }
+    };
+    if (overflow) {
+      const props = {
+        className: "h-8 justify-start emr-text-dense",
+        "aria-label": tool.label,
+        "data-overflow-tool-id": tool.id,
+        disabled: unavailable,
+        closeOnClick: false,
+        onMouseDown: (event: React.MouseEvent<HTMLElement>) => event.preventDefault(),
+        onClick: (event: React.MouseEvent<HTMLElement>) => run(event.currentTarget),
+      };
+      const content = <>{tool.icon}<span>{tool.label}</span></>;
+      return tool.active === undefined
+        ? <DropdownMenuItem key={tool.id} {...props}>{content}</DropdownMenuItem>
+        : <DropdownMenuCheckboxItem key={tool.id} checked={tool.active} {...props}>{content}</DropdownMenuCheckboxItem>;
+    }
     const button = <Button
       key={tool.id}
       type="button"
       variant="ghost"
-      size={overflow ? "sm" : "icon"}
-      className={overflow ? styles.menuItem : styles.toolButton}
-      role={overflow ? tool.active === undefined ? "menuitem" : "menuitemcheckbox" : undefined}
+      size="icon"
+      className={styles.toolButton}
       aria-label={tool.label}
-      aria-pressed={!overflow && tool.active !== undefined ? tool.active : undefined}
-      aria-checked={overflow && tool.active !== undefined ? tool.active : undefined}
-      aria-haspopup={!overflow && toolsThatOpenMenus.has(tool.id) ? "menu" : undefined}
+      aria-pressed={tool.active}
+      aria-haspopup={toolsThatOpenMenus.has(tool.id) ? "menu" : undefined}
       aria-expanded={menu === tool.id ? true : undefined}
       aria-disabled={unavailable}
-      tabIndex={overflow ? -1 : effectiveRovingId === tool.id ? 0 : -1}
-      data-toolbar-control={overflow ? undefined : tool.id}
-      data-overflow-tool-id={overflow ? tool.id : undefined}
-      ref={overflow ? undefined : (node) => { if (node) toolButtonRefs.current.set(tool.id, node); else toolButtonRefs.current.delete(tool.id); }}
-      onFocus={() => { if (!overflow) { setRovingId(tool.id); revealTool(tool.id); } }}
+      tabIndex={effectiveRovingId === tool.id ? 0 : -1}
+      data-toolbar-control={tool.id}
+      ref={(node) => { if (node) toolButtonRefs.current.set(tool.id, node); else toolButtonRefs.current.delete(tool.id); }}
+      onFocus={() => { setRovingId(tool.id); revealTool(tool.id); }}
       onMouseDown={(event) => event.preventDefault()}
-      onClick={(event) => {
-        rememberTrigger(event.currentTarget);
-        if (unavailable) return;
-        tool.run();
-        revealTool(tool.id);
-        if (toolsThatRestoreEditorFocus.has(tool.id)) editor.focus();
-        if (overflow && !toolsThatOpenMenus.has(tool.id)) setMenu(null);
-      }}
+      onClick={(event) => run(event.currentTarget)}
     >
       {tool.icon}<span className={styles.menuLabel}>{tool.label}</span>
     </Button>;
-    const menuTrigger = !overflow && toolsThatOpenMenus.has(tool.id)
+    const menuTrigger = toolsThatOpenMenus.has(tool.id)
       ? <PopoverTrigger render={button} />
       : button;
-    return overflow ? button : <Tooltip key={tool.id}><TooltipTrigger render={menuTrigger} /><TooltipContent side="bottom">{tool.label}</TooltipContent></Tooltip>;
+    return <Tooltip key={tool.id}><TooltipTrigger render={menuTrigger} /><TooltipContent side="bottom">{tool.label}</TooltipContent></Tooltip>;
   };
 
   const effectiveRovingId = rovingId === "more" && !edges.overflow && menu !== "more" ? "style" : rovingId;
   const showMore = edges.overflow || menu === "more";
 
   return (
-    <Popover open={activeMenu !== null} onOpenChange={(open) => { if (!open) setMenu(null); }}>
+    <DropdownMenu open={menu === "more"} modal={false} onOpenChange={(open) => {
+      if (open) {
+        moreFinalFocusRef.current = moreButtonRef.current;
+        setMoreSnapshotIds([...edges.hiddenIds]);
+        setMenu("more");
+      } else if (menu === "more") setMenu(null);
+    }}>
+    <Popover open={activeMenu !== null && menu !== "more"} onOpenChange={(open) => { if (!open && menu !== "more") setMenu(null); }}>
     <div className={styles.toolbarWrap} ref={toolbarWrapRef} role="toolbar" aria-orientation="horizontal" aria-label="SOAP 문서 편집 도구" onKeyDown={onToolbarKeyDown} data-toolbar-wrap>
       <div className={styles.toolbarShell} data-overflow={edges.overflow ? "true" : "false"} data-toolbar-shell>
         <div className={styles.toolbarViewport} ref={toolbarViewportRef} data-toolbar-viewport role="group" aria-label="서식 도구 가로 스크롤">
@@ -411,33 +444,32 @@ export function ChartSoapToolbar({
         </div>
         {edges.left ? <span className={`${styles.toolbarFade} ${styles.toolbarFadeLeft}`} data-toolbar-fade="left" aria-hidden="true" /> : null}
         {edges.right ? <span className={`${styles.toolbarFade} ${styles.toolbarFadeRight}`} data-toolbar-fade="right" aria-hidden="true" /> : null}
-        {showMore ? <Tooltip><TooltipTrigger render={<PopoverTrigger render={<Button
+        {showMore ? <Tooltip><TooltipTrigger render={<PopoverTrigger render={<DropdownMenuTrigger render={<Button
         ref={moreButtonRef}
         type="button"
         variant="ghost"
         size="icon"
         className={styles.toolbarMore}
-        aria-label="가려진 서식 도구 더보기"
+        aria-label="서식 도구 더보기"
         aria-haspopup="menu"
         aria-expanded={menu === "more"}
         tabIndex={effectiveRovingId === "more" ? 0 : -1}
         data-toolbar-control="more"
         onFocus={() => setRovingId("more")}
-        onClick={(event) => {
-          rememberTrigger(event.currentTarget);
-          if (menu === "more") setMenu(null);
-          else {
-            setMoreSnapshotIds([...edges.hiddenIds]);
-            setMenu("more");
-          }
-        }}
-        />} />}><CdsFilesMoreVerticalIcon size={16} /></TooltipTrigger><TooltipContent side="bottom">가려진 서식 도구 더보기</TooltipContent></Tooltip> : null}
+        onClick={(event) => rememberTrigger(event.currentTarget)}
+        />} />} />}><CdsFilesMoreVerticalIcon size={16} /></TooltipTrigger><TooltipContent side="bottom">서식 도구 더보기</TooltipContent></Tooltip> : null}
       </div>
     </div>
-      {activeMenu ? (
+      {menu === "more" ? (
+        <DropdownMenuContent ref={menuRef} align="end" sideOffset={4}
+          className="w-40 max-h-[280px]" aria-label="서식 도구 더보기"
+          finalFocus={() => moreFinalFocusRef.current ?? false}>
+          {moreTools.map((tool) => toolButton(tool, true))}
+        </DropdownMenuContent>
+      ) : null}
+      {activeMenu && menu !== "more" ? (
         <PopoverContent className={styles.toolMenu} align="end" side="bottom" sideOffset={4}>
-        {menu === "more" ? <p className={styles.menuHeading} role="heading" aria-level={2}>가려진 서식 도구</p> : null}
-        <div ref={menuRef} role="menu" aria-label={activeMenu === "more" ? "가려진 서식 도구" : activeMenu} onKeyDown={(event) => {
+        <div ref={menuRef} role="menu" aria-label={activeMenu} onKeyDown={(event) => {
           if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
           const items = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input'));
           const index = items.indexOf(document.activeElement as HTMLElement);
@@ -445,7 +477,6 @@ export function ChartSoapToolbar({
           event.preventDefault();
           items[next]?.focus();
         }}>
-          {menu === "more" ? moreTools.map((tool) => toolButton(tool, true)) : null}
           {menu === "style" ? (
             <>
               {([ ["본문", "paragraph"], ["제목 1", "heading", 1], ["제목 2", "heading", 2], ["제목 3", "heading", 3] ] as const).map(([label, type, level]) => (
@@ -477,5 +508,6 @@ export function ChartSoapToolbar({
         </PopoverContent>
       ) : null}
     </Popover>
+    </DropdownMenu>
   );
 }
