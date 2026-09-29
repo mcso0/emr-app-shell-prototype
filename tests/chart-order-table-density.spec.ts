@@ -42,23 +42,69 @@ test("chart order header matches the compact count tabs and current actions", as
   ).toBeVisible();
 });
 
-test("chart order table changes density from the selected-value dropdown", async ({
+test("chart order table defaults to standard 40px rows", async ({ page }) => {
+  await page.goto(chartOrderUrl);
+
+  const table = page.getByRole("table", { name: "처방/오더 테이블" });
+  const firstRow = table.locator("tbody > tr").first();
+  const densityTrigger = page.getByRole("button", {
+    name: "테이블 보기 밀도: 기본 간격",
+    exact: true,
+  });
+
+  await expect(firstRow).toBeVisible();
+  await expect(densityTrigger).toBeVisible();
+  await expect(table).toHaveAttribute("data-emr-density", "standard");
+  await expect(firstRow).toHaveCSS("height", "40px");
+  await expect(firstRow.locator("td").first()).toHaveCSS("height", "40px");
+  await densityTrigger.click();
+  await expect(
+    page.getByRole("menuitemradio", { name: "기본 간격", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+});
+
+test("chart order table changes density and resets to standard on reload", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await page.goto(chartOrderUrl);
 
   const orderArea = page.locator("section").filter({
     has: page.getByRole("tablist", { name: "처방/오더 분류" }),
   });
   const densityTrigger = orderArea.getByRole("button", {
-    name: "테이블 보기 밀도: 좁은 간격",
+    name: /^테이블 보기 밀도:/,
   });
+  const table = orderArea.getByRole("table", { name: "처방/오더 테이블" });
+  const firstRow = table.locator("tbody > tr").first();
 
-  await expect(densityTrigger).toBeVisible();
+  await expect(firstRow).toBeVisible();
+  for (const { label, density, height } of [
+    { label: "좁은 간격", density: "compact", height: 36 },
+    { label: "넓은 간격", density: "comfortable", height: 52 },
+    { label: "기본 간격", density: "standard", height: 40 },
+  ]) {
+    await densityTrigger.click();
+    await page.getByRole("menuitemradio", { name: label, exact: true }).click();
+    await expect(densityTrigger).toHaveAccessibleName(`테이블 보기 밀도: ${label}`);
+    await expect(table).toHaveAttribute("data-emr-density", density);
+    await expect(firstRow).toHaveCSS("height", `${height}px`);
+    const cellHeights = await firstRow.locator("td").evaluateAll((cells) =>
+      cells.map((cell) => cell.getBoundingClientRect().height),
+    );
+    expect(cellHeights.length).toBeGreaterThan(0);
+    expect(cellHeights.every((cellHeight) => cellHeight === height)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toBeHidden();
+  }
+
   await densityTrigger.click();
-  await page.getByRole("menuitemradio", { name: "넓은 간격" }).click();
-
-  await expect(
-    orderArea.getByRole("table", { name: "처방/오더 테이블" }),
-  ).toHaveAttribute("data-emr-density", "comfortable");
+  await page.getByRole("menuitemradio", { name: "좁은 간격", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toBeHidden();
+  await expect(table).toHaveAttribute("data-emr-density", "compact");
+  await page.reload();
+  await expect(table).toHaveAttribute("data-emr-density", "standard");
+  await expect(densityTrigger).toHaveAccessibleName("테이블 보기 밀도: 기본 간격");
+  await expect(firstRow).toHaveCSS("height", "40px");
 });

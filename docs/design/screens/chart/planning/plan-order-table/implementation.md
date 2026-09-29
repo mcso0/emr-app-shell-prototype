@@ -19,7 +19,7 @@ figma_references:
   - "https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28441-163295&m=dev"
   - "https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28441-163452&m=dev"
   - "https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ/-CDS.V2--CLAiR-EMR-Design-System-Ver.2?node-id=28441-163361&m=dev"
-last_updated: "2026-09-20"
+last_updated: "2026-09-29"
 ---
 
 # Plan/Order Table Body Implementation
@@ -244,6 +244,11 @@ new row-height values or a second density state for this work.
 | `compact` | 좁은 간격 | 36px | 36px |
 | `standard` | 기본 간격 | 40px | 36px |
 | `comfortable` | 넓은 간격 | 52px | 44px |
+
+Plan/Order initializes to `standard` (`기본 간격`): 40px body rows and a
+36px header. The existing selector can switch to `compact` or `comfortable`
+while the component remains mounted. This preference is not persisted; a
+page reload initializes to `standard` again.
 
 These are the applied `[data-emr-data-table="true"]` CSS overrides in
 `src/app/globals.css`. The linked general density document and foundation tokens

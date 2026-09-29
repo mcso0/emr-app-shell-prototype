@@ -1517,7 +1517,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
       .first(),
-  ).toHaveCSS("height", "36px");
+  ).toHaveCSS("height", "40px");
 
   const pinnedColumnIds = await orderTable
     .locator("[data-slot='table-head'][data-emr-column-pinned='left']")

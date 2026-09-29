@@ -12270,7 +12270,7 @@ function OrderArea({
     ({ order }) => order.id === orderMutationDraft?.orderId,
   );
   const [orderTableDensity, setOrderTableDensity] =
-    useState<EmrTableDensity>("compact");
+    useState<EmrTableDensity>("standard");
   const handleOrderSort = (key: ChartOrderSortKey) => {
     setOrderSortState((current) => {
       if (current?.key !== key) return { direction: "asc", key };
