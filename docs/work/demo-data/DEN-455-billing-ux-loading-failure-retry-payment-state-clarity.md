@@ -162,3 +162,44 @@ for this follow-up. Prepare the latest-main candidate, exact Release Check,
 Ready Preview, scoped smoke, and rollback evidence. Remote application of the
 function-only billing queue migration requires its separately scoped approval
 before merge; no customer, financial, role-policy, or seed writes are included.
+
+### Approved Delivery and Membership Schema Correction — 2026-09-29
+
+The user approved the separately scoped remote billing reader application and
+continued commit/push/PR/main/Production delivery. PR #856's candidate
+`833cd27d197b09fa52b4f5de0ee735866c176357` passed Release Check 36537371933
+and merged as `b191765d7350bd67819aa16ca883a41acd608e6b`, verified on live
+`origin/main`. Production `dpl_FtHdSuozkpx8gjWg2u3anxteJvyA` reached Ready
+at the canonical alias; `/login` returned HTTP 200.
+
+The first authenticated billing smoke exposed a schema mismatch: the local
+synthetic database has `user_memberships.deleted_at`, while the linked remote
+schema does not. The reader's requester-name join raised PostgreSQL 42703.
+The forward migration `20260929093000_billing_queue_membership_status.sql`
+removes only that unavailable display-join predicate. Active membership status,
+canonical `billing:view` authorization, workspace joins, subject soft-deletion
+filters, search path, and function execution grants remain enforced. No table,
+role policy, financial row, or fixture was modified remotely.
+
+TDD: `node scripts/test-billing-queue-local.mjs --remote-membership-shape`
+first failed with the same missing-column error. With the forward migration,
+both remote-shaped and original local schemas passed the full SQL proof. The
+schema change, fixtures, and migrations rolled back: zero proof workspaces, no
+persisted reader RPC, and the original local membership column restored. Remote
+EXPLAIN (without ANALYZE or row reads) verified all referenced columns. Catalog
+readback confirmed authenticated-only execution, stable functions, and fixed
+`pg_catalog` search paths.
+
+After the approved same-function correction, authenticated Production smoke
+verified all four central pending states and subsequent no-work views on
+2026-01-01 through 2026-01-06. Dispensing had no fulfillment warning in pending
+or completed-empty state. Live dispensing/billing center offsets were below
+0.01px; both used `role=status` and `data-size=md`. No clinical/order/payment
+mutation was performed. Screenshots are in `/tmp/queue-production-evidence/`.
+The correction's repository delivery continues in a separate narrow PR; app
+source is unchanged from the already checked and deployed PR #856.
+
+Rollback evidence: original pre-release Ready deployment
+`dpl_9LBhyCKpo2YVz7PEpsux32XSfych`. The additive reader functions can be removed
+by dropping the public wrapper then the private reader only, with separate
+rollback authorization. Do not restore the defective missing-column predicate.
