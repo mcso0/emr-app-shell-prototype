@@ -79,6 +79,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -2209,10 +2210,11 @@ function LabResultInputSection({
             : "저장 실패";
 
   return (
+    <div className="flex flex-col gap-2">
     <EmrOrderGroupSection
       className="lab-result-sheet-order-group [&>section]:px-4 [&>section]:pt-3 [&>section]:!pb-3 [&>section>div:first-child]:h-7 [&>section>div:first-child]:px-0 [&>section>div:first-child]:py-0"
       title={`${result.resultName} 세트`}
-      titleClassName="emr-text-body leading-5"
+      titleClassName="emr-text-body font-medium leading-5"
       count={rows.length}
       meta={
         abnormalRows.length > 0 ? (
@@ -2227,61 +2229,16 @@ function LabResultInputSection({
       }
       actions={
         <>
-          <EmrTableDensitySelector value={density} onValueChange={setDensity} />
+          <EmrTableDensitySelector value={density} onValueChange={setDensity} className="h-7 min-h-7 w-[82px] rounded-[8px] px-2 py-1 text-xs leading-4 tracking-[0.3px] [&>svg]:!size-3" />
+          <Button variant="outline" size="sm" className="h-7 w-[79px] gap-1 rounded-[8px] px-2 text-xs leading-4 tracking-[0.3px]" disabled={!phase2} onClick={() => setHistoryOpen(true)}>
+            <CdsUtilitiesHistoryIcon className="!size-3" aria-hidden="true" />수정이력
+          </Button>
           <LabResultTableLinkButton
             date={getOperatingDateFromIso(result.enteredAt ?? result.receivedAt ?? result.collectedAt) ?? new URLSearchParams(search).get("date") ?? undefined}
             resultId={routeResultId}
             search={search}
             workspaceId={result.workspaceId}
           />
-          {result.resultDefinitionOrigin === "canonical" && onCatalogRetry ? <Button variant="outline" size="xs" disabled={currentSaveState === "saving"}
-            onClick={() => {
-              setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
-              setRowValueState({ resultId: "", values: {} }); setMetadataState({ resultId: "", rows: {} }); onCatalogRetry();
-            }}>입력 초기화·재조회</Button> : null}
-          <Button variant="outline" size="xs" disabled={!phase2} onClick={() => setHistoryOpen(true)}>
-            수정이력
-          </Button>
-          <Button variant="outline" size="xs" disabled title="후속 단계에서 제공">
-            차트에 복사하기
-          </Button>
-          <Button
-            size="xs"
-            data-testid="lab-result-save-button"
-            disabled={
-              !onSave || currentSaveState === "saving" || rows.length === 0
-            }
-            onClick={saveResult}
-          >
-            {currentSaveState === "saving" ? "저장 중" : "저장"}
-          </Button>
-          {currentSaveState !== "idle" ? (
-            <span
-              data-testid="lab-result-save-status"
-              className={cn(
-                "emr-text-metadata font-medium",
-                currentSaveState === "error" ||
-                  currentSaveState === "invalid" ||
-                  currentSaveState === "permission_denied"
-                  ? "text-destructive"
-                  : "text-muted-foreground",
-              )}
-              title={currentSaveMessage}
-            >
-              {saveStatusLabel}
-            </span>
-          ) : null}
-          {saveRetryable ? (
-            <Button
-              variant="outline"
-              size="xs"
-              className="bg-card"
-              data-testid="lab-result-save-retry-button"
-              onClick={saveResult}
-            >
-              재시도
-            </Button>
-          ) : null}
         </>
       }
       collapsed={collapsed}
@@ -2334,24 +2291,49 @@ function LabResultInputSection({
         <LabResultHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} result={result} events={phase2?.events ?? []} />
       </div>
     </EmrOrderGroupSection>
+    <div className="flex min-h-7 flex-wrap items-center justify-end gap-2 px-4" data-testid="lab-result-actions-footer">
+      {currentSaveState !== "idle" ? (
+        <span data-testid="lab-result-save-status" className={cn(
+          "emr-text-metadata font-medium",
+          currentSaveState === "error" || currentSaveState === "invalid" || currentSaveState === "permission_denied"
+            ? "text-destructive" : "text-muted-foreground",
+        )} title={currentSaveMessage}>{saveStatusLabel}</span>
+      ) : null}
+      {saveRetryable ? <Button variant="outline" size="xs" className="bg-card" data-testid="lab-result-save-retry-button" onClick={saveResult}>재시도</Button> : null}
+      {result.resultDefinitionOrigin === "canonical" && onCatalogRetry ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button type="button" variant="outline" size="sm" aria-label="검사 결과 추가 작업" />}>
+            <CdsFilesMoreHorizontalIcon className="size-3" aria-hidden="true" />더보기
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem disabled={currentSaveState === "saving"} onClick={() => {
+              setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
+              setRowValueState({ resultId: "", values: {} }); setMetadataState({ resultId: "", rows: {} }); onCatalogRetry();
+            }}>입력 초기화·재조회</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      <Button size="sm" data-testid="lab-result-save-button" disabled={!onSave || currentSaveState === "saving" || rows.length === 0} onClick={saveResult}>
+        {currentSaveState === "saving" ? "저장 중" : "저장"}
+      </Button>
+    </div>
+    </div>
   );
 }
 
 function LabResultValueControl({
   row,
   onValueChange,
-  onMetadataChange,
 }: {
   row: LabResultRow;
   onValueChange: (rowId: string, value: string) => void;
-  onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
 }) {
   const rule = row.interpretationRule;
   const noResult = row.resultPresence === "instrument_no_result";
   const label = `${row.analyteName} 결과값`;
 
   return (
-    <div className="flex w-full min-w-0 items-center gap-1.5">
+    <div className="relative flex w-full min-w-0 items-center">
       {rule?.resultValueKind === "coded" ? (
         <select
           aria-label={label}
@@ -2368,7 +2350,7 @@ function LabResultValueControl({
       ) : (
         <Input
           aria-label={label}
-          className="h-7 min-w-0 flex-1 bg-card !text-[12px] !leading-4 !tracking-[0.3px]"
+          className={cn("h-7 min-w-0 flex-1 bg-card !text-[12px] !leading-4 !tracking-[0.3px]", row.qualifier && row.qualifier !== "exact" && "pr-9")}
           data-testid={`lab-result-input-${row.id}`}
           disabled={noResult}
           inputMode={rule?.resultValueKind === "numeric" || row.resultInputType === "number" ? "decimal" : undefined}
@@ -2378,10 +2360,23 @@ function LabResultValueControl({
         />
       )}
       {!noResult && row.qualifier && row.qualifier !== "exact" ? (
-        <span className="emr-text-metadata shrink-0 text-muted-foreground">
+        <span className="emr-text-metadata pointer-events-none absolute right-2 text-muted-foreground">
           {row.qualifier === "less_than" ? "미만" : "초과"}
         </span>
       ) : null}
+
+    </div>
+  );
+}
+
+function LabResultMetadataControl({ row, onValueChange, onMetadataChange }: {
+  row: LabResultRow;
+  onValueChange: (rowId: string, value: string) => void;
+  onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
+}) {
+  const rule = row.interpretationRule;
+  const noResult = row.resultPresence === "instrument_no_result";
+  return <>
       {rule ? (
         <Popover>
           <PopoverTrigger
@@ -2445,8 +2440,7 @@ function LabResultValueControl({
           </PopoverContent>
         </Popover>
       ) : null}
-    </div>
-  );
+  </>;
 }
 
 function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
@@ -2473,9 +2467,9 @@ function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
     }
   };
 
-  return <Button type="button" variant="ghost" size="xs" className="h-7 gap-1 px-2 text-xs font-normal text-muted-foreground hover:text-foreground"
+  return <Button type="button" variant="outline" size="sm" className="h-7 w-[82px] gap-1 rounded-[8px] px-2 text-xs leading-4 tracking-[0.3px]"
     aria-label="검사 결과표 링크 복사" onClick={() => void copyLink()}>
-    <CdsContentLink2Icon className="size-3.5" aria-hidden="true" />결과표 링크
+    <CdsContentLink2Icon className="!size-3" aria-hidden="true" />링크 복사
   </Button>;
 }
 
@@ -2521,10 +2515,10 @@ function LabResultDataTable({
         meta: { label: "소견 펼치기", resize: "none", align: "center", cellPadding: "none" },
         cell: ({ row }) => {
           const expanded = expandedRowId === row.original.id;
-          return <Button type="button" variant="ghost" size="icon-xs" className="mx-auto" aria-expanded={expanded}
+          return <Button type="button" variant="ghost" size="icon-xs" className="mx-auto rounded-[6px] bg-transparent aria-expanded:bg-transparent" aria-expanded={expanded}
             aria-controls={`lab-result-detail-${row.original.id}`} aria-label={`${row.original.analyteName} 검사 소견 ${expanded ? "접기" : "펼치기"}`}
             onClick={() => onExpandedRowChange(expanded ? null : row.original.id)}>
-            <CdsNavigationArrowDownIcon className={cn("size-4", expanded && "rotate-180")} aria-hidden="true" />
+            <CdsNavigationArrowDownIcon className={cn("!size-3.5", expanded && "rotate-180")} aria-hidden="true" />
           </Button>;
         },
       },
@@ -2546,6 +2540,7 @@ function LabResultDataTable({
           return (
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
+              <LabResultMetadataControl row={row.original} onValueChange={onValueChange} onMetadataChange={onMetadataChange} />
               {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
               (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
                 <AtomicLabRetestAction result={persistedResult} row={savedRow} />
@@ -2567,7 +2562,6 @@ function LabResultDataTable({
           <LabResultValueControl
             row={row.original}
             onValueChange={onValueChange}
-            onMetadataChange={onMetadataChange}
           />
         ),
       },
@@ -2611,7 +2605,8 @@ function LabResultDataTable({
           <div aria-live="polite">
             <Badge
               variant="outline"
-              className={judgmentBadgeClassName[row.original.judgment]}
+              size="md"
+              className={cn("rounded-[6px]", judgmentBadgeClassName[row.original.judgment])}
             >
               {getStatusLabel("labJudgment", row.original.judgment)}
             </Badge>
@@ -2674,7 +2669,7 @@ function LabResultDataTable({
       renderAfterRow={(tableRow) => expandedRowId === tableRow.original.id ? (
         <TableRow className="border-border bg-[var(--emr-surface-muted)] hover:bg-[var(--emr-surface-muted)]">
           <TableCell colSpan={tableRow.getVisibleCells().length} className="!p-0">
-            <div id={`lab-result-detail-${tableRow.original.id}`}>
+            <div id={`lab-result-detail-${tableRow.original.id}`} className={tableRow.original.id === rows.at(-1)?.id ? "overflow-hidden rounded-b-[6px]" : undefined}>
               <LabResultRowDetail result={persistedResult} row={tableRow.original} staffInstruction={staffInstruction} finding={tableRow.original.note ?? ""}
                 onFindingChange={value => onMetadataChange(tableRow.original.id, { note: value })}
                 phase2={phase2} refresh={onPhase2Refresh} />
@@ -2686,7 +2681,7 @@ function LabResultDataTable({
       table={table}
       viewportMode="content"
       getRowProps={(row) => ({
-        className: undefined,
+        className: expandedRowId === row.original.id ? "!border-b-0" : undefined,
         "data-testid": "lab-result-row-" + row.original.id,
       })}
     />

@@ -145,6 +145,21 @@ Documentation validation: `npm run docs:check` passed (1072 Markdown files); foc
 
 ## Active Implementation And Delivery Record
 
+### Approved AS-IS → TO-BE Follow-Up
+
+- On 2026-09-29 승욱 approved the detailed HTML comparison, requested TDD, and authorized commit, push, PR, origin/main merge and production deployment after checks pass.
+- Follow-up baseline: freshly fetched `origin/main` `9aad7a92e2e71adda9cc1cb07b624627fbba1bbd`; isolated branch `codex/lab-result-layout-tdd`. The earlier V5 implementation is already in that baseline. Primary checkout WIP is preserved.
+- Scope: three 28px toolbar actions and 8px gaps; save/retry/status below the group with reset/reload in overflow; fixed result columns with only normal range growing; 220px result inputs; metadata menu in the item cell; group title/count spacing; feature-scoped gutter and padding; row-group dividers; 76px transparent-default upload and matching finding typography/padding/shadow.
+- The [canonical spec](../../design/screens/lab/specs/result-sheet.md) captures the approved Figma geometry. Approved report-contract SHA-256: `97503cde8b7b25ccf04aa7f92c412c0265251ec6e52dab1852cb7a54cc551070`. Existing numeric/coded/text values, save/revision, history, retest, instruction source, upload lifecycle and permissions remain authoritative.
+- TDD RED: all four new layout scenarios failed before implementation (toolbar count, table geometry, default upload background, expanded-parent border); the CBC metadata placement assertion also failed before implementation.
+- Initial GREEN: all four layout scenarios passed. The CBC assertion needed visibility synchronization before measuring the animated group; its persistence/retest scenario then passed in the full run.
+- Broader initial run: 59/61 passed. The lab smoke still expected six columns, old disclosure labels/144px detail, and the removed chart-copy placeholder. Updated that scenario to the accepted contract while retaining its existing demo attachment assertions. Final focused matrix: 59 scenarios passed together, and the corrected lab smoke passed separately (60 passing scenarios in total).
+- The unrelated imaging status-button assertion failed identically with all three application owners restored from untouched baseline `9aad7a92`. It is excluded from this lab-focused release gate; no imaging application behavior was changed.
+- Node attachment context/lifecycle/transport: 14/14 passed. Secret scan passed (4491 tracked files), UX-copy check passed, lint passed with five existing script warnings, typecheck passed.
+- Documentation links passed (1054 files), diff check passed, and production build passed. Existing Turbopack documentation-reader warnings did not block the build. Remaining release gates: exact-candidate Release Check, Ready Preview, protected main merge, Ready Production and read-only lab smoke; delivery evidence will be recorded on the PR. No remote data writes or live attachment lifecycle tests are claimed.
+
+### Earlier V5 Implementation
+
 - Worker: GPT-6 Luna, reasoning effort `max`, scoped application code and focused tests. Parent owns integration, specification review, final validation and delivery.
 - Isolated branch: `codex/lab-figma-alignment`, created from fetched `origin/main` `84721187beb400a97ae74f7a63c963435212acde`. Primary checkout WIP is preserved.
 - Initial baseline checks: 11/11 Node attachment context/lifecycle tests passed; documentation links passed (1054 files in the clean checkout).
