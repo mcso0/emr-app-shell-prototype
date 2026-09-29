@@ -567,3 +567,111 @@ test("Home lists keep readable cells at wide and narrow widths", async ({ page }
     }
   }
 });
+
+test("Home toolbar stays in one row and collapses actions at its own 900px boundary", async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await openHome(page);
+  await page.evaluate(() => document.fonts.ready);
+  const toolbar = page.getByTestId("home-toolbar");
+  const setToolbarWidth = async (width: number) => {
+    const current = (await toolbar.boundingBox())!.width;
+    await page.setViewportSize({ width: Math.round(page.viewportSize()!.width + width - current), height: 1000 });
+    await expect.poll(async () => Math.round((await toolbar.boundingBox())!.width)).toBe(width);
+  };
+  await setToolbarWidth(900);
+  const completed = page.getByRole("button", { name: "완료 포함", exact: true });
+  await expect(completed.locator("span")).toBeVisible();
+  await setToolbarWidth(899);
+  await expect(completed.locator("span")).toBeHidden();
+  expect((await completed.boundingBox())!.width).toBe(32);
+  const owner = page.getByLabel("담당자 다중 선택");
+  expect((await owner.boundingBox())!.width).toBe(32);
+  for (const label of ["칸반", "리스트"]) {
+    const button = page.getByRole("button", { name: label, exact: true });
+    await expect(button.locator("span")).toBeHidden();
+    expect((await button.boundingBox())!.width).toBe(32);
+  }
+  const tabs = page.getByTestId("home-toolbar-tab-frame");
+  const actions = page.getByTestId("home-toolbar-actions");
+  const tabBox = (await tabs.boundingBox())!, actionBox = (await actions.boundingBox())!;
+  expect(actionBox.x - tabBox.x - tabBox.width).toBe(20);
+  expect(Math.abs(tabBox.y + tabBox.height / 2 - actionBox.y - actionBox.height / 2)).toBeLessThanOrEqual(1);
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  const input = page.getByLabel("환자 보호자 업무 검색");
+  await expect(input).toBeFocused();
+  expect((await input.boundingBox())!.width).toBeLessThanOrEqual(280);
+  expect((await input.boundingBox())!.width).toBeGreaterThanOrEqual(200);
+  expect(Math.abs((await input.boundingBox())!.y - (await completed.boundingBox())!.y)).toBeLessThanOrEqual(1);
+  await input.press("Escape");
+  await owner.click();
+  await page.getByRole("menuitem", { name: "선택 해제", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(owner).toHaveAttribute("title", "담당자 선택 없음");
+  await setToolbarWidth(536);
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  expect((await tabs.boundingBox())!.width).toBeGreaterThanOrEqual(96);
+  expect(await actions.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  await completed.focus();
+  await expect(page.getByRole("tooltip", { name: /완료 포함/ })).toBeVisible();
+  expect(await page.getByRole("tooltip").evaluate((element) => element.parentElement === document.body)).toBe(true);
+  await page.getByLabel("환자 보호자 업무 검색").press("Escape");
+  await setToolbarWidth(899);
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  for (const name of ["검색", "업무 필터 설정", "완료 포함", "정렬"]) {
+    const button = page.getByRole("button", { name, exact: true });
+    expect((await button.boundingBox())!.width).toBe(32);
+  }
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(page.getByLabel("내 업무 검색")).toBeFocused();
+  await page.getByLabel("내 업무 검색").fill("CBC");
+  await page.getByRole("button", { name: "검색어 지우기", exact: true }).click();
+  await expect(page.getByLabel("내 업무 검색")).toHaveValue("");
+  await page.getByRole("button", { name: "검색 닫기", exact: true }).click();
+  await expect(page.getByRole("button", { name: "검색", exact: true })).toBeFocused();
+});
+
+test("Home tabs support grab scrolling without selecting and reveal keyboard focus with edge fades", async ({ page }) => {
+  await page.setViewportSize({ width: 1303, height: 1000 });
+  await openHome(page);
+  const tabs = page.getByTestId("home-toolbar-tabs");
+  await expect(tabs).toHaveAttribute("data-overflow", "true");
+  await expect(page.getByTestId("home-tabs-fade-left")).toHaveAttribute("data-visible", "false");
+  await expect(page.getByTestId("home-tabs-fade-right")).toHaveAttribute("data-visible", "true");
+  const box = (await tabs.boundingBox())!;
+  await page.mouse.move(box.x + Math.min(box.width - 10, 180), box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 10, box.y + box.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(() => tabs.evaluate((element) => element.scrollLeft)).toBeGreaterThan(20);
+  await expect(page.getByTestId("home-all-work-tab")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("home-tabs-fade-left")).toHaveAttribute("data-visible", "true");
+  await page.getByTestId("home-all-work-tab").focus();
+  await page.getByTestId("home-all-work-tab").press("End");
+  const last = page.getByRole("button", { name: /^수납 / });
+  await expect(last).toBeFocused();
+  await page.setViewportSize({ width: 1200, height: 1000 });
+  await expect(last).toBeFocused();
+  await expect.poll(async () => {
+    const tabBounds = (await tabs.boundingBox())!, focusedBounds = (await last.boundingBox())!;
+    return focusedBounds.x >= tabBounds.x - 1 && focusedBounds.x + focusedBounds.width <= tabBounds.x + tabBounds.width + 1;
+  }).toBe(true);
+  await expect(page.getByTestId("home-tabs-fade-right")).toHaveAttribute("data-visible", "false");
+  await last.press("Enter");
+  await expect(last).toHaveAttribute("aria-pressed", "true");
+  await last.press("Home");
+  await expect(page.getByTestId("home-all-work-tab")).toBeFocused();
+  await expect(page.getByTestId("home-tabs-fade-left")).toHaveAttribute("data-visible", "false");
+  await page.getByTestId("home-all-work-tab").press("Enter");
+  await page.getByRole("button", { name: "내 업무", exact: true }).click();
+  await page.setViewportSize({ width: 1000, height: 1000 });
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await expect(tabs).toHaveAttribute("data-overflow", "true");
+  const assigned = page.getByRole("button", { name: "내가 해야 할 업무", exact: true });
+  await assigned.focus();
+  await assigned.press("End");
+  const requested = page.getByRole("button", { name: "내가 요청한 업무", exact: true });
+  await expect(requested).toBeFocused();
+  await requested.press("Enter");
+  await expect(requested).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("row", { name: "보리 내가 요청한 약", exact: true })).toBeVisible();
+});

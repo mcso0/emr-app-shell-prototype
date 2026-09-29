@@ -5,8 +5,9 @@
   gap: 16px;
   padding: 0 48px 16px;
 }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--clair-spacing-24); min-height: calc(var(--clair-control-height-sm) + var(--clair-spacing-6)); }
-.toolbarActions { display: flex; flex-wrap: wrap; max-width: 100%; justify-content: flex-end; align-items: center; gap: 12px; margin-left: auto; flex-shrink: 0; }
+.toolbar { container: home-toolbar / inline-size; display: flex; flex-wrap: nowrap; align-items: center; gap: var(--clair-spacing-20); min-width: 0; min-height: calc(var(--clair-control-height-sm) + var(--clair-spacing-6)); }
+.toolbarActions { display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: var(--clair-spacing-8); flex: 0 0 auto; white-space: nowrap; }
+.iconTools { display: flex; flex: 0 0 auto; align-items: center; gap: var(--clair-spacing-6); }
 .toolbarDivider { height: 16px; width: 1px; background: var(--emr-border-default); }
 .viewTabs { height: calc(var(--clair-control-height-sm) + var(--clair-spacing-6)); padding: calc(var(--clair-spacing-6) / 2); flex-shrink: 0; }
 .viewTabs button { gap: var(--clair-spacing-6); }
@@ -124,7 +125,7 @@
 .hospitalTitle .dateControl svg { flex-shrink: 0; }
 .hospitalTitle .dateControl > button[aria-haspopup] > svg:first-child { display: none; }
 .hospitalTitle .dateControl [data-slot="badge"] { width: 42px; height: 28px; flex-shrink: 0; border: 1px solid var(--clair-color-atomic-black-alpha-8); border-radius: var(--clair-radius-atomic-6); background: var(--clair-color-atomic-common-100); padding: var(--clair-spacing-2) var(--clair-spacing-8); color: var(--clair-color-atomic-neutral-900); font-size: 15px; font-weight: 500; line-height: 22px; letter-spacing: normal; }
-.workTypeTabs { display: flex; min-width: 0; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+.workTypeTabs { display: flex; width: max-content; align-items: center; gap: var(--clair-spacing-4); }
 .workTypeTabs button { display: inline-flex; height: 32px; flex-shrink: 0; align-items: center; gap: 6px; border: 1px solid var(--emr-border-default); border-radius: 999px; background: var(--emr-surface-panel); padding: 0 12px; color: var(--emr-text-secondary); font-size: 14px; font-weight: 500; white-space: nowrap; }
 .workTypeTabs button span { color: var(--emr-text-tertiary); font-size: 12px; }
 .workTypeTabs button:hover { background: var(--clair-color-atomic-black-alpha-4); }
@@ -172,12 +173,40 @@
   .hospitalTitle .dateControl { width: auto; }
   .hospitalTitle .dateControl > button[aria-haspopup] { width: auto; min-width: 196px; flex: 1 1 auto; gap: 6px; padding: 0 12px; font-size: 20px; letter-spacing: -0.024em; }
   .hospitalTitle .dateControl [data-slot="badge"] { display: none; }
-  .toolbar:has(.workTypeTabs) { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
-  .workTypeTabs { width: 100%; }
-  .toolbar:has(.workTypeTabs) .toolbarActions { width: 100%; flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; margin: 0; padding-bottom: 4px; scrollbar-width: thin; }
-  .toolbar:has(.workTypeTabs) .toolbarActions > * { flex-shrink: 0; }
   .workspaceBody:has(.board) { padding-left: 16px; }
   .listWorkspaceBody:has(.hospitalTable) { padding-inline: 16px; }
   .board { padding-left: 16px; }
   .boardScrollFrame { margin-left: -16px; }
+}
+
+/* Approved single-row toolbar; only Home adapts shared controls. */
+.tabFrame { position: relative; flex: 1 1 0; min-width: 0; }
+.tabViewport { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: var(--clair-spacing-2); user-select: none; }
+.tabViewport::-webkit-scrollbar { display: none; }
+.tabViewport[data-overflow="true"], .tabViewport[data-overflow="true"] button { cursor: grab; }
+.tabViewport[data-dragging="true"], .tabViewport[data-dragging="true"] button { cursor: grabbing; }
+.tabFade { position: absolute; inset-block: 0; width: 28px; pointer-events: none; opacity: 0; }
+.tabFade[data-visible="true"] { opacity: 1; }
+.tabFadeLeft { left: 0; background: linear-gradient(to right, var(--emr-surface-workspace), transparent); }
+.tabFadeRight { right: 0; background: linear-gradient(to left, var(--emr-surface-workspace), transparent); }
+.inlineSearch { position: relative; flex: 0 0 auto; width: clamp(200px, calc(100cqw - 460px), 280px); min-width: 0; }
+.toolbar[data-view="hospital"] .inlineSearch { width: clamp(200px, calc(100cqw - 520px), 280px); }
+.compactAction { flex-shrink: 0; }
+.ownerButton { position: relative; }
+.ownerIcon, .ownerDot { display: none; }
+.ownerDot { position: absolute; right: 3px; top: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--emr-text-link); }
+.actionButton { position: relative; }
+.actionHint { position: fixed; transform: translateX(-50%); width: max-content; max-width: 260px; padding: var(--clair-spacing-6) var(--clair-spacing-8); border-radius: var(--clair-radius-md); background: var(--emr-text-primary); color: var(--emr-surface-panel); font-size: 12px; line-height: 18px; font-weight: 400; pointer-events: none; z-index: 50; }
+@container home-toolbar (width < 900px) {
+  .actionLabel, .compactAction > span:not(.ownerDot), .ownerChevron, .filterTrigger > span { display: none; }
+  .compactAction, .filterTrigger { width: var(--clair-control-height-md); height: var(--clair-control-height-md); min-width: var(--clair-control-height-md); padding: 0; }
+  .ownerIcon, .ownerDot { display: block; }
+  .viewTabs button { width: var(--clair-control-height-md); padding-inline: 0; }
+  .filterTrigger { position: relative; justify-content: center; }
+  .filterTrigger strong { position: absolute; right: -5px; top: -6px; border-radius: 50%; min-width: 14px; background: var(--emr-text-link); color: var(--emr-surface-panel); font-size: 10px; line-height: 14px; text-align: center; }
+}
+/* At very small widths, keep a usable tab and pan the actions without wrapping. */
+@container home-toolbar (width < 600px) {
+  .toolbarActions { flex-shrink: 1; min-width: 0; max-width: calc(100% - 116px); overflow-x: auto; justify-content: flex-start; scrollbar-width: thin; }
+  .toolbarActions > * { flex-shrink: 0; }
 }

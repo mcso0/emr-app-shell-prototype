@@ -12,7 +12,7 @@ related_docs:
   - "docs/product/features/notifications/global-notification-center-v0-contract.md"
 related_work:
   - "docs/work/home/HOME-PR-014-home-workspace-and-personal-work.md"
-last_updated: "2026-09-09"
+last_updated: "2026-09-29"
 ---
 
 # Home Workspace UI Spec
@@ -70,3 +70,24 @@ On hover/focus, show the existing outline button in its 24px `xs` size with a tr
 ## Toolbar Control Parity — 2026-09-08
 
 Figma `28300:114305` uses 32px outline actions with 14px text and 16px icons. Home uses the shared Button `default` size rather than stretching `sm`. The date navigator remains shared: 230×34px outer composition, 28px square arrows, 160×28px date trigger and a conditional 오늘 badge. Board/list uses SegmentedControl `md` with Home-scoped 3px outer padding, 6px icon/text gaps and 16px icons. Shared component defaults remain unchanged.
+
+## Responsive Toolbar — 2026-09-29
+
+The approved toolbar study uses one row in both 원내 현황 and 내 업무. Keep
+20px between the scrolling tab group and fixed actions, 8px between actions,
+and 6px between hospital search/filter/sort. Category tabs retain pill styling;
+personal tabs retain the segmented selected surface. Scroll tabs with mouse
+grab, native touch, wheel or keyboard. Fade each edge only while more tabs exist
+in that direction. Focused and selected tabs are revealed without scrolling the
+whole page; a drag must not select a tab.
+
+At a toolbar container width below 900px, show compact 32px icon actions while
+retaining accessible names, pressed states, filter counts, owner selection dots,
+and hover/focus descriptions. Measure the toolbar rather than the browser so
+sidebar width participates. Search in both views expands inside the toolbar,
+200–280px, with the existing clear/close/Escape/focus-return behavior. For toolbar
+widths below 600px, allow action-group horizontal scrolling to retain a usable
+tab area and one row. Do not introduce a sidebar-collapse rule.
+
+Filtering, per-view queries, navigation, persistence and source permissions are
+unchanged. This is a Home-local composition; shared component defaults remain.

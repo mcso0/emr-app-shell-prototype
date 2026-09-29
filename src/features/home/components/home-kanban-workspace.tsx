@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
 import { ChevronDownIcon, ChevronRightIcon, CircleCloseFillIcon, ClockIcon, UserIcon } from "@/components/icons";
@@ -212,15 +213,18 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           <span>진료 중 {patientSummary?.inProgress ?? "—"}마리</span>
         </div> : undefined}
       />
-      <div className={styles.toolbar}>
+      <div className={styles.toolbar} data-testid="home-toolbar" data-view={view}>
+        <HomeToolbarTabs key={view} selection={view === "hospital" ? hospitalWorkType : personalTab}>
         {view === "hospital" ? <div className={styles.workTypeTabs} role="group" aria-label="업무 종류">
           <button type="button" data-testid="home-all-work-tab" aria-pressed={hospitalWorkType === "all"} onClick={() => setHospitalWorkType("all")}>전체 업무 <span>{loading ? "…" : blocked ? "—" : commonTasks.length}</span></button>
           {workTypes.map((type) => <button type="button" key={type.id} aria-pressed={hospitalWorkType === type.id} onClick={() => setHospitalWorkType(type.id)}>{type.label} <span>{loading ? "…" : blocked ? "—" : workTypeCounts[type.id] ?? 0}</span></button>)}
         </div> : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
-        <div className={styles.toolbarActions}>
+        </HomeToolbarTabs>
+        <HomeToolbarActions>
+          <div className={styles.iconTools}>
           <HomeSearch personal={view === "mine"} value={query.search} onChange={(search) => updateQuery(view, { search })} />
           <Popover key={`filters-${view}`} open={filterOpen} onOpenChange={(open) => { setFilterOpen(open); if (!open) { setFilterReady(false); setFilterAutoOpenConsumed(false); } }} onOpenChangeComplete={setFilterReady}>
-            <PopoverTrigger render={<EmrTableFilterTrigger activeCount={activeFilterCount + (view === "hospital" && query.includeCancelled ? 1 : 0)} size="default" className={view === "hospital" ? styles.hospitalFilterTrigger : styles.filterTrigger} aria-label={view === "hospital" && (activeFilterCount || query.includeCancelled) ? `업무 필터 설정, 적용 중인 룰 ${activeFilterCount + Number(query.includeCancelled)}개` : "업무 필터 설정"} />} />
+            <PopoverTrigger render={<EmrTableFilterTrigger activeCount={activeFilterCount + (view === "hospital" && query.includeCancelled ? 1 : 0)} size="default" className={cn(styles.actionButton, view === "hospital" ? styles.hospitalFilterTrigger : styles.filterTrigger)} title={`업무 필터 · 적용 중 ${activeFilterCount + Number(view === "hospital" && query.includeCancelled)}개`} aria-label={view === "hospital" && (activeFilterCount || query.includeCancelled) ? `업무 필터 설정, 적용 중인 룰 ${activeFilterCount + Number(query.includeCancelled)}개` : "업무 필터 설정"} />} />
             <PopoverContent align="end" className="w-[min(640px,calc(100vw-32px))] gap-0 overflow-visible p-0" initialFocus={false}>
               {view === "hospital" && <div className={styles.cancelFilter}><Checkbox aria-label="취소 포함" checked={query.includeCancelled} onCheckedChange={(checked) => updateQuery("hospital", { includeCancelled: checked === true })} /><span>취소 포함</span></div>}
               <EmrTableFilterBuilder fields={filterFields} model={filterModel} autoOpenFirstField={filterReady && !filterAutoOpenConsumed}
@@ -230,14 +234,18 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           </Popover>
           {view === "hospital" && <DropdownMenu>
             <DropdownMenuTrigger render={
-              <Button variant="outline" size="icon" aria-label="정렬" title="정렬" className={styles.sortButton}>
+              <Button variant="outline" size="icon" aria-label="정렬" title="정렬" className={cn(styles.sortButton, styles.actionButton)}>
                 <ArrowDownUpIcon aria-hidden="true" className="size-4" />
               </Button>
             } />
             <DropdownMenuContent align="end"><DropdownMenuRadioGroup value={hospitalSort} onValueChange={(sort) => setHospitalSort(sort as HospitalSort)}>{([ ["priority", "업무 우선순"], ["oldest", "오래된 요청순"], ["newest", "최근 요청순"] ] as const).map(([sort, label]) => <DropdownMenuRadioItem key={sort} value={sort}>{label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent>
           </DropdownMenu>}
+          </div>
           {view === "hospital" && <Button variant="outline" size="default" className={styles.todayButton} disabled={query.date === today} onClick={() => updateQuery("hospital", { date: today, owners: null })}>오늘</Button>}
           <EmrFilterToggle
+            className={cn(styles.compactAction, styles.actionButton)}
+            aria-label="완료 포함"
+            title={`완료 포함 · ${query.includeCompleted ? "켜짐" : "꺼짐"}`}
             pressed={query.includeCompleted}
             onPressedChange={(pressed) => updateQuery(view, { includeCompleted: pressed })}
           >
@@ -247,10 +255,10 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             <HomeMultiSelect label="담당자" menuVariant="reception" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
           </>}
-          {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", label: <><Columns3Icon aria-hidden="true" />칸반</> }, { value: "list", label: <><ListIcon aria-hidden="true" />리스트</> }]} /></> :
-            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default"><ArrowDownUpIcon aria-hidden="true" />정렬</Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
+          {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} itemClassName={styles.actionButton} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", ariaLabel: "칸반", title: "칸반 보기", label: <><Columns3Icon aria-hidden="true" /><span className={styles.actionLabel}>칸반</span></> }, { value: "list", ariaLabel: "리스트", title: "리스트 보기", label: <><ListIcon aria-hidden="true" /><span className={styles.actionLabel}>리스트</span></> }]} /></> :
+            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" className={cn(styles.compactAction, styles.actionButton)} aria-label="정렬" title="정렬 · 기본 업무 순서"><ArrowDownUpIcon aria-hidden="true" /><span className={styles.actionLabel}>정렬</span></Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
 
-        </div>
+        </HomeToolbarActions>
       </div>
     </header>
     {view === "hospital" && !loading && !blocked && tasks.length === 0 && (hospitalWorkType !== "all" || term || query.owners !== null || activeFilterCount > 0) && <div role="status" className={styles.noMatchNotice}>선택한 조건에 맞는 업무가 없습니다. <Button variant="ghost" size="sm" onClick={() => { setHospitalWorkType("all"); updateQuery("hospital", { search: "", owners: null }); updateFilter("hospital", { ...filterModel, groups: filterModel.groups.map((group) => ({ ...group, rules: group.rules.map((rule) => ({ ...rule, applied: null })) })) }); }}>검색·업무 탭·필터 초기화</Button></div>}
@@ -323,26 +331,124 @@ function HomeWorkTypeIcon({ id }: { id: string }) {
   return <span className="inline-flex size-3.5 shrink-0 items-center justify-center" aria-hidden="true"><Icon className={cn("size-3.5", moduleId === "lab" && "rotate-45 !scale-[0.7071]")} /></span>;
 }
 
+function HomeToolbarActions({ children }: { children: ReactNode }) {
+  const [hint, setHint] = useState<{ text: string; left: number; top: number } | null>(null);
+  useEffect(() => {
+    const close = () => setHint(null);
+    window.addEventListener("resize", close);
+    return () => window.removeEventListener("resize", close);
+  }, []);
+  const describe = (target: EventTarget | null, container: HTMLElement) => {
+    const button = target instanceof Element ? target.closest('button[title]') : null;
+    if (!button || !container.contains(button)) { setHint(null); return; }
+    const rect = button.getBoundingClientRect();
+    setHint({ text: button.getAttribute('title') || '', left: Math.max(130, Math.min(window.innerWidth - 130, rect.left + rect.width / 2)), top: rect.bottom + 8 });
+  };
+  return <>
+    <div className={styles.toolbarActions} data-testid="home-toolbar-actions"
+      onPointerOver={(event) => describe(event.target, event.currentTarget)}
+      onPointerLeave={() => setHint(null)}
+      onPointerDown={() => setHint(null)}
+      onFocusCapture={(event) => describe(event.target, event.currentTarget)}
+      onBlurCapture={() => setHint(null)}
+      onScrollCapture={() => setHint(null)}
+      onKeyDownCapture={(event) => { if (event.key === "Enter" || event.key === " " || event.key === "Escape") setHint(null); }}>
+      {children}
+    </div>
+    {hint && createPortal(<div role="tooltip" className={styles.actionHint} style={{ left: hint.left, top: hint.top }}>{hint.text}</div>, document.body)}
+  </>;
+}
+
+function HomeToolbarTabs({ selection, children }: { selection: string; children: ReactNode }) {
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ id: number; x: number; left: number; moved: boolean } | null>(null);
+  const suppressClick = useRef(false);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const update = () => setEdges({ left: viewport.scrollLeft > 1, right: viewport.scrollLeft + viewport.clientWidth < viewport.scrollWidth - 1 });
+    const reveal = (button: HTMLElement | null) => {
+      if (!button) return;
+      const bounds = viewport.getBoundingClientRect(), item = button.getBoundingClientRect();
+      if (item.left < bounds.left) viewport.scrollLeft += item.left - bounds.left;
+      else if (item.right > bounds.right) viewport.scrollLeft += item.right - bounds.right;
+    };
+    const resize = () => { reveal(viewport.contains(document.activeElement) ? document.activeElement as HTMLElement : viewport.querySelector('[aria-pressed="true"]')); update(); };
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.deltaX || viewport.scrollWidth <= viewport.clientWidth) return;
+      const amount = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? viewport.clientWidth : 1);
+      const next = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + amount));
+      if (next !== viewport.scrollLeft) { event.preventDefault(); viewport.scrollLeft = next; }
+    };
+    const onFocus = (event: FocusEvent) => { reveal((event.target as HTMLElement).closest('button')); };
+    const observer = new ResizeObserver(resize);
+    observer.observe(viewport);
+    if (viewport.firstElementChild) observer.observe(viewport.firstElementChild);
+    viewport.addEventListener('scroll', update);
+    viewport.addEventListener('wheel', onWheel, { passive: false });
+    viewport.addEventListener('focusin', onFocus);
+    resize();
+    return () => { observer.disconnect(); viewport.removeEventListener('scroll', update); viewport.removeEventListener('wheel', onWheel); viewport.removeEventListener('focusin', onFocus); };
+  }, [selection]);
+
+  return <div className={styles.tabFrame} data-testid="home-toolbar-tab-frame">
+    <div ref={viewportRef} className={styles.tabViewport} data-testid="home-toolbar-tabs" data-overflow={edges.left || edges.right}
+      onPointerDown={(event) => {
+        suppressClick.current = false;
+        if (event.pointerType !== "mouse" || event.button !== 0 || event.currentTarget.scrollWidth <= event.currentTarget.clientWidth) return;
+        drag.current = { id: event.pointerId, x: event.clientX, left: event.currentTarget.scrollLeft, moved: false };
+      }}
+      onPointerMove={(event) => {
+        const start = drag.current;
+        if (!start || start.id !== event.pointerId) return;
+        if (event.buttons !== 1) { drag.current = null; delete event.currentTarget.dataset.dragging; return; }
+        if (!start.moved && Math.abs(event.clientX - start.x) < 5) return;
+        if (!start.moved) { start.moved = true; event.currentTarget.setPointerCapture(event.pointerId); event.currentTarget.dataset.dragging = "true"; }
+        event.preventDefault();
+        event.currentTarget.scrollLeft = start.left - (event.clientX - start.x);
+      }}
+      onPointerUp={(event) => { suppressClick.current = Boolean(drag.current?.moved); drag.current = null; delete event.currentTarget.dataset.dragging; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+      onPointerCancel={(event) => { drag.current = null; suppressClick.current = false; delete event.currentTarget.dataset.dragging; }}
+      onLostPointerCapture={(event) => { drag.current = null; delete event.currentTarget.dataset.dragging; }}
+      onClickCapture={(event) => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}
+      onKeyDown={(event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')];
+        const index = buttons.indexOf(event.target as HTMLButtonElement);
+        if (index < 0) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : Math.max(0, Math.min(buttons.length - 1, index + (event.key === 'ArrowRight' ? 1 : -1)));
+        buttons[next]?.focus();
+      }}>
+      {children}
+    </div>
+    <span className={cn(styles.tabFade, styles.tabFadeLeft)} data-visible={edges.left} aria-hidden="true" data-testid="home-tabs-fade-left" />
+    <span className={cn(styles.tabFade, styles.tabFadeRight)} data-visible={edges.right} aria-hidden="true" data-testid="home-tabs-fade-right" />
+  </div>;
+}
+
 function HomeSearch({ personal, value, onChange }: { personal: boolean; value: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(Boolean(value));
   const buttonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const visible = open || Boolean(value);
   const close = () => { setOpen(false); requestAnimationFrame(() => buttonRef.current?.focus()); };
-  return visible ? <div className="relative w-[280px] min-w-0">
+  return visible ? <div className={styles.inlineSearch}>
     <CdsActionsSearchIcon aria-hidden="true" className="pointer-events-none absolute left-2 top-2 z-10 size-4 text-muted-foreground" />
     <Input ref={inputRef} autoFocus aria-label={personal ? "내 업무 검색" : "환자 보호자 업무 검색"} placeholder={personal ? "내 업무 검색" : "환자·업무 검색"} value={value} onValueChange={onChange}
       onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (value) onChange(""); else close(); } }}
       className="h-8 rounded-lg border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-2.5 py-1.5 pl-8 pr-8 text-[14px] font-medium leading-5 tracking-[0.196px] shadow-none" />
     <Button variant="ghost" size="icon-xs" className="absolute right-1 top-1" aria-label={value ? "검색어 지우기" : "검색 닫기"}
       onClick={() => { if (value) { onChange(""); inputRef.current?.focus(); } else close(); }}><CircleCloseFillIcon className="size-4" /></Button>
-  </div> : <Button ref={buttonRef} variant="outline" size={personal ? "default" : "icon"} className={personal ? undefined : styles.hospitalSearchTrigger} aria-label="검색" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" />{personal && <span className="px-0.5">검색</span>}</Button>;
+  </div> : <Button ref={buttonRef} variant="outline" size={personal ? "default" : "icon"} className={cn(styles.actionButton, personal ? styles.compactAction : styles.hospitalSearchTrigger)} title={personal ? "내 업무 검색" : "환자·업무 검색"} aria-label="검색" aria-expanded={false} onClick={() => setOpen(true)}><CdsActionsSearchIcon aria-hidden="true" />{personal && <span className={cn("px-0.5", styles.actionLabel)}>검색</span>}</Button>;
 }
 
 function HomeMultiSelect({ label, options, values, allSelected, onChange, menuVariant = "default" }: { label: string; options: Array<{ id: string; label: string }>; values: string[]; allSelected: boolean; onChange: (values: string[]) => void; menuVariant?: "default" | "reception" }) {
   const text = allSelected ? `${label} 전체` : values.length === 0 ? `${label} 선택 없음` : values.length === 1 ? options.find((option) => option.id === values[0])?.label || values[0] : `${label} ${values.length}개`;
   const receptionMenu = menuVariant === "reception";
-  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" aria-label={`${label} 다중 선택`}><span className="px-0.5">{text}</span><ChevronDownIcon /></Button>} />
+  return <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" aria-label={`${label} 다중 선택`} title={text} className={cn(styles.compactAction, styles.ownerButton, styles.actionButton)}><UserIcon aria-hidden="true" className={styles.ownerIcon} /><span className={cn("px-0.5", styles.actionLabel)}>{text}</span>{!allSelected && <span className={styles.ownerDot} aria-hidden="true" />}<ChevronDownIcon className={styles.ownerChevron} /></Button>} />
     <DropdownMenuContent align="end" className={receptionMenu ? "w-[201px] rounded-[8px] border border-[var(--clair-color-atomic-neutral-200)] bg-[var(--clair-color-atomic-common-100)] p-[4px] text-[var(--clair-color-atomic-neutral-900)] shadow-[0_2px_4px_-2px_rgba(0,0,0,0.1),0_4px_6px_-1px_rgba(0,0,0,0.1)] ring-0" : "w-52 p-2"} data-testid={receptionMenu ? "home-assignee-filter-menu" : undefined}>
       {receptionMenu ? <>
         <div className="flex h-8 w-full items-center">
