@@ -25,6 +25,29 @@ updated: "2026-07-14"
 
 # Reception Detail Drawer Hierarchy and Editable Encounter Update
 
+## Approved Calendar Overlay Follow-up — 2026-09-30
+
+승욱 approved the interactive right-to-left overlay prototype and implementation in this chat. Scope covers 예약/접수 creation and details, including queue/calendar selection and appointment-to-reception creation. On 2026-09-30, 승욱 additionally authorized commit, push, PR, merge to `origin/main`, and production deployment of this slice. Remote data operations are outside this scope.
+
+- Render the existing `ReceptionRightPanel` inside the calendar stage beneath the toolbar; keep its 380px fields, header, footer, and server-owned write contracts.
+- Suppress the corresponding fixed shell column to preserve calendar width and scroll. Keep profile panels on their existing shell path.
+- Use one stable animated wrapper across card selection and creation-to-detail transitions. Respect reduced motion and disable interaction during exit.
+- Creation cancellation closes the panel as well as clearing its drawer selection, avoiding an empty fixed column after cancellation.
+- New regression coverage: `tests/reception-calendar-drawer.spec.ts` for geometry, scroll, queue/calendar entry, cancellation, URL restoration, narrow viewports, and keyboard close.
+
+Local verification:
+
+- Focused Playwright: 8 passed (7 in the primary run, then 1 appointment-to-reception/profile separation check). Coverage includes `tests/reception-calendar-drawer.spec.ts` plus queue selection, footer close/reopen, walk-in creation, and draft-card close regressions in `tests/reception.spec.ts`.
+- TypeScript (`npx tsc --noEmit --pretty false --incremental false`), scoped ESLint, docs links, and `git diff --check`: passed.
+- Two additional legacy tests failed while looking for an older appointment summary and a mocked staff option. Restoring the original fixed-panel placement reproduced both failures at the same assertions; the overlay implementation was then restored. These failures are not counted as passing coverage.
+- Local implementation only; no merge, deployment, remote DB operation, or production browser acceptance was performed.
+
+Existing earlier fixed-column notes are historical for the scoped reception drawer types.
+
+Release preparation uses an isolated worktree based on `origin/main` at `0bca112ab30a88ca46edcd8a0ef76c8280534ea8`, preserving unrelated primary-checkout WIP. The five-file slice contains the reception implementation, shell placement, focused tests, and these two owning documents. Latest-main patient-profile return behavior and unsaved-input guards remain intact: Escape invokes the existing header action rather than bypassing its discard confirmation. Profile-origin forms in reception use the calendar overlay; the same forms in other modules retain their shell presentation.
+
+Clean-worktree focused reception/profile regressions: 12 passed, including geometry/scroll, create cancellation, mobile/reduced motion, profile return, and dirty-input Escape. Final local TypeScript and production build passed. Release gates: secrets/docs/UX-copy/lint/type/build checks, exact-candidate manual Release Check, Ready PR Preview, then main merge and Ready production alias verification. Production smoke is limited to opening/selecting/closing panels without submitting patient or appointment data. Stop on failed checks or unexpected scope/data changes. Rollback uses the previous Ready production deployment `dpl_3TjPK3UnQ2mRYkouDePuXJKYTnxN` or a reviewed revert of the merged slice. Environment values and credentials are not copied into this worktree or documents.
+
 ## Goal
 
 Refine the reception detail drawer so it presents patient/guardian information first, removes internal or duplicate UI, and lets staff update editable reception details through a server-owned API/DB boundary.

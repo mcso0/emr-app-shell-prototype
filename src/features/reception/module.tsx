@@ -15,6 +15,7 @@ import {
 } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import {
   CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
@@ -6675,11 +6676,63 @@ function ReceptionScheduleBoard({
   );
 }
 
+function ReceptionCalendarDrawer({ children }: { children: ReactNode }) {
+  const isPresent = useIsPresent();
+  const reduceMotion = useReducedMotion();
+  const panelRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    const opener = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    panel
+      ?.querySelector<HTMLButtonElement>('button[aria-label="우측 사이드 패널 닫기"], button[aria-label="환자 프로필로 돌아가기"]')
+      ?.focus();
+    return () => {
+      window.requestAnimationFrame(() => {
+        if (panel?.isConnected) return;
+        if (document.activeElement === document.body || panel?.contains(document.activeElement)) {
+          const returnTarget = document.querySelector<HTMLButtonElement>('button[aria-label="우측 사이드 패널 열기"]')
+            ?? (opener instanceof HTMLButtonElement && opener.isConnected && !panel?.contains(opener) ? opener : null)
+            ?? document.querySelector<HTMLButtonElement>('[data-testid="schedule-check-in-button"]');
+          returnTarget?.focus();
+        }
+      });
+    };
+  }, []);
+
+  return (
+    <motion.aside
+      ref={panelRef}
+      aria-label="접수/예약 드로어"
+      aria-hidden={!isPresent}
+      inert={!isPresent}
+      data-testid="reception-calendar-drawer"
+      className="absolute inset-y-0 right-0 z-40 w-[min(380px,100%)] border-l border-[var(--emr-border-strong)] bg-[var(--emr-surface-rightpanel)] shadow-2xl"
+      initial={{ x: reduceMotion ? 0 : "100%" }}
+      animate={{ x: 0 }}
+      exit={{ x: reduceMotion ? 0 : "100%" }}
+      transition={{ duration: reduceMotion ? 0 : 0.2, ease: [0.16, 0, 0.08, 1] }}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || event.defaultPrevented) return;
+        event.stopPropagation();
+        panelRef.current
+          ?.querySelector<HTMLButtonElement>('button[aria-label="우측 사이드 패널 닫기"], button[aria-label="환자 프로필로 돌아가기"]')
+          ?.click();
+      }}
+    >
+      {children}
+    </motion.aside>
+  );
+}
+
 export function ReceptionContent() {
   const params = useParams<{ workspaceId?: string | string[] }>();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const calendarViewByWorkspace = useReceptionStore(
     (state) => state.calendarViewByWorkspace,
@@ -7442,32 +7495,49 @@ export function ReceptionContent() {
               : "현재 캘린더는 로컬 데모/세션 데이터 기준으로 유지됩니다.")}
         </EmrInlineAlert>
       ) : null}
-      <ReceptionScheduleBoard
-        assignmentVeterinarians={veterinarians}
-        calendarDraftSelection={calendarDraftSelection}
-        calendarResourceState={calendarResourceState}
-        currentDate={defaultOperatingDate}
-        currentOperatingMinutes={currentOperatingMinutes}
-        emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
-        appointments={visibleAppointments}
-        draftCheckIns={calendarDraftCheckIns}
-        operatingDate={operatingDate}
-        operatingSchedule={selectedDateOperatingSchedule}
-        onClearCalendarDraft={clearCalendarDraft}
-        onClearCalendarTransientSelection={clearCalendarTransientSelection}
-        onEmptySlotAffordancePointerMove={() =>
-          setEmptySlotAffordanceSuspended(false)
-        }
-        profileDataset={profileDataset}
-        selectedVeterinarians={selectedVeterinarians}
-        view={calendarView}
-        onSelectAppointment={handleSelectAppointment}
-        onSelectEncounter={handleSelectEncounterFromSchedule}
-        onCreateCalendarDraft={openCalendarDraftDrawer}
-        onCreateWalkIn={openWalkInDialog}
-        onHideVeterinarian={toggleVeterinarian}
-        onOpenVeterinarianProfile={openStaffOperationalProfile}
-      />
+      <div
+        className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+        data-testid="reception-calendar-stage"
+      >
+        <ReceptionScheduleBoard
+          assignmentVeterinarians={veterinarians}
+          calendarDraftSelection={calendarDraftSelection}
+          calendarResourceState={calendarResourceState}
+          currentDate={defaultOperatingDate}
+          currentOperatingMinutes={currentOperatingMinutes}
+          emptySlotAffordanceSuspended={emptySlotAffordanceSuspended}
+          appointments={visibleAppointments}
+          draftCheckIns={calendarDraftCheckIns}
+          operatingDate={operatingDate}
+          operatingSchedule={selectedDateOperatingSchedule}
+          onClearCalendarDraft={clearCalendarDraft}
+          onClearCalendarTransientSelection={clearCalendarTransientSelection}
+          onEmptySlotAffordancePointerMove={() =>
+            setEmptySlotAffordanceSuspended(false)
+          }
+          profileDataset={profileDataset}
+          selectedVeterinarians={selectedVeterinarians}
+          view={calendarView}
+          onSelectAppointment={handleSelectAppointment}
+          onSelectEncounter={handleSelectEncounterFromSchedule}
+          onCreateCalendarDraft={openCalendarDraftDrawer}
+          onCreateWalkIn={openWalkInDialog}
+          onHideVeterinarian={toggleVeterinarian}
+          onOpenVeterinarianProfile={openStaffOperationalProfile}
+        />
+        <AnimatePresence>
+          {isReceptionRightPanelDrawer(activeDrawer) &&
+          (rightPanelOpen || activeDrawer.rightPanelPresentation?.surface === "workspace-right-panel") ? (
+            <ReceptionCalendarDrawer key="reception-calendar-drawer">
+              <ReceptionRightPanel
+                workspaceId={workspaceId}
+                moduleId="reception"
+                moduleLabel="접수/예약"
+              />
+            </ReceptionCalendarDrawer>
+          ) : null}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -7880,6 +7950,7 @@ function ReceptionWalkInFormDrawer({
       onClose();
       return;
     }
+    useLayoutStore.getState().setRightPanelOpen(false);
     setActiveDrawer(null);
   };
   const discardAndClose = () => {
@@ -7888,6 +7959,7 @@ function ReceptionWalkInFormDrawer({
       onClose();
       return;
     }
+    useLayoutStore.getState().setRightPanelOpen(false);
     setActiveDrawer(null);
   };
   const submitCreate = async () => {
@@ -8911,6 +8983,7 @@ function ReceptionReservationFormDrawer({
       onClose();
       return;
     }
+    useLayoutStore.getState().setRightPanelOpen(false);
     setActiveDrawer(null);
   };
   const discardAndClose = () => {
@@ -8920,6 +8993,7 @@ function ReceptionReservationFormDrawer({
       onClose();
       return;
     }
+    useLayoutStore.getState().setRightPanelOpen(false);
     setActiveDrawer(null);
   };
 
@@ -9956,7 +10030,10 @@ function ReceptionAppointmentCheckInFormDrawer({
       <Button
         size="default"
         variant="ghost"
-        onClick={() => setActiveDrawer(null)}
+        onClick={() => {
+          useLayoutStore.getState().setRightPanelOpen(false);
+          setActiveDrawer(null);
+        }}
         disabled={submitting}
       >
         취소
