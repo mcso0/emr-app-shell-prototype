@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useLayoutStore } from "@/stores/layout-store";
 import { cn } from "@/lib/utils";
 import { SHELL_LAYOUT } from "@/shell/layout-contract";
+import { WorkspaceDocumentLayout } from "@/shell/workspace-document-layout";
 
 type WorkspaceFrameProps = {
   moduleDefinition: ModuleDefinition;
@@ -159,7 +160,10 @@ export function WorkspaceFrame({
         const receptionCalendarDrawer = moduleDefinition.id === "reception" && isReceptionDrawer;
         const rightPanelVisible =
           hasCommonProfileRightPanel ||
-          (!receptionCalendarDrawer && (hasFeatureRightPanel || (hasModuleRightPanel && rightPanelOpen)));
+          (!receptionCalendarDrawer && (
+            hasFeatureRightPanel ||
+            (hasModuleRightPanel && !moduleDefinition.documentLayout && rightPanelOpen)
+          ));
         const rightPanelGap = rightPanelVisible
             ? hasCommonProfileRightPanel || hasFeatureRightPanel
             ? (activeDrawer?.rightPanelPresentation?.gap ?? SHELL_LAYOUT.shell.gap)
@@ -211,7 +215,12 @@ export function WorkspaceFrame({
               )}
             >
               {Header ? <Header {...slotProps} /> : null}
-              <div
+              {moduleDefinition.documentLayout ? (
+                <WorkspaceDocumentLayout
+                  moduleDefinition={moduleDefinition}
+                  slotProps={{ ...slotProps, hasRightPanel: hasModuleRightPanel }}
+                />
+              ) : <div
                 className="grid min-h-0 flex-1 transition-[grid-template-columns] duration-200 [grid-template-columns:var(--clair-workspace-content-columns)] max-md:[grid-template-columns:minmax(0,1fr)]"
                 style={{
                   "--clair-workspace-content-columns": `${
@@ -244,7 +253,7 @@ export function WorkspaceFrame({
                 <div className="min-h-0 min-w-0 overflow-hidden">
                   <Content {...slotProps} />
                 </div>
-              </div>
+              </div>}
 
             </section>
 

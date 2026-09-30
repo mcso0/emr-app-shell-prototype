@@ -11,6 +11,9 @@ export type ModuleRefreshAction = {
 };
 
 type LayoutStore = {
+  documentWidthModes: Record<string, "narrow" | "wide">;
+  lastContentPanelOpened: "left" | "right";
+  setDocumentWidthMode: (key: string, mode: "narrow" | "wide") => void;
   activeDrawer: DrawerState;
   contentAsideOpen: boolean;
   moduleRefreshActions: Record<string, ModuleRefreshAction | undefined>;
@@ -36,6 +39,11 @@ type LayoutStore = {
 };
 
 export const useLayoutStore = create<LayoutStore>()((set) => ({
+  documentWidthModes: {},
+  lastContentPanelOpened: "right",
+  setDocumentWidthMode: (key, mode) => set((state) => ({
+    documentWidthModes: { ...state.documentWidthModes, [key]: mode },
+  })),
   activeDrawer: null,
   contentAsideOpen: false,
   moduleRefreshActions: {},
@@ -70,7 +78,10 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
     }),
   setContentAsideOpen: (contentAsideOpen) =>
     set((state) =>
-      state.contentAsideOpen === contentAsideOpen ? state : { contentAsideOpen }
+      state.contentAsideOpen === contentAsideOpen ? state : {
+        contentAsideOpen,
+        ...(contentAsideOpen ? { lastContentPanelOpened: "left" as const } : {}),
+      }
     ),
   setModuleRefreshAction: (moduleId, action) =>
     set((state) => ({
@@ -100,7 +111,10 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
     ),
   setRightPanelOpen: (rightPanelOpen) =>
     set((state) =>
-      state.rightPanelOpen === rightPanelOpen ? state : { rightPanelOpen }
+      state.rightPanelOpen === rightPanelOpen ? state : {
+        rightPanelOpen,
+        ...(rightPanelOpen ? { lastContentPanelOpened: "right" as const } : {}),
+      }
     ),
   setSelectedQueueItem: (moduleId, itemId) =>
     set((state) =>

@@ -59,6 +59,13 @@ export type ModuleDefinition = {
   slotAvailabilityProvider?: WorkspaceSlotAvailabilityProvider;
   rightPanelGap?: boolean;
   rightPanelWidth?: number;
+  documentLayout?: {
+    narrowWidth: number;
+    historyPanelId: string;
+    historyLabel: string;
+    rightPanelId?: string;
+    rightLabel?: string;
+  };
   defaultContentAsideOpen?: boolean;
   defaultRightPanelOpen?: boolean;
   drawer?: ComponentType<ShellComponentProps>;

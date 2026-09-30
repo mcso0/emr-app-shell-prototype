@@ -131,6 +131,7 @@ export function ChartActionBar({
   timeLabel = "진료 시작 일시",
   visitLabel,
   workspaceId,
+  widthAction,
 }: {
   chartDate: string;
   completionAction?: ReactNode;
@@ -143,6 +144,7 @@ export function ChartActionBar({
   timeLabel?: string;
   visitLabel: string;
   workspaceId: string;
+  widthAction?: ReactNode;
 }) {
   return (
     <div
@@ -179,6 +181,7 @@ export function ChartActionBar({
           <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
           {doctorName}
         </span>
+        {widthAction}
         {completionAction}
       </div>
     </div>

@@ -826,6 +826,10 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await expect(historyAside).toContainText("요청");
   await expect(historyAside).not.toContainText("조제 시작 확인");
   await expect(historyAside).not.toContainText("user-tech");
+  const historyDialog = page.getByRole("dialog", { name: "조제/처치 이력", exact: true });
+  await expect(historyDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(historyDialog).toBeHidden();
   await page.getByRole("button", { name: "담당하기" }).first().click();
   await expect.poll(() => lifecycleActions).toEqual(["claim"]);
   await page

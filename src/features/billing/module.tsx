@@ -43,6 +43,13 @@ import {
   EmrRightPanelFooter,
 } from "@/components/emr/right-panel";
 import { EmrRightPanelHeader } from "@/components/emr/right-panel-header";
+import { EmrRightPanelHeaderIconButton } from "@/components/emr/right-panel-header-icon-button";
+import { CdsNavigationChevronsRightIcon } from "@/components/cds-icons/navigation";
+import {
+  WorkspaceDocumentToolbar,
+  WorkspaceDocumentWidthToggle,
+  useWorkspaceDocumentLayout,
+} from "@/shell/workspace-document-layout";
 import {
   EmrDateNavigator,
   EmrListHeader,
@@ -2444,6 +2451,7 @@ function BillingTitleCard({
   detail: BillingDetail;
   hasRightPanel: boolean;
 }) {
+  const documentLayout = useWorkspaceDocumentLayout();
   const { session: authSession } = useAuthClient();
   const {
     contentAsideOpen,
@@ -2463,76 +2471,84 @@ function BillingTitleCard({
     (state) => state.invoiceAssignees[detail.invoice.id],
   );
 
-  return (
-    <EmrInstructionHeaderStack
-      titleBar={
-        <EmrInstructionTitleBar
-          title="수납"
-          icon={
-            <EmrInstructionHistoryToggle
-              ariaLabelPrefix="수납이력"
-              controls="billing-content-aside"
-              expanded={contentAsideOpen}
-              tooltipLabel="수납이력"
-              onClick={() => setContentAsideOpen(!contentAsideOpen)}
-            />
-          }
-          badge={
-            <Badge
-              variant="secondary"
-              className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
-            >
-              {detail.invoice.invoiceNo}
-            </Badge>
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              {assigneeName ? (
-                <Badge
-                  variant="secondary"
-                  className="h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-8)] emr-text-status"
-                >
-                  담당 {assigneeName}
-                </Badge>
-              ) : null}
-              <Button
-                type="button"
-                size="xs"
-                variant={assigneeName ? "outline" : "default"}
-                className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-10)] shadow-[var(--clair-shadow-xs)]"
-                onClick={() => {
-                  if (assigneeName) {
-                    clearInvoiceAssignee(detail.invoice.id);
-                    return;
-                  }
-
-                  assignInvoice(detail.invoice.id, assignmentActorName);
-                }}
-              >
-                {assigneeName ? "담당 취소" : "담당하기"}
-              </Button>
-              <Button
-                type="button"
-                size="xs"
-                variant="outline"
-                className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-10)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
-                disabled={!hasRightPanel}
-                aria-label={
-                  rightPanelOpen ? "수납 요약 패널 접기" : "수납 요약 패널 열기"
-                }
-                aria-expanded={rightPanelOpen}
-                aria-pressed={rightPanelOpen}
-                data-state={rightPanelOpen ? "on" : "off"}
-                onClick={() => setRightPanelOpen(!rightPanelOpen)}
-              >
-                수납 요약
-              </Button>
-            </div>
-          }
+  const titleBar = (
+    <EmrInstructionTitleBar
+      title="수납"
+      className="flex-wrap gap-2"
+      icon={
+        <EmrInstructionHistoryToggle
+          ariaLabelPrefix="수납이력"
+          controls={documentLayout?.historyControlsId ?? "billing-content-aside"}
+          expanded={contentAsideOpen}
+          tooltipLabel="수납이력"
+          onClick={() => setContentAsideOpen(!contentAsideOpen)}
         />
       }
-      orderInfo={<BillingInstructionInfo detail={detail} />}
+      badge={
+        <Badge
+          variant="secondary"
+          className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
+        >
+          {detail.invoice.invoiceNo}
+        </Badge>
+      }
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          {assigneeName ? (
+            <Badge
+              variant="secondary"
+              className="h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-8)] emr-text-status"
+            >
+              담당 {assigneeName}
+            </Badge>
+          ) : null}
+          <Button
+            type="button"
+            size="xs"
+            variant={assigneeName ? "outline" : "default"}
+            className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-10)] shadow-[var(--clair-shadow-xs)]"
+            onClick={() => {
+              if (assigneeName) {
+                clearInvoiceAssignee(detail.invoice.id);
+                return;
+              }
+
+              assignInvoice(detail.invoice.id, assignmentActorName);
+            }}
+          >
+            {assigneeName ? "담당 취소" : "담당하기"}
+          </Button>
+          <WorkspaceDocumentWidthToggle />
+          <Button
+            type="button"
+            size="xs"
+            variant="outline"
+            className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-10)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
+            disabled={!hasRightPanel}
+            aria-label={
+              rightPanelOpen ? "수납 요약 패널 접기" : "수납 요약 패널 열기"
+            }
+            aria-controls={documentLayout?.rightControlsId ?? "billing-summary-panel"}
+            aria-expanded={rightPanelOpen}
+            aria-pressed={rightPanelOpen}
+            data-state={rightPanelOpen ? "on" : "off"}
+            onClick={() => setRightPanelOpen(!rightPanelOpen)}
+          >
+            수납 요약
+          </Button>
+        </div>
+      }
     />
+  );
+
+  return (
+    <>
+      {documentLayout ? <WorkspaceDocumentToolbar>{titleBar}</WorkspaceDocumentToolbar> : null}
+      <EmrInstructionHeaderStack
+        titleBar={documentLayout ? null : titleBar}
+        orderInfo={<BillingInstructionInfo detail={detail} />}
+      />
+    </>
   );
 }
 
@@ -3377,6 +3393,7 @@ export function BillingContent({
   hasRightPanel,
   workspaceId,
 }: ShellComponentProps) {
+  const documentLayout = useWorkspaceDocumentLayout();
   const {
     apiState,
     applyInvoiceSnapshot,
@@ -3474,10 +3491,14 @@ export function BillingContent({
     checkoutPayments,
     selectedInvoiceIds,
   ]);
-  const checkoutInvoiceIds = useMemo(
-    () => checkoutGroups.map((group) => group.invoice.id),
-    [checkoutGroups],
+  const checkoutInvoiceIdsKey = JSON.stringify(checkoutGroups.map((group) => group.invoice.id));
+  const checkoutInvoiceIds = useMemo<string[]>(
+    () => JSON.parse(checkoutInvoiceIdsKey),
+    [checkoutInvoiceIdsKey],
   );
+  const checkoutAmountsKey = JSON.stringify(checkoutGroups.map((group) => [
+    group.invoice.status, group.totalAmount, group.paidAmount,
+  ]));
   const checkoutTableLines = useMemo(
     () =>
       checkoutGroups.length
@@ -3529,6 +3550,7 @@ export function BillingContent({
   }, [
     actorHeaders,
     checkoutInvoiceIds,
+    checkoutAmountsKey,
     checkoutReloadKey,
     checkoutWorkspaceId,
   ]);
@@ -3668,9 +3690,9 @@ export function BillingContent({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="grid gap-4 p-4">
+    <div data-slot="billing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
+      <ScrollArea data-slot="billing-content-scroll-area" className="min-h-0 flex-1">
+        <div className={cn("grid gap-4 py-4", !documentLayout && "px-4")}>
           <BillingTitleCard
             detail={effectiveDetail}
             hasRightPanel={Boolean(hasRightPanel)}
@@ -3781,6 +3803,7 @@ function PaymentStatusNote({
 }
 
 export function BillingRightPanel() {
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const {
     applyInvoiceSnapshot,
     applyPaymentStatusSnapshot,
@@ -3846,10 +3869,14 @@ export function BillingRightPanel() {
       ? [createCheckoutGroupFromBillingDetail(effectiveDetail)]
       : [];
   }, [effectiveDetail, selectedCheckoutGroups]);
-  const checkoutInvoiceIds = useMemo(
-    () => summaryGroups.map((group) => group.invoice.id),
-    [summaryGroups],
+  const checkoutInvoiceIdsKey = JSON.stringify(summaryGroups.map((group) => group.invoice.id));
+  const checkoutInvoiceIds = useMemo<string[]>(
+    () => JSON.parse(checkoutInvoiceIdsKey),
+    [checkoutInvoiceIdsKey],
   );
+  const checkoutAmountsKey = JSON.stringify(summaryGroups.map((group) => [
+    group.invoice.status, group.totalAmount, group.paidAmount,
+  ]));
   const checkoutWorkspaceId =
     summaryGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
@@ -3879,6 +3906,7 @@ export function BillingRightPanel() {
   }, [
     actorHeaders,
     checkoutInvoiceIds,
+    checkoutAmountsKey,
     checkoutWorkspaceId,
     paymentMemo,
     paymentMethod,
@@ -4071,12 +4099,19 @@ export function BillingRightPanel() {
   return (
     <>
       <EmrRightPanel
+        id="billing-summary-panel"
         className="bg-[var(--emr-surface-rightpanel)]"
         header={
           <EmrRightPanelHeader className="justify-between border-b">
             <h2 className="emr-text-body font-semibold">수납 요약</h2>
             <div className="flex items-center gap-2">
               <EmrStatusBadge label={statusLabel} marker="none" />
+              <EmrRightPanelHeaderIconButton
+                aria-label="수납 요약 패널 접기"
+                onClick={() => setRightPanelOpen(false)}
+              >
+                <CdsNavigationChevronsRightIcon />
+              </EmrRightPanelHeaderIconButton>
             </div>
           </EmrRightPanelHeader>
         }

@@ -420,12 +420,18 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const nextSearch = params.toString();
     if (search !== nextSearch) {
       if (window.location.pathname !== pathname) return;
-      router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+      if (moduleDefinition.documentLayout) {
+        // Layout-only URL state must not replace the mounted document or race a later close.
+        window.history.replaceState(null, "", `${pathname}?${nextSearch}`);
+      } else {
+        router.replace(`${pathname}?${nextSearch}`, { scroll: false });
+      }
     }
   }, [
     activeDrawer,
     contentAsideOpen,
     moduleDefinition.contentAside,
+    moduleDefinition.documentLayout,
     moduleDefinition.rightPanel,
     modulePanelOpen,
     pathname,

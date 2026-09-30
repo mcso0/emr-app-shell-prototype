@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>진료/차트 폭 전환 · 적용 결과</title>
+  <style>
+    :root{color-scheme:light;--ink:#18212f;--muted:#637082;--line:#dfe6ec;--accent:#126e58}
+    *{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:var(--ink);font:15px/1.75 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
+    main{max-width:1120px;margin:36px auto;padding:0 24px 64px}header,section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;margin-top:18px}header{padding:36px}
+    h1{font-size:30px;line-height:1.4;margin:12px 0}h2{font-size:21px;margin:0 0 16px}p{margin:10px 0}.eyebrow,figcaption,.muted{color:var(--muted)}.eyebrow{font-size:13px}.lede{font-size:18px;max-width:860px}
+    .status{display:inline-block;padding:4px 12px;background:#e8f5ef;color:var(--accent);border-radius:99px;font-size:13px;font-weight:650}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{padding:18px;border:1px solid var(--line);border-radius:12px;background:#f7f9fb}.card b{display:block;font-size:24px}.card span{color:var(--muted)}
+    a{color:#2259a6;text-underline-offset:3px}.links,.switch{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 0}.button,button{border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none;color:var(--ink)}.primary,button[aria-pressed=true]{background:#18334c;color:white;border-color:#18334c}button:focus-visible{outline:3px solid #91b8ed;outline-offset:2px}
+    figure{margin:22px 0 0}img{display:block;width:100%;border:1px solid var(--line);border-radius:10px}figcaption{font-size:13px;margin-top:8px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f7f9fb}td:first-child{width:26%;font-weight:600}ul{padding-left:20px}li{margin:7px 0}footer{padding:20px 4px;color:var(--muted);font-size:13px}
+    @media(max-width:700px){main{margin:16px auto;padding:0 12px 32px}header,section{padding:20px}h1{font-size:25px}.cards{grid-template-columns:1fr}td:first-child{width:32%}}
+    @media print{body{background:white}main{max-width:none;margin:0;padding:0}.links,.switch{display:none}header,section{break-inside:avoid}}
+  </style>
+</head>
+<body><aside aria-label="검증 기록 안내" style="max-width:1280px;margin:20px auto;padding:12px 20px;font-size:13px;line-height:1.7;color:#52645a;background:#edf3ef;border-radius:8px">초기 pilot 검증 기록이야. 화면 이미지는 최신 main 통합 후 다시 촬영했고, 본문의 초기 검증 수치는 당시 source 기준이야. 현재 통합 결과는 <a href="2026-09-30-workspace-document-width-release-report.html">최종 통합 보고서</a>에서 확인해 줘.</aside><main>
+  <header>
+    <div class="eyebrow">CLAiR · 2026.09.30 · APP-SHELL-PR-002 · 두 번째 적용</div>
+    <h1>진료/차트에도<br>좁게·넓게 보기와 내부 이력을 적용했습니다.</h1>
+    <span class="status">로컬 구현 · 화면 검토 대기</span>
+    <p class="lede">차트 작성 영역은 1,040px로 모아 보고, 많은 Order 열을 확인할 때 넓게 펼칠 수 있습니다. 상단 차트 정보와 완료 버튼은 작업 화면 전체 폭을 사용합니다.</p>
+    <div class="links">
+      <a class="button primary" href="http://127.0.0.1:4310/w/clair-demo/treatment?scenario=kong-vomit&amp;patientId=patient-kong&amp;encounterId=encounter-kong-260501&amp;modulePanel=open&amp;aside=closed&amp;right=closed">실제 차트 미리보기</a>
+      <a class="button" href="2026-09-29-workspace-document-width-panels-report.html">임상검사 첫 적용 결과</a>
+      <a class="button" href="../design/2026-09-29-workspace-width-proposal/report.html">승인된 조사·제안</a>
+    </div>
+    <p class="muted">화면과 검증 데이터는 기존 합성 시나리오입니다. 운영 서비스에는 배포하지 않았습니다.</p>
+  </header>
+  <section>
+    <h2>이번에 달라진 점</h2>
+    <div class="cards">
+      <div class="card"><b>1,040px</b><span>차트 좁게 보기의 최대 폭</span></div>
+      <div class="card"><b>전체 폭 도구줄</b><span>차트 정보·폭 버튼·진료 완료 동작</span></div>
+      <div class="card"><b>기존 이력 재사용</b><span>넓은 공간은 나란히, 좁은 공간은 모달</span></div>
+    </div>
+    <p>버튼은 대기열·이력·프로필을 제외한 실제 문서 공간이 1,040px보다 넓을 때만 나타납니다. 숨겨져도 선택한 보기 모드를 기억하며, 검사와 차트는 각자의 보기 설정을 유지합니다.</p>
+    <p>SOAP·Assessment·History의 기존 패널과 Order 열·글자 크기·밀도는 유지합니다. 공간이 부족한 부분은 내부 가로 스크롤로 확인할 수 있고, 패널을 따로 접어 작업 공간을 확보할 수도 있습니다.</p>
+  </section>
+  <section>
+    <h2>같은 화면에서 폭 비교</h2>
+    <p>아래 버튼으로 1,920px 화면의 좁게·넓게 보기를 비교할 수 있습니다. 테스트 입력과 선택 상태가 남아 있는 검증 캡처입니다.</p>
+    <div class="switch" role="group" aria-label="차트 폭 비교">
+      <button type="button" aria-pressed="true" data-mode="narrow" aria-controls="width-image">좁게 보기 · 1,040px</button>
+      <button type="button" aria-pressed="false" data-mode="wide" aria-controls="width-image">넓게 보기 · 사용 가능 폭</button>
+    </div>
+    <figure><img id="width-image" src="2026-09-30-chart-document-width-assets/1920-narrow.png" alt="1920px 화면에서 1040px로 모은 차트 작성 영역"><figcaption id="width-caption">상단 도구줄은 전체 폭, 작성 영역은 중앙에 모여 있습니다. History와 Order의 넘치는 내용은 안에서 스크롤합니다.</figcaption></figure>
+  </section>
+  <section>
+    <h2>이력과 환자 프로필</h2>
+    <p>좁은 화면에서 이력을 열면 모달이 배경 조작을 막습니다. Tab 포커스는 이력 안에 머물고, Escape로 닫으면 열었던 버튼으로 돌아갑니다. 작성 중인 입력은 유지됩니다.</p>
+    <figure><img src="2026-09-30-chart-document-width-assets/1440-history-modal.png" alt="1440px 화면에서 차트 이력을 모달로 표시"><figcaption>1,440px · 대기열을 유지하면서 이력 모달 표시</figcaption></figure>
+    <p>환자 프로필은 바깥 오른쪽 슬롯을 그대로 사용합니다. 차트에는 새로운 오른쪽 참고 기능을 추가하지 않았습니다.</p>
+    <figure><img src="2026-09-30-chart-document-width-assets/2560-profile-history.png" alt="2560px 화면에서 왼쪽 차트 이력과 오른쪽 환자 프로필이 함께 표시"><figcaption>2,560px · 왼쪽 차트 이력, 중앙 작성 영역, 바깥 환자 프로필</figcaption></figure>
+  </section>
+  <section>
+    <h2>검증 결과</h2>
+    <p id="verification-summary"><strong>브라우저 검증 94개 항목 통과.</strong> 차트 전체 73개, 새 차트 레이아웃 6개, Order 밀도 1개, 임상검사 공통 레이아웃 9개, 공유 오른쪽 패널 5개를 확인했습니다. 프로덕션 빌드·타입 검사·ESLint·문서·diff·보안 검사도 통과했습니다.</p>
+    <p class="muted">전체 실행에서는 93개가 통과했고, 추가한 세로 스크롤 테스트의 편집기 선택자를 수정한 뒤 해당 1개도 재검증에 통과했습니다. 차트 기능과 임상검사 회귀는 최종 프로덕션 빌드에서 검증했습니다.</p>
+    <table><thead><tr><th>확인 영역</th><th>검증 범위</th></tr></thead><tbody>
+      <tr><td>입력과 보기 상태</td><td>SOAP 입력, 진단 검색, Order 선택, 작성 영역 유지, 내부 스크롤, 모듈별 폭 설정</td></tr>
+      <tr><td>화면과 접근성</td><td>1366 / 1440 / 1600 / 1920 / 2560 및 960 CSS px, 모달 Tab·Escape·포커스 복귀, 모션 감소, 프로필 공존</td></tr>
+      <tr><td>기존 업무 동작</td><td>Order 고정 열·밀도, 패널 접기, 영역 높이 조절, SOAP 편집, 빈 화면·권한 오류, 임상검사 공통 패널 회귀</td></tr>
+      <tr><td>정적 검사</td><td>변경 파일 ESLint, 타입 검사, 프로덕션 빌드, 문서 검사, diff 검사</td></tr>
+    </tbody></table>
+    <p class="muted">960 CSS px는 확대에 따른 공간 부족을 확인하기 위한 대체 조건입니다. 실제 브라우저 200% 확대나 실환자 진료 업무 검증은 포함하지 않습니다. 실제 임상 사용자의 선호·효율 평가는 별도로 남아 있습니다.</p>
+  </section>
+  <section>
+    <h2>적용 범위와 다음 단계</h2>
+    <p>변경 파일은 차트 모듈과 패널 컴포넌트, 모듈 레지스트리, 공통 문서 레이아웃과 타입, 관련 브라우저 테스트와 폭 계약 문서입니다. 원래 작업 중인 기본 체크아웃은 건드리지 않았습니다.</p>
+    <p>API·DB·권한·진료 정책·실제 데이터와 저장·확정 로직은 이번 변경 범위에 포함하지 않습니다. 커밋·푸시·병합·배포도 수행하지 않았습니다.</p>
+    <p>다음 적용 대상은 <strong>조제/처치</strong>입니다. 기존 수행 상세 drawer와 표 구조를 확인한 뒤 같은 계약을 연결하는 순서입니다.</p>
+  </section>
+  <footer>루멘 · 로컬 구현 및 합성 데이터 검증 · 폭 값은 실제 임상 사용 검토 전의 적용 후보입니다.</footer>
+</main>
+<script>
+  const picture = document.getElementById('width-image');
+  const caption = document.getElementById('width-caption');
+  document.querySelectorAll('[data-mode]').forEach(button => {
+    button.addEventListener('click', () => {
+      const narrow = button.dataset.mode === 'narrow';
+      picture.src = '2026-09-30-chart-document-width-assets/1920-' + button.dataset.mode + '.png';
+      picture.alt = narrow ? '1920px 화면에서 1040px로 모은 차트 작성 영역' : '1920px 화면의 사용 가능 폭으로 펼친 차트 작성 영역';
+      caption.textContent = narrow ? '상단 도구줄은 전체 폭, 작성 영역은 중앙에 모여 있습니다. History와 Order의 넘치는 내용은 안에서 스크롤합니다.' : '작성 영역을 넓히면 세 임상 패널의 기존 비율을 사용하고 Order의 더 많은 열을 동시에 볼 수 있습니다.';
+      document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    });
+  });
+</script>
+</body></html>
