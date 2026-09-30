@@ -33,6 +33,25 @@ test("workspace vital settings allow member reads and report manage eligibility"
   }
 });
 
+test("reception-only permission cannot read or change hospital administration settings", async () => {
+  const adapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: actorUserId, status: "active" }],
+    memberships: [{ id: "reception-only", workspaceId, userId: actorUserId, roles: ["front_desk"], status: "active",
+      permissionRole: { key: "reception-only", label: "Reception only", roleType: "custom", permissionIds: ["reception:view"] },
+    }],
+  });
+  let calls = 0;
+  const gateway = {
+    async get() { calls += 1; return { ok: true as const, snapshot: createDefaultWorkspaceVitalSettingsSnapshot() }; },
+    async replace() { calls += 1; return { ok: true as const, snapshot: createDefaultWorkspaceVitalSettingsSnapshot() }; },
+  };
+  expect(await readWorkspaceVitalSettings({ actorUserId, workspaceId, permissionAdapter: adapter, gateway }))
+    .toMatchObject({ ok: false, status: 403, denialReason: "permission_missing" });
+  expect(await replaceWorkspaceVitalSettings({ actorUserId, workspaceId, items: [], permissionAdapter: adapter, gateway }))
+    .toMatchObject({ ok: false, status: 403, denialReason: "permission_missing" });
+  expect(calls).toBe(0);
+});
+
 test("workspace vital settings reject non-managers before the write gateway", async () => {
   let gatewayCalled = false;
   const result = await replaceWorkspaceVitalSettings({

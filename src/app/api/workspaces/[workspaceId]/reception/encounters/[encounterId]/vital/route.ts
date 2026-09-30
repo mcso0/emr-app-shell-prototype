@@ -13,6 +13,10 @@ import {
   readReceptionEncounterVital,
   type SupabaseReceptionEncounterVitalClient,
 } from "@/features/reception/server-encounter-vital";
+import {
+  createSupabaseWorkspaceVitalSettingsGateway,
+  type SupabaseWorkspaceVitalSettingsClient,
+} from "@/features/hospital-admin/vital-settings/server-workspace-vital-settings-core";
 import { createClient } from "@/lib/supabase/server";
 
 type RouteContext = {
@@ -63,6 +67,9 @@ export async function GET(request: Request, { params }: RouteContext) {
       client as unknown as SupabaseReceptionEncounterVitalClient,
     ),
     permissionAdapter,
+    settingsGateway: createSupabaseWorkspaceVitalSettingsGateway(
+      client as unknown as SupabaseWorkspaceVitalSettingsClient,
+    ),
     workspaceId,
   });
 

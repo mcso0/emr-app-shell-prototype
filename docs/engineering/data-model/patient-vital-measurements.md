@@ -17,7 +17,7 @@ related_work:
   - HOSPITAL-ADMIN-LIVE-PR-019
   - HOSPITAL-ADMIN-LIVE-PR-024
   - RECEPTION-LIVE-PR-017
-last_updated: 2026-09-29
+last_updated: 2026-09-30
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -59,7 +59,7 @@ The direct table remains RLS-protected with direct authenticated table privilege
 
 - `clair_get_chart_preconsultation_context` returns one latest current-encounter vital and, at most, the immediate prior non-cancelled encounter's latest vital. It never falls through an empty prior visit to an older visit.
 - `clair_get_patient_latest_vital_for_encounter` uses the selected encounter only to identify the patient, then returns that patient's latest measurement row. A cleared row is still latest and therefore returns null values rather than older measurements.
-- `clair_get_reception_encounter_vital` returns only the latest measurement row linked to the selected reception encounter. It requires active workspace membership plus `reception:view`; it never substitutes another encounter's patient-latest row. The reception detail renders only non-null values that remain enabled by workspace settings.
+- `clair_get_reception_encounter_vital` returns only the latest measurement row linked to the selected reception encounter. It requires active workspace membership plus `reception:view`; it never substitutes another encounter's patient-latest row. The reception detail renders only non-null values that remain enabled by workspace settings. The reception API also reads display settings through the existing workspace-scoped settings RPC after that exact encounter succeeds and returns `vitalSettings` with `canManage: false`. Reception display therefore does not require `hospital_settings:view`; hospital administration settings GET/PUT retain `hospital_settings:view` / `hospital_settings:manage`. Settings read failures return `vital_settings_read_failed`, separately from measurement failures and missing measurements.
 
 The chart context bar can opt into a vital write action for its selected waiting or active consultation. Dispensing, lab, imaging, and treatment consumers remain display-only because they omit the shared component's opt-in action. A successful chart save replaces the current latest-vital result immediately; later screen selection/load still uses the shared server read model rather than real-time push.
 

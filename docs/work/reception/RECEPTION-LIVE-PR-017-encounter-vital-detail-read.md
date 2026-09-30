@@ -17,7 +17,7 @@ source_docs:
 dependencies:
   - "RECEPTION-QA-PR-011"
   - "HOSPITAL-ADMIN-LIVE-PR-018"
-updated: "2026-07-24"
+updated: "2026-09-30"
 ---
 
 # Reception Encounter Vital Detail Read
@@ -75,3 +75,39 @@ patient weight compatibility snapshot.
 ## Result
 
 Implemented and ready for release verification.
+
+## 2026-09-30 Display Settings Permission Follow-Up
+
+User approved the diagnosed reception-detail fix. The selected encounter's
+measurement read succeeded while the administration settings read returned 403.
+The detail required both reads and hid persisted measurements on settings denial.
+
+- Compose the existing display-settings RPC into the reception encounter vital
+  API after `reception:view` and the exact workspace/encounter read succeed.
+- Return `vitalSettings` with `canManage: false`; no new role grants, SQL migration,
+  measurement changes, or administrator GET/PUT permission changes.
+- Use the composed response in detail; distinguish permission denial, display
+  settings failure, measurement failure, and no recorded values.
+- Keep existing unrelated primary-checkout WIP intact.
+
+Release-worktree verification: 14 focused server checks, 5 mocked browser scenarios
+(administration settings denied, settings failure/retry, malformed settings/retry,
+permission denial, and no measurement), secrets/docs/UX-copy checks, full ESLint,
+TypeScript, and production build passed. Full ESLint has five pre-existing
+script warnings and zero errors.
+The browser scenarios verify the selected-encounter display and absent-value
+omission; they do not establish production delivery or authenticated remote smoke.
+Read-only specialist review found no blocking permission/workspace issue.
+
+승욱 explicitly authorized commit, push, PR, `origin/main` merge, and production
+deployment for this fix on 2026-09-30. Direct `main` delivery follows that request;
+the remote has no `staging` branch. Release preflight and the exact manually
+triggered Release Check must pass before merge. The associated GitHub PR records
+the exact candidate/merge SHA, Ready deployment, authenticated reception smoke,
+and rollback evidence. No remote DB writes are part of this follow-up.
+
+Rollback baseline: production deployment `dpl_4MQkvzrkEQGv5CzaEWbvR9FKPK6G`
+(`origin/main` preparation baseline `a3a4e142d97a0fedde4f8d4ec42d66d4aeec7339`).
+Refresh the previous deployment at merge time if another approved release lands.
+Stop before merge if preflight, exact-candidate Release Check, or Preview fails;
+stop and diagnose if production shell or scoped vital readback fails.
