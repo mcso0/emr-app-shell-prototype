@@ -216,7 +216,7 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   expect(panelBox!.width).toBeCloseTo(380, 0);
   expect(contentBox!.width).toBeCloseTo(originalContentWidth, 0);
   const frameBox = (await page.locator("main.emr-workspace-frame-responsive").boundingBox())!;
-  expect(panelBox!.x + panelBox!.width).toBeCloseTo(frameBox.x + frameBox.width, 0);
+  expect(panelBox!.x + panelBox!.width).toBeCloseTo(frameBox.x + frameBox.width - 1, 0);
   await expect(page.getByTestId("workspace-profile-drawer")).toHaveCSS(
     "backdrop-filter",
     "none",
@@ -613,10 +613,10 @@ test("touch viewport keeps the lane action visible and fits the profile within t
     const box = await drawer.boundingBox();
     if (!frame || !box) return Infinity;
     return Math.max(
-      Math.abs(box.x - frame.x),
-      Math.abs(box.y - frame.y),
-      Math.abs(box.width - Math.min(380, frame.width)),
-      Math.abs(box.height - frame.height),
+      Math.abs(box.x - frame.x - 1),
+      Math.abs(box.y - frame.y - 1),
+      Math.abs(box.width - Math.min(380, frame.width - 2)),
+      Math.abs(box.height - frame.height + 2),
     );
   }).toBeLessThanOrEqual(1);
 });

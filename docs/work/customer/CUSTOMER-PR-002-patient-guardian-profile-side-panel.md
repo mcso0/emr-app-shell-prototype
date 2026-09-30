@@ -11,7 +11,7 @@ source_docs:
 dependencies:
   - "CUSTOMER-LIVE-PR-004"
   - "CUSTOMER-LIVE-PR-005"
-updated: "2026-09-29"
+updated: "2026-09-30"
 ---
 
 # Patient and Guardian Profile Side Panel
@@ -162,3 +162,33 @@ overlay verification is recorded in the 2026-09-29 follow-up below.
   was needed.
 - Final candidate, exact Release Check, Ready Preview/Production, smoke and
   rollback evidence are recorded in the delivery PR.
+
+## 2026-09-30 Profile Frame Containment Follow-up
+
+- Authorization: 승욱 confirmed the shared profiles should slide within the
+  workspace frame, preserving its top/right/bottom border, and approved TDD
+  implementation, commit/push/PR, `origin/main` merge and Production delivery.
+- Root cause: bounds included the frame border; the body-portal popup escaped
+  frame clipping and inherited Sheet's outer shadow and 40 px entrance offset.
+- Scope: all patient, guardian and staff operational profiles use the existing
+  global host. Reception/appointment details and reception/reservation creation
+  remain side panels with their mounted drafts. No data/API/permission changes.
+- Implementation: measure border-excluded frame bounds and the inner corner
+  radius. A stationary, pointer-transparent Sheet viewport clips only the
+  sliding popup, which travels from its full width to zero with no outer shadow.
+  Nested portals stay outside that viewport under the existing body portal.
+  Ordinary Sheet callers retain their previous rendering and behavior.
+- RED: reception guardian inner-bound geometry and the missing stationary
+  clipping viewport failed before implementation.
+- Verification and exact delivery evidence are recorded in the follow-up PR.
+- GREEN: 54 Chromium scenarios passed across the final runs, including all
+  ten module/profile pairs, inner-boundary/slide-offset clipping, staff focus,
+  nested menus, resize/touch/zoom, draft preservation and profile-origin forms.
+  Both profile host stories and all three existing Sheet stories passed.
+- Baseline exceptions: the expanded 56-scenario run includes two failures
+  reproduced on clean `main` SHA `34b541a7`: reception-detail close leaves the
+  URL drawer parameter, and the calendar-avatar test still expects the old
+  `emr-text-body` class. Neither assertion was removed or weakened. The third
+  initial failure was a dev chunk-load error; its isolated rerun passed after
+  restarting the development server. Those baseline issues are outside this
+  visual change; no unrelated route or calendar implementation was modified.
