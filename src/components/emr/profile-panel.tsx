@@ -101,7 +101,7 @@ export function EmrProfilePanel({
               className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4"
             >
               {loading ? <EmrProfileIdentitySkeleton /> : identity}
-              <div className="absolute right-1 top-1 flex items-center gap-1">
+              <div className="absolute right-3.5 top-3.5 flex items-center gap-1">
                 {!loading ? headerActions : null}
                 <Button
                   ref={closeRef}
@@ -109,9 +109,10 @@ export function EmrProfilePanel({
                   type="button"
                   variant="ghost"
                   size="icon-sm"
+                  className="rounded-[var(--clair-radius-atomic-8)] text-[var(--clair-color-atomic-neutral-700)]"
                   onClick={close}
                 >
-                  <CdsActionsXIcon aria-hidden="true" size={12} />
+                  <CdsActionsXIcon aria-hidden="true" className="size-4" size={16} />
                 </Button>
               </div>
               <TabsList

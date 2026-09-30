@@ -208,7 +208,12 @@ export const HeaderMenuAuthorized: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const body = within(canvasElement.ownerDocument.body);
-    await openMenu(canvas.getByRole("button", { name: "프로필 작업 더보기" }));
+    const trigger = canvas.getByRole("button", { name: "프로필 작업 더보기" });
+    expect(trigger.getBoundingClientRect().width).toBe(28);
+    expect(trigger.querySelector("svg")!.getBoundingClientRect().width).toBe(16);
+    expect(getComputedStyle(trigger).borderRadius).toBe("8px");
+    expect(getComputedStyle(trigger).color).toBe("rgb(64, 64, 64)");
+    await openMenu(trigger);
     await waitFor(() =>
     expect(body.getByRole("menuitem", { name: "전체 근무표 보기" })).toBeInTheDocument(),
     );
