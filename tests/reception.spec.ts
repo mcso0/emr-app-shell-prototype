@@ -845,9 +845,7 @@ test("reception prioritizes the Kong vomit queue and detail context from query p
   await page.getByTestId("appointment-card-appointment-kong-260501").click();
 
   await expect(page.getByText("예약 상세").first()).toBeVisible();
-  await expect(page.getByTestId("reception-detail-status")).toHaveText(
-    "진료 진행중",
-  );
+  await expect(page.getByTestId("reception-detail-status")).toHaveCount(0);
   await expect(
     page.getByTestId("reception-right-panel").getByRole("textbox").nth(1),
   ).toHaveValue(/^김하늘/);
@@ -3797,7 +3795,7 @@ test("reception side panel groups active encounters and pending reservations by 
   const billingCard = billingGroup.getByTestId("patient-card-patient-dubu");
   await expect(billingCard).toContainText("수납대기");
   await billingCard.click();
-  await expect(page.getByTestId("reception-detail-status")).toHaveText("수납대기");
+  await expect(page.getByTestId("reception-detail-status")).toHaveCount(0);
 
   await exceptionGroup
     .getByRole("button", { name: "취소·노쇼 펼치기" })
@@ -3922,14 +3920,14 @@ test("server-backed reception queue read hydrates the side panel from persisted 
   await expect(persistedQueueCard).toContainText("진료대기");
 
   await persistedQueueCard.click();
-  await expect(page.getByTestId("reception-detail-status")).toHaveText("진료대기");
+  await expect(page.getByTestId("reception-detail-status")).toHaveCount(0);
 
   queueState = "in_consultation";
   const consultationRequestCount = requestCount;
   await page.getByRole("button", { name: "접수/예약 새로고침" }).click();
   await expect.poll(() => requestCount).toBeGreaterThan(consultationRequestCount);
   await expect(persistedQueueCard).toHaveCount(0);
-  await expect(page.getByTestId("reception-detail-status")).toHaveText("진료중");
+  await expect(page.getByTestId("reception-detail-status")).toHaveCount(0);
   await expect(
     page.getByTestId("walkin-status-encounter-live-queue-coco"),
   ).toHaveText("진료중");
@@ -3939,7 +3937,7 @@ test("server-backed reception queue read hydrates the side panel from persisted 
   await page.getByRole("button", { name: "접수/예약 새로고침" }).click();
   await expect.poll(() => requestCount).toBeGreaterThan(waitingRequestCount);
   await expect(persistedQueueCard).toContainText("09:25 접수");
-  await expect(page.getByTestId("reception-detail-status")).toHaveText("진료대기");
+  await expect(page.getByTestId("reception-detail-status")).toHaveCount(0);
 });
 
 test("server-backed reception day calendar read hydrates appointments and walk-ins", async ({
