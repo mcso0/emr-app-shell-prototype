@@ -119,7 +119,7 @@ export const Patient: Story = {
     const canvas = within(canvasElement);
     const close = canvas.getByRole("button", { name: "프로필 닫기" });
     expect(close).toHaveFocus();
-    expect(close.getBoundingClientRect().width).toBe(44);
+    expect(close.getBoundingClientRect().width).toBe(28);
     expect(
       canvasElement.querySelector("header")!.getBoundingClientRect().height,
     ).toBe(150);
