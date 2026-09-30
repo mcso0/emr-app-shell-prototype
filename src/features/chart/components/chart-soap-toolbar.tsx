@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { HistoryExtension } from "@blocknote/core/extensions";
 import { useEditorState } from "@blocknote/react";
+import { IconEraser, IconMarker, IconOrderedList, IconStrikethrough, IconTable, IconUnderline } from "obra-icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -16,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 import {
   CdsActionsCheckSquareIcon,
+  CdsActionsMinusIcon,
   CdsActionsRotateCcwIcon,
   CdsActionsRotateCwIcon,
 } from "@/components/cds-icons/actions-and-controls";
@@ -325,24 +327,24 @@ export function ChartSoapToolbar({
     { id: "phrases", label: "상용구", icon: <CdsMedicalMessageCircleIcon size={16} />, run: () => openMenu("phrases") },
     { id: "templates", label: "템플릿", icon: <CdsMedicalClipboardPenIcon size={16} />, run: () => openMenu("templates") },
     { id: "optical", label: "광학검사", icon: <CdsMedicalScanLineIcon size={16} />, run: () => onNotice("광학검사 패널은 아직 연결되지 않았습니다.") },
-    { id: "numbered", label: "번호 목록", icon: <span aria-hidden="true">1.</span>, active: state.blockType === "numberedListItem", run: () => toggleList("numberedListItem") },
+    { id: "numbered", label: "번호 목록", icon: <IconOrderedList size={16} strokeWidth={1.5} />, active: state.blockType === "numberedListItem", run: () => toggleList("numberedListItem") },
     { id: "italic", label: "기울임", icon: <CdsContentItalicIcon size={16} />, active: Boolean(state.styles.italic), run: () => toggleStyle("italic") },
-    { id: "strike", label: "취소선", icon: <span aria-hidden="true"><s>S</s></span>, active: Boolean(state.styles.strike), run: () => toggleStyle("strike") },
-    { id: "underline", label: "밑줄", icon: <span aria-hidden="true"><u>U</u></span>, active: Boolean(state.styles.underline), run: () => toggleStyle("underline") },
+    { id: "strike", label: "취소선", icon: <IconStrikethrough size={16} strokeWidth={1.5} />, active: Boolean(state.styles.strike), run: () => toggleStyle("strike") },
+    { id: "underline", label: "밑줄", icon: <IconUnderline size={16} strokeWidth={1.5} />, active: Boolean(state.styles.underline), run: () => toggleStyle("underline") },
     { id: "align-left", label: "왼쪽 정렬", icon: <CdsContentAlignLeftIcon size={16} />, active: state.alignment === "left", run: () => setAlignment("left") },
     { id: "align-center", label: "가운데 정렬", icon: <CdsContentAlignCenterIcon size={16} />, active: state.alignment === "center", run: () => setAlignment("center") },
-    { id: "highlight", label: "강조 색상", icon: <span aria-hidden="true">▰</span>, active: state.styles.backgroundColor === "yellow", run: () => toggleStyle("backgroundColor") },
+    { id: "highlight", label: "강조 색상", icon: <IconMarker size={16} strokeWidth={1.5} />, active: state.styles.backgroundColor === "yellow", run: () => toggleStyle("backgroundColor") },
     { id: "link", label: "링크 삽입", icon: <CdsContentLinkIcon size={16} />, run: () => { setLinkUrl(editor.getSelectedLinkUrl() ?? ""); setMenu("link"); } },
     { id: "checklist", label: "체크리스트", icon: <CdsActionsCheckSquareIcon size={16} />, active: state.blockType === "checkListItem", run: () => toggleList("checkListItem") },
-    { id: "divider", label: "구분선", icon: <span aria-hidden="true">—</span>, run: () => { const block = editor.getTextCursorPosition().block; editor.insertBlocks([{ type: "divider" }], block, "after"); } },
-    { id: "table", label: "표 삽입", icon: <span aria-hidden="true">▦</span>, run: () => {
+    { id: "divider", label: "구분선", icon: <CdsActionsMinusIcon size={16} />, run: () => { const block = editor.getTextCursorPosition().block; editor.insertBlocks([{ type: "divider" }], block, "after"); } },
+    { id: "table", label: "표 삽입", icon: <IconTable size={16} strokeWidth={1.5} />, run: () => {
       const block = editor.getTextCursorPosition().block;
       editor.insertBlocks([{ type: "table", content: { type: "tableContent", rows: [
         { cells: ["", "", ""] },
         { cells: ["", "", ""] },
       ] } }], block, "after");
     } },
-    { id: "clear", label: "서식 지우기", icon: <span aria-hidden="true">Tx</span>, run: () => { editor.focus(); editor.removeStyles({ bold: true, italic: true, underline: true, strike: true, code: true, backgroundColor: "yellow", textColor: "default" }); } },
+    { id: "clear", label: "서식 지우기", icon: <IconEraser size={16} strokeWidth={1.5} />, run: () => { editor.focus(); editor.removeStyles({ bold: true, italic: true, underline: true, strike: true, code: true, backgroundColor: "yellow", textColor: "default" }); } },
     { id: "records", label: "기록 삽입", icon: <CdsMedicalFileTextIcon size={16} />, run: () => openMenu("records") },
   ];
   const toolsById = new Map(tools.map((tool) => [tool.id, tool]));
@@ -386,7 +388,10 @@ export function ChartSoapToolbar({
         onMouseDown: (event: React.MouseEvent<HTMLElement>) => event.preventDefault(),
         onClick: (event: React.MouseEvent<HTMLElement>) => run(event.currentTarget),
       };
-      const content = <>{tool.icon}<span>{tool.label}</span></>;
+      const content = <>
+        <span aria-hidden="true" data-toolbar-menu-icon className="inline-flex size-4 shrink-0 items-center justify-center">{tool.icon}</span>
+        <span data-toolbar-menu-label className="min-w-0 flex-1 text-left">{tool.label}</span>
+      </>;
       return tool.active === undefined
         ? <DropdownMenuItem key={tool.id} {...props}>{content}</DropdownMenuItem>
         : <DropdownMenuCheckboxItem key={tool.id} checked={tool.active} {...props}>{content}</DropdownMenuCheckboxItem>;
