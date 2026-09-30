@@ -1,4 +1,5 @@
 import type { PatientVitalMeasurement } from "@/features/patient-vitals/patient-vital-types";
+import type { WorkspaceVitalSettingsSnapshot } from "@/features/patient-vitals/workspace-vital-settings";
 
 export type ReceptionEncounterVitalReadResponse =
   | {
@@ -6,6 +7,7 @@ export type ReceptionEncounterVitalReadResponse =
       status: 200;
       enforcedBy: "reception-encounter-vital-read";
       vital: PatientVitalMeasurement | null;
+      vitalSettings: WorkspaceVitalSettingsSnapshot;
     }
   | {
       ok: false;
@@ -18,6 +20,7 @@ export type ReceptionEncounterVitalReadResponse =
         | "permission_missing";
       error?:
         | "db_read_failed"
+        | "vital_settings_read_failed"
         | "encounter_unavailable"
         | "supabase_client_missing";
     };

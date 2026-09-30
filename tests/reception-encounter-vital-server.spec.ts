@@ -7,6 +7,7 @@ import {
   readReceptionEncounterVital,
   type SupabaseReceptionEncounterVitalClient,
 } from "../src/features/reception/server-encounter-vital";
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 import type { PermissionId } from "../src/types/emr-domain";
 
 const workspaceId = "workspace-clair-cheongdam";
@@ -16,6 +17,7 @@ const actorUserId = "49110000-0000-4000-8000-000000000004";
 
 test("reception encounter vital read requires reception view before calling the gateway", async () => {
   let gatewayCalled = false;
+  let settingsCalled = false;
   const result = await readReceptionEncounterVital({
     actorUserId,
     encounterId,
@@ -25,6 +27,7 @@ test("reception encounter vital read requires reception view before calling the 
         return { ok: true, vital: createVital() };
       },
     },
+    settingsGateway: { async get() { settingsCalled = true; return { ok: true, snapshot: createDefaultWorkspaceVitalSettingsSnapshot() }; } },
     permissionAdapter: createPermissionAdapter(["patient:view"]),
     workspaceId,
   });
@@ -35,6 +38,7 @@ test("reception encounter vital read requires reception view before calling the 
     denialReason: "permission_missing",
   });
   expect(gatewayCalled).toBe(false);
+  expect(settingsCalled).toBe(false);
 });
 
 test("reception encounter vital read returns only the selected encounter measurement", async () => {
@@ -48,6 +52,7 @@ test("reception encounter vital read returns only the selected encounter measure
         return { ok: true, vital: createVital() };
       },
     },
+    settingsGateway: { async get(id) { calls.push({ workspaceId: id }); return { ok: true, snapshot: createDefaultWorkspaceVitalSettingsSnapshot() }; } },
     permissionAdapter: createPermissionAdapter(["reception:view"]),
     workspaceId,
   });
@@ -57,8 +62,48 @@ test("reception encounter vital read returns only the selected encounter measure
     status: 200,
     enforcedBy: "reception-encounter-vital-read",
     vital: { patientId, encounterId, temperatureC: 38.7 },
+    vitalSettings: { canManage: false, items: createDefaultWorkspaceVitalSettingsSnapshot().items },
   });
-  expect(calls).toEqual([{ encounterId, workspaceId }]);
+  expect(calls).toEqual([{ encounterId, workspaceId }, { workspaceId }]);
+});
+
+test("reception read denies unauthenticated and foreign workspace callers before either gateway", async () => {
+  for (const input of [
+    { actorUserId: null, workspaceId, status: 401 },
+    { actorUserId, workspaceId: "foreign-workspace", status: 403 },
+    { actorUserId, workspaceId, status: 403, inactiveUser: true },
+    { actorUserId, workspaceId, status: 403, inactiveMember: true },
+  ]) {
+    let calls = 0;
+    const result = await readReceptionEncounterVital({
+      actorUserId: input.actorUserId,
+      workspaceId: input.workspaceId,
+      encounterId,
+      permissionAdapter: createPermissionAdapter(["reception:view"], input),
+      gateway: { async readEncounterVital() { calls += 1; return { ok: true, vital: createVital() }; } },
+      settingsGateway: { async get() { calls += 1; return { ok: true, snapshot: createDefaultWorkspaceVitalSettingsSnapshot() }; } },
+    });
+    expect(result).toMatchObject({ ok: false, status: input.status });
+    expect(calls).toBe(0);
+  }
+});
+
+test("reception read reports settings failure separately and never reads settings for an unavailable encounter", async () => {
+  let settingsCalls = 0;
+  for (const unavailable of [true, false]) {
+    const result = await readReceptionEncounterVital({
+      actorUserId, workspaceId, encounterId,
+      permissionAdapter: createPermissionAdapter(["reception:view"]),
+      gateway: { async readEncounterVital() {
+        return unavailable ? { ok: false, error: "encounter_unavailable" } : { ok: true, vital: createVital() };
+      } },
+      settingsGateway: { async get() { settingsCalls += 1; return { ok: false, error: "db_read_failed" }; } },
+    });
+    expect(result).toMatchObject(unavailable
+      ? { ok: false, status: 404, error: "encounter_unavailable" }
+      : { ok: false, status: 500, error: "vital_settings_read_failed" });
+    expect(settingsCalls).toBe(unavailable ? 0 : 1);
+  }
 });
 
 test("Supabase reception encounter vital gateway calls the exact encounter RPC", async () => {
@@ -135,9 +180,12 @@ function createVital() {
   };
 }
 
-function createPermissionAdapter(permissionIds: PermissionId[]) {
+function createPermissionAdapter(
+  permissionIds: PermissionId[],
+  options: { inactiveUser?: boolean; inactiveMember?: boolean } = {},
+) {
   return createMockWorkspacePermissionAdapter({
-    users: [{ id: actorUserId, status: "active" }],
+    users: [{ id: actorUserId, status: options.inactiveUser ? "inactive" : "active" }],
     memberships: [
       {
         id: "membership-reception-vital",
@@ -150,7 +198,7 @@ function createPermissionAdapter(permissionIds: PermissionId[]) {
           roleType: "custom",
           permissionIds,
         },
-        status: "active",
+        status: options.inactiveMember ? "inactive" : "active",
       },
     ],
   });

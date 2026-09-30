@@ -11615,9 +11615,8 @@ function ReceptionPersistedEncounterVitals({
   workspaceId: string;
 }) {
   const vital = useReceptionEncounterVital({ encounterId, workspaceId });
-  const settings = useWorkspaceVitalSettings({ workspaceId });
 
-  if (vital.status === "loading" || settings.status === "loading") {
+  if (vital.status === "loading") {
     return (
       <div className="grid gap-2" aria-label="바이탈 불러오는 중">
         <Skeleton className="h-8 w-full" />
@@ -11628,9 +11627,7 @@ function ReceptionPersistedEncounterVitals({
 
   if (
     vital.status === "denied" ||
-    settings.status === "denied" ||
-    vital.status === "error" ||
-    settings.status === "error"
+    vital.status === "error"
   ) {
     return (
       <div
@@ -11638,14 +11635,18 @@ function ReceptionPersistedEncounterVitals({
         className="flex items-center justify-between gap-2 rounded-[var(--emr-radius-control)] border border-[var(--emr-status-danger-border)] bg-[var(--emr-status-danger-bg)] p-2"
       >
         <p className="emr-text-dense text-[var(--emr-status-danger-text)]">
-          바이탈 정보를 불러오지 못했습니다.
+          {vital.status === "denied"
+            ? "바이탈 정보를 조회할 권한이 없습니다."
+            : vital.error === "vital_settings_read_failed"
+              ? "바이탈 표시 설정을 불러오지 못했습니다."
+              : "바이탈 정보를 불러오지 못했습니다."}
         </p>
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={() => {
-            void Promise.all([vital.reload(), settings.reload()]);
+            void vital.reload();
           }}
         >
           다시 시도
@@ -11658,7 +11659,7 @@ function ReceptionPersistedEncounterVitals({
     vital.vital?.encounterId === encounterId
       ? formatEnteredPatientVitalDisplayItemsForSettings(
           vital.vital,
-          settings.snapshot,
+          vital.vitalSettings,
         )
       : [];
 

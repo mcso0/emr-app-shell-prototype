@@ -3,12 +3,20 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PatientVitalMeasurement } from "@/features/patient-vitals/patient-vital-types";
 import type { ReceptionEncounterVitalReadResponse } from "@/features/reception/encounter-vital";
+import {
+  parseWorkspaceVitalSettingsSnapshot,
+  type WorkspaceVitalSettingsSnapshot,
+} from "@/features/patient-vitals/workspace-vital-settings";
 
 type ReceptionEncounterVitalState =
   | { status: "loading"; vital: null }
-  | { status: "ready"; vital: PatientVitalMeasurement | null }
+  | {
+      status: "ready";
+      vital: PatientVitalMeasurement | null;
+      vitalSettings: WorkspaceVitalSettingsSnapshot;
+    }
   | { status: "denied"; vital: null }
-  | { status: "error"; vital: null };
+  | { status: "error"; vital: null; error?: "vital_settings_read_failed" };
 
 export function useReceptionEncounterVital({
   encounterId,
@@ -35,10 +43,21 @@ export function useReceptionEncounterVital({
         return;
       }
       if (!response.ok || !body.ok) {
-        setState({ status: "error", vital: null });
+        setState({
+          status: "error",
+          vital: null,
+          ...(!body.ok && body.error === "vital_settings_read_failed"
+            ? { error: body.error }
+            : {}),
+        });
         return;
       }
-      setState({ status: "ready", vital: body.vital });
+      const vitalSettings = parseWorkspaceVitalSettingsSnapshot(body.vitalSettings);
+      if (!vitalSettings) {
+        setState({ status: "error", vital: null, error: "vital_settings_read_failed" });
+        return;
+      }
+      setState({ status: "ready", vital: body.vital, vitalSettings });
     } catch {
       setState({ status: "error", vital: null });
     }
