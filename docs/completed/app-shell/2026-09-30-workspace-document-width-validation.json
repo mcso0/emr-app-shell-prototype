@@ -1,0 +1,222 @@
+{
+  "workItem": "APP-SHELL-PR-002",
+  "integrationBase": "6f70a24583bde034b84ed4f913e614d9cf988463",
+  "branch": "codex/workspace-document-width-release",
+  "environment": "loopback explicit mock; synthetic fixtures only",
+  "runtimeSourceChangedAfterBuild": false,
+  "focused": {
+    "distinctPassed": 119,
+    "finalRun": {
+      "startTime": "2026-09-30T12:30:10.104Z",
+      "duration": 88133.499,
+      "expected": 114,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "chartGeometry": {
+      "startTime": "2026-09-30T12:31:54.875Z",
+      "duration": 8898.569,
+      "expected": 5,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "excludedExistingMainFailure": "dispensing context opens the selected live profile and vital editor",
+    "reason": "114 focused cases plus five chart geometry/visual/pinning/collapse cases all pass on the final build after removing duplicated toolbar vertical padding.",
+    "integrationBase": "0bca112ab30a88ca46edcd8a0ef76c8280534ea8"
+  },
+  "broaderChart": {
+    "candidateInitialPassed": 67,
+    "candidateInitialFailed": 34,
+    "baselineStats": {
+      "startTime": "2026-09-30T12:12:38.974Z",
+      "duration": 561117.1089999999,
+      "expected": 69,
+      "skipped": 0,
+      "unexpected": 32,
+      "flaky": 0
+    },
+    "candidateInitialFailureTitles": [
+      "chart quick-add hides only for total-empty and restores after existing first-add flow",
+      "chart detail loading centers the md empty state and disables chart actions",
+      "active chart context bar previews actual profiles and saves current encounter vitals",
+      "chart Order draft autosaves Field Matrix values and enables explicit confirmation",
+      "chart order catalog lets veterinarians deselect unconfirmed draft orders and cancel safely",
+      "chart continuously edits a 20-row mixed draft with keyboard focus preserved",
+      "chart saves a set-child constrained actual dispense override from dedicated authority",
+      "chart opens the Kong scenario as one SOAP, assessment, and order flow",
+      "chart consultation CTA moves from call to start before chart completion",
+      "an uncalled past reception stays waiting and warns before creating today's first chart",
+      "chart confirmation continues after an ambiguous draft response only when readback matches",
+      "chart wide contents preserve panel geometry below the separate toolbar",
+      "chart empty notice waits for a successful list and dismissal stays encounter-scoped",
+      "chart completion persists through route-backed reload",
+      "chart order checkboxes update the selected order total",
+      "chart order add searches active workspace catalog and adds a draft row",
+      "chart order add announces success only after the candidate is persisted",
+      "chart saves a constrained actual dispense override with an anchored reason",
+      "chart quick-add uses no sparse dock and restores dense scroll after cancellation",
+      "chart dispensing catalog prefills master prescription values and preserves veterinarian edits",
+      "chart catalog dialog searches 108 service-review dispensing candidates at target scale",
+      "chart clinical panels collapse independently without unmounting their content",
+      "chart order catalog preloads and reopens without another read",
+      "chart order table supports single sort without a filter control",
+      "chart selects the first live task on entry without flashing an empty state",
+      "live patient chart history keeps loading, error, and empty states distinct",
+      "chart diagnosis search recommends, adds, marks, and removes session diagnoses",
+      "chart order table edits quantity, commits draft changes, and deletes rows",
+      "chart safety context identifies the patient while order review shows only selected orders",
+      "chart order set requires explicit leaf intent and preserves set rows on reload save",
+      "waiting chart saves and clears only today's vital values through the dialog",
+      "chart wide panels retain their inset below the full-width action bar",
+      "chart workspace renders queue, history, SOAP, assessment, and orders",
+      "chart order added during an in-flight save can be removed without resurrection"
+    ],
+    "baselineFailureTitles": [
+      "waiting chart saves and clears only today's vital values through the dialog",
+      "chart workspace renders queue, history, SOAP, assessment, and orders",
+      "chart contents preserve the Figma 1540 by 968 reference geometry",
+      "chart saves a constrained actual dispense override with an anchored reason",
+      "chart saves a set-child constrained actual dispense override from dedicated authority",
+      "chart Order draft autosaves Field Matrix values and enables explicit confirmation",
+      "chart selects the first live task on entry without flashing an empty state",
+      "an uncalled past reception stays waiting and warns before creating today's first chart",
+      "live patient chart history keeps loading, error, and empty states distinct",
+      "active chart context bar previews actual profiles and saves current encounter vitals",
+      "chart detail loading centers the md empty state and disables chart actions",
+      "chart consultation CTA moves from call to start before chart completion",
+      "chart diagnosis search recommends, adds, marks, and removes session diagnoses",
+      "chart safety context identifies the patient while order review shows only selected orders",
+      "chart order checkboxes update the selected order total",
+      "chart order table supports single sort without a filter control",
+      "chart order table edits quantity, commits draft changes, and deletes rows",
+      "chart order add announces success only after the candidate is persisted",
+      "chart order added during an in-flight save can be removed without resurrection",
+      "chart continuously edits a 20-row mixed draft with keyboard focus preserved",
+      "chart opens the Kong scenario as one SOAP, assessment, and order flow",
+      "chart completion persists through route-backed reload",
+      "chart order catalog preloads and reopens without another read",
+      "chart catalog dialog searches 108 service-review dispensing candidates at target scale",
+      "chart order catalog lets veterinarians deselect unconfirmed draft orders and cancel safely",
+      "chart dispensing catalog prefills master prescription values and preserves veterinarian edits",
+      "chart order add searches active workspace catalog and adds a draft row",
+      "chart order set requires explicit leaf intent and preserves set rows on reload save",
+      "chart confirmation continues after an ambiguous draft response only when readback matches",
+      "chart quick-add hides only for total-empty and restores after existing first-add flow",
+      "chart quick-add uses no sparse dock and restores dense scroll after cancellation",
+      "chart empty notice waits for a successful list and dismissal stays encounter-scoped"
+    ],
+    "resolvedLayoutChecks": [
+      "chart wide panels retain their inset below the full-width action bar",
+      "chart clinical panels collapse independently without unmounting their content",
+      "chart wide contents preserve panel geometry below the separate toolbar"
+    ],
+    "interpretation": "31 identical failures reproduce on unchanged main. The baseline also fails its old visual reference; the candidate visual case now freezes synthetic reads and passes. All three additional layout-check failures are resolved. Full chart suite is not reported green.",
+    "auditStage": "Before the final toolbar padding adjustment; clinical/data source is unchanged. Both audit harnesses use the same 1920px functional-test viewport while retaining per-case viewport overrides."
+  },
+  "dispensingBaseline": {
+    "stats": {
+      "startTime": "2026-09-30T12:16:37.427Z",
+      "duration": 30806.528000000002,
+      "expected": 0,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "title": "dispensing context opens the selected live profile and vital editor",
+    "interpretation": "Unchanged main fails because the fixture has no vital-settings response. The unrelated test remains unchanged and is explicitly excluded from the focused release run."
+  },
+  "rollback": {
+    "deploymentId": "dpl_H5hqKUBpQ9aNazwjP8NDthe7h1TS",
+    "sourceSha": "6f70a24583bde034b84ed4f913e614d9cf988463",
+    "state": "READY",
+    "target": "production",
+    "url": "https://emr-app-shell-prototype-nmxm0iqlz-mcso0s-projects.vercel.app"
+  },
+  "finalBuild": {
+    "command": "NEXT_PUBLIC_AUTH_MODE=mock npm run build",
+    "result": "passed",
+    "integrationBase": "6f70a24583bde034b84ed4f913e614d9cf988463",
+    "compileSeconds": 9.4,
+    "typescriptSeconds": 19.5,
+    "warning": "Inherited docs-reader NFT warning"
+  },
+  "initialIntegrationBase": "0bca112ab30a88ca46edcd8a0ef76c8280534ea8",
+  "rebase": {
+    "includedMainChange": "PR #880 reception calendar drawer overlay",
+    "runtimeResolution": "Retain receptionCalendarDrawer exclusion for outer feature panels and documentLayout exclusion for opt-in inner panels. Preserve both independent behaviors.",
+    "distinctPassed": 53,
+    "initialRun": {
+      "startTime": "2026-09-30T12:37:48.860Z",
+      "duration": 70847.556,
+      "expected": 46,
+      "skipped": 0,
+      "unexpected": 2,
+      "flaky": 0
+    },
+    "fixedAssertions": "Two reception drawer tests now target the #880 calendar overlay; runtime reception behavior is unchanged.",
+    "finalRetryAndChartGeometry": {
+      "startTime": "2026-09-30T12:40:28.331Z",
+      "duration": 13616.133,
+      "expected": 8,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "verification": "All 48 layout/right-panel/reception cases pass across the first run and corrected retry; five additional chart geometry/visual/pinning/collapse cases pass. Rebased production build, TypeScript, changed-source/test lint, docs and secrets pass.",
+    "buildCompileSeconds": 9.7,
+    "buildTypescriptSeconds": 18.1,
+    "integrationBase": "252bfb25af3d6dd62dce3f62ef29400de6a1df46"
+  },
+  "profileRebase": {
+    "includedMainChange": "PR #882 shared patient/guardian/staff profile UI",
+    "runtimeResolution": "Clean rebase retains current profile enter/exit/reduced-motion behavior and the independent documentLayout outer-panel exclusion. No runtime source changed in this refresh.",
+    "distinctPassed": 61,
+    "initialRun": {
+      "startTime": "2026-09-30T12:49:49.680Z",
+      "duration": 68559.213,
+      "expected": 55,
+      "skipped": 0,
+      "unexpected": 1,
+      "flaky": 0
+    },
+    "retryAndChartGeometry": {
+      "startTime": "2026-09-30T12:51:59.879Z",
+      "duration": 10002.792,
+      "expected": 7,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "settledBillingDispensingCapture": {
+      "startTime": "2026-09-30T12:53:05.673Z",
+      "duration": 3406.215,
+      "expected": 2,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "finalSettledDispensingCapture": {
+      "startTime": "2026-09-30T12:54:17.091Z",
+      "duration": 3180.643,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "initialFailure": "One screenshot guard expected a single closed tooltip; replace with zero visible tooltips, preserving the actual hidden requirement.",
+    "visualReview": "Five profile-coexistence screenshots inspected. Billing/dispensing captures wait for the final profile; dispensing additionally waits for network idle and checks actual identity/information inside viewport.",
+    "buildCompileSeconds": 9.4,
+    "buildTypescriptSeconds": 19.5,
+    "staticChecks": "Changed frame/test ESLint, standalone TypeScript, 1057-doc link check, 4559-file secret scan, UX copy and diff whitespace checks pass."
+  },
+  "initialFinalBuild": {
+    "command": "NEXT_PUBLIC_AUTH_MODE=mock npm run build",
+    "result": "passed",
+    "compileSeconds": 12.8,
+    "typescriptSeconds": 28.0,
+    "warning": "Inherited docs-reader NFT warning",
+    "integrationBase": "0bca112ab30a88ca46edcd8a0ef76c8280534ea8"
+  }
+}

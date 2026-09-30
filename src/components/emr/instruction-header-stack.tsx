@@ -146,8 +146,8 @@ export function EmrInstructionHeaderStack({
 }: EmrInstructionHeaderStackProps) {
   return (
     <div data-slot="instruction-header-stack" className={cn("flex shrink-0 flex-col", className)}>
-      <div data-slot="instruction-header-title-bar">{titleBar}</div>
-      <div data-slot="instruction-header-order-info" className={cn(chartAligned ? "px-4" : "mt-3")}>
+      {titleBar ? <div data-slot="instruction-header-title-bar">{titleBar}</div> : null}
+      <div data-slot="instruction-header-order-info" className={cn(chartAligned ? "px-4" : titleBar ? "mt-3" : undefined)}>
         {orderInfo}
       </div>
       {filters ? (

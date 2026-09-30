@@ -202,6 +202,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | NOTIFICATION-PR-015         | human_review | notifications        | P0       | Project 20 / DEN-409 | `docs/work/notifications/NOTIFICATION-PR-015-human-review-readiness-pass.md`                            |
 | NOTIFICATION-PR-027         | human_review | notifications        | P1       | User-approved reception waiting toast persistence | `docs/work/notifications/NOTIFICATION-PR-027-waiting-toast-dismiss-persistence.md` |
 | APP-SHELL-PR-001            | done         | app-shell            | P1       | PR 1                 | `docs/work/app-shell/APP-SHELL-PR-001-workspace-tabs.md`                                               |
+| APP-SHELL-PR-002 | human_review | app-shell | P1 | User-approved document width + internal Lab/chart/dispensing/imaging/billing panels | `docs/work/app-shell/APP-SHELL-PR-002-workspace-document-width-panels.md` |
 | WORKSPACE-TABS-PR-001       | human_review | app-shell            | P0       | Workspace Tabs v1 shipping closeout | `docs/work/app-shell/WORKSPACE-TABS-PR-001-workspace-tabs-v1-shipping-closeout.md`       |
 | WORKSPACE-TABS-PR-002       | human_review | app-shell            | P0       | Workspace tab work-surface independence | `docs/work/app-shell/WORKSPACE-TABS-PR-002-workspace-surface-independence.md`          |
 | AUTH-PR-001                 | human_review | auth                 | P0       | PR 1                 | `docs/work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md`                                 |

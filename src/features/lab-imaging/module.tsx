@@ -148,6 +148,11 @@ import {
   getOperatingDateFromIso,
 } from "@/lib/emr-domain/demo-date";
 import { cn } from "@/lib/utils";
+import {
+  WorkspaceDocumentToolbar,
+  WorkspaceDocumentWidthToggle,
+  useWorkspaceDocumentLayout,
+} from "@/shell/workspace-document-layout";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import type {
@@ -3424,6 +3429,7 @@ export function LabContent({
   hasRightPanel,
   workspaceId,
 }: ShellComponentProps) {
+  const documentLayout = useWorkspaceDocumentLayout();
   const allowDemoContent =
     isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const searchParams = useSearchParams();
@@ -3719,18 +3725,14 @@ export function LabContent({
     },
   };
 
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
-      <EmrInstructionHeaderStack
-        chartAligned
-        titleBar={
-          <EmrInstructionTitleBar
-            className="px-4"
+  const titleBar = (
+    <EmrInstructionTitleBar
+            className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
             title="임상병리검사 결과지"
             icon={
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix="임상병리검사 이력"
-                controls="lab-content-aside"
+                controls={documentLayout?.historyControlsId ?? "lab-content-aside"}
                 expanded={contentAsideOpen}
                 tooltipLabel="임상병리검사 이력"
                 onClick={() => setContentAsideOpen(!contentAsideOpen)}
@@ -3755,7 +3757,7 @@ export function LabContent({
                   variant="outline"
                   size="sm"
                   className="relative bg-card data-[state=on]:border-[var(--emr-border-default)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
-                  aria-controls="lab-receipt-panel"
+                  aria-controls={documentLayout?.rightControlsId ?? "lab-receipt-panel"}
                   aria-expanded={rightPanelOpen}
                   aria-pressed={rightPanelOpen}
                   data-state={rightPanelOpen ? "on" : "off"}
@@ -3797,11 +3799,19 @@ export function LabContent({
                     onCancelAssignment={cancelAssignment}
                   />
                 )}
+                <WorkspaceDocumentWidthToggle />
                 <EmrInstructionOutputMenu />
               </>
             }
           />
-        }
+  );
+
+  return (
+    <div data-slot="lab-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
+      {documentLayout ? <WorkspaceDocumentToolbar>{titleBar}</WorkspaceDocumentToolbar> : null}
+      <EmrInstructionHeaderStack
+        chartAligned={!documentLayout}
+        titleBar={documentLayout ? null : titleBar}
         orderInfo={
           <div data-slot="instruction-info-card" className="grid min-h-[72px] [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
             {[
@@ -3955,7 +3965,6 @@ export function ImagingSlotAvailabilityProvider({
 }
 
 export function ImagingHeader({
-  hasRightPanel,
   workspaceId,
 }: ShellComponentProps) {
   const { detail } = useCurrentImagingDetail(workspaceId);
@@ -3965,8 +3974,6 @@ export function ImagingHeader({
     patient: detail?.patient,
     workspaceId,
   });
-  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const latestVitals = usePatientLatestVitalItems({
     encounterId: detail?.encounter.id,
     fallbackItems: isLegacySalesDemoWorkspace(workspaceId)
@@ -4058,11 +4065,7 @@ export function ImagingHeader({
             value: getStatusLabel("imagingStudy", detail.study.status),
           },
         ]}
-        onToggleRightPanel={() => setRightPanelOpen(!rightPanelOpen)}
-        rightPanelBadgeCount={detail.attachments.length}
-        rightPanelDisabled={!hasRightPanel}
-        rightPanelOpen={rightPanelOpen}
-        rightPanelToggleLabel="종합소견"
+
       />
     </EmrMainContentHeader>
     {vitalDialog}
@@ -4381,7 +4384,9 @@ function ImagingReadingSections({
   );
 }
 
-export function ImagingContent({ workspaceId }: ShellComponentProps) {
+export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentProps) {
+  const documentLayout = useWorkspaceDocumentLayout();
+  const { rightPanelOpen, setRightPanelOpen } = useLayoutStore();
   const allowDemoContent =
     isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const searchParams = useSearchParams();
@@ -4560,18 +4565,14 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
     );
   }
 
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
-      <EmrInstructionHeaderStack
-        chartAligned
-        titleBar={
-          <EmrInstructionTitleBar
-            className="px-4"
+  const titleBar = (
+    <EmrInstructionTitleBar
+            className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
             title="영상검사 Order 상세"
             icon={
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix="영상검사 이력"
-                controls="imaging-content-aside"
+                controls={documentLayout?.historyControlsId ?? "imaging-content-aside"}
                 expanded={contentAsideOpen}
                 tooltipLabel="영상검사 이력"
                 onClick={() => setContentAsideOpen(!contentAsideOpen)}
@@ -4618,11 +4619,27 @@ export function ImagingContent({ workspaceId }: ShellComponentProps) {
                     onCancelAssignment={cancelAssignment}
                   />
                 )}
+                <WorkspaceDocumentWidthToggle />
+                <Button variant="outline" size="sm" className="bg-card" disabled={!hasRightPanel}
+                  aria-label={rightPanelOpen ? "종합소견 패널 접기" : "종합소견 패널 열기"}
+                  aria-controls={documentLayout?.rightControlsId ?? "imaging-summary-panel"}
+                  aria-expanded={rightPanelOpen} aria-pressed={rightPanelOpen}
+                  data-state={rightPanelOpen ? "on" : "off"}
+                  onClick={() => setRightPanelOpen(!rightPanelOpen)}>
+                  종합소견 <Badge variant="secondary" className="ml-1">{detail.attachments.length}</Badge>
+                </Button>
                 <EmrInstructionOutputMenu />
               </>
             }
           />
-        }
+  );
+
+  return (
+    <div data-slot="imaging-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
+      {documentLayout ? <WorkspaceDocumentToolbar>{titleBar}</WorkspaceDocumentToolbar> : null}
+      <EmrInstructionHeaderStack
+        chartAligned={!documentLayout}
+        titleBar={documentLayout ? null : titleBar}
         orderInfo={
           <div data-slot="instruction-info-card" className="grid min-h-[72px] [grid-template-columns:repeat(auto-fit,minmax(140px,1fr))] rounded-lg border border-border bg-card px-4 py-3">
             {[
@@ -4746,6 +4763,7 @@ function ImagingMediaStrip({ attachments }: { attachments: EmrAttachment[] }) {
 }
 
 export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
+  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const allowDemoContent =
     isLegacySalesDemoWorkspace(workspaceId) && !isLiveAuthRuntime();
   const { detail } = useCurrentImagingDetail(workspaceId);
@@ -4775,17 +4793,23 @@ export function ImagingRightPanel({ workspaceId }: ShellComponentProps) {
 
   return (
     <EmrRightPanel
+      id="imaging-summary-panel"
       className="bg-[var(--emr-surface-rightpanel)]"
       data-testid="imaging-summary-panel"
       header={
         <EmrRightPanelHeader className="justify-between">
           <h2 className="min-w-0 truncate text-sm font-semibold">종합소견</h2>
+          <div className="flex items-center gap-2">
           <Badge
             variant="secondary"
             className="h-5 rounded-md px-2 emr-text-micro text-muted-foreground"
           >
             {sameEncounterOrderCount}
           </Badge>
+            <EmrRightPanelHeaderIconButton aria-label="종합소견 패널 접기" onClick={() => setRightPanelOpen(false)}>
+              <CdsNavigationChevronsRightIcon />
+            </EmrRightPanelHeaderIconButton>
+          </div>
         </EmrRightPanelHeader>
       }
     >

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>영상 보고서 폭 전환 · 적용 결과</title>
+<style>
+    :root{color-scheme:light;--ink:#18212f;--muted:#637082;--line:#dfe6ec;--accent:#126e58}
+    *{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:var(--ink);font:15px/1.75 system-ui,-apple-system,"Apple SD Gothic Neo",sans-serif}
+    main{max-width:1120px;margin:36px auto;padding:0 24px 64px}header,section{background:#fff;border:1px solid var(--line);border-radius:16px;padding:28px;margin-top:18px}header{padding:36px}
+    h1{font-size:30px;line-height:1.4;margin:12px 0}h2{font-size:21px;margin:0 0 16px}p{margin:10px 0}.eyebrow,figcaption,.muted{color:var(--muted)}.eyebrow{font-size:13px}.lede{font-size:18px;max-width:860px}
+    .status{display:inline-block;padding:4px 12px;background:#e8f5ef;color:var(--accent);border-radius:99px;font-size:13px;font-weight:650}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{padding:18px;border:1px solid var(--line);border-radius:12px;background:#f7f9fb}.card b{display:block;font-size:24px}.card span{color:var(--muted)}
+    a{color:#2259a6;text-underline-offset:3px}.links,.switch{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0 0}.button,button{border:1px solid #cbd5e1;border-radius:8px;background:#fff;padding:8px 14px;font:inherit;cursor:pointer;text-decoration:none;color:var(--ink)}.primary,button[aria-pressed=true]{background:#18334c;color:white;border-color:#18334c}button:focus-visible{outline:3px solid #91b8ed;outline-offset:2px}
+    figure{margin:22px 0 0}img{display:block;width:100%;border:1px solid var(--line);border-radius:10px}figcaption{font-size:13px;margin-top:8px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f7f9fb}td:first-child{width:26%;font-weight:600}ul{padding-left:20px}li{margin:7px 0}footer{padding:20px 4px;color:var(--muted);font-size:13px}
+    @media(max-width:700px){main{margin:16px auto;padding:0 12px 32px}header,section{padding:20px}h1{font-size:25px}.cards{grid-template-columns:1fr}td:first-child{width:32%}}
+    @media print{body{background:white}main{max-width:none;margin:0;padding:0}.links,.switch{display:none}header,section{break-inside:avoid}}
+  </style>
+</head>
+
+<body><aside aria-label="검증 기록 안내" style="max-width:1280px;margin:20px auto;padding:12px 20px;font-size:13px;line-height:1.7;color:#52645a;background:#edf3ef;border-radius:8px">초기 pilot 검증 기록이야. 화면 이미지는 최신 main 통합 후 다시 촬영했고, 본문의 초기 검증 수치는 당시 source 기준이야. 현재 통합 결과는 <a href="2026-09-30-workspace-document-width-release-report.html">최종 통합 보고서</a>에서 확인해 줘.</aside><main>
+<header>
+  <div class="eyebrow">CLAiR · 2026.09.30 · APP-SHELL-PR-002 · 네 번째 적용</div>
+  <h1>영상 판독 보고서에<br>좁게·넓게 보기와 내부 종합소견을 적용했습니다.</h1>
+  <span class="status">로컬 구현 · 화면 검토 대기</span>
+  <p class="lede">보고서는 1,280px로 모아 보고, 필요할 때 사용 가능한 폭으로 펼칠 수 있습니다. 영상 이력과 기존 종합소견·첨부 영역은 환자 정보 아래에서 함께 확인합니다.</p>
+  <div class="links">
+    <a class="button primary" href="http://127.0.0.1:4310/w/clair-demo/imaging?imagingStudyId=imaging-coco-thorax&amp;modulePanel=open&amp;aside=closed&amp;right=closed">영상 보고서 미리보기</a>
+    <a class="button" href="2026-09-30-dispensing-document-width-report.html">조제/처치 적용 결과</a>
+    <a class="button" href="../design/2026-09-29-workspace-width-proposal/report.html">승인된 조사·제안</a>
+  </div>
+  <p class="muted">기존 합성 시나리오와 합성 응답으로 검증했습니다. 실제 PACS viewer는 현재 화면에 연결되어 있지 않으며, 이번 결과는 판독 보고서의 배치와 입력 유지 검증입니다.</p>
+</header>
+<section>
+  <h2>이번에 달라진 점</h2>
+  <div class="cards">
+    <div class="card"><b>1,280px</b><span>영상 보고서 좁게 보기의 최대 폭</span></div>
+    <div class="card"><b>전체 폭 도구줄</b><span>보고서 제목·폭·종합소견·판독 상태</span></div>
+    <div class="card"><b>양쪽 내부 패널</b><span>영상 이력과 기존 종합소견·첨부</span></div>
+  </div>
+  <p>대기열·내부 패널·프로필을 제외한 실제 문서 공간이 1,280px보다 넓을 때 폭 버튼이 나타납니다. 공간이 줄어 버튼이 숨겨져도 선택한 보기 모드는 유지합니다.</p>
+  <p>종합소견 버튼은 문서 도구줄로 옮겼습니다. 좁은 화면에서 모달을 닫으면 이 버튼으로 포커스가 돌아옵니다. 환자 정보는 위쪽 헤더와 바깥 프로필 영역을 계속 사용합니다.</p>
+</section>
+<section>
+  <h2>같은 보고서에서 폭 비교</h2>
+  <p>1,920px 화면의 좁게·넓게 보기를 비교합니다. 판독 내용과 종합소견의 합성 입력을 유지한 검증 캡처입니다.</p>
+  <div class="switch" role="group" aria-label="영상 보고서 폭 비교">
+    <button type="button" aria-pressed="true" data-mode="narrow" aria-controls="width-image">좁게 보기 · 1,280px</button>
+    <button type="button" aria-pressed="false" data-mode="wide" aria-controls="width-image">넓게 보기 · 사용 가능 폭</button>
+  </div>
+  <figure><img id="width-image" src="2026-09-30-imaging-document-width-assets/1920-narrow.png" alt="1920px 화면에서 1280px로 모은 영상 판독 보고서"><figcaption id="width-caption">상단 도구줄은 전체 폭, Order 정보와 판독 보고서는 중앙에 모여 있습니다.</figcaption></figure>
+  <p>Order 상세표의 열·기본 간격은 유지합니다. 폭과 패널 전환 중 응답이 멈추던 표 상태 초기화 문제도 수정해 실제 클릭으로 다시 검증했습니다.</p>
+</section>
+<section>
+  <h2>이력과 종합소견을 함께 보기</h2>
+  <p>넓은 공간에서는 양쪽 패널을 보고서 옆에 표시합니다. 판독 입력과 보호자 코멘트를 유지하고, 표·본문의 넘치는 내용은 각 영역 안에서 스크롤합니다.</p>
+  <figure><img src="2026-09-30-imaging-document-width-assets/1920-bilateral.png" alt="1920px 화면의 영상 이력, 판독 보고서, 종합소견"><figcaption>1,920px · 양쪽 패널이 열리면 남은 문서 공간에 맞춰 표시하며 폭 버튼은 숨깁니다.</figcaption></figure>
+  <p>공간이 부족하면 최근에 연 패널을 모달로 표시합니다. Tab 포커스는 모달 안에 머물고, Escape로 닫으면 해당 버튼으로 돌아갑니다. 표시 방식이 바뀌어도 입력 중인 코멘트를 유지합니다.</p>
+  <figure><img src="2026-09-30-imaging-document-width-assets/1440-summary-modal.png" alt="1440px 화면에서 종합소견을 모달로 표시"><figcaption>1,440px · 종합소견 모달, 코멘트 입력과 포커스 처리</figcaption></figure>
+</section>
+<section>
+  <h2>환자 프로필과 함께 보기</h2>
+  <p>환자 프로필은 바깥 오른쪽 영역을 사용합니다. 영상 종합소견과 동시에 열어도 서로를 대체하거나 겹치지 않는지 확인했습니다.</p>
+  <figure><img src="2026-09-30-imaging-document-width-assets/2560-profile-bilateral.png" alt="2560px 화면에 영상 이력, 보고서, 종합소견, 환자 프로필이 함께 표시"><figcaption>2,560px · 내부 업무 패널과 바깥 환자 프로필 공존</figcaption></figure>
+</section>
+<section>
+  <h2>검증 결과</h2>
+  <p><strong>최종 브라우저 검증 46개 항목 통과.</strong> 새 영상 레이아웃 8개, 기존 검사·영상 11개, 공유 패널 5개, 검사 공통 레이아웃 9개, 차트 6개, 조제/처치 7개를 확인했습니다.</p>
+  <table><thead><tr><th>영역</th><th>확인한 내용</th></tr></thead><tbody>
+    <tr><td>보고서·보기 상태</td><td>판독·종합소견 입력, 화면 유지, 표 열·간격 전환, 세로·가로 스크롤, 모듈별 폭 설정</td></tr>
+    <tr><td>패널·접근성</td><td>이력 접기 상태, 코멘트 입력 유지, 최근 패널의 모달 표시, Tab·Escape·포커스 복귀, 프로필 공존</td></tr>
+    <tr><td>화면 크기</td><td>1366 / 1440 / 1600 / 1920 / 2560 및 960 CSS px, 실제 남은 폭 기준, 모션 감소</td></tr>
+    <tr><td>기존 흐름·정적 검사</td><td>판독 상태 동작, 첨부 목록, 빈 업무·실제 응답 형태의 합성 대기열, 다른 모듈 회귀, 빌드·타입·ESLint·문서·diff·보안 검사</td></tr>
+  </tbody></table>
+  <p class="muted">960 CSS px는 확대에 따른 공간 부족을 확인하는 대체 조건입니다. 실제 브라우저 확대, 운영 인증 데이터, 실제 영상 확대·다중 비교나 임상 사용성 평가는 포함하지 않습니다.</p>
+</section>
+<section>
+  <h2>범위와 다음 단계</h2>
+  <p>검사·영상 모듈의 영상 부분, 모듈 레지스트리, 관련 브라우저 테스트, 폭 계약과 작업 항목을 갱신했습니다. 기존 기본 체크아웃의 작업은 보존했습니다.</p>
+  <p>실제 PACS 연결, 파일 업로드, 판독·코멘트 저장 기능의 확장은 이번 범위에 포함하지 않습니다. API·DB·권한 계약은 유지했고 커밋·푸시·병합·배포나 실제 데이터 작업도 수행하지 않았습니다.</p>
+  <p>다음 대상은 <strong>수납</strong>입니다. 금액·청구표·결제 동작의 기존 제약을 확인한 뒤 폭 계약을 연결하는 순서입니다.</p>
+</section>
+<footer>루멘 · 로컬 구현 및 합성 데이터 검증 · 폭 값은 실제 임상 사용 검토 전의 적용 후보입니다.</footer>
+</main>
+<script>
+  const picture = document.getElementById('width-image');
+  const caption = document.getElementById('width-caption');
+  document.querySelectorAll('[data-mode]').forEach(button => {
+    button.addEventListener('click', () => {
+      const narrow = button.dataset.mode === 'narrow';
+      picture.src = '2026-09-30-imaging-document-width-assets/1920-' + button.dataset.mode + '.png';
+      picture.alt = narrow ? '1920px 화면에서 1280px로 모은 영상 판독 보고서' : '1920px 화면의 사용 가능 폭으로 펼친 영상 판독 보고서';
+      caption.textContent = narrow ? '상단 도구줄은 전체 폭, Order 정보와 판독 보고서는 중앙에 모여 있습니다.' : '보고서를 넓혀도 판독·종합소견 입력과 기존 표의 열·간격을 유지합니다.';
+      document.querySelectorAll('[data-mode]').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
+    });
+  });
+</script>
+</body></html>

@@ -24,6 +24,12 @@ export const SHELL_LAYOUT = {
   rightPanel: {
     defaultWidth: 316,
   },
+  documentLayout: {
+    rightPanelWidth: 336,
+    minimumCenterWidth: 880,
+    documentPadding: 16,
+    transitionMs: 180,
+  },
   drawer: {
     defaultWidth: 460,
     largeWidth: 708,

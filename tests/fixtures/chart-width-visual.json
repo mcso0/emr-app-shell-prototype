@@ -1,0 +1,360 @@
+{
+  "/api/workspaces/clair-demo/chart/diagnoses?encounterId=encounter-coco-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "diagnoses": [
+        {
+          "id": "diagnosis-coco-gastroenteritis",
+          "encounterId": "encounter-coco-260501",
+          "diagnosisText": "급성 위장관염 의심",
+          "diagnosisType": "suspected",
+          "createdByUserId": "user-vet-suji",
+          "createdAt": "2026-05-01T10:28:00+09:00",
+          "isPrimary": true,
+          "sortOrder": 0,
+          "updatedAt": "2026-05-01T10:28:00+09:00"
+        }
+      ],
+      "enforcedBy": "chart-diagnosis-persistence"
+    }
+  },
+  "/api/workspaces/clair-demo/chart/encounter-charts?encounterId=encounter-coco-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "charts": [
+        {
+          "id": "soap-coco-260501",
+          "encounterId": "encounter-coco-260501",
+          "authorUserId": "user-vet-suji",
+          "subjective": "보호자 진술상 전날 밤부터 구토 2회, 식욕 감소.",
+          "objective": "체온 39.3C, 복부 촉진 시 경미한 긴장.",
+          "assessment": "급성 위장관염 의심, 탈수 경도.",
+          "plan": "CBC, 전해질 검사 및 수액 처치. 항구토제 처방.",
+          "status": "autosaved",
+          "createdAt": "2026-05-01T10:08:00+09:00",
+          "updatedAt": "2026-05-01T10:32:00+09:00"
+        }
+      ]
+    }
+  },
+  "/api/workspaces/clair-demo/chart/encounter-charts?encounterId=encounter-kong-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "charts": [
+        {
+          "id": "soap-kong-260501",
+          "encounterId": "encounter-kong-260501",
+          "authorUserId": "user-vet-suji",
+          "subjective": "보호자 진술상 전날 밤부터 구토 3회, 아침 식욕 없음. 물 섭취 후 재구토.",
+          "objective": "체온 39.1C, 복부 촉진 시 경미한 불편감. 탈수 경도 의심.",
+          "assessment": "급성 위장관염 의심. 이물 가능성 배제를 위해 검사/영상 확인 필요.",
+          "plan": "CBC, 혈청화학, 복부 영상 확인. 피하 수액과 항구토제 처방 후 수납 안내.",
+          "status": "autosaved",
+          "createdAt": "2026-05-01T09:40:00+09:00",
+          "updatedAt": "2026-05-01T10:16:00+09:00"
+        }
+      ]
+    }
+  },
+  "/api/workspaces/clair-demo/chart/diagnoses?encounterId=encounter-kong-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "diagnoses": [
+        {
+          "id": "diagnosis-kong-gastroenteritis",
+          "encounterId": "encounter-kong-260501",
+          "diagnosisText": "급성 위장관염 의심",
+          "diagnosisType": "suspected",
+          "createdByUserId": "user-vet-suji",
+          "createdAt": "2026-05-01T10:10:00+09:00",
+          "isPrimary": true,
+          "sortOrder": 0,
+          "updatedAt": "2026-05-01T10:10:00+09:00"
+        }
+      ],
+      "enforcedBy": "chart-diagnosis-persistence"
+    }
+  },
+  "/api/workspaces/clair-demo/chart/order-drafts?encounterId=encounter-kong-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "etag": "\"4f1faa9640c1b29b6a044c265cd208088608ae9c0cac573868e04615beda7b7b\"",
+      "rows": [
+        {
+          "orderId": "order-kong-maropitant",
+          "workspaceId": "clair-demo",
+          "encounterId": "encounter-kong-260501",
+          "originChartId": "soap-kong-260501",
+          "rowType": "individual",
+          "orderType": "treatment",
+          "clinicalOrderType": "dispensing",
+          "destinationModule": "dispensing",
+          "executionMode": "routed",
+          "detailInputs": {
+            "doseBasis": "patient",
+            "dose": 16,
+            "doseUnit": "mg",
+            "route": "PO",
+            "frequency": "once",
+            "durationDays": 1,
+            "totalQuantity": 1
+          },
+          "detailSchemaVersion": 1,
+          "priority": "normal",
+          "billingEligible": true,
+          "revisionNo": 0,
+          "parentOrderId": null,
+          "sourceSetId": null,
+          "sourceSetRevisionId": null,
+          "sourceSetRevisionNo": null,
+          "sourceSetVersion": null,
+          "sourceSetRevisionItemId": null,
+          "workspaceCatalogItemId": null,
+          "workspaceCatalogRevision": null,
+          "dispensingLineage": null,
+          "quantity": 1,
+          "quantitySource": "manual",
+          "unitPriceSnapshot": 4500,
+          "lineTotalSnapshot": 4500,
+          "snapshotSchemaVersion": 0,
+          "snapshotHash": null,
+          "appliedSnapshot": {},
+          "appliedPriceSnapshot": {},
+          "calculationInputs": {},
+          "calculationOutputs": {},
+          "billingReflectionEnabled": true,
+          "orderConfirmationStatus": "draft",
+          "status": "requested",
+          "updatedAt": "2026-05-01T10:16:00+09:00"
+        },
+        {
+          "orderId": "order-kong-cbc",
+          "workspaceId": "clair-demo",
+          "encounterId": "encounter-kong-260501",
+          "originChartId": "soap-kong-260501",
+          "rowType": "individual",
+          "orderType": "treatment",
+          "clinicalOrderType": "clinical_lab",
+          "destinationModule": "lab",
+          "executionMode": "routed",
+          "detailInputs": {
+            "specimenType": "blood",
+            "testPanel": "CBC",
+            "collectionCondition": "EDTA 전혈"
+          },
+          "detailSchemaVersion": 1,
+          "priority": "normal",
+          "billingEligible": true,
+          "revisionNo": 0,
+          "parentOrderId": null,
+          "sourceSetId": null,
+          "sourceSetRevisionId": null,
+          "sourceSetRevisionNo": null,
+          "sourceSetVersion": null,
+          "sourceSetRevisionItemId": null,
+          "workspaceCatalogItemId": null,
+          "workspaceCatalogRevision": null,
+          "dispensingLineage": null,
+          "quantity": 1,
+          "quantitySource": "manual",
+          "unitPriceSnapshot": 35000,
+          "lineTotalSnapshot": 35000,
+          "snapshotSchemaVersion": 0,
+          "snapshotHash": null,
+          "appliedSnapshot": {},
+          "appliedPriceSnapshot": {},
+          "calculationInputs": {},
+          "calculationOutputs": {},
+          "billingReflectionEnabled": true,
+          "orderConfirmationStatus": "draft",
+          "status": "requested",
+          "updatedAt": "2026-05-01T10:24:00+09:00"
+        },
+        {
+          "orderId": "order-kong-fluid",
+          "workspaceId": "clair-demo",
+          "encounterId": "encounter-kong-260501",
+          "originChartId": "soap-kong-260501",
+          "rowType": "individual",
+          "orderType": "treatment",
+          "clinicalOrderType": "treatment",
+          "destinationModule": "treatment",
+          "executionMode": "routed",
+          "detailInputs": {
+            "method": "피하 수액",
+            "site": "등쪽 피하",
+            "administeredAmount": 100,
+            "frequency": "once",
+            "schedule": "즉시"
+          },
+          "detailSchemaVersion": 1,
+          "priority": "normal",
+          "billingEligible": true,
+          "revisionNo": 0,
+          "parentOrderId": null,
+          "sourceSetId": null,
+          "sourceSetRevisionId": null,
+          "sourceSetRevisionNo": null,
+          "sourceSetVersion": null,
+          "sourceSetRevisionItemId": null,
+          "workspaceCatalogItemId": null,
+          "workspaceCatalogRevision": null,
+          "dispensingLineage": null,
+          "quantity": 1,
+          "quantitySource": "manual",
+          "unitPriceSnapshot": 18000,
+          "lineTotalSnapshot": 18000,
+          "snapshotSchemaVersion": 0,
+          "snapshotHash": null,
+          "appliedSnapshot": {},
+          "appliedPriceSnapshot": {},
+          "calculationInputs": {},
+          "calculationOutputs": {},
+          "billingReflectionEnabled": true,
+          "orderConfirmationStatus": "draft",
+          "status": "requested",
+          "updatedAt": "2026-05-01T10:15:00+09:00"
+        },
+        {
+          "orderId": "order-kong-abdomen",
+          "workspaceId": "clair-demo",
+          "encounterId": "encounter-kong-260501",
+          "originChartId": "soap-kong-260501",
+          "rowType": "individual",
+          "orderType": "treatment",
+          "clinicalOrderType": "imaging",
+          "destinationModule": "imaging",
+          "executionMode": "routed",
+          "detailInputs": {
+            "bodyRegion": "복부",
+            "position": "VD/LAT",
+            "viewCount": 2,
+            "contrastRequired": false,
+            "sedationRequired": false
+          },
+          "detailSchemaVersion": 1,
+          "priority": "normal",
+          "billingEligible": true,
+          "revisionNo": 0,
+          "parentOrderId": null,
+          "sourceSetId": null,
+          "sourceSetRevisionId": null,
+          "sourceSetRevisionNo": null,
+          "sourceSetVersion": null,
+          "sourceSetRevisionItemId": null,
+          "workspaceCatalogItemId": null,
+          "workspaceCatalogRevision": null,
+          "dispensingLineage": null,
+          "quantity": 1,
+          "quantitySource": "manual",
+          "unitPriceSnapshot": 77000,
+          "lineTotalSnapshot": 77000,
+          "snapshotSchemaVersion": 0,
+          "snapshotHash": null,
+          "appliedSnapshot": {},
+          "appliedPriceSnapshot": {},
+          "calculationInputs": {},
+          "calculationOutputs": {},
+          "billingReflectionEnabled": true,
+          "orderConfirmationStatus": "draft",
+          "status": "requested",
+          "updatedAt": "2026-05-01T10:34:00+09:00"
+        }
+      ],
+      "enforcedBy": "chart-order-draft-persistence"
+    }
+  },
+  "/api/workspaces/clair-demo/chart/order-billing-summary?encounterId=encounter-kong-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "enforcedBy": "chart-order-billing-summary",
+      "summary": {
+        "workspaceId": "clair-demo",
+        "encounterId": "encounter-kong-260501",
+        "etag": "\"mock-empty\"",
+        "generatedAt": "2026-09-30T12:23:07.413Z",
+        "currency": "KRW",
+        "context": null,
+        "invoiceId": null,
+        "orderCounts": {
+          "total": 0,
+          "confirmed": 0,
+          "draft": 0,
+          "recheck": 0,
+          "requested": 0,
+          "requestable": 0,
+          "cancelled": 0
+        },
+        "amounts": {
+          "gross": 0,
+          "confirmed": 0,
+          "draft": 0,
+          "discount": 0,
+          "surcharge": 0,
+          "tax": 0,
+          "paid": 0,
+          "outstanding": 0,
+          "estimatedTotal": 0,
+          "requestableTotal": 0
+        },
+        "requestableOrderIds": [],
+        "unfinishedOrders": []
+      }
+    }
+  },
+  "/api/workspaces/clair-demo/chart/soap-notes?encounterId=encounter-kong-260501&chartId=soap-kong-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "soapNote": {
+        "id": "soap-kong-260501",
+        "encounterId": "encounter-kong-260501",
+        "authorUserId": "user-vet-suji",
+        "subjective": "보호자 진술상 전날 밤부터 구토 3회, 아침 식욕 없음. 물 섭취 후 재구토.",
+        "objective": "체온 39.1C, 복부 촉진 시 경미한 불편감. 탈수 경도 의심.",
+        "assessment": "급성 위장관염 의심. 이물 가능성 배제를 위해 검사/영상 확인 필요.",
+        "plan": "CBC, 혈청화학, 복부 영상 확인. 피하 수액과 항구토제 처방 후 수납 안내.",
+        "status": "autosaved",
+        "createdAt": "2026-05-01T09:40:00+09:00",
+        "updatedAt": "2026-05-01T10:16:00+09:00"
+      },
+      "enforcedBy": "chart-soap-note-persistence"
+    }
+  },
+  "/api/workspaces/clair-demo/chart/diagnoses?encounterId=encounter-kong-260501&chartId=soap-kong-260501": {
+    "status": 200,
+    "json": {
+      "ok": true,
+      "status": 200,
+      "diagnoses": [
+        {
+          "id": "diagnosis-kong-gastroenteritis",
+          "encounterId": "encounter-kong-260501",
+          "diagnosisText": "급성 위장관염 의심",
+          "diagnosisType": "suspected",
+          "createdByUserId": "user-vet-suji",
+          "createdAt": "2026-05-01T10:10:00+09:00",
+          "isPrimary": true,
+          "sortOrder": 0,
+          "updatedAt": "2026-05-01T10:10:00+09:00"
+        }
+      ],
+      "version": "{\"assessmentRevision\":0,\"diagnoses\":[{\"id\":\"diagnosis-kong-gastroenteritis\",\"encounterId\":\"encounter-kong-260501\",\"diagnosisText\":\"급성 위장관염 의심\",\"diagnosisType\":\"suspected\",\"createdByUserId\":\"user-vet-suji\",\"createdAt\":\"2026-05-01T10:10:00+09:00\",\"isPrimary\":true,\"sortOrder\":0,\"updatedAt\":\"2026-05-01T10:10:00+09:00\"}]}",
+      "assessments": [],
+      "enforcedBy": "chart-diagnosis-persistence"
+    }
+  }
+}

@@ -305,6 +305,11 @@ import {
 } from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
 import { cn } from "@/lib/utils";
+import {
+  WorkspaceDocumentToolbar,
+  WorkspaceDocumentWidthToggle,
+  useWorkspaceDocumentLayout,
+} from "@/shell/workspace-document-layout";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import {
@@ -15588,6 +15593,7 @@ export function ChartContent({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
+  const documentLayout = useWorkspaceDocumentLayout();
   useScenarioEncounterSync(workspaceId);
 
   const searchParams = useSearchParams();
@@ -16996,6 +17002,8 @@ export function ChartContent({
     >
       {!chartStartLocked ? (
         <>
+          <WorkspaceDocumentToolbar>
+            <div className={documentLayout ? "-mx-4" : undefined}>
           <ChartActionBar
             chartDate={chartDate}
             doctorName={effectiveLatestSoap ? effectiveLatestSoap.authorDisplayName ?? getChartStaffName(effectiveLatestSoap.authorUserId) ?? (effectiveLatestSoap.authorUserId ? "작성자 이름 미확인" : "작성자 미기록") : getChartBundleVeterinarianName(currentBundle)}
@@ -17007,7 +17015,7 @@ export function ChartContent({
               <span className="inline-flex [&_button]:!size-6 [&_button]:!rounded-[var(--clair-radius-atomic-6)] [&_button]:!shadow-[var(--clair-shadow-xs)] [&_svg]:!size-3.5">
                 <EmrInstructionHistoryToggle
                   ariaLabelPrefix="차트 이력"
-                  controls="chart-content-aside"
+                  controls={documentLayout?.historyControlsId ?? "chart-content-aside"}
                   disabled={detailHydrationPending}
                   expanded={contentAsideOpen}
                   tooltipLabel="과거 이력 보기"
@@ -17017,6 +17025,7 @@ export function ChartContent({
             }
             startTime={chartStartTime}
             visitLabel={chartHistoryEncounterCount > 1 ? "재진" : "초진"}
+            widthAction={<WorkspaceDocumentWidthToggle />}
             pendingIndicator={
               isHistoricalReadOnlyView ? (
                 <span className="flex items-center gap-2">
@@ -17101,6 +17110,8 @@ export function ChartContent({
               ) : null
             }
           />
+            </div>
+          </WorkspaceDocumentToolbar>
           <span className="sr-only" data-testid="chart-completion-status">
             {chartCompletionStatusText}
           </span>
@@ -17583,7 +17594,7 @@ export function ChartContent({
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] px-4 pb-2",
+            "@container/chart-workspace grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] px-4 pb-2",
             isChartResizing && "select-none",
           )}
           style={{

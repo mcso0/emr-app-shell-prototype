@@ -83,7 +83,7 @@ export function ChartCollapsiblePanelGroup({
       data-testid="chart-soap-diagnosis-grid"
       data-collapsed-count={collapsedPanels.size}
       className={cn(
-        "grid min-h-0 min-w-0 items-stretch gap-2 overflow-x-auto overflow-y-hidden bg-[var(--emr-surface-workspace)] [grid-template-columns:var(--chart-panel-columns)] transition-[grid-template-columns] duration-[var(--clair-motion-duration-normal)] ease-[var(--clair-motion-easing-standard)] motion-reduce:transition-none max-[1180px]:[grid-template-columns:var(--chart-panel-columns-narrow)] [&>*]:min-w-0",
+        "grid min-h-0 min-w-0 items-stretch gap-2 overflow-x-auto overflow-y-hidden bg-[var(--emr-surface-workspace)] [grid-template-columns:var(--chart-panel-columns)] transition-[grid-template-columns] duration-[var(--clair-motion-duration-normal)] ease-[var(--clair-motion-easing-standard)] motion-reduce:transition-none max-[1180px]:[grid-template-columns:var(--chart-panel-columns-narrow)] @max-[1180px]/chart-workspace:[grid-template-columns:var(--chart-panel-columns-narrow)] [&>*]:min-w-0",
         className,
       )}
       style={

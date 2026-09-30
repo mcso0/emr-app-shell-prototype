@@ -4,6 +4,8 @@ import { readFileSync } from "node:fs";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 
+test.use({ viewport: { width: 1920, height: 1080 } });
+
 const billingModuleSource = readFileSync("src/features/billing/module.tsx", "utf8");
 
 test("billing maps every A3 frozen billing category to its display group", () => {
@@ -339,7 +341,7 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
     guardianContextBar.getByRole("button", { name: "수납 요약" }),
   ).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "수납 요약" }),
+    page.getByRole("button", { name: "수납 요약 패널 접기", exact: true }).first(),
   ).toBeVisible();
   await expect(guardianContextBar).toContainText("문자보다 알림톡 선호");
   await expect(page.getByText("품종")).toHaveCount(0);

@@ -80,6 +80,11 @@ import {
   formatOperatingShortTime,
   getOperatingDateFromIso,
 } from "@/lib/emr-domain/demo-date";
+import {
+  WorkspaceDocumentToolbar,
+  WorkspaceDocumentWidthToggle,
+  useWorkspaceDocumentLayout,
+} from "@/shell/workspace-document-layout";
 import { useLayoutStore } from "@/stores/layout-store";
 import { buildWorkspaceSurfaceRoute } from "@/shell/workspace-surface-route";
 import {
@@ -1768,6 +1773,7 @@ function DispensingContentBody({
   onOpenChart?: (encounterId: string) => void;
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
 }) {
+  const documentLayout = useWorkspaceDocumentLayout();
   const {
     contentAsideOpen,
     rightPanelOpen,
@@ -2105,18 +2111,14 @@ function DispensingContentBody({
     });
   };
 
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
-      <EmrInstructionHeaderStack
-        chartAligned
-        titleBar={
-          <EmrInstructionTitleBar
-            className="px-4"
+  const titleBar = (
+    <EmrInstructionTitleBar
+            className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
             title={`${instructionType} 지시서`}
             icon={
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix={historyLabel}
-                controls="dispensing-content-aside"
+                controls={documentLayout?.historyControlsId ?? "dispensing-content-aside"}
                 expanded={contentAsideOpen}
                 tooltipLabel={historyLabel}
                 onClick={() => setContentAsideOpen(!contentAsideOpen)}
@@ -2184,11 +2186,19 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
+                <WorkspaceDocumentWidthToggle />
                 <EmrInstructionOutputMenu />
               </>
             }
           />
-        }
+  );
+
+  return (
+    <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
+      {documentLayout ? <WorkspaceDocumentToolbar>{titleBar}</WorkspaceDocumentToolbar> : null}
+      <EmrInstructionHeaderStack
+        chartAligned={!documentLayout}
+        titleBar={documentLayout ? null : titleBar}
         orderInfo={
           <div className="grid gap-2">
             <div

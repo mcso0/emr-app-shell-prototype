@@ -127,6 +127,7 @@ test("imaging no-work empty state hides history aside", async ({ page }) => {
 });
 
 test("lab workspace renders result input, equipment receipts, and attachments", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   const queueLoaded = waitForFulfillmentQueue(page, "lab");
   await page.goto("/w/clair-demo/lab?modulePanel=open");
   await queueLoaded;
@@ -239,11 +240,15 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
   );
 
   await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=history`);
+  const historyDialog = page.getByRole("dialog", { name: "임상병리검사 이력", exact: true });
+  await expect(historyDialog).toBeVisible();
+  await expect(page.locator("#lab-content-aside")).toContainText("CBC 검사");
+  await page.keyboard.press("Escape");
+  await expect(historyDialog).toBeHidden();
 
   const sidePanel = page.locator("aside").first();
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("모카");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("CBC 검사");
-  await expect(page.locator("#lab-content-aside")).toContainText("CBC 검사");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("김민준");
   await expect(sidePanel.getByTestId(`lab-queue-item-live-lab-${liveWorkItem.id}`)).toContainText("10:20");
   await expect(sidePanel.getByTestId("lab-queue-item-lab-result-coco-cbc")).toHaveCount(0);
@@ -468,6 +473,7 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
 });
 
 test("lab workspace shows equipment receipts in the right panel", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed&right=open");
 
   const receiptPanel = page.getByTestId("lab-receipt-panel");
@@ -532,6 +538,7 @@ test("lab workspace prioritizes Kong CBC result from demo query", async ({ page 
 });
 
 test("imaging workspace renders reading, impression, and attachment flow", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   const queueLoaded = waitForFulfillmentQueue(page, "imaging");
   await page.goto(
     "/w/clair-demo/imaging?modulePanel=open&aside=history&right=open&imagingStudyId=imaging-coco-thorax",
@@ -562,10 +569,15 @@ test("imaging workspace renders reading, impression, and attachment flow", async
     await expect(page.getByRole("button", { name: "판독 중", exact: true })).toBeVisible();
     await page
       .getByRole("button", { name: "판독 상태 액션 열기" })
-      .dispatchEvent("click");
-    await page.getByRole("menuitem", { name: "판독완료" }).dispatchEvent("click");
+      .click();
+    await page.getByRole("menuitem", { name: "판독완료" }).click();
   }
-  await expect(completedStatusButton).toBeVisible();
+  // Completion opens the existing required actual-execution form before any status write.
+  const executionDialog = page.getByRole("dialog", { name: "실제 수행기록", exact: true });
+  await expect(executionDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(executionDialog).toBeHidden();
+  await expect(page.getByTestId("imaging-study-status-label")).toHaveText("판독중");
   const summaryPanel = page.getByTestId("imaging-summary-panel");
   await expect(summaryPanel.getByText("coco-thorax-lateral.png")).toBeVisible();
   await expect(summaryPanel.getByRole("heading", { name: "종합소견" })).toBeVisible();
@@ -721,6 +733,10 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("김민준");
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("10:25");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
+  const summaryDialog = page.getByRole("dialog", { name: "영상검사 이력", exact: true });
+  await expect(summaryDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(summaryDialog).toBeHidden();
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
   await expect(page.getByText("하늘").first()).toBeVisible();
 
@@ -740,6 +756,7 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
 });
 
 test("imaging workspace prioritizes Kong abdomen study from demo query", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto(
     "/w/clair-demo/imaging?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&imagingStudyId=imaging-kong-abdomen&modulePanel=open&aside=closed&right=open"
   );

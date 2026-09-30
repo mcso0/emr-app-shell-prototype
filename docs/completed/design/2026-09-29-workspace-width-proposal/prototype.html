@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CLAiR · 작업 영역 폭 & 양방향 패널 시안</title><link rel="stylesheet" href="prototype.css?v=4"><script src="prototype.js?v=6" defer></script></head>
+<body>
+<header class="studio"><div><a href="report.html" class="backlink">CLAiR / UX RESEARCH 09.29</a><h1>작업 영역 폭 · 양방향 패널</h1></div><span class="sample">동작 시안 · 모든 데이터는 가상 예시</span></header>
+<div class="controls">
+ <label>업무 화면 <select id="module"><option value="lab">임상병리검사</option><option value="chart">진료/차트</option><option value="dispensing">조제/처치</option><option value="imaging">영상</option><option value="billing">수납</option></select></label>
+ <label>브라우저 폭 <select id="viewport"><option value="1366">1,366px</option><option value="1440">1,440px</option><option value="1600">1,600px</option><option value="1920" selected>1,920px</option><option value="2560">2,560px</option></select></label>
+ <div class="presets" role="group" aria-label="배치 비교"><button data-preset="current">A 현재 배치</button><button data-preset="focus">B 좁게 보기</button><button data-preset="both">C 양쪽 패널</button></div>
+ <span id="scale-label"></span>
+</div>
+<p class="instruction">결과값이나 소견을 입력한 뒤 <b>좁게/넓게 보기</b>와 패널을 눌러봐. 입력은 유지돼. 실제 문서 폭 차이가 있을 때만 폭 버튼이 보여. 1,440px에서는 패널을 열면 겹쳐 보이고, 대기열을 접으면 공간을 더 확보할 수 있어.</p>
+<div class="stage-wrap" id="stage-wrap"><div class="stage" id="stage">
+ <div class="topbar"><span class="workspace-name"><img src="assets/clair-logo-mark.svg" alt="">CLAiR 예시 동물병원</span><span class="tab-name" id="tab-name">임상병리검사</span><span class="topbar-tail">시안 전용 <button id="profile" class="avatar" aria-label="가상 환자 프로필 열기">P</button></span></div>
+ <div class="app-shell" id="app-shell">
+  <nav class="rail" aria-label="시안 업무 메뉴"><img class="rail-logo" src="assets/clair-logo-mark.svg" alt="CLAiR"><button data-module="chart" aria-label="진료/차트"><img src="assets/stethoscope.svg" alt=""></button><button data-module="lab" aria-label="임상병리검사"><img src="assets/flask.svg" alt=""></button><button data-module="dispensing" aria-label="조제/처치"><img src="assets/pill.svg" alt=""></button><button data-module="imaging" aria-label="영상"><img src="assets/images.svg" alt=""></button><button data-module="billing" aria-label="수납"><img src="assets/credit-card.svg" alt=""></button></nav>
+  <aside class="queue" id="queue"><div class="queue-title"><b id="queue-label">임상병리검사</b><button id="queue-close" class="icon-button" aria-label="대기열 접기"><img src="assets/panel-left.svg" alt=""></button></div><p class="queue-date">2026. 09. 29 (화)</p><div class="list-heading">업무 대기열 <span>3</span></div><div class="queue-card selected"><small>외래 · 예시 01</small><b>하루 · 예시 보호자</b><span id="queue-task">혈청화학 검사</span><small>12:05 요청 · 담당 배정됨</small></div><div class="queue-card"><small>외래 · 예시 02</small><b>보리 · 예시 보호자</b><span>업무 대기</span><small>12:10 요청 · 미지정</small></div><div class="queue-card"><small>외래 · 예시 03</small><b>나무 · 예시 보호자</b><span>업무 대기</span><small>12:15 요청 · 미지정</small></div><p class="queue-foot">현재 환자와 대기열은<br>폭을 바꿔도 그대로 유지</p></aside>
+  <main class="workspace" id="workspace">
+   <div class="patient-strip"><button id="queue-open" class="icon-button" aria-label="대기열 펼치기" hidden><img src="assets/panel-left.svg" alt=""></button><button id="patient-profile" class="patient-button"><b>하루</b> · Pomeranian · 7세 · 중성화 수컷</button><span>예시 보호자</span><span class="vital">체중 5.2 kg</span><span class="vital">체온 38.4°C</span><span class="vital">심박수 92 bpm</span><span class="strip-tail">가상 환자 · 외래</span></div>
+   <div class="work-toolbar" id="work-toolbar"><div class="toolbar-title"><button id="history-toggle" class="icon-button" aria-label="임상검사 이력 열기" aria-expanded="false" aria-controls="history-panel"><img src="assets/history.svg" alt=""></button><h2 id="document-title">임상병리검사 결과지</h2></div><div class="toolbar-actions"><button id="width-toggle" aria-pressed="true"><img src="assets/columns.svg" alt=""><span>넓게 보기</span></button><button id="receipt-toggle" aria-expanded="false" aria-controls="receipt-panel"><img src="assets/inbox.svg" alt=""><span>장비 검사 수신함</span><b class="count">2</b></button><button class="primary" id="demo-save">저장</button></div></div>
+   <div class="work-area" id="work-area">
+    <aside class="inner-panel history-panel" id="history-panel" hidden><header><b id="history-title">임상검사 이력</b><button class="icon-button" data-close="left" aria-label="이력 닫기"><img src="assets/chevrons-left.svg" alt=""></button></header><div class="panel-scroll" id="history-content"></div></aside>
+    <div class="center" id="center"><div class="width-note"><span id="width-meter"></span><span id="layout-mode"></span></div><article class="document" id="document"></article></div>
+    <aside class="inner-panel receipt-panel" id="receipt-panel" hidden><header><b id="receipt-title">장비 검사 수신함</b><button class="icon-button" data-close="right" aria-label="보조 패널 닫기"><img src="assets/chevrons-right.svg" alt=""></button></header><div class="panel-scroll" id="receipt-content"></div></aside>
+   </div>
+   <div id="layout-announcement" class="sr-only" aria-live="polite"></div>
+  </main>
+  <aside id="legacy-receipt" class="legacy-receipt" hidden><header>장비 검사 수신함 <small>기존 외부 슬롯</small></header><p>현재 배치에서는 작업 헤더 바깥까지 패널이 올라와.<br><br>C 시안에서는 환자 정보 아래 작업 영역 안에서 열려.</p></aside>
+ </div>
+</div></div>
+<footer class="studio-footer"><p id="layout-summary" aria-live="polite"></p><p>px는 CSS 픽셀 기준. 화면에 맞춰 축소된 시안이며, 아래 숫자는 축소 전 실제 배치 폭이야. 저장·수신 결과 반영은 이 페이지의 가상 데이터에만 적용돼.</p></footer>
+<dialog id="panel-dialog" aria-labelledby="modal-title"><header><b id="modal-title"></b><button class="icon-button" id="modal-close" aria-label="패널 닫기"><img src="assets/x.svg" alt=""></button></header><p class="modal-note">공간이 좁아 패널 하나를 겹쳐 표시해. 닫으면 작성하던 화면으로 돌아가.</p><div id="modal-content" class="panel-scroll"></div></dialog>
+<dialog id="profile-dialog" aria-labelledby="profile-title"><header><b id="profile-title">하루 · 가상 환자 프로필</b><button class="icon-button" id="profile-close" aria-label="프로필 닫기"><img src="assets/x.svg" alt=""></button></header><p>프로필은 환자 정보에서 열고, 수신함은 작업 도구에서 열어.</p><dl><dt>환자</dt><dd>하루 · 가상 예시</dd><dt>보호자</dt><dd>예시 보호자</dd></dl></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+</body></html>

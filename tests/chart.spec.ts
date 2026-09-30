@@ -6,6 +6,8 @@ import {
   type Route,
 } from "@playwright/test";
 
+import chartWidthVisualFixture from "./fixtures/chart-width-visual.json";
+
 import { createMockOrderCatalogGateway } from "../src/features/hospital-admin/server-order-catalog-core";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import type { ChartLiveQueueRecord } from "../src/features/chart/chart-live-queue";
@@ -18,15 +20,18 @@ import {
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 
+// Functional flows use inline panels; modal and viewport behavior have dedicated layout coverage.
+test.use({ viewport: { width: 1920, height: 1080 } });
+
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
 const chartFigmaVisualFixture = {
-  expectedContentSize: { height: 968, width: 1540 },
+  expectedContentSize: { height: 919, width: 1540 },
   expectedPanelWidths: [560, 560, 371],
   expectedRows: [452, 8, 452],
   route:
     "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed",
-  viewport: { height: 1088, width: 1624 },
+  viewport: { height: 1088, width: 1656 },
 } as const;
 const kongEncounterId = "encounter-kong-260501";
 const kongSoapFields = {
@@ -1027,11 +1032,13 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
-test("chart workspace panels align with the action bar horizontal inset", async ({
+test("chart wide panels retain their inset below the full-width action bar", async ({
   page,
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
+  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const actionBar = page.locator("[data-slot='chart-action-bar']");
   const workspace = page.locator("[data-slot='chart-workspace']");
@@ -1058,7 +1065,8 @@ test("chart workspace panels align with the action bar horizontal inset", async 
   expect(workspaceBox).not.toBeNull();
   expect(firstPanelBox).not.toBeNull();
   expect(lastPanelBox).not.toBeNull();
-  expect(historyToggleBox!.x).toBe(firstPanelBox!.x);
+  expect(firstPanelBox!.x).toBe(workspaceBox!.x + 16);
+  expect(historyToggleBox!.x).toBe((await actionBar.boundingBox())!.x + 16);
   expect(
     Math.round(
       workspaceBox!.x +
@@ -1075,6 +1083,8 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
+  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const actionBar = page.locator("[data-slot='chart-action-bar']");
   const workspace = page.locator("[data-slot='chart-workspace']");
@@ -1386,11 +1396,21 @@ test("chart panel actions remain visible on touch input", async ({
   }
 });
 
-test("chart contents preserve the Figma 1540 by 968 reference geometry", async ({
+test("chart wide contents preserve panel geometry below the separate toolbar", async ({
   page,
 }) => {
+  // Freeze synthetic reads so earlier persistence tests cannot change the visual baseline.
+  const responses = chartWidthVisualFixture as Record<string, { status: number; json: unknown }>;
+  await page.route("**/api/workspaces/clair-demo/chart/**", async (route) => {
+    const url = new URL(route.request().url());
+    const response = responses[url.pathname + url.search];
+    if (route.request().method() === "GET" && response) await route.fulfill(response);
+    else await route.fallback();
+  });
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
+  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const content = page.locator("[data-slot='chart-content']");
   await expect(content).toBeVisible();
@@ -1456,7 +1476,7 @@ test("chart contents preserve the Figma 1540 by 968 reference geometry", async (
   await expect(orderFooter).toContainText("저장됨");
   await expect(orderFooter).toContainText("이 차트 오더 합계");
   await expect(content).toHaveScreenshot(
-    "chart-contents-v2-reference-1540x968.png",
+    "chart-document-wide-1540x919.png",
     {
       animations: "disabled",
       caret: "hide",
@@ -1470,6 +1490,8 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
+  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const chartContent = page.locator("[data-slot='chart-content']");
   const orderTable = page.getByRole("table", { name: "처방/오더 테이블" });
@@ -2395,7 +2417,7 @@ test("chart clinical panels collapse independently without unmounting their cont
   await expect
     .poll(() =>
       panelGroup.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth + 1,
+        (element) => element.scrollWidth > element.clientWidth,
       ),
     )
     .toBe(true);
@@ -7015,6 +7037,8 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
+  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const diagnosisPanel = page.getByLabel("진단명 관리");
   const table = diagnosisPanel.getByRole("table", { name: "진단명 목록" });

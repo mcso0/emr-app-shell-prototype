@@ -200,6 +200,7 @@ test("guardian checkout route exposes ledger, prepared checkout, and status tran
 });
 
 test("billing screen uses guardian checkout route for ledger and checkout totals", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   const guardianCheckoutCalls: Array<{ method: string; status: number; url: string }> = [];
   page.on("response", (response) => {
     const url = response.url();
@@ -230,9 +231,9 @@ test("billing screen uses guardian checkout route for ledger and checkout totals
     await page.getByTestId(`billing-ledger-row-${invoiceId}`).click({ position: { x: 14, y: 14 } });
   }
 
-  await expect(page.getByTestId("shell-right-section")).toContainText("최종 결제금액");
-  await expect(page.getByTestId("shell-right-section")).toContainText("179,500원");
-  await expect(page.getByTestId("shell-right-section")).toContainText("완료/취소 2건은 현재 수납 합산에서 제외됩니다.");
+  await expect(page.locator('[data-workspace-panel="right"]')).toContainText("최종 결제금액");
+  await expect(page.locator('[data-workspace-panel="right"]')).toContainText("179,500원");
+  await expect(page.locator('[data-workspace-panel="right"]')).toContainText("완료/취소 2건은 현재 수납 합산에서 제외됩니다.");
 });
 
 test("billing checkout hardening migration contains local schema and RPC contract", () => {

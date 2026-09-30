@@ -24,7 +24,7 @@ test("workspace right panels share the 56px header frame", async ({ page }) => {
     await test.step(rightPanelCase.name, async () => {
       await page.goto(rightPanelCase.path);
 
-      const rightPanel = page.locator(".emr-workspace-rightpanel-responsive");
+      const rightPanel = ((rightPanelCase.name !== "Reception") ? page.locator('[data-workspace-panel="right"]') : page.locator(".emr-workspace-rightpanel-responsive"));
       const header = rightPanel.locator('[data-slot="emr-right-panel-header"]');
 
       await expect(rightPanel).toBeVisible();
@@ -62,7 +62,7 @@ test("right panels share one body and support optional fixed footer sizes", asyn
     await test.step(rightPanelCase.name, async () => {
       await page.goto(rightPanelCase.path);
 
-      const rightPanel = page.locator(".emr-workspace-rightpanel-responsive");
+      const rightPanel = page.locator('[data-workspace-panel="right"]');
       const panelLayout = rightPanel.locator('[data-slot="emr-right-panel"]');
       const body = panelLayout.locator('[data-slot="emr-right-panel-body"]');
       const footer = panelLayout.locator('[data-slot="emr-right-panel-footer"]');
@@ -89,7 +89,7 @@ test("right-panel header keeps its 56px frame at the supported narrow width", as
     "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-encounter%3Aencounter-haru-260430",
   );
 
-  const rightPanel = page.locator(".emr-workspace-rightpanel-responsive");
+  const rightPanel = page.getByTestId("reception-calendar-drawer");
   await expect(rightPanel).toBeVisible();
   await expect(
     rightPanel.locator('[data-slot="emr-right-panel-header"]'),
@@ -115,7 +115,7 @@ test("right panels keep the body scrollable and any footer inside the panel fram
     "/w/clair-demo/reception?modulePanel=open&right=open&drawer=reception-reservation-form%3Anew",
   );
 
-  const rightPanel = page.locator(".emr-workspace-rightpanel-responsive");
+  const rightPanel = page.getByTestId("reception-calendar-drawer");
   const panelLayout = rightPanel.locator('[data-slot="emr-right-panel"]');
   const header = panelLayout.locator('[data-slot="emr-right-panel-header"]');
   const body = panelLayout.locator('[data-slot="emr-right-panel-body"]');

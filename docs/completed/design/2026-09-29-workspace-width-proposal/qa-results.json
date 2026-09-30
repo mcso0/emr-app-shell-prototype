@@ -1,0 +1,374 @@
+{
+  "date": "2026-09-29",
+  "browser": "Codex in-app browser",
+  "boundary": "Static synthetic prototype only. Virtual CSS layout widths were tested; no production implementation or clinical acceptance test.",
+  "checks": [
+    {
+      "check": "1920 current",
+      "center": 1538,
+      "doc": 1506,
+      "left": false,
+      "right": false
+    },
+    {
+      "check": "1920 focus",
+      "center": 1538,
+      "doc": 1120,
+      "left": false,
+      "right": false
+    },
+    {
+      "check": "1920 both",
+      "center": 922,
+      "doc": 890,
+      "left": true,
+      "right": true
+    },
+    {
+      "calcium": "10.7",
+      "center": 922,
+      "check": "input preserved after width toggle",
+      "note": "입력 유지 확인 · 가상 메모"
+    },
+    {
+      "calcium": "10.7",
+      "center": 1058,
+      "check": "1440 modal fallback",
+      "inlineLeft": false,
+      "inlineRight": false,
+      "modal": true
+    },
+    {
+      "calcium": "10.7",
+      "check": "Escape and focus restoration",
+      "dialog": false,
+      "focus": "receipt-toggle"
+    },
+    {
+      "center": 1020,
+      "check": "1440 collapsed queue single inline panel",
+      "inlineRight": true,
+      "modal": false
+    },
+    {
+      "center": 984,
+      "check": "viewport 1366",
+      "doc": 952,
+      "left": false,
+      "modal": true,
+      "right": false
+    },
+    {
+      "center": 1058,
+      "check": "viewport 1440",
+      "doc": 1026,
+      "left": false,
+      "modal": true,
+      "right": false
+    },
+    {
+      "center": 1218,
+      "check": "viewport 1600",
+      "doc": 1120,
+      "left": false,
+      "modal": true,
+      "right": false
+    },
+    {
+      "center": 922,
+      "check": "viewport 1920",
+      "doc": 890,
+      "left": true,
+      "modal": false,
+      "right": true
+    },
+    {
+      "center": 1562,
+      "check": "viewport 2560",
+      "doc": 1120,
+      "left": true,
+      "modal": false,
+      "right": true
+    },
+    {
+      "bodyOverflow": false,
+      "check": "module lab",
+      "doc": 1120,
+      "fields": 5,
+      "imagesMissing": 0,
+      "title": "임상병리검사 결과지",
+      "measurementNote": "Intermediate geometry may reflect the 180ms width transition. See independent CSS width target checks."
+    },
+    {
+      "bodyOverflow": false,
+      "check": "module chart",
+      "doc": 1040,
+      "fields": 2,
+      "imagesMissing": 0,
+      "title": "진료 기록 · SOAP",
+      "measurementNote": "Intermediate geometry may reflect the 180ms width transition. See independent CSS width target checks."
+    },
+    {
+      "bodyOverflow": false,
+      "check": "module dispensing",
+      "doc": 1108,
+      "fields": 3,
+      "imagesMissing": 0,
+      "title": "조제·처치 수행 기록",
+      "measurementNote": "Intermediate geometry may reflect the 180ms width transition. See independent CSS width target checks."
+    },
+    {
+      "bodyOverflow": false,
+      "check": "module imaging",
+      "doc": 1277,
+      "fields": 2,
+      "imagesMissing": 0,
+      "title": "영상검사 보고서",
+      "measurementNote": "Intermediate geometry may reflect the 180ms width transition. See independent CSS width target checks."
+    },
+    {
+      "bodyOverflow": false,
+      "check": "module billing",
+      "doc": 1120,
+      "fields": 1,
+      "imagesMissing": 0,
+      "title": "청구 내역 확인",
+      "measurementNote": "Intermediate geometry may reflect the 180ms width transition. See independent CSS width target checks."
+    },
+    {
+      "bodyOverflow": false,
+      "button": "좁게 보기",
+      "check": "imaging viewer prefers wide",
+      "emptyState": true
+    },
+    {
+      "albumin": "3.3",
+      "calcium": "10.1",
+      "check": "explicit synthetic receipt application"
+    },
+    {
+      "check": "profile and task panels separate",
+      "focus": "patient-profile",
+      "history": true,
+      "profile": false,
+      "receipt": true
+    },
+    {
+      "check": "CSS width target lab",
+      "target": "1120px",
+      "title": "임상병리검사 결과지"
+    },
+    {
+      "check": "CSS width target chart",
+      "target": "1040px",
+      "title": "진료 기록 · SOAP"
+    },
+    {
+      "check": "CSS width target dispensing",
+      "target": "1120px",
+      "title": "조제·처치 수행 기록"
+    },
+    {
+      "check": "CSS width target imaging",
+      "target": "1280px",
+      "title": "영상검사 보고서"
+    },
+    {
+      "check": "CSS width target billing",
+      "target": "1120px",
+      "title": "청구 내역 확인"
+    },
+    {
+      "check": "modal controls after accessibility refinement",
+      "ariaControls": "panel-dialog",
+      "duplicateIds": []
+    },
+    {
+      "check": "report 390px responsive",
+      "viewport": 390,
+      "pageWidth": 375,
+      "overflow": false
+    },
+    {
+      "check": "report inline prototype",
+      "result": "Rendered bilateral-panel prototype confirmed in browser screenshot; outer-page read-only evaluation does not expose nested-frame contentDocument."
+    }
+  ],
+  "notTested": [
+    "real clinical task performance",
+    "production code changes",
+    "200 percent browser zoom",
+    "actual PACS/medical-image viewing",
+    "persistent per-user preferences"
+  ],
+  "approvedWidthFollowup": {
+    "date": "2026-09-29",
+    "scriptVersion": 6,
+    "checks": [
+      {
+        "button": "좁게 보기",
+        "buttonHidden": false,
+        "calcium": "10.7",
+        "check": "1920 expand",
+        "documentWidth": 1506,
+        "maxWidth": "1506px",
+        "note": "폭 전환 검증 · 가상 메모",
+        "transition": "max-width 0.18s cubic-bezier(0.2, 0, 0, 1)"
+      },
+      {
+        "button": "넓게 보기",
+        "buttonHidden": false,
+        "calcium": "10.7",
+        "check": "1920 contract",
+        "documentWidth": 1253,
+        "maxWidth": "1252.95px",
+        "note": "폭 전환 검증 · 가상 메모",
+        "transition": "max-width 0.18s cubic-bezier(0.2, 0, 0, 1)",
+        "measurement": "Intermediate interpolation sampled during the 180ms contraction; final compact target is 1120px."
+      },
+      {
+        "button": "넓게 보기",
+        "buttonHidden": true,
+        "calcium": "10.7",
+        "check": "available width visibility",
+        "doc": 952,
+        "transition": "all",
+        "unrestricted": 952,
+        "viewport": "1366"
+      },
+      {
+        "button": "넓게 보기",
+        "buttonHidden": true,
+        "calcium": "10.7",
+        "check": "available width visibility",
+        "doc": 1026,
+        "transition": "all",
+        "unrestricted": 1026,
+        "viewport": "1440"
+      },
+      {
+        "button": "넓게 보기",
+        "buttonHidden": false,
+        "calcium": "10.7",
+        "check": "available width visibility",
+        "doc": 1120,
+        "transition": "all",
+        "unrestricted": 1186,
+        "viewport": "1600"
+      },
+      {
+        "button": "넓게 보기",
+        "buttonHidden": false,
+        "calcium": "10.7",
+        "check": "available width visibility",
+        "doc": 1120,
+        "transition": "all",
+        "unrestricted": 1506,
+        "viewport": "1920"
+      },
+      {
+        "button": "넓게 보기",
+        "buttonHidden": false,
+        "calcium": "10.7",
+        "check": "available width visibility",
+        "doc": 1120,
+        "transition": "all",
+        "unrestricted": 2146,
+        "viewport": "2560"
+      },
+      {
+        "check": "wide preference while hidden",
+        "doc": 1026,
+        "hidden": true,
+        "pressed": "false"
+      },
+      {
+        "button": "좁게 보기",
+        "calcium": "10.7",
+        "check": "wide preference restored",
+        "doc": 1506,
+        "hidden": false
+      },
+      {
+        "calcium": "10.7",
+        "check": "1920 both panels hide toggle",
+        "doc": 890,
+        "hidden": true,
+        "left": true,
+        "right": true
+      },
+      {
+        "check": "1440 collapsed queue reveals toggle",
+        "doc": 1120,
+        "hidden": false,
+        "unrestricted": 1324
+      },
+      {
+        "check": "module-specific cap visibility at 1600",
+        "doc": 1120,
+        "hidden": false,
+        "module": "lab",
+        "unrestricted": 1186
+      },
+      {
+        "check": "module-specific cap visibility at 1600",
+        "doc": 1040,
+        "hidden": false,
+        "module": "chart",
+        "unrestricted": 1186
+      },
+      {
+        "check": "module-specific cap visibility at 1600",
+        "doc": 1120,
+        "hidden": false,
+        "module": "dispensing",
+        "unrestricted": 1186
+      },
+      {
+        "check": "module-specific cap visibility at 1600",
+        "doc": 1171,
+        "hidden": true,
+        "module": "imaging",
+        "unrestricted": 1171
+      },
+      {
+        "check": "module-specific cap visibility at 1600",
+        "doc": 1120,
+        "hidden": false,
+        "module": "billing",
+        "unrestricted": 1171
+      },
+      {
+        "button": "넓게 보기",
+        "calcium": "10.7",
+        "check": "rapid reversal",
+        "note": "폭 전환 검증 · 가상 메모",
+        "target": "1120px",
+        "transition": "max-width 0.18s cubic-bezier(0.2, 0, 0, 1)"
+      },
+      {
+        "button": "좁게 보기",
+        "check": "pointer expand after final change",
+        "target": "1506px",
+        "transition": "max-width 0.18s cubic-bezier(0.2, 0, 0, 1)"
+      },
+      {
+        "check": "final observer small screen",
+        "doc": 1026,
+        "hidden": true
+      },
+      {
+        "calcium": "10.7",
+        "check": "final pointer animation and input preservation",
+        "doc": 1506,
+        "hidden": false,
+        "transition": "max-width 0.18s cubic-bezier(0.2, 0, 0, 1)"
+      }
+    ],
+    "limits": [
+      "Static synthetic prototype only.",
+      "Reduced-motion rule checked in source; no OS/browser emulation.",
+      "180ms is the configured transition duration; exact frame timing and user comfort were not benchmarked."
+    ]
+  }
+}
