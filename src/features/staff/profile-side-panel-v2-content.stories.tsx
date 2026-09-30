@@ -2,9 +2,8 @@ import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
-import { CloseIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmrProfileIdentity, EmrProfilePanel, EmrProfilePanelBody, EmrProfileTabPanel } from "@/components/emr/profile-panel";
 import {
   EditableProfileAvatar,
   PresenceBadge,
@@ -73,53 +72,28 @@ async function openMenu(trigger: HTMLElement) {
 }
 
 function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" | "work" | "schedule" }) {
+  const [activeTab, setActiveTab] = useState<string>(defaultTab);
   return (
-    <section
+    <EmrProfilePanel
       aria-label="직원 운영 프로필 Storybook 예시"
-      className="flex h-dvh w-full flex-col overscroll-x-none touch-pan-y overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:rounded-none max-md:border-0 max-md:shadow-none md:h-[1105px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)] md:shadow-[var(--clair-shadow-xs)]"
+      className="h-dvh w-full md:h-[1105px] md:w-[var(--emr-profile-panel-width)] md:rounded-[var(--emr-radius-panel)] md:border md:border-[var(--emr-border-strong)]"
       data-testid="profile-v2-panel-specimen"
+      closeLabel="프로필 닫기"
+      onClose={() => undefined}
+      value={activeTab}
+      onTabChange={setActiveTab}
+      tabs={[{ value: "profile", label: "프로필" }, { value: "work", label: "업무현황" }, { value: "schedule", label: "일정" }]}
+      tabsLabel="직원 프로필 탭"
+      headerActions={<ProfileHeaderActionMenu canManageMember={false} hasContact onCopyContact={() => undefined} onManageMember={() => undefined} onOpenSchedule={() => undefined} />}
+      identity={<EmrProfileIdentity
+        avatar={<EditableProfileAvatar alt="합성 직원" editable={false} initials="SU" />}
+        name="합성 직원"
+        badge={<PresenceBadge state="online" />}
+        description={<div className="-ml-1.5 min-w-0 flex-1"><StatusMessageEditor editable onSave={async () => undefined} value="" /></div>}
+        detail="최근 접속 · 방금 전"
+      />}
     >
-      <Tabs defaultValue={defaultTab} className="min-h-0 flex-1 gap-0">
-        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
-          <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
-            <EditableProfileAvatar alt="합성 직원" editable={false} initials="SU" />
-            <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-1 flex-col gap-1">
-              <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
-                <h2 className="truncate text-xl leading-7 font-semibold tracking-[-0.015em]">합성 직원</h2>
-                <PresenceBadge state="online" />
-              </div>
-              <div className="h-[var(--emr-profile-status-control-height)]">
-                <StatusMessageEditor editable onSave={async () => undefined} value="" />
-              </div>
-              <p className="flex h-5 items-center gap-1 px-1.5 text-sm font-medium tracking-[0.014em] text-[var(--emr-text-placeholder)]">
-                최근 접속 <span aria-hidden="true">·</span> 방금 전
-              </p>
-            </div>
-            <div className="absolute -top-1.5 -right-1.5 flex gap-2">
-              <ProfileHeaderActionMenu
-                canManageMember={false}
-                hasContact
-                onCopyContact={() => undefined}
-                onManageMember={() => undefined}
-                onOpenSchedule={() => undefined}
-              />
-              <Button type="button" aria-label="프로필 닫기" size="icon-sm" variant="ghost">
-                <CloseIcon aria-hidden="true" />
-              </Button>
-            </div>
-          </div>
-          <TabsList
-            aria-label="직원 프로필 탭"
-            className="absolute bottom-0 left-4 h-[34px] w-[175px] gap-2 p-0"
-            variant="line"
-          >
-            <TabsTrigger className="h-7 w-[53px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="profile">프로필</TabsTrigger>
-            <TabsTrigger className="h-7 w-[65px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="work">업무현황</TabsTrigger>
-            <TabsTrigger className="h-7 w-[41px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="schedule">일정</TabsTrigger>
-          </TabsList>
-        </header>
-
-        <TabsContent value="profile" className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4">
+        <EmrProfileTabPanel value="profile"><EmrProfilePanelBody className="p-4">
           <div className="grid gap-4">
             <section className="px-2">
               <h3 className="flex h-8 items-center text-sm font-medium text-[var(--emr-text-secondary)]">오늘 근무 정보</h3>
@@ -153,15 +127,15 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
               </div>
             </section>
           </div>
-        </TabsContent>
-        <TabsContent value="work" className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4">
+        </EmrProfilePanelBody></EmrProfileTabPanel>
+        <EmrProfileTabPanel value="work"><EmrProfilePanelBody className="p-4">
           <ProfileWorkStatusTab
             groups={[{ dateLabel: "오늘", items: [sampleWorkItem] }]}
             state="ready"
             onRequestNavigation={() => undefined}
           />
-        </TabsContent>
-        <TabsContent value="schedule" className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4">
+        </EmrProfilePanelBody></EmrProfileTabPanel>
+        <EmrProfileTabPanel value="schedule"><EmrProfilePanelBody className="p-4">
           <section className="px-2">
             <h3 className="flex h-6 items-center text-sm font-medium text-[var(--emr-text-secondary)]">일정</h3>
             <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border px-4 text-sm text-[var(--emr-text-tertiary)]">
@@ -169,9 +143,8 @@ function FullPanelSpecimen({ defaultTab = "profile" }: { defaultTab?: "profile" 
               <Button size="xs" variant="outline" className="w-[66px] shrink-0 px-0 text-xs">일정 확인</Button>
             </div>
           </section>
-        </TabsContent>
-      </Tabs>
-    </section>
+        </EmrProfilePanelBody></EmrProfileTabPanel>
+    </EmrProfilePanel>
   );
 }
 

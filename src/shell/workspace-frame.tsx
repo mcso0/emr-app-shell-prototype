@@ -1,7 +1,7 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
-import type { CSSProperties } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useState, type CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
 import {
   GuardianProfileDrawer,
@@ -66,9 +66,19 @@ export function WorkspaceFrame({
   const routeReceptionDrawerToRightPanel =
     (moduleDefinition.id === "reception" && Boolean(RightPanel)) ||
     isReceptionDrawerInWorkspaceRightPanel;
-  const instantRightPanel =
-    moduleDefinition.id === "reception" ||
-    isReceptionDrawerInWorkspaceRightPanel;
+  const isProfileRightPanel = isPatientDrawer || isGuardianDrawer || activeDrawer?.type === "staff-operational-profile";
+  // Retain only the last panel type so closing uses the same motion as opening.
+  const [lastDrawerType, setLastDrawerType] = useState(activeDrawer?.type);
+  if (activeDrawer && lastDrawerType !== activeDrawer.type) setLastDrawerType(activeDrawer.type);
+  const profileMotion = isProfileRightPanel || (!activeDrawer && (
+    lastDrawerType === "patient" || lastDrawerType === "reception-patient" ||
+    lastDrawerType === "guardian" || lastDrawerType === "reception-guardian" ||
+    lastDrawerType === "staff-operational-profile"
+  ));
+  const reducedMotion = useReducedMotion();
+  const instantRightPanel = !profileMotion && (
+    moduleDefinition.id === "reception" || isReceptionDrawerInWorkspaceRightPanel
+  );
   const CommonProfileDrawer = isPatientDrawer
     ? PatientProfileDrawer
     : isGuardianDrawer
@@ -172,7 +182,7 @@ export function WorkspaceFrame({
           <main
             className={cn(
               "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
-              !instantRightPanel && "transition-[grid-template-columns]",
+              !instantRightPanel && "transition-[grid-template-columns,column-gap]",
               rightPanelDetached
                 ? "overflow-visible bg-transparent"
                 : "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] bg-[var(--emr-surface-workspace)] shadow-xs"
@@ -181,10 +191,15 @@ export function WorkspaceFrame({
             data-right-panel-mobile-full={rightPanelMobileFullWidth ? "true" : "false"}
             data-right-panel-open={rightPanelVisible ? "true" : "false"}
             style={{
+              ...(profileMotion ? {
+                transitionDuration: reducedMotion ? "0ms" : `var(--clair-motion-duration-panel-${rightPanelVisible ? "enter" : "exit"})`,
+                transitionTimingFunction: `var(--clair-motion-easing-panel-${rightPanelVisible ? "enter" : "exit"})`,
+              } : {}),
               "--clair-workspace-frame-columns": `minmax(0, 1fr) ${
                 rightPanelVisible ? `${effectiveRightPanelWidth}px` : "0px"
               }`,
               "--clair-workspace-right-panel-gap": `${rightPanelGap}px`,
+              "--clair-profile-content-width": `${effectiveRightPanelWidth - 2}px`,
             } as CSSProperties}
           >
             <section
@@ -235,6 +250,11 @@ export function WorkspaceFrame({
 
             <aside
               data-testid="workspace-right-panel"
+              data-profile-motion={profileMotion ? "true" : undefined}
+              style={profileMotion ? {
+                transitionDuration: reducedMotion ? "0ms" : `var(--clair-motion-duration-panel-${rightPanelVisible ? "enter" : "exit"})`,
+                transitionTimingFunction: `var(--clair-motion-easing-panel-${rightPanelVisible ? "enter" : "exit"})`,
+              } : undefined}
               className={cn(
                 "emr-workspace-rightpanel-responsive min-h-0 min-w-0 overflow-hidden bg-[var(--emr-surface-rightpanel)] max-md:hidden",
                 rightPanelMobileFullWidth &&
@@ -248,23 +268,30 @@ export function WorkspaceFrame({
               )}
             >
               <div
-                className="flex h-full w-full flex-col"
-                style={{ minWidth: rightPanelVisible ? effectiveRightPanelWidth : 0 }}
+                className={cn("flex h-full w-full flex-col", isProfileRightPanel && "min-w-[var(--clair-profile-content-width)] max-[1100px]:min-w-0")}
+                style={{ minWidth: isProfileRightPanel ? undefined : rightPanelVisible ? effectiveRightPanelWidth : 0 }}
               >
-                {CommonProfileDrawer && activeDrawer ? (
-                  isPatientDrawer ? (
-                    <PatientProfileDrawer
-                      defaultTab={activeDrawer.profileTab}
-                      patientId={activeDrawer.id}
-                    />
-                  ) : (
-                    <GuardianProfileDrawer guardianId={activeDrawer.id} />
-                  )
-                ) : hasFeatureRightPanel && !receptionCalendarDrawer ? (
+                <AnimatePresence initial={false}>
+                  {isProfileRightPanel && activeDrawer ? (
+                    <motion.div
+                      key="profile-panel"
+                      className="flex h-full min-h-0 w-full min-w-[var(--clair-profile-content-width)] shrink-0 flex-col max-[1100px]:min-w-0"
+                      initial={{ opacity: 1 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: reducedMotion ? 0 : 0.12 }}
+                    >
+                      {isPatientDrawer ? <PatientProfileDrawer defaultTab={activeDrawer.profileTab} patientId={activeDrawer.id} />
+                        : isGuardianDrawer ? <GuardianProfileDrawer guardianId={activeDrawer.id} />
+                          : RightPanel ? <RightPanel {...slotProps} /> : null}
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+                {!isProfileRightPanel && (hasFeatureRightPanel && !receptionCalendarDrawer ? (
                   <ReceptionRightPanel {...slotProps} />
                 ) : RightPanel && rightPanelVisible ? (
                   <RightPanel {...slotProps} />
-                ) : null}
+                ) : null)}
               </div>
             </aside>
 

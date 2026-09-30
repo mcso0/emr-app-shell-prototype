@@ -1,17 +1,17 @@
 .panel {
   --profile-neutral-50: var(--emr-surface-muted);
-  --profile-neutral-100: #f5f5f5;
-  --profile-neutral-200: #e5e5e5;
-  --profile-neutral-300: #d4d4d4;
-  --profile-neutral-400: #a3a3a3;
-  --profile-neutral-500: #737373;
-  --profile-neutral-600: #525252;
-  --profile-neutral-700: #404040;
-  --profile-neutral-800: #262626;
-  --profile-neutral-900: #171717;
-  --profile-sky-50: #f0f8ff;
-  --profile-sky-200: #87c9ff;
-  --profile-sky-600: #005fc4;
+  --profile-neutral-100: var(--emr-surface-muted);
+  --profile-neutral-200: var(--emr-border-default);
+  --profile-neutral-300: var(--emr-border-strong);
+  --profile-neutral-400: var(--emr-text-placeholder);
+  --profile-neutral-500: var(--emr-text-tertiary);
+  --profile-neutral-600: var(--emr-text-secondary);
+  --profile-neutral-700: var(--emr-text-secondary);
+  --profile-neutral-800: var(--emr-text-primary);
+  --profile-neutral-900: var(--emr-text-primary);
+  --profile-sky-50: var(--clair-color-atomic-sky-50);
+  --profile-sky-200: var(--clair-color-atomic-sky-200);
+  --profile-sky-600: var(--clair-color-atomic-sky-600);
   position: relative;
   display: flex;
   width: 100%;
@@ -23,99 +23,26 @@
   touch-action: pan-y;
   border: 1px solid var(--profile-neutral-300);
   border-radius: 12px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   color: var(--profile-neutral-900);
   font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   box-sizing: border-box;
 }
 
 .embeddedPanel {
-  width: calc(100% - 2px);
   border: 0;
   border-radius: 0;
-}
-
-.header {
-  position: relative;
-  z-index: 2;
-  height: 151px;
-  flex: 0 0 151px;
-  border-bottom: 1px solid var(--profile-neutral-200);
-  background: #fff;
-  box-sizing: border-box;
-}
-
-.identity {
-  position: relative;
-  display: flex;
-  width: 346px;
-  height: 84px;
-  margin: 16px 16px 0;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.avatar {
-  width: 84px;
-  height: 84px;
-  flex: 0 0 84px;
-  overflow: hidden;
-  border: 1px solid var(--profile-neutral-200);
-  border-radius: 6px;
-  background: var(--profile-neutral-100);
-  object-fit: cover;
-  box-sizing: border-box;
-}
-
-.identityBody {
-  display: flex;
-  width: 252px;
-  height: 84px;
-  min-width: 0;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.identityCopy {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nameRow {
-  display: flex;
-  width: 100%;
-  height: 28px;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-  padding: 0 6px;
-  box-sizing: border-box;
-}
-
-.name {
-  max-width: 132px;
-  overflow: hidden;
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 28px;
-  letter-spacing: -0.24px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .typeBadge {
   display: inline-flex;
   min-width: 20px;
-  height: 23px;
+  height: 20px;
   flex: none;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 3px 8px 3px 6px;
+  padding: 1px 8px 1px 6px;
   border: 1px solid var(--profile-sky-200);
   border-radius: 6px;
   background: var(--profile-sky-50);
@@ -131,37 +58,6 @@
 .typeBadge svg {
   width: 12px;
   height: 12px;
-}
-
-.metaRow {
-  display: flex;
-  width: 100%;
-  height: 24px;
-  min-width: 0;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  padding: 0 6px;
-  color: var(--profile-neutral-500);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  letter-spacing: 0.196px;
-  box-sizing: border-box;
-  white-space: nowrap;
-}
-
-.metaItem {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.metaSeparator {
-  flex: none;
-  color: var(--profile-neutral-500);
-  font-size: 13px;
-  line-height: 18px;
 }
 
 .headerActions {
@@ -194,7 +90,7 @@
   padding: 4px 8px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 8px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
   color: var(--profile-neutral-900);
   font: inherit;
@@ -225,107 +121,12 @@
 }
 
 .smallAction:focus-visible,
-.closeButton:focus-visible,
-.tab:focus-visible,
 .editButton:focus-visible,
 .monthButton:focus-visible,
 .select:focus-visible,
 .relatedCard:focus-visible {
   outline: 2px solid var(--profile-sky-600);
   outline-offset: 2px;
-}
-
-.closeButton {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--profile-neutral-700);
-  cursor: pointer;
-}
-
-.closeButton svg {
-  width: 16px;
-  height: 16px;
-}
-
-.tabs {
-  display: flex;
-  height: 34px;
-  margin: 16px 16px 0;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.tab {
-  position: relative;
-  display: inline-flex;
-  height: 34px;
-  flex: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--profile-neutral-500);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  letter-spacing: 0.196px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.tabLabel {
-  display: inline-flex;
-  height: 28px;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border-radius: 8px;
-  box-sizing: border-box;
-}
-
-.tab::after {
-  width: 100%;
-  height: 1px;
-  flex: none;
-  background: transparent;
-  content: "";
-}
-
-.tab[aria-selected="true"] {
-  color: var(--profile-neutral-900);
-}
-
-.tab[aria-disabled="true"] {
-  color: var(--profile-neutral-400);
-}
-
-.tab[aria-disabled="true"] .tabLabel {
-  cursor: not-allowed;
-}
-
-.tab[aria-selected="true"]::after {
-  background: var(--profile-neutral-900);
-}
-
-.content {
-  position: relative;
-  display: flex;
-  min-height: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  overflow: hidden;
-  background: #fff;
 }
 
 .scrollContent {
@@ -399,7 +200,7 @@
   padding: 0 8px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 7px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   color: var(--profile-neutral-600);
   font: inherit;
   font-size: 12px;
@@ -432,7 +233,7 @@
   width: 330px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 12px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   box-sizing: border-box;
 }
 
@@ -571,15 +372,11 @@
   color: inherit;
   font: inherit;
   text-align: left;
-}
-
-button.relatedCard {
+}button.relatedCard {
   cursor: pointer;
-}
-
-button.relatedCard:hover,
+}button.relatedCard:hover,
 button.relatedCard:focus-visible {
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   box-shadow: 0 1px 2px rgb(0 0 0 / 5%);
 }
 
@@ -601,9 +398,7 @@ button.relatedCard:focus-visible {
   height: 32px;
   opacity: 0;
   pointer-events: none;
-}
-
-button.relatedCard:hover .relatedCardAffordance,
+}button.relatedCard:hover .relatedCardAffordance,
 button.relatedCard:focus-visible .relatedCardAffordance {
   opacity: 1;
 }
@@ -621,7 +416,7 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   height: 32px;
   flex: 0 0 32px;
   place-items: center;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
 }
 
 .relatedCardAffordanceFrame svg {
@@ -694,7 +489,7 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   padding: 2px 6px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 6px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   color: var(--profile-neutral-600);
   font-size: 12px;
   line-height: 16px;
@@ -789,13 +584,12 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   opacity: 0.5;
 }
 
-.retryButton,
 .loadMoreButton {
   min-height: 28px;
   padding: 4px 10px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 8px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   color: var(--profile-neutral-700);
   font: inherit;
   font-size: 12px;
@@ -803,7 +597,6 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   cursor: pointer;
 }
 
-.retryButton:hover,
 .loadMoreButton:hover {
   background: var(--profile-neutral-50);
 }
@@ -825,7 +618,7 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   padding: 10px 8px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 12px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   box-shadow: 0 1px 2px rgb(0 0 0 / 2%);
   box-sizing: border-box;
 }
@@ -917,7 +710,7 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   padding: 1px 6px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 6px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   color: var(--profile-neutral-600);
   font-size: 12px;
   font-weight: 500;
@@ -955,7 +748,7 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   padding: 12px 12px 12px 14px;
   border: 1px solid var(--profile-neutral-200);
   border-radius: 12px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   box-sizing: border-box;
 }
 
@@ -983,57 +776,6 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   font-weight: 600;
 }
 
-.emptyState {
-  position: absolute;
-  top: 280px;
-  right: 0;
-  left: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  color: var(--profile-neutral-600);
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
-  box-sizing: border-box;
-  text-align: center;
-}
-
-.emptyIcon {
-  position: relative;
-  display: grid;
-  width: 48px;
-  height: 48px;
-  place-items: center;
-  border-radius: 14px;
-  background: var(--profile-neutral-100);
-  color: var(--profile-neutral-600);
-}
-
-.emptyIconMark {
-  position: absolute;
-  right: 11px;
-  bottom: 10px;
-  display: grid;
-  width: 9px;
-  height: 9px;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--profile-neutral-100);
-}
-
-.emptyIconMark svg {
-  width: 8px;
-  height: 8px;
-  stroke-width: 2;
-}
-
-.emptyIcon svg {
-  width: 24px;
-  height: 24px;
-}
-
 .editSurface {
   display: grid;
   gap: 12px;
@@ -1049,7 +791,7 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   gap: 8px;
   border-top: 1px solid var(--profile-neutral-200);
   padding: 0 16px;
-  background: #fff;
+  background: var(--emr-surface-rightpanel);
   box-sizing: border-box;
 }
 
@@ -1063,14 +805,9 @@ button.relatedCard:focus-visible .relatedCardAffordance {
     border-radius: 0;
   }
 
-  .identity,
   .infoSection,
   .divider {
     width: calc(100% - 32px);
-  }
-
-  .identityBody {
-    width: calc(100% - 94px);
   }
 
   .workCard,
