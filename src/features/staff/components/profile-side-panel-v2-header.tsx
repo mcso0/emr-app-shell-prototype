@@ -570,10 +570,10 @@ export function ProfileHeaderActionMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" aria-label="프로필 작업 더보기" size="icon-sm" variant="ghost" />
+          <Button type="button" aria-label="프로필 작업 더보기" size="icon-sm" variant="ghost" className="rounded-[var(--clair-radius-atomic-8)] text-[var(--clair-color-atomic-neutral-700)]" />
         }
       >
-        <CdsFilesMoreHorizontalIcon aria-hidden="true" />
+        <CdsFilesMoreHorizontalIcon aria-hidden="true" className="size-4" size={16} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[var(--emr-profile-header-menu-width)]">
         <DropdownMenuGroup>
