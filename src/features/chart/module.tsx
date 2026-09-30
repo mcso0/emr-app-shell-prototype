@@ -1,6 +1,7 @@
 "use client";
 
 import historyStyles from "./chart-history.module.css";
+import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import orderScrollStyles from "./chart-order-scroll.module.css";
 
 import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
@@ -12988,30 +12989,25 @@ function OrderArea({
     workspaceId: bundle.encounter.workspaceId,
   });
   useEffect(() => {
-    void refreshBillingSummary();
+    // Mutation/Realtime invalidations still supersede older automatic reads
+    // through the existing request sequence; only startup/focus reads share.
+    const refreshAutomatically = coalescePendingRefresh(refreshBillingSummary);
+    void refreshAutomatically();
+    const unsubscribe = subscribeVisibleRefresh({
+      onRefresh: () => {
+        if (
+          draftTouchedRef.current ||
+          orderDraftSaveInFlightRef.current ||
+          orderDraftSavePromiseRef.current
+        ) {
+          return;
+        }
+        void refreshAutomatically();
+      },
+    });
     return () => {
+      unsubscribe();
       billingSummaryRequestSequenceRef.current += 1;
-    };
-  }, [refreshBillingSummary]);
-  useEffect(() => {
-    const refreshIfSafe = () => {
-      if (
-        draftTouchedRef.current ||
-        orderDraftSaveInFlightRef.current ||
-        orderDraftSavePromiseRef.current
-      ) {
-        return;
-      }
-      void refreshBillingSummary();
-    };
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") refreshIfSafe();
-    };
-    window.addEventListener("focus", refreshIfSafe);
-    document.addEventListener("visibilitychange", refreshWhenVisible);
-    return () => {
-      window.removeEventListener("focus", refreshIfSafe);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, [refreshBillingSummary]);
   const savePrebillingOverride = async (

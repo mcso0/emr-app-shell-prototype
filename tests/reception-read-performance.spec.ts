@@ -212,3 +212,114 @@ test("reception content owns one shared staff request for content, side panel, a
   await expect(page.getByRole("option", { name: "청담 원장" })).toBeVisible();
   await expect.poll(() => staffRequestCount).toBe(1);
 });
+
+test("reception hidden staff polling resumes once on visibility and focus return", async ({
+  page,
+}) => {
+  await page.clock.install();
+  // This regression uses local/mock data only; block browser external requests.
+  await page.route("**/*", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.hostname === "127.0.0.1" || url.hostname === "localhost") await route.continue();
+    else await route.abort();
+  });
+  const workspaceId = "workspace-clair-cheongdam";
+  let staffRequestCount = 0;
+
+  await page.route(
+    `**/api/workspaces/${workspaceId}/staff?date=*`,
+    async (route) => {
+      staffRequestCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          staff: [
+            {
+              id: "49110000-0000-4000-8000-000000000003",
+              displayName: "청담 원장",
+              initial: "청",
+              roles: ["vet"],
+              status: "active",
+            },
+          ],
+          enforcedBy: "workspace-staff-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/queue**`,
+    async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          queue: [],
+          enforcedBy: "reception-queue-read",
+        }),
+      });
+    },
+  );
+  await page.route(
+    `**/api/workspaces/${workspaceId}/reception/calendar/day**`,
+    async (route) => {
+      const date = new URL(route.request().url()).searchParams.get("date");
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: 200,
+          workspaceId,
+          date,
+          records: [],
+          operatingSchedule: {
+            date,
+            timezone: "Asia/Seoul",
+            isOpen: true,
+            source: "weekly",
+            treatmentStart: "09:00",
+            treatmentEnd: "19:00",
+            breakStart: "13:00",
+            breakEnd: "14:00",
+          },
+          enforcedBy: "reception-calendar-read",
+        }),
+      });
+    },
+  );
+
+  await page.goto(
+    `/w/${workspaceId}/reception?modulePanel=open`,
+  );
+
+  await expect(page.getByTestId("schedule-toolbar")).toBeVisible();
+  await expect(page.getByTestId("veterinarian-lane-name")).toContainText(
+    "청담 원장",
+  );
+  await expect.poll(() => staffRequestCount).toBeGreaterThan(0);
+  await page.clock.runFor(100);
+  const initialReads = staffRequestCount;
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "hidden" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  await page.clock.fastForward(180_000);
+  expect(staffRequestCount).toBe(initialReads);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: "visible" });
+    document.dispatchEvent(new Event("visibilitychange"));
+    window.dispatchEvent(new Event("focus"));
+  });
+  await expect.poll(() => staffRequestCount).toBe(initialReads + 1);
+  // The return/focus pair shares the in-flight read or its 30-second fresh result.
+  await page.clock.runFor(100);
+  expect(staffRequestCount).toBe(initialReads + 1);
+});

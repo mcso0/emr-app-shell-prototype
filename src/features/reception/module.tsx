@@ -18,6 +18,7 @@ import {
 } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import {
   CdsActionsListFilterIcon,
@@ -7223,18 +7224,15 @@ export function ReceptionContent() {
   useEffect(() => {
     if (!liveStaffSourceEnabled) return;
 
-    const refreshStaff = () => void refreshWorkspaceStaff();
-    const refreshStaffOnFocus = () =>
-      void refreshWorkspaceStaff({ skipIfFreshMs: 30_000 });
-
-    void refreshWorkspaceStaff({ showLoading: true, skipIfFreshMs: 30_000 });
-    const refreshInterval = window.setInterval(refreshStaff, 60_000);
-    window.addEventListener("focus", refreshStaffOnFocus);
-
-    return () => {
-      window.clearInterval(refreshInterval);
-      window.removeEventListener("focus", refreshStaffOnFocus);
-    };
+    if (document.visibilityState === "visible") {
+      void refreshWorkspaceStaff({ showLoading: true, skipIfFreshMs: 30_000 });
+    }
+    return subscribeVisibleRefresh({
+      intervalMs: 60_000,
+      onRefresh: (reason) => {
+        void refreshWorkspaceStaff({ skipIfFreshMs: reason === "resume" ? 30_000 : 0 });
+      },
+    });
   }, [liveStaffSourceEnabled, refreshWorkspaceStaff]);
 
   useEffect(() => {
