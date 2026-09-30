@@ -192,3 +192,11 @@ Production rollback candidate is `dpl_EJjPQWVeYbFFU2s9VSuk9HayCT7C` from
 protection after the manual Release Check and automatic Preview are verified.
 Stop on candidate drift, failed gates, unexpected Production source, or smoke
 failure; rollback mutations require separate authorization.
+
+## Guardian Address Icon Repair (2026-09-30)
+
+- 승욱 approved the scoped fix, commit/push/PR, direct `origin/main` merge, and production deployment in this chat.
+- The address map-pin SVG existed and had visible 14 px styling, but its clip rectangle had lost its dimensions during icon normalization and clipped out the entire path.
+- Restore the source rectangle to 24 x 24 and regenerate the shared icon. Preserve inner SVG dimensions in the generator so subsequent Figma imports retain clipping and shape geometry. No profile data, API, permission, or layout changes.
+- Focused verification: generator import-to-component geometry regression and guardian profile browser clip-region regression; release also requires secrets/docs/UX-copy, lint, typecheck, build, exact-candidate Release Check, Ready preview, and production address-icon smoke.
+- Production rollback candidate: current Ready deployment `dpl_3z6bBiGMXveHQGkjjwLPHsVXNcrf`, source `bd321152d1ca4f095ab4c07840cd7cc81ebc9d73`. Stop before merge for failed verification or a changed candidate; verify the synthetic guardian profile after deployment.

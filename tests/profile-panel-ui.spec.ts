@@ -114,3 +114,19 @@ for (const subject of ["patient:patient-coco", "guardian:guardian-lee-jieun"]) {
     await expect(panel).toHaveCount(0);
   });
 }
+
+test("guardian address icon has a non-empty clipping region", async ({ page }) => {
+  await page.goto(
+    "/w/clair-demo/customer?modulePanel=open&right=closed&drawer=guardian:guardian-lee-jieun",
+  );
+  const icon = page.getByTestId("profile-side-panel").locator('[data-profile-definition-icon="map-pin"]');
+  await expect(icon).toBeVisible();
+  await expect(icon).toHaveCSS("width", "14px");
+  await expect(icon.locator("clipPath rect")).toHaveAttribute("width", "24");
+  await expect(icon.locator("clipPath rect")).toHaveAttribute("height", "24");
+  const clipBounds = await icon.locator("clipPath rect").evaluate((rect) => {
+    const bounds = (rect as SVGGraphicsElement).getBBox();
+    return { width: bounds.width, height: bounds.height };
+  });
+  expect(clipBounds).toEqual({ width: 24, height: 24 });
+});
