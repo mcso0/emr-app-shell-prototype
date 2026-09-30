@@ -108,11 +108,10 @@ export function EmrProfilePanel({
                   aria-label={closeLabel}
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="size-11"
+                  size="icon-sm"
                   onClick={close}
                 >
-                  <CdsActionsXIcon aria-hidden="true" size={16} />
+                  <CdsActionsXIcon aria-hidden="true" size={12} />
                 </Button>
               </div>
               <TabsList
