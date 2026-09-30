@@ -21,6 +21,15 @@ source_docs:
 
 # CDS V2 Reception Screen Alignment Notes
 
+## Approved Calendar Overlay Drawer — 2026-09-30
+
+- 예약 생성, 접수 생성, 예약 상세, 접수 상세, and appointment-to-reception creation use a 380px overlay anchored to the calendar's right edge, below the toolbar. Narrow calendars cap the drawer at their available width.
+- The drawer enters from right to left and exits to the right. Opening it preserves calendar width and scroll; switching cards or completing creation replaces the content without replaying the entrance.
+- Keep the queue and toolbar interactive, without a blocking backdrop. Closing removes the drawer from keyboard interaction; reduced motion skips translation.
+- Preserve existing forms, API writes, URL restoration, and draft-card cleanup. Staff, patient, and guardian profiles keep their existing panel presentation.
+- The older fixed right-column presentation below is historical for these five reception drawer types. See [detail drawer work item](../../../../work/reception/RECEPTION-QA-PR-005-detail-edit-drawer.md) for local verification.
+
+
 These notes capture the current requested direction for the reception screen visual alignment. They are not a completion claim and do not replace the active work-item gate for implementation.
 
 ## Scope Boundary

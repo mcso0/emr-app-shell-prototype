@@ -146,10 +146,10 @@ export function WorkspaceFrame({
         const hasRightPanel =
           hasCommonProfileRightPanel || hasFeatureRightPanel || hasModuleRightPanel;
         const contentAsideVisible = hasContentAside && contentAsideOpen;
+        const receptionCalendarDrawer = moduleDefinition.id === "reception" && isReceptionDrawer;
         const rightPanelVisible =
           hasCommonProfileRightPanel ||
-          hasFeatureRightPanel ||
-          (hasModuleRightPanel && rightPanelOpen);
+          (!receptionCalendarDrawer && (hasFeatureRightPanel || (hasModuleRightPanel && rightPanelOpen)));
         const rightPanelGap = rightPanelVisible
             ? hasCommonProfileRightPanel || hasFeatureRightPanel
             ? (activeDrawer?.rightPanelPresentation?.gap ?? SHELL_LAYOUT.shell.gap)
@@ -260,7 +260,7 @@ export function WorkspaceFrame({
                   ) : (
                     <GuardianProfileDrawer guardianId={activeDrawer.id} />
                   )
-                ) : hasFeatureRightPanel ? (
+                ) : hasFeatureRightPanel && !receptionCalendarDrawer ? (
                   <ReceptionRightPanel {...slotProps} />
                 ) : RightPanel && rightPanelVisible ? (
                   <RightPanel {...slotProps} />
