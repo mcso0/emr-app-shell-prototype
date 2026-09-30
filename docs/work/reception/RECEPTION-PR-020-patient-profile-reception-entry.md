@@ -15,7 +15,7 @@ source_docs:
 dependencies:
   - "RECEPTION-LIVE-PR-004"
   - "RECEPTION-LIVE-PR-006"
-updated: "2026-09-29"
+updated: "2026-09-20"
 ---
 
 # Patient-Profile Reception And Reservation Entry
@@ -38,7 +38,7 @@ position.
 - Show the created reception or reservation detail in the same panel after a
   successful write; preserve the form and draft after a failed write.
 - Keep profile-origin panel state transient so it does not replace the
-  URL-owned `profile=patient:<id>` selection or force module navigation.
+  URL-owned patient drawer or force module navigation.
 - Capture the workspace operating date when the profile action starts so a
   stale Reception selection cannot backdate a walk-in or reservation default.
 - After a successful write, align Reception state and the current URL to the
@@ -105,14 +105,12 @@ position.
   cases passed again on a fresh server; this broad-run caveat remains open for
   release-candidate verification.
 
-## 2026-09-29 Profile Overlay Compatibility
 
-- Patient/guardian/staff profiles now use a separate non-modal overlay host.
-  Reception details and reception/reservation creation remain side panels.
-- Starting a patient-profile task closes the overlay and retains its return
-  target/tab. Clean or confirmed cancellation reopens that profile tab; success
-  continues to show the business detail in the side panel.
-- Opening a staff profile while a reservation draft is already mounted does
-  not replace the business selection or reset input state.
-- API, permissions, persistence, operating-date, dirty-discard, and profile
-  preselection contracts are unchanged.
+## 2026-09-30 Profile Placement Restoration
+
+승욱 requested undoing PR #867/#872/#876 and restoring profiles to the original
+workspace right-panel slot. Profile-origin reception/reservation preselection,
+dirty-discard guards, operating-date behavior, create result, and return-tab
+contracts remain unchanged. CUSTOMER-PR-002 records the selective reversal;
+independent simultaneous profile/business-panel behavior is removed with the
+overlay task.

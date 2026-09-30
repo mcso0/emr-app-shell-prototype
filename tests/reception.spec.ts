@@ -2335,7 +2335,7 @@ test("profile drawer follows the CDS V2 geometry and keyboard contract", async (
     "/w/clair-demo/reception?drawer=reception-patient:patient-coco",
   );
 
-  const rightPanel = page.getByTestId("workspace-profile-drawer");
+  const rightPanel = page.getByTestId("workspace-right-panel");
   const mainContent = page.getByTestId("workspace-main-content");
   const panel = page.getByTestId("profile-side-panel");
   const [rightPanelBox, mainContentBox, panelBox, headerBox] = await Promise.all([
@@ -2350,12 +2350,11 @@ test("profile drawer follows the CDS V2 geometry and keyboard contract", async (
   expect(panelBox).not.toBeNull();
   expect(headerBox).not.toBeNull();
   expect(rightPanelBox?.width).toBe(380);
-  expect(panelBox?.width).toBe(379);
-  expect(panelBox?.height).toBe(1169);
+  expect(panelBox?.width).toBe(378);
+  expect(panelBox?.height).toBe(1105);
   expect(panelBox?.x).toBe(rightPanelBox!.x + 1);
-  expect(panelBox?.y).toBe(rightPanelBox!.y);
-  expect(rightPanelBox!.x + rightPanelBox!.width).toBe(1440);
-  expect(mainContentBox!.x + mainContentBox!.width).toBeGreaterThan(rightPanelBox!.x);
+  expect(panelBox?.y).toBe(rightPanelBox!.y + 1);
+  expect(rightPanelBox!.x - (mainContentBox!.x + mainContentBox!.width)).toBe(10);
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
   expect(headerBox?.height).toBe(151);
   await expect

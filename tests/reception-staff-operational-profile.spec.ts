@@ -135,7 +135,6 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
 }) => {
   await mockStaffProfileApis(page);
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
-  const originalContentWidth = (await page.getByTestId("workspace-main-content").boundingBox())!.width;
   const { trigger } = await openStaffProfile(page);
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
@@ -203,21 +202,19 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   await expect(page.locator('[data-slot="sheet-overlay"]')).toHaveCount(0);
   await expect(
     page.getByRole("dialog", { name: "직원 운영 프로필" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
 
   const contentBox = await page
     .getByTestId("workspace-main-content")
     .boundingBox();
   const panelBox = await page
-    .getByTestId("workspace-profile-drawer")
+    .getByTestId("workspace-right-panel")
     .boundingBox();
   expect(contentBox).not.toBeNull();
   expect(panelBox).not.toBeNull();
   expect(panelBox!.width).toBeCloseTo(380, 0);
-  expect(contentBox!.width).toBeCloseTo(originalContentWidth, 0);
-  const frameBox = (await page.locator("main.emr-workspace-frame-responsive").boundingBox())!;
-  expect(panelBox!.x + panelBox!.width).toBeCloseTo(frameBox.x + frameBox.width - 1, 0);
-  await expect(page.getByTestId("workspace-profile-drawer")).toHaveCSS(
+  expect(panelBox!.x - (contentBox!.x + contentBox!.width)).toBeCloseTo(10, 0);
+  await expect(page.getByTestId("workspace-right-panel")).toHaveCSS(
     "backdrop-filter",
     "none",
   );
@@ -591,7 +588,7 @@ test("staff profile panel keeps loading, error, retry, and offline states distin
   await expect(drawer).not.toContainText("예약 진료");
 });
 
-test("touch viewport keeps the lane action visible and fits the profile within the workspace body", async ({
+test("touch viewport keeps the lane action visible and uses a full-width panel", async ({
   page,
 }) => {
   await mockStaffProfileApis(page);
@@ -607,18 +604,14 @@ test("touch viewport keeps the lane action visible and fits the profile within t
   await trigger.click();
   await page.getByRole("menuitem", { name: "운영 프로필 보기" }).click();
 
-  const drawer = page.getByTestId("workspace-profile-drawer");
-  await expect.poll(async () => {
-    const frame = await page.locator("main.emr-workspace-frame-responsive").boundingBox();
-    const box = await drawer.boundingBox();
-    if (!frame || !box) return Infinity;
-    return Math.max(
-      Math.abs(box.x - frame.x - 1),
-      Math.abs(box.y - frame.y - 1),
-      Math.abs(box.width - Math.min(380, frame.width - 2)),
-      Math.abs(box.height - frame.height + 2),
-    );
-  }).toBeLessThanOrEqual(1);
+  const drawer = page.getByRole("region", { name: "직원 운영 프로필" });
+  await expect
+    .poll(async () => (await drawer.boundingBox())?.x ?? 999)
+    .toBeLessThanOrEqual(1);
+  const box = await drawer.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeLessThanOrEqual(1);
+  expect(box!.width).toBeGreaterThanOrEqual(389);
 });
 
 test("staff profile reflows at a 200 percent zoom equivalent without hiding long content or self actions", async ({
@@ -659,10 +652,6 @@ test("staff profile reflows at a 200 percent zoom equivalent without hiding long
   await openStaffProfile(page);
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
-  await expect.poll(async () => {
-    const box = await panel.boundingBox();
-    return box ? box.x + box.width : Infinity;
-  }).toBeLessThanOrEqual(640);
   const panelBox = await panel.boundingBox();
   expect(panelBox).not.toBeNull();
   expect(panelBox!.x).toBeGreaterThanOrEqual(0);
