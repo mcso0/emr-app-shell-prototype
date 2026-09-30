@@ -210,6 +210,10 @@ export function WorkspaceStaffPresenceReporter({
     const client = supabase;
     let disposed = false;
     let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+    const stopHeartbeat = () => {
+      if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
+      heartbeatTimer = undefined;
+    };
     let channel: ReturnType<typeof client.channel> | null = null;
 
     async function start() {
@@ -247,11 +251,13 @@ export function WorkspaceStaffPresenceReporter({
         );
 
       channel.subscribe((status) => {
+        if (disposed) return;
         if (
           status === "CHANNEL_ERROR" ||
           status === "TIMED_OUT" ||
           status === "CLOSED"
         ) {
+          stopHeartbeat();
           clearWorkspaceStaffPresenceState(workspaceId);
           return;
         }
@@ -261,9 +267,8 @@ export function WorkspaceStaffPresenceReporter({
           userId: session.user.id,
           onlineAt: new Date().toISOString(),
         });
+        stopHeartbeat();
         void touchActivity();
-
-        if (heartbeatTimer) clearInterval(heartbeatTimer);
         heartbeatTimer = setInterval(() => {
           void touchActivity();
         }, HEARTBEAT_INTERVAL_MS);
@@ -274,7 +279,7 @@ export function WorkspaceStaffPresenceReporter({
 
     return () => {
       disposed = true;
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      stopHeartbeat();
       clearWorkspaceStaffPresenceState(workspaceId);
       if (channel) {
         void channel.untrack();

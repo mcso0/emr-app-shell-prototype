@@ -102,3 +102,40 @@ advisor findings, and verify the released version against Supabase and Vercel.
   logs for the same linked project now provide route/status evidence instead.
 - Commit, PR, exact production approval, merge, deployment, and post-deploy
   notification/staff/database deltas remain pending.
+
+
+## Frontend idle refresh follow-up — 2026-09-30
+
+승욱 approved the small frontend fixes after a read-only Supabase-request caller
+investigation, then authorized release preparation and deployment once tests pass.
+The exact-candidate Production approval gate still applies. This follow-up does
+not authorize DB/RLS, billing/settings/data changes, bounded notification RPC
+redesign, or multi-tab leader election.
+
+- Reception staff polling runs only while visible, with focus/visibility-return
+  revalidation. The existing 30-second successful-read freshness check and
+  same-scope in-flight sharing remain in place. Hidden initial mounts wait for
+  visible return; the visible 60-second interval is unchanged.
+- Notification startup/focus/visibility/30-second polling shares only a pending
+  snapshot read within the current effect's actor/workspace scope. Mutation reload
+  keys still abort/invalidate the old snapshot and start a post-mutation read.
+  Unmount/scope changes remove listeners/timers and abort the old request.
+- Chart startup/focus/visibility reads share a pending read and retain the unsaved
+  draft/save guards. Mutation and private Realtime invalidations still invoke the
+  authoritative reader separately; its existing sequence rejects stale results.
+- Presence channel failure, timeout and close stop the activity timer. Subscribe
+  success tracks Presence and immediately touches activity, then restarts one
+  60-second timer. Disposed callbacks cannot restart it. Presence is not paused
+  merely because a tab is hidden, and DB actor/membership checks remain unchanged.
+
+Local fake-timer/mock verification uses
+`npx vitest run --config vitest.frontend-refresh.config.ts` without a web server,
+authenticated session, env files or hosted Supabase. Existing Presence,
+notification persistence and chart private Realtime contract tests run with a
+server-free Playwright config. Full local release checks and exact Preview/CI
+results are recorded in the PR approval packet; Production is pending that gate.
+
+Expected savings: hidden reception staff interval calls stop (nominally 60 calls
+per hidden tab-hour), overlapping automatic reads collapse to one pending request,
+and disconnected Presence no longer keeps issuing activity RPCs. Real byte/egress
+savings, client attribution and deployed runtime behavior remain unmeasured.

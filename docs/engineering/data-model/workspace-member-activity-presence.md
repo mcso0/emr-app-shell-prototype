@@ -66,6 +66,9 @@ public.workspace_member_activity (
 - actor는 자신 행만 upsert할 수 있고 대상 user ID를 인자로 받지 않는다.
 - 마지막 accepted write 이후 60초 이내 호출은 timestamp를 변경하지 않고 기존 값을 반환한다.
 - client는 Presence subscribe 직후 한 번, 이후 연결 유지 중 60초 간격으로 호출한다. Supabase `rpc()` 반환값은 lazy thenable이므로 reporter는 각 호출을 반드시 `await`해 실제 네트워크 요청을 시작한다.
+- channel failure/timeout/close는 activity timer를 중지한다. 재구독 성공 시
+  즉시 한 번 기록하고 단일 60초 timer를 다시 시작한다. unmount 후 status
+  callback은 timer나 Presence tracking을 다시 시작할 수 없다.
 - disconnect/unload write에 의존하지 않는다.
 
 직접 table write grant는 없고 authenticated에는 RLS가 적용된 SELECT만 허용한다.

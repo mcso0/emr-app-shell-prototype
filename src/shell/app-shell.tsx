@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -207,30 +208,20 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }, [hydrateAuth]);
 
   useEffect(() => {
-    if (!authHydrated || authSession?.role !== "supabase") return;
-    const refresh = () => { if (document.visibilityState === "visible") setNotificationReloadKey(key => key + 1); };
-    const timer = window.setInterval(refresh, 30_000);
-    window.addEventListener("focus", refresh);
-    return () => { window.clearInterval(timer); window.removeEventListener("focus", refresh); };
-  }, [authHydrated, authSession?.role, workspaceId]);
-
-  useEffect(() => {
     if (!authHydrated) return;
 
     const controller = new AbortController();
     let cancelled = false;
 
-    void Promise.resolve().then(() => {
-      if (cancelled) return null;
+    const refresh = coalescePendingRefresh(async () => {
+      if (cancelled) return;
       setNotificationRequestState((state) => (state === "ready" ? "ready" : "loading"));
 
-      return fetchLiveNotificationSnapshot({
+      const result = await fetchLiveNotificationSnapshot({
         actorHeaders,
         signal: controller.signal,
         workspaceId,
       });
-    }).then((result) => {
-      if (!result) return;
       if (cancelled) return;
 
       if (result.ok) {
@@ -252,11 +243,18 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       );
     });
 
+    // Do not start a request from an effect already cleaned up by Strict Mode.
+    void Promise.resolve().then(() => { if (!cancelled) void refresh(); });
+    const unsubscribe = authSession?.role === "supabase"
+      ? subscribeVisibleRefresh({ intervalMs: 30_000, onRefresh: () => { void refresh(); } })
+      : undefined;
+
     return () => {
       cancelled = true;
+      unsubscribe?.();
       controller.abort();
     };
-  }, [actorHeaders, authHydrated, authSession?.id, notificationReloadKey, workspaceId]);
+  }, [actorHeaders, authHydrated, authSession?.id, authSession?.role, notificationReloadKey, workspaceId]);
 
   useEffect(() => {
     if (tabsInitializedRef.current === workspaceId) return;

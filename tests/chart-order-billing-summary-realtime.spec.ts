@@ -228,5 +228,18 @@ test("chart consumes private invalidations through the existing authoritative GE
   expect(realtimeSource).not.toMatch(/\.send\s*\(/);
   expect(chartSource).toContain("useChartBillingSummaryRealtime({");
   expect(chartSource).toContain("onInvalidated: refreshBillingSummary");
-  expect(chartSource).toContain('window.addEventListener("focus", refreshIfSafe)');
+  const automaticEffect = chartSource.slice(
+    chartSource.indexOf("const refreshAutomatically = coalescePendingRefresh(refreshBillingSummary)"),
+    chartSource.indexOf("const savePrebillingOverride"),
+  );
+  expect(automaticEffect).toContain("subscribeVisibleRefresh({");
+  expect(automaticEffect).toContain("draftTouchedRef.current");
+  expect(automaticEffect).toContain("orderDraftSaveInFlightRef.current");
+  expect(automaticEffect).toContain("orderDraftSavePromiseRef.current");
+  expect(automaticEffect).toContain("void refreshAutomatically()");
+  expect(automaticEffect).toContain("unsubscribe()");
+  const refreshSource = readFileSync("src/lib/visible-refresh.ts", "utf8");
+  expect(refreshSource).toContain('window.addEventListener("focus", resume)');
+  expect(refreshSource).toContain('document.addEventListener("visibilitychange", resume)');
+  expect(refreshSource).toContain('document.visibilityState === "visible"');
 });
