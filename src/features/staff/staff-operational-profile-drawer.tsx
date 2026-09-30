@@ -4,14 +4,12 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ComponentType,
-  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { CdsActionsCopyIcon, CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsActionsCopyIcon } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsCommunicationMailIcon,
   CdsCommunicationPhoneIcon,
@@ -20,8 +18,7 @@ import { CdsMedicalStethoscopeIcon } from "@/components/cds-icons/medical-and-do
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tab, TabGroup, TabPanel, TabsList } from "@/components/ui/tabs";
+import { EmrProfileIdentity, EmrProfilePanel, EmrProfilePanelBody, EmrProfilePanelLoading, EmrProfilePanelState, EmrProfileTabPanel } from "@/components/emr/profile-panel";
 import { PERSONAL_PROFILE_STORAGE_EVENT, PERSONAL_PROFILE_CHANGED_KEY, notifyPersonalProfileChanged } from "@/features/auth/personal-profile-session";
 import {
   EditableProfileAvatar,
@@ -121,7 +118,6 @@ export function StaffOperationalProfilePanel({
   workspaceId: string;
 }) {
   const router = useRouter();
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [activeTab, setActiveTab] = useState<"profile" | "work" | "schedule">("profile");
   const [loadResult, setLoadResult] = useState<{
     key: string;
@@ -178,16 +174,6 @@ export function StaffOperationalProfilePanel({
       ? loadResult.response
       : null;
 
-  useEffect(() => {
-    closeButtonRef.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -435,102 +421,48 @@ export function StaffOperationalProfilePanel({
   }, [actorUserId, requestKey, response, workspaceId]);
 
   return (
-    <section
+    <EmrProfilePanel
       aria-label="직원 운영 프로필"
-      className="h-full min-h-0 overflow-x-hidden overscroll-x-none touch-pan-y bg-[var(--emr-surface-rightpanel)]"
       data-testid="staff-operational-profile-panel"
+      closeLabel="직원 운영 프로필 닫기"
+      onClose={onClose}
+      loading={requestState === "loading"}
+      value={activeTab}
+      tabsLabel="직원 프로필 탭"
+      tabs={[
+        { value: "profile", label: "프로필" },
+        { value: "work", label: "업무현황" },
+        { value: "schedule", label: "일정" },
+      ]}
+      onTabChange={(value) => {
+        const nextTab = value === "work" ? "work" : value === "schedule" ? "schedule" : "profile";
+        setActiveTab(nextTab);
+        if (nextTab === "work" && workRead.state === "idle") void loadWorkPage(null, false);
+      }}
+      headerActions={profile && response ? <ProfileHeaderActionMenu
+        canManageMember={response.capabilities.canManageMember}
+        canViewSchedule={Boolean(response.capabilities.scheduleHref)}
+        hasContact={Boolean(profile.email || profile.phone)}
+        onCopyContact={() => void copyContact(profile)}
+        onManageMember={() => navigate(response.capabilities.manageMemberHref)}
+        onOpenSchedule={() => navigate(response.capabilities.scheduleHref)}
+      /> : null}
+      identity={profile ? <ProfileHeader
+        canEditAvatar={response?.capabilities.canEditAvatar ?? false}
+        canEditStatusMessage={response?.capabilities.canEditStatusMessage ?? false}
+        onRemoveAvatar={removeAvatar}
+        onSaveStatusMessage={saveStatusMessage}
+        onUploadAvatar={uploadAvatar}
+        presence={presence}
+        profile={profile}
+      /> : <EmrProfileIdentity avatar={<div className="size-full rounded-md bg-[var(--emr-surface-muted)]" />} name="직원 프로필" />}
     >
-      <TabGroup
-        value={activeTab}
-        className="h-full min-h-0 gap-0"
-        onValueChange={(value) => {
-          const nextTab = value === "work" ? "work" : value === "schedule" ? "schedule" : "profile";
-          setActiveTab(nextTab);
-          if (nextTab === "work" && workRead.state === "idle") {
-            void loadWorkPage(null, false);
-          }
-        }}
-      >
-        <header className="relative h-[var(--emr-profile-header-height)] shrink-0 border-b border-[var(--emr-border-default)] px-4 pt-4">
-          {profile ? (
-            <ProfileHeader
-              actions={
-                <>
-                  {response ? (
-                    <ProfileHeaderActionMenu
-                      canManageMember={response.capabilities.canManageMember}
-                      canViewSchedule={Boolean(response.capabilities.scheduleHref)}
-                      hasContact={Boolean(profile.email || profile.phone)}
-                      onCopyContact={() => void copyContact(profile)}
-                      onManageMember={() => navigate(response.capabilities.manageMemberHref)}
-                      onOpenSchedule={() => navigate(response.capabilities.scheduleHref)}
-                    />
-                  ) : null}
-                  <Button
-                    ref={closeButtonRef}
-                    type="button"
-                    aria-label="직원 운영 프로필 닫기"
-                    size="icon-sm"
-                    variant="ghost"
-                    onClick={onClose}
-                  >
-                    <CdsActionsXIcon aria-hidden="true" size={16} />
-                  </Button>
-                </>
-              }
-              canEditAvatar={response?.capabilities.canEditAvatar ?? false}
-              canEditStatusMessage={
-                response?.capabilities.canEditStatusMessage ?? false
-              }
-              onRemoveAvatar={removeAvatar}
-              onSaveStatusMessage={saveStatusMessage}
-              onUploadAvatar={uploadAvatar}
-              presence={presence}
-              profile={profile}
-            />
-          ) : (
-            <ProfileHeaderSkeleton
-              action={
-                <Button
-                  ref={closeButtonRef}
-                  type="button"
-                  aria-label="직원 운영 프로필 닫기"
-                  size="icon-sm"
-                  variant="ghost"
-                  onClick={onClose}
-                >
-                  <CdsActionsXIcon aria-hidden="true" size={16} />
-                </Button>
-              }
-            />
-          )}
-          <TabsList
-            activateOnFocus
-            aria-label="직원 프로필 탭"
-            className="absolute bottom-0 left-4 h-[34px] w-[175px] gap-2 p-0"
-            variant="line"
-          >
-            <Tab className="h-7 w-[53px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="profile">프로필</Tab>
-            <Tab className="h-7 w-[65px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="work">업무현황</Tab>
-            <Tab className="h-7 w-[41px] flex-none self-start px-0 after:bottom-[-6px] after:h-px" value="schedule">일정</Tab>
-          </TabsList>
-        </header>
-
-        <TabPanel className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4" value="profile">
+      <EmrProfileTabPanel value="profile">
+        <EmrProfilePanelBody className="p-4">
           {requestState === "loading" ? (
-            <ProfileLoadingState />
+            <EmrProfilePanelLoading label="직원 운영 프로필 불러오는 중" testId="staff-operational-profile-loading" />
           ) : requestState === "error" ? (
-            <EmrInlineAlert
-              severity="error"
-              title="운영 프로필을 불러오지 못했어요"
-              action={
-                <Button type="button" size="sm" variant="outline" onClick={loadProfile}>
-                  다시 시도
-                </Button>
-              }
-            >
-              직원 정보 원본을 확인할 수 없어요. 잠시 후 다시 시도해 주세요.
-            </EmrInlineAlert>
+            <EmrProfilePanelState state="error" label="운영 프로필을 불러오지 못했어요" onRetry={loadProfile} />
           ) : profile && response ? (
             <div className="grid gap-4">
               <TodayShiftSection
@@ -569,9 +501,11 @@ export function StaffOperationalProfilePanel({
               </section>
             </div>
           ) : null}
-        </TabPanel>
+        </EmrProfilePanelBody>
+      </EmrProfileTabPanel>
 
-        <TabPanel className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4" value="work">
+      <EmrProfileTabPanel value="work">
+        <EmrProfilePanelBody className="p-4">
           <ProfileWorkStatusTab
             groups={workGroups}
             hasNextPage={Boolean(workRead.nextCursor)}
@@ -595,9 +529,11 @@ export function StaffOperationalProfilePanel({
               void loadWorkPage(workRead.nextCursor, true)
             }
           />
-        </TabPanel>
+        </EmrProfilePanelBody>
+      </EmrProfileTabPanel>
 
-        <TabPanel className="min-h-0 overflow-x-hidden overflow-y-auto overscroll-x-none touch-pan-y p-4" value="schedule">
+      <EmrProfileTabPanel value="schedule">
+        <EmrProfilePanelBody className="p-4">
           <ScheduleNavigationSection
             onOpenSchedule={
               response?.capabilities.scheduleHref
@@ -605,8 +541,8 @@ export function StaffOperationalProfilePanel({
                 : undefined
             }
           />
-        </TabPanel>
-      </TabGroup>
+        </EmrProfilePanelBody>
+      </EmrProfileTabPanel>
 
       <WorkNavigationDialog
         item={navigationItem}
@@ -617,12 +553,11 @@ export function StaffOperationalProfilePanel({
         }}
         onOpenChange={(open) => !open && setNavigationItem(null)}
       />
-    </section>
+    </EmrProfilePanel>
   );
 }
 
 function ProfileHeader({
-  actions,
   canEditAvatar,
   canEditStatusMessage,
   onRemoveAvatar,
@@ -631,7 +566,6 @@ function ProfileHeader({
   presence,
   profile,
 }: {
-  actions: ReactNode;
   canEditAvatar: boolean;
   canEditStatusMessage: boolean;
   onRemoveAvatar: () => Promise<void>;
@@ -644,41 +578,38 @@ function ProfileHeader({
   profile: StaffOperationalProfile;
 }) {
   return (
-    <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
-      <EditableProfileAvatar
-        alt={profile.displayName}
-        editable={canEditAvatar}
-        initials={profile.initials ?? profile.displayName.slice(0, 2)}
-        onRemove={onRemoveAvatar}
-        onUpload={onUploadAvatar}
-        src={profile.avatarUrl}
-      />
-      <div className="flex h-[var(--emr-profile-avatar-size)] min-w-0 flex-1 flex-col gap-1">
-        <div className="flex h-7 min-w-0 items-center gap-2 px-1.5">
-          <h2 className="min-w-0 truncate text-xl leading-7 font-semibold tracking-[-0.015em] text-[var(--emr-text-primary)]">
-            {profile.displayName}
-          </h2>
-          <PresenceBadge state={presence} />
-        </div>
-        <div className="h-[var(--emr-profile-status-control-height)]">
+    <EmrProfileIdentity
+      avatar={
+        <EditableProfileAvatar
+          alt={profile.displayName}
+          editable={canEditAvatar}
+          initials={profile.initials ?? profile.displayName.slice(0, 2)}
+          onRemove={onRemoveAvatar}
+          onUpload={onUploadAvatar}
+          src={profile.avatarUrl}
+        />
+      }
+      name={profile.displayName}
+      badge={<PresenceBadge state={presence} />}
+      description={
+        <div className="-ml-1.5 min-w-0 flex-1">
           <StatusMessageEditor
             editable={canEditStatusMessage}
             onSave={onSaveStatusMessage}
             value={profile.statusMessage ?? ""}
           />
         </div>
-        <p className="flex h-5 min-w-0 items-center gap-1 truncate px-1.5 text-sm font-medium tracking-[0.014em] text-[var(--emr-text-placeholder)]">
+      }
+      detail={
+        <p className="flex min-w-0 items-center gap-1 truncate">
           <span className="shrink-0">최근 접속</span>
-          <span aria-hidden="true" className="shrink-0">·</span>
+          <span aria-hidden="true">·</span>
           <span className="truncate">
             {formatProfileLastSeenDetail(presence, profile.lastSeenAt)}
           </span>
         </p>
-      </div>
-      <div className="absolute -top-1.5 -right-1.5 flex items-start gap-2">
-        {actions}
-      </div>
-    </div>
+      }
+    />
   );
 }
 
@@ -707,42 +638,6 @@ type AvatarFinalizeResponse =
 type AvatarRemoveResponse =
   | { ok: true; avatarUrl: null }
   | { ok: false; error?: string; denialReason?: string };
-
-function ProfileHeaderSkeleton({ action }: { action: ReactNode }) {
-  return (
-    <div className="relative flex h-[var(--emr-profile-avatar-size)] items-start gap-2.5">
-      <Skeleton className="size-[var(--emr-profile-avatar-size)] shrink-0 rounded-md" />
-      <div className="min-w-0 flex-1 space-y-1 px-1.5 pt-1">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-7 w-full" />
-        <Skeleton className="h-5 w-24" />
-      </div>
-      <div className="absolute -top-1.5 -right-1.5 flex items-start">
-        {action}
-      </div>
-    </div>
-  );
-}
-
-function ProfileLoadingState() {
-  return (
-    <div
-      aria-live="polite"
-      className="space-y-4"
-      data-testid="staff-operational-profile-loading"
-    >
-      <span className="sr-only">직원 운영 프로필 불러오는 중</span>
-      <Skeleton className="h-8 w-24" />
-      <Skeleton className="h-[70px] w-full rounded-xl" />
-      <Skeleton className="h-px w-full" />
-      <Skeleton className="h-8 w-20" />
-      <Skeleton className="h-32 w-full rounded-xl" />
-      <Skeleton className="h-px w-full" />
-      <Skeleton className="h-8 w-24" />
-      <Skeleton className="h-[70px] w-full rounded-xl" />
-    </div>
-  );
-}
 
 function SectionTitle({ children, id }: { children: string; id: string }) {
   return (
@@ -873,13 +768,13 @@ function ScheduleNavigationSection({
   return (
     <section aria-labelledby="staff-schedule-heading" className="px-2">
       <SectionTitle id="staff-schedule-heading">일정</SectionTitle>
-      <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4">
-        <p className="text-sm text-[var(--emr-text-tertiary)]">
-          {onOpenSchedule
-            ? "근무 일정은 일정 화면에서 확인할 수 있어요"
-            : "표시할 일정이 없어요"}
-        </p>
-        {onOpenSchedule ? (
+      {!onOpenSchedule ? (
+        <EmrProfilePanelState state="empty" label="표시할 일정이 없어요" />
+      ) : (
+        <div className="mt-3 flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] px-4">
+          <p className="text-sm text-[var(--emr-text-tertiary)]">
+            근무 일정은 일정 화면에서 확인할 수 있어요
+          </p>
           <Button
             type="button"
             size="xs"
@@ -889,8 +784,8 @@ function ScheduleNavigationSection({
           >
             일정 확인
           </Button>
-        ) : null}
-      </div>
+        </div>
+      )}
     </section>
   );
 }

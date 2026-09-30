@@ -2356,7 +2356,7 @@ test("profile drawer follows the CDS V2 geometry and keyboard contract", async (
   expect(panelBox?.y).toBe(rightPanelBox!.y + 1);
   expect(rightPanelBox!.x - (mainContentBox!.x + mainContentBox!.width)).toBe(10);
   await expect(page.getByTestId("workspace-drawer")).toHaveCount(0);
-  expect(headerBox?.height).toBe(151);
+  expect(headerBox?.height).toBe(150);
   await expect
     .poll(() =>
       page.evaluate(() =>

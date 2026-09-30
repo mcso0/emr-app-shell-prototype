@@ -14,7 +14,7 @@ tags:
   - workspace-membership
   - fulfillment
 created: 2026-07-14
-last_updated: 2026-07-20
+last_updated: 2026-09-30
 ---
 
 # Staff Operational Profile Side Panel V2
@@ -68,7 +68,7 @@ metadata, or inferred clinical competence.
 | avatar             | `84px` square, 6px radius, cover crop; compose locally instead of adding a global Avatar size                                        |
 | presence           | `20px` badge with dot and text for online, offline, or unknown                                                                       |
 | status message     | `28px` high; default/hover width `173px`; editable input/result remain bounded by the existing `217px` feature-local width           |
-| tabs               | three Base UI line tabs: 53px `프로필`, 65px `업무현황`, and 41px `일정`, with 8px gaps, 34px group height, and 1px active underline |
+| tabs               | three Base UI line tabs with content-sized widths, 8px horizontal padding, 8px gaps, 28px triggers, 34px group height, and 1px active underline |
 | content            | 16px horizontal padding, internal vertical scroll, section spacing from approved design tokens                                       |
 | avatar action menu | `180px` wide; upload group, separator, remove group                                                                                  |
 | header action menu | `196px` wide; permission-gated member-management entries                                                                             |
@@ -77,6 +77,28 @@ metadata, or inferred clinical competence.
 Use existing `--clair-*` tokens and semantic `--emr-*` aliases. Profile-specific
 aliases, when needed, belong in `emr-foundation.css`; never edit generated
 `clair.css`. Raw color values are not part of the component contract.
+
+## Shared Patient, Guardian, And User Presentation
+
+The approved 2026-09-30 unification uses `src/components/emr/profile-panel.tsx`
+for patient, guardian, and staff/user profiles. Features supply identity slots,
+permission-aware tab definitions, and their existing content. The common layer
+owns the 150px header, 84px avatar slot, 44px close target, Base UI line tabs,
+identity/body loading skeletons, tab-level error/retry and empty/denied states,
+and one vertical ScrollArea viewport per active tab. The viewport explicitly
+sets `overflowX: hidden`, horizontal overscroll containment, and `touchAction:
+pan-y`; wrapper clipping alone is insufficient for the Base UI viewport.
+
+Staff retains three tabs and patient/guardian retains four. Status/avatar edits,
+reception/reservation entry, relationship navigation, section-specific empty
+meaning, API projections, pagination, permissions, and persistence stay with
+feature owners. Section alerts may remain alongside successful section data.
+
+The workspace layout column remains 380px wide with a 10px content gap; its
+border leaves 378px for the shared profile. The shell owns enter/exit motion at
+160ms/120ms using the existing panel easing tokens, including reception. Reduced
+motion uses zero duration. Switching profile subjects retains the same column
+instead of replaying expansion. No independent Sheet or overlay is introduced.
 
 ## Open, Close, Focus, And Responsive Behavior
 

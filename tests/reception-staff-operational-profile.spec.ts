@@ -133,12 +133,15 @@ test("veterinarian lane menu shares filter state and protects the final lane", a
 test("staff profile panel is non-modal, detached, and returns focus after keyboard close", async ({
   page,
 }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await mockStaffProfileApis(page);
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
   const { trigger } = await openStaffProfile(page);
 
   const panel = page.getByRole("region", { name: "직원 운영 프로필" });
   await expect(panel).toBeVisible();
+  await expect(page.getByTestId("workspace-right-panel")).toHaveCSS("transition-duration", "0.16s");
+  await expect.poll(async () => (await panel.boundingBox())!.width).toBe(378);
   await expect
     .poll(() =>
       panel.evaluate((element) => {
@@ -177,10 +180,14 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
         scrollLeft: 0,
         touchAction: "pan-y",
       });
-    await activeTabPanel.hover();
+    const viewport = activeTabPanel.locator('[data-slot="scroll-area-viewport"]');
+    await expect(viewport).toHaveCount(1);
+    await expect(viewport).toHaveCSS("overflow-x", "hidden");
+    await expect(viewport).toHaveCSS("touch-action", "pan-y");
+    await viewport.hover();
     await page.mouse.wheel(120, 0);
     await expect
-      .poll(() => activeTabPanel.evaluate((element) => element.scrollLeft))
+      .poll(() => viewport.evaluate((element) => element.scrollLeft))
       .toBe(0);
   }
   await panel.getByRole("tab", { name: "프로필", exact: true }).click();
@@ -240,10 +247,12 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
   const scheduleTabBox = await panel
     .getByRole("tab", { name: "일정" })
     .boundingBox();
-  expect(tabListBox?.width).toBeCloseTo(175, 0);
-  expect(profileTabBox?.width).toBeCloseTo(53, 0);
-  expect(workTabBox?.width).toBeCloseTo(65, 0);
-  expect(scheduleTabBox?.width).toBeCloseTo(41, 0);
+  expect(tabListBox?.height).toBeCloseTo(34, 0);
+  expect(profileTabBox?.height).toBeCloseTo(28, 0);
+  expect(workTabBox?.height).toBeCloseTo(28, 0);
+  expect(scheduleTabBox?.height).toBeCloseTo(28, 0);
+  expect(workTabBox!.x - (profileTabBox!.x + profileTabBox!.width)).toBeCloseTo(8, 0);
+  await expect(panel.getByRole("button", { name: "직원 운영 프로필 닫기" })).toHaveCSS("width", "44px");
   expect(
     (await panel.getByRole("heading", { name: "오늘 근무 정보" }).boundingBox())
       ?.x,
@@ -267,6 +276,7 @@ test("staff profile panel is non-modal, detached, and returns focus after keyboa
 
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
+  await expect(page.getByTestId("workspace-right-panel")).toHaveCSS("transition-duration", "0.12s");
   await expect(trigger).toBeFocused();
 
   await trigger.click();
@@ -445,6 +455,12 @@ test("staff work tab keeps server order, merges cursor pages by hospital date, a
     name: "업무 화면으로 이동할까요?",
   });
   await expect(dialog).toContainText("합성 환자 · 합성 보호자 · 합성 CBC");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(panel).toBeVisible();
+  await panel.getByRole("button", { name: "합성 CBC 더보기" }).click();
+  await page.getByRole("menuitem", { name: "업무 보러가기" }).click();
+  await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "이동" }).click();
   await expect(page).toHaveURL(
     /\/w\/clair-demo\/lab\?encounterId=encounter-1&orderId=order-1&modulePanel=open/,
@@ -592,7 +608,7 @@ test("touch viewport keeps the lane action visible and uses a full-width panel",
   page,
 }) => {
   await mockStaffProfileApis(page);
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 360, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open&right=closed");
 
   const lane = page.getByTestId("veterinarian-lane-header").first();
@@ -611,7 +627,7 @@ test("touch viewport keeps the lane action visible and uses a full-width panel",
   const box = await drawer.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeLessThanOrEqual(1);
-  expect(box!.width).toBeGreaterThanOrEqual(389);
+  expect(box!.width).toBe(360);
 });
 
 test("staff profile reflows at a 200 percent zoom equivalent without hiding long content or self actions", async ({
@@ -670,6 +686,14 @@ test("staff profile reflows at a 200 percent zoom equivalent without hiding long
     name: "프로필 이미지 메뉴 열기",
   });
   await avatarMenuTrigger.focus();
+  await expect(avatarMenuTrigger).toBeFocused();
+  await avatarMenuTrigger.click();
+  await page.getByRole("menuitem", { name: "프로필 이미지 업로드" }).click();
+  const avatarDialog = page.getByRole("dialog", { name: "프로필 이미지 업로드" });
+  await expect(avatarDialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(avatarDialog).toBeHidden();
+  await expect(panel).toBeVisible();
   await expect(avatarMenuTrigger).toBeFocused();
   await avatarMenuTrigger.press("Enter");
   await expect(page.getByRole("menuitem")).toHaveCount(2);

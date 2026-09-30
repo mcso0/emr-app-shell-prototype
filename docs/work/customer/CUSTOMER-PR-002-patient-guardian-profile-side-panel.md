@@ -11,7 +11,7 @@ source_docs:
 dependencies:
   - "CUSTOMER-LIVE-PR-004"
   - "CUSTOMER-LIVE-PR-005"
-updated: "2026-07-24"
+updated: "2026-09-30"
 ---
 
 # Patient and Guardian Profile Side Panel
@@ -20,7 +20,7 @@ updated: "2026-07-24"
 
 Implement the CDS V2 patient and guardian profile right-side panel from Figma with a measured 380 x 1105 visual contract while preserving the existing profile read/edit and navigation behavior. Route the profiles through the same shared workspace right-panel slot as the staff profile so the panel reserves layout space instead of covering workspace content.
 
-## Scope
+## Original Figma Implementation Scope
 
 - Replace the duplicated shell and feature headers with the Figma-owned 151 px identity header and four-tab navigation.
 - Render patient and guardian information, linked identities, upcoming reservations, encounter history, and billing summaries from the existing mock/read-model graph.
@@ -38,7 +38,7 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
 - Production activity-tab read projections.
 - Shared design-system token changes, staff-profile content changes, or unrelated drawer placement changes.
 
-## Done Criteria
+## Original Figma Implementation Criteria
 
 - Patient and guardian drawers use a 380 px feature-owned panel with the Figma header, tabs, spacing, typography, radii, and colors.
 - Information, reservation, history, billing, filled, empty, long-content, edit, and keyboard-close paths are usable.
@@ -116,3 +116,79 @@ Implement the CDS V2 patient and guardian profile right-side panel from Figma wi
   Remote main/Production restoration is pending release authorization;
   exact candidate Release Check, Ready Preview, and authenticated Production
   smoke will be completed as part of an approved delivery.
+
+
+## 2026-09-30 Shared Profile Presentation
+
+승욱 approved the investigation and common-component plan, then explicitly
+requested implementation: “오케이 좋아. 수정에 들어가자.” This scope covers
+local implementation and non-destructive validation. Production delivery is
+not part of this approval.
+
+- Base: production source `0bca112ab30a88ca46edcd8a0ef76c8280534ea8`, after
+  the original right-side column was restored. Preserve the primary checkout
+  WIP; implement in `codex/profile-ui-unification` in an isolated worktree.
+- Patient/guardian `ProfileSidePanel` and `StaffOperationalProfileDrawer`
+  compose one presentation module, `src/components/emr/profile-panel.tsx`.
+  Share header geometry, close target, line tabs, loading skeletons,
+  tab feedback, vertical scrolling, and close/Escape focus handling.
+- Align the patient/guardian header from 151px to the shared 150px contract.
+  Replace profile-local neutral colors with existing semantic aliases.
+  Preserve patient/guardian type badges and staff Presence meaning.
+- Normalize profile motion in the shell to enter 160ms and exit 120ms with
+  existing panel easing; honor reduced motion and preserve the column during
+  patient/guardian switches.
+- Feature content, live/mock boundaries, API/RLS/role policy, lazy reads,
+  cursor pagination, status/avatar saves, relationship navigation, and
+  profile-origin reception/reservation draft/return contracts are unchanged.
+- Shared and feature Storybook specimens now use the production presentation.
+  The current shared presentation supersedes the earlier 151px header and
+  fixed staff-tab widths while retaining the historical pixel evidence.
+
+The historical pixel-comparison result above remains an older Figma-specific
+measurement; it is not a claim about this intentionally unified UI. The current
+shared contract is in [Staff Operational Profile Side Panel V2](../../design/system/staff-operational-profile-drawer.md#shared-patient-guardian-and-user-presentation).
+
+
+### Local Verification And Acceptance
+
+- 42 unique focused Playwright scenarios passed: the 34-scenario profile UI,
+  staff operational profile, patient profile-origin reception/reservation,
+  and avatar contract run, plus eight customer/reception/billing consumers.
+  Coverage includes normal/reduced motion, 360px layouts, 200% zoom equivalent,
+  permission-disabled tabs, overview/section lazy reads, error retry, missing
+  versus denied data, one actual vertical scroll viewport, dialog/editor Escape,
+  exact opener focus restoration, target switching, edits and dirty draft return.
+- 33 tests passed across shared profile, patient/guardian profile, staff header,
+  and staff full-panel/content Storybook files. Inspected the actual synthetic
+  patient, guardian and staff specimens in the local browser.
+- Targeted ESLint, TypeScript, Next production build, Storybook production build,
+  docs links, Korean UX copy, secret scan, and whitespace checks passed.
+- An additional chart consultation end-to-end scenario fails at the unchanged
+  `tests/chart.spec.ts:5633` assertion: expected five vital column headers,
+  received six. The exact same failure was reproduced on untouched base
+  `0bca112` in a temporary checkout, before profile assertions. Do not claim this
+  broad chart scenario passed, and do not change the unrelated vital table here.
+- Read-only final implementation review found no additional confirmed regression.
+  Local implementation and verification are complete. Human UI acceptance and
+  any production delivery remain pending; no commit, push, merge or deployment
+  was performed for this change.
+
+
+### Delivery Authorization
+
+After reviewing the completed local result, 승욱 explicitly authorized commit,
+push, PR creation, `origin/main` merge, and deployment: “수정 다했으면 커밋,
+푸시, 피알, 오리진-메인에 머지. 배포 승인”. Delivery covers the verified
+shared profile UI above, with no external-data, role-policy or database changes.
+Rebase onto current `origin/main` (`252bfb25`) while preserving PR #880's
+reception calendar drawer placement, then verify the resulting exact candidate.
+
+The release smoke covers `/login` and read-only synthetic/demo patient, guardian,
+and user profiles: common header/tabs/loading/scroll, open/close, and profile
+switching. Do not edit production patient/member data. The previous Ready
+Production rollback candidate is `dpl_EJjPQWVeYbFFU2s9VSuk9HayCT7C` from
+`252bfb25af3d6dd62dce3f62ef29400de6a1df46`. Merge only with exact-head
+protection after the manual Release Check and automatic Preview are verified.
+Stop on candidate drift, failed gates, unexpected Production source, or smoke
+failure; rollback mutations require separate authorization.

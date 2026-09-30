@@ -2,10 +2,9 @@
 
 import type { ReactNode } from "react";
 import { CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
-import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrRowActionMenu } from "@/components/emr/row-action-menu";
-import { EmrQueueLoadingState } from "@/components/emr/subpanel";
+import { EmrProfilePanelLoading, EmrProfilePanelState } from "@/components/emr/profile-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -204,40 +203,17 @@ export function ProfileWorkStatusTab({
   state: ProfileWorkStatusState;
 }) {
   if (state === "loading") {
-    return <EmrQueueLoadingState title="배정된 업무를 불러오는 중입니다" />;
+    return <EmrProfilePanelLoading label="배정된 업무를 불러오는 중입니다" />;
   }
 
   if (state === "empty") {
-    return (
-      <div className="flex min-h-[260px] items-center justify-center px-4">
-        <EmrEmptyState
-          kind="no-data"
-          size="md"
-          surface="queue"
-          title="배정된 업무가 없어요"
-          description="현재 이 구성원에게 배정된 업무가 없습니다."
-        />
-      </div>
-    );
+    return <EmrProfilePanelState state="empty" label="배정된 업무가 없어요" description="현재 이 구성원에게 배정된 업무가 없습니다." />;
   }
 
   if (state === "error") {
-    return (
-      <EmrInlineAlert
-        severity="error"
-        title="업무 현황을 불러오지 못했어요"
-        action={
-          onRetry ? (
-            <Button type="button" size="sm" variant="outline" onClick={onRetry}>
-              다시 시도
-            </Button>
-          ) : undefined
-        }
-      >
-        잠시 후 다시 확인해 주세요.
-      </EmrInlineAlert>
-    );
+    return <EmrProfilePanelState state="error" label="업무 현황을 불러오지 못했어요" description="잠시 후 다시 확인해 주세요." onRetry={onRetry} />;
   }
+
 
   return (
     <div className="grid gap-4">

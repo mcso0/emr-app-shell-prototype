@@ -1,16 +1,13 @@
 "use client";
 
 import {
-  useEffect,
   useId,
   useMemo,
-  useRef,
   useState,
-  type KeyboardEvent,
   type ReactNode,
 } from "react";
 
-import { CdsActionsPlusIcon, CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsCommunicationMailIcon,
   CdsCommunicationMessageSquareIcon,
@@ -19,7 +16,6 @@ import {
 import {
   CdsFilesCalendarIcon,
   CdsFilesClockIcon,
-  CdsFilesFileTextIcon,
 } from "@/components/cds-icons/files-and-layout";
 import {
   CdsMedicalFileUserIcon,
@@ -30,7 +26,6 @@ import {
 import {
   CdsNavigationChevronLeftIcon,
   CdsNavigationChevronRightIcon,
-  CdsNavigationSidebarIcon,
 } from "@/components/cds-icons/navigation";
 import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
@@ -42,7 +37,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EmrProfileIdentity, EmrProfilePanel, EmrProfilePanelBody, EmrProfilePanelState, EmrProfileTabPanel } from "@/components/emr/profile-panel";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Select,
@@ -54,7 +50,6 @@ import { cn } from "@/lib/utils";
 
 import styles from "./profile-side-panel.module.css";
 
-const PROFILE_SCROLL_VIEWPORT_STYLE = { overflowX: "hidden" } as const;
 const MESSAGE_ACTION_DISABLED_REASON = "문자/카톡 발송 기능은 아직 구현되지 않았습니다.";
 
 export type ProfileSidePanelTab = "info" | "history" | "reservations" | "billing";
@@ -308,161 +303,96 @@ function TypeBadge({ kind }: { kind: ProfileSidePanelModel["kind"] }) {
   );
 }
 
-function ProfileHeader({
-  activeTab,
+function ProfileIdentity({
   model,
-  onClose,
   onHeaderAction,
-  tabAccess,
-  onTabChange,
+  disabled,
 }: {
-  activeTab: ProfileSidePanelTab;
   model: ProfileSidePanelModel;
-  onClose: () => void;
   onHeaderAction: ProfileSidePanelProps["onHeaderAction"];
-  tabAccess?: ProfileSidePanelProps["tabAccess"];
-  onTabChange: (tab: ProfileSidePanelTab) => void;
+  disabled: boolean;
 }) {
-  const tabRefs = useRef<Partial<Record<ProfileSidePanelTab, HTMLButtonElement | null>>>({});
   const messageActionTooltipId = useId();
-  const firstLabel = model.kind === "patient" ? "환자 정보" : "보호자 정보";
-  const tabs = [
-    { label: firstLabel, value: "info" as const },
-    { label: "진료 이력", value: "history" as const },
-    { label: "예약", value: "reservations" as const },
-    { label: "수납", value: "billing" as const },
-  ];
-  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, tab: ProfileSidePanelTab) => {
-    const index = tabOrder.indexOf(tab);
-    let nextIndex: number | null = null;
-
-    if (event.key === "ArrowRight") nextIndex = (index + 1) % tabOrder.length;
-    if (event.key === "ArrowLeft") nextIndex = (index - 1 + tabOrder.length) % tabOrder.length;
-    if (event.key === "Home") nextIndex = 0;
-    if (event.key === "End") nextIndex = tabOrder.length - 1;
-    if (nextIndex === null) return;
-
-    event.preventDefault();
-    const nextTab = tabOrder[nextIndex];
-    onTabChange(nextTab);
-    tabRefs.current[nextTab]?.focus();
-  };
-
   return (
-    <header className={styles.header}>
-      <div className={styles.identity}>
-        {model.avatarSrc ? (
-          // The Figma reference includes an image avatar. Product callers keep
-          // this prop optional until Patient/Guardian gain an approved media source.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className={styles.avatar} src={model.avatarSrc} alt={model.avatarAlt} />
-        ) : (
-          <div className={styles.avatar} role="img" aria-label={`${model.avatarAlt} · 이미지 미등록`} />
-        )}
-        <div className={styles.identityBody}>
-          <div className={styles.identityCopy}>
-            <div className={styles.nameRow}>
-              <h2 className={styles.name}>{model.name}</h2>
-              <TypeBadge kind={model.kind} />
-            </div>
-            <div className={styles.metaRow}>
-              {model.meta.map((item, index) => (
-                <span key={`${item}-${index}`} className={styles.metaItem}>
-                  {index ? <span className={styles.metaSeparator}> · </span> : null}
-                  {item}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className={styles.headerActions}>
+    <EmrProfileIdentity
+      avatar={
+        <Avatar className="size-full" roundness="roundrect">
+          {model.avatarSrc ? (
+            <AvatarImage src={model.avatarSrc} alt={model.avatarAlt} />
+          ) : null}
+          <AvatarFallback aria-label={`${model.avatarAlt} · 이미지 미등록`}>
             {model.kind === "patient" ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <button type="button" className={styles.smallAction} />
-                  }
-                >
-                  <CdsActionsPlusIcon aria-hidden="true" />
-                  접수/예약
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-32">
-                  <DropdownMenuItem onClick={() => onHeaderAction("walk-in")}>
-                    접수하기
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onHeaderAction("reservation")}>
-                    예약하기
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-            <Tooltip>
-              <TooltipTrigger
+              <CdsMedicalPawPrintIcon aria-hidden="true" />
+            ) : (
+              <CdsPeopleUserIcon aria-hidden="true" />
+            )}
+          </AvatarFallback>
+        </Avatar>
+      }
+      name={model.name}
+      badge={<TypeBadge kind={model.kind} />}
+      description={
+        <span className="min-w-0 truncate">{model.meta.join(" · ")}</span>
+      }
+      detail={
+        <div className={styles.headerActions}>
+          {model.kind === "patient" ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
                 render={
-                  <span
-                    className={styles.disabledActionTrigger}
-                    data-testid="profile-message-action-trigger"
-                    tabIndex={0}
+                  <button
+                    type="button"
+                    className={styles.smallAction}
+                    disabled={disabled}
                   />
                 }
               >
-                <button
-                  type="button"
-                  aria-describedby={messageActionTooltipId}
-                  aria-label="카카오톡 발송"
-                  className={styles.smallAction}
-                  disabled
-                >
-                  <CdsCommunicationMessageSquareIcon aria-hidden="true" />
-                  문자/카톡
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                id={messageActionTooltipId}
-                role="tooltip"
-                side="bottom"
-                sideOffset={6}
-              >
-                {MESSAGE_ACTION_DISABLED_REASON}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-        <button type="button" aria-label="상세 닫기" className={styles.closeButton} onClick={onClose}>
-          <CdsNavigationSidebarIcon aria-hidden="true" />
-        </button>
-      </div>
-      <div className={styles.tabs} role="tablist" aria-label={`${firstLabel} 탭`}>
-        {tabs.map((tab) => {
-          const access = tabAccess?.[tab.value];
-          const disabledReason = access?.allowed === false
-            ? access.disabledReason ?? `${access.requiredPermission} 권한이 필요합니다`
-            : undefined;
-
-          return (
-            <button
-              key={tab.value}
-              ref={(node) => {
-                tabRefs.current[tab.value] = node;
-              }}
-              type="button"
-              id={`profile-tab-${tab.value}`}
-              role="tab"
-              aria-controls={`profile-tabpanel-${tab.value}`}
-              aria-selected={activeTab === tab.value}
-              aria-disabled={access?.allowed === false ? true : undefined}
-              aria-label={disabledReason ? `${tab.label}, ${disabledReason}` : undefined}
-              title={disabledReason}
-              className={styles.tab}
-              tabIndex={activeTab === tab.value ? 0 : -1}
-              onClick={() => onTabChange(tab.value)}
-              onKeyDown={(event) => onTabKeyDown(event, tab.value)}
+                <CdsActionsPlusIcon aria-hidden="true" />
+                접수/예약
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-32">
+                <DropdownMenuItem onClick={() => onHeaderAction("walk-in")}>
+                  접수하기
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onHeaderAction("reservation")}>
+                  예약하기
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  className={styles.disabledActionTrigger}
+                  data-testid="profile-message-action-trigger"
+                  tabIndex={0}
+                />
+              }
             >
-              <span className={styles.tabLabel}>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    </header>
+              <button
+                type="button"
+                aria-describedby={messageActionTooltipId}
+                aria-label="카카오톡 발송"
+                className={styles.smallAction}
+                disabled
+              >
+                <CdsCommunicationMessageSquareIcon aria-hidden="true" />
+                문자/카톡
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              id={messageActionTooltipId}
+              role="tooltip"
+              side="bottom"
+              sideOffset={6}
+            >
+              {MESSAGE_ACTION_DISABLED_REASON}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      }
+    />
   );
 }
 
@@ -567,21 +497,17 @@ function InformationTab({
           : "프로필 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
 
     return (
-      <ScrollArea
+      <EmrProfilePanelBody
         className={cn(styles.scrollContent, styles.infoContent)}
-        viewportClassName="scroll-fade-y scroll-fade-8"
-        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
       >
-        <PanelState label={label} actionLabel={overviewState.status === "error" ? "다시 시도" : undefined} onAction={onRetryOverview} />
-      </ScrollArea>
+        <PanelState state={overviewState.status} label={label} onAction={onRetryOverview} />
+      </EmrProfilePanelBody>
     );
   }
 
   return (
-    <ScrollArea
+    <EmrProfilePanelBody
       className={cn(styles.scrollContent, styles.infoContent)}
-      viewportClassName="scroll-fade-y scroll-fade-8"
-      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
     >
       {model.today ? (
         <>
@@ -675,50 +601,21 @@ function InformationTab({
           ) : null}
         </>
       )}
-    </ScrollArea>
+    </EmrProfilePanelBody>
   );
 }
 
 function EmptyTab({ kind }: { kind: ProfileSidePanelTab }) {
-  const config = {
-    billing: { icon: CdsFilesFileTextIcon, label: "수납 이력이 없습니다" },
-    history: { icon: CdsFilesFileTextIcon, label: "진료 이력이 없습니다" },
-    reservations: { icon: CdsFilesCalendarIcon, label: "등록된 예약 일정이 없습니다" },
-    info: { icon: CdsFilesFileTextIcon, label: "표시할 정보가 없습니다" },
-  }[kind];
-  const Icon = config.icon;
-
-  return (
-    <div className={styles.emptyState}>
-      <span className={styles.emptyIcon} aria-hidden="true">
-        <Icon />
-        {kind === "reservations" ? (
-          <span className={styles.emptyIconMark}><CdsActionsXIcon /></span>
-        ) : null}
-      </span>
-      <p>{config.label}</p>
-    </div>
-  );
+  const label = { billing: "수납 이력이 없습니다", history: "진료 이력이 없습니다", reservations: "등록된 예약 일정이 없습니다", info: "표시할 정보가 없습니다" }[kind];
+  return <EmrProfilePanelState state="empty" label={label} />;
 }
 
-function PanelState({
-  actionLabel,
-  label,
-  onAction,
-}: {
-  actionLabel?: string;
+function PanelState({ state, label, onAction }: {
+  state: Exclude<ProfileTabState["status"], "ready">;
   label: string;
   onAction?: () => void;
 }) {
-  return (
-    <div className={styles.emptyState} role="status">
-      <span className={styles.emptyIcon} aria-hidden="true"><CdsFilesFileTextIcon /></span>
-      <p>{label}</p>
-      {onAction && actionLabel ? (
-        <button type="button" className={styles.retryButton} onClick={onAction}>{actionLabel}</button>
-      ) : null}
-    </div>
-  );
+  return <EmrProfilePanelState state={state} label={label} onRetry={onAction} />;
 }
 
 function LoadMoreButton({ onClick }: { onClick?: () => void }) {
@@ -767,21 +664,17 @@ function ReservationsTab({
           ? "프로필 정보를 찾을 수 없습니다."
           : "예약 일정을 불러오지 못했습니다.";
     return (
-      <ScrollArea
+      <EmrProfilePanelBody
         className={styles.scrollContent}
-        viewportClassName="scroll-fade-y scroll-fade-8"
-        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
       >
-        <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
-      </ScrollArea>
+        <PanelState state={state.status} label={label} onAction={onRetry} />
+      </EmrProfilePanelBody>
     );
   }
 
   return (
-    <ScrollArea
+    <EmrProfilePanelBody
       className={styles.scrollContent}
-      viewportClassName="scroll-fade-y scroll-fade-8"
-      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
     >
       <div className={styles.toolbar}>
         <div className={styles.monthNavigator}>
@@ -842,7 +735,7 @@ function ReservationsTab({
       ) : (
         <EmptyTab kind="reservations" />
       )}
-    </ScrollArea>
+    </EmrProfilePanelBody>
   );
 }
 
@@ -923,21 +816,17 @@ function HistoryTab({
           ? "프로필 정보를 찾을 수 없습니다."
           : "진료 이력을 불러오지 못했습니다.";
     return (
-      <ScrollArea
+      <EmrProfilePanelBody
         className={styles.scrollContent}
-        viewportClassName="scroll-fade-y scroll-fade-8"
-        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
       >
-        <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
-      </ScrollArea>
+        <PanelState state={state.status} label={label} onAction={onRetry} />
+      </EmrProfilePanelBody>
     );
   }
 
   return (
-    <ScrollArea
+    <EmrProfilePanelBody
       className={styles.scrollContent}
-      viewportClassName="scroll-fade-y scroll-fade-8"
-      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
     >
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
@@ -1008,7 +897,7 @@ function HistoryTab({
       ) : (
         <EmptyTab kind="history" />
       )}
-    </ScrollArea>
+    </EmrProfilePanelBody>
   );
 }
 
@@ -1087,21 +976,17 @@ function BillingTab({
           ? "프로필 정보를 찾을 수 없습니다."
           : "수납 이력을 불러오지 못했습니다.";
     return (
-      <ScrollArea
+      <EmrProfilePanelBody
         className={styles.scrollContent}
-        viewportClassName="scroll-fade-y scroll-fade-8"
-        viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
       >
-        <PanelState label={label} actionLabel={state.status === "error" ? "다시 시도" : undefined} onAction={onRetry} />
-      </ScrollArea>
+        <PanelState state={state.status} label={label} onAction={onRetry} />
+      </EmrProfilePanelBody>
     );
   }
 
   return (
-    <ScrollArea
+    <EmrProfilePanelBody
       className={styles.scrollContent}
-      viewportClassName="scroll-fade-y scroll-fade-8"
-      viewportStyle={PROFILE_SCROLL_VIEWPORT_STYLE}
     >
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
@@ -1172,7 +1057,7 @@ function BillingTab({
       ) : (
         <EmptyTab kind="billing" />
       )}
-    </ScrollArea>
+    </EmrProfilePanelBody>
   );
 }
 
@@ -1206,39 +1091,30 @@ export function ProfileSidePanel({
     if (tab === "reservations") onLoadSection?.("reservations", { month: model.reservationMonth ?? getInitialMonth(model.reservations) });
   };
 
-  useEffect(() => {
-    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-
-      onClose();
-    };
-
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+  const loading = sectionStates?.info?.status === "loading" || sectionStates?.info?.status === "idle";
+  const firstLabel = model.kind === "patient" ? "환자 정보" : "보호자 정보";
 
   return (
-    <section
+    <EmrProfilePanel
       className={cn(styles.panel, embedded && styles.embeddedPanel)}
       aria-label={`${model.kind === "patient" ? "환자" : "보호자"} 프로필 사이드 패널`}
       data-profile-kind={model.kind}
       data-testid="profile-side-panel"
+      closeLabel="상세 닫기"
+      onClose={onClose}
+      loading={loading}
+      identity={<ProfileIdentity model={model} onHeaderAction={onHeaderAction} disabled={sectionStates?.info ? sectionStates.info.status !== "ready" : false} />}
+      value={activeTab}
+      tabsLabel={`${firstLabel} 탭`}
+      tabs={tabOrder.map((value) => ({
+        value,
+        label: { info: firstLabel, history: "진료 이력", reservations: "예약", billing: "수납" }[value],
+        disabledReason: tabAccess?.[value]?.allowed === false ? tabAccess[value]?.disabledReason ?? `${tabAccess[value]?.requiredPermission} 권한이 필요합니다` : undefined,
+      }))}
+      onTabChange={(value) => { if (tabOrder.includes(value as ProfileSidePanelTab)) changeTab(value as ProfileSidePanelTab); }}
     >
-      <ProfileHeader
-        activeTab={activeTab}
-        model={model}
-        onClose={onClose}
-        onHeaderAction={onHeaderAction}
-        onTabChange={changeTab}
-        tabAccess={tabAccess}
-      />
-      <div
-        id={`profile-tabpanel-${activeTab}`}
-        role="tabpanel"
-        aria-labelledby={`profile-tab-${activeTab}`}
-        className={styles.content}
-        tabIndex={0}
-      >
+      <EmrProfileTabPanel value={activeTab}>
+
         {activeTab === "info" ? (
           <InformationTab
             editContent={editContent}
@@ -1280,13 +1156,13 @@ export function ProfileSidePanel({
             state={sectionStates?.billing}
           />
         ) : null}
-      </div>
+      </EmrProfileTabPanel>
       {activeTab === "info" && editing ? (
         <div className={styles.editFooter}>
           <Button type="button" variant="outline" onClick={onCancelEdit} disabled={saving}>취소</Button>
           <Button type="button" onClick={onSaveEdit} disabled={saving}>{saving ? "저장 중" : "저장"}</Button>
         </div>
       ) : null}
-    </section>
+    </EmrProfilePanel>
   );
 }
