@@ -663,7 +663,7 @@ test("customer workspace renders animal master list and opens the common patient
     page.getByRole("button", { name: "카카오톡 발송" }),
   ).toBeVisible();
   await expect(page).toHaveURL(
-    /profile=patient%3Apatient-dubu|profile=patient:patient-dubu/,
+    /drawer=patient%3Apatient-dubu|drawer=patient:patient-dubu/,
   );
 });
 
@@ -1927,7 +1927,7 @@ test("customer side panel switches to guardians and search filters rows", async 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
   await expect(page.getByRole("tab", { name: "보호자 정보" })).toBeVisible();
   await expect(page).toHaveURL(
-    /profile=guardian%3Aguardian-kim-haneul|profile=guardian:guardian-kim-haneul/,
+    /drawer=guardian%3Aguardian-kim-haneul|drawer=guardian:guardian-kim-haneul/,
   );
 });
 
@@ -2396,22 +2396,21 @@ test("common patient and guardian drawers are available outside reception", asyn
 
   await expect(page.getByText("보호자 정보").first()).toBeVisible();
   await expect(page).toHaveURL(
-    /profile=guardian%3Aguardian-lee-jieun|profile=guardian:guardian-lee-jieun/,
+    /drawer=guardian%3Aguardian-lee-jieun|drawer=guardian:guardian-lee-jieun/,
   );
 });
 
-test("patient and guardian profiles share an overlay without shrinking customer content", async ({
+test("patient and guardian profiles share the right-panel slot and push customer content", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto("/w/clair-demo/customer?modulePanel=open");
-  const originalWidth = (await page.getByTestId("workspace-main-content").boundingBox())!.width;
   await page.goto(
     "/w/clair-demo/customer?modulePanel=open&drawer=patient:patient-coco",
   );
 
+  const frame = page.locator("main.emr-workspace-frame-responsive");
   const mainContent = page.getByTestId("workspace-main-content");
-  const rightPanel = page.getByTestId("workspace-profile-drawer");
+  const rightPanel = page.getByTestId("workspace-right-panel");
   const profilePanel = page.getByTestId("profile-side-panel");
   const getProfileGestureState = () =>
     profilePanel.evaluate((panel) => {
@@ -2482,15 +2481,21 @@ test("patient and guardian profiles share an overlay without shrinking customer 
     .poll(async () => (await rightPanel.boundingBox())?.width)
     .toBe(380);
 
-  const [mainContentBox, rightPanelBox] = await Promise.all([
+  const [frameBox, mainContentBox, rightPanelBox] = await Promise.all([
+    frame.boundingBox(),
     mainContent.boundingBox(),
     rightPanel.boundingBox(),
   ]);
+  expect(frameBox).not.toBeNull();
   expect(mainContentBox).not.toBeNull();
   expect(rightPanelBox).not.toBeNull();
   expect(rightPanelBox?.width).toBe(380);
-  expect(mainContentBox!.width).toBe(originalWidth);
-  expect(rightPanelBox!.x + rightPanelBox!.width).toBe(1600);
+  expect(rightPanelBox!.x - (mainContentBox!.x + mainContentBox!.width)).toBe(
+    10,
+  );
+  expect(frameBox!.x + frameBox!.width).toBe(
+    rightPanelBox!.x + rightPanelBox!.width,
+  );
 
   await page.getByRole("button", { name: "보호자 이지은 보기" }).click();
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");

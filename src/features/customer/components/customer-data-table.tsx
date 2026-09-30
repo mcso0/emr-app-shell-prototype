@@ -175,7 +175,7 @@ export function CustomerDataTable<
 }: CustomerDataTableProps<TRow>) {
   const query = useCustomerStore((state) => state.query);
   const setQuery = useCustomerStore((state) => state.setQuery);
-  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const [rowActionFeedback, setRowActionFeedback] =
     useState<CustomerRowActionFeedback | null>(null);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
@@ -498,7 +498,7 @@ export function CustomerDataTable<
           <NewUnifiedRegistrationButton
             openRequestKey={registrationOpenRequestKey}
             onPatientReady={(patientId) =>
-              setActiveProfileDrawer({ type: "patient", id: patientId })
+              setActiveDrawer({ type: "patient", id: patientId })
             }
           />
         }
@@ -604,16 +604,7 @@ export function CustomerDataTable<
                 className: "group/customer-row cursor-pointer",
                 "data-state": active ? "selected" : undefined,
                 "data-testid": rowTestId(row.original),
-                tabIndex: 0,
-                onClick: (event) => {
-                  event.currentTarget.focus();
-                  onOpenRow(row.original);
-                },
-                onKeyDown: (event) => {
-                  if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
-                  event.preventDefault();
-                  onOpenRow(row.original);
-                },
+                onClick: () => onOpenRow(row.original),
               };
             }}
           />

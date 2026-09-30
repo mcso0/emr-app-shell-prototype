@@ -1,19 +1,5 @@
 "use client";
 
-import type { ProfileDrawerState } from "@/types/emr";
-
-export function readProfileDrawerParam(value: string | null): ProfileDrawerState {
-  if (!value) return null;
-  const separator = value.indexOf(":");
-  const type = value.slice(0, separator);
-  const id = value.slice(separator + 1);
-  if (separator < 1 || !id.trim()) return null;
-  if (type === "patient" || type === "reception-patient") return { type: "patient", id };
-  if (type === "guardian" || type === "reception-guardian") return { type: "guardian", id };
-  if (type === "staff-operational-profile") return { type, id };
-  return null;
-}
-
 type SearchParamsLike = string | { toString: () => string };
 
 type BuildWorkspaceSurfaceRouteInput = {

@@ -50,7 +50,7 @@ export function usePatientContextProfileInteractions({
   const applyPatientGuardianLookupItem = usePatientProfileStore(
     (state) => state.applyPatientGuardianLookupItem,
   );
-  const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
+  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const currentOverview =
     overviewStatus === "ready" && overview?.subjectId === livePatientId
       ? overview
@@ -73,7 +73,7 @@ export function usePatientContextProfileInteractions({
     if (localProfileAvailable && patient) {
       applyPatientGuardianLookupItem({ patient, primaryGuardian: guardian });
     }
-    setActiveProfileDrawer({ type, id });
+    setActiveDrawer({ type, id });
   };
 
   return {

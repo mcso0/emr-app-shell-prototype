@@ -11,26 +11,25 @@ source_docs:
 dependencies:
   - "CUSTOMER-LIVE-PR-004"
   - "CUSTOMER-LIVE-PR-005"
-updated: "2026-09-30"
+updated: "2026-07-24"
 ---
 
 # Patient and Guardian Profile Side Panel
 
 ## Goal
 
-Preserve the CDS V2 patient and guardian profile content, read/edit, and navigation behavior. The approved 2026-09-29 follow-up moves patient, guardian, and staff operational profiles into a shared non-modal overlay drawer, independently of reception/reservation right panels. The earlier 380 x 1105 specimen measurements remain historical content-design evidence.
+Implement the CDS V2 patient and guardian profile right-side panel from Figma with a measured 380 x 1105 visual contract while preserving the existing profile read/edit and navigation behavior. Route the profiles through the same shared workspace right-panel slot as the staff profile so the panel reserves layout space instead of covering workspace content.
 
 ## Scope
 
 - Replace the duplicated shell and feature headers with the Figma-owned 151 px identity header and four-tab navigation.
 - Render patient and guardian information, linked identities, upcoming reservations, encounter history, and billing summaries from the existing mock/read-model graph.
 - Preserve profile PATCH save, linked patient/guardian navigation, drawer close, URL selection, and workspace reuse.
-- Route the treatment preconsultation `환자 정보` and `보호자 정보` actions to the shared profile overlay drawer.
+- Route the treatment preconsultation `환자 정보` and `보호자 정보` actions to the same shared profile right-panel slot.
 - Add operating-date grouping for encounter history, including missing or invalid dates.
 - Add invoice/payment hierarchy to billing cards while retaining the Figma card surface.
 - Verify the source viewport against the provided Figma captures with pixel comparison and record explicit masks for the two approved content exceptions.
-- Reuse the shared Sheet as a right-edge profile overlay aligned with each workspace body's top, bottom, and right bounds. Width is 380 px or the body width if narrower, without reserving main-content width.
-- Keep profile selection separate from reception detail, appointment detail, and reception/reservation creation; these remain workspace side panels.
+- Reuse the shared `WorkspaceFrame` right-panel column with the staff-profile 380 px width, 10 px gap, detached surface, and mobile full-width behavior.
 
 ## Out Of Scope
 
@@ -44,17 +43,13 @@ Preserve the CDS V2 patient and guardian profile content, read/edit, and navigat
 - Patient and guardian drawers use a 380 px feature-owned panel with the Figma header, tabs, spacing, typography, radii, and colors.
 - Information, reservation, history, billing, filled, empty, long-content, edit, and keyboard-close paths are usable.
 - Existing profile save and linked-identity navigation continue to work.
-- Patient and guardian profiles render in `workspace-profile-drawer`; reception/reservation tasks retain `workspace-right-panel` and their mounted drafts.
+- Patient and guardian profiles render in `workspace-right-panel`; no absolute `workspace-drawer` overlays the customer/reception content.
 - Treatment preconsultation profile actions open the selected encounter's patient or primary guardian in the shared panel instead of the retired chart-specific information sheet.
-- Opening the profile preserves main workspace width and the same overlay position when navigating between patient and guardian profiles.
-- The global profile host follows workspace geometry in every module and on resize/sidebar changes, without viewport-top placement or clipping nested menus/dialogs.
+- Opening the panel reduces the main workspace width and preserves the same right-panel position when navigating between patient and guardian profiles.
 - Focused lint, typecheck, Playwright, Storybook build, and pixel-comparison evidence are recorded.
 - Pixel differences are iterated to the approved threshold; any remaining mismatch is reported, not described as exact.
 
 ## Verification
-
-The dated July checks below describe the previous side-panel placement. Current
-overlay verification is recorded in the 2026-09-29 follow-up below.
 
 - Passed: targeted ESLint for implementation and affected tests.
 - Passed: `npx tsc --noEmit`.
@@ -84,111 +79,40 @@ overlay verification is recorded in the 2026-09-29 follow-up below.
 - PR #475 shipped the original CDS V2 profile surface. The 2026-07-22 follow-up changes only its shell placement and embedded border ownership; profile data, permissions, persistence, tabs, and actions remain unchanged.
 - The 2026-07-24 treatment consumer hydrates the existing profile store from the selected chart queue record before opening the shared panel. It does not restore the retired chart-specific patient information panel.
 
-## 2026-09-29 Profile Overlay Follow-up
 
-- Authorization: 승욱 approved implementation with TDD, then commit, push, PR,
-  merge to `origin/main`, and deployment after passing checks. Work is isolated
-  from the dirty primary checkout; data/API/permission policy is unchanged.
-- `activeProfileDrawer` owns patient/guardian/staff selection. `activeDrawer`
-  retains business-task state, so inspecting a profile does not unmount or
-  erase a reservation form draft.
-- Patient/guardian links use `profile=patient:<id>` / `profile=guardian:<id>`.
-  Existing `drawer=patient`, `drawer=guardian`, and reception-profile aliases
-  remain accepted and normalize to `profile`. Staff selections remain transient.
-- URL hydration waits for both selections before writing profile-only changes
-  through Next.js-integrated `history.replaceState`; domain selection and
-  unrelated query parameters remain intact when a profile closes.
-- The profile host owns non-modal focus, close/Escape, and opener restoration.
-  Background interaction remains available; nested menu Escape closes only the
-  menu. Existing horizontal scroll locks are retained.
-- Profile-origin reception/reservation forms still use the existing side-panel
-  placement, preselection, dirty-discard guard, operating-date rules, success
-  details, and return to the same profile tab.
-- RED: the existing implementation unmounted a filled reservation form on staff
-  profile open, ignored a simultaneous `profile` URL target, and lacked the new
-  overlay host. An additional RED exposed outside-module detail close retaining
-  the side panel.
-- GREEN: 41 focused Playwright scenarios passed, including six new drawer
-  regressions, profile-origin reception/reservation flows, staff work/permission
-  behavior, customer selection, editing, nested Escape, 200% zoom, and avatar
-  source contracts. Three shell navigation/reload checks also passed.
-- Local lint (five pre-existing script warnings), TypeScript, production build
-  (existing NFT trace warning), docs, Korean UX copy, secrets, and diff checks
-  passed. Final candidate Release Check/Preview/Production evidence belongs to
-  the attached PR and delivery record.
-- Wider sampled failures also reproduce on untouched `origin/main`: customer
-  column resize, chart vital editing permission, chart consultation table
-  header count, dispensing title fixture, reception readback fixture, and
-  workspace-tab history navigation. These remain outside this placement change;
-  the complete repository browser suite is not claimed green.
+## 2026-09-30 Restore Original Right-Side Panel
 
-## 2026-09-29 Global Body Alignment Follow-up
-
-- Authorization: 승욱 accepted the HTML body-aligned design and explicitly
-  approved investigation, TDD implementation, commit/push/PR, `origin/main`
-  merge, and Production deployment after passing verification.
-- Scope: the shared patient, guardian, and staff operational profile host in
-  every workspace module, including home, reception, treatment, lab, imaging,
-  dispensing, orders, billing, inpatient, and customer. Reception/appointment
-  details and reception/reservation creation keep their existing side panels.
-- Root cause: the shared Sheet portal renders under `body` with viewport-fixed
-  vertical bounds. Nesting its React declaration inside WorkspaceFrame did
-  not constrain the popup to the workspace body.
-- Implementation: WorkspaceFrame supplies its mounted main element; the
-  profile host measures its top/right/height and clamps width to
-  `min(380px, body width)`. ResizeObserver and resize/capture-scroll listeners
-  keep geometry current and are disconnected on close/unmount. A measured
-  initial position is required before the popup opens; closing keeps the
-  last bounds for its exit transition. Existing shared Sheet API and focus
-  behavior remain in place.
-- Keep the body portal: installed Base UI 1.7.0 nests portals under the parent
-  portal by default. Moving the profile portal into the overflow-clipped
-  workspace would also constrain its nested menus/popovers.
-- RED: representative patient, staff-with-reservation-draft, and narrow
-  reception scenarios failed their body-boundary assertions before the fix.
-- Current tests cover both URL-backed profile kinds across all ten registered
-  workspace modules, sidebar changes, open resize down to 390px, unchanged
-  content width, nested Escape, opener restoration, preserved reservation
-  drafts and independent reception detail. Staff checks retain horizontal
-  scroll locks, touch, and 200 percent zoom behavior.
-- New patient/guardian host stories exercise body-height changes and close
-  focus restoration. No data/API/DB/RLS/permission/dependency changes.
-- GREEN: all 53 focused browser scenarios passed across final runs (27 global
-  profile, 13 staff, 11 profile-origin reception/reservation, and 2 avatar
-  contracts). Two host Storybook stories passed; existing shared Sheet stories
-  also passed. Touch geometry waits for the opening transition to settle.
-- A first-run retry precondition timeout passed on untouched latest main and
-  then in the complete 13-scenario patient/avatar rerun. No broader data fix
-  was needed.
-- Final candidate, exact Release Check, Ready Preview/Production, smoke and
-  rollback evidence are recorded in the delivery PR.
-
-## 2026-09-30 Profile Frame Containment Follow-up
-
-- Authorization: 승욱 confirmed the shared profiles should slide within the
-  workspace frame, preserving its top/right/bottom border, and approved TDD
-  implementation, commit/push/PR, `origin/main` merge and Production delivery.
-- Root cause: bounds included the frame border; the body-portal popup escaped
-  frame clipping and inherited Sheet's outer shadow and 40 px entrance offset.
-- Scope: all patient, guardian and staff operational profiles use the existing
-  global host. Reception/appointment details and reception/reservation creation
-  remain side panels with their mounted drafts. No data/API/permission changes.
-- Implementation: measure border-excluded frame bounds and the inner corner
-  radius. A stationary, pointer-transparent Sheet viewport clips only the
-  sliding popup, which travels from its full width to zero with no outer shadow.
-  Nested portals stay outside that viewport under the existing body portal.
-  Ordinary Sheet callers retain their previous rendering and behavior.
-- RED: reception guardian inner-bound geometry and the missing stationary
-  clipping viewport failed before implementation.
-- Verification and exact delivery evidence are recorded in the follow-up PR.
-- GREEN: 54 Chromium scenarios passed across the final runs, including all
-  ten module/profile pairs, inner-boundary/slide-offset clipping, staff focus,
-  nested menus, resize/touch/zoom, draft preservation and profile-origin forms.
-  Both profile host stories and all three existing Sheet stories passed.
-- Baseline exceptions: the expanded 56-scenario run includes two failures
-  reproduced on clean `main` SHA `34b541a7`: reception-detail close leaves the
-  URL drawer parameter, and the calendar-avatar test still expects the old
-  `emr-text-body` class. Neither assertion was removed or weakened. The third
-  initial failure was a dev chunk-load error; its isolated rerun passed after
-  restarting the development server. Those baseline issues are outside this
-  visual change; no unrelated route or calendar implementation was modified.
+- 승욱 clarified that the complete profile-drawer task must be undone:
+  restore the original 우측 사이드 패널, before PR #867, not only its later
+  viewport/body/frame placement changes.
+- Selectively reverse PR #876 (`06adb765`), PR #872 (`34b541a7`), and
+  PR #867 (`9aad7a92`) on `origin/main` (`ad7d12b6`). The original comparison
+  target is `c050ef4b`; unrelated later changes remain in place.
+- Patient, guardian, and staff profiles again use the shared workspace right
+  column. Opening a profile reserves main-content width and only one right
+  task/profile is active at a time. Remove the independent profile Sheet,
+  `activeProfileDrawer`, profile-only URL state, and frame clipping viewport.
+- Restore existing drawer URL selection, close/Escape/focus, profile content
+  and edits, linked patient/guardian navigation, and profile-origin reception
+  and reservation flows. The independent overlay coexistence/draft behavior
+  added by PR #867 is intentionally removed with that task.
+- Existing API, database, RLS, role policy, and synthetic data are unchanged.
+  Reception detail status cleanup (#875), chart highlight icon (#877), and
+  reception vital display permission/read behavior (#878) are preserved.
+- Earlier overlay/body-alignment/frame-containment delivery evidence is kept
+  in PR #867, #872, and #876; those placement decisions are superseded.
+- Local verification: 32 distinct focused Chromium scenarios passed across
+  final runs (24 staff/profile-origin flows and 8 profile layout/content checks).
+  Two cancellation tests retain exact locators to avoid matching the newer
+  SOAP toolbar's 실행 취소/취소선 buttons; assertions and product behavior are intact.
+- The one wider chart-context test fails on denied 오늘 바이탈 수정 after both
+  profile navigation checks. The identical failure reproduced on clean
+  `ad7d12b6` main and is outside this restoration; no permission was weakened.
+- All 3 existing shared Sheet stories passed. Local synthetic browser proof
+  shows a 380 px right-panel column, 10 px gap, reduced main-content width,
+  and zero independent profile overlay hosts.
+- Local lint (same 5 existing script warnings), typecheck, production build
+  (existing NFT trace warning), docs, copy, secrets, and diff checks passed.
+  Remote main/Production restoration is pending release authorization;
+  exact candidate Release Check, Ready Preview, and authenticated Production
+  smoke will be completed as part of an approved delivery.

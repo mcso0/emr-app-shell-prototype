@@ -1,10 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useState, type CSSProperties } from "react";
+import type { CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
-import { ReceptionRightPanel } from "@/features/reception/module";
-import { WorkspaceProfileDrawer } from "@/shell/workspace-profile-drawer";
+import {
+  GuardianProfileDrawer,
+  PatientProfileDrawer,
+} from "@/features/reception/profile-drawer";
+import {
+  ReceptionDrawer,
+  ReceptionRightPanel,
+} from "@/features/reception/module";
 import type {
   ModuleDefinition,
   WorkspaceSlotAvailabilityProviderProps,
@@ -31,7 +37,6 @@ export function WorkspaceFrame({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: WorkspaceFrameProps) {
-  const [frameElement, setFrameElement] = useState<HTMLElement | null>(null);
   const {
     activeDrawer,
     contentAsideOpen,
@@ -47,26 +52,55 @@ export function WorkspaceFrame({
   const ModuleDrawer = moduleDefinition.drawer;
   const SlotAvailabilityProvider =
     moduleDefinition.slotAvailabilityProvider ?? DefaultSlotAvailabilityProvider;
+  const isPatientDrawer = activeDrawer?.type === "patient" || activeDrawer?.type === "reception-patient";
+  const isGuardianDrawer = activeDrawer?.type === "guardian" || activeDrawer?.type === "reception-guardian";
   const isReceptionDrawer =
     activeDrawer?.type === "reception-appointment" ||
     activeDrawer?.type === "reception-appointment-check-in-form" ||
     activeDrawer?.type === "reception-encounter" ||
     activeDrawer?.type === "reception-form" ||
     activeDrawer?.type === "reception-reservation-form";
-  const isReceptionDrawerInWorkspaceRightPanel = isReceptionDrawer;
+  const isReceptionDrawerInWorkspaceRightPanel =
+    isReceptionDrawer &&
+    activeDrawer?.rightPanelPresentation?.surface === "workspace-right-panel";
   const routeReceptionDrawerToRightPanel =
     (moduleDefinition.id === "reception" && Boolean(RightPanel)) ||
     isReceptionDrawerInWorkspaceRightPanel;
   const instantRightPanel =
     moduleDefinition.id === "reception" ||
     isReceptionDrawerInWorkspaceRightPanel;
-  const hasFeatureRightPanel = Boolean(isReceptionDrawer &&
-    (moduleDefinition.id !== "reception" ||
-      activeDrawer?.rightPanelPresentation?.surface === "workspace-right-panel"));
-  const EffectiveModuleDrawer = ModuleDrawer;
-  const shouldRenderWorkspaceDrawer = Boolean(activeDrawer && EffectiveModuleDrawer) &&
+  const CommonProfileDrawer = isPatientDrawer
+    ? PatientProfileDrawer
+    : isGuardianDrawer
+      ? GuardianProfileDrawer
+      : undefined;
+  const hasCommonProfileRightPanel = Boolean(CommonProfileDrawer && activeDrawer);
+  const hasFeatureRightPanel = Boolean(isReceptionDrawerInWorkspaceRightPanel);
+  const EffectiveModuleDrawer =
+    isReceptionDrawer && !routeReceptionDrawerToRightPanel
+      ? ReceptionDrawer
+      : ModuleDrawer;
+  const shouldRenderWorkspaceDrawer =
+    Boolean(activeDrawer && !CommonProfileDrawer && EffectiveModuleDrawer) &&
     !(routeReceptionDrawerToRightPanel && isReceptionDrawer);
-  const drawerTitle = activeDrawer?.type === "inpatient-admission" ? "입원 상세" : "상세 정보";
+  const drawerTitle =
+    isPatientDrawer
+        ? "환자 정보"
+        : isGuardianDrawer
+          ? "보호자 정보"
+          : activeDrawer?.type === "inpatient-admission"
+            ? "입원 상세"
+            : activeDrawer?.type === "reception-appointment"
+              ? "예약 상세"
+              : activeDrawer?.type === "reception-appointment-check-in-form"
+                ? "접수 생성"
+              : activeDrawer?.type === "reception-encounter"
+                ? "접수 상세"
+              : activeDrawer?.type === "reception-form"
+                ? "접수 생성"
+              : activeDrawer?.type === "reception-reservation-form"
+                ? "예약 생성"
+                : "상세 정보";
   const drawerSubtitle =
     activeDrawer?.subtitle ??
     (activeDrawer?.type === "reception-encounter" ||
@@ -86,7 +120,7 @@ export function WorkspaceFrame({
     SHELL_LAYOUT.contentAside.minWidth
   );
   const resolvedRightPanelWidth =
-    hasFeatureRightPanel
+    hasCommonProfileRightPanel || hasFeatureRightPanel
       ? 380
       : (activeDrawer?.rightPanelPresentation?.width ??
         moduleDefinition.rightPanelWidth ??
@@ -110,19 +144,21 @@ export function WorkspaceFrame({
         const hasModuleRightPanel =
           Boolean(RightPanel) && (availability.hasRightPanel ?? true);
         const hasRightPanel =
-          hasFeatureRightPanel || hasModuleRightPanel;
+          hasCommonProfileRightPanel || hasFeatureRightPanel || hasModuleRightPanel;
         const contentAsideVisible = hasContentAside && contentAsideOpen;
         const rightPanelVisible =
+          hasCommonProfileRightPanel ||
           hasFeatureRightPanel ||
           (hasModuleRightPanel && rightPanelOpen);
         const rightPanelGap = rightPanelVisible
-            ? hasFeatureRightPanel
+            ? hasCommonProfileRightPanel || hasFeatureRightPanel
             ? (activeDrawer?.rightPanelPresentation?.gap ?? SHELL_LAYOUT.shell.gap)
             : (activeDrawer?.rightPanelPresentation?.gap ??
               (moduleDefinition.rightPanelGap ? SHELL_LAYOUT.shell.gap : 0))
           : 0;
         const rightPanelDetached = rightPanelGap > 0;
         const rightPanelMobileFullWidth = Boolean(
+          hasCommonProfileRightPanel ||
             hasFeatureRightPanel ||
             activeDrawer?.rightPanelPresentation?.mobileFullWidth,
         );
@@ -134,7 +170,6 @@ export function WorkspaceFrame({
 
         return (
           <main
-            ref={setFrameElement}
             className={cn(
               "emr-workspace-frame-responsive relative grid min-h-0 gap-x-[var(--clair-workspace-right-panel-gap)] [grid-template-columns:var(--clair-workspace-frame-columns)] max-md:[grid-template-columns:minmax(0,1fr)]",
               !instantRightPanel && "transition-[grid-template-columns]",
@@ -216,15 +251,22 @@ export function WorkspaceFrame({
                 className="flex h-full w-full flex-col"
                 style={{ minWidth: rightPanelVisible ? effectiveRightPanelWidth : 0 }}
               >
-                {hasFeatureRightPanel ? (
+                {CommonProfileDrawer && activeDrawer ? (
+                  isPatientDrawer ? (
+                    <PatientProfileDrawer
+                      defaultTab={activeDrawer.profileTab}
+                      patientId={activeDrawer.id}
+                    />
+                  ) : (
+                    <GuardianProfileDrawer guardianId={activeDrawer.id} />
+                  )
+                ) : hasFeatureRightPanel ? (
                   <ReceptionRightPanel {...slotProps} />
                 ) : RightPanel && rightPanelVisible ? (
                   <RightPanel {...slotProps} />
                 ) : null}
               </div>
             </aside>
-
-            <WorkspaceProfileDrawer {...slotProps} frameElement={frameElement} />
 
             <AnimatePresence>
               {shouldRenderWorkspaceDrawer ? (

@@ -30,7 +30,7 @@
 }
 
 .embeddedPanel {
-  width: 100%;
+  width: calc(100% - 2px);
   border: 0;
   border-radius: 0;
 }
