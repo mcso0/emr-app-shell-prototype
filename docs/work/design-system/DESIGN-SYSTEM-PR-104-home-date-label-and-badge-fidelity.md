@@ -80,3 +80,19 @@ push, PR, merge to `origin/main`, and Production deployment in the same chat.
   no transform. Date-picker opening and Escape closing were verified locally.
 - The exact follow-up PR records release checks, Preview readiness, Production
   smoke, and the prior Ready deployment or merge-revert rollback candidate.
+
+## 2026-09-30 Chevron Optical Alignment Correction
+
+승욱 approved the narrow correction, commit, push, PR, `origin/main` merge,
+and Production deployment in the same chat.
+
+- Authenticated Production readback showed the date-label center at 127px
+  and both chevron centers at 129px after the label-only correction.
+- Apply the same existing -2px spacing-token translation only to the SVGs
+  in Home hospital previous/next buttons. Keep the 32×40px buttons and their
+  interaction areas unchanged.
+- Local Home Storybook readback: label and chevron centers are now 34px;
+  button centers remain 36px. Calendar opening was verified.
+- Shared sidebar presentation remains outside this Home-owned selector.
+- The follow-up PR records exact-candidate release checks, Ready Preview,
+  Production smoke, and rollback evidence.

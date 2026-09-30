@@ -123,6 +123,7 @@
 .hospitalTitle .dateControl button[aria-expanded="true"] { background: var(--clair-color-atomic-black-alpha-6); }
 .hospitalTitle .dateControl button:disabled { opacity: .4; cursor: not-allowed; }
 .hospitalTitle .dateControl svg { flex-shrink: 0; }
+.hospitalTitle .dateControl > button:first-child > svg, .hospitalTitle .dateControl > button:last-child > svg { transform: translateY(calc(-1 * var(--clair-spacing-2))); }
 .hospitalTitle .dateControl > button[aria-haspopup] > svg:first-child { display: none; }
 .hospitalTitle .dateControl [data-slot="badge"] { width: 42px; height: 28px; flex-shrink: 0; border: 1px solid var(--clair-color-atomic-black-alpha-8); border-radius: var(--clair-radius-atomic-6); background: var(--clair-color-atomic-common-100); padding: var(--clair-spacing-2) var(--clair-spacing-8); color: var(--clair-color-atomic-neutral-900); font-size: 15px; font-weight: 500; line-height: 22px; letter-spacing: normal; }
 .workTypeTabs { display: flex; width: max-content; align-items: center; gap: var(--clair-spacing-4); }
