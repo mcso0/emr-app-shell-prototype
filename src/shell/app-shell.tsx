@@ -169,6 +169,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const {
     activeDrawer,
+    retainedReceptionDrawer,
     contentAsideOpen,
     enterModule,
     moduleRefreshActions,
@@ -299,6 +300,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       drawer?.startsWith("reception-reservation-form:");
     const pendingUrlState: PendingUrlState = { search };
     const currentLayoutState = useLayoutStore.getState();
+    const currentUrlDrawer = currentLayoutState.retainedReceptionDrawer ?? currentLayoutState.activeDrawer;
     const moduleHasSidePanel = Boolean(moduleDefinition.sidePanel);
 
     if (modulePanel || !moduleHasSidePanel) {
@@ -339,15 +341,15 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     }
     if (
       drawer &&
-      currentLayoutState.activeDrawer?.rightPanelPresentation?.persistToUrl !== false
+      currentUrlDrawer?.rightPanelPresentation?.persistToUrl !== false
     ) {
       const separatorIndex = drawer.indexOf(":");
       const type = separatorIndex >= 0 ? drawer.slice(0, separatorIndex) : "";
       const id = separatorIndex >= 0 ? drawer.slice(separatorIndex + 1) : "";
       if (type && id) {
         const nextDrawer =
-          currentLayoutState.activeDrawer?.type === type && currentLayoutState.activeDrawer.id === id
-            ? currentLayoutState.activeDrawer
+          currentUrlDrawer?.type === type && currentUrlDrawer.id === id
+            ? currentUrlDrawer
             : { type, id };
         setActiveDrawer(nextDrawer);
       }
@@ -395,11 +397,19 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       pendingUrlStateRef.current = null;
     }
 
-    if (activeDrawer?.rightPanelPresentation?.persistToUrl === false) {
+    const selectedUrlDrawer = retainedReceptionDrawer ?? activeDrawer;
+    const transientDrawer = selectedUrlDrawer?.rightPanelPresentation?.persistToUrl === false;
+    const params = new URLSearchParams(search);
+    // A concurrent profile does not replace the calendar drawer's URL owner.
+    // Once the calendar drawer closes, remove its stale URL even if the staff
+    // profile itself is transient.
+    if (transientDrawer && (retainedReceptionDrawer || !(
+      moduleDefinition.id === "reception" &&
+      /^(reception-appointment|reception-appointment-check-in-form|reception-encounter|reception-form|reception-reservation-form):/.test(params.get("drawer") ?? "")
+    ))) {
       return;
     }
-
-    const params = new URLSearchParams(search);
+    const urlDrawer = transientDrawer ? null : selectedUrlDrawer;
     params.set("modulePanel", modulePanelOpen ? "open" : "closed");
     if (moduleDefinition.contentAside) {
       params.set("aside", contentAsideOpen ? "history" : "closed");
@@ -412,8 +422,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     } else {
       params.delete("right");
     }
-    if (activeDrawer) {
-      params.set("drawer", `${activeDrawer.type}:${activeDrawer.id}`);
+    if (urlDrawer) {
+      params.set("drawer", `${urlDrawer.type}:${urlDrawer.id}`);
     } else {
       params.delete("drawer");
     }
@@ -429,10 +439,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     }
   }, [
     activeDrawer,
+    retainedReceptionDrawer,
     contentAsideOpen,
     moduleDefinition.contentAside,
     moduleDefinition.documentLayout,
     moduleDefinition.rightPanel,
+    moduleDefinition.id,
     modulePanelOpen,
     pathname,
     rightPanelOpen,

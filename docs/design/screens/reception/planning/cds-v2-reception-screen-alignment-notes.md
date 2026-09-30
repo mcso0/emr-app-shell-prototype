@@ -228,3 +228,14 @@ interaction without introducing a new staff-status data model.
   `진료중`, and status-read failure does not remove the staff lane.
 - The client refreshes the read every 60 seconds and when the window regains focus.
   No minute-by-minute status value is persisted in the database.
+
+## Calendar Drawer Stability And Profiles — 2026-09-30
+
+- Entry/return focus must use `preventScroll` so the moving drawer cannot scroll
+  the calendar stage during its right-to-left animation.
+- A calendar form/detail remains mounted while the existing shell profile is
+  open. Each surface closes independently; its selection/dirty state and the
+  calendar drawer URL are retained. Transient profile-origin entry keeps its
+  existing return URL and discard guard.
+- Profiles retain the shared shell layout and animation. No write payload,
+  permission, or persistence contract changes.

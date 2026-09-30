@@ -3,7 +3,10 @@
 import { parsePatientVitalDraft, getPatientVitalFieldWarnings, type PatientVitalField } from "@/features/patient-vitals/patient-vital-validation";
 
 import {
+  createContext,
+  useContext,
   useCallback,
+  useLayoutEffect,
   useEffect,
   useMemo,
   useRef,
@@ -3498,7 +3501,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const patientGuardians = usePatientProfileStore(
     (state) => state.patientGuardians,
   );
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
+  const activeDrawer = useLayoutStore((state) => state.retainedReceptionDrawer ?? state.activeDrawer);
   const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const authSession = useMockAuthStore((state) => state.session);
@@ -6676,6 +6679,23 @@ function ReceptionScheduleBoard({
   );
 }
 
+const ReceptionCalendarLayoutContext = createContext(false);
+
+function useReceptionPanelLayout() {
+  const calendar = useContext(ReceptionCalendarLayoutContext);
+  const activeDrawer = useLayoutStore((state) => calendar
+    ? state.retainedReceptionDrawer ?? state.activeDrawer : state.activeDrawer);
+  const setActiveDrawer = useLayoutStore((state) => calendar
+    ? state.setReceptionCalendarDrawer : state.setActiveDrawer);
+  const setRightPanelOpen = useLayoutStore((state) => calendar
+    ? state.setReceptionCalendarOpen : state.setRightPanelOpen);
+  const getActiveDrawer = useCallback(() => {
+    const state = useLayoutStore.getState();
+    return calendar ? state.retainedReceptionDrawer ?? state.activeDrawer : state.activeDrawer;
+  }, [calendar]);
+  return { activeDrawer, setActiveDrawer, setRightPanelOpen, getActiveDrawer, calendar };
+}
+
 function ReceptionCalendarDrawer({ children }: { children: ReactNode }) {
   const isPresent = useIsPresent();
   const reduceMotion = useReducedMotion();
@@ -6688,7 +6708,7 @@ function ReceptionCalendarDrawer({ children }: { children: ReactNode }) {
       : null;
     panel
       ?.querySelector<HTMLButtonElement>('button[aria-label="우측 사이드 패널 닫기"], button[aria-label="환자 프로필로 돌아가기"]')
-      ?.focus();
+      ?.focus({ preventScroll: true });
     return () => {
       window.requestAnimationFrame(() => {
         if (panel?.isConnected) return;
@@ -6696,7 +6716,7 @@ function ReceptionCalendarDrawer({ children }: { children: ReactNode }) {
           const returnTarget = document.querySelector<HTMLButtonElement>('button[aria-label="우측 사이드 패널 열기"]')
             ?? (opener instanceof HTMLButtonElement && opener.isConnected && !panel?.contains(opener) ? opener : null)
             ?? document.querySelector<HTMLButtonElement>('[data-testid="schedule-check-in-button"]');
-          returnTarget?.focus();
+          returnTarget?.focus({ preventScroll: true });
         }
       });
     };
@@ -6732,7 +6752,8 @@ export function ReceptionContent() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen);
+  const rightPanelOpen = useLayoutStore((state) => state.rightPanelOpen || Boolean(state.retainedReceptionDrawer));
+  const setReceptionCalendarScope = useLayoutStore((state) => state.setReceptionCalendarScope);
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const calendarViewByWorkspace = useReceptionStore(
     (state) => state.calendarViewByWorkspace,
@@ -6804,7 +6825,7 @@ export function ReceptionContent() {
   const patientGuardians = usePatientProfileStore(
     (state) => state.patientGuardians,
   );
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
+  const activeDrawer = useLayoutStore((state) => state.retainedReceptionDrawer ?? state.activeDrawer);
   const clearModuleRefreshAction = useLayoutStore(
     (state) => state.clearModuleRefreshAction,
   );
@@ -6953,6 +6974,10 @@ export function ReceptionContent() {
       ),
     [appointments, effectiveSelectedVeterinarianIds],
   );
+  useLayoutEffect(() => {
+    setReceptionCalendarScope(workspaceId);
+    return () => setReceptionCalendarScope(null);
+  }, [setReceptionCalendarScope, workspaceId]);
   const lastMessageDelivery = messageDeliveries.at(-1);
   const toggleVeterinarian = (veterinarianId: string) => {
     setSelectedVeterinarianIds((current) => {
@@ -7529,11 +7554,13 @@ export function ReceptionContent() {
           {isReceptionRightPanelDrawer(activeDrawer) &&
           (rightPanelOpen || activeDrawer.rightPanelPresentation?.surface === "workspace-right-panel") ? (
             <ReceptionCalendarDrawer key="reception-calendar-drawer">
+              <ReceptionCalendarLayoutContext.Provider value={true}>
               <ReceptionRightPanel
                 workspaceId={workspaceId}
                 moduleId="reception"
                 moduleLabel="접수/예약"
               />
+              </ReceptionCalendarLayoutContext.Provider>
             </ReceptionCalendarDrawer>
           ) : null}
         </AnimatePresence>
@@ -7682,7 +7709,7 @@ function ReceptionWalkInFormDrawer({
     date: operatingDate,
     workspaceId,
   });
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const { setActiveDrawer, setRightPanelOpen } = useReceptionPanelLayout();
   const [department, setDepartment] = useState(defaultWalkInDepartment);
   const [duration, setDuration] = useState(
     initialDurationMinutes ? `${initialDurationMinutes}분` : defaultWalkInDuration,
@@ -7950,7 +7977,7 @@ function ReceptionWalkInFormDrawer({
       onClose();
       return;
     }
-    useLayoutStore.getState().setRightPanelOpen(false);
+    setRightPanelOpen(false);
     setActiveDrawer(null);
   };
   const discardAndClose = () => {
@@ -7959,7 +7986,7 @@ function ReceptionWalkInFormDrawer({
       onClose();
       return;
     }
-    useLayoutStore.getState().setRightPanelOpen(false);
+    setRightPanelOpen(false);
     setActiveDrawer(null);
   };
   const submitCreate = async () => {
@@ -8864,7 +8891,7 @@ function ReceptionReservationFormDrawer({
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const { setActiveDrawer, setRightPanelOpen } = useReceptionPanelLayout();
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
   );
@@ -8983,7 +9010,7 @@ function ReceptionReservationFormDrawer({
       onClose();
       return;
     }
-    useLayoutStore.getState().setRightPanelOpen(false);
+    setRightPanelOpen(false);
     setActiveDrawer(null);
   };
   const discardAndClose = () => {
@@ -8993,7 +9020,7 @@ function ReceptionReservationFormDrawer({
       onClose();
       return;
     }
-    useLayoutStore.getState().setRightPanelOpen(false);
+    setRightPanelOpen(false);
     setActiveDrawer(null);
   };
 
@@ -9780,7 +9807,7 @@ function ReceptionAppointmentCheckInFormDrawer({
   workspaceId: string;
 }) {
   const authSession = useMockAuthStore((state) => state.session);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
+  const { setActiveDrawer, setRightPanelOpen } = useReceptionPanelLayout();
   const appointmentDate =
     getOperatingDateFromIso(appointment.scheduledStartAt) ??
     getWorkspaceOperatingDate(workspaceId);
@@ -10031,7 +10058,7 @@ function ReceptionAppointmentCheckInFormDrawer({
         size="default"
         variant="ghost"
         onClick={() => {
-          useLayoutStore.getState().setRightPanelOpen(false);
+          setRightPanelOpen(false);
           setActiveDrawer(null);
         }}
         disabled={submitting}
@@ -10074,9 +10101,8 @@ function ReceptionAppointmentCheckInFormDrawer({
 }
 
 export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponentProps) {
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const { activeDrawer, setActiveDrawer, setRightPanelOpen, calendar } = useReceptionPanelLayout();
+  const receptionCalendarScope = useLayoutStore((state) => state.receptionCalendarScope);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const setCalendarDraftSelection = useReceptionStore(
     (state) => state.setCalendarDraftSelection,
@@ -10196,10 +10222,11 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
 
   const closeStaffProfile = useCallback(() => {
     const returnFocusId = activeDrawer?.rightPanelPresentation?.returnFocusId;
+    const hasRetainedReception = Boolean(useLayoutStore.getState().retainedReceptionDrawer);
     setActiveDrawer(null);
-    setRightPanelOpen(false);
+    if (!hasRetainedReception) setRightPanelOpen(false);
     window.setTimeout(() => {
-      if (returnFocusId) document.getElementById(returnFocusId)?.focus();
+      if (returnFocusId) document.getElementById(returnFocusId)?.focus({ preventScroll: true });
     }, 0);
   }, [activeDrawer?.rightPanelPresentation?.returnFocusId, setActiveDrawer, setRightPanelOpen]);
   const returnFromReceptionPanel = useCallback(() => {
@@ -10226,6 +10253,9 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
     returnFromReceptionPanel();
   }, [activeDrawer?.hasUnsavedChanges, returnFromReceptionPanel]);
 
+  // The exiting calendar wrapper must never render the foreground profile.
+  if (calendar && !isReceptionRightPanelDrawer(activeDrawer)) return null;
+
   if (activeDrawer?.type === "staff-operational-profile") {
     return (
       <StaffOperationalProfilePanel
@@ -10244,6 +10274,10 @@ export function ReceptionRightPanel({ moduleLabel, workspaceId }: ShellComponent
       />
     );
   }
+
+  // The exiting shell profile must not mount a second copy of the restored
+  // calendar form and reset its draft/dirty state during the exit animation.
+  if (!calendar && receptionCalendarScope && isReceptionRightPanelDrawer(activeDrawer)) return null;
 
   return (
     <>
@@ -11819,9 +11853,7 @@ export function ReceptionDrawer({
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const activeDrawer = useLayoutStore((state) => state.activeDrawer);
-  const setActiveDrawer = useLayoutStore((state) => state.setActiveDrawer);
-  const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
+  const { activeDrawer, setActiveDrawer, setRightPanelOpen, getActiveDrawer } = useReceptionPanelLayout();
   const treatmentRefreshAction = useLayoutStore(
     (state) => state.moduleRefreshActions.treatment,
   );
@@ -12115,7 +12147,7 @@ export function ReceptionDrawer({
   ]);
   const setCreateFlowDirty = useCallback(
     (dirty: boolean) => {
-      const current = useLayoutStore.getState().activeDrawer;
+      const current = getActiveDrawer();
       if (
         !current ||
         current.id !== activeDrawer?.id ||
@@ -12129,7 +12161,7 @@ export function ReceptionDrawer({
         hasUnsavedChanges: dirty || undefined,
       });
     },
-    [activeDrawer?.id, activeDrawer?.type, setActiveDrawer],
+    [activeDrawer?.id, activeDrawer?.type, getActiveDrawer, setActiveDrawer],
   );
   const openReceptionFlowDrawer = useCallback(
     (type: string, id: string) => {

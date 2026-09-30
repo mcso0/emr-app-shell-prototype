@@ -25,6 +25,46 @@ updated: "2026-07-14"
 
 # Reception Detail Drawer Hierarchy and Editable Encounter Update
 
+## Approved Scroll And Concurrent-Profile Repair — 2026-09-30
+
+승욱 reported a leftward calendar jump during drawer entry and forms disappearing
+when a profile opens, then authorized the repair, commit, push, PR, and
+`origin/main` merge in this chat. This remains a UI state/focus-only release;
+no DB/API, permission, or remote data operation is included.
+
+- Entry focus scrolled the overflow-hidden stage by 380px while the animated
+  close button was offscreen. Use `preventScroll` for entry and return focus;
+  verify calendar position and stage scroll on every animation frame.
+- On Reception only, retain the calendar drawer while a patient, guardian, or
+  staff profile occupies the existing shell panel. Keep the form mounted and
+  route its actions to its own retained state.
+- Profile close restores the retained drawer; calendar close preserves the
+  profile and prevents later form resurrection. Module/workspace changes clear
+  retained state. Profile-origin return targets and dirty-discard guards remain.
+- The retained drawer owns URL synchronization; transient profile-origin forms
+  keep their original profile URL. Closing a calendar form removes its stale URL
+  while a transient staff profile remains open.
+- During staff-profile exit, suppress a second shell copy of the restored
+  calendar form: its initial dirty effect would otherwise overwrite the retained
+  form's dirty metadata.
+- Regression coverage extends `tests/reception-calendar-drawer.spec.ts` and adds
+  `tests/reception-layout-state.spec.ts`; patient-origin entry and shared profile
+  UI are included in focused verification.
+
+Local preparation evidence:
+
+- Integrated Reception, profile-origin, staff-profile, shared profile UI, and
+  workspace document-layout run: 55 passed. Per-frame entry movement and stage
+  scroll were both zero. A follow-up run that reused that runner's server was
+  interrupted when its owner shut the server down; connection-refused results
+  are excluded from passing evidence and are rerun on a fresh owned server.
+- Lint (five existing unrelated warnings), TypeScript, production build (existing
+  NFT tracing warning), docs links, Korean UX copy, secrets, and diff checks
+  passed during preparation. Final exact-candidate/Preview/Production evidence
+  is recorded in the release report after the release gates complete.
+- The isolated worktree includes latest main's document-layout and guardian
+  map-pin changes; no unrelated primary-checkout WIP is included.
+
 ## Approved Calendar Overlay Follow-up — 2026-09-30
 
 승욱 approved the interactive right-to-left overlay prototype and implementation in this chat. Scope covers 예약/접수 creation and details, including queue/calendar selection and appointment-to-reception creation. On 2026-09-30, 승욱 additionally authorized commit, push, PR, merge to `origin/main`, and production deployment of this slice. Remote data operations are outside this scope.
