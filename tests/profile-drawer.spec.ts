@@ -2,7 +2,16 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function expectBodyAlignedProfile(page: Page) {
   await expect.poll(async () => {
-    const frame = await page.locator("main.emr-workspace-frame-responsive").boundingBox();
+    const frame = await page.locator("main.emr-workspace-frame-responsive").evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const top = parseFloat(style.borderTopWidth);
+      const right = parseFloat(style.borderRightWidth);
+      const bottom = parseFloat(style.borderBottomWidth);
+      const left = parseFloat(style.borderLeftWidth);
+      return { x: rect.x + left, y: rect.y + top,
+        width: rect.width - left - right, height: rect.height - top - bottom };
+    });
     const drawer = await page.getByTestId("workspace-profile-drawer").boundingBox();
     if (!frame || !drawer) return Infinity;
     return Math.max(
@@ -11,7 +20,7 @@ async function expectBodyAlignedProfile(page: Page) {
       Math.abs(drawer.x + drawer.width - frame.x - frame.width),
       Math.abs(drawer.width - Math.min(380, frame.width)),
     );
-  }).toBeLessThanOrEqual(1);
+  }).toBeLessThanOrEqual(0.25);
 }
 
 for (const moduleId of ["home", "reception", "treatment", "lab", "imaging", "dispensing", "orders", "billing", "inpatient", "customer"]) {
@@ -168,4 +177,37 @@ test("customer row opens the profile and Escape restores row focus", async ({ pa
   await expect(page.getByTestId("workspace-profile-drawer")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(row).toBeFocused();
+});
+
+// Check intermediate slide offsets against the visible frame border.
+test("profile slide stays clipped inside the workspace border", async ({ page }) => {
+  await page.goto("/w/clair-demo/customer?modulePanel=open");
+  await page.getByTestId("customer-patient-row-patient-dubu").click();
+  const viewport = page.locator('[data-slot="sheet-viewport"]');
+  await expect(viewport).toBeVisible();
+  await expectBodyAlignedProfile(page);
+  const clipped = await viewport.evaluate(async (element) => {
+    const popup = element.querySelector<HTMLElement>('[data-testid="workspace-profile-drawer"]')!;
+    const rect = element.getBoundingClientRect();
+    const original = popup.style.transform;
+    popup.style.transition = "none";
+    for (const fraction of [0, 0.25, 0.5, 1]) {
+      popup.style.transform = `translateX(${fraction * 100}%)`;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      for (const [x, y] of [[rect.right + 0.5, rect.top + 30],
+        [rect.right - 30, rect.top - 0.5], [rect.right - 30, rect.bottom + 0.5]]) {
+        const outside = document.elementFromPoint(x, y);
+        if (outside && popup.contains(outside)) return { contained: false, fraction };
+      }
+    }
+    popup.style.transform = original;
+    popup.style.transition = "";
+    return { contained: true, overflow: getComputedStyle(element).overflow,
+      shadow: getComputedStyle(popup).boxShadow };
+  });
+  expect(clipped.contained).toBe(true);
+  expect(clipped.overflow).toBe("hidden");
+  expect(clipped.shadow).toMatch(/none|rgba\(0, 0, 0, 0\)/);
+  await page.getByRole("button", { name: "상세 닫기" }).click();
+  await expect(viewport).toHaveCount(0);
 });

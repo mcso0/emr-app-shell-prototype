@@ -53,10 +53,10 @@ const meta = {
         expect(popup).not.toBeNull();
         const body = frame.getBoundingClientRect();
         const drawer = popup!.getBoundingClientRect();
-        expect(drawer.top).toBeCloseTo(body.top, 0);
-        expect(drawer.bottom).toBeCloseTo(body.bottom, 0);
-        expect(drawer.right).toBeCloseTo(body.right, 0);
-        expect(drawer.width).toBeCloseTo(Math.min(380, body.width), 0);
+        expect(drawer.top).toBeCloseTo(body.top + 1, 0);
+        expect(drawer.bottom).toBeCloseTo(body.bottom - 1, 0);
+        expect(drawer.right).toBeCloseTo(body.right - 1, 0);
+        expect(drawer.width).toBeCloseTo(Math.min(380, body.width - 2), 0);
       });
     };
     await assertAlignment();

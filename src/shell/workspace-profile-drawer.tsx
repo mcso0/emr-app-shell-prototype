@@ -14,7 +14,7 @@ export function WorkspaceProfileDrawer({ frameElement, ...props }: ShellComponen
   const setActiveProfileDrawer = useLayoutStore((state) => state.setActiveProfileDrawer);
   const returnFocusIdRef = useRef<string | undefined>(undefined);
   const [bounds, setBounds] = useState<{
-    top: number; right: number; height: number; width: number;
+    top: number; right: number; height: number; width: number; borderRadius: number;
   } | null>(null);
   const open = Boolean(profile);
   useLayoutEffect(() => {
@@ -24,15 +24,21 @@ export function WorkspaceProfileDrawer({ frameElement, ...props }: ShellComponen
       window.cancelAnimationFrame(animationFrame);
       animationFrame = window.requestAnimationFrame(() => {
         const rect = frameElement.getBoundingClientRect();
+        const style = window.getComputedStyle(frameElement);
+        const top = parseFloat(style.borderTopWidth);
+        const right = parseFloat(style.borderRightWidth);
+        const bottom = parseFloat(style.borderBottomWidth);
+        const left = parseFloat(style.borderLeftWidth);
         const next = {
-          top: rect.top,
-          right: window.innerWidth - rect.right,
-          height: rect.height,
-          width: Math.min(380, rect.width),
+          top: rect.top + top,
+          right: window.innerWidth - rect.right + right,
+          height: rect.height - top - bottom,
+          width: rect.width - left - right,
+          borderRadius: Math.max(0, parseFloat(style.borderTopRightRadius) - Math.max(top, right)),
         };
         setBounds((current) => current && current.top === next.top &&
           current.right === next.right && current.height === next.height &&
-          current.width === next.width ? current : next);
+          current.width === next.width && current.borderRadius === next.borderRadius ? current : next);
       });
     };
     // Keep the body portal so nested menus/dialogs escape workspace clipping.
@@ -59,8 +65,9 @@ export function WorkspaceProfileDrawer({ frameElement, ...props }: ShellComponen
       onOpenChange={(open) => { if (!open) setActiveProfileDrawer(null); }}>
       <SheetContent
         aria-describedby={undefined}
-        className="gap-0 overflow-hidden rounded-r-[var(--emr-radius-panel)] p-0 motion-reduce:transition-none"
-        style={bounds ? { ...bounds, bottom: "auto", maxWidth: bounds.width } : undefined}
+        className="gap-0 overflow-hidden p-0 shadow-none data-[side=right]:data-ending-style:translate-x-full data-[side=right]:data-starting-style:translate-x-full motion-reduce:transition-none"
+        viewportStyle={bounds ?? undefined}
+        style={{ top: 0, right: 0, bottom: "auto", height: "100%", width: 380, maxWidth: "100%" }}
         data-testid="workspace-profile-drawer"
         showCloseButton={false}
         showOverlay={false}
