@@ -34,7 +34,7 @@ work instead of presenting every non-cancelled encounter as `대기`.
 - Keep requested, confirmed, and changed appointments in the active `예약`
   group with their truthful appointment status.
 - Remove in-consultation and ordered encounters from the active side queue
-  while keeping a high-level progress label on the calendar and detail panel.
+  while keeping a high-level progress label on the calendar.
 - Keep ready-for-billing encounters in a collapsed `수납대기` handoff group
   until the non-legacy billing queue owns that work.
 - Keep cancelled encounters/appointments and no-show appointments in a
@@ -77,3 +77,12 @@ work instead of presenting every non-cancelled encounter as `대기`.
   passed. The build retains the existing project-wide NFT trace warning.
 - Release Check, preview, staging, and production evidence are tracked by the
   release operation for the exact committed candidate.
+
+## 2026-09-30 Detail Panel Cleanup
+
+- User approved removal of the redundant status badge row from the right detail
+  panel, including commit, push, PR, main merge, and production delivery.
+- Keep queue/calendar status labels, status data, appointment check-in notice,
+  detail actions, and the separate modal presentation unchanged.
+- Existing focused browser checks assert that the right-panel badge is absent
+  while queue/calendar status and selected patient context remain available.

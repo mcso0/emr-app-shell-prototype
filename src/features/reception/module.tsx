@@ -11150,24 +11150,6 @@ function ReceptionSidePanelDetail({
             />
           ) : null}
 
-          {selectedEncounter || selectedAppointment ? (
-            <div className="flex justify-end">
-              <ReceptionStatusBadge
-                label={
-                  selectedEncounter
-                    ? getReceptionEncounterStatusLabel(selectedEncounter.status)
-                    : getStatusLabel("appointment", selectedAppointment!.status)
-                }
-                testId="reception-detail-status"
-                tone={
-                  selectedEncounter
-                    ? getReceptionEncounterStatusTone(selectedEncounter.status)
-                    : getAppointmentTone(selectedAppointment!.status)
-                }
-              />
-            </div>
-          ) : null}
-
           <ReceptionSidePanelSection title="환자/보호자" variant={detailVariant}>
             <ReceptionSidePanelField
               icon={<CdsMedicalPawPrintIcon className="size-3.5" />}
