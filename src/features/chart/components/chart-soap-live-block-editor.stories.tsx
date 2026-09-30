@@ -231,10 +231,19 @@ export const ResponsiveNarrow320: Story = {
     await expect(documentBody.queryByRole("heading", { name: "가려진 서식 도구" })).toBeNull();
     await expect(menu).toHaveAttribute("data-slot", "dropdown-menu-content");
     await waitFor(() => expect(menu.getBoundingClientRect().width).toBe(160));
+    let labelStart: number | undefined;
     for (const item of menu.querySelectorAll<HTMLElement>("[data-overflow-tool-id]")) {
-      const icon = item.children[item.getAttribute("role") === "menuitemcheckbox" ? 1 : 0];
+      const icon = item.querySelector<HTMLElement>("[data-toolbar-menu-icon]");
+      const label = item.querySelector<HTMLElement>("[data-toolbar-menu-label]");
+      if (!icon || !label) throw new Error("SOAP 메뉴의 아이콘/텍스트 영역을 찾지 못했습니다.");
       await expect(getComputedStyle(item).justifyContent).toBe("flex-start");
       await expect(icon.getBoundingClientRect().left - item.getBoundingClientRect().left).toBeLessThanOrEqual(8);
+      await expect(icon.getBoundingClientRect().width).toBe(16);
+      await expect(icon.getBoundingClientRect().height).toBe(16);
+      await expect(icon.querySelector("svg")).not.toBeNull();
+      await expect(getComputedStyle(label).textAlign).toBe("left");
+      labelStart ??= label.getBoundingClientRect().left;
+      await expect(Math.abs(label.getBoundingClientRect().left - labelStart)).toBeLessThan(0.5);
     }
     await userEvent.keyboard("{ArrowDown}{End}");
     await expect(within(menu).getByRole("menuitem", { name: "기록 삽입" })).toHaveFocus();
