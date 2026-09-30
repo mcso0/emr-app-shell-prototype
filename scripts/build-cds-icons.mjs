@@ -137,7 +137,6 @@ function extractSvgInner(svg) {
 
 function normalizePaints(svg) {
   return svg
-    .replace(/\s(?:width|height)="[^"]*"/g, "")
     .replace(/\sdata-name="[^"]*"/g, "")
     .replace(/\s(id|mask|clip-path)="url\(#paint[^"]*\)"/g, "")
     .replace(/fill="(?:black|#000|#000000|rgb\(0,\s*0,\s*0\))"/gi, 'fill="currentColor"')

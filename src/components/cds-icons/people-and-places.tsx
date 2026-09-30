@@ -21,7 +21,7 @@ export const CdsPeopleMapPinIcon = React.forwardRef<SVGSVGElement, CdsIconProps>
       </g>
       <defs>
       <clipPath id="clip0_26656_119975">
-      <rect fill="currentColor"/>
+      <rect width="24" height="24" fill="currentColor"/>
       </clipPath>
       </defs>
     </svg>
