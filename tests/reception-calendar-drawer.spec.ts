@@ -2,6 +2,83 @@ import { expect, test, type Page } from "@playwright/test";
 
 const route = "/w/clair-demo/reception?modulePanel=open";
 
+async function openStaffProfile(page: Page) {
+  await page.getByRole("button", { name: "이수지 수의사 옵션", exact: true }).click();
+  await page.getByRole("menuitem", { name: "운영 프로필 보기", exact: true }).click();
+  await expect(page.getByRole("region", { name: "직원 운영 프로필" })).toBeVisible();
+}
+
+for (const label of ["예약하기", "접수하기"]) {
+  test(`${label} keeps the calendar stationary throughout the opening animation`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.goto(route);
+    await expect(page.getByTestId("appointment-card-appointment-nabi-260501")).toBeVisible();
+    await page.getByTestId("schedule-check-in-button").click();
+    await page.evaluate(() => {
+      const samples: { left: number; scrollLeft: number; moving: boolean }[] = [];
+      Object.assign(window, { drawerMotionSamples: samples });
+      const start = performance.now();
+      const sample = () => {
+        const stage = document.querySelector('[data-testid="reception-calendar-stage"]')!;
+        const frame = document.querySelector('[data-testid="reception-calendar-frame"]')!;
+        const drawer = stage.querySelector('[data-testid="reception-calendar-drawer"]');
+        samples.push({ left: frame.getBoundingClientRect().left, scrollLeft: stage.scrollLeft,
+          moving: Boolean(drawer && getComputedStyle(drawer).transform !== "none") });
+        if (performance.now() - start < 800) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    await page.getByRole("menuitem", { name: label, exact: true }).click();
+    await expect(page.getByTestId("reception-calendar-drawer")).toBeVisible();
+    await page.waitForTimeout(850);
+    const samples = await page.evaluate(() => (window as unknown as {
+      drawerMotionSamples: { left: number; scrollLeft: number; moving: boolean }[];
+    }).drawerMotionSamples);
+    expect(samples.length).toBeGreaterThan(5);
+    expect(samples.some((sample) => sample.moving)).toBe(true);
+    expect(Math.max(...samples.map((sample) => sample.left)) - Math.min(...samples.map((sample) => sample.left))).toBe(0);
+    expect(Math.max(...samples.map((sample) => sample.scrollLeft))).toBe(0);
+  });
+}
+
+for (const label of ["예약하기", "접수하기"]) {
+  test(`${label} retains its draft while a staff profile opens and closes independently`, async ({ page }) => {
+    await page.goto(route);
+    await page.getByTestId("schedule-check-in-button").click();
+    await page.getByRole("menuitem", { name: label, exact: true }).click();
+    const drawer = page.getByTestId("reception-calendar-drawer");
+    const draft = label === "접수하기" ? drawer.getByRole("textbox", { name: "방문목적" })
+      : drawer.getByPlaceholder("예약 메모를 입력해주세요");
+    await draft.fill("Synthetic retained drawer draft");
+    await openStaffProfile(page);
+    await expect(draft).toHaveValue("Synthetic retained drawer draft");
+    await expect(page).toHaveURL(label === "예약하기" ? /drawer=reception-reservation-form/ : /drawer=reception-form/);
+    await page.getByRole("button", { name: "직원 운영 프로필 닫기", exact: true }).click();
+    await expect(page.getByRole("region", { name: "직원 운영 프로필" })).toHaveCount(0);
+    await expect(draft).toHaveValue("Synthetic retained drawer draft");
+    await openStaffProfile(page);
+    await page.evaluate(() => {
+      const counts: number[] = [];
+      const sample = () => counts.push(document.querySelectorAll('[aria-label="직원 운영 프로필"]').length);
+      const observer = new MutationObserver(sample);
+      observer.observe(document.body, { childList: true, subtree: true });
+      sample();
+      Object.assign(window, { concurrentProfileCounts: counts });
+      window.setTimeout(() => observer.disconnect(), 800);
+    });
+    await drawer.getByRole("button", { name: "취소", exact: true }).click();
+    await expect(drawer).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "직원 운영 프로필" })).toBeVisible();
+    const profileCounts = await page.evaluate(() => (window as unknown as {
+      concurrentProfileCounts: number[];
+    }).concurrentProfileCounts);
+    expect(Math.max(...profileCounts)).toBe(1);
+    await expect(page).not.toHaveURL(/drawer=reception-(form|reservation-form)/);
+    await page.getByRole("button", { name: "직원 운영 프로필 닫기", exact: true }).click();
+    await expect(drawer).toHaveCount(0);
+  });
+}
+
 async function calendarGeometry(page: Page) {
   return page.getByTestId("reception-calendar-frame").evaluate((frame) => {
     const rect = frame.getBoundingClientRect();
@@ -113,6 +190,10 @@ test("reception profile-origin Escape respects the discard guard and restores th
   await expect(page.getByTestId("workspace-right-panel").getByTestId("reception-right-panel")).toHaveCount(0);
   const purpose = drawer.getByRole("textbox", { name: "방문목적" });
   await purpose.fill("Synthetic drawer draft");
+  await openStaffProfile(page);
+  await expect(purpose).toHaveValue("Synthetic drawer draft");
+  await page.getByRole("button", { name: "직원 운영 프로필 닫기", exact: true }).click();
+  await expect(purpose).toHaveValue("Synthetic drawer draft");
   await purpose.press("Escape");
   const confirm = page.getByRole("dialog", { name: "작성 중인 내용을 버릴까요?" });
   await expect(confirm).toBeVisible();

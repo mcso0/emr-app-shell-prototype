@@ -15,6 +15,8 @@ type LayoutStore = {
   lastContentPanelOpened: "left" | "right";
   setDocumentWidthMode: (key: string, mode: "narrow" | "wide") => void;
   activeDrawer: DrawerState;
+  retainedReceptionDrawer: DrawerState;
+  receptionCalendarScope: string | null;
   contentAsideOpen: boolean;
   moduleRefreshActions: Record<string, ModuleRefreshAction | undefined>;
   modulePanelOpen: boolean;
@@ -25,6 +27,9 @@ type LayoutStore = {
   contentAsideWidth: number;
   rightPanelWidth: number;
   setActiveDrawer: (drawer: DrawerState) => void;
+  setReceptionCalendarScope: (scope: string | null) => void;
+  setReceptionCalendarDrawer: (drawer: DrawerState) => void;
+  setReceptionCalendarOpen: (open: boolean) => void;
   setContentAsideOpen: (open: boolean) => void;
   setModuleRefreshAction: (
     moduleId: string,
@@ -38,13 +43,23 @@ type LayoutStore = {
   enterModule: () => void;
 };
 
-export const useLayoutStore = create<LayoutStore>()((set) => ({
+const isReceptionCalendarDrawer = (drawer: DrawerState) => Boolean(drawer && [
+  "reception-appointment", "reception-appointment-check-in-form", "reception-encounter",
+  "reception-form", "reception-reservation-form",
+].includes(drawer.type));
+const isProfileDrawer = (drawer: DrawerState) => Boolean(drawer && [
+  "patient", "guardian", "reception-patient", "reception-guardian", "staff-operational-profile",
+].includes(drawer.type));
+
+export const useLayoutStore = create<LayoutStore>()((set, get) => ({
   documentWidthModes: {},
   lastContentPanelOpened: "right",
   setDocumentWidthMode: (key, mode) => set((state) => ({
     documentWidthModes: { ...state.documentWidthModes, [key]: mode },
   })),
   activeDrawer: null,
+  retainedReceptionDrawer: null,
+  receptionCalendarScope: null,
   contentAsideOpen: false,
   moduleRefreshActions: {},
   modulePanelOpen: true,
@@ -56,6 +71,17 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
   rightPanelWidth: SHELL_LAYOUT.rightPanel.defaultWidth,
   setActiveDrawer: (activeDrawer) =>
     set((state) => {
+      if (state.receptionCalendarScope && isProfileDrawer(activeDrawer) && isReceptionCalendarDrawer(state.activeDrawer)) {
+        return { activeDrawer, retainedReceptionDrawer: state.activeDrawer };
+      }
+      if (state.retainedReceptionDrawer && isProfileDrawer(state.activeDrawer)) {
+        if (activeDrawer === null) {
+          return { activeDrawer: state.retainedReceptionDrawer, retainedReceptionDrawer: null };
+        }
+        if (isReceptionCalendarDrawer(activeDrawer)) {
+          return { retainedReceptionDrawer: activeDrawer };
+        }
+      }
       if (
         state.activeDrawer?.type === activeDrawer?.type &&
         state.activeDrawer?.id === activeDrawer?.id &&
@@ -74,8 +100,34 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
         return state;
       }
 
-      return { activeDrawer };
+      return { activeDrawer, ...(isProfileDrawer(activeDrawer) ? {} : { retainedReceptionDrawer: null }) };
     }),
+  setReceptionCalendarScope: (receptionCalendarScope) =>
+    set((state) => state.receptionCalendarScope === receptionCalendarScope ? state : {
+      receptionCalendarScope, retainedReceptionDrawer: null,
+    }),
+  setReceptionCalendarDrawer: (drawer) => {
+    // Explicit form return targets replace the form; opening a profile from
+    // outside the calendar uses setActiveDrawer and retains the form instead.
+    if (drawer && !isReceptionCalendarDrawer(drawer)) {
+      set({ activeDrawer: drawer, retainedReceptionDrawer: null });
+      return;
+    }
+    const state = get();
+    if (state.receptionCalendarScope && isProfileDrawer(state.activeDrawer)) {
+      set({ retainedReceptionDrawer: drawer });
+      return;
+    }
+    get().setActiveDrawer(drawer);
+  },
+  setReceptionCalendarOpen: (open) => {
+    const state = get();
+    if (state.receptionCalendarScope && isProfileDrawer(state.activeDrawer)) {
+      if (!open) set({ retainedReceptionDrawer: null });
+      return;
+    }
+    get().setRightPanelOpen(open);
+  },
   setContentAsideOpen: (contentAsideOpen) =>
     set((state) =>
       state.contentAsideOpen === contentAsideOpen ? state : {
@@ -128,5 +180,7 @@ export const useLayoutStore = create<LayoutStore>()((set) => ({
           }
     ),
   enterModule: () =>
-    set((state) => (state.activeDrawer === null ? state : { activeDrawer: null })),
+    set((state) => (state.activeDrawer === null && state.retainedReceptionDrawer === null ? state : {
+      activeDrawer: null, retainedReceptionDrawer: null,
+    })),
 }));
