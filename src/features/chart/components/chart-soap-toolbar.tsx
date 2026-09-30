@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { HistoryExtension } from "@blocknote/core/extensions";
 import { useEditorState } from "@blocknote/react";
-import { IconEraser, IconMarker, IconOrderedList, IconStrikethrough, IconTable, IconUnderline } from "obra-icons-react";
+import { IconEraser, IconMarkerAlt, IconOrderedList, IconStrikethrough, IconTable, IconUnderline } from "obra-icons-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -333,7 +333,7 @@ export function ChartSoapToolbar({
     { id: "underline", label: "밑줄", icon: <IconUnderline size={16} strokeWidth={1.5} />, active: Boolean(state.styles.underline), run: () => toggleStyle("underline") },
     { id: "align-left", label: "왼쪽 정렬", icon: <CdsContentAlignLeftIcon size={16} />, active: state.alignment === "left", run: () => setAlignment("left") },
     { id: "align-center", label: "가운데 정렬", icon: <CdsContentAlignCenterIcon size={16} />, active: state.alignment === "center", run: () => setAlignment("center") },
-    { id: "highlight", label: "강조 색상", icon: <IconMarker size={16} strokeWidth={1.5} />, active: state.styles.backgroundColor === "yellow", run: () => toggleStyle("backgroundColor") },
+    { id: "highlight", label: "강조 색상", icon: <IconMarkerAlt size={16} strokeWidth={1.5} />, active: state.styles.backgroundColor === "yellow", run: () => toggleStyle("backgroundColor") },
     { id: "link", label: "링크 삽입", icon: <CdsContentLinkIcon size={16} />, run: () => { setLinkUrl(editor.getSelectedLinkUrl() ?? ""); setMenu("link"); } },
     { id: "checklist", label: "체크리스트", icon: <CdsActionsCheckSquareIcon size={16} />, active: state.blockType === "checkListItem", run: () => toggleList("checkListItem") },
     { id: "divider", label: "구분선", icon: <CdsActionsMinusIcon size={16} />, run: () => { const block = editor.getTextCursorPosition().block; editor.insertBlocks([{ type: "divider" }], block, "after"); } },
