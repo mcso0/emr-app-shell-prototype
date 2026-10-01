@@ -208,8 +208,8 @@ export function WorkspaceDocumentLayout({
         <WorkspacePanel open={leftOpen && (!overlay || modalSide === "left")} modal={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={leftWidth} position={position} onClose={() => closeLeft(false)}>
           {ContentAside ? <ContentAside {...slotProps} /> : null}
         </WorkspacePanel>
-        <div ref={centerRef} data-testid="workspace-document-center" className="col-start-2 row-start-1 min-h-0 min-w-0 overflow-hidden px-4">
-          <div data-testid="workspace-document" data-width-mode={widthMode} className="mx-auto h-full min-h-0 w-full" style={{ maxWidth: targetWidth, transition: animateWidth && !reduceMotion ? `max-width ${transitionMs}ms cubic-bezier(.2,0,0,1)` : "none" }}>
+        <div ref={centerRef} data-testid="workspace-document-center" className="col-start-2 row-start-1 min-h-0 min-w-0 overflow-hidden px-4 has-[[data-chart-start-locked=true]]:bg-[var(--emr-surface-panel)] has-[[data-chart-start-locked=true]]:px-0">
+          <div data-testid="workspace-document" data-width-mode={widthMode} className="mx-auto h-full min-h-0 w-full has-[[data-chart-start-locked=true]]:!max-w-none" style={{ maxWidth: targetWidth, transition: animateWidth && !reduceMotion ? `max-width ${transitionMs}ms cubic-bezier(.2,0,0,1)` : "none" }}>
             <Content {...slotProps} />
           </div>
         </div>

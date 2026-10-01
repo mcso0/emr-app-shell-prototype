@@ -5093,6 +5093,16 @@ test("chart consultation CTA moves from call to start before chart completion", 
   test.setTimeout(60_000);
   const workspaceId = "clair-demo";
   const encounterId = "encounter-choco-call-flow";
+  await page.route("**/api/workspaces/*/vital-settings", async (route) => {
+    const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+    snapshot.items = snapshot.items.map((item) => item.key === "blood_pressure"
+      ? { ...item, enabled: false }
+      : item);
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true, status: 200, ...snapshot }),
+    });
+  });
   const baseEncounter = {
     id: encounterId,
     workspaceId,
@@ -5519,11 +5529,12 @@ test("chart consultation CTA moves from call to start before chart completion", 
     }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "진료 완료" })).toHaveCount(0);
-  await expect(lockedState.locator(":scope > div").first()).toHaveCSS(
+  const waitingViewport = lockedState.locator("[data-slot=scroll-area-viewport]");
+  await expect(waitingViewport.locator(":scope > div").first()).toHaveCSS(
     "max-width",
     "1024px",
   );
-  const preconsultationPanel = lockedState.locator(":scope > div").first();
+  const preconsultationPanel = waitingViewport.locator(":scope > div").first();
   const headerSeparator = preconsultationPanel
     .locator(":scope > [data-slot='separator']")
     .first();
@@ -5541,10 +5552,24 @@ test("chart consultation CTA moves from call to start before chart completion", 
   });
   expect(Math.abs(separatorMetrics.leftInset - 24)).toBeLessThanOrEqual(1);
   expect(Math.abs(separatorMetrics.rightInset - 24)).toBeLessThanOrEqual(1);
-  await expect(lockedState).toHaveClass(/scroll-fade-y/);
-  await expect(lockedState).toHaveClass(/scroll-fade-8/);
-  await expect(lockedState).toHaveCSS("overflow-y", "auto");
-  await expect(lockedState).toHaveCSS("padding-right", "16px");
+  await expect(waitingViewport).toHaveClass(/scroll-fade-y/);
+  await expect(waitingViewport).toHaveClass(/scroll-fade-8/);
+  await expect(waitingViewport).toHaveCSS("overflow-y", "scroll");
+  await expect(waitingViewport).toHaveCSS("overflow-x", "hidden");
+  await expect(waitingViewport).toHaveCSS("padding-right", "16px");
+  await expect(page.locator("[data-slot=chart-content]")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  const waitingScrollbar = lockedState.locator("[data-slot=scroll-area-scrollbar]");
+  await page.mouse.move(0, 0);
+  await expect(waitingScrollbar).toHaveCSS("opacity", "0");
+  await waitingViewport.hover();
+  await expect(waitingScrollbar).toHaveCSS("opacity", "1");
+  await page.mouse.move(0, 0);
+  await expect(waitingScrollbar).toHaveCSS("opacity", "0");
+  const waitingScrollBounds = await waitingScrollbar.evaluate((element) => ({
+    barRight: element.getBoundingClientRect().right,
+    contentRight: document.querySelector("[data-testid=workspace-main-content]")!.getBoundingClientRect().right,
+  }));
+  expect(Math.abs(waitingScrollBounds.contentRight - waitingScrollBounds.barRight)).toBeLessThanOrEqual(1);
   const lockedStateFrameMetrics = await lockedState.evaluate((element) => {
     const parent = element.parentElement;
     if (!parent) throw new Error("chart locked-state frame is missing");
@@ -5559,6 +5584,24 @@ test("chart consultation CTA moves from call to start before chart completion", 
   });
   expect(lockedStateFrameMetrics.framePaddingRight).toBe("0px");
   expect(Math.abs(lockedStateFrameMetrics.rightInset)).toBeLessThanOrEqual(1);
+  for (const width of [1386, 800]) {
+    await page.setViewportSize({ width, height: 877 });
+    await page.goto(`/w/clair-demo/treatment?modulePanel=closed&aside=closed&encounterId=${encounterId}`);
+    await expect(lockedState).toBeVisible();
+    const rightInset = await waitingScrollbar.evaluate((element) =>
+      document.querySelector("[data-testid=workspace-main-content]")!.getBoundingClientRect().right - element.getBoundingClientRect().right,
+    );
+    expect(Math.abs(rightInset)).toBeLessThanOrEqual(1);
+    await waitingViewport.hover();
+    await expect(waitingScrollbar).toHaveCSS("opacity", "1");
+    await page.mouse.wheel(0, 240);
+    await expect.poll(() => waitingViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await page.mouse.move(0, 0);
+    await expect(waitingScrollbar).toHaveCSS("opacity", "0");
+  }
+  await page.setViewportSize({ width: 1324, height: 877 });
+  await page.goto(`/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`);
+  await expect(lockedState).toBeVisible();
   await expect(lockedState).toContainText("진료 대기");
   await expect(lockedState).toContainText("차트번호 E-260625-0001");
   await expect(lockedState).toContainText("초코");
@@ -5803,7 +5846,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(historySection).toContainText("예방접종 및 건강검진");
   await expect(historySection).not.toContainText("2026년 06월 25일");
   await expect(historySection).not.toContainText("완료");
-  const preconsultationScrollMetrics = await lockedState.evaluate(
+  const preconsultationScrollMetrics = await waitingViewport.evaluate(
     (element) => ({
       clientHeight: element.clientHeight,
       scrollHeight: element.scrollHeight,
@@ -5812,11 +5855,11 @@ test("chart consultation CTA moves from call to start before chart completion", 
   expect(preconsultationScrollMetrics.scrollHeight).toBeGreaterThan(
     preconsultationScrollMetrics.clientHeight,
   );
-  await lockedState.evaluate((element) => {
+  await waitingViewport.evaluate((element) => {
     element.scrollTop = element.scrollHeight;
   });
   await expect
-    .poll(() => lockedState.evaluate((element) => element.scrollTop))
+    .poll(() => waitingViewport.evaluate((element) => element.scrollTop))
     .toBeGreaterThan(0);
   await expect(historySection).toBeInViewport();
   await expect(historyTimeline).toHaveClass(/px-6/);

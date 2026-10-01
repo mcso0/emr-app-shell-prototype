@@ -35,6 +35,7 @@ import {
   ButtonGroupIconButton,
   ButtonGroupPrimaryButton,
 } from "@/components/ui/button-group";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import type {
@@ -57,6 +58,9 @@ import {
 } from "@/features/patient-vitals/workspace-vital-settings";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import { cn } from "@/lib/utils";
+
+const PRECONSULTATION_SCROLL_CLASS =
+  "min-h-0 flex-1 overflow-hidden [&>[data-slot=scroll-area-scrollbar]]:opacity-0 [&>[data-slot=scroll-area-scrollbar]]:transition-opacity [&>[data-slot=scroll-area-scrollbar][data-hovering]]:opacity-100";
 
 type ContextState =
   | { status: "loading" }
@@ -179,8 +183,10 @@ export function ChartPreconsultationContextPanel({
     (measurement) => measurement.encounterId === context.encounter.id,
   );
   return (
-    <div
-      className="scroll-fade-y scroll-fade-8 min-h-0 flex-1 overflow-y-auto px-4"
+    <ScrollArea
+      className={PRECONSULTATION_SCROLL_CLASS}
+      viewportClassName="scroll-fade-y scroll-fade-8 px-4"
+      viewportStyle={{ overflowX: "hidden" }}
       data-testid="chart-start-locked-state"
     >
       <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
@@ -230,7 +236,7 @@ export function ChartPreconsultationContextPanel({
         vitalSettings={vitalSettings}
         workspaceId={workspaceId}
       />
-    </div>
+    </ScrollArea>
   );
 }
 
@@ -262,8 +268,10 @@ async function loadChartPreconsultationContext({
 
 function PreconsultationLoadingState() {
   return (
-    <div
-      className="scroll-fade-y scroll-fade-8 min-h-0 flex-1 overflow-y-auto px-4"
+    <ScrollArea
+      className={PRECONSULTATION_SCROLL_CLASS}
+      viewportClassName="scroll-fade-y scroll-fade-8 px-4"
+      viewportStyle={{ overflowX: "hidden" }}
       aria-busy="true"
       aria-label="환자 정보 불러오는 중"
       data-testid="preconsultation-loading-state"
@@ -292,7 +300,7 @@ function PreconsultationLoadingState() {
       <span className="sr-only" role="status">
         환자와 접수 정보를 불러오고 있어요.
       </span>
-    </div>
+    </ScrollArea>
   );
 }
 
