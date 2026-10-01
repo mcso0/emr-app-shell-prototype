@@ -17596,7 +17596,8 @@ export function ChartContent({
           ref={chartWorkspaceRef}
           data-slot="chart-workspace"
           className={cn(
-            "@container/chart-workspace grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] px-4 pb-2",
+            "@container/chart-workspace grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] pb-2",
+            !documentLayout && "px-4",
             isChartResizing && "select-none",
           )}
           style={{

@@ -32,6 +32,7 @@ Implementation approval: 승욱, 2026-09-29, “오케이 순서대로 진행해
 ## Panels and accessibility
 
 - Patient header and document toolbar span the work surface. Internal panels start below the toolbar.
+- 차트 retains its original borderless action toolbar. The common center owns the single 16px horizontal inset; an opt-in chart adds no second inset. Wide S/O/Assessment/History outer edges and Plan/Order align with the action bar's inner edges. The narrow visible document area uses the full 1040px cap, while existing minimum panel tracks and contained scrolling remain unchanged.
 - Profile remains in the outer slot and does not replace the receipt panel.
 - If requested inline panels would leave less than 880px for the center, display the latest panel as a modal; close the earlier supplementary panel and preserve central inputs. Never automatically collapse the queue.
 - Inline panels do not trap focus or dismiss when Escape closes an unrelated central control. Modal presentation blocks background interaction, supports Escape and backdrop dismissal, and returns focus to the panel trigger.
