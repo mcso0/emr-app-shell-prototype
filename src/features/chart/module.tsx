@@ -16994,7 +16994,13 @@ export function ChartContent({
   return (
     <div
       data-slot="chart-content"
-      className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]"
+      data-chart-start-locked={chartStartLocked || undefined}
+      className={cn(
+        "flex h-full min-h-0 flex-col",
+        chartStartLocked
+          ? "bg-[var(--emr-surface-panel)]"
+          : "bg-[var(--emr-surface-workspace)]",
+      )}
     >
       {!chartStartLocked ? (
         <>
