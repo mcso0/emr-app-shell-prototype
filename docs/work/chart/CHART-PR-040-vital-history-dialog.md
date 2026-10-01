@@ -8,7 +8,7 @@ source_docs:
   - docs/engineering/data-model/patient-vital-measurements.md
 dependencies:
   - CHART-PR-023
-updated: 2026-09-29
+updated: 2026-10-01
 ---
 
 # Vital History Dialog
@@ -220,3 +220,80 @@ the actual context bar and dialog shell: pointer-close restores focus but yields
 `hover=false`, `focusWithin=true`, `focusVisible=false`, transparent background and
 + opacity 0. Actual hover and Tab/Escape both show the action; keyboard return
 retains a 2px focus ring. No automated tests or remote patient-data writes ran.
+
+
+## 2026-10-01 stale SOAP vitals follow-up (local implementation only)
+
+승욱 approved reproducing and fixing audit item 1 using local synthetic/mock data.
+This follow-up does **not** inherit earlier release approval: no commit, push, PR,
+merge, deployment, hosted clinical write, migration or policy change is authorized.
+
+- Verified GitHub main/base: `e4d382a76e52943193524c0e9a2d944c77b49838`.
+  Detached isolated worktree: `/Users/iseung-ug/Documents/Codex/2026-10-01/task/vitals-fix`.
+  The dirty primary checkout and its WIP are preserved.
+- Before the fix, the actual latest-vitals hook mounted as header and SOAP consumers
+  reproduced the defect: header synthetic save/refetch returned 7.00 kg, while
+  insertion without navigation still emitted 4.00 kg. This is synthetic runtime
+  reproduction, not evidence of a hosted clinical incident.
+- A mounted-only resource now shares latest summary, settings and initial requests
+  by encounter/workspace/authenticated actor/normalized headers. Header `replaceVital`
+  refreshes the server summary for both consumers; no saved-row optimistic overwrite.
+- Cookie auth identity comes from the existing Supabase client's auth subscription;
+  wait for `INITIAL_SESSION`, isolate account changes/sign-out, and avoid extra
+  clinical reads on token refresh. No new auth request or polling is introduced.
+- Abort superseded requests and check request generation plus resource identity.
+  Release entries after the last subscriber; preserve StrictMode request deduplication.
+  Loading/error states suppress stale SOAP insertion and write eligibility.
+- No chart/module UI, API, SQL, RLS, schema, canonical permissions, billing or
+  notification changes. The existing static test now points at the new resource
+  instead of requiring the old settings-hook implementation by name.
+
+Validation command: `npx playwright test -c playwright.vitals.config.ts`.
+The synthetic browser harness bundles the actual hook, mocks auth/HTTP, and mirrors
+existing header save and SOAP insertion contracts. It does not mount the full chart
+editor/dialog and does not claim remote persistence or real-account smoke coverage.
+Final local evidence (2026-10-01):
+
+- Focused Playwright: **50 passed** (17 synthetic actual-hook browser regressions,
+  33 existing mocked server/model/permission contract tests). Covers save→SOAP,
+  old-row correction, per-field fallback, units/order/visibility, pending/failed
+  refresh, delayed/out-of-order responses even ignoring abort, rapid patient/
+  encounter/workspace/account changes, stale save completion, normalized headers,
+  duplicate initial reads, StrictMode, unmount/remount, initial auth wait and
+  token-refresh/sign-out behavior.
+- TypeScript and changed-file ESLint passed without warnings. Full ESLint passed
+  with 0 errors and 5 pre-existing warnings in unrelated WP-10 scripts.
+- Default `npm run build` passed with Next 16.2.6/Turbopack. The existing docs/NFT
+  tracing warning remains. Initial external-dependency-symlink build failed;
+  APFS-cloned worktree-local dependencies resolved that. A sandbox build stalled
+  and was interrupted; the approved elevated local build completed successfully.
+- Docs references, Korean UX copy, tracked-file and untracked-addition secret scans and diff checks passed.
+  Original and final browser logs plus build/lint output are retained locally in
+  `_workspace/vitals-validation/` (ignored, not a publication artifact).
+- No hosted clinical mutation, full-chart editor smoke, real-account cookie/remote
+  persistence test, commit/push/PR/merge/deployment or DB execution. Full suite was
+  not run; validation is focused on the changed resource and existing contracts.
+
+Human acceptance and a new publication decision remain pending. The next optional
+step is approval for this exact local candidate's commit/PR/release workflow;
+PR887 approval does not apply.
+
+
+## 2026-10-01 PR and release verification preparation
+
+승욱's subsequent reply authorized commit/push, a draft PR and deployment
+verification preparation for this vitals fix. Exact-candidate Production approval
+is still required: stop before merge, deploy, promote or Production alias changes.
+Earlier PR887 approval remains unrelated.
+
+- Refreshed base: `906a118b41e760adf2dc274f1e3df4895a4adc32` (main includes
+  separately approved chart-layout PRs #888–#890). No vital-source overlap.
+- Branch: `codex/soap-vitals-refresh`. Preserve the primary checkout and all its WIP.
+- Prepare a packet for the exact committed PR head containing local checks,
+  manually dispatched Release Check, Ready Preview, current main/Production,
+  bounded read-only smoke and a verified previous Ready deployment.
+- Proposed post-approval action is an exact-head-protected squash merge to main.
+  Smoke may check `/login` and mock/synthetic vital synchronization; no hosted
+  clinical save is authorized. No schema/RLS/permission/billing or other audit fixes.
+- Candidate/run/deployment identifiers belong in the PR and approval packet once
+  known; do not change the candidate merely to embed its own commit hash.
