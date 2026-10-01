@@ -35,6 +35,13 @@ test("instruction toolbar spans the surface and width preserves table selection 
   await expect(toolbar.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
   await expect(toolbar.getByRole("button", { name: "문서 추가 작업", exact: true })).toBeVisible();
   const document = page.getByTestId("workspace-document");
+  const group = page.locator('[data-slot="instruction-result-scroll-content"] > *').first();
+  await expect(toolbar).toHaveCSS("border-bottom-width", "0px");
+  await expect.poll(async () => {
+    const documentBox = (await document.boundingBox())!;
+    const groupBox = (await group.boundingBox())!;
+    return [groupBox.x - documentBox.x, groupBox.width - documentBox.width];
+  }).toEqual([0, 0]);
   const content = await page.locator('[data-slot="dispensing-content"]').elementHandle();
   const table = page.getByRole("table", { name: "조제/처치 section-0 오더 테이블", exact: true });
   const checkbox = table.getByRole("checkbox").nth(1);
@@ -44,6 +51,12 @@ test("instruction toolbar spans the surface and width preserves table selection 
   await page.getByRole("button", { name: "넓게 보기" }).click();
   await expect(document).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => (await document.boundingBox())!.width).toBeGreaterThan(1120);
+  await expect.poll(async () => {
+    const documentBox = (await document.boundingBox())!;
+    const groupBox = (await group.boundingBox())!;
+    const toolbarBox = (await toolbar.boundingBox())!;
+    return [groupBox.x - documentBox.x, groupBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+  }).toEqual([0, 0, 0, 0]);
   expect(await content!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(checkbox).toBeChecked();
   await expect(table).toHaveAttribute("data-emr-density", "compact");
@@ -52,6 +65,7 @@ test("instruction toolbar spans the surface and width preserves table selection 
   await page.screenshot({ path: `${evidence}/1920-wide.png` });
   await page.getByRole("button", { name: "좁게 보기" }).click();
   await expect(document).toHaveCSS("max-width", "1120px");
+  await expect.poll(async () => (await document.boundingBox())!.width).toBe(1120);
   await expect(checkbox).toBeChecked();
   await page.screenshot({ path: `${evidence}/1920-narrow.png` });
 });

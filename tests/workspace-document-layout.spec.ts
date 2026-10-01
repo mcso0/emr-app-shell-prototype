@@ -29,11 +29,25 @@ test("available document width controls visibility and preserves selected mode a
   await openLab(page);
   const doc = page.getByTestId("workspace-document");
   const widthButton = page.locator("[data-workspace-width-toggle]");
+  const toolbar = page.getByTestId("workspace-document-toolbar");
+  const resultContent = page.locator('[data-slot="instruction-result-scroll-content"]');
+  await expect(toolbar).toHaveCSS("border-bottom-width", "0px");
+  await expect.poll(async () => {
+    const documentBox = (await doc.boundingBox())!;
+    const contentBox = (await resultContent.locator(":scope > *").first().boundingBox())!;
+    return [contentBox.x - documentBox.x, contentBox.width - documentBox.width];
+  }).toEqual([0, 0]);
   await expect(doc).toHaveCSS("max-width", "1120px");
   await page.getByRole("textbox", { name: "HCT 결과값" }).fill("31");
   await widthButton.click();
   await expect(doc).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => (await doc.boundingBox())!.width).toBeGreaterThan(1120);
+  await expect.poll(async () => {
+    const documentBox = (await doc.boundingBox())!;
+    const contentBox = (await resultContent.locator(":scope > *").first().boundingBox())!;
+    const toolbarBox = (await toolbar.boundingBox())!;
+    return [contentBox.x - documentBox.x, contentBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+  }).toEqual([0, 0, 0, 0]);
   await expect(widthButton).toBeVisible();
   await page.mouse.move(0, 0);
   await page.mouse.move(0, 0);
@@ -46,6 +60,7 @@ test("available document width controls visibility and preserves selected mode a
   await expect(widthButton).toHaveText("좁게 보기");
   await widthButton.click();
   await expect(doc).toHaveCSS("max-width", "1120px");
+  await expect.poll(async () => (await doc.boundingBox())!.width).toBe(1120);
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toHaveValue("31");
   await expect(page.getByTestId("workspace-document-toolbar").getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
   await page.mouse.move(0, 0);

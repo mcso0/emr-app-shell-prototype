@@ -3901,7 +3901,7 @@ export function LabContent({
       />
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
-        <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 px-4 pb-10 pt-4">
+        <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
           <LabResultInputSection
             routeResultId={detail?.result.id ?? selectedLabResultId ?? displayDetail.result.id}
             assigneeName={
@@ -4705,7 +4705,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
         data-slot="imaging-result-scroll-area"
         className="min-h-0 flex-1"
       >
-        <div data-slot="instruction-result-scroll-content" className="flex flex-col gap-4 px-4 pb-10 pt-4">
+        <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
           <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 emr-text-dense font-medium leading-5 text-[var(--emr-status-warning-text)]">
             병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
           </section>

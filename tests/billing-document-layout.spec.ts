@@ -36,6 +36,13 @@ test("invoice width preserves quantity, calculated total, table and assignment",
   await openInvoice(page);
   const document = page.getByTestId("workspace-document");
   const toolbar = page.getByTestId("workspace-document-toolbar");
+  const info = page.getByTestId("billing-instruction-info");
+  await expect(toolbar).toHaveCSS("border-bottom-width", "0px");
+  await expect.poll(async () => {
+    const documentBox = (await document.boundingBox())!;
+    const infoBox = (await info.boundingBox())!;
+    return [infoBox.x - documentBox.x, infoBox.width - documentBox.width];
+  }).toEqual([0, 0]);
   expect((await toolbar.boundingBox())!.width).toBeGreaterThan((await document.boundingBox())!.width);
   const content = await page.locator('[data-slot="billing-content"]').elementHandle();
   const quantity = page.getByRole("spinbutton", { name: "CBC 검사 수량" });
@@ -51,6 +58,12 @@ test("invoice width preserves quantity, calculated total, table and assignment",
   await page.getByRole("button", { name: "넓게 보기" }).click();
   const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
   await expect.poll(async () => (await document.boundingBox())!.width).toBe(available);
+  await expect.poll(async () => {
+    const documentBox = (await document.boundingBox())!;
+    const infoBox = (await info.boundingBox())!;
+    const toolbarBox = (await toolbar.boundingBox())!;
+    return [infoBox.x - documentBox.x, infoBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+  }).toEqual([0, 0, 0, 0]);
   expect(await content!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(quantity).toHaveValue("2");
   expect(await table.getByRole("columnheader").allTextContents()).toEqual(columns);
