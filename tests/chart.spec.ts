@@ -3673,6 +3673,111 @@ test("an uncalled past reception stays waiting and warns before creating today's
   ).toBeEditable();
 });
 
+for (const { heldPage, action } of [
+  { heldPage: 1, action: "patient" },
+  { heldPage: 2, action: "patient" },
+  { heldPage: 1, action: "encounter" },
+  { heldPage: 1, action: "leave" },
+  { heldPage: 1, action: "signout" },
+]) {
+  test(`live history cancellation stops page ${heldPage} on ${action} change`, async ({ page }) => {
+    const first = createLiveChartQueueRecord({ encounterId: "cancel-a", patientName: "취소에이", sortOrder: 1 });
+    const second = createLiveChartQueueRecord({ encounterId: "cancel-b", patientName: "취소비", sortOrder: 2 });
+    if (action === "encounter") {
+      second.patient = first.patient;
+      second.encounter.patientId = first.patient.id;
+    }
+    await grantCheongdamWorkspaceAccess(page);
+    await page.route(
+      `**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/chart/live-queue?*`,
+      (route) => fulfillLiveChartQueue(route, [first, second]),
+    );
+    await page.route("**/api/workspaces/*/chart/encounter-charts**", (route) => route.fulfill({
+      json: { ok: true, status: 200, charts: [] },
+    }));
+    await page.addInitScript(({ first, heldPage }) => {
+      const originalFetch = window.fetch.bind(window);
+      const requests: Array<{ calls: string[]; aborted: boolean; released: boolean; release?: () => void }> = [];
+      const bySignal = new Map<AbortSignal | null | undefined, typeof requests[number]>();
+      const audit = { requests, switching: false };
+      Object.assign(window, { historyCancellationAudit: audit });
+      window.fetch = async (input, init) => {
+        const url = new URL(String(input), window.location.origin);
+        if (!url.pathname.endsWith("/chart/history")) return originalFetch(input, init);
+        const patientId = url.searchParams.get("patientId");
+        if (audit.switching || patientId !== first.patient.id) return Response.json({
+          ok: true, status: 200, enforcedBy: "chart-patient-history-read", items: [], nextCursor: null, totalCount: 0,
+        });
+        const start = Number(url.searchParams.get("cursor") ?? 0);
+        let request = bySignal.get(init?.signal);
+        if (!request) {
+          request = { calls: [], aborted: false, released: false };
+          bySignal.set(init?.signal, request);
+          requests.push(request);
+          const observedRequest = request;
+          init?.signal?.addEventListener("abort", () => { observedRequest.aborted = true; }, { once: true });
+        }
+        request.calls.push(String(start));
+        if (start === (heldPage - 1) * 50) {
+          const heldRequest = request;
+          init?.signal?.addEventListener("abort", () => { heldRequest.aborted = true; }, { once: true });
+          // Deliberately ignore abort until released to exercise stale/out-of-order completion.
+          await new Promise<void>((resolve) => { heldRequest.release = resolve; });
+          heldRequest.released = true;
+        }
+        return Response.json({
+          ok: true, status: 200, enforcedBy: "chart-patient-history-read",
+          totalCount: 125, nextCursor: start + 50 < 125 ? String(start + 50) : null,
+          items: Array.from({ length: Math.min(50, 125 - start) }, (_, offset) => ({
+            chart: {
+              id: `synthetic-chart-${start + offset}`, encounterId: first.encounter.id,
+              authorUserId: "synthetic-vet", status: "signed",
+              createdAt: "2026-10-01T00:00:00.000Z", updatedAt: "2026-10-01T00:00:00.000Z",
+            },
+            encounter: first.encounter, primaryGuardian: first.primaryGuardian, diagnoses: [],
+          })),
+        });
+      };
+    }, { first, heldPage });
+    const audit = () => page.evaluate(() => (window as unknown as {
+      historyCancellationAudit: { requests: Array<{ calls: string[]; aborted: boolean; released: boolean }> };
+    }).historyCancellationAudit);
+    await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/treatment?encounterId=${first.encounter.id}&modulePanel=open&aside=history`);
+    await expect.poll(async () => (await audit()).requests.some((request) =>
+      !request.aborted && request.calls.length === heldPage)).toBe(true);
+    await expect(page.getByTestId("chart-history-loading-state")).toBeVisible();
+    await page.evaluate(() => { (window as unknown as {
+      historyCancellationAudit: { switching: boolean };
+    }).historyCancellationAudit.switching = true; });
+    if (action === "leave") {
+      await page.getByRole("link", { name: "접수/예약", exact: true }).click();
+    } else if (action === "signout") {
+      await page.getByTestId("top-menu-mock-user").click();
+      await page.getByRole("menuitem", { name: "로그아웃" }).click();
+    } else {
+      await page.getByTestId(`order-queue-item-${second.encounter.id}`).click();
+      await expect(page.getByTestId("chart-history-empty-state")).toBeVisible();
+    }
+    await expect.poll(async () => (await audit()).requests.every((request) => request.aborted)).toBe(true);
+    await page.evaluate(() => (window as unknown as {
+      historyCancellationAudit: { requests: Array<{ release?: () => void }> };
+    }).historyCancellationAudit.requests.forEach((request) => request.release?.()));
+    await expect.poll(async () => (await audit()).requests.filter((request) =>
+      request.calls.length === heldPage).every((request) => request.released)).toBe(true);
+    // Let the resolved fetch/body continuation run before checking the final page count.
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    for (const request of (await audit()).requests) {
+      expect(request.calls).toEqual(request.calls.length === 1 ? ["0"] : ["0", "50"]);
+      expect(request.calls.length).toBeLessThanOrEqual(heldPage);
+    }
+    await expect(page.getByTestId("chart-history-loading-state")).toHaveCount(0);
+    await expect(page.getByTestId("chart-history-error-alert")).toHaveCount(0);
+    if (action === "patient") {
+      await expect(page.getByLabel("환자 컨텍스트 정보")).toContainText("취소비");
+    }
+  });
+}
+
 test("live patient chart history keeps loading, error, and empty states distinct", async ({
   page,
 }) => {
