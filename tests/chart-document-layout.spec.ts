@@ -5,11 +5,35 @@ const chartUrl = "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-
 const evidence = "docs/completed/app-shell/2026-09-30-chart-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
-async function openChart(page: Page) {
+async function openChart(page: Page, narrow = true) {
   await page.goto(chartUrl);
   await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
-  await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1040px");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
+  await expect(page.getByRole("button", { name: "좁게 보기" })).toBeVisible();
+  if (narrow) {
+    await page.getByRole("button", { name: "좁게 보기" }).click();
+    await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1040px");
+  }
 }
+
+test("chart starts wide after entry and reload while manual narrow choice survives module navigation", async ({ page }) => {
+  await openChart(page, false);
+  const doc = page.getByTestId("workspace-document");
+  const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
+  await expect.poll(async () => (await doc.boundingBox())!.width).toBe(available);
+  await page.getByRole("button", { name: "좁게 보기" }).click();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await page.reload();
+  await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
+  await expect(doc).toHaveAttribute("data-width-mode", "wide");
+  await expect(page.getByRole("button", { name: "좁게 보기" })).toBeVisible();
+  await page.getByRole("button", { name: "좁게 보기" }).click();
+  await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toBeVisible();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await page.getByRole("link", { name: "진료/차트", exact: true }).click();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+});
 
 test("chart toolbar spans the surface and width changes preserve editor, selection and panel state", async ({ page }) => {
   // Keep this layout probe isolated from the local server's mutable SOAP fixture.

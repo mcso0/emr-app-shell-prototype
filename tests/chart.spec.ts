@@ -1037,7 +1037,7 @@ test("chart wide panels retain their inset below the full-width action bar", asy
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
-  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const actionBar = page.locator("[data-slot='chart-action-bar']");
@@ -1083,7 +1083,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
-  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const actionBar = page.locator("[data-slot='chart-action-bar']");
@@ -1409,7 +1409,7 @@ test("chart wide contents preserve panel geometry below the separate toolbar", a
   });
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const content = page.locator("[data-slot='chart-content']");
@@ -1490,7 +1490,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(chartFigmaVisualFixture.route);
-  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const chartContent = page.locator("[data-slot='chart-content']");
@@ -7037,7 +7037,7 @@ test("Assessment diagnosis table matches the approved Figma geometry and semanti
   await routePopulatedKongCurrentChartAssessment(page);
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
   await page.goto(`${chartFigmaVisualFixture.route}&chartId=soap-kong-260501`);
-  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => Math.round((await page.locator("[data-slot='chart-content']").boundingBox())?.width ?? 0)).toBe(chartFigmaVisualFixture.expectedContentSize.width);
 
   const diagnosisPanel = page.getByLabel("진단명 관리");
