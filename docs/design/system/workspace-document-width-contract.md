@@ -1,6 +1,6 @@
 ---
 status: active
-updated: 2026-09-30
+updated: 2026-10-01
 related_work: APP-SHELL-PR-002
 ---
 
@@ -22,7 +22,7 @@ Implementation approval: 승욱, 2026-09-29, “오케이 순서대로 진행해
 
 ## Width and state
 
-- Narrow is the initial width preference. Wide uses available document space.
+- 차트 (`treatment`) starts wide on first entry and full reload; other opted-in modules start narrow. Wide uses available document space. A manual narrow/wide choice remains respected during module navigation in the current session.
 - Show the width button only when unrestricted document space exceeds the cap. Measure the center container after shell, profile, inline panels, padding and scrollbar; never use viewport 1600 as the threshold or the restricted document width as the measurement.
 - Keep the preference when the button hides. UI preference is scoped by workspace and module in the session store; no database or new durable storage is introduced.
 - Keep the Content component and its fields mounted across width and panel presentation changes. Keep existing panel URL states separate from width preference.

@@ -137,7 +137,7 @@ export function WorkspaceDocumentLayout({
   const [animateWidth, setAnimateWidth] = useState(false);
   const reduceMotion = useReducedMotion();
   const preferenceKey = `${slotProps.workspaceId}:${slotProps.moduleId}`;
-  const widthMode = useLayoutStore((state) => state.documentWidthModes[preferenceKey] ?? "narrow");
+  const widthMode = useLayoutStore((state) => state.documentWidthModes[preferenceKey] ?? (slotProps.moduleId === "treatment" ? "wide" : "narrow"));
   const setWidthMode = useLayoutStore((state) => state.setDocumentWidthMode);
   const leftOpen = useLayoutStore((state) => state.contentAsideOpen) && Boolean(slotProps.hasContentAside);
   const rightOpen = useLayoutStore((state) => state.rightPanelOpen) && Boolean(slotProps.hasRightPanel);
