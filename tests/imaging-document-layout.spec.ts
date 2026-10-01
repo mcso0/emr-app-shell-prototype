@@ -33,6 +33,13 @@ test("report width and full toolbar preserve reading inputs and order table", as
   await openReport(page);
   const document = page.getByTestId("workspace-document");
   const toolbar = page.getByTestId("workspace-document-toolbar");
+  const section = page.locator('[data-slot="instruction-result-scroll-content"] > section').first();
+  await expect(toolbar).toHaveCSS("border-bottom-width", "0px");
+  await expect.poll(async () => {
+    const documentBox = (await document.boundingBox())!;
+    const sectionBox = (await section.boundingBox())!;
+    return [sectionBox.x - documentBox.x, sectionBox.width - documentBox.width];
+  }).toEqual([0, 0]);
   const content = await page.locator('[data-slot="imaging-content"]').elementHandle();
   expect((await toolbar.boundingBox())!.width).toBeGreaterThan((await document.boundingBox())!.width);
   await expect(toolbar.getByRole("button", { name: "PACS", exact: true })).toBeVisible();
@@ -47,6 +54,12 @@ test("report width and full toolbar preserve reading inputs and order table", as
   await page.getByRole("button", { name: "넓게 보기" }).click();
   const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
   await expect.poll(async () => (await document.boundingBox())!.width).toBe(available);
+  await expect.poll(async () => {
+    const documentBox = (await document.boundingBox())!;
+    const sectionBox = (await section.boundingBox())!;
+    const toolbarBox = (await toolbar.boundingBox())!;
+    return [sectionBox.x - documentBox.x, sectionBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+  }).toEqual([0, 0, 0, 0]);
   expect(await content!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(findings).toHaveValue("합성 판독 입력 · 폭 전환 유지 확인");
   await expect(impression).toHaveValue("합성 종합소견 · 입력 유지 확인");
