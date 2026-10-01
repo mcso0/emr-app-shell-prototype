@@ -1,28 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
+import { usePatientVitalActorScope } from "./use-patient-vital-actor-scope";
+import { createPatientLatestVitalsResource } from "./patient-latest-vitals-resource";
 import {
   formatPatientVitalDisplayItemsForSettings,
   type PatientVitalDisplayItem,
   type PatientVitalMeasurement,
   type PatientVitalSummary,
 } from "@/features/patient-vitals/patient-vital-types";
-import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import {
   getEnabledWorkspaceVitalSettings,
   type WorkspaceVitalKey,
   type WorkspaceVitalSettingsSnapshot,
 } from "@/features/patient-vitals/workspace-vital-settings";
-
-type PatientLatestVitalResponse =
-  | {
-      ok: true;
-      status: 200;
-      canWriteVitals: boolean;
-      vital: PatientVitalMeasurement | null;
-      summary?: PatientVitalSummary;
-    }
-  | { ok: false; status: number; denialReason?: string; error?: string };
 
 export function usePatientLatestVitalItems({
   actorHeaders,
@@ -35,80 +26,20 @@ export function usePatientLatestVitalItems({
   fallbackItems?: PatientVitalDisplayItem[];
   workspaceId: string;
 }) {
-  const scope = `${workspaceId}:${encounterId ?? ""}`;
-  const { snapshot: vitalSettings, status: vitalSettingsStatus } = useWorkspaceVitalSettings({ workspaceId });
-  const requestIdRef = useRef(0);
-  const [result, setResult] = useState<
-    | { scope?: string; status: "loading"; vital?: PatientVitalMeasurement | null; summary?: PatientVitalSummary }
-    | {
-        canWriteVitals: boolean;
-        scope: string;
-        status: "ready";
-        vital: PatientVitalMeasurement | null;
-        summary?: PatientVitalSummary;
-      }
-    | { scope?: string; status: "error"; vital?: PatientVitalMeasurement | null; summary?: PatientVitalSummary }
-  >({ status: "loading" });
-
-  const requestLatestVital = useCallback(async () => {
-    if (!encounterId) throw new Error("patient_latest_vital_unavailable");
-    const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/patient-vitals/latest?encounterId=${encodeURIComponent(encounterId)}`,
-      { cache: "no-store", headers: actorHeaders },
-    );
-    const body = (await response.json()) as PatientLatestVitalResponse;
-    if (!response.ok || !body.ok) {
-      throw new Error("patient_latest_vital_unavailable");
-    }
-    return body;
-  }, [actorHeaders, encounterId, workspaceId]);
-
-  useEffect(() => {
-    if (!encounterId) return;
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-
-    void requestLatestVital()
-      .then((body) => {
-        if (requestIdRef.current !== requestId) return;
-        setResult({
-          canWriteVitals: body.canWriteVitals,
-          scope,
-          status: "ready",
-          vital: body.vital,
-          summary: body.summary,
-        });
-      })
-      .catch(() => {
-        if (requestIdRef.current !== requestId) return;
-        setResult({ scope, status: "error" });
-      });
-    return () => { requestIdRef.current += 1; };
-  }, [encounterId, requestLatestVital, scope]);
-
-  const refresh = useCallback(async () => {
-    if (!encounterId) return;
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    setResult((current) => current.scope === scope
-      ? { ...current, status: "loading" }
-      : { scope, status: "loading" });
-    try {
-      const body = await requestLatestVital();
-      if (requestIdRef.current !== requestId) return;
-      setResult({
-        canWriteVitals: body.canWriteVitals,
-        scope,
-        status: "ready",
-        vital: body.vital,
-        summary: body.summary,
-      });
-    } catch (error) {
-      if (requestIdRef.current !== requestId) return;
-      setResult((current) => ({ ...current, scope, status: "error" }));
-      throw error;
-    }
-  }, [encounterId, requestLatestVital, scope]);
+  const actorScope = usePatientVitalActorScope();
+  const actorHeaderKey = JSON.stringify(Array.from(new Headers(actorHeaders).entries()).sort());
+  const scope = JSON.stringify([workspaceId, encounterId ?? "", actorScope, actorHeaderKey]);
+  const resource = useMemo(() => createPatientLatestVitalsResource({
+    key: scope,
+    enabled: actorScope !== null,
+    workspaceId,
+    encounterId,
+    actorHeaders: Object.fromEntries(JSON.parse(actorHeaderKey) as [string, string][]),
+  }), [scope, workspaceId, encounterId, actorHeaderKey, actorScope]);
+  const { latest: result, settings: vitalSettings, settingsStatus: vitalSettingsStatus } = useSyncExternalStore(
+    resource.subscribe, resource.getSnapshot, resource.getServerSnapshot,
+  );
+  const refresh = resource.refresh;
 
   // Keep the existing callback contract. A corrected old row must not replace
   // the latest summary; refresh the authoritative per-field projection.
@@ -117,27 +48,26 @@ export function usePatientLatestVitalItems({
   return useMemo(
     () => ({
       canWriteVitals:
-        result.status === "ready" && result.scope === scope
+        result.status === "ready"
           ? result.canWriteVitals
           : false,
       items:
-        result.scope === scope && result.vital !== undefined
+        result.vital !== undefined
           ? formatLatestSummaryItems(result.summary, result.vital, vitalSettings)
           : fallbackItems
             ? orderFallbackVitalItems(fallbackItems, vitalSettings)
             : formatPatientVitalDisplayItemsForSettings(undefined, vitalSettings),
       refresh,
       replaceVital,
-      status: result.scope === scope ? result.status : "loading",
+      status: result.status,
       vital:
-        result.status === "ready" && result.scope === scope
+        result.status === "ready"
           ? result.vital
           : null,
       vitalSettings,
       vitalSettingsStatus,
     }),
     [
-      scope,
       fallbackItems,
       refresh,
       replaceVital,

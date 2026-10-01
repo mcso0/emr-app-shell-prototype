@@ -17,7 +17,7 @@ related_work:
   - HOSPITAL-ADMIN-LIVE-PR-019
   - HOSPITAL-ADMIN-LIVE-PR-024
   - RECEPTION-LIVE-PR-017
-last_updated: 2026-09-30
+last_updated: 2026-10-01
 tags: [data-model, patient, vital, chart, permissions]
 ---
 
@@ -61,7 +61,21 @@ The direct table remains RLS-protected with direct authenticated table privilege
 - `clair_get_patient_latest_vital_for_encounter` uses the selected encounter only to identify the patient, then returns that patient's latest measurement row. A cleared row is still latest and therefore returns null values rather than older measurements.
 - `clair_get_reception_encounter_vital` returns only the latest measurement row linked to the selected reception encounter. It requires active workspace membership plus `reception:view`; it never substitutes another encounter's patient-latest row. The reception detail renders only non-null values that remain enabled by workspace settings. The reception API also reads display settings through the existing workspace-scoped settings RPC after that exact encounter succeeds and returns `vitalSettings` with `canManage: false`. Reception display therefore does not require `hospital_settings:view`; hospital administration settings GET/PUT retain `hospital_settings:view` / `hospital_settings:manage`. Settings read failures return `vital_settings_read_failed`, separately from measurement failures and missing measurements.
 
-The chart context bar can opt into a vital write action for its selected waiting or active consultation. Dispensing, lab, imaging, and treatment consumers remain display-only because they omit the shared component's opt-in action. A successful chart save replaces the current latest-vital result immediately; later screen selection/load still uses the shared server read model rather than real-time push.
+The chart context bar can opt into a vital write action for its selected waiting or active consultation. Dispensing, lab, imaging, and treatment consumers remain display-only because they omit the shared component's opt-in action. A successful chart save refreshes the authoritative latest-per-field summary for
+all mounted consumers of the same encounter/workspace/actor scope, including SOAP
+record insertion. It does not replace that summary with the single saved row:
+correcting an older measurement must retain newer per-field values. During the
+refresh, SOAP insertion is unavailable; refresh failure retains the existing
+saved-but-refresh-failed feedback and does not offer stale SOAP data.
+
+The browser resource shares latest-vital and settings reads within the same scope.
+The scope includes the authenticated actor and normalized actor headers, including
+cookie-backed Supabase identity from `onAuthStateChange`. Reads wait for its initial
+session event; account changes and sign-out isolate values and write eligibility.
+The last subscriber releases the resource and aborts pending reads. Post-save reads
+supersede pre-save requests, and late responses cannot overwrite newer results.
+There is no persistent cache, polling or cross-tab clinical-data synchronization.
+Server permission checks and latest-per-field SQL semantics remain unchanged.
 
 Workspace display and entry visibility comes from `vital_presets` plus `workspace_vital_settings`. The measurement table keeps canonical `kg` and `°C` values; changing a workspace display unit, disabling a preset, or removing it from the workspace list never rewrites or deletes historical rows. Re-adding the preset makes the same stored values visible again. The workspace setting `input_required` governs entry validation for enabled fields. All five product presets have `required_in_workspace = false`, and new workspaces start with all five enabled and `input_required = false`. The reception and chart server boundaries read current workspace settings before writes. The reception RPC validates required fields even if no measurement row would otherwise be created; a deferred measurement trigger validates final row values for chart writes and reception upserts. Historical rows remain readable, and an edit is checked against current requirements.
 
@@ -91,7 +105,7 @@ above until this migration is applied through a separately authorized rollout.
   event behavior and grants remain unchanged. Legacy encounter upsert RPCs remain unchanged.
 - The latest reader retains its raw `vital` record and adds `summary`: most recent
   non-null values independently for each stored field, with `measuredAtByField`.
-  Only the context-bar display uses the summary. Record editing uses raw values.
+  Context-bar display and SOAP record insertion use the summary. Record editing uses raw values.
   Entirely cleared values fall back to earlier values in the summary only.
 - The new writer recomputes the patient's newest non-null weight;
   an old corrected weight cannot replace a newer compatibility snapshot.

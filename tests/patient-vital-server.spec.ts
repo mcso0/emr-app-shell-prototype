@@ -350,7 +350,7 @@ test("patient context bars expose opt-in profile and vital actions across clinic
   expect(labImaging).toContain("usePatientLatestVitalItems");
   expect(labImaging).toContain("vitalAction={vitalAction}");
   expect(labImaging).toContain("patientInteraction={profileInteractions.patientInteraction}");
-  expect(latestVitalHook).toContain("useWorkspaceVitalSettings");
+  expect(latestVitalHook).toContain("createPatientLatestVitalsResource");
   expect(latestVitalHook).toContain("formatPatientVitalDisplayItemsForSettings");
 });
 
