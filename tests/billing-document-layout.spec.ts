@@ -4,15 +4,29 @@ const billingUrl = "/w/clair-demo/billing?modulePanel=open&aside=closed&right=cl
 const evidence = "docs/completed/app-shell/2026-09-30-billing-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 const summaryTrigger = (page: Page) => page.locator('button[aria-controls="billing-summary-panel-surface"]');
-async function openInvoice(page: Page) {
+async function openInvoice(page: Page, narrow = true) {
   const checkoutReady = page.waitForResponse((response) => response.url().includes("/billing/guardian-checkout") && response.request().method() === "POST" && response.status() === 200);
   await page.goto(billingUrl);
   await checkoutReady;
   await expect(page.getByRole("heading", { name: "수납", exact: true })).toBeVisible();
-  await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1120px");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
+  if (narrow) await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  if (narrow) await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1120px");
   await expect(page.getByText("수납 데이터를 불러오는 중입니다.", { exact: true })).toBeHidden();
   await expect(page.getByText("Checkout session을 준비하는 중입니다.", { exact: true })).toBeHidden();
 }
+
+test("billing starts wide and reload resets a manual narrow choice", async ({ page }) => {
+  await openInvoice(page, false);
+  const doc = page.getByTestId("workspace-document");
+  const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
+  await expect.poll(async () => (await doc.boundingBox())!.width).toBe(available);
+  await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await page.reload();
+  await expect(doc).toHaveAttribute("data-width-mode", "wide");
+  await expect(page.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
+});
 
 test("invoice width preserves quantity, calculated total, table and assignment", async ({ page }) => {
   let checkoutCalls = 0;
@@ -202,7 +216,7 @@ test("billing hidden width trigger restores focus and module preference", async 
   await page.setViewportSize({ width: 1920, height: 1080 });
   await expect(toggle).toHaveText("좁게 보기");
   await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
-  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "narrow");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await page.getByRole("link", { name: "수납", exact: true }).click();
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
 });
