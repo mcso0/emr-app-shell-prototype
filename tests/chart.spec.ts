@@ -26,8 +26,8 @@ test.use({ viewport: { width: 1920, height: 1080 } });
 const kongScenarioUrl =
   "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed";
 const chartFigmaVisualFixture = {
-  expectedContentSize: { height: 919, width: 1540 },
-  expectedPanelWidths: [560, 560, 371],
+  expectedContentSize: { height: 920, width: 1540 },
+  expectedPanelWidths: [573, 573, 379],
   expectedRows: [452, 8, 452],
   route:
     "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=closed&aside=closed",
@@ -1032,7 +1032,7 @@ test("chart workspace renders queue, history, SOAP, assessment, and orders", asy
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
-test("chart wide panels retain their inset below the full-width action bar", async ({
+test("chart wide panel edges align with the action bar content", async ({
   page,
 }) => {
   await page.setViewportSize(chartFigmaVisualFixture.viewport);
@@ -1052,29 +1052,27 @@ test("chart wide panels retain their inset below the full-width action bar", asy
   await expect(workspace).toBeVisible({ timeout: 15_000 });
   await expect(actionBar).toHaveCSS("padding-left", "16px");
   await expect(actionBar).toHaveCSS("padding-right", "16px");
-  await expect(workspace).toHaveCSS("padding-left", "16px");
-  await expect(workspace).toHaveCSS("padding-right", "16px");
   await expect(historyToggle).toBeVisible();
   await expect(topPanels).toHaveCount(3);
 
   const historyToggleBox = await historyToggle.boundingBox();
-  const workspaceBox = await workspace.boundingBox();
+  const actionBarBox = await actionBar.boundingBox();
+  const orderPanelBox = await page.locator("[data-slot='chart-workspace-panel']").last().boundingBox();
   const firstPanelBox = await topPanels.first().boundingBox();
   const lastPanelBox = await topPanels.last().boundingBox();
   expect(historyToggleBox).not.toBeNull();
-  expect(workspaceBox).not.toBeNull();
+  expect(actionBarBox).not.toBeNull();
+  expect(orderPanelBox).not.toBeNull();
   expect(firstPanelBox).not.toBeNull();
   expect(lastPanelBox).not.toBeNull();
-  expect(firstPanelBox!.x).toBe(workspaceBox!.x + 16);
-  expect(historyToggleBox!.x).toBe((await actionBar.boundingBox())!.x + 16);
-  expect(
-    Math.round(
-      workspaceBox!.x +
-        workspaceBox!.width -
-        lastPanelBox!.x -
-        lastPanelBox!.width,
-    ),
-  ).toBe(16);
+  const leftGuide = actionBarBox!.x + 16;
+  const rightGuide = actionBarBox!.x + actionBarBox!.width - 16;
+  expect(Math.abs(firstPanelBox!.x - leftGuide)).toBeLessThanOrEqual(1);
+  expect(Math.abs(lastPanelBox!.x + lastPanelBox!.width - rightGuide)).toBeLessThanOrEqual(1);
+  expect(Math.abs(orderPanelBox!.x - leftGuide)).toBeLessThanOrEqual(1);
+  expect(Math.abs(orderPanelBox!.x + orderPanelBox!.width - rightGuide)).toBeLessThanOrEqual(1);
+  expect(historyToggleBox!.x).toBe(leftGuide);
+  await expect(page.getByTestId("workspace-document-toolbar")).toHaveCSS("border-bottom-width", "0px");
 });
 
 test("chart Figma follow-up restores history and panel chrome contracts", async ({
@@ -1476,7 +1474,7 @@ test("chart wide contents preserve panel geometry below the separate toolbar", a
   await expect(orderFooter).toContainText("저장됨");
   await expect(orderFooter).toContainText("이 차트 오더 합계");
   await expect(content).toHaveScreenshot(
-    "chart-document-wide-1540x919.png",
+    "chart-document-wide-1540x920.png",
     {
       animations: "disabled",
       caret: "hide",
@@ -1534,7 +1532,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   // The left pinned span includes the terminal 8px boundary gap. The visible
   // divider is drawn at its trailing edge and the scroll layer starts after it.
   expect(referenceMetrics.leftPinnedWidth).toBe(408);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1098);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1130);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")

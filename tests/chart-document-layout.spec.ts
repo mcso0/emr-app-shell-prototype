@@ -171,6 +171,17 @@ test("chart width matrix, reduced motion and independent profile keep content co
     if (available > 1040) await expect(toggle).toBeVisible();
     else await expect(toggle).toBeHidden();
     await expect(page.getByLabel("SOAP 블록 문서")).toBeVisible();
+    await expect.poll(async () => {
+      const document = (await page.getByTestId("workspace-document").boundingBox())!;
+      const top = (await page.getByTestId("chart-soap-diagnosis-grid").boundingBox())!;
+      const order = (await page.locator('[data-slot="chart-workspace-panel"]').last().boundingBox())!;
+      return Math.max(
+        Math.abs(top.x - document.x),
+        Math.abs(top.x + top.width - document.x - document.width),
+        Math.abs(order.x - document.x),
+        Math.abs(order.x + order.width - document.x - document.width),
+      );
+    }).toBeLessThanOrEqual(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
   }
   await page.setViewportSize({ width: 2560, height: 1080 });
@@ -187,5 +198,16 @@ test("chart width matrix, reduced motion and independent profile keep content co
     const panel = await profile.boundingBox();
     return Boolean(document && panel && document.x + document.width <= panel.x + 1);
   }).toBe(true);
+  await expect.poll(async () => {
+    const document = (await page.getByTestId("workspace-document").boundingBox())!;
+    const top = (await page.getByTestId("chart-soap-diagnosis-grid").boundingBox())!;
+    const order = (await page.locator('[data-slot="chart-workspace-panel"]').last().boundingBox())!;
+    return Math.max(
+      Math.abs(top.x - document.x),
+      Math.abs(top.x + top.width - document.x - document.width),
+      Math.abs(order.x - document.x),
+      Math.abs(order.x + order.width - document.x - document.width),
+    );
+  }).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${evidence}/2560-profile-history.png` });
 });

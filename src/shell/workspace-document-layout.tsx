@@ -203,7 +203,7 @@ export function WorkspaceDocumentLayout({
         setWidthMode(preferenceKey, narrow ? "wide" : "narrow");
       },
     }}>
-      <div ref={setToolbarHost} data-slot="instruction-header-title-bar" data-testid="workspace-document-toolbar" className="shrink-0 border-b border-[var(--emr-border-subtle)] px-4 empty:hidden" />
+      <div ref={setToolbarHost} data-slot="instruction-header-title-bar" data-testid="workspace-document-toolbar" className={cn("shrink-0 px-4 empty:hidden", moduleDefinition.id !== "treatment" && "border-b border-[var(--emr-border-subtle)]")} />
       <div ref={areaRef} data-testid="workspace-document-area" className="relative grid min-h-0 flex-1" style={{ gridTemplateColumns: `${inlineLeft ? leftWidth : 0}px minmax(0, 1fr) ${inlineRight ? rightWidth : 0}px` }}>
         <WorkspacePanel open={leftOpen && (!overlay || modalSide === "left")} modal={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={leftWidth} position={position} onClose={() => closeLeft(false)}>
           {ContentAside ? <ContentAside {...slotProps} /> : null}
