@@ -30,7 +30,7 @@ test("chart starts wide after entry and reload while manual narrow choice surviv
   await page.getByRole("button", { name: "좁게 보기" }).click();
   await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toBeVisible();
-  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await expect(doc).toHaveAttribute("data-width-mode", "wide");
   await page.getByRole("link", { name: "진료/차트", exact: true }).click();
   await expect(doc).toHaveAttribute("data-width-mode", "narrow");
 });
@@ -156,7 +156,7 @@ test("chart hidden width toggle returns focus to history and restores mode acros
   await expect(toggle).toHaveText("좁게 보기");
   await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toBeVisible();
-  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "narrow");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await page.getByRole("link", { name: "진료/차트", exact: true }).click();
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
 });

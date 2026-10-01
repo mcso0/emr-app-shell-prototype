@@ -4,7 +4,7 @@ const dispensingUrl = "/w/clair-demo/dispensing?modulePanel=open&aside=closed&ri
 const evidence = "docs/completed/app-shell/2026-09-30-dispensing-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
-async function openInstruction(page: Page, type: "dispensing" | "treatment" = "dispensing") {
+async function openInstruction(page: Page, type: "dispensing" | "treatment" = "dispensing", narrow = true) {
   // The existing synthetic instruction fixtures exercise several groups and their drawer.
   await page.route("**/api/workspaces/clair-demo/fulfillment/work-items?*", (route) => route.fulfill({
     json: { ok: true, status: 200, enforcedBy: "fulfillment-work-item-persistence", workItems: [] },
@@ -12,8 +12,22 @@ async function openInstruction(page: Page, type: "dispensing" | "treatment" = "d
   await page.goto(dispensingUrl);
   await page.getByTestId(`order-queue-item-dispensing-queue-${type === "dispensing" ? 0 : 1}`).click();
   await expect(page.getByRole("heading", { name: type === "dispensing" ? "조제 지시서" : "처치 지시서", exact: true })).toBeVisible();
-  await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1120px");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
+  if (narrow) await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  if (narrow) await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1120px");
 }
+
+test("dispensing starts wide and reload resets a manual narrow choice", async ({ page }) => {
+  await openInstruction(page, "dispensing", false);
+  const doc = page.getByTestId("workspace-document");
+  const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
+  await expect.poll(async () => (await doc.boundingBox())!.width).toBe(available);
+  await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await page.reload();
+  await expect(doc).toHaveAttribute("data-width-mode", "wide");
+  await expect(page.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
+});
 
 test("instruction toolbar spans the surface and width preserves table selection and density", async ({ page }) => {
   await openInstruction(page);
@@ -155,7 +169,7 @@ test("dispensing hidden width trigger restores focus and module-specific prefere
   await page.setViewportSize({ width: 1920, height: 1080 });
   await expect(toggle).toHaveText("좁게 보기");
   await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
-  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "narrow");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await page.getByRole("link", { name: "조제/처치", exact: true }).click();
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
 });

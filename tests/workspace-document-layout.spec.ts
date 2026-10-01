@@ -3,13 +3,27 @@ import { expect, test } from "@playwright/test";
 const labUrl = "/w/clair-demo/lab?labResultId=lab-result-coco-cbc&modulePanel=open&aside=closed&right=closed";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
-async function openLab(page: import("@playwright/test").Page) {
+async function openLab(page: import("@playwright/test").Page, narrow = true) {
   await page.goto(labUrl);
   await expect(page.getByTestId("auth-gate-shell-skeleton")).toBeHidden({ timeout: 15_000 });
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toBeVisible();
   await expect(page.getByTestId("lab-receipt-panel")).toBeHidden();
   await page.waitForLoadState("networkidle");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
+  if (narrow) await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
 }
+
+test("workspace starts wide and reload resets a manual narrow choice", async ({ page }) => {
+  await openLab(page, false);
+  const doc = page.getByTestId("workspace-document");
+  const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
+  await expect.poll(async () => (await doc.boundingBox())!.width).toBe(available);
+  await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await page.reload();
+  await expect(doc).toHaveAttribute("data-width-mode", "wide");
+  await expect(page.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
+});
 
 test("available document width controls visibility and preserves selected mode and inputs", async ({ page }) => {
   await openLab(page);

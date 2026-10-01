@@ -4,16 +4,30 @@ const imagingUrl = "/w/clair-demo/imaging?imagingStudyId=imaging-coco-thorax&mod
 const evidence = "docs/completed/app-shell/2026-09-30-imaging-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
-async function openReport(page: Page) {
+async function openReport(page: Page, narrow = true) {
   await page.route("**/api/workspaces/clair-demo/fulfillment/work-items?*", (route) => route.fulfill({
     json: { ok: true, status: 200, enforcedBy: "fulfillment-work-item-persistence", workItems: [] },
   }));
   await page.goto(imagingUrl);
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세", exact: true })).toBeVisible();
-  await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1280px");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
+  if (narrow) await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  if (narrow) await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1280px");
 }
 
 const summaryTrigger = (page: Page) => page.locator('button[aria-controls="imaging-summary-panel-surface"]');
+
+test("imaging starts wide and reload resets a manual narrow choice", async ({ page }) => {
+  await openReport(page, false);
+  const doc = page.getByTestId("workspace-document");
+  const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
+  await expect.poll(async () => (await doc.boundingBox())!.width).toBe(available);
+  await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  await expect(doc).toHaveAttribute("data-width-mode", "narrow");
+  await page.reload();
+  await expect(doc).toHaveAttribute("data-width-mode", "wide");
+  await expect(page.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
+});
 
 test("report width and full toolbar preserve reading inputs and order table", async ({ page }) => {
   await openReport(page);
@@ -201,7 +215,7 @@ test("hidden imaging width trigger returns focus to summary and restores module 
   await page.setViewportSize({ width: 1920, height: 1080 });
   await expect(toggle).toHaveText("좁게 보기");
   await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
-  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "narrow");
+  await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await page.getByRole("link", { name: "영상검사", exact: true }).click();
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
 });
