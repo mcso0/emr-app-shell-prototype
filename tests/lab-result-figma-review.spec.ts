@@ -471,20 +471,66 @@ test("layout follow-up: empty upload is transparent until hover and matches find
   await detail.screenshot({ path: testInfo.outputPath("aligned-empty-hover.png") });
 });
 
-test("layout follow-up: dividers belong to complete row groups and disclosure remains single-open", async ({ page }) => {
-  const { row, detail } = await openReview(page, 0, true, 2);
+test("row dividers: a single order has no divider when expanded or collapsed", async ({ page }, testInfo) => {
+  const { row, detail } = await openReview(page, 1);
+  await expect(detail.getByRole("textbox", { name: "검사 소견", exact: true })).toBeVisible();
+  await expect(detail.getByTestId("lab-attachment-card")).toHaveCount(1);
   await expect(row).toHaveCSS("border-bottom-width", "0px");
+  for (const cell of await row.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "0px");
+  }
+  const expanded = detail.locator("xpath=ancestor::tr[1]");
+  await expect(expanded).toHaveCSS("border-bottom-width", "0px");
+  await expect(expanded.locator(":scope > td")).toHaveCSS("border-bottom-width", "0px");
+  await page.getByTestId("lab-result-table-anchor").screenshot({ path: testInfo.outputPath("single-order-expanded.png") });
+  await row.getByRole("button", { name: /소견.*접기/ }).press("Enter");
+  await expect(detail).toHaveCount(0);
+  await expect(row).toHaveCSS("border-bottom-width", "0px");
+  for (const cell of await row.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "0px");
+  }
+});
+
+test("layout follow-up: dividers belong to complete row groups and disclosure remains single-open", async ({ page }, testInfo) => {
+  const { row, detail } = await openReview(page, 1, true, 3);
+  await expect(row).toHaveCSS("border-bottom-width", "0px");
+  for (const cell of await row.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "0px");
+  }
   const expanded = detail.locator("xpath=ancestor::tr[1]");
   await expect(expanded).toHaveCSS("border-bottom-width", "1px");
+  await expect(expanded.locator(":scope > td")).toHaveCSS("border-bottom-width", "1px");
+  const table = page.getByTestId("lab-result-table-anchor");
+  await table.screenshot({ path: testInfo.outputPath("multiple-orders-first-expanded.png") });
   const nextRow = page.getByTestId(`lab-result-row-${rowId}-1`);
+  for (const cell of await nextRow.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "1px");
+  }
   await nextRow.getByRole("button", { name: /소견.*펼치기/ }).click();
   await expect(detail).toHaveCount(0);
   await expect(row.getByRole("button", { name: /소견.*펼치기/ })).toHaveAttribute("aria-expanded", "false");
-  const lastDetail = page.getByTestId(`lab-result-detail-${rowId}-1`);
+  for (const cell of await row.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "1px");
+  }
+  for (const cell of await nextRow.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "0px");
+  }
+  const middleDetail = page.getByTestId(`lab-result-detail-${rowId}-1`);
+  await expect(middleDetail.locator("xpath=ancestor::tr[1]")).toHaveCSS("border-bottom-width", "1px");
+  await expect(middleDetail.locator("xpath=ancestor::tr[1]").locator(":scope > td")).toHaveCSS("border-bottom-width", "1px");
+  const lastRow = page.getByTestId(`lab-result-row-${rowId}-2`);
+  await lastRow.getByRole("button", { name: /소견.*펼치기/ }).click();
+  await expect(middleDetail).toHaveCount(0);
+  const lastDetail = page.getByTestId(`lab-result-detail-${rowId}-2`);
   await expect(lastDetail).toBeVisible();
-  await expect(nextRow).toHaveCSS("border-bottom-width", "0px");
+  await expect(lastRow).toHaveCSS("border-bottom-width", "0px");
+  for (const cell of await lastRow.locator(":scope > td").all()) {
+    await expect(cell).toHaveCSS("border-bottom-width", "0px");
+  }
   await expect(lastDetail.locator("xpath=ancestor::tr[1]")).toHaveCSS("border-bottom-width", "0px");
-  await nextRow.getByRole("button", { name: /소견.*접기/ }).press("Enter");
+  await expect(lastDetail.locator("xpath=ancestor::tr[1]").locator(":scope > td")).toHaveCSS("border-bottom-width", "0px");
+  await table.screenshot({ path: testInfo.outputPath("multiple-orders-last-expanded.png") });
+  await lastRow.getByRole("button", { name: /소견.*접기/ }).press("Enter");
   await expect(lastDetail).toHaveCount(0);
 });
 
