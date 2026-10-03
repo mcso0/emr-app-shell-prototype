@@ -11704,6 +11704,7 @@ function OrderArea({
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
 }) {
+  const compactToolbarActions = useWorkspaceDocumentLayout()?.narrow ?? false;
   const [orderDraftReadError, setOrderDraftReadError] = useState(false);
   const writeDisabled = inheritedWriteDisabled || !chartId || orderDraftReadError;
   const draftWriteDisabled = inheritedDraftWriteDisabled || orderDraftReadError;
@@ -14713,24 +14714,38 @@ function OrderArea({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="rounded-lg bg-card px-2 text-xs"
+              size={compactToolbarActions ? "icon-sm" : "sm"}
+              className={cn(
+                "rounded-lg bg-card",
+                !compactToolbarActions && "px-2 text-xs",
+              )}
+              aria-label="검색"
               title="준비 중"
               disabled
             >
-              <CdsActionsSearchIcon data-icon="inline-start" />
-              검색
+              <CdsActionsSearchIcon
+                data-icon={compactToolbarActions ? undefined : "inline-start"}
+                aria-hidden="true"
+              />
+              {!compactToolbarActions && "검색"}
             </Button>
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="rounded-lg bg-card px-2 text-xs"
+              size={compactToolbarActions ? "icon-sm" : "sm"}
+              className={cn(
+                "rounded-lg bg-card",
+                !compactToolbarActions && "px-2 text-xs",
+              )}
+              aria-label="필터"
               title="준비 중"
               disabled
             >
-              <CdsActionsListFilterIcon data-icon="inline-start" />
-              필터
+              <CdsActionsListFilterIcon
+                data-icon={compactToolbarActions ? undefined : "inline-start"}
+                aria-hidden="true"
+              />
+              {!compactToolbarActions && "필터"}
             </Button>
             <EmrTableDensitySelector
               className="h-[var(--clair-control-height-sm)] min-h-[var(--clair-control-height-sm)] px-2 py-0 text-xs"
