@@ -12,7 +12,7 @@ async function openReport(page: Page, narrow = true) {
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세", exact: true })).toBeVisible();
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   if (narrow) await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
-  if (narrow) await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1280px");
+  if (narrow) await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1120px");
 }
 
 const summaryTrigger = (page: Page) => page.locator('button[aria-controls="imaging-summary-panel-surface"]');
@@ -67,7 +67,7 @@ test("report width and document toolbar preserve reading inputs and order table"
   await page.mouse.move(0, 0);
   await page.screenshot({ path: `${evidence}/1920-wide.png` });
   await page.getByRole("button", { name: "좁게 보기" }).click();
-  await expect.poll(async () => (await document.boundingBox())!.width).toBe(1280);
+  await expect.poll(async () => (await document.boundingBox())!.width).toBe(1120);
   await expect(findings).toHaveValue("합성 판독 입력 · 폭 전환 유지 확인");
   await page.screenshot({ path: `${evidence}/1920-narrow.png` });
 });
@@ -87,7 +87,8 @@ test("history starts beside the title while summary stays below and inputs remai
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
   expect((await left.boundingBox())!.y).toBe(toolbar.y);
   expect((await right.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
-  await expect(page.locator("[data-workspace-width-toggle]")).toBeHidden();
+  await expect(page.locator("[data-workspace-width-toggle]")).toBeVisible();
+  await expect(page.locator("[data-workspace-width-toggle]")).toBeDisabled();
   await expect(findings).toHaveValue("합성 중앙 입력 · 양쪽 패널 확인");
   await expect(right.getByRole("button", { name: "저장", exact: true })).toBeVisible();
   await expect(right.getByText("coco-thorax-lateral.png")).toBeVisible();
@@ -193,8 +194,9 @@ test("imaging actual-space matrix, reduced motion and profile coexistence", asyn
     await page.setViewportSize({ width, height: 1080 });
     const available = await page.getByTestId("workspace-document-center").evaluate((element) => element.clientWidth - 32);
     const toggle = page.locator("[data-workspace-width-toggle]");
-    if (available > 1280) await expect(toggle).toBeVisible();
-    else await expect(toggle).toBeHidden();
+    await expect(toggle).toBeVisible();
+    if (available > 1120) await expect(toggle).toBeEnabled();
+    else await expect(toggle).toBeDisabled();
     await expect(page.getByRole("heading", { name: "영상검사 Order 상세", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
   }
@@ -218,13 +220,14 @@ test("imaging actual-space matrix, reduced motion and profile coexistence", asyn
   await page.screenshot({ path: `${evidence}/2560-profile-bilateral.png` });
 });
 
-test("hidden imaging width trigger returns focus to summary and restores module preference", async ({ page }) => {
+test("unavailable imaging width trigger returns focus to summary and restores module preference", async ({ page }) => {
   await openReport(page);
   const toggle = page.locator("[data-workspace-width-toggle]");
   await toggle.click();
   await toggle.focus();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(toggle).toBeHidden();
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toBeDisabled();
   await expect(summaryTrigger(page)).toBeFocused();
   await page.setViewportSize({ width: 1920, height: 1080 });
   await expect(toggle).toHaveText("좁게 보기");
@@ -232,4 +235,26 @@ test("hidden imaging width trigger returns focus to summary and restores module 
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
   await page.getByRole("link", { name: "영상검사", exact: true }).click();
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
+});
+
+test("imaging width remains discoverable when space is unavailable and explains why", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openReport(page, false);
+  const toggle = page.getByRole("button", { name: "좁게 보기", exact: true });
+  const document = page.getByTestId("workspace-document");
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toBeDisabled();
+  await summaryTrigger(page).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(toggle).toBeFocused();
+  await expect(page.getByRole("tooltip")).toHaveText("현재 공간에서는 두 보기의 폭이 같습니다.");
+  await expect(toggle).toHaveAccessibleDescription("현재 공간에서는 두 보기의 폭이 같습니다.");
+  await page.keyboard.press("Enter");
+  await expect(document).toHaveAttribute("data-width-mode", "wide");
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await expect(toggle).toBeEnabled();
+  await toggle.click();
+  await expect(document).toHaveAttribute("data-width-mode", "narrow");
+  await expect(document).toHaveCSS("max-width", "1120px");
 });

@@ -4,7 +4,7 @@ status: human_review
 area: app-shell
 priority: P1
 target_pr: User-approved five-module document alignment follow-up to main and Production
-updated: 2026-10-01
+updated: 2026-10-03
 source_docs:
   - docs/design/system/workspace-document-width-contract.md
   - docs/design/system/ux-ui-research-before-implementation.md
@@ -239,3 +239,37 @@ The prior delivery instruction covers this completion of the intended five-modul
 The common document layout now places history beside the title, immediately below patient context. The title/actions and body share one document container. Pointer opening/closing slides history from/to the left and translates the mounted document to its final position using existing 180/140ms motion tokens. Rapid reversal starts from the visible position. Keyboard, reduced motion, restoration, resize and automatic presentation changes remain immediate. Existing narrow/wide transitions stay independent. Stable history mounting retains group/filter state; closing history is inert and excluded from accessibility before its visible exit finishes, and returns focus from its controls to the title trigger. Right reference panels retain their below-title placement using measured, wrapped toolbar height. Profile/queue, inputs, scrolling, data/API/permission/financial actions and non-opt-in modules retain their existing contracts.
 
 Focused checks cover all five document layouts and pointer midpoints, exit visibility, reversal continuity, keyboard/reduced motion, restored routes and retained history/input DOM. Required local gates and the exact-candidate manual Release Check plus Ready Preview must pass before an exact-head-protected squash merge. Existing Vercel configuration is reused without credentials or environment changes. Production smoke: `/login`, the five scoped routes, and reversible history/width controls on authenticated synthetic documents where the existing session supplies them. HTTP probes alone do not prove authenticated interaction. Rollback is the immediately preceding Ready Production deployment recorded in the release packet, or a reviewed scoped revert. Stop on head/scope drift, required gate failure, unexpected deployment source or critical smoke failure. No DB, clinical/result save, payment, provider, migration, credential or role-policy write is included.
+
+
+## Imaging width discoverability correction — 2026-10-03
+
+승욱 approved the investigated correction and requested commit, push, PR,
+origin/main merge and Production delivery. The clean `codex/imaging-width-control`
+branch starts from `0ea42732655ed8947df77d1d099ccf748bc234aa`; primary WIP is preserved.
+The final candidate is rebased onto `f6c0f281afe62679536943197b31e6f66ac57231`
+and retains #901's mounted title/body and history slide behavior.
+
+The existing imaging width control was already wired, but the 1280px report cap
+hid it on narrower work surfaces. Imaging now uses a 1120px narrow cap and keeps
+the existing shared control visible when space is insufficient. The disabled
+control remains keyboard-focusable and explains the identical effective widths
+through the existing tooltip. Other modules keep their current hidden-button
+policy and caps. Default-wide/session preference, panel presentation, mounted
+inputs, table density and contained scrolling remain unchanged. No clinical
+data, API, DB, migration, permission, dependency or environment change is included.
+
+Verification: all 48 focused cases pass on the final optimized local mock
+build: 44 document-layout cases across imaging, lab, chart, dispensing and
+billing plus four history-motion cases. The imaging
+matrix covers 960, 1366, 1440, 1600, 1920 and 2560px viewports; keyboard focus,
+accessible tooltip description, disabled activation, re-enabled narrow mode,
+mounted input retention and existing panel behavior pass. TypeScript and full
+lint pass (five existing script warnings); build passes with the existing docs
+reader trace warning. Required secrets/docs/UX-copy gates pass before commit.
+Generated historical report captures are saved outside the repository and
+restored before staging. The exact candidate must pass
+manual Release Check and Ready Preview before exact-head-protected merge.
+Production smoke: `/login`, the synthetic Cheongdam imaging route, and read-only
+width/control verification. Rollback: the immediately preceding Ready Production
+deployment or a reviewed revert of this scoped merge. Stop on candidate drift,
+failed required checks, unexpected deployment source or critical smoke failure.

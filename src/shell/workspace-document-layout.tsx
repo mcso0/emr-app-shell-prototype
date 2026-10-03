@@ -1,10 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { CdsNavigationMaximize2Icon, CdsNavigationMinimize2Icon } from "@/components/cds-icons/navigation";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { ModuleDefinition, ShellComponentProps } from "@/types/emr";
@@ -37,24 +38,39 @@ export function WorkspaceDocumentToolbar({ children }: { children: ReactNode }) 
   return layout.toolbarHost ? createPortal(children, layout.toolbarHost) : null;
 }
 
-export function WorkspaceDocumentWidthToggle() {
+export function WorkspaceDocumentWidthToggle({
+  showWhenUnavailable = false,
+}: { showWhenUnavailable?: boolean }) {
   const layout = useWorkspaceDocumentLayout();
+  const tooltipId = useId();
   if (!layout) return null;
   const Icon = layout.narrow ? CdsNavigationMaximize2Icon : CdsNavigationMinimize2Icon;
-  return (
+  const button = (
     <Button
       type="button"
       variant="outline"
       size="sm"
-      className="bg-card"
-      hidden={!layout.canToggle}
+      className="bg-card aria-disabled:opacity-50"
+      hidden={!layout.canToggle && !showWhenUnavailable}
+      disabled={!layout.canToggle}
+      focusableWhenDisabled={showWhenUnavailable}
       data-workspace-width-toggle="true"
       aria-pressed={layout.narrow}
+      aria-describedby={showWhenUnavailable && !layout.canToggle ? tooltipId : undefined}
       onClick={layout.toggleWidth}
     >
       <Icon data-icon="inline-start" />
       {layout.narrow ? "넓게 보기" : "좁게 보기"}
     </Button>
+  );
+  if (!showWhenUnavailable) return button;
+  return (
+    <Tooltip disabled={layout.canToggle}>
+      <TooltipTrigger render={button} />
+      <TooltipContent id={tooltipId} role="tooltip" side="bottom">
+        현재 공간에서는 두 보기의 폭이 같습니다.
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
