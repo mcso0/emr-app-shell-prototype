@@ -43,7 +43,7 @@ test("invoice width preserves quantity, calculated total, table and assignment",
     const infoBox = (await info.boundingBox())!;
     return [infoBox.x - documentBox.x, infoBox.width - documentBox.width];
   }).toEqual([0, 0]);
-  expect((await toolbar.boundingBox())!.width).toBeGreaterThan((await document.boundingBox())!.width);
+  await expect.poll(async () => (await toolbar.boundingBox())!.width - (await document.boundingBox())!.width).toBe(0);
   const content = await page.locator('[data-slot="billing-content"]').elementHandle();
   const quantity = page.getByRole("spinbutton", { name: "CBC 검사 수량" });
   await quantity.fill("2");
@@ -62,7 +62,7 @@ test("invoice width preserves quantity, calculated total, table and assignment",
     const documentBox = (await document.boundingBox())!;
     const infoBox = (await info.boundingBox())!;
     const toolbarBox = (await toolbar.boundingBox())!;
-    return [infoBox.x - documentBox.x, infoBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+    return [infoBox.x - documentBox.x, infoBox.width - documentBox.width, documentBox.x - toolbarBox.x, documentBox.width - toolbarBox.width];
   }).toEqual([0, 0, 0, 0]);
   expect(await content!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(quantity).toHaveValue("2");
@@ -79,7 +79,7 @@ test("invoice width preserves quantity, calculated total, table and assignment",
   await page.screenshot({ path: `${evidence}/1920-narrow.png` });
 });
 
-test("billing bilateral panels remain below toolbar with visible amount and payment footer", async ({ page }) => {
+test("billing history starts beside the title and summary keeps its amount and payment footer", async ({ page }) => {
   await openInvoice(page);
   await page.getByRole("button", { name: "수납이력 패널 열기" }).click();
   await summaryTrigger(page).click();
@@ -88,7 +88,8 @@ test("billing bilateral panels remain below toolbar with visible amount and paym
   for (const panel of [left, right]) {
     await expect(panel).toHaveAttribute("data-presentation", "inline");
     const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
-    expect((await panel.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
+    if (panel === left) expect((await panel.boundingBox())!.y).toBe(toolbar.y);
+    else expect((await panel.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
   }
   await expect(page.locator("[data-workspace-width-toggle]")).toBeHidden();
   await expect(right.getByText("최종 결제금액")).toBeVisible();

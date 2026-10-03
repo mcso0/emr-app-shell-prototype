@@ -1,6 +1,6 @@
 ---
 status: active
-updated: 2026-10-01
+updated: 2026-10-03
 related_work: APP-SHELL-PR-002
 ---
 
@@ -27,17 +27,19 @@ Implementation approval: 승욱, 2026-09-29, “오케이 순서대로 진행해
 - Keep the preference when the button hides. UI preference is scoped by workspace and module in the session store; no database or new durable storage is introduced.
 - Keep the Content component and its fields mounted across width and panel presentation changes. Keep existing panel URL states separate from width preference.
 - Opt-in layout-only URL updates use Next.js-integrated native `history.replaceState` so panel changes do not trigger server navigation or race a later close. Feature navigation and non-opt-in modules retain their existing routing.
-- Explicit width toggles use actual numeric endpoints, 180ms ease-out and no scale/fade. Resize and panel changes are immediate; reduced motion removes width transitions.
+- Explicit width toggles use actual numeric endpoints, 180ms ease-out and no scale/fade. Resize and reference-panel changes are immediate; history toggles use the slide contract below. Reduced motion removes movement transitions.
 
 ## Panels and accessibility
 
-- Patient header and document toolbar span the work surface. Internal panels start below the toolbar.
-- All five opted-in modules use a borderless document toolbar. The common center owns the single 16px horizontal inset; document content adds no second outer inset. Wide clinical panels, result sections, execution tables and billing cards align with their document and the toolbar's inner edges when internal panels are closed. Narrow visible content uses the full module cap: 차트 1040px, 임상검사/조제·처치/수납 1120px, 영상 1280px. Card inner padding, existing minimum panel tracks and contained scrolling remain unchanged.
+- Patient header spans the work surface. History starts directly beneath it, beside the document title. The title/actions and body share one mounted document column and move together when history opens or closes. The right reference panel retains its below-title position; its top follows the actual toolbar height, including wrapped actions.
+- All five opted-in modules use a borderless document toolbar. The common center owns the single 16px horizontal inset; document content adds no second outer inset. Wide clinical panels, result sections, execution tables and billing cards align with their document and the toolbar when internal panels are closed. Narrow visible content uses the full module cap: 차트 1040px, 임상검사/조제·처치/수납 1120px, 영상 1280px. Card inner padding, existing minimum panel tracks and contained scrolling remain unchanged.
 - Profile remains in the outer slot and does not replace the receipt panel.
 - If requested inline panels would leave less than 880px for the center, display the latest panel as a modal; close the earlier supplementary panel and preserve central inputs. Never automatically collapse the queue.
 - Inline panels do not trap focus or dismiss when Escape closes an unrelated central control. Modal presentation blocks background interaction, supports Escape and backdrop dismissal, and returns focus to the panel trigger.
 - If a focused width button hides, return focus to the right panel trigger when available, otherwise the history trigger.
-- Closed panels are hidden immediately, including while the dialog portal finishes its closing lifecycle.
+- Pointer history toggles slide in from the left in 180ms and back out in 140ms using the existing panel ease-out token. The document uses translation from its previous visible position to the final layout, without scaling, fading, blurring or animating its width. Reversing a toggle retargets the current visible position.
+- Keyboard toggles, reduced motion, initial URL restoration, resize and automatic inline/modal changes settle immediately. Explicit narrow/wide mode remains a separate 180ms width transition.
+- Closing history becomes inert and leaves the accessibility tree immediately; its visible slide completes before Base UI hides the popup. Its stable mounted portal retains history group/filter state. Closing from inside history returns focus to the title history trigger. Right reference panels keep their existing immediate hiding and draft lifecycle.
 - Preserve table columns and font/density. Contain necessary horizontal scrolling inside tables.
 - 차트 clinical panel tracks use the actual workspace container width. At 1180px or below, expanded tracks retain their existing 360px minimum and scroll inside the group; wide documents preserve the original panel proportions. Existing independent collapse, editor autosave and Order pinned-column behavior remain intact.
 - 조제/처치 preserves instruction/table mount identity, row selection, columns/density and contained horizontal/vertical scrolling. Existing drawer input survives width and history presentation changes; this verifies local input retention, not a new persisted prescription-edit workflow. Execution history and lifecycle actions retain their existing persistence/permission contracts.

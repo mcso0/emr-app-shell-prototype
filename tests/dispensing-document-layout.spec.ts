@@ -29,7 +29,7 @@ test("dispensing starts wide and reload resets a manual narrow choice", async ({
   await expect(page.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
 });
 
-test("instruction toolbar spans the surface and width preserves table selection and density", async ({ page }) => {
+test("instruction toolbar follows the document and width preserves table selection and density", async ({ page }) => {
   await openInstruction(page);
   const toolbar = page.getByTestId("workspace-document-toolbar");
   await expect(toolbar.getByRole("heading", { name: "조제 지시서" })).toBeVisible();
@@ -47,7 +47,7 @@ test("instruction toolbar spans the surface and width preserves table selection 
   const checkbox = table.getByRole("checkbox").nth(1);
   await checkbox.check();
   const columns = await table.getByRole("columnheader").allTextContents();
-  expect((await toolbar.boundingBox())!.width).toBeGreaterThan((await document.boundingBox())!.width);
+  await expect.poll(async () => (await toolbar.boundingBox())!.width - (await document.boundingBox())!.width).toBe(0);
   await page.getByRole("button", { name: "넓게 보기" }).click();
   await expect(document).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => (await document.boundingBox())!.width).toBeGreaterThan(1120);
@@ -55,7 +55,7 @@ test("instruction toolbar spans the surface and width preserves table selection 
     const documentBox = (await document.boundingBox())!;
     const groupBox = (await group.boundingBox())!;
     const toolbarBox = (await toolbar.boundingBox())!;
-    return [groupBox.x - documentBox.x, groupBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+    return [groupBox.x - documentBox.x, groupBox.width - documentBox.width, documentBox.x - toolbarBox.x, documentBox.width - toolbarBox.width];
   }).toEqual([0, 0, 0, 0]);
   expect(await content!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(checkbox).toBeChecked();
@@ -98,7 +98,7 @@ test("history preserves group state across inline and modal presentation and ret
   const panel = page.locator('[data-workspace-panel="left"]');
   await expect(panel).toHaveAttribute("data-presentation", "inline");
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
-  expect((await panel.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
+  expect((await panel.boundingBox())!.y).toBe(toolbar.y);
   const group = panel.locator('[data-slot="content-history-group-title"]').first();
   await group.click();
   const expanded = await group.getAttribute("aria-expanded");

@@ -46,7 +46,7 @@ test("available document width controls visibility and preserves selected mode a
     const documentBox = (await doc.boundingBox())!;
     const contentBox = (await resultContent.locator(":scope > *").first().boundingBox())!;
     const toolbarBox = (await toolbar.boundingBox())!;
-    return [contentBox.x - documentBox.x, contentBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+    return [contentBox.x - documentBox.x, contentBox.width - documentBox.width, documentBox.x - toolbarBox.x, documentBox.width - toolbarBox.width];
   }).toEqual([0, 0, 0, 0]);
   await expect(widthButton).toBeVisible();
   await page.mouse.move(0, 0);
@@ -68,7 +68,7 @@ test("available document width controls visibility and preserves selected mode a
   await page.screenshot({ path: "docs/completed/design/2026-09-29-workspace-width-proposal/assets/implementation-1920-narrow.png" });
 });
 
-test("bilateral internal panels sit below full toolbar and hide ineffective width toggle", async ({ page }) => {
+test("history starts beside the title and receipt stays below the toolbar", async ({ page }) => {
   await openLab(page);
   await page.getByRole("button", { name: "임상병리검사 이력 패널 열기" }).click();
   await page.getByRole("button", { name: /장비 검사 수신함 새 장비결과/ }).click();
@@ -80,7 +80,8 @@ test("bilateral internal panels sit below full toolbar and hide ineffective widt
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
   for (const panel of await panels.all()) {
     const box = (await panel.boundingBox())!;
-    expect(box.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
+    if (await panel.getAttribute("data-workspace-panel") === "left") expect(box.y).toBe(toolbar.y);
+    else expect(box.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
   }
   await expect(page.getByTestId("workspace-right-panel").locator("#lab-receipt-panel")).toHaveCount(0);
   await page.mouse.move(0, 0);

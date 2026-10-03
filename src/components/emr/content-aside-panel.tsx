@@ -62,6 +62,7 @@ export function EmrContentAsideHeader({
         <>
           <EmrListHeaderIconButton
             ariaLabel={collapseAriaLabel ?? fallbackCollapseLabel}
+            data-workspace-history-collapse="true"
             iconSize="md"
             onClick={onCollapse}
           >

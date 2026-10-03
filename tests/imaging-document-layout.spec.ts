@@ -29,7 +29,7 @@ test("imaging starts wide and reload resets a manual narrow choice", async ({ pa
   await expect(page.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
 });
 
-test("report width and full toolbar preserve reading inputs and order table", async ({ page }) => {
+test("report width and document toolbar preserve reading inputs and order table", async ({ page }) => {
   await openReport(page);
   const document = page.getByTestId("workspace-document");
   const toolbar = page.getByTestId("workspace-document-toolbar");
@@ -41,7 +41,7 @@ test("report width and full toolbar preserve reading inputs and order table", as
     return [sectionBox.x - documentBox.x, sectionBox.width - documentBox.width];
   }).toEqual([0, 0]);
   const content = await page.locator('[data-slot="imaging-content"]').elementHandle();
-  expect((await toolbar.boundingBox())!.width).toBeGreaterThan((await document.boundingBox())!.width);
+  await expect.poll(async () => (await toolbar.boundingBox())!.width - (await document.boundingBox())!.width).toBe(0);
   await expect(toolbar.getByRole("button", { name: "PACS", exact: true })).toBeVisible();
   await expect(summaryTrigger(page)).toBeVisible();
   const findings = page.getByRole("textbox", { name: "영상 판독 내용", exact: true });
@@ -58,7 +58,7 @@ test("report width and full toolbar preserve reading inputs and order table", as
     const documentBox = (await document.boundingBox())!;
     const sectionBox = (await section.boundingBox())!;
     const toolbarBox = (await toolbar.boundingBox())!;
-    return [sectionBox.x - documentBox.x, sectionBox.width - documentBox.width, documentBox.x - toolbarBox.x - 16, documentBox.width - toolbarBox.width + 32];
+    return [sectionBox.x - documentBox.x, sectionBox.width - documentBox.width, documentBox.x - toolbarBox.x, documentBox.width - toolbarBox.width];
   }).toEqual([0, 0, 0, 0]);
   expect(await content!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(findings).toHaveValue("합성 판독 입력 · 폭 전환 유지 확인");
@@ -72,7 +72,7 @@ test("report width and full toolbar preserve reading inputs and order table", as
   await page.screenshot({ path: `${evidence}/1920-narrow.png` });
 });
 
-test("history and summary sit below the toolbar while report and comment remain mounted", async ({ page }) => {
+test("history starts beside the title while summary stays below and inputs remain mounted", async ({ page }) => {
   await openReport(page);
   const findings = page.getByRole("textbox", { name: "영상 판독 내용", exact: true });
   await findings.fill("합성 중앙 입력 · 양쪽 패널 확인");
@@ -85,7 +85,8 @@ test("history and summary sit below the toolbar while report and comment remain 
   const comment = right.getByRole("textbox", { name: "영상 종합 코멘트" });
   await comment.fill("합성 보호자 코멘트 · 표시 전환 확인");
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
-  for (const panel of [left, right]) expect((await panel.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
+  expect((await left.boundingBox())!.y).toBe(toolbar.y);
+  expect((await right.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
   await expect(page.locator("[data-workspace-width-toggle]")).toBeHidden();
   await expect(findings).toHaveValue("합성 중앙 입력 · 양쪽 패널 확인");
   await expect(right.getByRole("button", { name: "저장", exact: true })).toBeVisible();

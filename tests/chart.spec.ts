@@ -1366,7 +1366,7 @@ test("chart Figma follow-up restores history and panel chrome contracts", async 
   await expect(expandedToggle).toHaveAttribute("aria-expanded", "true");
   await expandedToggle.click();
   await expect(page).toHaveURL(/aside=closed/);
-  await expect(page.locator("#chart-content-aside")).toHaveCount(0);
+  await expect(page.locator("#chart-content-aside")).toBeHidden();
 });
 
 test("chart panel actions remain visible on touch input", async ({
