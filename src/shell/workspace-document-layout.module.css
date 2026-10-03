@@ -1,0 +1,27 @@
+.history {
+  transform: translateX(0);
+  transition: transform var(--clair-motion-duration-drawer-enter) var(--clair-motion-easing-panel-enter);
+}
+
+.history[data-starting-style],
+.history[data-ending-style] {
+  transform: translateX(-100%);
+}
+
+.history[data-ending-style] {
+  transition-duration: var(--clair-motion-duration-drawer-exit);
+}
+
+.history[data-instant] {
+  transition: none;
+}
+
+.center[data-history-moving] {
+  overflow: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .history {
+    transition: none;
+  }
+}

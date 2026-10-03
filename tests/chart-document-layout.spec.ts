@@ -35,7 +35,7 @@ test("chart starts wide after entry and reload while manual narrow choice surviv
   await expect(doc).toHaveAttribute("data-width-mode", "narrow");
 });
 
-test("chart toolbar spans the surface and width changes preserve editor, selection and panel state", async ({ page }) => {
+test("chart toolbar follows the document and width changes preserve editor, selection and panel state", async ({ page }) => {
   // Keep this layout probe isolated from the local server's mutable SOAP fixture.
   await page.route("**/api/workspaces/clair-demo/chart/soap-notes", async (route) => {
     if (route.request().method() !== "PATCH") return route.continue();
@@ -60,7 +60,7 @@ test("chart toolbar spans the surface and width changes preserve editor, selecti
   const toolbar = page.getByTestId("workspace-document-toolbar");
   await expect(toolbar.locator('[data-slot="chart-action-bar"]')).toBeVisible();
   const doc = page.getByTestId("workspace-document");
-  expect((await toolbar.boundingBox())!.width).toBeGreaterThan((await doc.boundingBox())!.width);
+  await expect.poll(async () => (await toolbar.boundingBox())!.width - (await doc.boundingBox())!.width).toBe(0);
   await page.getByRole("button", { name: "넓게 보기" }).click();
   await expect(doc).toHaveAttribute("data-width-mode", "wide");
   await expect.poll(async () => (await doc.boundingBox())!.width).toBeGreaterThan(1040);
@@ -89,7 +89,7 @@ test("chart history switches inline to modal with focus return and preserved inp
   await page.keyboard.press("Escape");
   await expect(panel).toBeVisible();
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
-  expect((await panel.boundingBox())!.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
+  expect((await panel.boundingBox())!.y).toBe(toolbar.y);
   await page.setViewportSize({ width: 1440, height: 900 });
   const dialog = page.getByRole("dialog", { name: "차트 이력", exact: true });
   await expect(dialog).toHaveAttribute("aria-modal", "true");
