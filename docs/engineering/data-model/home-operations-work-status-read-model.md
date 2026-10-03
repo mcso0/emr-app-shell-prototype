@@ -15,7 +15,7 @@ related_docs:
 related_work:
   - "docs/work/home/HOME-PR-011-home-operations-live-work-items.md"
   - "docs/work/home/HOME-PR-012-home-operations-source-to-home-parity.md"
-last_updated: 2026-09-07
+last_updated: 2026-10-03
 ---
 
 # Home Operations Work Status Read Model
@@ -28,7 +28,11 @@ Home operations must not derive hospital-wide work by merging mock data in the b
 
 ## Current Reader In HOME-PR-014
 
-The Next.js endpoint resolves each source's existing view permission before invoking its reader and repeats workspace/source filtering before counts. It no longer invokes the historical aggregate RPC. Fulfillment uses the guarded `clair_list_fulfillment_work_items`; reception, encounter context, invoice candidates and member labels use `clair_get_home_operations_source_snapshot`, a workspace-scoped paginated reader (500 rows per source per page). Its private implementation validates auth.uid and reception:view, gates consultation queue rows with chart:view and billing arrays with billing:view, and returns only the selected Home columns. Original table SELECT remains revoked. Operational staff IDs come from workspace/source-matched assignment subqueries, including cancelled records. Member names are joined through workspace memberships. Each page is consistent; concurrent source changes between offset pages are reflected on refresh.
+The Next.js endpoint resolves each source's existing view permission before invoking its reader and repeats workspace/source filtering before counts. It no longer invokes the historical aggregate RPC. The local audit item5 candidate uses `clair_get_home_operations_source_snapshot_v2(workspace, date, includeCompleted, includeCancelled)` and per-destination `clair_list_home_fulfillment_work_items`. The source RPC returns one complete scalar JSON snapshot of the operational source/dependency sets, without offset pages or a row cap. It validates auth.uid and reception:view, gates consultation with chart:view and billing with billing:view, and derives fulfillment destination permissions from authenticated identity. Table grants and source/detail readers remain unchanged. This additive migration must be applied before the application release; the deployed legacy reader remains available for rollback until delivery is approved.
+
+SQL includes the selected Asia/Seoul `[midnight, next midnight)` day and all earlier unfinished work. Terminal work is returned only for its source operating day and respective inclusion flag. Appointment time is scheduledStartAt first; fulfillment time is dueAt first; billing time is billingRequestedAt, earliest of all lines, then invoice creation. Current source status remains authoritative on historical selected dates. Hospital UI filters to selected-day work; personal work retains earlier unfinished work. These differ from fulfillment v2's exact selected-day semantics, which remain unchanged.
+
+The source snapshot keeps old encounter dependencies, all reception queues suppressing synthetic reception, all lines of included invoices, related patient/guardian names, operational staff arrays and workspace membership names (including existing inactive-member name semantics). Fulfillment exports only consumed fields and frozen snapshot keys, including imaging detail.modality; complete details remain in existing source RPCs reached by exact workItemId and source operating-date links. Source arrays retain ID order and fulfillment retains updatedAt descending/id order. Each RPC has a consistent statement snapshot; separate source RPCs are refreshed together through the existing mount/date/inclusion/manual refresh path. There is no polling loop. A missing migration fails visibly; it does not fall back to full-history reads. Per-fulfillment failure retains the partial-source warning.
 
 `isMyWork` uses direct user assignment (including reception/reservation operational staff arrays). `isRequestedWork` uses requester user ID. Team availability is not personal assignment. `scheduledAt` is distinct from `requestedAt`; operational date uses scheduled date when present. Previous unfinished records are retained; completed prior-date records and future work are excluded. Invoice work requires a billing-candidate anchor on the line or its order.
 

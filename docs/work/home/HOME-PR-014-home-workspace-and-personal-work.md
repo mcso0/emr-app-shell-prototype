@@ -9,10 +9,104 @@ source_docs:
   - "docs/engineering/data-model/home-operations-work-status-read-model.md"
 dependencies:
   - "HOME-PR-012"
-updated: "2026-09-29"
+updated: "2026-10-03"
 ---
 
 # Home Workspace And Personal Work
+
+## Audit item5 — scoped operational reads (2026-10-03)
+
+User approved investigation, scoped implementation and local synthetic verification
+after item4. Initial base: main `56f8c7979f9e7af3b19dd7203cada2b2f35c6b82`;
+final local base: latest main `bd3cf450fe8164724ce6cff0ef2171880f75239b`
+including merged PR905 Lab receipt chrome/detail-cache integration. Branch
+`codex/home-scoped-operational-read`. Preserve primary WIP. The initial scope
+authorized local work only. On 2026-10-03 the user subsequently requested PR
+publication and proceeding through deployment. Prepare a draft PR, exact-head
+Release Check/Preview and the complete DB/main/Production approval packet first;
+the repository's completed exact-candidate gate remains required before release.
+
+Scope: additive date/status-scoped source snapshot and compact Home fulfillment
+reader, retaining existing server mapping, permissions, workspace isolation,
+selected Seoul day plus all earlier unfinished work, current patient counts,
+source detail links and refresh behavior. Keep all dependencies needed for
+reception suppression, appointment encounter identity and full invoice-line
+counts/timestamps. Fulfillment v1/v2 and their exact-day/history contracts remain.
+
+Verification: dedicated schema-only local `item5_synthetic` DB, representative
+historical fixtures, exact old/new mapped result parity across roles/dates/flags,
+complete results above row caps, SQL permission/advisor/lint checks, focused
+Home/source regression and secrets/docs/UX/lint/type/build preflight. Record local
+JSON sizes, RPC counts and SQL elapsed milliseconds separately from unmeasured
+hosted wire egress. Migration-first compatibility and rollback remain release
+requirements; no full-history fallback should silently mask a missing migration.
+
+Local result: ready for review; no remote action performed. Existing item mapping
+is unchanged. Replaced the all-history offset loop with one complete scalar JSON
+source snapshot and compact, independently failure-tolerant fulfillment reads.
+The additive migration is `20261003100830_home_scoped_operational_read.sql`
+(SHA256 `4a7d9f89f7cbe9d50e370fbf189255b87b1eb7ae30a8478986522331c8bce9dc`).
+Supabase CLI 2.115.0 generated the migration; current changelog, PostgreSQL minor
+breaking-change notice and official database-functions docs were reviewed. The
+new code uses no affected ltree/crypto/GiST/custom-operator feature.
+
+Final synthetic fixture: 7,300 appointment/encounter/patient/guardian roots,
+6,000 historical and 1,200 selected-day roots, 14,604 invoice lines, 12,985
+fulfillment items across all four destinations, and a foreign workspace. Sparse
+old unfinished records remain; all six fulfillment states, billing paid/refund
+precedence, midnight boundaries, dueAt fallback, suppression, frozen/context name
+fallbacks, assignments and requests are covered. Every scoped fulfillment queue
+and appointment snapshot exceeds 1,000 rows when terminal flags are included.
+
+Default full-role view, three alternating-order local runs:
+
+| Measure | Existing reader | Candidate |
+| --- | ---: | ---: |
+| RPC calls | 34 | 5 |
+| Source rows returned | 66,064 | 6,895 |
+| Fulfillment rows returned | 12,985 | 3,244 |
+| PostgreSQL JSON text bytes (sum per RPC) | 80,473,122 | 4,926,595 |
+| Node serialized source/fulfillment bytes | 77,902,660 | 4,647,641 |
+| SQL function elapsed ms, median | 1,239.838 | 328.480 |
+
+JSON text reduced 93.88%. SQL samples were 3,853.418/1,225.809/1,239.838 ms
+before and 336.370/327.761/328.480 ms after. SQL timing sums function execution
+only, excluding harness concatenation, Docker/process/network/JS mapping time.
+These are local serialized sizes and local timings, not actual hosted wire egress,
+Production latency or current workload statistics. Large legitimate unfinished
+backlogs are retained without an arbitrary cutoff. RPCs remain separate statement
+snapshots; this does not add a cross-source transaction or refresh polling.
+
+Verification:
+
+- `HOME_SCOPED_LOCAL_DB=1 PATH=/usr/local/bin:$PATH npx playwright test --config=output/item5/server.config.ts tests/home-scoped-read-local.spec.ts --reporter=line`: two tests passed; 15 role/date/flag cases each compare all/mine results (30 exact result comparisons), including item order, identities, names, dates, links, status/counts/currentPatients, and repeat determinism. The temporary serverless config isolated these Node/SQL tests from dev/build locks and was removed after the run; the suite can also run with the repository's standard config, which starts the mock web server.
+- SQL `home_scoped_read_permissions.sql` inside BEGIN/ROLLBACK: passed actor/Home/destination/workspace/role/inactive denial, helper/anonymous/service-role/PUBLIC grants, complete results, boundaries, source detail access and business-row digests.
+- Initial combined `home.spec`, `home-hospital-status`, `home-filter-state`, `home-hospital-presentation`, `home-source-navigation`, `home-operations-source-parity`, `home-operations-work-items-server`, `fulfillment-scoped-read`, `fulfillment-work-item-server`, `fulfillment-assignee-server`, `workspace-vital-settings-server`: 89 passed, one inherited handoff confirmation 409 at source-parity line60. Clean initial main `56f8c797` independently reproduced the same failure (11 passed/one failed in the three baseline suites). Disabled vital settings and all three deep-link navigation tests pass on both. Baseline Turbopack startup timed out before testing; the independent webpack loopback server reproduced the failure.
+- Post-PR905 integration on latest main `bd3cf450`: all preceding suites plus `lab-imaging.spec` and `lab-receipt-loading.spec` ran against isolated webpack/mock loopback servers, with 108 passed/two failed. All 20 Lab tests, including receipt detail-cache reuse without another queue read and loading/error/permission behavior, passed. All three Home destination navigation tests also passed. The same handoff 409 reproduced on clean latest main (11 passed/one failed); an additional fulfillment route lifecycle assertion expected completed but received requested at `fulfillment-work-item-server.spec.ts:501`. Isolated runs reproduced the identical lifecycle failure on both clean latest main and candidate. This execution-mode baseline failure was not present in the earlier 89-pass run; neither failure is waived or counted as passing.
+- After execution recovery, latest main was fetched again and remained `bd3cf450`; no duplicate test process was running. PR905 touched only Lab UI/tests and width docs, and the item5 Home/SQL diff remains intact. TypeScript, lint and the transaction/rollback SQL permission and read-immutability proof were rerun successfully. Raw post-integration evidence uses `output/item5/post905-*`; the clean baseline logs are in the separate `baseline-main/output/item5/` worktree.
+- Final post-PR905 secrets (including intent-to-add new files: 4,591 tracked files), docs (1,059 Markdown files), Korean UX copy, TypeScript, lint, full Production build and diff checks pass. Lint retains five existing WP10 warnings; build retains the existing docs-reader NFT tracing warning. The sandboxed build stalled at compilation with inactive processes and was terminated; the same `npm run build` with local worker access completed successfully. This is a local build, with no publication or deployment. Both owned loopback test servers were stopped after verification.
+- Local security/performance advisors: 39 baseline and 39 candidate, identical, zero new findings. Public/private function lint output is identical: inherited appointment_change_logs.action error and a pre-existing lab adopter pg_temp fixture-context error; no new reader issue. This is a schema-only local copy with current relevant readers, not a hosted advisor result or full historical migration replay.
+- Independent read-only SQL/gateway review found no concrete mapping/security regression; its fixture coverage gap was corrected before final parity.
+
+Reproduction requires a fresh, dedicated local `item5_synthetic` schema with current
+source readers; `node scripts/test-home-scoped-read-local.mjs --seed` seeds only
+that Docker database. `--legacy` / default export the corresponding result and
+RPC/SQL/serialized-byte measurements. No hosted database URL is accepted. Raw
+local evidence is in ignored `output/item5/benchmark.json`,
+`parity-measurements.json`, SQL/advisor/lint and regression/preflight logs.
+
+Release requirements: review the uncommitted local diff and exact candidate;
+reconcile the hosted migration history alias for item4 (local `073105` versus
+recorded remote `094027`, identical SQL SHA256) before any scoped application.
+Apply only the approved item5 additive migration before the application, verify
+authenticated date/personal/presence/details/refresh smoke, and run exact-candidate
+Release Check plus preview verification under the release skill. Main/Production
+needs separate explicit approval. Stop on migration, permissions, unexpected
+scope or smoke failure. Roll back the application to the prior compatible source
+and leave additive readers installed; older source snapshot and fulfillment v1/v2
+are unchanged. If removing the new functions later, first confirm no caller
+uses them, then drop public wrappers, private readers and internal helpers in that
+order under separate authorization. No business-data rollback is needed.
 
 ## Goal
 

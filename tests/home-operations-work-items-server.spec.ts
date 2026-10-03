@@ -107,18 +107,21 @@ function sourceClient(rows: Record<string, unknown[]> = {}, fulfillment: unknown
     calls,
     async rpc(name: string, args: Record<string, unknown>) {
       calls.push(`${name}:${args.p_queue_type}`);
-      if (name === "clair_get_home_operations_source_snapshot") {
+      expect(args.p_date).toBe(operatingDate);
+      expect(args.p_include_completed).toEqual(expect.any(Boolean));
+      expect(args.p_include_cancelled).toEqual(expect.any(Boolean));
+      if (name === "clair_get_home_operations_source_snapshot_v2") {
         expect(args.p_workspace_id).toBe(workspaceId);
-        const offset = Number(args.p_offset);
+        expect(args).not.toHaveProperty("p_offset");
+        expect(args).not.toHaveProperty("p_limit");
         const data = Object.fromEntries(["appointments", "encounters", "waiting_queue_entries", "patients", "guardians", "invoices", "invoice_lines", "orders", "user_memberships"].map((table) => {
-          calls.push(`${table}:${offset}`);
-          return [table, (rows[table] ?? []).slice(offset, offset + Number(args.p_limit)).map((value) => ({ workspace_id: workspaceId, assigned_staff_user_ids: [actorUserId], ...value as object }))];
+          return [table, (rows[table] ?? []).map((value) => ({ workspace_id: workspaceId, assigned_staff_user_ids: [actorUserId], ...value as object }))];
         }));
         return { error: null, data };
       }
-      expect(name).toBe("clair_list_fulfillment_work_items");
+      expect(name).toBe("clair_list_home_fulfillment_work_items");
       expect(args.p_workspace_id).toBe(workspaceId);
-      return { error: null, data: fulfillment };
+      return { error: null, data: fulfillment.map((value) => Object.fromEntries(Object.entries(value as object).map(([key, field]) => [key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`), field]))) };
     },
 
   };
@@ -150,7 +153,7 @@ test("home reads authorized sources, scheduled dates, identities, names and exac
   expect(response.sourceStatus).toBe("live");
   expect(appointment.requestedAt).toBe("2026-06-20T09:00:00+09:00");
   expect(appointment.attentionSignals).not.toContain("long_stay");
-  expect(client.calls.filter((name) => name.startsWith("clair_list_fulfillment"))).toEqual(["clair_list_fulfillment_work_items:lab"]);
+  expect(client.calls.filter((name) => name.startsWith("clair_list_home_fulfillment"))).toEqual(["clair_list_home_fulfillment_work_items:lab"]);
 });
 
 test("home enriches fulfillment context without snapshot names and fails closed on an incomplete reader response", async () => {
@@ -175,9 +178,29 @@ test("billing uses invoice guardian context when encounter guardian is absent", 
   expect(result.ok && result.items.find((item) => item.sourceType === "billing")).toMatchObject({ patientName: "나나", guardianName: "김보호" });
 });
 
-test("home paginates beyond one page and separates current patient counts from selected work date", async () => {
+test("scoped source migration errors fail closed without the historical reader fallback", async () => {
+  const calls: string[] = [];
+  const result = await createSupabaseHomeOperationsWorkItemGateway({ async rpc(name) {
+    calls.push(name);
+    return { data: null, error: { message: "function missing" } };
+  } }).listHomeOperationsWorkItems(gatewayInput);
+  expect(result).toEqual({ ok: false, error: "db_read_failed", retryable: true });
+  expect(calls).toEqual(["clair_get_home_operations_source_snapshot_v2"]);
+});
+
+test("a compact fulfillment failure keeps the explicit partial-source contract", async () => {
+  const client = sourceClient({ appointments: [{ id: "appointment", status: "confirmed", scheduled_start_at: `${operatingDate}T10:00:00+09:00` }] });
+  const result = await createSupabaseHomeOperationsWorkItemGateway({ async rpc(name, args) {
+    if (name === "clair_list_home_fulfillment_work_items") return { data: null, error: { message: "read failed" } };
+    return client.rpc(name, args);
+  } }).listHomeOperationsWorkItems(gatewayInput);
+  expect(result).toMatchObject({ ok: true, sourceStatus: "partial", accessIssues: [{ code: "fulfillment_read_failed", sourceType: "lab" }] });
+  expect(result.ok && result.items.map((item) => item.id)).toEqual(["appointment:appointment"]);
+});
+
+test("home consumes the complete scalar snapshot beyond row caps and separates current patient counts from selected work date", async () => {
   const client = sourceClient({
-    appointments: Array.from({ length: 503 }, (_, index) => ({ id: `appointment-${index}`, status: "confirmed", scheduled_start_at: `${operatingDate}T10:00:00+09:00` })),
+    appointments: Array.from({ length: 1503 }, (_, index) => ({ id: `appointment-${index}`, status: "confirmed", scheduled_start_at: `${operatingDate}T10:00:00+09:00` })),
     encounters: [
       { id: "one", patient_id: "patient-a", status: "waiting", checked_in_at: "2026-01-01T09:00:00+09:00" },
       { id: "two", patient_id: "patient-a", status: "in_consultation", checked_in_at: "2026-01-01T09:00:00+09:00" },
@@ -188,8 +211,8 @@ test("home paginates beyond one page and separates current patient counts from s
   });
   const response = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems(gatewayInput);
   expect(response).toMatchObject({ ok: true, currentPatients: { present: 2, waiting: 1, inProgress: 1 } });
-  expect(response.ok && response.items.filter((item) => item.sourceType === "appointment")).toHaveLength(503);
-  expect(client.calls).toContain("appointments:500");
+  expect(response.ok && response.items.filter((item) => item.sourceType === "appointment")).toHaveLength(1503);
+  expect(client.calls.filter((name) => name.startsWith("clair_get_home"))).toHaveLength(1);
 });
 
 test("home excludes future work, old completed work, foreign fulfillment and unanchored invoices", async () => {

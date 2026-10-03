@@ -622,19 +622,21 @@ async function listHomeOperationsWorkItemsFromExistingSources(
   const accessIssues: HomeOperationsAccessIssue[] = [];
   const items: HomeOperationsWorkItem[] = [];
 
-  const sourceRows: Record<string, unknown[]> = {};
-  for (let offset = 0; ; offset += 500) {
-    const snapshot = await client.rpc("clair_get_home_operations_source_snapshot", {
-      p_workspace_id: input.workspaceId, p_offset: offset, p_limit: 500,
-    });
-    const page = getRecord(snapshot.data);
-    const tables = ["appointments", "encounters", "waiting_queue_entries", "patients", "guardians", "invoices", "invoice_lines", "orders", "user_memberships"];
-    if (snapshot.error || !page || tables.some((table) => !Array.isArray(page[table]))) {
-      return { ok: false, error: "db_read_failed", retryable: true };
-    }
-    for (const table of tables) (sourceRows[table] ??= []).push(...page[table] as unknown[]);
-    if (tables.every((table) => (page[table] as unknown[]).length < 500)) break;
+  const readArgs = {
+    p_workspace_id: input.workspaceId,
+    p_date: input.operatingDate,
+    p_include_completed: input.includeCompleted,
+    p_include_cancelled: input.includeCancelled,
+  };
+  // A scalar JSON snapshot contains the complete operational source/dependency
+  // set in one statement, avoiding historical offset pages and row-limit caps.
+  const snapshot = await client.rpc("clair_get_home_operations_source_snapshot_v2", readArgs);
+  const page = getRecord(snapshot.data);
+  const tables = ["appointments", "encounters", "waiting_queue_entries", "patients", "guardians", "invoices", "invoice_lines", "orders", "user_memberships"];
+  if (snapshot.error || !page || tables.some((table) => !Array.isArray(page[table]))) {
+    return { ok: false, error: "db_read_failed", retryable: true };
   }
+  const sourceRows = Object.fromEntries(tables.map((table) => [table, page[table] as unknown[]]));
   const sourceClient: SupabaseHomeOperationsWorkItemsRpcClient = {
     rpc: (name, args) => client.rpc(name, args), sourceRows,
   };
@@ -646,16 +648,13 @@ async function listHomeOperationsWorkItemsFromExistingSources(
     if (calendar.assignmentReadFailed) accessIssues.push({ code: "assignment_read_failed", message: "일부 접수·예약 담당 정보를 불러오지 못했습니다.", sourceType: "reception" });
   }
   for (const queueType of fulfillmentQueueTypes.filter((type) => input.allowedSourceTypes.includes(type))) {
-    const fulfillment = await client.rpc("clair_list_fulfillment_work_items", {
-      p_workspace_id: input.workspaceId, p_queue_type: queueType,
+    const fulfillment = await client.rpc("clair_list_home_fulfillment_work_items", {
+      ...readArgs, p_queue_type: queueType,
     });
     if (fulfillment.error || !Array.isArray(fulfillment.data)) {
       accessIssues.push({ code: "fulfillment_read_failed", message: "오더 기반 업무를 불러오지 못했습니다.", sourceType: queueType });
     } else {
-      items.push(...mapFulfillmentFallbackItems(fulfillment.data.map((value) => {
-        const row = getRecord(value) ?? {};
-        return Object.fromEntries(Object.entries(row).map(([key, field]) => [key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`), field]));
-      }), input).filter((item) => item.sourceType === queueType));
+      items.push(...mapFulfillmentFallbackItems(fulfillment.data, input).filter((item) => item.sourceType === queueType));
     }
   }
   if (input.allowedSourceTypes.includes("billing")) {
