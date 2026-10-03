@@ -260,3 +260,13 @@ Documentation validation: `npm run docs:check` passed (1072 Markdown files); foc
   Production is not Ready, its source is unexpected or scoped smoke fails.
 - Exact candidate, PR, Release Check, merge, Production and final rollback
   evidence are recorded in the PR and delivery handoff.
+
+## Responsive Follow-Up — 2026-10-03
+
+- User reviewed the standalone HTML proposal, restricted implementation to responsive behavior with the existing design preserved, and requested commit/push/PR/main merge with deployment approval.
+- Scope: `LabResultDataTable` observes its viewport content width and supplies controlled column sizing using existing preferred/minimum widths (1198px / 904px totals). Preserve the shared renderer, default wide layout, reference geometry, all style classes, and result/finding/attachment/persistence contracts.
+- Rebased on the separately approved autosave release #897. Its stable cell renderers already retain input focus; the responsive slice changes no persistence hook, result projection, or autosave behavior.
+- No shared component, dependency, API contract, permission, schema, remote data, typography, spacing, wrapping, toolbar, or detail-design change.
+- Regression evidence: before implementation, narrow mode overflowed by 126px in the synthetic browser fixture. The follow-up checks narrow/wide modes, right-panel changes, window resizing, minimum-width table scrolling, header/body alignment, unchanged input appearance, draft/finding/disclosure preservation, and focus retention.
+- Existing wide-geometry checks now wait for the resize result; the CBC fixed-width assertion explicitly uses a wide viewport. Final focused checks and preflight are rerun after rebasing. Browser writes use intercepted synthetic fixtures, not remote records.
+- Exact candidate checks, Preview, Release Check, main/Production delivery, scoped read-only smoke, and rollback evidence are recorded in the PR and final handoff. Human acceptance remains separate from delivery verification.

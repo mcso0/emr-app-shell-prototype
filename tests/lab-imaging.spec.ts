@@ -377,6 +377,7 @@ test("lab workspace renders shared empty state for true-empty live result rows",
 });
 
 test("CBC V2 actual persisted results load, preserve blank, submit typed states and reload", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const profiles = JSON.parse(readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/oed-lab-04/cbc-runtime.non-applied.v1.json", "utf8")).profiles;

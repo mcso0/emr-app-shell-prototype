@@ -85,6 +85,8 @@ Use existing semantic surface, border, text, focus, and selected tokens. Figma r
 
 Some Figma examples swap range/actor widths. Use one consistent column grid; do not vary columns by expanded state. At narrow widths, preserve the existing responsive detail stacking and table overflow. Recommended card behavior is four columns where space permits, two on narrow containers, with the two-row cap based on actual layout. Validate rather than shrinking unreadable controls.
 
+Responsive table follow-up approved 2026-10-03: keep the existing design and column definitions. Measure the table viewport's content width, excluding padding. Between 904px and the 1198px preferred column total, distribute shrinkage in proportion to each column's existing `size - minSize`. Keep the 24px disclosure fixed. Below 904px, preserve minimum column widths and scroll inside the table. At 1198px and above, retain the reference widths and existing range-column growth. Document width toggles, shell panels, and window resizing use the same rule; result/finding drafts and disclosure state remain intact. No typography, spacing, wrapping, toolbar, or detail-design change is included.
+
 ## Attachment And Upload Behavior
 
 - Count ready attachments in `첨부 자료 N`; visible pending/failed tasks also consume layout space, but are not ready files. Cancellation/removal/retry/view changes must recompute overflow.

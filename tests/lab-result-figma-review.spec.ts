@@ -42,6 +42,57 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
   return { detail, row, attachments };
 }
 
+test("result table fits narrow and wide containers while preserving drafts and minimum-width scrolling", async ({ page }, testInfo) => {
+  const { row, detail } = await openReview(page, 0);
+  await mockAutosave(page);
+  const input = page.getByRole("textbox", { name: "합성 항목 결과값", exact: true });
+  const finding = detail.getByRole("textbox", { name: "검사 소견", exact: true });
+  const table = page.getByRole("table", { name: "임상병리 검사 결과 입력", exact: true });
+  const viewport = page.getByTestId("lab-result-table-anchor").locator('[data-slot="table-container"]');
+  const overflow = () => viewport.evaluate(el => el.scrollWidth - el.clientWidth);
+  const appearance = () => input.evaluate(el => {
+    const style = getComputedStyle(el);
+    return { fontSize: style.fontSize, lineHeight: style.lineHeight, height: style.height,
+      padding: style.padding, borderRadius: style.borderRadius, background: style.backgroundColor };
+  });
+  const originalAppearance = await appearance();
+  await input.fill("responsive draft");
+  await finding.fill("검사 소견 임시 입력");
+  await page.getByRole("button", { name: "좁게 보기", exact: true }).click();
+  await expect.poll(overflow).toBeLessThanOrEqual(1);
+  await expect(table.locator("thead th")).toHaveCount(7);
+  expect((await table.boundingBox())!.width).toBeLessThan(1198);
+  await table.screenshot({ path: testInfo.outputPath("responsive-narrow.png") });
+  await page.getByRole("button", { name: "넓게 보기", exact: true }).click();
+  await expect.poll(overflow).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 1600, height: 1080 });
+  await expect.poll(overflow).toBeLessThanOrEqual(1);
+  await page.getByRole("button", { name: "장비 검사 수신함", exact: true }).click();
+  await expect(page.getByRole("button", { name: "장비 검사 수신함", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect.poll(overflow).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 1366, height: 1080 });
+  await expect.poll(overflow).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "장비 검사 수신함", exact: true }).click();
+  await expect.poll(overflow).toBeLessThanOrEqual(1);
+  await input.focus();
+  await page.setViewportSize({ width: 800, height: 1080 });
+  await expect.poll(overflow).toBeGreaterThan(0);
+  await expect.poll(async () => (await table.boundingBox())!.width).toBeCloseTo(904, 0);
+  await expect(input).toHaveValue("responsive draft");
+  await expect(input).toBeFocused();
+  await expect(finding).toHaveValue("검사 소견 임시 입력");
+  await expect(row.getByRole("button", { name: /소견.*접기/ })).toHaveAttribute("aria-expanded", "true");
+  expect(await appearance()).toEqual(originalAppearance);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
+  await viewport.evaluate(el => { el.scrollLeft = el.scrollWidth; });
+  const header = table.locator('thead [data-column-id="assignee"]');
+  const cell = row.locator('[data-column-id="assignee"]');
+  const headerBox = (await header.boundingBox())!; const cellBox = (await cell.boundingBox())!;
+  expect(Math.abs(headerBox.x - cellBox.x)).toBeLessThan(1);
+  expect(Math.abs(headerBox.width - cellBox.width)).toBeLessThan(1);
+  await viewport.screenshot({ path: testInfo.outputPath("responsive-minimum-scroll.png") });
+});
+
 
 async function installUploadHarness(page: Page) {
   await page.addInitScript(() => {
@@ -394,6 +445,7 @@ test("layout follow-up: only normal range grows and both table edges retain eigh
   expect((await input.boundingBox())!.width).toBeCloseTo(220, 0);
   const viewport = page.viewportSize()!;
   await page.setViewportSize({ width: viewport.width + 143, height: viewport.height });
+  await expect.poll(async () => (await widths())[4] - baseline[4]).toBeCloseTo(143, 0);
   const wide = await widths();
   [0,1,2,3,5,6].forEach(i => expect(wide[i]).toBeCloseTo(baseline[i], 0));
   expect(wide[4] - baseline[4]).toBeCloseTo(143, 0);
