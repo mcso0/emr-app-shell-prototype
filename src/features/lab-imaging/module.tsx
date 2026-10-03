@@ -3117,6 +3117,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
               <EmrRightPanelHeaderIconButton
                 className="opacity-0 text-[var(--emr-text-tertiary)] transition-opacity hover:text-[var(--emr-text-tertiary)] group-hover/lab-receipt-panel:opacity-100 focus-visible:opacity-100"
                 aria-label="장비 검사 수신함 접기"
+                data-workspace-receipt-collapse="true"
                 onClick={() => setRightPanelOpen(false)}
               >
                 <CdsNavigationChevronsRightIcon className="size-4" />

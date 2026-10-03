@@ -68,7 +68,7 @@ test("available document width controls visibility and preserves selected mode a
   await page.screenshot({ path: "docs/completed/design/2026-09-29-workspace-width-proposal/assets/implementation-1920-narrow.png" });
 });
 
-test("history starts beside the title and receipt stays below the toolbar", async ({ page }) => {
+test("history and receipt share the document title hierarchy", async ({ page }) => {
   await openLab(page);
   await page.getByRole("button", { name: "임상병리검사 이력 패널 열기" }).click();
   await page.getByRole("button", { name: /장비 검사 수신함 새 장비결과/ }).click();
@@ -80,8 +80,8 @@ test("history starts beside the title and receipt stays below the toolbar", asyn
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
   for (const panel of await panels.all()) {
     const box = (await panel.boundingBox())!;
-    if (await panel.getAttribute("data-workspace-panel") === "left") expect(box.y).toBe(toolbar.y);
-    else expect(box.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height - 1);
+    expect(box.y).toBe(toolbar.y);
+    expect(box.height).toBe((await page.getByTestId("workspace-document-area").boundingBox())!.height);
   }
   await expect(page.getByTestId("workspace-right-panel").locator("#lab-receipt-panel")).toHaveCount(0);
   await page.mouse.move(0, 0);
