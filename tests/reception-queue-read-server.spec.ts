@@ -814,3 +814,31 @@ function createLegacyReceptionViewPermissionGateway(calls: string[]): WorkspaceP
     },
   };
 }
+
+test("waiting producer respects exact 30/60 minute boundaries and queue re-entry identity", async () => {
+  const events: Parameters<NotificationPersistenceGateway["emitNotificationEvent"]>[0][] = [];
+  const waitingEntry: WaitingQueueEntry = { ...queueEntry, enteredAt: "2026-05-19T00:00:00.000Z" };
+  const gateway = createRecordingNotificationPersistenceGateway(events);
+  const poll = async (now: string, entry = waitingEntry) => readReceptionQueue({
+    actorUserId: "user-front-desk", workspaceId: "clair-demo", date: "2026-05-19",
+    gateway: createMockReceptionQueueReadGateway({ queue: [{ kind: "encounter_queue", encounter, queueEntry: entry }] }),
+    notificationPersistenceGateway: gateway, now,
+  });
+  await poll("2026-05-19T00:29:59.999Z");
+  expect(events).toHaveLength(0);
+  await poll("2026-05-19T00:30:00.000Z");
+  await poll("2026-05-19T00:59:59.999Z");
+  await poll("2026-05-19T01:00:00.000Z");
+  expect(events.map(event => event.priority)).toEqual(["high", "high", "urgent"]);
+  expect(new Set(events.map(event => event.dedupeKey)).size).toBe(1);
+  expect(events.map(event => event.occurredAt)).toEqual(Array(3).fill("2026-05-19T00:30:00.000Z"));
+  await poll("2026-05-19T01:01:00.000Z", { ...waitingEntry, status: "cancelled" });
+  await poll("2026-05-19T01:01:00.000Z", { ...waitingEntry, status: "called" });
+  expect(events).toHaveLength(3);
+  await poll("2026-05-19T01:01:00.000Z");
+  expect(events[3].dedupeKey).toBe(events[0].dedupeKey);
+  await poll("2026-05-19T01:29:59.999Z", { ...waitingEntry, id: "fresh-queue", enteredAt: "2026-05-19T01:00:00.000Z" });
+  expect(events).toHaveLength(4);
+  await poll("2026-05-19T01:30:00.000Z", { ...waitingEntry, id: "fresh-queue", enteredAt: "2026-05-19T01:00:00.000Z" });
+  expect(events[4].dedupeKey).not.toBe(events[0].dedupeKey);
+});

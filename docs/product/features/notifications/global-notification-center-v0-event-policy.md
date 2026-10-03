@@ -14,7 +14,7 @@ related_work:
   - "docs/work/notifications/NOTIFICATION-PR-012-event-ui-surface-qa.md"
   - "docs/work/notifications/NOTIFICATION-PR-013-focused-state-regression-tests.md"
   - "https://linear.app/deny-93/issue/DEN-396/00-02-finalize-event-matrix-ux-writing-rules-and-badgetoast-policy"
-last_updated: "2026-06-03"
+last_updated: "2026-10-03"
 ---
 
 # Global Notification Center v0 Event Policy
@@ -206,6 +206,18 @@ Update/bump may change:
 - metadata needed to explain the latest state.
 
 Do not append another row for the same unread event.
+
+Persisted reception waiting alerts are the threshold exception: for the same
+workspace, normalized event scope, and queue-entry dedupe key, the first eligible
+poll creates a `high` alert at 30 minutes; the first poll at or beyond 60 minutes
+promotes it to `urgent` once. Repeated polls and late `high` requests return
+`unchanged`. All per-user read/archive state survives both repeats and escalation.
+The notification text retains the elapsed minutes observed at creation or
+escalation; it is not a live elapsed-time counter. Cancel/restore keeps the same
+queue entry and acknowledgement; a new entry has an independent dedupe key.
+This database contract is prepared locally in
+`docs/work/notifications/NOTIFICATION-PR-028-waiting-threshold-idempotency.md`;
+release requires the additive function migration.
 
 Read or archived repeated events should be handled by the implementation issue that owns state behavior. The product expectation is that repeated operational signals do not create noisy duplicate rows.
 
