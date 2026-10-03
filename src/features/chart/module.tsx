@@ -16376,7 +16376,7 @@ export function ChartContent({
     const patientId = activeBundle?.patient.id;
     if (allowMockFallback || !authHydrated || !patientId) return;
 
-    let cancelled = false;
+    const controller = new AbortController();
 
     async function loadHistory() {
       setChartHistoryState({
@@ -16386,12 +16386,19 @@ export function ChartContent({
         totalCount: 0,
       });
 
-      const result = await loadCompleteChartPatientHistory({
-        actorHeaders,
-        patientId: patientId!,
-        workspaceId,
-      });
-      if (cancelled) return;
+      let result: Awaited<ReturnType<typeof loadCompleteChartPatientHistory>>;
+      try {
+        result = await loadCompleteChartPatientHistory({
+          actorHeaders,
+          patientId: patientId!,
+          signal: controller.signal,
+          workspaceId,
+        });
+      } catch {
+        if (controller.signal.aborted) return;
+        result = { ok: false, status: 500, error: "db_read_failed" };
+      }
+      if (controller.signal.aborted) return;
 
       if (!result.ok) {
         setChartHistoryState({
@@ -16414,14 +16421,25 @@ export function ChartContent({
 
     void loadHistory();
     return () => {
-      cancelled = true;
+      controller.abort();
+      // A store-backed spinner must not survive leaving the chart mid-request.
+      const history = useChartStore.getState();
+      if (
+        history.chartHistoryStatus === "loading" &&
+        history.chartHistoryScope?.patientId === patientId &&
+        history.chartHistoryScope.workspaceId === workspaceId
+      ) {
+        setChartHistoryState({ records: [], status: "idle", totalCount: 0 });
+      }
     };
   }, [
     activeBundle?.patient.id,
     actorHeaders,
     allowMockFallback,
     authHydrated,
+    authSession?.id,
     chartHistoryRefreshNonce,
+    selectedEncounterId,
     setChartHistoryState,
     workspaceId,
   ]);

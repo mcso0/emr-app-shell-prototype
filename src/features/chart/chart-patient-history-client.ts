@@ -7,14 +7,17 @@ export async function loadChartPatientHistoryPage({
   cursor,
   limit = 50,
   patientId,
+  signal,
   workspaceId,
 }: {
   actorHeaders?: Record<string, string>;
   cursor?: string;
   limit?: number;
   patientId: string;
+  signal?: AbortSignal;
   workspaceId: string;
 }): Promise<ChartPatientHistoryResponse> {
+  signal?.throwIfAborted();
   const searchParams = new URLSearchParams({
     limit: String(limit),
     patientId,
@@ -27,9 +30,11 @@ export async function loadChartPatientHistoryPage({
       {
         cache: "no-store",
         headers: actorHeaders,
+        signal,
       },
     );
     const body = (await response.json()) as ChartPatientHistoryResponse;
+    signal?.throwIfAborted();
 
     if (!response.ok || !body.ok) {
       if (!body.ok) return { ...body, status: response.status };
@@ -38,6 +43,7 @@ export async function loadChartPatientHistoryPage({
 
     return body;
   } catch {
+    signal?.throwIfAborted();
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 }
@@ -45,15 +51,18 @@ export async function loadChartPatientHistoryPage({
 export async function loadCompleteChartPatientHistory({
   actorHeaders,
   patientId,
+  signal,
   workspaceId,
   loadPage = loadChartPatientHistoryPage,
 }: {
   actorHeaders?: Record<string, string>;
   patientId: string;
+  signal?: AbortSignal;
   workspaceId: string;
   loadPage?: typeof loadChartPatientHistoryPage;
 }): Promise<ChartPatientHistoryResponse> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
+    signal?.throwIfAborted();
     const recordsByHistoryId = new Map<
       string,
       Extract<ChartPatientHistoryResponse, { ok: true }>["items"][number]
@@ -63,12 +72,16 @@ export async function loadCompleteChartPatientHistory({
     let totalCount = 0;
 
     while (true) {
+      signal?.throwIfAborted();
       const result = await loadPage({
         actorHeaders,
         cursor,
         patientId,
+        signal,
         workspaceId,
       });
+      // Also guard loaders that resolve after cancellation instead of rejecting.
+      signal?.throwIfAborted();
       if (!result.ok) return result;
 
       for (const record of result.items) {
