@@ -15,7 +15,7 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-09-12"
+updated: "2026-10-03"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
@@ -176,3 +176,161 @@ and completed lab/imaging/dispensing/treatment read and amendment contracts.
   reproduced unchanged on the `origin/main` parent: a date-stale dispensing
   fixture and a pre-existing strict-locator ambiguity. They are recorded as
   baseline limitations rather than candidate regressions.
+
+## Audit Item 4 — Approved Local Follow-up, 2026-10-03
+
+User continuation authorization covers reducing historical reads for treatment,
+lab, and pharmacy fulfillment plus synthetic local verification. It does not
+cover hosted migration application, publication, `main` merge, or deployment.
+The original dirty checkout was preserved. Work is isolated on
+`codex/audit-fulfillment-history`; fetched base is
+`e0e81f8f5d8888af3e7d44b68ec145553385d34f`, including PR896. Its sole chart
+button-layout change does not overlap this fulfillment core/SQL change.
+
+Implementation: additive v2 RPC and `(workspace_id, queue_type,
+coalesce(due_at, created_at))` index; gateway passes existing selected operating
+date and patient history filter, and mutation permission lookup passes exact
+work item ID. Full snapshots, ordering, all statuses, summary semantics
+(including returned in activeCount), and detail/mutation/realtime behavior are
+preserved. The established contract is exact operating day, not new overdue
+carryover. No row cap, new dependency, home redesign, role change, or business
+write is added. [The owning read contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#fulfillment-read-scope--audit-item-4-local-candidate)
+records the deployment dependency.
+
+### Synthetic Baseline And Reduction
+
+An empty task database `item4_synthetic` in the existing localhost Docker
+Postgres container received schema only, the existing main lifecycle/display
+RPC migrations, and synthetic fixtures. No hosted data was read or written.
+Fixture: 1,200 selected-day + 12,000 prior-day rows per queue, all six statuses,
+dueAt present/absent, and five additional Seoul midnight/precedence rows.
+Snapshot payload includes 2,700 bytes of synthetic detail text per normal row.
+
+| Queue | RPC rows before → after | JSON text bytes before → after | Median RPC + JSON text serialization, 5 runs |
+| --- | --- | --- | --- |
+| Lab | 13,205 → 1,202 | 55,423,548 → 5,038,944 | 381.575ms → 32.961ms |
+| Pharmacy/dispensing | 13,200 → 1,200 | 55,602,694 → 5,053,493 | 398.190ms → 37.552ms |
+| Treatment | 13,200 → 1,200 | 55,576,294 → 5,051,093 | 379.140ms → 36.007ms |
+
+JSON text shrank about 90.9%; local median time shrank 90.5–91.4%. These are
+Postgres JSON-text/clock measurements, not wire/compressed egress, browser
+latency, or production savings. Matching payloads were compared in full against
+v1 filtered by the existing date contract, including sorted order and all status
+subsets. The selected-day predicate used the new index (1,202 rows, 72 shared
+buffer hits, 0.325ms direct index scan execution). It is not a measurement of
+the whole RPC. No pagination/truncation at 1,000 rows was observed.
+
+### Verification
+
+- Local SQL: [fixture](../../../tests/sql/fulfillment_scoped_queue_fixture.sql)
+  and [reader proof](../../../tests/sql/fulfillment_scoped_queue_reader.sql),
+  guarded to the task DB. Full payload/order/status equivalence, dueAt-first
+  half-open Seoul midnight, prior unfinished detail/historical day, future
+  exclusion, date-free history, patient/order/encounter filters, missing actor,
+  wrong role/workspace, inactive membership, restricted grants, and unchanged
+  work-item hashes/counts passed. Proof changes were rolled back.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3144 npx playwright test
+  tests/fulfillment-scoped-read.spec.ts tests/fulfillment-work-item-server.spec.ts
+  tests/fulfillment-handoff-replay.spec.ts tests/fulfillment-assignee-server.spec.ts
+  tests/queue-realtime-refresh.spec.ts tests/dispensing-fulfillment.spec.ts
+  tests/lab-imaging.spec.ts --reporter=line`: 67 passed, 2 failed. New gateway
+  tests cover date/patient payload, all-status summaries/full snapshot, Seoul
+  boundaries, exact ID without date, and missing-v2 fail-closed behavior.
+- The two failures reproduced unchanged in a clean archive of main with the
+  same lockfile dependencies on port3145: handoff confirmation returns409 at
+  `fulfillment-handoff-replay.spec.ts:46`; vital editor click waits on a disabled
+  button at `dispensing-fulfillment.spec.ts:1417`. No scope expansion to fix them.
+- `npm run lint`: passed, five existing warnings; `npx tsc --noEmit` and
+  `npm run build`: passed after installing exact lockfile dependencies in the
+  isolated checkout. Original checkout dependencies were incomplete for main.
+- `npm run security:secrets`, `npm run docs:check`, `npm run ux-copy:check`, and
+  `git diff --check`: passed.
+- The 69-test suite ran on `f3e2566e`; after fast-forwarding the disjoint
+  PR896 change, the three new gateway tests, type/lint/build, docs, secrets, UX
+  copy, and diff checks passed again on `e0e81f8f`. Exact release-head checks
+  remain part of the later publication/release workflow.
+- Supabase CLI2.114.0 local advisors before/after v2/index produced exactly
+  identical39 inherited findings. Public-schema DB lint reports one unrelated
+  pre-existing `clair_restore_reception_appointment` reference to absent
+  `appointment_change_logs.action`; the same lint output was reproduced without
+  v2. No v2 finding and no hosted advisor claim.
+- Official Supabase changelog and database-function docs were checked. The
+  Sept25 PostgreSQL breaking changes concern ltree, legacy pgcrypto ciphers,
+  btree_gist NaN, and custom operators; this candidate uses none of them.
+  Sources: [changelog](https://supabase.com/changelog.md),
+  [Postgres minor upgrade](https://supabase.com/changelog/postgres-15-19-17-11-breaking-changes),
+  [database functions](https://supabase.com/docs/guides/database/functions).
+
+### Release And Rollback Boundary
+
+Local verification is ready for review with the two baseline test failures and
+inherited schema findings above. Hosted migration, draft PR publication,
+exact-candidate Release Check/Preview, `main` merge, and Production deployment
+remain unperformed. Production Supabase must receive the separately approved
+additive migration before the new application caller. Index creation has 5s
+lock/120s statement timeouts and the migration is transactional. Failure must
+stop application release; do not use unfiltered v1 as a runtime fallback.
+
+Rollback rehearsal in the task DB removed v2/index while leaving v1 intact,
+then reapplied the migration successfully. Prefer reverting the application to
+the prior v1 caller; the additive DB objects can remain, or be dropped only
+after all v2 callers are reverted. There is no data backfill or data rollback.
+Date-free patient history and the separate home v1 reader can still be large;
+future projection/pagination requires its own consumer/count contract.
+
+## Draft PR / Release Preparation Authorization — 2026-10-03
+
+승욱 accepted the offer to publish a draft PR and prepare release checks and
+rollback evidence (`오케이 좋아`). Authorized preparation includes commit/push,
+draft PR, automatic Preview, exact-head Release Check, and read-only production
+schema/deployment/unauthenticated route verification. Hosted migration, `main`
+merge, Production deployment, and clinical/financial write smoke remain gated.
+
+The isolated branch was fast-forwarded to live main
+`b56b6133213181091dd9d3939d5d45cb44f3cf42` (PR897 lab autosave). It contains PR895
+and PR896. The new lab consumer changes do not overlap the fulfillment core/SQL
+files. Repeated focused suite plus `lab-autosave-coordinator.spec.ts`: 73/75
+passed, with the same two clean-main baseline failures documented above.
+Type/lint/docs/UX/secret gates passed; production build was repeated before
+publication. No dependency or lockfile change is included.
+
+Read-only production metadata confirmed Vercel project
+`prj_iCK5KPP0IBMm7crAqcruCHO4JSlV` / team
+`team_yPnxLJWKaLHGXtslBgkEKmMv` and current Ready deployment
+`dpl_GxoKWzoVnqzU6sSupAhzYokN3Nwh` at main `b56b6133`, with alias
+`https://emr-app-shell-prototype.vercel.app`. This deployment preserves PR897 and
+is the app rollback candidate, subject to a fresh check immediately before an
+approved release.
+
+Production Supabase target is `qmerxgzrwaaahpkhjqlc` despite its
+`clair-emr-staging` display name. Read-only schema introspection found the v1
+function body exactly matches repository migration `20260912121342`; hosted
+history recorded it as `20260912145224`. Required lifecycle/display columns
+exist, and v2/index are absent. Latest hosted migration observed:
+`20261003070504_notification_waiting_threshold_idempotency`. This history drift
+is why the release must apply only the reviewed SQL, not all pending migrations.
+
+Candidate SQL file SHA256:
+`2d97b629f7efde276315b65f777ec1747f10d95380dd826544ce91c00312d518`.
+Preserved hosted v1 `pg_get_functiondef` SHA256:
+`bebb45af41b20340ddc9cb9bcafc1bd91d8b5e262e45589fb1a05f52b72fed94`;
+trimmed body SHA256:
+`9a144b9cb71351cc2aa11c884c92442ae727965db8a65009bf7b2ac3330e1252`.
+V1 execute ACL is owner + authenticated only, with fixed
+`search_path=pg_catalog, public, private`. Proposed v2 preserves that boundary.
+
+The complete approval packet will be attached to the draft PR after Preview and
+exact-head Release Check finish. Safe smoke is limited to login and unauthenticated
+API denial checks; no hosted clinical/financial write or authenticated clinical
+list smoke is claimed. Preview cannot validate authenticated v2 reads before
+the separately approved migration exists on its configured DB. Synthetic local
+DB/browser regressions provide that behavior evidence at this preparation stage.
+
+During draft PR899 publication, main advanced to
+`c0faa1837842a48b6a3250d8b4a076d54d038804` (PR898 responsive lab table).
+There was no fulfillment-file overlap. The feature commit was rebased onto
+that main to preserve PR895–898; final candidate/Preview/Release Check must
+use the resulting exact head, superseding the initial publication head.
+The refreshed app rollback candidate is Ready Production
+`dpl_DQD8jYcfZww9e1DVgRQ4gzz6KyHs`, source `c0faa183`, URL
+`https://emr-app-shell-prototype-dsxf568sk-mcso0s-projects.vercel.app`.

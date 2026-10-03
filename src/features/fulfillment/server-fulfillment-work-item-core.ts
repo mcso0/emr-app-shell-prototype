@@ -301,6 +301,8 @@ export type FulfillmentWorkItemGateway = {
     date?: string;
     encounterId?: string;
     orderId?: string;
+    patientId?: string;
+    workItemId?: string;
     queueType: FulfillmentQueueType;
     status?: FulfillmentWorkItemStatus;
     workspaceId: string;
@@ -509,6 +511,7 @@ export async function readFulfillmentWorkItems({
     encounterId: normalized.encounterId,
     date: normalized.date,
     orderId: normalized.orderId,
+    patientId: normalized.patientId,
     queueType,
     status: normalized.status,
     workspaceId,
@@ -1051,6 +1054,8 @@ export function createMockFulfillmentWorkItemGateway(
       encounterId,
       date,
       orderId,
+      patientId,
+      workItemId,
       queueType,
       status,
       workspaceId,
@@ -1069,6 +1074,8 @@ export function createMockFulfillmentWorkItemGateway(
         )
         .filter((item) => !encounterId || item.encounterId === encounterId)
         .filter((item) => !orderId || item.orderId === orderId)
+        .filter((item) => !patientId || item.patientId === patientId)
+        .filter((item) => !workItemId || item.id === workItemId)
         .filter((item) => !status || item.status === status)
         .sort(
           (a, b) =>
@@ -1315,13 +1322,16 @@ export type SupabaseFulfillmentWorkItemRpcClient = {
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
-    functionName: "clair_list_fulfillment_work_items",
+    functionName: "clair_list_fulfillment_work_items_v2",
     args: {
       p_workspace_id: string;
       p_queue_type: FulfillmentQueueType;
       p_encounter_id?: string;
       p_order_id?: string;
       p_status?: FulfillmentWorkItemStatus;
+      p_date?: string;
+      p_patient_id?: string;
+      p_work_item_id?: string;
     },
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
@@ -1382,18 +1392,23 @@ export function createSupabaseFulfillmentWorkItemGateway(
       encounterId,
       date,
       orderId,
+      patientId,
+      workItemId,
       queueType,
       status,
       workspaceId,
     }) {
       const { data, error } = await client.rpc(
-        "clair_list_fulfillment_work_items",
+        "clair_list_fulfillment_work_items_v2",
         {
           p_workspace_id: workspaceId,
           p_queue_type: queueType,
           p_encounter_id: normalizeUuidForRpc(encounterId),
           p_order_id: normalizeUuidForRpc(orderId),
           p_status: status,
+          p_date: date,
+          p_patient_id: normalizeUuidForRpc(patientId),
+          p_work_item_id: normalizeUuidForRpc(workItemId),
         },
       );
       if (error) return mapGatewayError(error.message, "db_read_failed");
@@ -1600,7 +1615,7 @@ async function findWorkItemForPermission({
     "dispensing",
     "treatment",
   ] satisfies FulfillmentQueueType[]) {
-    const result = await gateway.listWorkItems({ queueType, workspaceId });
+    const result = await gateway.listWorkItems({ queueType, workItemId, workspaceId });
     if (!result.ok) {
       if (result.status === 409) continue;
       return { ok: false, status: 500, error: "db_read_failed" };
