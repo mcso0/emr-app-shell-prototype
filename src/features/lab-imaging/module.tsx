@@ -4585,7 +4585,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                     onCancelAssignment={cancelAssignment}
                   />
                 )}
-                <WorkspaceDocumentWidthToggle />
+                <WorkspaceDocumentWidthToggle showWhenUnavailable />
                 <Button variant="outline" size="sm" className="bg-card" disabled={!hasRightPanel}
                   aria-label={rightPanelOpen ? "종합소견 패널 접기" : "종합소견 패널 열기"}
                   aria-controls={documentLayout?.rightControlsId ?? "imaging-summary-panel"}

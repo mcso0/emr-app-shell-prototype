@@ -141,7 +141,7 @@ export const modules: ModuleDefinition[] = [
     content: ImagingContent,
     rightPanel: ImagingRightPanel,
     documentLayout: {
-      narrowWidth: 1280,
+      narrowWidth: 1120,
       historyPanelId: "imaging-content-aside",
       historyLabel: "영상검사 이력",
       rightPanelId: "imaging-summary-panel",
