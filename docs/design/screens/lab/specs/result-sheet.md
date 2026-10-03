@@ -5,7 +5,7 @@ description: "Figma annotations, accepted V5 corrections, and code boundaries fo
 status: "accepted-design"
 tags: [lab, result-sheet, figma, attachments]
 related_work: "LAB-PR-004"
-updated: "2026-09-29"
+updated: "2026-10-03"
 ---
 
 # Lab Result Sheet — Implementation Reference
@@ -27,7 +27,7 @@ The temporary review URL is not a durable source dependency. V5 artifact SHA-256
 | --- | --- |
 | 소견/첨부 entry | Reuse `Button variant="ghost" size="xs"` for `+ 검사소견 및 첨부자료`. Preserve shared hover, focus, disabled, and disclosure semantics. Eligibility still needs an authoritative mapping. |
 | Empty attachment | 76px upload surface, transparent by default and gray on hover. Keep the permission-aware read-only empty state. |
-| Finding | 76px textarea with 12/16px text, 7px internal padding plus border, and input shadow; preserve controlled `row.note`, maximum length, and explicit result-save behavior. |
+| Finding | 76px textarea with 12/16px text, 7px internal padding plus border, and input shadow; preserve controlled `row.note`, maximum length, and automatic result-save behavior. |
 | Cards | Grow with content up to two rendered rows, then scroll only the file viewport. |
 | List | Grow up to six 32px rows with 4px gaps, then scroll only file rows. Title, tools, and column header remain outside that scrolling area. |
 | Overflow cue | Show the bottom fade only when actual overflow exists and more content remains below. Remove it at the bottom and after shrink. |
@@ -139,3 +139,24 @@ The user approved the detailed HTML comparison and authorized TDD, commit, push,
 The geometry above supersedes the earlier V5 empty-upload height and finding typography. Only the normal-range column absorbs extra width; the lab table reserves no scrollbar gutter when it does not need one. Feature-scoped CSS leaves shared table defaults intact. Existing attachment presentation, transport, permission and persistence contracts remain unchanged.
 
 Keep workspace/result/row isolation, `canEdit`, server permission checks and RPC ownership checks, protected preview/download, deletion confirmation, upload metadata/byte validation, and cleanup. Supported types remain JPEG/PNG/WebP/PDF/CSV/TXT; existing limits are 20MiB PDF and 5MiB for other supported files. This design does not authorize schema, RLS, storage policy, or real-data changes.
+
+## Result Autosave Follow-up — 2026-10-03
+
+User-approved local scope replaces the result footer (`더보기` / `저장`) and
+`종합소견 저장` with automatic saving. Results, `row.note`, qualifiers, device
+flags and overall findings save after 800ms without edits, or when focus leaves
+the input. The three existing table toolbar actions stay available.
+
+- Show `저장 대기 중`, `저장 중`, `저장됨`, validation/permission/conflict errors,
+  and `재시도` only for retryable failures. No write on initial loading.
+- Serialize writes per workspace/result/channel. Advance revisions only from
+  successful responses; retain the same request ID and payload when retrying an
+  ambiguous result-entry failure. Newer edits follow the recovered write.
+- Keep edited values until authoritative readback confirms the revision. Never
+  treat a POST acknowledgement combined with old GET rows as fresh readback.
+- Preserve pending/error drafts across module/result switches in session memory.
+  Detached failures show a notice; reopening restores the input and retry state.
+  Browser unload warns while any lab draft remains unsaved. This is not offline
+  durable storage: accepting unload discards session-only failed drafts.
+- Preserve existing server permission, workspace, validation, revision and audit
+  boundaries. Saving a draft does not complete or approve a result.

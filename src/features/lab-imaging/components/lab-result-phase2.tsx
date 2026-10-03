@@ -16,6 +16,7 @@ import labResultPdfIcon from "../assets/lab-result-file-pdf.svg";
 import labResultPdfSmallIcon from "../assets/lab-result-file-pdf-small.svg";
 import labResultCardViewIcon from "../assets/lab-result-view-card.svg";
 import labResultListViewIcon from "../assets/lab-result-view-list.svg";
+import { useLabAutosave } from "../lab-autosave";
 import { validateLabResultAttachment } from "../lab-result-attachment-core";
 import { uploadLabAttachmentToSignedUrl } from "./lab-result-upload-transport";
 import type { LabResultAttachment, LabResultHistoryEvent, LabResultPhase2Data } from "../use-lab-result-phase2";
@@ -60,7 +61,7 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
           <Textarea id={`lab-finding-${row.id}`} className="h-[76px] min-h-[76px] max-h-[76px] resize-none overflow-y-auto bg-card p-[7px] !text-[12px] !leading-4 !tracking-[0.3px] font-medium shadow-[var(--clair-shadow-xs)]" maxLength={4096}
             disabled={phase2 !== null && !phase2.canEdit}
             value={finding} onChange={event => onFindingChange(event.target.value)}
-            placeholder="항목별 검사 소견을 입력하세요. 결과표의 저장 버튼으로 저장됩니다." />
+            placeholder="항목별 검사 소견을 입력하세요. 자동으로 저장됩니다." />
         </div>
       </div>
       <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>
@@ -424,30 +425,44 @@ function uploadProgressLabel(task: UploadTask) {
 }
 
 export function LabOverallFinding({ result, phase2, refresh }: { result: LabResult; phase2: LabResultPhase2Data | null; refresh: () => void }) {
-  const [draft, setDraft] = useState<{ resultId: string; value: string } | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const value = draft?.resultId === result.id ? draft.value : phase2?.overallFinding ?? "";
-  const save = async () => {
-    if (!phase2) return;
-    setSaving(true); setMessage("");
-    try {
-      const response = await fetch(`/api/workspaces/${encodeURIComponent(result.workspaceId)}/lab-imaging/result-phase2`, {
-        method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resultId: result.id, expectedRevision: phase2.overallRevision, finding: value }),
-      });
-      if (!response.ok) throw new Error(response.status === 409 ? "다른 수정이 저장됐습니다. 다시 불러온 뒤 확인해 주세요." : "종합소견 저장에 실패했습니다.");
-      setDraft(null); setMessage("저장됨"); refresh();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "저장 실패"); }
-    finally { setSaving(false); }
-  };
-  return <section className="rounded-lg border bg-card p-4">
+  const autosave = useLabAutosave<string>(`${result.workspaceId}:${result.id}:overall`, async (finding, _requestId, expectedRevision) => {
+    const endpoint = `/api/workspaces/${encodeURIComponent(result.workspaceId)}/lab-imaging/result-phase2`;
+    const response = await fetch(endpoint, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resultId: result.id, expectedRevision, finding }),
+    });
+    const body = await response.json();
+    if (response.ok && body.ok === true && Number.isSafeInteger(body.data?.revision)) {
+      refresh();
+      return { ok: true, revision: body.data.revision };
+    }
+    if (response.status === 409) {
+      // The previous response may have been lost after committing. Only accept
+      // readback that matches this exact finding and the next revision.
+      const readback = await fetch(`${endpoint}?resultId=${encodeURIComponent(result.id)}`, { cache: "no-store" });
+      const current = await readback.json();
+      if (readback.ok && current.ok === true && current.data?.resultId === result.id &&
+        current.data.overallFinding === finding && current.data.overallRevision === expectedRevision + 1) {
+        refresh();
+        return { ok: true, revision: current.data.overallRevision };
+      }
+      return { ok: false, reason: "conflict", retryable: false,
+        message: "다른 수정이 저장됐습니다. 입력을 확인한 뒤 새로고침해 주세요." };
+    }
+    return { ok: false, reason: response.status === 401 || response.status === 403 ? "permission_denied" : "error",
+      retryable: response.status >= 500 || response.status === 429,
+      message: response.status === 401 || response.status === 403 ? "저장 권한이 없습니다." : "종합소견을 저장하지 못했습니다." };
+  }, phase2?.overallRevision ?? 0);
+  const value = autosave.state.draft ?? phase2?.overallFinding ?? "";
+  return <section className="rounded-lg border bg-card p-4" onBlurCapture={autosave.flush}>
     <div className="mb-3 flex items-center justify-between gap-2"><h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>
-      <Button size="xs" disabled={!phase2?.canEdit || saving || value === phase2.overallFinding} onClick={() => void save()}>{saving ? "저장 중" : "종합소견 저장"}</Button></div>
+      {autosave.state.value !== "idle" ? <div className="flex items-center gap-2">
+        <span role="status" data-testid="lab-overall-save-status" className={`emr-text-metadata ${["error", "conflict", "permission_denied"].includes(autosave.state.value) ? "text-destructive" : "text-muted-foreground"}`}>{autosave.state.message}</span>
+        {autosave.state.retryable ? <Button size="xs" variant="outline" onClick={autosave.retry}>재시도</Button> : null}
+      </div> : null}</div>
     <Textarea aria-label="검사결과 종합소견" className="min-h-36 resize-none overflow-y-auto bg-background emr-text-dense" maxLength={10000}
-      disabled={!phase2?.canEdit} value={value} onChange={event => setDraft({ resultId: result.id, value: event.target.value })}
-      placeholder={phase2 ? "전체 검사 결과에 대한 종합소견을 입력하세요." : "종합소견을 불러오는 중입니다."} />
-    {message ? <p className={`mt-2 emr-text-metadata ${message === "저장됨" ? "text-muted-foreground" : "text-destructive"}`} role="status">{message}</p> : null}
+      disabled={!phase2?.canEdit} value={value} onChange={event => autosave.change(event.target.value)}
+      placeholder={phase2 ? "전체 검사 결과에 대한 종합소견을 입력하세요. 자동으로 저장됩니다." : "종합소견을 불러오는 중입니다."} />
   </section>;
 }
 

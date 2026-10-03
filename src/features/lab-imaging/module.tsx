@@ -79,7 +79,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,6 +97,7 @@ import {
 } from "@/features/lab-imaging/data";
 import { LabImagingStatusAction } from "@/features/lab-imaging/components/status-action";
 import { LabOverallFinding, LabResultHistoryDialog, LabResultRowDetail } from "@/features/lab-imaging/components/lab-result-phase2";
+import { useLabAutosave } from "@/features/lab-imaging/lab-autosave";
 import { useLabResultPhase2, type LabResultPhase2Data } from "@/features/lab-imaging/use-lab-result-phase2";
 import {
   FulfillmentWorkLifecycleAction,
@@ -504,7 +504,7 @@ type LabResultSaveOutcome =
   | {
       message: string;
       ok: false;
-      reason: "error" | "invalid" | "permission_denied";
+      reason: "error" | "invalid" | "permission_denied" | "conflict";
       retryable: boolean;
     };
 
@@ -1023,6 +1023,11 @@ async function saveLabResultEntry({
       };
     }
 
+    if (response.status === 409) {
+      return { ok: false, reason: "conflict", retryable: false,
+        message: "다른 수정이 저장됐습니다. 입력을 확인한 뒤 새로고침해 주세요." };
+    }
+
     if (
       response.status === 401 ||
       response.status === 403 ||
@@ -1047,14 +1052,14 @@ async function saveLabResultEntry({
       };
     }
     return {
-      message: "결과 저장에 실패했습니다.",
+      message: "저장 실패: 결과를 저장하지 못했습니다.",
       ok: false,
       reason: "error",
       retryable: true,
     };
   } catch {
     return {
-      message: "네트워크 오류로 저장하지 못했습니다.",
+      message: "저장 실패: 네트워크 오류로 저장하지 못했습니다.",
       ok: false,
       reason: "error",
       retryable: true,
@@ -2101,6 +2106,7 @@ function LabResultInputSection({
   onSave?: (
     rows: LabResultRow[],
     requestId: string,
+    expectedRevision: number,
   ) => Promise<LabResultSaveOutcome>;
   phase2: LabResultPhase2Data | null;
   phase2Status: "loading" | "ready" | "error" | "permission_denied";
@@ -2111,88 +2117,36 @@ function LabResultInputSection({
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [density, setDensity] = useState<EmrTableDensity>("standard");
-  const [saveRequestId, setSaveRequestId] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<{
-    message?: string;
-    retryable?: boolean;
-    resultId: string;
-    value:
-      "idle" | "saving" | "saved" | "error" | "invalid" | "permission_denied";
-  }>(() => ({ resultId: result.id, value: "idle" }));
-  const currentSaveState =
-    saveState.resultId === result.id ? saveState.value : "idle";
-  const currentSaveMessage =
-    saveState.resultId === result.id ? saveState.message : undefined;
-  const saveRetryable =
-    saveState.resultId === result.id ? saveState.retryable === true : false;
-  const initialRowValues = useMemo(
-    () =>
-      Object.fromEntries(result.rows.map((row) => [row.id, row.value ?? ""])),
-    [result.rows],
+  const autosave = useLabAutosave<LabResultRow[]>(
+    `${result.workspaceId}:${result.id}:rows`,
+    async (snapshot, requestId, expectedRevision) => {
+      if (!onSave) return { ok: false, reason: "permission_denied", message: "저장 권한이 없습니다.", retryable: false };
+      const outcome = await onSave(snapshot, requestId, expectedRevision);
+      return outcome.ok ? { ok: true, revision: outcome.entryWriteRevision } : outcome;
+    },
+    result.entryWriteRevision ?? 0,
+    snapshot => snapshot.some(row => row.interpretationRule && !evaluateLabProfileValue(row.interpretationRule, {
+      value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence,
+    }).valid) ? "선택한 프로필의 값 형식과 결과 상태를 확인해 주세요." : null,
   );
-  const [rowValueState, setRowValueState] = useState<{
-    resultId: string;
-    values: Record<string, string>;
-  }>(() => ({ resultId: result.id, values: initialRowValues }));
-  const rowValues =
-    rowValueState.resultId === result.id
-      ? rowValueState.values
-      : initialRowValues;
-  const [metadataState, setMetadataState] = useState<{ resultId: string; rows: Record<string, Partial<LabResultRow>> }>({ resultId: result.id, rows: {} });
-  const rowMetadata = useMemo(() => metadataState.resultId === result.id ? metadataState.rows : {}, [metadataState, result.id]);
+  const currentSaveState = autosave.state.value;
+  const rows = useMemo(() => (autosave.state.draft ?? result.rows).map(row => {
+    const evaluation = row.interpretationRule ? evaluateLabProfileValue(row.interpretationRule, {
+      value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence,
+    }) : null;
+    return { ...row, judgment: getDerivedLabJudgment(row, row.value ?? ""),
+      resultState: evaluation?.valid ? evaluation.state : row.resultState };
+  }), [autosave.state.draft, result.rows]);
+  const queueChange = autosave.change;
   const handleMetadataChange = useCallback((rowId: string, patch: Partial<LabResultRow>) => {
-    setSaveRequestId(null);
-    setMetadataState(current => ({ resultId: result.id, rows: {
-      ...(current.resultId === result.id ? current.rows : {}),
-      [rowId]: { ...(current.resultId === result.id ? current.rows[rowId] : {}), ...patch },
-    } }));
-  }, [result.id]);
+    queueChange(rows.map(row => row.id === rowId ? { ...row, ...patch } : row));
+  }, [queueChange, rows]);
   const handleValueChange = useCallback((rowId: string, value: string) => {
-    setSaveRequestId(null);
-    setRowValueState(current => {
-      const currentValues = current.resultId === result.id ? current.values : initialRowValues;
-      return { resultId: result.id, values: { ...currentValues, [rowId]: value } };
-    });
-  }, [initialRowValues, result.id]);
-  const rows = useMemo(
-    () =>
-      result.rows.map((row) => {
-        const edited = { ...row, ...rowMetadata[row.id], value: rowValues[row.id] ?? row.value ?? "" };
-        const evaluation = edited.interpretationRule ? evaluateLabProfileValue(edited.interpretationRule, {
-          value: edited.value, qualifier: edited.qualifier, deviceFlag: edited.deviceFlag, resultState: edited.resultPresence,
-        }) : null;
-        return { ...edited, judgment: getDerivedLabJudgment(edited, edited.value),
-          resultState: evaluation?.valid ? evaluation.state : edited.resultState };
-      }),
-    [result.rows, rowValues, rowMetadata],
-  );
+    queueChange(rows.map(row => row.id === rowId ? { ...row, value } : row));
+  }, [queueChange, rows]);
   const abnormalRows = rows.filter(
     (row) => row.judgment !== "normal" && row.judgment !== "not_judged",
   );
-  const saveResult = async () => {
-    if (!onSave) return;
-    if (rows.some(row => row.interpretationRule && !evaluateLabProfileValue(row.interpretationRule, {
-      value: row.value ?? null, qualifier: row.qualifier, deviceFlag: row.deviceFlag, resultState: row.resultPresence,
-    }).valid)) {
-      setSaveState({ resultId: result.id, value: "invalid", message: "선택한 프로필의 값 형식과 결과 상태를 확인해 주세요." });
-      return;
-    }
-    const requestId = saveRequestId ?? crypto.randomUUID();
-    setSaveRequestId(requestId);
-    setSaveState({ resultId: result.id, value: "saving" });
-    const outcome = await onSave(rows, requestId);
-    if (outcome.ok) setSaveRequestId(null);
-    setSaveState(
-      outcome.ok
-        ? { resultId: result.id, value: "saved" }
-        : {
-            message: outcome.message,
-            resultId: result.id,
-            retryable: outcome.retryable,
-            value: outcome.reason,
-          },
-    );
-  };
   const catalogMessage =
     catalogStatus === "loading"
       ? "결과지 항목을 불러오는 중"
@@ -2203,19 +2157,9 @@ function LabResultInputSection({
           : catalogStatus === "empty"
             ? "연결된 결과지 항목이 없습니다."
             : null;
-  const saveStatusLabel =
-    currentSaveState === "saved"
-      ? "서버 저장됨"
-      : currentSaveState === "saving"
-        ? "저장 중"
-        : currentSaveState === "permission_denied"
-          ? "저장 권한이 없습니다"
-          : currentSaveState === "invalid"
-            ? "저장 항목 확인 필요"
-            : "저장 실패";
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" onBlurCapture={autosave.flush}>
     <EmrOrderGroupSection
       className="lab-result-sheet-order-group [&>section]:px-4 [&>section]:pt-3 [&>section]:!pb-3 [&>section>div:first-child]:h-7 [&>section>div:first-child]:px-0 [&>section>div:first-child]:py-0"
       title={`${result.resultName} 세트`}
@@ -2296,41 +2240,24 @@ function LabResultInputSection({
         <LabResultHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} result={result} events={phase2?.events ?? []} />
       </div>
     </EmrOrderGroupSection>
-    <div className="flex min-h-7 flex-wrap items-center justify-end gap-2 px-4" data-testid="lab-result-actions-footer">
-      {currentSaveState !== "idle" ? (
-        <span data-testid="lab-result-save-status" className={cn(
-          "emr-text-metadata font-medium",
-          currentSaveState === "error" || currentSaveState === "invalid" || currentSaveState === "permission_denied"
-            ? "text-destructive" : "text-muted-foreground",
-        )} title={currentSaveMessage}>{saveStatusLabel}</span>
-      ) : null}
-      {saveRetryable ? <Button variant="outline" size="xs" className="bg-card" data-testid="lab-result-save-retry-button" onClick={saveResult}>재시도</Button> : null}
-      {result.resultDefinitionOrigin === "canonical" && onCatalogRetry ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button type="button" variant="outline" size="sm" aria-label="검사 결과 추가 작업" />}>
-            <CdsFilesMoreHorizontalIcon className="size-3" aria-hidden="true" />더보기
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem disabled={currentSaveState === "saving"} onClick={() => {
-              setSaveRequestId(null); setSaveState({ resultId: result.id, value: "idle" });
-              setRowValueState({ resultId: "", values: {} }); setMetadataState({ resultId: "", rows: {} }); onCatalogRetry();
-            }}>입력 초기화·재조회</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-      <Button size="sm" data-testid="lab-result-save-button" disabled={!onSave || currentSaveState === "saving" || rows.length === 0} onClick={saveResult}>
-        {currentSaveState === "saving" ? "저장 중" : "저장"}
-      </Button>
-    </div>
+    {currentSaveState !== "idle" ? <div className="flex min-h-7 flex-wrap items-center justify-end gap-2 px-4">
+      <span role="status" data-testid="lab-result-save-status" className={cn("emr-text-metadata font-medium",
+        ["error", "invalid", "permission_denied", "conflict"].includes(currentSaveState) ? "text-destructive" : "text-muted-foreground"
+      )}>{autosave.state.message}</span>
+      {autosave.state.retryable ? <Button variant="outline" size="xs" data-testid="lab-result-save-retry-button" onClick={autosave.retry}>재시도</Button> : null}
+
+    </div> : null}
     </div>
   );
 }
 
 function LabResultValueControl({
   row,
+  disabled = false,
   onValueChange,
 }: {
   row: LabResultRow;
+  disabled?: boolean;
   onValueChange: (rowId: string, value: string) => void;
 }) {
   const rule = row.interpretationRule;
@@ -2343,7 +2270,7 @@ function LabResultValueControl({
         <select
           aria-label={label}
           className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 !text-[12px] !leading-4 !tracking-[0.3px]"
-          disabled={noResult}
+          disabled={disabled || noResult}
           value={row.value ?? ""}
           onChange={(event) => onValueChange(row.id, event.target.value)}
         >
@@ -2357,7 +2284,7 @@ function LabResultValueControl({
           aria-label={label}
           className={cn("h-7 min-w-0 flex-1 bg-card !text-[12px] !leading-4 !tracking-[0.3px]", row.qualifier && row.qualifier !== "exact" && "pr-9")}
           data-testid={`lab-result-input-${row.id}`}
-          disabled={noResult}
+          disabled={disabled || noResult}
           inputMode={rule?.resultValueKind === "numeric" || row.resultInputType === "number" ? "decimal" : undefined}
           placeholder={noResult ? "측정 불가" : "검사 결과값 입력"}
           value={row.value ?? ""}
@@ -2374,9 +2301,9 @@ function LabResultValueControl({
   );
 }
 
-function LabResultMetadataControl({ row, onValueChange, onMetadataChange }: {
+function LabResultMetadataControl({ row, disabled, onMetadataChange }: {
   row: LabResultRow;
-  onValueChange: (rowId: string, value: string) => void;
+  disabled: boolean;
   onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
 }) {
   const rule = row.interpretationRule;
@@ -2391,6 +2318,7 @@ function LabResultMetadataControl({ row, onValueChange, onMetadataChange }: {
                 variant="ghost"
                 size="icon-xs"
                 aria-label={`${row.analyteName} 추가 결과 정보`}
+                disabled={disabled}
               />
             }
           >
@@ -2406,8 +2334,8 @@ function LabResultMetadataControl({ row, onValueChange, onMetadataChange }: {
                 value={row.resultPresence ?? "value"}
                 onChange={(event) => {
                   const presence = event.target.value as "value" | "instrument_no_result";
-                  if (presence === "instrument_no_result") onValueChange(row.id, "");
-                  onMetadataChange(row.id, { resultPresence: presence, qualifier: "exact", deviceFlag: undefined });
+                  onMetadataChange(row.id, { resultPresence: presence, qualifier: "exact", deviceFlag: undefined,
+                    ...(presence === "instrument_no_result" ? { value: "" } : {}) });
                 }}
               >
                 <option value="value">결과 입력</option>
@@ -2478,6 +2406,16 @@ function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
   </Button>;
 }
 
+type LabResultTableContext = {
+  assigneeName: string;
+  canEdit: boolean;
+  persistedResult: LabResult;
+  expandedRowId: string | null;
+  onExpandedRowChange: (rowId: string | null) => void;
+  onValueChange: (rowId: string, value: string) => void;
+  onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
+};
+
 function LabResultDataTable({
   assigneeName,
   staffInstruction,
@@ -2518,7 +2456,8 @@ function LabResultDataTable({
         enableResizing: false,
         header: () => <span className="sr-only">검사 소견</span>,
         meta: { label: "소견 펼치기", resize: "none", align: "center", cellPadding: "none" },
-        cell: ({ row }) => {
+        cell: ({ row, table }) => {
+          const { expandedRowId, onExpandedRowChange } = table.options.meta as LabResultTableContext;
           const expanded = expandedRowId === row.original.id;
           return <Button type="button" variant="ghost" size="icon-xs" className="mx-auto rounded-[6px] bg-transparent aria-expanded:bg-transparent" aria-expanded={expanded}
             aria-controls={`lab-result-detail-${row.original.id}`} aria-label={`${row.original.analyteName} 검사 소견 ${expanded ? "접기" : "펼치기"}`}
@@ -2540,12 +2479,13 @@ function LabResultDataTable({
           resize: "none",
           textMode: "two-line-if-long",
         },
-        cell: ({ row }) => {
+        cell: ({ row, table }) => {
+          const { persistedResult, canEdit, onMetadataChange } = table.options.meta as LabResultTableContext;
           const savedRow = persistedResult.rows.find((saved) => saved.id === row.original.id);
           return (
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
-              <LabResultMetadataControl row={row.original} onValueChange={onValueChange} onMetadataChange={onMetadataChange} />
+              <LabResultMetadataControl disabled={!canEdit} row={row.original} onMetadataChange={onMetadataChange} />
               {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
               (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
                 <AtomicLabRetestAction result={persistedResult} row={savedRow} />
@@ -2563,12 +2503,10 @@ function LabResultDataTable({
         enableResizing: false,
         header: "결과값",
         meta: { label: "결과값", resize: "none" },
-        cell: ({ row }) => (
-          <LabResultValueControl
-            row={row.original}
-            onValueChange={onValueChange}
-          />
-        ),
+        cell: ({ row, table }) => {
+          const { canEdit, onValueChange } = table.options.meta as LabResultTableContext;
+          return <LabResultValueControl disabled={!canEdit} row={row.original} onValueChange={onValueChange} />;
+        },
       },
       {
         id: "unit",
@@ -2620,26 +2558,28 @@ function LabResultDataTable({
       },
       {
         id: "assignee",
-        accessorFn: () => assigneeName,
         size: 160,
         minSize: 100,
         enableSorting: false,
         enableResizing: false,
         header: "담당자",
         meta: { label: "담당자", resize: "none" },
-        cell: () => (
-          <Avatar size="sm" title={assigneeName} aria-label={assigneeName}>
+        cell: ({ table }) => {
+          const { assigneeName } = table.options.meta as LabResultTableContext;
+          return <Avatar size="sm" title={assigneeName} aria-label={assigneeName}>
             <AvatarFallback>{assigneeName.slice(0, 2)}</AvatarFallback>
-          </Avatar>
-        ),
+          </Avatar>;
+        },
       },
     ],
-    [assigneeName, onValueChange, onMetadataChange, persistedResult, expandedRowId, onExpandedRowChange],
+    [],
   );
   // TanStack Table owns the result grid controller.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns,
+    // Stable cell renderers retain input focus and open popovers during autosave.
+    meta: { assigneeName, canEdit: phase2 === null || phase2.canEdit, persistedResult, expandedRowId, onExpandedRowChange, onValueChange, onMetadataChange } satisfies LabResultTableContext,
     data: rows,
     enableColumnResizing: false,
     enableSorting: false,
@@ -3493,7 +3433,7 @@ export function LabContent({
       ? Math.max(savedEntryRevision.revision, effectiveDetail?.result.entryWriteRevision ?? 0)
       : effectiveDetail?.result.entryWriteRevision;
   const saveResultRows = useCallback(
-    async (rows: LabResultRow[], requestId: string) => {
+    async (rows: LabResultRow[], requestId: string, expectedRevision: number) => {
       if (!effectiveDetail) {
         return Promise.resolve({
           message: "선택된 검사 결과가 없습니다.",
@@ -3505,7 +3445,7 @@ export function LabContent({
       const outcome = await saveLabResultEntry({
         result: {
           ...effectiveDetail.result,
-          entryWriteRevision: saveResultRevision,
+          entryWriteRevision: expectedRevision,
         },
         requestId,
         rows,
@@ -3526,7 +3466,6 @@ export function LabContent({
     [
       effectiveDetail,
       fulfillmentWorkItem,
-      saveResultRevision,
       workspaceId,
       reloadPersistedResult,
       allowDemoContent,
@@ -3903,6 +3842,7 @@ export function LabContent({
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
           <LabResultInputSection
+            key={`${workspaceId}:${displayDetail.result.id}:rows`}
             routeResultId={detail?.result.id ?? selectedLabResultId ?? displayDetail.result.id}
             assigneeName={
               allowDemoContent
@@ -3917,14 +3857,14 @@ export function LabContent({
                 : "idle"
             }
             emptyRowsKind={fulfillmentWorkItem ? "upstream-pending" : "no-data"}
-            result={displayDetail.result}
+            result={effectiveDetail.result}
             onCatalogRetry={allowDemoContent ? catalogRowsState.retry : persistedResult.retry}
             onSave={saveResultRows}
             phase2={phase2.data}
             phase2Status={phase2.status}
             onPhase2Refresh={phase2.refresh}
           />
-          <LabOverallFinding result={displayDetail.result} phase2={phase2.data} refresh={phase2.refresh} />
+          <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} phase2={phase2.data} refresh={phase2.refresh} />
           {displayDetail.attachments.length || allowDemoContent ? <AttachmentStrip
             allowDemoContent={allowDemoContent} attachments={displayDetail.attachments}
             showImageExample title="공통 첨부자료"

@@ -336,8 +336,7 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
   await page
     .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
     .fill("21.4");
-  await page.getByTestId("lab-result-save-button").click();
-  await expect(page.getByTestId("lab-result-save-status")).toContainText("서버 저장됨");
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
 
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
   await expect(page.getByTestId("billing-queue-item-invoice-coco-260501")).toBeVisible();
@@ -391,8 +390,7 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
     await page
       .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
       .fill("21.4");
-    await page.getByTestId("lab-result-save-button").click();
-    await expect(page.getByTestId("lab-result-save-status")).toContainText("서버 저장됨");
+    await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
   });
 
   await test.step("technician sees the selected dispensing order in the instruction table", async () => {
@@ -952,10 +950,9 @@ test("lab result UI exposes catalog retry and save retry states", async ({ page 
   await page
     .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
     .fill("21.4");
-  await page.getByTestId("lab-result-save-button").click();
   await expect(page.getByTestId("lab-result-save-status")).toContainText("저장 실패");
   await page.getByTestId("lab-result-save-retry-button").click();
-  await expect(page.getByTestId("lab-result-save-status")).toContainText("서버 저장됨");
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
 });
 
 test("lab result UI separates catalog permission denial from empty data", async ({ page }) => {

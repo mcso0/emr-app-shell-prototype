@@ -14,7 +14,7 @@ export function usePersistedLabResult(workspaceId: string, workItemId: string | 
     if (!enabled || !workItemId || !orderId || !encounterId) return;
     const controller = new AbortController();
     void (async () => {
-      setState({ key, status: "loading" });
+      setState(previous => ({ key, status: "loading", payload: previous.key === key ? previous.payload : undefined }));
       try {
         const params = new URLSearchParams({ workItemId, orderId });
         const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/lab-imaging/result-entries?${params}`, {
@@ -22,10 +22,12 @@ export function usePersistedLabResult(workspaceId: string, workItemId: string | 
         });
         const payload = await response.json();
         if (controller.signal.aborted) return;
-        setState({ key, payload, status: response.status === 401 || response.status === 403 ? "permission_denied"
-          : !response.ok || payload?.ok !== true ? "error" : payload.savedResult === null ? "empty" : "ready" });
+        const status = response.status === 401 || response.status === 403 ? "permission_denied"
+          : !response.ok || payload?.ok !== true ? "error" : payload.savedResult === null ? "empty" : "ready";
+        setState(previous => ({ key, status, payload: status === "error" && previous.key === key
+          ? previous.payload : status === "permission_denied" ? undefined : payload }));
       } catch {
-        if (!controller.signal.aborted) setState({ key, status: "error" });
+        if (!controller.signal.aborted) setState(previous => ({ key, status: "error", payload: previous.key === key ? previous.payload : undefined }));
       }
     })();
     return () => controller.abort();
@@ -33,7 +35,7 @@ export function usePersistedLabResult(workspaceId: string, workItemId: string | 
   const retry = useCallback(() => setReload(value => value + 1), []);
   if (!enabled) return { status: "idle" as const, result: null, retry };
   if (state.key !== key) return { status: "loading" as const, result: null, retry };
-  const result = state.status === "ready" && base && workItemId && orderId && encounterId
+  const result = (state.status === "ready" || state.status === "loading" || state.status === "error") && base && workItemId && orderId && encounterId
     ? parsePersistedLabResult(state.payload, { workspaceId, workItemId, orderId, encounterId }, base) : null;
   return { status: state.status === "ready" && !result ? "error" as const : state.status, result, retry };
 }

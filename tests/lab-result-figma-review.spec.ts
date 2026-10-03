@@ -35,7 +35,7 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
   await page.goto(`/w/${workspaceId}/lab?date=2026-09-29&labResultId=live-lab-${workItem.id}&modulePanel=closed&aside=closed&right=closed`);
   const row = page.getByTestId(`lab-result-row-${rowId}`);
   await expect(row).toBeVisible();
-  await expect(page.getByRole("button", { name: "수정이력", exact: true })).toBeEnabled();
+  await expect(page.getByTestId("lab-result-table-anchor").locator("xpath=ancestor::section[1]").getByRole("button", { name: "수정이력", exact: true })).toBeEnabled();
   await row.getByRole("button", { name: /소견.*펼치기/ }).click();
   const detail = page.getByTestId(`lab-result-detail-${rowId}`);
   await expect(detail).toBeVisible();
@@ -355,7 +355,7 @@ test("attachment container resize recomputes two-column row height and overflow"
 
 
 // Approved 2026-09-29 AS-IS → TO-BE follow-up: rendered outcomes, not CSS snapshots.
-test("layout follow-up: toolbar has three aligned actions and save/reload remain reachable", async ({ page }) => {
+test("layout follow-up: toolbar has three aligned actions without manual save or reset menu", async ({ page }) => {
   await page.setViewportSize({ width: 1782, height: 1254 });
   await openReview(page, 0);
   const group = page.getByTestId("lab-result-table-anchor").locator("xpath=ancestor::section[1]");
@@ -367,12 +367,11 @@ test("layout follow-up: toolbar has three aligned actions and save/reload remain
   const boxes = await Promise.all(buttons.map(button => button.boundingBox()));
   expect(boxes[1]!.x - boxes[0]!.x - boxes[0]!.width).toBeCloseTo(8, 0);
   expect(boxes[2]!.x - boxes[1]!.x - boxes[1]!.width).toBeCloseTo(8, 0);
-  await expect(page.getByTestId("lab-result-save-button")).toBeVisible();
-  expect((await page.getByTestId("lab-result-save-button").boundingBox())!.y).toBeGreaterThan((await group.boundingBox())!.y + (await group.boundingBox())!.height);
-  await page.getByRole("button", { name: "검사 결과 추가 작업", exact: true }).click();
-  await expect(page.getByRole("menuitem", { name: "입력 초기화·재조회", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "수정이력", exact: true })).toBeEnabled();
+  await expect(page.getByTestId("lab-result-save-button")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "검사 결과 추가 작업", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "종합소견 저장", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("lab-result-table-anchor").locator("xpath=ancestor::section[1]").getByRole("button", { name: "수정이력", exact: true })).toBeEnabled();
+  await page.screenshot({ path: "output/lab-autosave/result-sheet.png" });
 });
 
 test("layout follow-up: only normal range grows and both table edges retain eight pixels", async ({ page }) => {
@@ -435,4 +434,195 @@ test("layout follow-up: dividers belong to complete row groups and disclosure re
   await expect(lastDetail.locator("xpath=ancestor::tr[1]")).toHaveCSS("border-bottom-width", "0px");
   await nextRow.getByRole("button", { name: /소견.*접기/ }).press("Enter");
   await expect(lastDetail).toHaveCount(0);
+});
+
+// Stateful, synthetic API boundary: only this local browser test receives writes.
+async function mockAutosave(page: Page, options: {
+  entryStatus?: number;
+  holdPost?: () => Promise<void>;
+  holdReadback?: () => Promise<void>;
+  holdFinding?: () => Promise<void>;
+} = {}) {
+  const entry = { ok: true, workspaceId, resultId, orderId: "review-order", encounterId: "review-encounter", workItemId: "review-work",
+    entryWriteRevision: 0, resultDefinitionSnapshot: { schemaVersion: 1 },
+    rows: [{ id: rowId, analyteName: "합성 항목", value: null as string | null, resultValueKind: "text", judgment: "not_judged", note: "" }] };
+  const phase2 = { resultId, orderId: "review-order", overallFinding: "", overallRevision: 0, canEdit: true, events: [], attachments: [] };
+  const posts: Array<{ requestId: string; expectedEntryWriteRevision: number; rows: Array<{ rowId: string; value: string; note: string }> }> = [];
+  const findings: Array<{ finding: string; expectedRevision: number }> = [];
+  let entryStatus = options.entryStatus;
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-entries**`, async route => {
+    if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON(); posts.push(body);
+      if (posts.length === 1) await options.holdPost?.();
+      if (entryStatus) {
+        const status = entryStatus; entryStatus = undefined;
+        await route.fulfill({ status, json: { ok: false, error: status === 409 ? "revision_conflict" : "save_failed" } }); return;
+      }
+      entry.entryWriteRevision++;
+      entry.rows = entry.rows.map(row => ({ ...row, value: body.rows[0].value, note: body.rows[0].note ?? "" }));
+    } else if (entry.entryWriteRevision > 0) await options.holdReadback?.();
+    await route.fulfill({ json: entry });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-phase2**`, async route => {
+    if (route.request().method() === "PUT") {
+      const body = route.request().postDataJSON(); findings.push(body);
+      if (findings.length === 1) await options.holdFinding?.();
+      phase2.overallFinding = body.finding; phase2.overallRevision++;
+      await route.fulfill({ json: { ok: true, data: { finding: body.finding, revision: phase2.overallRevision } } });
+    } else await route.fulfill({ json: { ok: true, data: phase2 } });
+  });
+  return { posts, findings, entry, phase2 };
+}
+
+function gate() {
+  let release!: () => void;
+  const waiting = new Promise<void>(resolve => { release = resolve; });
+  return { waiting, release };
+}
+
+test("autosave: result values and item findings persist without manual buttons", async ({ page }) => {
+  await openReview(page, 0);
+  const api = await mockAutosave(page);
+  await expect(page.getByTestId("lab-result-save-button")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "검사 결과 추가 작업" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "종합소견 저장" })).toHaveCount(0);
+  expect(api.posts).toHaveLength(0); expect(api.findings).toHaveLength(0);
+  const input = page.getByLabel("합성 항목 결과값", { exact: true });
+  await input.fill("첫 입력"); await input.fill("최신 입력");
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  expect(api.posts).toHaveLength(1);
+  await page.getByLabel("검사 소견", { exact: true }).fill("항목별 소견");
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  expect(api.posts.at(-1)).toMatchObject({ expectedEntryWriteRevision: 1, rows: [{ value: "최신 입력", note: "항목별 소견" }] });
+  await page.reload();
+  await expect(input).toHaveValue("최신 입력");
+  await page.getByTestId(`lab-result-row-${rowId}`).getByRole("button", { name: /소견.*펼치기/ }).click();
+  await expect(page.getByLabel("검사 소견", { exact: true })).toHaveValue("항목별 소견");
+});
+
+test("autosave: edits during an in-flight save use the acknowledged revision", async ({ page }) => {
+  await openReview(page, 0); const pending = gate();
+  const api = await mockAutosave(page, { holdPost: () => pending.waiting });
+  const input = page.getByLabel("합성 항목 결과값", { exact: true });
+  await input.fill("첫 입력"); await expect.poll(() => api.posts.length).toBe(1);
+  await input.fill("저장 중 새 입력"); await expect(input).toHaveValue("저장 중 새 입력");
+  pending.release();
+  await expect.poll(() => api.posts.length).toBe(2);
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  expect(api.posts[1]).toMatchObject({ expectedEntryWriteRevision: 1, rows: [{ value: "저장 중 새 입력" }] });
+  await expect(input).toHaveValue("저장 중 새 입력");
+});
+
+test("autosave: delayed readback never restores stale values or notes", async ({ page }) => {
+  await openReview(page, 0); const pending = gate();
+  const api = await mockAutosave(page, { holdReadback: () => pending.waiting });
+  const input = page.getByLabel("합성 항목 결과값", { exact: true });
+  await input.fill("유지할 결과값");
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  await expect(input).toHaveValue("유지할 결과값");
+  await page.getByLabel("검사 소견", { exact: true }).fill("새 소견");
+  await expect.poll(() => api.posts.length).toBe(2);
+  expect(api.posts[1]).toMatchObject({ expectedEntryWriteRevision: 1, rows: [{ value: "유지할 결과값", note: "새 소견" }] });
+  pending.release(); await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  // A newer server baseline must not resurrect the previously saved draft.
+  api.entry.entryWriteRevision = 3; api.entry.rows[0].note = "서버의 새 소견";
+  await page.reload();
+  await expect(input).toHaveValue("유지할 결과값");
+  await input.fill("다음 결과값");
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  expect(api.posts.at(-1)).toMatchObject({ expectedEntryWriteRevision: 3, rows: [{ value: "다음 결과값", note: "서버의 새 소견" }] });
+});
+
+test("autosave: failed requests retain drafts and retry before newer edits", async ({ page }) => {
+  await openReview(page, 0); const api = await mockAutosave(page, { entryStatus: 500 });
+  await page.getByLabel("합성 항목 결과값", { exact: true }).fill("첫 입력");
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장 실패");
+  await page.getByLabel("합성 항목 결과값", { exact: true }).fill("실패 후 새 입력");
+  await page.getByTestId("lab-result-save-retry-button").click();
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  expect(api.posts).toHaveLength(3);
+  expect(api.posts[1].requestId).toBe(api.posts[0].requestId);
+  expect(api.posts[2]).toMatchObject({ expectedEntryWriteRevision: 1, rows: [{ value: "실패 후 새 입력" }] });
+});
+
+test("autosave: revision conflicts preserve input and stop automatic writes", async ({ page }) => {
+  await openReview(page, 0); const api = await mockAutosave(page, { entryStatus: 409 });
+  const input = page.getByLabel("합성 항목 결과값", { exact: true });
+  await input.fill("보존할 입력");
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("다른 수정이 저장됐습니다");
+  await input.fill("추가 입력"); await input.blur();
+  await expect(input).toHaveValue("추가 입력"); expect(api.posts).toHaveLength(1);
+  await expect(page.getByTestId("lab-result-save-retry-button")).toHaveCount(0);
+});
+
+test("autosave: overall finding serializes edits without a save button", async ({ page }) => {
+  await openReview(page, 0); const pending = gate();
+  const api = await mockAutosave(page, { holdFinding: () => pending.waiting });
+  const input = page.getByLabel("검사결과 종합소견", { exact: true });
+  await input.fill("첫 종합소견"); await expect.poll(() => api.findings.length).toBe(1);
+  await input.fill("저장 중 수정한 종합소견"); pending.release();
+  await expect(page.getByTestId("lab-overall-save-status")).toHaveText("저장됨");
+  expect(api.findings).toMatchObject([{ finding: "첫 종합소견", expectedRevision: 0 }, { finding: "저장 중 수정한 종합소견", expectedRevision: 1 }]);
+  await expect(input).toHaveValue("저장 중 수정한 종합소견");
+  await page.reload(); await expect(input).toHaveValue("저장 중 수정한 종합소견");
+});
+
+test("autosave: read-only results do not allow value or finding writes", async ({ page }) => {
+  await openReview(page, 0, false); const api = await mockAutosave(page);
+  await expect(page.getByLabel("합성 항목 결과값", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("검사 소견", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("검사결과 종합소견", { exact: true })).toBeDisabled();
+  expect(api.posts).toHaveLength(0); expect(api.findings).toHaveLength(0);
+});
+
+test("autosave: switching modules retains a draft when the detached save fails", async ({ page }) => {
+  await openReview(page, 0); const pending = gate();
+  const api = await mockAutosave(page, { entryStatus: 500, holdPost: () => pending.waiting });
+  const url = page.url();
+  await page.getByLabel("합성 항목 결과값", { exact: true }).fill("이동해도 보존할 입력");
+  await expect.poll(() => api.posts.length).toBe(1);
+  await page.getByRole("link", { name: "홈 화면", exact: true }).click();
+  await expect(page.getByLabel("합성 항목 결과값", { exact: true })).toHaveCount(0);
+  pending.release();
+  await expect(page.getByText("검사 결과를 저장하지 못했습니다. 검사를 다시 열어 입력을 확인해 주세요.", { exact: true })).toBeVisible();
+  // App navigation preserves session memory; a full reload would deliberately
+  // invoke the browser's unsaved-change guard instead.
+  await page.getByRole("link", { name: "임상병리검사", exact: true }).click();
+  const queue = page.getByTestId("lab-queue-item-live-lab-review-work");
+  if (await queue.isVisible()) await queue.click();
+  await expect(page.getByLabel("합성 항목 결과값", { exact: true })).toHaveValue("이동해도 보존할 입력");
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장 실패");
+  await page.getByTestId("lab-result-save-retry-button").click();
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  expect(api.posts[1].requestId).toBe(api.posts[0].requestId);
+  expect(new URL(url).searchParams.get("labResultId")).toBe("live-lab-review-work");
+});
+
+test("autosave: a failed result readback keeps the saved input and visible retry", async ({ page }) => {
+  await openReview(page, 0); const api = await mockAutosave(page);
+  let failRead = true;
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-entries?*`, async route => {
+    if (failRead) await route.fulfill({ status: 500, json: { ok: false, error: "readback_failed" } });
+    else await route.fulfill({ json: api.entry });
+  });
+  const input = page.getByLabel("합성 항목 결과값", { exact: true });
+  await input.fill("재조회 실패에도 유지할 값");
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  await expect(page.getByTestId("lab-result-catalog-status")).toContainText("불러오지 못했습니다");
+  await expect(input).toHaveValue("재조회 실패에도 유지할 값");
+  failRead = false; await page.getByTestId("lab-result-catalog-retry-button").click();
+  await expect(page.getByTestId("lab-result-catalog-status")).toHaveCount(0);
+  await expect(input).toHaveValue("재조회 실패에도 유지할 값");
+});
+
+
+test("autosave: result input retains keyboard focus while typing and saving", async ({ page }) => {
+  await openReview(page, 0); await mockAutosave(page);
+  const input = page.getByLabel("합성 항목 결과값", { exact: true });
+  await input.click(); await page.keyboard.type("abc");
+  await expect(input).toHaveValue("abc"); await expect(input).toBeFocused();
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
+  await expect(input).toBeFocused(); await page.keyboard.type("def");
+  await expect(input).toHaveValue("abcdef");
+  await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
 });
