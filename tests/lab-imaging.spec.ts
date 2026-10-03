@@ -61,6 +61,43 @@ function waitForFulfillmentQueue(
   });
 }
 
+test("live receipt reopens with its chrome and known empty list without another queue read", async ({ page }) => {
+  await grantCheongdamWorkspaceAccess(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  let queueReads = 0;
+  const workItem = {
+    id: "receipt-loading-work", workspaceId: PREPARED_EMPTY_CLINIC_WORKSPACE_ID,
+    encounterId: "receipt-loading-encounter", orderId: "receipt-loading-order",
+    patientId: "receipt-loading-patient", patientName: "샘플 환자", guardianName: "샘플 보호자",
+    queueType: "lab", status: "requested", rowRevision: 1,
+    assignedToUserId: null, requestedByUserId: "user-vet", requesterName: "샘플 수의사",
+    createdAt: "2026-06-14T01:25:00.000Z", updatedAt: "2026-06-14T01:25:00.000Z",
+    sourceSnapshot: { inHospitalOrderName: "샘플 CBC 검사", serviceItemId: "sample-cbc" },
+  };
+  await page.route(`**/api/workspaces/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/fulfillment/work-items**`, async route => {
+    queueReads += 1;
+    await route.fulfill({ json: { ok: true, workItems: [workItem] } });
+  });
+  await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?date=2026-06-14&labResultId=live-lab-${workItem.id}&encounterId=${workItem.encounterId}&modulePanel=closed&aside=closed&right=closed`);
+  const trigger = page.getByRole("button", { name: "장비 검사 수신함", exact: true });
+  await expect(trigger).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  const initialReads = queueReads;
+  const receipt = page.getByTestId("lab-receipt-panel");
+  const emptyMessage = "현재 오더와 연결된 장비결과가 없습니다.";
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await trigger.click();
+    await expect(receipt.getByRole("heading", { name: "장비 검사 수신함", exact: true })).toBeVisible();
+    await expect(receipt.getByRole("button", { name: "장비 검사 수신함 검색", exact: true })).toBeVisible();
+    await expect(receipt.getByText(emptyMessage, { exact: true })).toBeVisible();
+    await expect(receipt.locator('[data-testid="emr-queue-loading-state"]')).toHaveCount(0);
+    expect(queueReads).toBe(initialReads);
+    await receipt.getByRole("button", { name: "장비 검사 수신함 접기", exact: true }).click();
+    await expect(receipt).toBeHidden();
+  }
+  expect(queueReads).toBe(initialReads);
+});
+
 test("lab no-work empty state hides history aside", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
 

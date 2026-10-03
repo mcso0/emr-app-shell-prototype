@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCoreRowModel,
   useReactTable,
@@ -2871,25 +2871,36 @@ function useCurrentLabDetail(workspaceId: string) {
   );
   const fulfillmentQueue = useFulfillmentQueue("lab");
 
-  return getLabDetailFromSearchParams(
-    searchParams,
-    selectedLabResultId,
-    fulfillmentQueue.workItems,
-    { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
-  );
+  return {
+    ...getLabDetailFromSearchParams(
+      searchParams,
+      selectedLabResultId,
+      fulfillmentQueue.workItems,
+      { allowMockFallback: isLegacySalesDemoWorkspace(workspaceId) },
+    ),
+    status: isLegacySalesDemoWorkspace(workspaceId) ? "ready" as const : fulfillmentQueue.status,
+    retry: fulfillmentQueue.refresh,
+  };
 }
+
+// Share the mounted slot owner's read; the receipt's local UI still resets on close.
+const LabCurrentDetailContext = createContext<ReturnType<typeof useCurrentLabDetail> | null>(null);
 
 export function LabSlotAvailabilityProvider({
   children,
   workspaceId,
 }: WorkspaceSlotAvailabilityProviderProps) {
-  const { detail } = useCurrentLabDetail(workspaceId);
-  const hasSelectedDetail = Boolean(detail);
+  const currentDetail = useCurrentLabDetail(workspaceId);
+  const hasSelectedDetail = Boolean(currentDetail.detail);
 
-  return children({
-    hasContentAside: hasSelectedDetail,
-    hasRightPanel: hasSelectedDetail,
-  });
+  return (
+    <LabCurrentDetailContext.Provider value={currentDetail}>
+      {children({
+        hasContentAside: hasSelectedDetail,
+        hasRightPanel: hasSelectedDetail,
+      })}
+    </LabCurrentDetailContext.Provider>
+  );
 }
 
 export function LabHeader({ workspaceId }: ShellComponentProps) {
@@ -3060,7 +3071,9 @@ export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: She
 }
 
 export function LabRightPanel({ workspaceId }: ShellComponentProps) {
-  const { detail } = useCurrentLabDetail(workspaceId);
+  const currentDetail = useContext(LabCurrentDetailContext);
+  const readStatus = currentDetail?.status ?? "loading";
+  const detail = readStatus === "permission_denied" ? undefined : currentDetail?.detail;
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const [expandedReceiptIds, setExpandedReceiptIds] =
     useState<Set<string> | null>(null);
@@ -3090,12 +3103,12 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
     );
   }, [detail]);
 
-  if (!detail) return null;
-
-  const visibleReceipts = linkedReceipts;
-  const hasEnteredRows = detail.result.rows.some((row) => row.value);
+  const readFailed = readStatus === "error" || readStatus === "permission_denied";
+  const listResolved = Boolean(detail) && !readFailed;
+  const visibleReceipts = listResolved ? linkedReceipts : [];
+  const hasEnteredRows = Boolean(detail?.result.rows.some((row) => row.value));
   const latestReceiptDate =
-    visibleReceipts[0]?.receivedAt ?? detail.result.receivedAt;
+    visibleReceipts[0]?.receivedAt ?? detail?.result.receivedAt;
   const receiptOperatingDate = latestReceiptDate?.slice(0, 10);
   const dateLabel = receiptOperatingDate
     ? formatKoreanOperatingDateLabel(receiptOperatingDate)
@@ -3136,7 +3149,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
         />
         <EmrListHeader
           className="mx-3"
-          count={visibleReceipts.length}
+          count={listResolved ? visibleReceipts.length : "-"}
           label="검사 결과"
           topDividerVisible
           headerActions={
@@ -3154,7 +3167,21 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
           }
         />
         <ScrollArea className="min-h-0 flex-1">
-          <div className="flex flex-col gap-3 p-3">
+          <div className="flex flex-col gap-3 p-3" aria-busy={readStatus === "loading"}>
+            {!listResolved && !readFailed && readStatus === "loading" ? (
+              <EmrQueueLoadingState title="검사 정보를 불러오는 중입니다" />
+            ) : readFailed ? (
+              <EmrEmptyState
+                kind={readStatus === "permission_denied" ? "no-permission" : "read-error"}
+                surface="queue"
+                size="sm"
+                role="alert"
+                title={readStatus === "permission_denied" ? "검사 정보를 볼 권한이 없습니다" : "검사 정보를 불러오지 못했습니다"}
+                primaryAction={readStatus === "permission_denied" ? undefined : (
+                  <Button variant="outline" onClick={() => void currentDetail?.retry()}>재시도</Button>
+                )}
+              />
+            ) : null}
             {visibleReceipts.map((receipt) => {
               const receiptWorkItem = receipt.orderId
                 ? workItemByOrderId.get(receipt.orderId)
@@ -3202,7 +3229,7 @@ export function LabRightPanel({ workspaceId }: ShellComponentProps) {
                 />
               );
             })}
-            {!visibleReceipts.length ? (
+            {listResolved && !visibleReceipts.length ? (
               <section className="rounded-md border border-dashed p-3 emr-text-dense text-muted-foreground">
                 현재 오더와 연결된 장비결과가 없습니다.
               </section>

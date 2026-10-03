@@ -49,6 +49,8 @@ Implementation approval: 승욱, 2026-09-29, “오케이 순서대로 진행해
 
 ## Verification and extension
 
+Lab receipt chrome (title, collapse control, date region and list tools) renders with the popup. The mounted Lab slot provider owns its current-detail read and shares it with the receipt, so opening/reopening does not remount a queue subscription or trigger another read. Only unresolved list content shows pending feedback; known empty/results remain available during refresh. Read errors and permission denial replace list rows, and unknown counts do not imply zero. Permission denial also withholds the previous receipt date. Existing right-popup unmount/reset, card/dialog state and 180/140ms motion contracts remain unchanged. This does not add live equipment integration; the current live mapper still returns an empty receipt list.
+
 Verify 1366/1440/1600/1920/2560, 200% zoom-equivalent layout, inputs and scroll, hidden preference restoration, both panels, profile coexistence, modal focus/Escape, reduced motion, nested receipt confirmation, and unchanged module layouts. Run focused browser regression, lint, typecheck and build.
 
 차트 Order, 조제/처치 drawer and 영상 report/summary adoption use synthetic local inputs. Future diagnostic image viewing must use unrestricted available space without forcing the report cap onto images; no viewer zoom or comparison capability is claimed here. 수납 payment actions are verified with synthetic loopback fixtures only; actual PG/VAT/receipt/refund/settlement integrations remain outside this adoption. The width values remain pilot candidates pending real clinical usability review.
