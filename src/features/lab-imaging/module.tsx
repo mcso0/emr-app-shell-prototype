@@ -5,6 +5,7 @@ import {
   getCoreRowModel,
   useReactTable,
   type ColumnDef,
+  type ColumnSizingState,
 } from "@tanstack/react-table";
 import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -2445,6 +2446,20 @@ function LabResultDataTable({
   onPhase2Refresh: () => void;
   rows: LabResultRow[];
 }) {
+  const tableAnchorRef = useRef<HTMLDivElement>(null);
+  const [availableWidth, setAvailableWidth] = useState(0);
+
+  useEffect(() => {
+    const viewport = tableAnchorRef.current?.querySelector<HTMLDivElement>('[data-slot="table-container"]');
+    if (!viewport) return;
+    // Observe the viewport content box, excluding its existing padding.
+    const observer = new ResizeObserver(([entry]) => {
+      setAvailableWidth(entry.contentRect.width);
+    });
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
   const columns = useMemo<ColumnDef<LabResultRow, unknown>[]>(
     () => [
       {
@@ -2574,6 +2589,16 @@ function LabResultDataTable({
     ],
     [],
   );
+  const columnSizing = useMemo<ColumnSizingState>(() => {
+    const preferredWidth = columns.reduce((total, column) => total + column.size!, 0);
+    if (!availableWidth || availableWidth >= preferredWidth) return {};
+    const minimumWidth = columns.reduce((total, column) => total + column.minSize!, 0);
+    const ratio = Math.max(0, (availableWidth - minimumWidth) / (preferredWidth - minimumWidth));
+    return Object.fromEntries(columns.map(column => [
+      column.id!,
+      column.minSize! + (column.size! - column.minSize!) * ratio,
+    ]));
+  }, [availableWidth, columns]);
   // TanStack Table owns the result grid controller.
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -2583,12 +2608,13 @@ function LabResultDataTable({
     data: rows,
     enableColumnResizing: false,
     enableSorting: false,
+    state: { columnSizing },
     getCoreRowModel: getCoreRowModel(),
     getRowId: (row) => row.id,
   });
 
   return (
-    <div id="lab-result-table" data-testid="lab-result-table-anchor" tabIndex={-1} className="lab-result-sheet-table-anchor mt-3 scroll-mt-2 outline-none [&_[data-slot=table-head][data-column-id=disclosure]_[data-emr-table-content]]:sr-only">
+    <div ref={tableAnchorRef} id="lab-result-table" data-testid="lab-result-table-anchor" tabIndex={-1} className="lab-result-sheet-table-anchor mt-3 scroll-mt-2 outline-none [&_[data-slot=table-head][data-column-id=disclosure]_[data-emr-table-content]]:sr-only">
     <EmrDataTable
       aria-label="임상병리 검사 결과 입력"
       className="table-fixed"
