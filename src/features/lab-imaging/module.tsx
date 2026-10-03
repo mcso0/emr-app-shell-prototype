@@ -2652,7 +2652,7 @@ function LabResultDataTable({
       table={table}
       viewportMode="content"
       getRowProps={(row) => ({
-        className: expandedRowId === row.original.id ? "!border-b-0" : undefined,
+        className: expandedRowId === row.original.id ? "!border-b-0 [&>[data-slot=table-cell]]:!border-b-0" : undefined,
         "data-testid": "lab-result-row-" + row.original.id,
       })}
     />

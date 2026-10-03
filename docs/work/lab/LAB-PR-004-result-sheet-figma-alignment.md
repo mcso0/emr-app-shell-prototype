@@ -270,3 +270,11 @@ Documentation validation: `npm run docs:check` passed (1072 Markdown files); foc
 - Regression evidence: before implementation, narrow mode overflowed by 126px in the synthetic browser fixture. The follow-up checks narrow/wide modes, right-panel changes, window resizing, minimum-width table scrolling, header/body alignment, unchanged input appearance, draft/finding/disclosure preservation, and focus retention.
 - Existing wide-geometry checks now wait for the resize result; the CBC fixed-width assertion explicitly uses a wide viewport. Final focused checks and preflight are rerun after rebasing. Browser writes use intercepted synthetic fixtures, not remote records.
 - Exact candidate checks, Preview, Release Check, main/Production delivery, scoped read-only smoke, and rollback evidence are recorded in the PR and final handoff. Human acceptance remains separate from delivery verification.
+
+## Row Group Divider Correction — 2026-10-03
+
+- User approved the investigated divider correction, commit/push/PR, main merge and Production delivery. A result row includes its expanded finding and attachments; dividers separate complete row groups, and a single order has no divider.
+- Cause: the expanded parent suppressed its `tr` border, but the shared table CSS also adds borders to its direct `td` cells. Opening the detail makes the parent cease to be the final DOM row, leaving its cell borders visible.
+- Fix: extend only the expanded parent's feature-local class to suppress direct cell borders. Preserve the existing detail/final-row border rules, shared renderer/styles, autosave, permissions and attachment lifecycle.
+- Regression: the single-order browser test failed before the fix with a cell border of `1px` instead of `0px`. After the fix, four focused browser scenarios passed: single-order expanded/collapsed, first/middle/last groups with keyboard and single-open disclosure, result/finding autosave, and read-only attachments.
+- Local browser checks use intercepted synthetic APIs. Production smoke inspects the annotated lab route without editing values, findings or files. Exact-candidate Release Check, Ready Preview, merge/source, Production alias and rollback evidence are recorded in the PR and final handoff.
