@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const dispensingUrl = "/w/clair-demo/dispensing?modulePanel=open&aside=closed&right=closed";
-const evidence = "docs/completed/app-shell/2026-09-30-dispensing-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
 async function openInstruction(page: Page, type: "dispensing" | "treatment" = "dispensing", narrow = true) {
@@ -62,12 +61,12 @@ test("instruction toolbar follows the document and width preserves table selecti
   await expect(table).toHaveAttribute("data-emr-density", "compact");
   expect(await table.getByRole("columnheader").allTextContents()).toEqual(columns);
   await page.mouse.move(0, 0);
-  await page.screenshot({ path: `${evidence}/1920-wide.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-wide.png") });
   await page.getByRole("button", { name: "좁게 보기" }).click();
   await expect(document).toHaveCSS("max-width", "1120px");
   await expect.poll(async () => (await document.boundingBox())!.width).toBe(1120);
   await expect(checkbox).toBeChecked();
-  await page.screenshot({ path: `${evidence}/1920-narrow.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-narrow.png") });
 });
 
 test("existing detail drawer input survives panel presentation and viewport changes", async ({ page }) => {
@@ -82,16 +81,17 @@ test("existing detail drawer input survives panel presentation and viewport chan
   await expect(page.locator('[data-workspace-panel="left"]')).toHaveAttribute("data-presentation", "inline");
   await expect(dose).toHaveValue("0.75 ml");
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.getByRole("dialog", { name: "조제/처치 이력", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "조제/처치 이력", exact: true })).toBeVisible();
+  await page.locator('[data-workspace-panel="left"] [data-workspace-history-collapse]').focus();
   await page.keyboard.press("Escape");
   await expect(dose).toHaveValue("0.75 ml");
   await expect(page.getByTestId("workspace-document")).toHaveAttribute("data-width-mode", "wide");
-  await page.screenshot({ path: `${evidence}/1440-existing-drawer.png` });
+  await page.screenshot({ path: test.info().outputPath("1440-existing-drawer.png") });
   await drawer.getByRole("button", { name: "상세 닫기" }).click();
   await expect(drawer).toBeHidden();
 });
 
-test("history preserves group state across inline and modal presentation and returns focus", async ({ page }) => {
+test("history preserves group state across inline and drawer presentation and returns focus", async ({ page }) => {
   await openInstruction(page);
   const trigger = page.getByRole("button", { name: "조제 이력 패널 열기" });
   await trigger.click();
@@ -102,17 +102,16 @@ test("history preserves group state across inline and modal presentation and ret
   const group = panel.locator('[data-slot="content-history-group-title"]').first();
   await group.click();
   const expanded = await group.getAttribute("aria-expanded");
+  await page.locator(`button[aria-controls="dispensing-content-aside-surface"]`).focus();
   await page.keyboard.press("Escape");
   await expect(panel).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
-  const dialog = page.getByRole("dialog", { name: "조제/처치 이력", exact: true });
-  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  const dialog = page.getByRole("complementary", { name: "조제/처치 이력", exact: true });
+  await expect(dialog).toHaveAttribute("data-presentation", "drawer");
   await expect(group).toHaveAttribute("aria-expanded", expanded!);
-  for (let step = 0; step < 8; step += 1) {
-    await page.keyboard.press("Tab");
-    await expect.poll(() => dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-  }
-  await page.screenshot({ path: `${evidence}/1440-history-modal.png` });
+  await expect(page.locator(`button[aria-controls="dispensing-content-aside-surface"]`)).toBeFocused();
+  await dialog.locator("[data-workspace-history-collapse]").focus();
+  await page.screenshot({ path: test.info().outputPath("1440-history-modal.png") });
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
@@ -169,7 +168,7 @@ test("dispensing width matrix preserves mode, reduced motion and independent pro
   await page.waitForLoadState("networkidle");
   await expect(profile.locator('[data-slot="emr-profile-identity"]')).toBeInViewport();
   await expect(profile.getByText("마이크로칩", { exact: true })).toBeInViewport();
-  await page.screenshot({ path: `${evidence}/2560-profile-history.png` });
+  await page.screenshot({ path: test.info().outputPath("2560-profile-history.png") });
 });
 
 test("dispensing hidden width trigger restores focus and module-specific preference", async ({ page }) => {

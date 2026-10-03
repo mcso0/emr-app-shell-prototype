@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const billingUrl = "/w/clair-demo/billing?modulePanel=open&aside=closed&right=closed";
-const evidence = "docs/completed/app-shell/2026-09-30-billing-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 const summaryTrigger = (page: Page) => page.locator('button[aria-controls="billing-summary-panel-surface"]');
 async function openInvoice(page: Page, narrow = true) {
@@ -69,14 +68,14 @@ test("invoice width preserves quantity, calculated total, table and assignment",
   expect(await table.getByRole("columnheader").allTextContents()).toEqual(columns);
   await expect(toolbar.getByRole("button", { name: "담당 취소" })).toBeVisible();
   await page.mouse.move(0, 0);
-  await page.screenshot({ path: `${evidence}/1920-wide.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-wide.png") });
   await page.getByRole("button", { name: "좁게 보기" }).click();
   await expect.poll(async () => (await document.boundingBox())!.width).toBe(1120);
   await expect(quantity).toHaveValue("2");
   await expect(table.locator("tfoot")).toContainText("156,500원");
   await expect(page.getByTestId("billing-checkout-total")).toContainText("121,500원");
   expect(checkoutCalls).toBe(checkoutCallsBeforeWidth);
-  await page.screenshot({ path: `${evidence}/1920-narrow.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-narrow.png") });
 });
 
 test("billing history starts beside the title and summary keeps its amount and payment footer", async ({ page }) => {
@@ -97,10 +96,10 @@ test("billing history starts beside the title and summary keeps its amount and p
   await expect(right.locator('[data-slot="emr-right-panel-footer"]')).toHaveCSS("height", "105px");
   await page.mouse.move(0, 0);
   await expect(page.locator('[data-slot="tooltip-content"]:visible')).toHaveCount(0);
-  await page.screenshot({ path: `${evidence}/1920-bilateral.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-bilateral.png") });
 });
 
-test("summary modal retains memo and adjustment, traps focus and returns to toolbar", async ({ page }) => {
+test("summary drawer retains memo and adjustment with safe focus return", async ({ page }) => {
   await openInvoice(page);
   await summaryTrigger(page).click();
   const right = page.locator('[data-workspace-panel="right"]');
@@ -109,35 +108,39 @@ test("summary modal retains memo and adjustment, traps focus and returns to tool
   await memo.fill("합성 메모 · 화면 상태 유지 확인");
   await adjustment.fill("합성 사유 · 표시 전환 확인");
   const input = await memo.elementHandle();
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect(right).toBeVisible();
+  await expect(adjustment).toBeFocused();
   await page.setViewportSize({ width: 1440, height: 900 });
-  const dialog = page.getByRole("dialog", { name: "수납 요약", exact: true });
-  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  const dialog = page.getByRole("complementary", { name: "수납 요약", exact: true });
+  await expect(dialog).toHaveAttribute("data-presentation", "drawer");
   expect(await input!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(memo).toHaveValue("합성 메모 · 화면 상태 유지 확인");
   await expect(adjustment).toHaveValue("합성 사유 · 표시 전환 확인");
-  for (let step = 0; step < 12; step += 1) {
-    await page.keyboard.press("Tab");
-    await expect.poll(() => dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-  }
+  await expect(adjustment).toBeFocused();
   await page.mouse.move(0, 0);
-  await page.screenshot({ path: `${evidence}/1440-summary-modal.png` });
+  await page.screenshot({ path: test.info().outputPath("1440-summary-modal.png") });
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(summaryTrigger(page)).toBeFocused();
 });
 
-test("modal payment preflight dismisses only nested dialog and preserves unpaid reason", async ({ page }) => {
+test("drawer payment preflight dismisses only nested modal and preserves unpaid reason", async ({ page }) => {
   await openInvoice(page);
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
   await page.setViewportSize({ width: 1440, height: 900 });
   await summaryTrigger(page).click();
-  const summary = page.getByRole("dialog", { name: "수납 요약", exact: true });
+  const summary = page.getByRole("complementary", { name: "수납 요약", exact: true });
   await summary.getByRole("button", { name: "미납 처리", exact: true }).click();
   const preflight = page.getByRole("dialog", { name: "미납 처리 전 확인" });
   await expect(preflight).toBeVisible();
   await expect(preflight.getByRole("button", { name: "미납 처리 저장" })).toBeDisabled();
   const reason = preflight.getByRole("textbox", { name: "미납 처리 사유" });
   await reason.fill("합성 사유 · 취소 동작 검증");
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect(page.locator('[data-workspace-panel="right"]')).toBeVisible();
+  await expect(reason).toBeFocused();
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.keyboard.press("Tab");
   await expect.poll(() => preflight.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await page.keyboard.press("Escape");
@@ -147,24 +150,27 @@ test("modal payment preflight dismisses only nested dialog and preserves unpaid 
   await summary.getByRole("button", { name: "미납 처리", exact: true }).click();
   await expect(reason).toHaveValue("합성 사유 · 취소 동작 검증");
   await preflight.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(summary.getByRole("button", { name: "미납 처리", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(summary).toBeHidden();
   await expect(summaryTrigger(page)).toBeFocused();
 });
 
-test("history filters and selection survive modal presentation without changing totals", async ({ page }) => {
+test("history filters and selection survive drawer presentation without changing totals", async ({ page }) => {
   await openInvoice(page);
   await page.getByRole("button", { name: "수납이력 패널 열기" }).click();
   const left = page.locator('[data-workspace-panel="left"]');
   await left.getByRole("button", { name: "1달", exact: true }).click();
   await left.getByTestId("billing-ledger-row-invoice-coco-history-paid-260414").getByRole("checkbox").click();
   await expect(page.getByText("수납 합산 121,500원", { exact: false }).first()).toBeVisible();
+  await page.getByRole("button", { name: "수납이력 패널 접기" }).focus();
   await page.keyboard.press("Escape");
   await expect(left).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.getByRole("dialog", { name: "수납이력", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "수납이력", exact: true })).toBeVisible();
   await expect(left.getByRole("button", { name: "1달", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(left.getByTestId("billing-ledger-row-invoice-coco-history-paid-260414").getByRole("checkbox")).toBeChecked();
+  await left.locator("[data-workspace-history-collapse]").focus();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "수납이력 패널 열기" })).toBeFocused();
   await expect(page.getByText("수납 합산 121,500원", { exact: false }).first()).toBeVisible();
@@ -217,7 +223,7 @@ test("billing actual-space matrix reduced motion and profile coexistence", async
   await expect(page.locator('[data-slot="tooltip-content"]:visible')).toHaveCount(0);
   await expect(profile.getByRole("heading", { name: "환자 정보" })).toBeVisible();
   await expect(profile.locator('[data-slot="emr-profile-loading"]')).toHaveCount(0);
-  await page.screenshot({ path: `${evidence}/2560-profile-bilateral.png` });
+  await page.screenshot({ path: test.info().outputPath("2560-profile-bilateral.png") });
 });
 
 test("billing hidden width trigger restores focus and module preference", async ({ page }) => {

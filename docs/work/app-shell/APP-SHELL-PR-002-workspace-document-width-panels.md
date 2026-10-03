@@ -4,7 +4,7 @@ status: human_review
 area: app-shell
 priority: P1
 target_pr: User-approved five-module document alignment follow-up to main and Production
-updated: 2026-10-03
+updated: 2026-10-04
 source_docs:
   - docs/design/system/workspace-document-width-contract.md
   - docs/design/system/ux-ui-research-before-implementation.md
@@ -28,7 +28,7 @@ Duplicate check: APP-SHELL-PR-001 is workspace tabs; DESIGN-SYSTEM-PR-081 explic
 
 ## Scope
 
-Shared opt-in document layout, measured conditional width button, workspace/module session preference, 180ms/reduced-motion behavior, full-width toolbar, internal Lab receipt placement, narrow modal fallback, independent outer profile. Second adoption: 차트 width/history and existing panel/table constraints. Third adoption: 조제/처치 width/history and existing execution table/drawer constraints. Fourth adoption: 영상 report width/history/summary and stable Order detail table data. Fifth adoption: 수납 width/history/payment-summary placement and unchanged financial contracts.
+Shared opt-in document layout, measured conditional width button, workspace/module session preference, 180ms/reduced-motion behavior, full-width toolbar, internal Lab receipt placement, independent outer profile. The 2026-10-03 accepted responsive proposal supersedes the original narrow modal fallback with non-modal drawers, equal 280px panels, clamped work-area centering and compact surface selection. Second adoption: 차트 width/history and existing panel/table constraints. Third adoption: 조제/처치 width/history and existing execution table/drawer constraints. Fourth adoption: 영상 report width/history/summary and stable Order detail table data. Fifth adoption: 수납 width/history/payment-summary placement and unchanged financial contracts.
 
 ## Out of scope
 
@@ -295,3 +295,21 @@ Existing design, panel dimensions, title hierarchy, 180/140ms slide, keyboard/re
 Verification includes unresolved-list chrome, known empty refresh, error/denial boundaries, synthetic live reopen without another queue read, and existing Lab/right-panel/motion/nested-dialog regression. Delivery requires local preflight, one exact-candidate Release Check, Ready Preview, exact-head-protected main merge, origin/main/source/alias proof and scoped authenticated synthetic Production smoke. Smoke uses reversible receipt/history/width controls and `/login`; no clinical save or provider side effect. Rollback is the immediately preceding Ready Production deployment or a reviewed revert. Stop on candidate/scope drift, required check failure, unexpected source/alias or critical smoke failure.
 
 Local result: 42 distinct focused cases passed across Lab/imaging, receipt read states, document layout, bilateral motion and shared right-panel headers. The initial new browser test attempted to close through an inert document trigger in modal presentation; it now uses the receipt collapse control and the selected-record desktop case passes independently. Optimized mock build, full lint (five pre-existing warnings, no errors), TypeScript, secret scan, docs, UX copy and whitespace checks passed. Generated historical captures are retained outside the repository and restored before staging. Read-only source review found no new workspace/selection or popup lifecycle leak. Cold no-detail slot availability remains unchanged; list-state render cases do not claim authenticated cold-error shell coverage.
+
+## Accepted responsive document panels — 2026-10-03
+
+승욱 accepted the interactive proposal and requested implementation after source investigation/planning. During implementation, 승욱 explicitly authorized conditional delivery: “구현 부터 시안대로 잘 구현되었는 지 검증하고, 통과되면, 커밋, 푸시, 피알, 오리진-메인에 머지. 배포 승인”. This is the five-module UI slice only; data/permission/payment/provider writes remain excluded.
+
+Base: `08100acb7df5bce1f7c89766350f9537958c3c05`, branch `codex/document-panels-responsive`, attached clean worktree. Primary-checkout WIP is preserved. The accepted proposal fixes bilateral widths at 280px, centers the document within non-overlapping bounds without a mirrored closed-side gutter, and replaces modal fallback/automatic close with stable non-modal drawers. Requested center <880px enters drawer mode; >=912px returns inline. Work area <576px provides direct panel/body selection with no stacked history. Open intent/URL, mounted inputs, scroll and cached read state survive resize/concealment. All five title controls use actual visibility and reactivate concealed panels before closing. Imaging/billing right references retain their below-title position.
+
+Existing Base UI 1.7.0 is reused with outside dismissal disabled, no forced focus, scoped Escape and stable concealed guard hosts. Nested confirmations retain modal semantics and portal priority. The scoped history wrapper removes its minimum width only when the work area cannot hold 280px. No dependencies or data/store/URL ownership are added.
+
+Verification began with failing-before tests for right width (336 instead of 280) and missing compact selection. Final optimized mock-build Chromium run: **91 passed (2.2m)** across workspace document, bilateral motion, all five module layouts, Lab/imaging, receipt loading, shared right-panel headers and reception/calendar drawers. This verifies document center/closed-side space, 880/912 hysteresis, 576/320 compact selection, focused input ownership, hidden guards, last-panel close focus, fast/reduced-motion slides, list-only loading/no extra receipt reads, no layout-only checkout requests, nested receipt/payment confirmations and profile coexistence. An independent read-only source review identified focus-return, concealed focus-guard, locked-chart alignment and nested-portal priority issues; all were corrected before the final run.
+
+Actual in-app browser inspection also verified bilateral 280px drawers with editable uncovered document fields at 1440px, and 320px history/receipt/body selection without page horizontal overflow. Input values and receipt node identity survived concealment and resize. Captures and generated test evidence remain outside the repository/public prototype. No clinical or financial write was made outside local synthetic fixtures.
+
+Local full lint passed with five existing script warnings; TypeScript, optimized mock production build, secret scan, docs, UX copy and whitespace checks passed. Changed test lint passed. No Storybook server was running; installed component declarations/source supplied the API evidence. Historical module reports were not overwritten by screenshots.
+
+Existing boundary: at exactly 768px with the module queue and outer patient profile both open, the unchanged outer shell can leave a zero-width document area. This separate outer-slot behavior is excluded from the internal-panel slice. Nested receipt confirmation compact coexistence was verified at 1024px with nonzero work space; cancel restores the receipt action. Inner panels, compact focus and inputs at 768/320px without that outer-slot combination passed.
+
+Human Review records pending clinical acceptance. Conditional delivery authorization remains active. Exact Preview, Release Check, merge/source/alias and scoped Production smoke evidence belongs to the resulting PR. Rollback preflight: Ready Production `dpl_8hnyVCL8QrGfoQhbesDarhPjapzj`, source `08100acb7df5bce1f7c89766350f9537958c3c05`. Stop on candidate drift, failed required checks or unexpected Production source/smoke; no remote DB, clinical save, payment or provider action is included.

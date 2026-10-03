@@ -2479,9 +2479,9 @@ function BillingTitleCard({
         <EmrInstructionHistoryToggle
           ariaLabelPrefix="수납이력"
           controls={documentLayout?.historyControlsId ?? "billing-content-aside"}
-          expanded={contentAsideOpen}
+          expanded={documentLayout?.historyVisible ?? contentAsideOpen}
           tooltipLabel="수납이력"
-          onClick={() => setContentAsideOpen(!contentAsideOpen)}
+          onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
         />
       }
       badge={
@@ -2526,13 +2526,13 @@ function BillingTitleCard({
             className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-10)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
             disabled={!hasRightPanel}
             aria-label={
-              rightPanelOpen ? "수납 요약 패널 접기" : "수납 요약 패널 열기"
+              (documentLayout?.rightVisible ?? rightPanelOpen) ? "수납 요약 패널 접기" : "수납 요약 패널 열기"
             }
             aria-controls={documentLayout?.rightControlsId ?? "billing-summary-panel"}
-            aria-expanded={rightPanelOpen}
-            aria-pressed={rightPanelOpen}
-            data-state={rightPanelOpen ? "on" : "off"}
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
+            aria-expanded={documentLayout?.rightVisible ?? rightPanelOpen}
+            aria-pressed={documentLayout?.rightVisible ?? rightPanelOpen}
+            data-state={(documentLayout?.rightVisible ?? rightPanelOpen) ? "on" : "off"}
+            onClick={documentLayout?.toggleRight ?? (() => setRightPanelOpen(!rightPanelOpen))}
           >
             수납 요약
           </Button>
