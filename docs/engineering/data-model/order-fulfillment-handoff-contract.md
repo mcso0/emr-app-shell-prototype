@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-08-31
+last_updated: 2026-10-03
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -256,3 +256,36 @@ Use narrow verification first, then expand as implementation touches shared beha
 - [Order Fulfillment Handoff Product Contract](../../product/domain/order-fulfillment-handoff.md)
 - [DB Structure Spec KO](emr-saas-db-structure-spec.ko.md)
 - [Mock And Live Boundary Map](../architecture/mock-live-boundary-map.md)
+
+## Fulfillment Read Scope — Audit Item 4 (Local Candidate)
+
+The application candidate uses `clair_list_fulfillment_work_items_v2` with
+optional `p_date`, `p_patient_id`, and `p_work_item_id` alongside the existing
+workspace, queue, encounter, order, and status filters. The migration is
+`20261003073105_fulfillment_scoped_queue_read.sql`; hosted application is pending
+separate approval.
+
+A selected day uses the half-open Asia/Seoul interval on
+`coalesce(due_at, created_at)`. This moves the existing server date filter to the
+DB before joins/JSON aggregation; the server keeps its date check as defense in
+depth. Status does not alter the interval. Historical unfinished work remains
+readable by its operating day, date-free patient history, and exact work item
+lookup. This change does not introduce an overdue carryover policy.
+
+The RPC returns the complete matching set, existing display context/order, and
+unchanged full `sourceSnapshot`. There is no row limit or pagination that could
+silently truncate counts or hide work. Detail, execution, and billing consumers
+still need nested frozen/lineage/detail data, so snapshot projection is deferred.
+Date-free history remains potentially large but is scoped by patient at the DB;
+mutation permission lookup is scoped by work item ID. The home reader remains
+on v1; home redesign/read-model optimization is outside this item.
+
+The same DB membership, destination read permission, workspace-scoped joins,
+and authenticated-only execute boundary are retained. No role/RLS policy or
+clinical/financial write path changes. Apply the additive RPC/index before the
+application release; an absent v2 fails as a read error, with no broad-history
+fallback. Keep v1 for application rollback. After reverting callers, v2 and its
+new index can be removed without changing business data.
+
+See [CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md)
+for local equivalence, performance, regressions, and release limits.
