@@ -104,7 +104,8 @@ test("keyboard and reduced motion open/close immediately and leave no focus in h
   await expect(panel).toHaveCSS("transition-duration", "0s");
   expect(await page.getByTestId("workspace-document").evaluate((element) => element.getAnimations().length)).toBe(0);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(panel).toHaveAttribute("data-presentation", "modal");
+  await expect(panel).toHaveAttribute("data-presentation", "drawer");
+  await panel.locator("[data-workspace-history-collapse]").focus();
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
   await expect(trigger).toBeFocused();
@@ -234,8 +235,9 @@ test("receipt keyboard, reduced motion and restored routes settle immediately wi
   await expect(panel).toHaveCSS("transition-duration", "0s");
   expect(await page.getByTestId("workspace-document").evaluate((element) => element.getAnimations().length)).toBe(0);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(panel).toHaveAttribute("data-presentation", "modal");
+  await expect(panel).toHaveAttribute("data-presentation", "drawer");
   expect((await panel.boundingBox())!.y).toBe((await page.getByTestId("workspace-document-toolbar").boundingBox())!.y);
+  await panel.locator("[data-workspace-receipt-collapse]").focus();
   await page.keyboard.press("Escape");
   await expect(panel).toHaveCount(0);
   await expect(trigger).toBeFocused();

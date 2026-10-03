@@ -2,7 +2,6 @@ import { expect, test, type Page } from "@playwright/test";
 import { mockSoapNotes } from "../src/mocks/emr-domain";
 
 const chartUrl = "/w/clair-demo/treatment?scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&modulePanel=open&aside=closed&right=closed";
-const evidence = "docs/completed/app-shell/2026-09-30-chart-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
 async function openChart(page: Page, narrow = true) {
@@ -13,6 +12,7 @@ async function openChart(page: Page, narrow = true) {
   if (narrow) {
     await page.getByRole("button", { name: "좁게 보기" }).click();
     await expect(page.getByTestId("workspace-document")).toHaveCSS("max-width", "1040px");
+    await expect.poll(async () => (await page.getByTestId("workspace-document").boundingBox())!.width).toBe(1040);
   }
 }
 
@@ -69,14 +69,14 @@ test("chart toolbar follows the document and width changes preserve editor, sele
   await expect(editor).toContainText("width-preserved");
   await expect(search).toHaveValue("위장염");
   await expect(page.getByRole("checkbox", { name: "CBC 검사 선택" })).toBeChecked();
-  await page.screenshot({ path: `${evidence}/1920-wide.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-wide.png") });
   await page.getByRole("button", { name: "좁게 보기" }).click();
   await expect(doc).toHaveCSS("max-width", "1040px");
   await expect(editor).toContainText("width-preserved");
-  await page.screenshot({ path: `${evidence}/1920-narrow.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-narrow.png") });
 });
 
-test("chart history switches inline to modal with focus return and preserved input", async ({ page }) => {
+test("chart history switches inline to drawer with body interaction and safe focus return", async ({ page }) => {
   await openChart(page);
   const search = page.getByRole("textbox", { name: "진단명 검색" });
   await search.fill("위장염");
@@ -91,13 +91,13 @@ test("chart history switches inline to modal with focus return and preserved inp
   const toolbar = (await page.getByTestId("workspace-document-toolbar").boundingBox())!;
   expect((await panel.boundingBox())!.y).toBe(toolbar.y);
   await page.setViewportSize({ width: 1440, height: 900 });
-  const dialog = page.getByRole("dialog", { name: "차트 이력", exact: true });
-  await expect(dialog).toHaveAttribute("aria-modal", "true");
-  for (let step = 0; step < 8; step += 1) {
-    await page.keyboard.press("Tab");
-    await expect.poll(() => dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-  }
-  await page.screenshot({ path: `${evidence}/1440-history-modal.png` });
+  const dialog = page.getByRole("complementary", { name: "차트 이력", exact: true });
+  await expect(dialog).toHaveAttribute("data-presentation", "drawer");
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeVisible();
+  await dialog.locator("[data-workspace-history-collapse]").focus();
+  await page.screenshot({ path: test.info().outputPath("1440-history-modal.png") });
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
@@ -209,5 +209,5 @@ test("chart width matrix, reduced motion and independent profile keep content co
       Math.abs(order.x + order.width - document.x - document.width),
     );
   }).toBeLessThanOrEqual(1);
-  await page.screenshot({ path: `${evidence}/2560-profile-history.png` });
+  await page.screenshot({ path: test.info().outputPath("2560-profile-history.png") });
 });

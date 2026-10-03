@@ -2120,9 +2120,9 @@ function DispensingContentBody({
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix={historyLabel}
                 controls={documentLayout?.historyControlsId ?? "dispensing-content-aside"}
-                expanded={contentAsideOpen}
+                expanded={documentLayout?.historyVisible ?? contentAsideOpen}
                 tooltipLabel={historyLabel}
-                onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
               />
             }
             badge={

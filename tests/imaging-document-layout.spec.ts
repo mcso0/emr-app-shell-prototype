@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const imagingUrl = "/w/clair-demo/imaging?imagingStudyId=imaging-coco-thorax&modulePanel=open&aside=closed&right=closed";
-const evidence = "docs/completed/app-shell/2026-09-30-imaging-document-width-assets";
 test.use({ viewport: { width: 1920, height: 1080 } });
 
 async function openReport(page: Page, narrow = true) {
@@ -65,11 +64,11 @@ test("report width and document toolbar preserve reading inputs and order table"
   await expect(impression).toHaveValue("합성 종합소견 · 입력 유지 확인");
   expect(await table.getByRole("columnheader").allTextContents()).toEqual(columns);
   await page.mouse.move(0, 0);
-  await page.screenshot({ path: `${evidence}/1920-wide.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-wide.png") });
   await page.getByRole("button", { name: "좁게 보기" }).click();
   await expect.poll(async () => (await document.boundingBox())!.width).toBe(1120);
   await expect(findings).toHaveValue("합성 판독 입력 · 폭 전환 유지 확인");
-  await page.screenshot({ path: `${evidence}/1920-narrow.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-narrow.png") });
 });
 
 test("history starts beside the title while summary stays below and inputs remain mounted", async ({ page }) => {
@@ -94,16 +93,16 @@ test("history starts beside the title while summary stays below and inputs remai
   await expect(right.getByText("coco-thorax-lateral.png")).toBeVisible();
   await page.mouse.move(0, 0);
   await expect(page.locator('[data-slot="tooltip-content"]:visible')).toHaveCount(0);
-  await page.screenshot({ path: `${evidence}/1920-bilateral.png` });
+  await page.screenshot({ path: test.info().outputPath("1920-bilateral.png") });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(right).toHaveAttribute("data-presentation", "modal");
-  await expect(left).toBeHidden();
+  await expect(right).toHaveAttribute("data-presentation", "drawer");
+  await expect(left).toBeVisible();
   await expect(comment).toHaveValue("합성 보호자 코멘트 · 표시 전환 확인");
   await page.keyboard.press("Escape");
   await expect(findings).toHaveValue("합성 중앙 입력 · 양쪽 패널 확인");
 });
 
-test("summary presentation preserves comment and traps then returns focus", async ({ page }) => {
+test("summary presentation preserves comment, permits body input and returns focus", async ({ page }) => {
   await openReport(page);
   const trigger = summaryTrigger(page);
   await trigger.click();
@@ -112,22 +111,23 @@ test("summary presentation preserves comment and traps then returns focus", asyn
   await comment.fill("합성 코멘트 유지");
   const input = await comment.elementHandle();
   await page.setViewportSize({ width: 1440, height: 900 });
-  const dialog = page.getByRole("dialog", { name: "종합소견", exact: true });
-  await expect(dialog).toHaveAttribute("aria-modal", "true");
+  const dialog = page.getByRole("complementary", { name: "종합소견", exact: true });
+  await expect(dialog).toHaveAttribute("data-presentation", "drawer");
   expect(await input!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(comment).toHaveValue("합성 코멘트 유지");
-  for (let step = 0; step < 10; step += 1) {
-    await page.keyboard.press("Tab");
-    await expect.poll(() => dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-  }
-  await page.screenshot({ path: `${evidence}/1440-summary-modal.png` });
+  const findings = page.getByRole("textbox", { name: "영상 판독 내용", exact: true });
+  await findings.fill("드로어와 동시 입력");
+  await findings.press("Escape");
+  await expect(dialog).toBeVisible();
+  await comment.focus();
+  await page.screenshot({ path: test.info().outputPath("1440-summary-modal.png") });
   await page.keyboard.press("Escape");
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
   await expect(page).toHaveURL(/right=closed/);
 });
 
-test("history state and central reading survive inline to modal and latest panel switching", async ({ page }) => {
+test("history state and central reading survive drawer presentation and independent closing", async ({ page }) => {
   await openReport(page);
   const findings = page.getByRole("textbox", { name: "영상 판독 내용", exact: true });
   await findings.fill("합성 판독 입력 유지");
@@ -137,15 +137,18 @@ test("history state and central reading survive inline to modal and latest panel
   const group = left.locator('[data-slot="content-history-group-title"]').first();
   await group.click();
   const expanded = await group.getAttribute("aria-expanded");
+  await findings.focus();
   await page.keyboard.press("Escape");
   await expect(left).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
-  await expect(page.getByRole("dialog", { name: "영상검사 이력", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "영상검사 이력", exact: true })).toBeVisible();
   await expect(group).toHaveAttribute("aria-expanded", expanded!);
+  await left.locator("[data-workspace-history-collapse]").focus();
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
   await summaryTrigger(page).click();
-  await expect(page.getByRole("dialog", { name: "종합소견", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "종합소견", exact: true })).toBeVisible();
+  await page.locator('[data-workspace-panel="right"]').getByRole("textbox", { name: "영상 종합 코멘트" }).focus();
   await page.keyboard.press("Escape");
   await expect(findings).toHaveValue("합성 판독 입력 유지");
 });
@@ -217,7 +220,7 @@ test("imaging actual-space matrix, reduced motion and profile coexistence", asyn
     return Boolean(box && profileBox && box.x + box.width <= profileBox.x + 1);
   }).toBe(true);
   await page.mouse.move(0, 0);
-  await page.screenshot({ path: `${evidence}/2560-profile-bilateral.png` });
+  await page.screenshot({ path: test.info().outputPath("2560-profile-bilateral.png") });
 });
 
 test("unavailable imaging width trigger returns focus to summary and restores module preference", async ({ page }) => {

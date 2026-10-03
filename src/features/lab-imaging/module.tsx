@@ -3726,9 +3726,9 @@ export function LabContent({
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix="임상병리검사 이력"
                 controls={documentLayout?.historyControlsId ?? "lab-content-aside"}
-                expanded={contentAsideOpen}
+                expanded={documentLayout?.historyVisible ?? contentAsideOpen}
                 tooltipLabel="임상병리검사 이력"
-                onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
               />
             }
             badge={
@@ -3751,11 +3751,11 @@ export function LabContent({
                   size="sm"
                   className="relative bg-card data-[state=on]:border-[var(--emr-border-default)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)]"
                   aria-controls={documentLayout?.rightControlsId ?? "lab-receipt-panel"}
-                  aria-expanded={rightPanelOpen}
-                  aria-pressed={rightPanelOpen}
-                  data-state={rightPanelOpen ? "on" : "off"}
+                  aria-expanded={documentLayout?.rightVisible ?? rightPanelOpen}
+                  aria-pressed={documentLayout?.rightVisible ?? rightPanelOpen}
+                  data-state={(documentLayout?.rightVisible ?? rightPanelOpen) ? "on" : "off"}
                   disabled={!hasRightPanel}
-                  onClick={() => setRightPanelOpen(!rightPanelOpen)}
+                  onClick={documentLayout?.toggleRight ?? (() => setRightPanelOpen(!rightPanelOpen))}
                 >
                   <CdsUtilitiesHistoryIcon data-icon="inline-start" />
                   장비 검사 수신함
@@ -4567,9 +4567,9 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
               <EmrInstructionHistoryToggle
                 ariaLabelPrefix="영상검사 이력"
                 controls={documentLayout?.historyControlsId ?? "imaging-content-aside"}
-                expanded={contentAsideOpen}
+                expanded={documentLayout?.historyVisible ?? contentAsideOpen}
                 tooltipLabel="영상검사 이력"
-                onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
               />
             }
             badge={
@@ -4615,11 +4615,11 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                 )}
                 <WorkspaceDocumentWidthToggle showWhenUnavailable />
                 <Button variant="outline" size="sm" className="bg-card" disabled={!hasRightPanel}
-                  aria-label={rightPanelOpen ? "종합소견 패널 접기" : "종합소견 패널 열기"}
+                  aria-label={(documentLayout?.rightVisible ?? rightPanelOpen) ? "종합소견 패널 접기" : "종합소견 패널 열기"}
                   aria-controls={documentLayout?.rightControlsId ?? "imaging-summary-panel"}
-                  aria-expanded={rightPanelOpen} aria-pressed={rightPanelOpen}
-                  data-state={rightPanelOpen ? "on" : "off"}
-                  onClick={() => setRightPanelOpen(!rightPanelOpen)}>
+                  aria-expanded={documentLayout?.rightVisible ?? rightPanelOpen} aria-pressed={documentLayout?.rightVisible ?? rightPanelOpen}
+                  data-state={(documentLayout?.rightVisible ?? rightPanelOpen) ? "on" : "off"}
+                  onClick={documentLayout?.toggleRight ?? (() => setRightPanelOpen(!rightPanelOpen))}>
                   종합소견 <Badge variant="secondary" className="ml-1">{detail.attachments.length}</Badge>
                 </Button>
                 <EmrInstructionOutputMenu />

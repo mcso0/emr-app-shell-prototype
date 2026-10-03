@@ -25,6 +25,20 @@
   overflow: visible;
 }
 
+/* Limit history only inside the opted-in document surface, including sub-280px drawers. */
+.panel [data-slot="content-aside-panel"] {
+  min-width: 0;
+}
+
+.panelPortal {
+  z-index: 10;
+}
+
+/* Nested financial/receipt confirmations must remain above outer profile drawers. */
+.panelPortal:has([data-nested-dialog-open]) {
+  z-index: 50;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .slide {
     transition: none;

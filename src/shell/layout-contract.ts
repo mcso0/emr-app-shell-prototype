@@ -25,8 +25,10 @@ export const SHELL_LAYOUT = {
     defaultWidth: 316,
   },
   documentLayout: {
-    rightPanelWidth: 336,
+    rightPanelWidth: 280,
     minimumCenterWidth: 880,
+    drawerReturnBuffer: 32,
+    compactPanelWidth: 576,
     documentPadding: 16,
     transitionMs: 180,
   },

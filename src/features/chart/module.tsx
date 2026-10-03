@@ -17052,9 +17052,9 @@ export function ChartContent({
                   ariaLabelPrefix="차트 이력"
                   controls={documentLayout?.historyControlsId ?? "chart-content-aside"}
                   disabled={detailHydrationPending}
-                  expanded={contentAsideOpen}
+                  expanded={documentLayout?.historyVisible ?? contentAsideOpen}
                   tooltipLabel="과거 이력 보기"
-                  onClick={() => setContentAsideOpen(!contentAsideOpen)}
+                  onClick={documentLayout?.toggleHistory ?? (() => setContentAsideOpen(!contentAsideOpen))}
                 />
               </span>
             }

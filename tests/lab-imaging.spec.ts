@@ -92,6 +92,17 @@ test("live receipt reopens with its chrome and known empty list without another 
     await expect(receipt.getByText(emptyMessage, { exact: true })).toBeVisible();
     await expect(receipt.locator('[data-testid="emr-queue-loading-state"]')).toHaveCount(0);
     expect(queueReads).toBe(initialReads);
+    const receiptNode = await receipt.elementHandle();
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.getByRole("button", { name: "본문 보기", exact: true }).click();
+    await expect(receipt).toBeHidden();
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await trigger.click();
+    await expect(receipt.getByText(emptyMessage, { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/right=open/);
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    expect(await receiptNode!.evaluate((element) => element.isConnected)).toBe(true);
+    expect(queueReads).toBe(initialReads);
     await receipt.getByRole("button", { name: "장비 검사 수신함 접기", exact: true }).click();
     await expect(receipt).toBeHidden();
   }
@@ -278,9 +289,10 @@ test("Cheongdam lab workspace renders live fulfillment rows without legacy resul
   );
 
   await page.goto(`/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/lab?modulePanel=open&aside=history`);
-  const historyDialog = page.getByRole("dialog", { name: "임상병리검사 이력", exact: true });
+  const historyDialog = page.getByRole("complementary", { name: "임상병리검사 이력", exact: true });
   await expect(historyDialog).toBeVisible();
   await expect(page.locator("#lab-content-aside")).toContainText("CBC 검사");
+  await historyDialog.locator("[data-workspace-history-collapse]").focus();
   await page.keyboard.press("Escape");
   await expect(historyDialog).toBeHidden();
 
@@ -709,10 +721,12 @@ test("clinical history panels keep the chart aside frame and card spacing", asyn
       return {
         headerHeight: header?.getBoundingClientRect().height,
         paddingLeft: style.paddingLeft,
-        width: panel.getBoundingClientRect().width,
+        width: panel.closest('[data-workspace-panel="left"]')?.getBoundingClientRect().width,
       };
     });
+    // Surface width includes the inline/drawer border; content fits inside it.
     expect(metrics).toEqual({ headerHeight: 48, paddingLeft: "16px", width: 280 });
+    expect((await page.locator('[data-workspace-panel="left"]').boundingBox())!.width).toBe(280);
     await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
   }
 
@@ -775,8 +789,9 @@ test("Cheongdam imaging workspace renders live fulfillment rows without legacy s
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("김민준");
   await expect(sidePanel.getByTestId(`imaging-queue-item-live-imaging-${liveWorkItem.id}`)).toContainText("10:25");
   await expect(sidePanel.getByTestId("imaging-queue-item-imaging-coco-thorax")).toHaveCount(0);
-  const summaryDialog = page.getByRole("dialog", { name: "영상검사 이력", exact: true });
+  const summaryDialog = page.getByRole("complementary", { name: "영상검사 이력", exact: true });
   await expect(summaryDialog).toBeVisible();
+  await summaryDialog.locator("[data-workspace-history-collapse]").focus();
   await page.keyboard.press("Escape");
   await expect(summaryDialog).toBeHidden();
   await expect(page.getByRole("heading", { name: "영상검사 Order 상세" })).toBeVisible();
