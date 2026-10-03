@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
+import { evaluateLabProfileValue } from "../src/features/lab-imaging/result-profile-contract";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 
@@ -413,7 +414,11 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
       posted = route.request().postDataJSON();
       const row = (posted!.rows as Array<Record<string, unknown>>)[0];
       result.rows[0].value = row.value as string; result.rows[0].qualifier = row.qualifier as string;
-      result.rows[0].resultState = "qualified_result"; result.entryWriteRevision++;
+      const evaluation = evaluateLabProfileValue(rule, { value: row.value as string | null,
+        qualifier: row.qualifier as "exact" | "less_than" | "greater_than", resultState: "value" });
+      if (!evaluation.valid) throw new Error(evaluation.error);
+      result.rows[0].resultState = evaluation.state; result.rows[0].judgment = evaluation.judgment;
+      result.entryWriteRevision++;
       await route.fulfill({ json: { ok: true, entryWriteRevision: result.entryWriteRevision } });
     } else {
       expect(new URL(route.request().url()).searchParams.get("workItemId")).toBe(wi.id);
@@ -445,9 +450,8 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
   await page.getByRole("button", { name: "WBC 추가 결과 정보" }).click();
   await page.getByLabel("WBC 부등호").selectOption("less_than");
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
-  await page.getByTestId("lab-result-save-button").click();
-  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장");
-  expect(posted).toMatchObject({ resultId: result.resultId, expectedEntryWriteRevision: 0,
+  await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
+  expect(posted).toMatchObject({ resultId: result.resultId, expectedEntryWriteRevision: result.entryWriteRevision - 1,
     rows: [{ rowId: "frozen-wbc-row", qualifier: "less_than", deviceFlag: null, resultState: "value" }] });
   await page.reload();
   await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(String(rule.referenceInterval.low));
@@ -467,7 +471,7 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
   await retest.getByLabel("재검 프로필").selectOption(`${profile.id}:${deviceId}`);
   await page.getByRole("button", { name: "재검 오더 초안 만들기" }).click();
   await expect(retest.getByRole("link", { name: "차트에서 확인·확정" })).toBeVisible();
-  expect(retestPosted).toMatchObject({ resultId: result.resultId, rowId: "frozen-wbc-row", expectedEntryWriteRevision: 1,
+  expect(retestPosted).toMatchObject({ resultId: result.resultId, rowId: "frozen-wbc-row", expectedEntryWriteRevision: result.entryWriteRevision,
     specimenDecision: "new_specimen", specimenReference: "synthetic-new-edta-002", billingPolicy: "no_charge", profileVersionId: profile.id, deviceId });
   expect(result.rows[0].value).toBe(String(rule.referenceInterval.low));
 });

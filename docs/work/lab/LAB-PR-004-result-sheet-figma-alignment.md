@@ -11,7 +11,7 @@ target_pr: "Scoped V5 alignment candidate"
 source_docs:
   - "docs/design/screens/lab/specs/result-sheet.md"
 dependencies: ["LAB-PR-003 baseline", "Narrative and instruction mapping", "Measured upload transport proof"]
-updated: "2026-09-29"
+updated: "2026-10-03"
 ---
 
 # LAB-PR-004 — Result Sheet Figma Alignment
@@ -194,3 +194,69 @@ Documentation validation: `npm run docs:check` passed (1072 Markdown files); foc
 - Delivery evidence (exact candidate, PR, remote check, merge/deployment, smoke and rollback) belongs in the PR and final handoff. Human acceptance remains separate from passing automated and parent checks.
 
 - Final visual correction: the shared table intentionally renders semantic column labels. A feature-local screen-reader-only treatment hides the disclosure header visually while retaining its accessible label; the parent reference-width test also checks the 12px toolbar gap.
+
+### Local Autosave Follow-up — 2026-10-03
+
+- Authorization: 승욱 approved local implementation after code investigation.
+  Remove the annotated `더보기 / 저장` footer and use automatic saving for
+  result values, item findings and overall finding. This follow-up has no new
+  commit/push/merge/deployment or remote-data authorization.
+- Scope: feature-local queue shared by result rows and overall finding, existing
+  POST/PUT APIs, visible status/retry, in-flight edits, readback and failed-draft
+  restoration during SPA navigation. No schema, RLS, dependencies or attachment
+  transport changes. Primary-checkout WIP is preserved in a managed worktree
+  based on `origin/main` `f3e2566ed09c854cb2da0779e425bf183f471df1`.
+- Done criteria: no manual save/reset footer; result and finding readback after
+  autosave; no writes on mount or in read-only controls; serialization, retry,
+  conflicts and navigation preserve edits. Keep role/server/audit contracts.
+- Verification: focused autosave coordinator/browser checks, existing CBC
+  persisted-result and API retry regressions, TypeScript, scoped lint, docs and
+  secret checks. All browser mutations use intercepted synthetic local APIs.
+- Result: local implementation complete and ready for human acceptance. The
+  annotated footer and overall save button are removed. Status/retry appears only
+  after edits; no idle footer space remains. Stable table cell renderers preserve
+  keyboard focus and open result metadata popovers during server acknowledgements.
+- Verification: 21 distinct focused tests passed across the combined run and the
+  final CBC/toolbar rerun. Coverage includes 6 queue contracts, 10 autosave browser
+  cases, toolbar absence/geometry, CBC value/qualifier reload and retest revision,
+  and 3 existing API boundary/loading/retry/permission regressions. TypeScript,
+  scoped ESLint, docs links, secret scan, UX copy and diff checks passed.
+- Wider scenario limit: `visible day-in-clinic demo links reception, chart,
+  fulfillment, lab, billing, and audit surfaces` stops at the reception
+  `patient-card-patient-ui-api-kong` precondition, before reaching lab. No broader
+  suite or production smoke pass is claimed. Production build was not required
+  or run for this local follow-up.
+- Browser tests use intercepted synthetic local APIs. No production autosave,
+  authenticated remote writes, merge, deployment or user acceptance claimed.
+  Visual evidence is retained locally at `output/lab-autosave/result-sheet.png`.
+
+
+### Autosave Release Authorization And Candidate Verification — 2026-10-03
+
+- 승욱 explicitly authorized commit, push, PR, `origin/main` merge and Production
+  delivery after the removal and autosave verification pass. This authorizes the
+  same autosave follow-up scope; no remote data mutation, migration, RLS or env
+  change is included.
+- The managed worktree was fast-forwarded to `origin/main`
+  `e0e81f8f5d8888af3e7d44b68ec145553385d34f` before release verification. Only
+  the feature's source, focused tests and owning docs are staged; primary WIP
+  and local screenshot artifacts remain excluded.
+- Fresh focused run: all 21 tests passed together. The screenshot confirms the
+  annotated footer and overall save button are absent. Coverage includes result,
+  item finding and overall finding autosave, readback, serialization, invalid
+  input, ambiguous retry, conflict/permission blocking and navigation recovery.
+- Local secret, docs, UX copy, full lint and TypeScript gates passed. Full lint
+  has five existing warnings in unrelated WP10 generator scripts. Release build,
+  exact-candidate Release Check and Ready Preview are required before merge.
+- Before-release rollback target: Ready Production deployment
+  `dpl_9vAcSXcKZSZMVhFyeHoZzNTzCp4p`, alias target
+  `emr-app-shell-prototype-4ogzswbbq-mcso0s-projects.vercel.app`.
+- Post-release smoke: `/login` HTTP probe and authenticated read-only inspection
+  of the originally annotated lab route, footer absence and automatic-save
+  placeholders. Autosave write verification uses intercepted synthetic local
+  APIs; no Production result values or findings are changed by the smoke.
+- Stop before merge if required gates fail, candidate scope changes, secrets
+  appear or Preview/source is unexpected. Stop and report after merge if
+  Production is not Ready, its source is unexpected or scoped smoke fails.
+- Exact candidate, PR, Release Check, merge, Production and final rollback
+  evidence are recorded in the PR and delivery handoff.
