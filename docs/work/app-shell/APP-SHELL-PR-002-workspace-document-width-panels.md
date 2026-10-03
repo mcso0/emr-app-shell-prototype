@@ -273,3 +273,13 @@ Production smoke: `/login`, the synthetic Cheongdam imaging route, and read-only
 width/control verification. Rollback: the immediately preceding Ready Production
 deployment or a reviewed revert of this scoped merge. Stop on candidate drift,
 failed required checks, unexpected deployment source or critical smoke failure.
+
+## Approved Lab receipt hierarchy and slide — 2026-10-03
+
+승욱 requested that 장비 검사 수신함 share the history panel hierarchy, starting beneath patient context beside the title, while remaining on the right and entering from right to left. The follow-up authorizes source investigation, a concrete plan, implementation, commit/push/PR and origin/main merge. This scope adds only Lab receipt placement/motion; imaging and billing right references retain their existing behavior.
+
+Cause: the common right-panel position added measured toolbar height and immediately hid closing panels. Plan: use the full work-surface position for Lab receipt, mirror the existing clipped CSS slide at 180/140ms, and extend measured document translation to its pointer toggles. Preserve keyboard/reduced-motion/restoration/resize instant handling, focus return, nested confirmation, input/scroll retention, and existing receipt unmount/reset after exit. No new dependency, data write, device integration, or API/permission change.
+
+Verification must cover aligned bilateral panel tops/heights, right-edge anchoring, visible exit completion, rapid reversal, narrow document continuity, keyboard/reduced motion, route restoration, modal focus/nested confirmation and regression checks for unchanged consumers. Delivery reuses the release gates: local checks, exact-candidate Release Check, Ready Preview, exact-head-protected merge, origin/main proof and scoped Production smoke. Smoke uses reversible receipt/history/width controls on an authenticated synthetic Lab document and /login. Rollback is the immediately preceding Ready Production deployment or a reviewed revert. Stop on candidate/scope drift, failed required checks or unexpected deployment/smoke results.
+
+Local result: 51 focused browser tests passed across Lab/history motion and all five document-layout consumers. Full lint (five pre-existing script warnings, zero errors), TypeScript, mock production build, secret scan, docs links, UX copy and diff checks passed. In-app browser synthetic Lab proof measured history/receipt/title top at 109px and bilateral panel height at 960px in a 1920×1080 viewport. Existing generated report captures were preserved outside the repository and restored before staging. Release SHA/deployment/smoke evidence is recorded in the PR and task release packet.

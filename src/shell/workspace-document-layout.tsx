@@ -76,7 +76,7 @@ export function WorkspaceDocumentWidthToggle({
 
 type PanelPosition = { left: number; top: number; right: number; height: number };
 function WorkspacePanel({
-  children, open, modal, side, controlsId, label, width, position, instant = true, onClose,
+  children, open, modal, side, controlsId, label, width, position, sliding = side === "left", instant = true, onClose,
 }: {
   children: ReactNode;
   open: boolean;
@@ -86,6 +86,7 @@ function WorkspacePanel({
   label: string;
   width: number;
   position: PanelPosition;
+  sliding?: boolean;
   instant?: boolean;
   onClose: (pointer: boolean) => void;
 }) {
@@ -113,9 +114,9 @@ function WorkspacePanel({
       {/* A stable portal preserves panel state and nested dialogs across presentation changes. */}
       <DialogPrimitive.Portal
         keepMounted={side === "left" && (open || hasOpened)}
-        className={side === "left" ? "fixed overflow-hidden" : undefined}
-        style={side === "left" ? {
-          left: Math.max(8, position.left), top: Math.max(8, position.top),
+        className={sliding ? "fixed overflow-hidden" : undefined}
+        style={sliding ? {
+          left: Math.max(8, side === "left" ? position.left : position.right - width), top: Math.max(8, position.top),
           width, height: position.height, maxWidth: "calc(100vw - 16px)",
           maxHeight: `calc(100dvh - ${Math.max(8, position.top) + 8}px)`,
           zIndex: modal ? 50 : 10, pointerEvents: open ? undefined : "none",
@@ -137,12 +138,13 @@ function WorkspacePanel({
         data-instant={instant || undefined}
         className={cn(
           "flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--emr-surface-content-panel)] outline-none",
-          side === "left" ? cn("absolute inset-0 border-r", styles.history) : "fixed border-l",
+          sliding ? cn("absolute inset-0", styles.slide) : "fixed",
+          side === "left" ? "border-r" : "border-l",
           "border-[var(--emr-border-strong)]",
           modal ? "z-50 rounded-[var(--emr-radius-panel)] border shadow-lg" : "z-10",
-          !open && side === "right" && "hidden",
+          !open && (!sliding || instant) && "hidden",
         )}
-        style={side === "right" ? {
+        style={!sliding ? {
           left: Math.max(8, position.right - width),
           top: Math.max(8, position.top),
           width,
@@ -172,8 +174,9 @@ export function WorkspaceDocumentLayout({
   const centerRef = useRef<HTMLDivElement>(null);
   const documentRef = useRef<HTMLDivElement>(null);
   const documentAnimation = useRef<Animation | null>(null);
-  const historyIntent = useRef<{ left: number; pointer: boolean } | null>(null);
+  const panelIntent = useRef<{ left: number; pointer: boolean; side: "left" | "right" } | null>(null);
   const [historyMotion, setHistoryMotion] = useState(false);
+  const [receiptMotion, setReceiptMotion] = useState(false);
   const [toolbarHost, setToolbarHost] = useState<HTMLDivElement | null>(null);
   const [areaWidth, setAreaWidth] = useState(0);
   const [toolbarHeight, setToolbarHeight] = useState(0);
@@ -185,6 +188,7 @@ export function WorkspaceDocumentLayout({
   const setWidthMode = useLayoutStore((state) => state.setDocumentWidthMode);
   const leftOpen = useLayoutStore((state) => state.contentAsideOpen) && Boolean(slotProps.hasContentAside);
   const rightOpen = useLayoutStore((state) => state.rightPanelOpen) && Boolean(slotProps.hasRightPanel);
+  const receiptSliding = slotProps.moduleId === "lab";
   const latest = useLayoutStore((state) => state.lastContentPanelOpened);
   const closeLeft = useLayoutStore((state) => state.setContentAsideOpen);
   const closeRight = useLayoutStore((state) => state.setRightPanelOpen);
@@ -210,7 +214,8 @@ export function WorkspaceDocumentLayout({
       if (area.clientWidth !== previousAreaWidth) {
         setAnimateWidth(false);
         setHistoryMotion(false);
-        historyIntent.current = null;
+        setReceiptMotion(false);
+        panelIntent.current = null;
         documentAnimation.current?.cancel();
         center.removeAttribute("data-history-moving");
         setAreaWidth(area.clientWidth);
@@ -245,24 +250,30 @@ export function WorkspaceDocumentLayout({
     : config.narrowWidth;
 
   const previousLeftOpen = useRef(leftOpen);
+  const previousRightOpen = useRef(rightOpen);
   const previousInlineRight = useRef(inlineRight);
   useLayoutEffect(() => {
-    const changed = previousLeftOpen.current !== leftOpen;
-    if (changed || previousInlineRight.current !== inlineRight) setAnimateWidth(false);
+    const leftChanged = previousLeftOpen.current !== leftOpen;
+    const rightChanged = previousRightOpen.current !== rightOpen;
+    if (leftChanged || previousInlineRight.current !== inlineRight) setAnimateWidth(false);
     previousLeftOpen.current = leftOpen;
+    previousRightOpen.current = rightOpen;
     previousInlineRight.current = inlineRight;
-    const intent = historyIntent.current;
-    historyIntent.current = null;
-    if (changed && !intent) setHistoryMotion(false);
+    const intent = panelIntent.current;
+    panelIntent.current = null;
+    if (leftChanged && intent?.side !== "left") setHistoryMotion(false);
+    if (rightChanged && intent?.side !== "right") setReceiptMotion(false);
     const element = documentRef.current;
     documentAnimation.current?.cancel();
     centerRef.current?.removeAttribute("data-history-moving");
+    const changed = intent?.side === "left" ? leftChanged : receiptSliding && rightChanged;
     if (!changed || !intent?.pointer || reduceMotion || !element) return;
     // Measure the final layout once, then move the title and body together without scaling.
     const delta = intent.left - element.getBoundingClientRect().left;
     if (Math.abs(delta) < 1) return;
     const tokens = getComputedStyle(element);
-    const timing = tokens.getPropertyValue(leftOpen ? "--clair-motion-duration-drawer-enter" : "--clair-motion-duration-drawer-exit").trim();
+    const opening = intent.side === "left" ? leftOpen : rightOpen;
+    const timing = tokens.getPropertyValue(opening ? "--clair-motion-duration-drawer-enter" : "--clair-motion-duration-drawer-exit").trim();
     const duration = parseFloat(timing) * (timing.endsWith("ms") ? 1 : 1000);
     centerRef.current?.setAttribute("data-history-moving", "true");
     const animation = element.animate([{ transform: `translateX(${delta}px)` }, { transform: "translateX(0)" }], {
@@ -272,25 +283,30 @@ export function WorkspaceDocumentLayout({
     void animation.finished.then(() => {
       if (documentAnimation.current === animation) centerRef.current?.removeAttribute("data-history-moving");
     }).catch(() => {});
-  }, [areaWidth, inlineLeft, inlineRight, leftOpen, reduceMotion, targetWidth]);
+  }, [areaWidth, inlineLeft, inlineRight, leftOpen, receiptSliding, reduceMotion, rightOpen, targetWidth]);
 
   useEffect(() => () => { documentAnimation.current?.cancel(); }, []);
 
-  const prepareHistoryMotion = (pointer: boolean) => {
-    historyIntent.current = { left: documentRef.current?.getBoundingClientRect().left ?? 0, pointer };
-    setHistoryMotion(pointer && !reduceMotion);
+  const preparePanelMotion = (side: "left" | "right", pointer: boolean) => {
+    panelIntent.current = { left: documentRef.current?.getBoundingClientRect().left ?? 0, pointer, side };
+    if (side === "left") setHistoryMotion(pointer && !reduceMotion);
+    else setReceiptMotion(pointer && !reduceMotion);
     setAnimateWidth(false);
-    if (leftOpen && document.querySelector(`[id="${historyControlsId}"]`)?.contains(document.activeElement)) {
-      document.querySelector<HTMLButtonElement>(`button[aria-controls="${historyControlsId}"]`)?.focus({ preventScroll: true });
+    const controlsId = side === "left" ? historyControlsId : rightControlsId;
+    const open = side === "left" ? leftOpen : rightOpen;
+    if (open && document.getElementById(controlsId)?.contains(document.activeElement)) {
+      document.querySelector<HTMLButtonElement>(`button[aria-controls="${controlsId}"]`)?.focus({ preventScroll: true });
     }
   };
-  const captureHistoryClick = (event: MouseEvent<HTMLDivElement>) => {
+  const capturePanelClick = (event: MouseEvent<HTMLDivElement>) => {
     const button = event.target instanceof Element ? event.target.closest("button") : null;
     if (button?.getAttribute("aria-controls") === historyControlsId || button?.hasAttribute("data-workspace-history-collapse")) {
-      prepareHistoryMotion(event.detail > 0);
+      preparePanelMotion("left", event.detail > 0);
+    } else if (receiptSliding && (button?.getAttribute("aria-controls") === rightControlsId || button?.hasAttribute("data-workspace-receipt-collapse"))) {
+      preparePanelMotion("right", event.detail > 0);
     }
   };
-  const rightPosition = { ...position, top: position.top + toolbarHeight, height: Math.max(0, position.height - toolbarHeight) };
+  const rightPosition = receiptSliding ? position : { ...position, top: position.top + toolbarHeight, height: Math.max(0, position.height - toolbarHeight) };
   return (
     <DocumentLayout.Provider value={{
       toolbarHost, canToggle, narrow, historyControlsId, rightControlsId,
@@ -299,8 +315,8 @@ export function WorkspaceDocumentLayout({
         setWidthMode(preferenceKey, narrow ? "wide" : "narrow");
       },
     }}>
-      <div ref={areaRef} onClickCapture={captureHistoryClick} data-testid="workspace-document-area" className="relative grid min-h-0 flex-1 overflow-hidden" style={{ gridTemplateColumns: `${inlineLeft ? leftWidth : 0}px minmax(0, 1fr) ${inlineRight ? rightWidth : 0}px` }}>
-        <WorkspacePanel key={historyControlsId} open={leftOpen && (!overlay || modalSide === "left")} modal={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={leftWidth} position={position} instant={!historyMotion || Boolean(reduceMotion)} onClose={(pointer) => { prepareHistoryMotion(pointer); closeLeft(false); }}>
+      <div ref={areaRef} onClickCapture={capturePanelClick} data-testid="workspace-document-area" className="relative grid min-h-0 flex-1 overflow-hidden" style={{ gridTemplateColumns: `${inlineLeft ? leftWidth : 0}px minmax(0, 1fr) ${inlineRight ? rightWidth : 0}px` }}>
+        <WorkspacePanel key={historyControlsId} open={leftOpen && (!overlay || modalSide === "left")} modal={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={leftWidth} position={position} instant={!historyMotion || Boolean(reduceMotion)} onClose={(pointer) => { preparePanelMotion("left", pointer); closeLeft(false); }}>
           {ContentAside ? <ContentAside {...slotProps} /> : null}
         </WorkspacePanel>
         <div ref={centerRef} data-testid="workspace-document-center" className={cn(styles.center, "col-start-2 row-start-1 min-h-0 min-w-0 overflow-hidden px-4 has-[[data-chart-start-locked=true]]:bg-[var(--emr-surface-panel)] has-[[data-chart-start-locked=true]]:px-0")}>
@@ -309,7 +325,7 @@ export function WorkspaceDocumentLayout({
             <div className="min-h-0 flex-1"><Content {...slotProps} /></div>
           </div>
         </div>
-        {RightPanel && config.rightLabel ? <WorkspacePanel open={rightOpen && (!overlay || modalSide === "right")} modal={overlay} side="right" controlsId={rightControlsId} label={config.rightLabel} width={rightWidth} position={rightPosition} onClose={() => closeRight(false)}>
+        {RightPanel && config.rightLabel ? <WorkspacePanel open={rightOpen && (!overlay || modalSide === "right")} modal={overlay} side="right" controlsId={rightControlsId} label={config.rightLabel} width={rightWidth} position={rightPosition} sliding={receiptSliding} instant={!receiptMotion || Boolean(reduceMotion)} onClose={(pointer) => { if (receiptSliding) preparePanelMotion("right", pointer); closeRight(false); }}>
           {RightPanel ? <RightPanel {...slotProps} /> : null}
         </WorkspacePanel> : null}
       </div>
