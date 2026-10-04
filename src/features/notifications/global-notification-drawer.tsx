@@ -24,6 +24,7 @@ type NotificationFilter = "all" | "unread" | "requires_action" | "archived";
 
 type GlobalNotificationDrawerProps = {
   badgeCount: number;
+  globalUnreadCount?: number;
   errorMessage?: string | null;
   fallbackDetailNotificationId: string | null;
   loading?: boolean;
@@ -241,6 +242,7 @@ function NotificationFallbackDetail({
 
 export function GlobalNotificationDrawer({
   badgeCount,
+  globalUnreadCount,
   errorMessage,
   fallbackDetailNotificationId,
   loading = false,
@@ -257,7 +259,8 @@ export function GlobalNotificationDrawer({
   onRetry,
 }: GlobalNotificationDrawerProps) {
   const [filter, setFilter] = useState<NotificationFilter>("all");
-  const unreadCount = useMemo(() => resolveNotificationUnreadCount(notifications), [notifications]);
+  const loadedUnreadCount = useMemo(() => resolveNotificationUnreadCount(notifications), [notifications]);
+  const unreadCount = globalUnreadCount ?? loadedUnreadCount;
   const filterItems = useMemo(() => getFilterItems(notifications), [notifications]);
   const visibleNotifications = useMemo(
     () => getFilteredNotifications(notifications, filter),

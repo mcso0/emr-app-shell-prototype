@@ -255,7 +255,7 @@ All routes must enforce workspace membership and notification recipient authoriz
 
 | Route | Method | Purpose |
 |---|---|---|
-| `/api/workspaces/:workspaceId/notifications` | GET | List current user's visible notifications with cursor pagination and optional filter. |
+| `/api/workspaces/:workspaceId/notifications` | GET | Return a bounded recent list for the current user with an optional filter and exact global counts. |
 | `/api/workspaces/:workspaceId/notifications/counts` | GET | Return badge, unread, important, and archived counts for the current user. |
 | `/api/workspaces/:workspaceId/notifications/:notificationId/read` | POST | Mark one visible notification read for the current user. |
 | `/api/workspaces/:workspaceId/notifications/read-all` | POST | Mark all currently visible notifications read for the current user. |
@@ -271,10 +271,10 @@ Notification creation should start as an internal server helper used after appro
 | Parameter | Values | Default | Meaning |
 |---|---|---|---|
 | `filter` | `all`, `unread`, `important`, `archived`, `snapshot` | `all` | Server-side row filter. `snapshot` returns the bounded active and archived startup set in one response. |
-| `limit` | 1-50 | 20 | Maximum rows returned. |
-| `cursor` | opaque string | none | Pagination cursor for older rows. |
+| `limit` | 1-50; snapshot 1-100 | 20 | Maximum rows returned. Zero/nonfinite values default to 20; negative values clamp to 1 and fractions round down. |
+| `cursor` | reserved | none | The current route does not consume a cursor. `nextCursor` is metadata; older-row pagination is not implemented. |
 
-Invalid filter or limit values return a 400 response. A missing or invalid session returns 401. A valid session without workspace membership or recipient visibility returns 403 or an empty authorized list depending on the failure.
+An invalid nonempty filter returns 400; an empty filter means `all`. Limits are normalized as above. A missing or invalid session returns 401. A valid session without workspace membership or recipient visibility returns 403 or an empty authorized list depending on the failure.
 
 ### List Response Shape
 
@@ -651,6 +651,18 @@ Still out of scope after this slice:
 - Cross-request permission caching.
 - Broad advisor-driven index creation or deletion without measured query evidence.
 - External channels or provider/device/PACS integrations.
+
+## Local Bounded Snapshot And State Correction (2026-10-04)
+
+[NOTIFICATION-PR-029](../../../work/notifications/NOTIFICATION-PR-029-bounded-snapshot-and-state.md)
+is locally implemented and verified; its migration is not applied remotely.
+
+- `clair_read_notification_snapshot_v2` returns at most 100 snapshot rows / 50 other rows. One SQL snapshot computes global badge/unread/important/archived counts before filter and limit; aggregate materialization carries compact metadata, and detailed fields are serialized only for the page. Read/archive state is returned only for selected rows with nonempty state.
+- DB visibility remains the intersection of the existing DB role/recipient rules and the existing Next role-policy/assignment checks. The RPC is the final authority for both rows and counts; the server still validates the request and sanitizes DTO/source routes. Direct notification table access remains denied.
+- Order is `updated_at DESC`, notification ID ascending, then DB UUID ascending. Equal timestamps therefore have a deterministic order.
+- `clair_mutate_notification_user_state_v2` validates a notification by ID independently of list position or archive status. Read preserves existing acknowledgement/archive; archive sets both timestamps; restore preserves read and clears archive. Read-all covers the complete authorized, nonarchived unread set in the selected event scope.
+- Legacy notification RPCs remain for application rollback. PR895 event idempotency, polling, cross-tab behavior and realtime publication are unchanged.
+- The drawer summary and full read-all action use the global unread count, including unread rows outside the snapshot. The drawer still filters the latest 100-row snapshot locally; global badge counts do not imply all historical rows are loaded. Cursor pagination remains future work.
 
 ## Open Questions
 

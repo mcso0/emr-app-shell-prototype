@@ -1896,6 +1896,8 @@ function createRecordingNotificationPersistenceGateway(
   >,
 ): NotificationPersistenceGateway {
   return {
+    async readNotificationSnapshot() { throw new Error("Producer must not read notification snapshots"); },
+    async mutateNotificationState() { throw new Error("Producer must not mutate notification state"); },
     async emitNotificationEvent(event) {
       persistedEvents.push(event);
       return {
@@ -1944,6 +1946,8 @@ function createRecordingNotificationPersistenceGateway(
 
 function createThrowingNotificationPersistenceGateway(): NotificationPersistenceGateway {
   return {
+    async readNotificationSnapshot() { throw new Error("Producer must not read notification snapshots"); },
+    async mutateNotificationState() { throw new Error("Producer must not mutate notification state"); },
     async emitNotificationEvent() {
       throw new Error("simulated notification persistence outage");
     },

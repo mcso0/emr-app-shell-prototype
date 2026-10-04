@@ -252,201 +252,37 @@ test("notification persistence gateway uses fixed Supabase RPC boundaries", asyn
   });
 });
 
-test("persisted notification helper reads DB events with DB-backed user state", async () => {
-  const gateway = createSupabaseNotificationPersistenceGateway({
-    async rpc(functionName) {
-      if (functionName === "clair_list_notification_events") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            notifications: [samplePersistedNotification],
-            enforcedBy: "notification-event-persistence",
-          },
-          error: null,
-        };
-      }
-
-      if (functionName === "clair_list_notification_user_states") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            states: [
-              {
-                archivedAt: null,
-                notificationId: "notif-live-order-recheck",
-                readAt: "2026-07-05T09:10:00.000Z",
-              },
-            ],
-            enforcedBy: "notification-user-state-persistence",
-          },
-          error: null,
-        };
-      }
-
-      return {
-        data: { ok: true, status: 200, enforcedBy: "notification-user-state-persistence" },
-        error: null,
-      };
-    },
-  });
-
-  const result = await readPersistedLiveNotifications({
-    actorUserId: "user-tech",
-    eventScopeId: "browser-a",
-    filter: "all",
-    gateway,
-    limit: 50,
-    stateScopeId: "user-tech:browser-a",
-    workspaceId: "clair-demo",
-  });
-
-  expect(result).toMatchObject({
-    ok: true,
-    counts: { badge: 0, unread: 0 },
-    notifications: [
-      expect.objectContaining({
-        eventKey: "order_recheck_requested",
-        readAt: "2026-07-05T09:10:00.000Z",
-      }),
-    ],
-  });
+test("persisted notification helper reads a bounded snapshot with global DB counts", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseNotificationPersistenceGateway({ async rpc(name) {
+    calls.push(name);
+    return { data: { ok: true, notifications: [samplePersistedNotification],
+      states: [{ notificationId: samplePersistedNotification.id, readAt: "2026-07-05T09:10:00.000Z", archivedAt: null }],
+      counts: { badge: 199, unread: 199, important: 200, archived: 0 }, nextCursor: "2026-07-05T09:00:00.000Z" }, error: null };
+  } });
+  const result = await readPersistedLiveNotifications({ actorUserId: "user-tech", gateway,
+    filter: "all", limit: 50, workspaceId: "clair-demo" });
+  expect(result).toMatchObject({ ok: true, counts: { unread: 199 },
+    notifications: [expect.objectContaining({ readAt: "2026-07-05T09:10:00.000Z" })] });
+  expect(calls).toEqual(["clair_read_notification_snapshot_v2"]);
 });
 
-test("persisted notification helper writes read state through DB gateway", async () => {
-  const calls: Array<{ args: unknown; functionName: string }> = [];
-  const gateway = createSupabaseNotificationPersistenceGateway({
-    async rpc(functionName, args) {
-      calls.push({ functionName, args });
-      if (functionName === "clair_list_notification_events") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            notifications: [samplePersistedNotification],
-            enforcedBy: "notification-event-persistence",
-          },
-          error: null,
-        };
-      }
-
-      if (functionName === "clair_list_notification_user_states") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            states: [],
-            enforcedBy: "notification-user-state-persistence",
-          },
-          error: null,
-        };
-      }
-
-      return {
-        data: { ok: true, status: 200, enforcedBy: "notification-user-state-persistence" },
-        error: null,
-      };
-    },
-  });
-
-  const result = await markPersistedLiveNotificationRead({
-    actorUserId: "user-tech",
-    eventScopeId: "browser-a",
-    gateway,
-    notificationId: "notif-live-order-recheck",
-    stateScopeId: "user-tech:browser-a",
-    workspaceId: "clair-demo",
-  });
-
-  expect(result).toMatchObject({
-    ok: true,
-    notification: expect.objectContaining({
-      id: "notif-live-order-recheck",
-      readAt: expect.any(String),
-    }),
-  });
-  expect(calls.map((call) => call.functionName)).toContain(
-    "clair_upsert_notification_user_state",
-  );
-  expect(
-    calls.find((call) => call.functionName === "clair_upsert_notification_user_state")?.args,
-  ).toMatchObject({
-    p_actor_user_id: "user-tech",
-    p_notification_id: "notif-live-order-recheck",
-    p_state_scope_id: "user-tech:browser-a",
-  });
-});
-
-test("persisted notification read-all uses one set-based state RPC", async () => {
-  const calls: Array<{ args: unknown; functionName: string }> = [];
-  const gateway = createSupabaseNotificationPersistenceGateway({
-    async rpc(functionName, args) {
-      calls.push({ functionName, args });
-      if (functionName === "clair_list_notification_events") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            notifications: [samplePersistedNotification],
-            enforcedBy: "notification-event-persistence",
-          },
-          error: null,
-        };
-      }
-
-      if (functionName === "clair_list_notification_user_states") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            states: [],
-            enforcedBy: "notification-user-state-persistence",
-          },
-          error: null,
-        };
-      }
-
-      if (functionName === "clair_mark_notification_user_states_read") {
-        return {
-          data: {
-            ok: true,
-            status: 200,
-            updatedCount: 1,
-            enforcedBy: "notification-user-state-persistence",
-          },
-          error: null,
-        };
-      }
-
-      return {
-        data: { ok: true, status: 200, enforcedBy: "notification-user-state-persistence" },
-        error: null,
-      };
-    },
-  });
-
-  const result = await markAllPersistedLiveNotificationsRead({
-    actorUserId: "user-tech",
-    eventScopeId: "browser-a",
-    gateway,
-    stateScopeId: "user-tech:browser-a",
-    workspaceId: "clair-demo",
-  });
-
-  expect(result).toMatchObject({ ok: true, updatedCount: 1 });
-  expect(
-    calls.filter((call) => call.functionName === "clair_mark_notification_user_states_read"),
-  ).toHaveLength(1);
-  expect(
-    calls.filter((call) => call.functionName === "clair_upsert_notification_user_state"),
-  ).toHaveLength(0);
-  expect(
-    calls.find((call) => call.functionName === "clair_mark_notification_user_states_read")?.args,
-  ).toMatchObject({
-    p_notification_ids: ["notif-live-order-recheck"],
-    p_state_scope_id: "user-tech:browser-a",
-  });
+test("persisted notification mutation delegates ID and complete set to one atomic RPC", async () => {
+  const calls: Array<{ name: string; args: unknown }> = [];
+  const gateway = createSupabaseNotificationPersistenceGateway({ async rpc(name, args) {
+    calls.push({ name, args });
+    const bulk = "p_action" in args && args.p_action === "read-all";
+    return { data: { ok: true, notifications: bulk ? [] : [samplePersistedNotification],
+      states: bulk ? [] : [{ notificationId: samplePersistedNotification.id, readAt: "2026-07-05T09:10:00.000Z", archivedAt: null }],
+      counts: { badge: 0, unread: 0, important: 200, archived: 0 }, nextCursor: null, updatedCount: bulk ? 200 : 1 }, error: null };
+  } });
+  const input = { actorUserId: "user-tech", gateway, workspaceId: "clair-demo" };
+  expect(await markPersistedLiveNotificationRead({ ...input, notificationId: samplePersistedNotification.id }))
+    .toMatchObject({ ok: true, notification: { readAt: "2026-07-05T09:10:00.000Z" } });
+  expect(await markAllPersistedLiveNotificationsRead(input)).toMatchObject({ ok: true, updatedCount: 200, counts: { unread: 0 } });
+  expect(calls.map(c => c.name)).toEqual(["clair_mutate_notification_user_state_v2", "clair_mutate_notification_user_state_v2"]);
+  expect(calls[0].args).toMatchObject({ p_action: "read", p_notification_id: samplePersistedNotification.id });
+  expect(calls[1].args).toMatchObject({ p_action: "read-all", p_notification_id: null });
 });
 
 test("batch migration keeps notification and fulfillment mutations set-based and authenticated", () => {
