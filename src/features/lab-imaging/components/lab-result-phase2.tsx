@@ -26,6 +26,9 @@ const LabAttachmentViewer = dynamic(() => import("./lab-attachment-viewer"), { s
 const LabAttachmentPdfThumbnail = dynamic(() => import("./lab-attachment-pdf-thumbnail"), { ssr: false });
 // Original static SVGs from the approved result-sheet Figma nodes 28532:202785 and 28532:203029.
 
+// Keep the opaque Common surface beneath state overlays on thumbnail actions.
+const attachmentCardActionClassName = "bg-[var(--emr-surface-floating)] hover:bg-[var(--emr-surface-floating)] aria-expanded:bg-[var(--emr-surface-floating)] hover:bg-[linear-gradient(var(--emr-state-hover),var(--emr-state-hover))] aria-expanded:bg-[linear-gradient(var(--emr-state-hover),var(--emr-state-hover))]";
+
 type UploadTask = { id: string; file: File; status: "queued" | "preparing" | "uploading" | "finalizing" | "failed"; loading: boolean; progress?: number; error?: string };
 
 function attachmentPath(workspaceId: string, resultId: string, attachmentId: string, download = false) {
@@ -325,7 +328,7 @@ function AttachmentCard({ item, url, downloadUrl, canDelete, onPreview, onDelete
         <span className="min-w-0 flex-1 truncate" title={item.name}>{item.name}</span>
       </div>
     </button>
-    {thumbnailState === "error" ? <Button type="button" variant="ghost" size="xs" className="absolute bottom-8 left-1 bg-card"
+    {thumbnailState === "error" ? <Button type="button" variant="ghost" size="xs" className={`absolute bottom-8 left-1 ${attachmentCardActionClassName}`}
       aria-label={`${item.name} 미리보기 다시 불러오기`} onClick={() => { setThumbnailState("loading"); setAttempt(value => value + 1); previewButton.current?.focus(); }}>
       <CdsActionsRefreshCcwIcon aria-hidden="true" />다시 읽기
     </Button> : null}
@@ -334,7 +337,7 @@ function AttachmentCard({ item, url, downloadUrl, canDelete, onPreview, onDelete
       <AvatarFallback className="bg-[var(--emr-surface-panel)] text-[9px] leading-3 text-foreground">{initials}</AvatarFallback>
     </Avatar>
     <span className="absolute bottom-1 left-2 right-7 hidden truncate text-[12px] leading-4 tracking-[0.3px] text-muted-foreground group-hover/card:block group-focus-within/card:block">{formatTime(item.uploadedAt)}</span>
-    <div className="absolute right-1 top-1 z-10 opacity-0 transition-opacity group-hover/card:opacity-100 group-focus-within/card:opacity-100 [@media(hover:none)]:opacity-100">
+    <div className="absolute right-1 top-1 z-10 opacity-0 transition-opacity group-hover/card:opacity-100 group-focus-within/card:opacity-100 has-aria-expanded:opacity-100 [@media(hover:none)]:opacity-100">
       <AttachmentActionMenu presentation="card" name={item.name} downloadUrl={downloadUrl} canDelete={canDelete} onPreview={onPreview} onDelete={onDelete} />
     </div>
   </div>;
@@ -387,7 +390,7 @@ function AttachmentActionMenu({ presentation = "list", name, downloadUrl, canDel
   presentation?: "card" | "list"; name: string; downloadUrl: string; canDelete: boolean; onPreview: () => void; onDelete: () => void; onRetry?: () => void;
 }) {
   return <DropdownMenu>
-    <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" className={presentation === "card" ? "border border-[var(--clair-color-atomic-black-alpha-8)] bg-card shadow-[var(--clair-shadow-xs)]" : undefined} aria-label={`${name} 작업 메뉴`} /> }>
+    <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" className={presentation === "card" ? `border border-[var(--clair-color-atomic-black-alpha-8)] shadow-[var(--clair-shadow-xs)] ${attachmentCardActionClassName}` : undefined} aria-label={`${name} 작업 메뉴`} /> }>
       <CdsFilesMoreHorizontalIcon aria-hidden="true" />
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="w-36">
