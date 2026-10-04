@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 export type LabResultAttachment = {
   id: string;
-  rowId: string;
+  rowId: string | null;
   name: string;
   mimeType: string;
   size: number;
@@ -42,7 +42,7 @@ function parsePhase2(value: unknown, resultId: string): LabResultPhase2Data | nu
     || typeof data.canEdit !== "boolean"
     || !Array.isArray(data.events) || !Array.isArray(data.attachments)) return null;
   if (!data.attachments.every(item => item && typeof item === "object" &&
-    typeof item.id === "string" && typeof item.rowId === "string" &&
+    typeof item.id === "string" && (item.rowId === null || typeof item.rowId === "string") &&
     typeof item.name === "string" && typeof item.mimeType === "string" && typeof item.size === "number")) return null;
   return data as LabResultPhase2Data;
 }

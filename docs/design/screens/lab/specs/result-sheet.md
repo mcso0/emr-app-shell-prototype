@@ -91,6 +91,20 @@ Responsive table follow-up approved 2026-10-03: keep the existing design and col
 
 ## Attachment And Upload Behavior
 
+Overall finding layout approved 2026-10-04: retain the `검사결과 종합소견`
+card and use equal desktop columns for `종합 소견` and `첨부 자료`, with
+the same responsive stacking and center divider as item details. Empty textarea
+and upload target are both 128px high. Do not add prototype explanatory subtext.
+Keep overall autosave, revision recovery, and read-only controls.
+
+An explicit `rowId: null` identifies an attachment for the whole result;
+item attachments keep their existing row IDs. Render each only in its own scope.
+Reuse the existing private upload, preview, download, deletion, retry and
+cancellation lifecycle. Result/workspace ownership, lab permissions, immutable
+file paths, validation and audit remain enforced. Missing or malformed prepare
+selectors are rejected instead of being interpreted as overall scope. This
+contract needs the overall-attachment migration before application delivery.
+
 - Count ready attachments in `첨부 자료 N`; visible pending/failed tasks also consume layout space, but are not ready files. Cancellation/removal/retry/view changes must recompute overflow.
 - File type is derived from validated MIME metadata. Use protected attachment URLs; failed thumbnail rendering switches to a type fallback. Do not use synthetic paper previews as real PDF thumbnails.
 - Card hover and keyboard focus expose time and one 24px menu. Retain existing motion duration as an implementation choice; Figma does not specify timing. Honor reduced motion and expose actions on touch.

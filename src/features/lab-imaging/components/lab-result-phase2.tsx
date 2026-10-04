@@ -71,8 +71,11 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
 }
 
 export function LabResultAttachmentArea({ result, row, attachments, enabled, canEdit, refresh }: {
-  result: LabResult; row: LabResultRow; attachments: LabResultAttachment[]; enabled: boolean; canEdit: boolean; refresh: () => void;
+  result: LabResult; row: LabResultRow | null; attachments: LabResultAttachment[]; enabled: boolean; canEdit: boolean; refresh: () => void;
 }) {
+  const rowId = row?.id ?? null;
+  const scopeLabel = row?.analyteName ?? "검사결과 종합소견";
+  const emptyHeight = row ? "h-[76px]" : "h-32";
   const [mode, setMode] = useState<"card" | "list">("card");
   const [tasks, setTasks] = useState<UploadTask[]>([]);
   const [preview, setPreview] = useState<LabResultAttachment | null>(null);
@@ -92,7 +95,7 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
     for (const task of tasksRef.current) cancelled.current.add(task.id);
     uploadRequests.current.forEach(abort => abort());
     uploadRequests.current.clear();
-  }, [result.workspaceId, result.id, row.id]);
+  }, [result.workspaceId, result.id, rowId]);
 
   const discard = useCallback(async (attachmentId: string) => {
     const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
@@ -112,7 +115,7 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
       const valid = validateLabResultAttachment({ name: task.file.name, mimeType, size: task.file.size });
       if (!valid.ok) throw new Error(valid.status === 413 ? "파일 크기가 허용 범위를 넘었습니다." : "지원하지 않는 파일입니다.");
       const preparedResponse = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "prepare", resultId: result.id, rowId: row.id, name: valid.name, mimeType: valid.mimeType, size: valid.size }) });
+        body: JSON.stringify({ action: "prepare", resultId: result.id, rowId, name: valid.name, mimeType: valid.mimeType, size: valid.size }) });
       const prepared = await preparedResponse.json();
       if (!preparedResponse.ok || !prepared.ok || typeof prepared.attachmentId !== "string" || typeof prepared.objectPath !== "string" || typeof prepared.uploadToken !== "string" || typeof prepared.uploadUrl !== "string") throw new Error("업로드를 준비하지 못했습니다.");
       attachmentId = prepared.attachmentId;
@@ -152,7 +155,7 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
       active.current -= 1;
       setTasks(current => [...current]);
     }
-  }, [discard, endpoint, refresh, result.id, result.workspaceId, row.id]);
+  }, [discard, endpoint, refresh, result.id, result.workspaceId, rowId]);
 
   useEffect(() => {
     const available = Math.max(0, 2 - active.current);
@@ -185,7 +188,7 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
   };
   const visibleTasks = tasks.filter(task => task.loading || task.status !== "queued");
   const itemCount = attachments.length + visibleTasks.length;
-  return <div className="group/attachments @container min-w-0" aria-label={`${row.analyteName} 첨부 자료`}>
+  return <div className="group/attachments @container min-w-0" aria-label={`${scopeLabel} 첨부 자료`}>
     {uploadNotice ? <p role="alert" className="mb-2 emr-text-metadata text-destructive">{uploadNotice}</p> : null}
     <div className="flex min-h-6 items-center justify-between gap-2">
       <span className="flex h-7 items-center gap-1 px-2.5 emr-text-metadata text-muted-foreground">첨부 자료{attachments.length ? <span className="text-foreground">{attachments.length}</span> : ""}</span>
@@ -213,7 +216,7 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
         {mode === "list" ? <div className="mb-1 grid h-6 grid-cols-[minmax(0,1fr)_48px_64px_20px_24px] items-center gap-2 px-2 text-[10px] leading-[14px] tracking-[0.31px] text-muted-foreground @md:grid-cols-[minmax(0,1fr)_72px_88px_48px_24px]" aria-hidden="true">
           <span>파일명</span><span>파일 크기</span><span>첨부 시각</span><span>담당자</span><span />
         </div> : null}
-        <AttachmentFileViewport mode={mode} itemCount={itemCount} label={`${row.analyteName} 첨부 ${mode === "card" ? "카드" : "목록"} 스크롤 영역`}>
+        <AttachmentFileViewport mode={mode} itemCount={itemCount} label={`${scopeLabel} 첨부 ${mode === "card" ? "카드" : "목록"} 스크롤 영역`}>
           {mode === "card" ? <div className="grid grid-cols-2 gap-2.5 @lg:grid-cols-4" data-testid="lab-attachment-card-grid">
             {attachments.map(item => <AttachmentCard key={item.id} item={item} url={attachmentPath(result.workspaceId, result.id, item.id)} downloadUrl={attachmentPath(result.workspaceId, result.id, item.id, true)} canDelete={canEdit} onPreview={() => setPreview(item)} onDelete={() => setPendingDelete(item)} />)}
             {visibleTasks.map(task => <UploadCard key={task.id} task={task} onCancel={() => removeTask(task)} onRetry={() => retryTask(task)} />)}
@@ -224,9 +227,9 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
         </AttachmentFileViewport>
       </div>
     </> : <div className="px-2.5 py-2.5">
-      {canEdit ? <button type="button" disabled={!enabled} className="flex h-[76px] w-full items-center justify-center gap-1 rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--emr-state-hover)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed" onClick={() => fileInput.current?.click()}>
+      {canEdit ? <button type="button" disabled={!enabled} className={`flex ${emptyHeight} w-full items-center justify-center gap-1 rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--emr-state-hover)] focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed`} onClick={() => fileInput.current?.click()}>
         <CdsActionsUploadIcon className="size-3" aria-hidden="true" /><span>첨부자료 업로드</span>
-      </button> : <div className="flex h-[76px] items-center justify-center rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground">첨부 자료가 없습니다.</div>}
+      </button> : <div className={`flex ${emptyHeight} items-center justify-center rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground`}>첨부 자료가 없습니다.</div>}
     </div>}
     {preview ? <LabAttachmentViewer item={preview} url={attachmentPath(result.workspaceId, result.id, preview.id)} canDelete={canEdit}
       onClose={() => setPreview(null)} onDownload={() => window.open(attachmentPath(result.workspaceId, result.id, preview.id, true), "_blank", "noopener")}
@@ -454,15 +457,28 @@ export function LabOverallFinding({ result, phase2, refresh }: { result: LabResu
       message: response.status === 401 || response.status === 403 ? "저장 권한이 없습니다." : "종합소견을 저장하지 못했습니다." };
   }, phase2?.overallRevision ?? 0);
   const value = autosave.state.draft ?? phase2?.overallFinding ?? "";
-  return <section className="rounded-lg border bg-card p-4" onBlurCapture={autosave.flush}>
+  return <section className="rounded-lg border bg-card p-4" data-testid="lab-overall-finding" onBlurCapture={autosave.flush}>
     <div className="mb-3 flex items-center justify-between gap-2"><h2 className="emr-text-body font-semibold">검사결과 종합소견</h2>
       {autosave.state.value !== "idle" ? <div className="flex items-center gap-2">
         <span role="status" data-testid="lab-overall-save-status" className={`emr-text-metadata ${["error", "conflict", "permission_denied"].includes(autosave.state.value) ? "text-destructive" : "text-muted-foreground"}`}>{autosave.state.message}</span>
         {autosave.state.retryable ? <Button size="xs" variant="outline" onClick={autosave.retry}>재시도</Button> : null}
       </div> : null}</div>
-    <Textarea aria-label="검사결과 종합소견" className="min-h-36 resize-none overflow-y-auto bg-background emr-text-dense" maxLength={10000}
-      disabled={!phase2?.canEdit} value={value} onChange={event => autosave.change(event.target.value)}
-      placeholder={phase2 ? "전체 검사 결과에 대한 종합소견을 입력하세요. 자동으로 저장됩니다." : "종합소견을 불러오는 중입니다."} />
+    <div className="grid min-w-0 grid-cols-1 items-stretch gap-2 md:grid-cols-[minmax(0,1fr)_17px_minmax(0,1fr)]">
+      <div className="min-w-0">
+        <div className="flex h-7 items-center gap-1 px-2.5 emr-text-metadata text-muted-foreground">
+          <label htmlFor={`lab-overall-finding-${result.id}`}>종합 소견</label>
+        </div>
+        <div className="p-2.5">
+          <Textarea id={`lab-overall-finding-${result.id}`} aria-label="검사결과 종합소견" className="h-32 min-h-32 resize-none overflow-y-auto bg-background emr-text-dense" maxLength={10000}
+            disabled={!phase2?.canEdit} value={value} onChange={event => autosave.change(event.target.value)}
+            placeholder={phase2 ? "전체 검사 결과에 대한 종합소견을 입력하세요. 자동으로 저장됩니다." : "종합소견을 불러오는 중입니다."} />
+        </div>
+      </div>
+      <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>
+      <LabResultAttachmentArea key={`${result.workspaceId}:${result.id}:overall-attachments`} result={result} row={null}
+        attachments={phase2?.attachments.filter(item => item.rowId === null) ?? []}
+        enabled={phase2 !== null} canEdit={phase2?.canEdit ?? false} refresh={refresh} />
+    </div>
   </section>;
 }
 

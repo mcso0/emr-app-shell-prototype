@@ -62,9 +62,9 @@ function routeHarness({ denied = false, foreignRow = false, prepareError = false
         : { ok: true, actorUserId: "actor-a", client, trusted },
     },
   });
-  const run = () => route.POST(new Request("https://example.test/api/attachments", {
+  const run = (...rowIds) => route.POST(new Request("https://example.test/api/attachments", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "prepare", resultId: "result-a", rowId: "row-a",
+    body: JSON.stringify({ action: "prepare", resultId: "result-a", rowId: rowIds.length ? rowIds[0] : "row-a",
       name: "synthetic.png", mimeType: "image/png", size: 179 }),
   }), { params: Promise.resolve({ workspaceId: "workspace-a" }) });
   return { run, calls };
@@ -80,6 +80,24 @@ test("prepare uses the authenticated ownership RPC and server-only storage signe
   assert.equal(harness.calls[1].name, "clair_prepare_lab_result_attachment");
   assert.equal(harness.calls[1].args.p_row_id, "row-a");
   assert.equal(harness.calls.find(call => call.signedPath)?.signedPath, body.objectPath);
+});
+
+test("overall prepare requires explicit null and retains scoped ownership and signing", async () => {
+  const overall = routeHarness();
+  assert.equal((await overall.run(null)).status, 201);
+  assert.equal(overall.calls[0].args.p_row_id, null);
+  assert.equal(overall.calls[1].args.p_row_id, null);
+  for (const rowId of [undefined, "", 0, false, {}, "x".repeat(201)]) {
+    const invalid = routeHarness();
+    assert.equal((await invalid.run(rowId)).status, 400);
+    assert.equal(invalid.calls.length, 0);
+  }
+  const denied = routeHarness({ denied: true });
+  assert.equal((await denied.run(null)).status, 403);
+  assert.equal(denied.calls.length, 0);
+  const foreign = routeHarness({ foreignRow: true });
+  assert.equal((await foreign.run(null)).status, 409);
+  assert.equal(foreign.calls.some(call => call.signedPath), false);
 });
 
 test("denied permissions and foreign rows cannot create metadata or signed upload URLs", async () => {

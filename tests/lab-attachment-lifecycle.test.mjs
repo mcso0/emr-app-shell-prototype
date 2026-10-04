@@ -82,8 +82,8 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
   const file = (method, attachmentId, download = false) => fileRoute[method](new Request(
     `https://example.test/attachments/${attachmentId}?resultId=result-a${download ? "&download=1" : ""}`, { method }),
   { params: Promise.resolve({ workspaceId: "workspace-a", attachmentId }) });
-  const prepare = async () => {
-    const response = await post("prepare", { rowId: "row-a", name: "synthetic.png", mimeType: "image/png", size: 179 });
+  const prepare = async (rowId = "row-a") => {
+    const response = await post("prepare", { rowId, name: "synthetic.png", mimeType: "image/png", size: 179 });
     assert.equal(response.status, 201);
     const body = await response.json();
     const bytes = new Uint8Array(179);
@@ -94,9 +94,10 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
   return { prepare, post, file, records, objects, setActor(value) { actor = value; } };
 }
 
-test("generated prepare UUID completes finalize, preview, download and deletion", async () => {
+for (const rowId of ["row-a", null]) test(`generated ${rowId === null ? "overall" : "item"} prepare UUID completes finalize, preview, download and deletion`, async () => {
   const h = harness();
-  const attachmentId = await h.prepare();
+  const attachmentId = await h.prepare(rowId);
+  assert.equal(h.records.get(attachmentId).row_id, rowId);
   assert.equal((await h.file("GET", attachmentId)).status, 404);
   assert.equal((await h.post("finalize", { attachmentId })).status, 200);
   const readyAt = h.records.get(attachmentId).ready_at;
