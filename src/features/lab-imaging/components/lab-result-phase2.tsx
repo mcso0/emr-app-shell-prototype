@@ -23,6 +23,7 @@ import type { LabResultAttachment, LabResultHistoryEvent, LabResultPhase2Data } 
 import type { LabResult, LabResultRow } from "@/types/emr-domain";
 
 const LabAttachmentViewer = dynamic(() => import("./lab-attachment-viewer"), { ssr: false });
+const LabAttachmentPdfThumbnail = dynamic(() => import("./lab-attachment-pdf-thumbnail"), { ssr: false });
 // Original static SVGs from the approved result-sheet Figma nodes 28532:202785 and 28532:203029.
 
 type UploadTask = { id: string; file: File; status: "queued" | "preparing" | "uploading" | "finalizing" | "failed"; loading: boolean; progress?: number; error?: string };
@@ -291,21 +292,44 @@ function AttachmentFileViewport({ mode, itemCount, label, children }: { mode: "c
 }
 
 function AttachmentCard({ item, url, downloadUrl, canDelete, onPreview, onDelete }: { item: LabResultAttachment; url: string; downloadUrl: string; canDelete: boolean; onPreview: () => void; onDelete: () => void }) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const image = item.mimeType.startsWith("image/");
+  const pdf = item.mimeType === "application/pdf";
+  const [thumbnailState, setThumbnailState] = useState<"loading" | "ready" | "error">(image || pdf ? "loading" : "ready");
+  const [attempt, setAttempt] = useState(0);
+  const previewButton = useRef<HTMLButtonElement>(null);
   const initials = item.uploadedByName?.trim().slice(0, 2) || "?";
   return <div className="group/card relative min-w-0 overflow-hidden rounded-md bg-[var(--clair-color-atomic-black-alpha-4)] p-2 text-[12px] leading-4 tracking-[0.3px] transition-colors hover:bg-[var(--clair-color-atomic-black-alpha-8)] focus-within:bg-[var(--clair-color-atomic-black-alpha-8)]" data-testid="lab-attachment-card">
-    <button type="button" className="flex w-full min-w-0 flex-col items-stretch justify-end gap-2 text-left outline-none transition-transform duration-[220ms] ease-out group-hover/card:-translate-y-[13px] group-focus-within/card:-translate-y-[13px] focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none" aria-label={`${item.name} 미리보기`} onClick={onPreview}>
-      {item.mimeType.startsWith("image/") && !imageFailed ? <div className="aspect-[190/107] w-full overflow-hidden rounded-sm bg-card">
-        {/* Protected same-origin attachment route; no public image optimization. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" className="h-full w-full object-cover" onError={() => setImageFailed(true)} />
-      </div> : <div className="relative flex aspect-[190/107] w-full items-center justify-center overflow-hidden rounded-sm bg-card text-[var(--emr-text-secondary)]" aria-label={attachmentTypeLabel(item.mimeType)}>
-        <span className="flex size-10 items-center justify-center rounded-[10px] border border-[var(--clair-color-atomic-black-alpha-4)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"><AttachmentTypeIcon mimeType={item.mimeType} size="lg" /></span>
-      </div>}
+    <div className="relative transition-transform duration-[220ms] ease-out group-hover/card:-translate-y-[13px] group-focus-within/card:-translate-y-[13px] motion-reduce:transition-none">
+    <button ref={previewButton} type="button" className="flex w-full min-w-0 flex-col items-stretch justify-end gap-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${item.name} 미리보기`} onClick={onPreview}>
+      <div className="relative flex aspect-[190/107] w-full items-center justify-center overflow-hidden rounded-sm bg-card text-[var(--emr-text-secondary)]" aria-label={attachmentTypeLabel(item.mimeType)} aria-busy={thumbnailState === "loading"}>
+        {thumbnailState !== "error" && image ? <>
+          {/* Protected same-origin attachment route; no public image optimization. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img key={attempt} src={url} loading="lazy" alt="" className="h-full w-full object-cover"
+            onLoad={() => setThumbnailState("ready")} onError={() => setThumbnailState("error")} />
+        </> : thumbnailState !== "error" && pdf ? <LabAttachmentPdfThumbnail key={attempt} url={url}
+          onReady={() => setThumbnailState("ready")} onError={() => setThumbnailState("error")} />
+          : thumbnailState === "error" ? <div className="flex h-full w-full items-start justify-center pt-2">
+            <span role="status" className="flex items-center gap-1 whitespace-nowrap text-[10px] leading-4" title="미리보기를 불러오지 못했어요.">
+              <AttachmentTypeIcon mimeType={item.mimeType} size="sm" />읽기 실패
+            </span>
+          </div> : <div className="flex flex-col items-center gap-1">
+            <span className="flex size-10 items-center justify-center rounded-[10px] border border-[var(--clair-color-atomic-black-alpha-4)] bg-[var(--emr-surface-panel)] shadow-[var(--clair-shadow-xs)]"><AttachmentTypeIcon mimeType={item.mimeType} size="lg" /></span>
+          </div>}
+        {thumbnailState === "loading" ? <span role="status" aria-label={`${item.name} 미리보기 불러오는 중`} className="absolute inset-0 flex items-center justify-center bg-card">
+          <CdsAlertsLoaderIcon className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+        </span> : null}
+        {pdf && thumbnailState !== "error" ? <span className="pointer-events-none absolute bottom-1 right-1 rounded bg-card px-1 text-[10px] leading-4 text-muted-foreground">PDF · 1페이지</span> : null}
+      </div>
       <div className="flex h-5 min-h-5 min-w-0 items-center gap-2 pr-6 text-[12px] leading-4 tracking-[0.3px]">
         <span className="min-w-0 flex-1 truncate" title={item.name}>{item.name}</span>
       </div>
     </button>
+    {thumbnailState === "error" ? <Button type="button" variant="ghost" size="xs" className="absolute bottom-8 left-1 bg-card"
+      aria-label={`${item.name} 미리보기 다시 불러오기`} onClick={() => { setThumbnailState("loading"); setAttempt(value => value + 1); previewButton.current?.focus(); }}>
+      <CdsActionsRefreshCcwIcon aria-hidden="true" />다시 읽기
+    </Button> : null}
+    </div>
     <Avatar className="absolute bottom-2 right-2 size-5 border border-[var(--clair-color-atomic-black-alpha-8)] bg-[var(--emr-surface-panel)]" aria-label={`업로드 담당자 ${item.uploadedByName ?? "정보 없음"}`} title={item.uploadedByName ?? "담당자 정보 없음"}>
       <AvatarFallback className="bg-[var(--emr-surface-panel)] text-[9px] leading-3 text-foreground">{initials}</AvatarFallback>
     </Avatar>
@@ -317,10 +341,12 @@ function AttachmentCard({ item, url, downloadUrl, canDelete, onPreview, onDelete
 }
 
 function AttachmentListRow({ item, url, downloadUrl, canDelete, onPreview, onDelete }: { item: LabResultAttachment; url: string; downloadUrl: string; canDelete: boolean; onPreview: () => void; onDelete: () => void }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const initials = item.uploadedByName?.trim().slice(0, 2) || "?";
   return <div className="grid h-8 grid-cols-[minmax(0,1fr)_48px_64px_20px_24px] items-center gap-2 rounded-sm px-2 text-[12px] leading-4 tracking-[0.3px] hover:bg-[var(--clair-color-atomic-black-alpha-4)] @md:grid-cols-[minmax(0,1fr)_72px_88px_48px_24px]" data-testid="lab-attachment-list-row">
     <button type="button" className="flex min-w-0 items-center gap-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={onPreview} title={item.name}>
-      <AttachmentListFileIcon mimeType={item.mimeType} url={url} />
+      <AttachmentListFileIcon key={attempt} mimeType={item.mimeType} url={url} imageFailed={imageFailed} onError={() => setImageFailed(true)} />
       <span className="min-w-0 truncate">{item.name}</span>
     </button>
     <span className="truncate text-muted-foreground" title={formatSize(item.size)}>{formatSize(item.size)}</span>
@@ -328,17 +354,17 @@ function AttachmentListRow({ item, url, downloadUrl, canDelete, onPreview, onDel
     <Avatar className="size-5 border border-[var(--clair-color-atomic-black-alpha-8)] bg-[var(--emr-surface-panel)]" aria-label={`업로드 담당자 ${item.uploadedByName ?? "정보 없음"}`} title={item.uploadedByName ?? "담당자 정보 없음"}>
       <AvatarFallback className="bg-[var(--emr-surface-panel)] text-[9px] leading-3 text-foreground">{initials}</AvatarFallback>
     </Avatar>
-    <AttachmentActionMenu name={item.name} downloadUrl={downloadUrl} canDelete={canDelete} onPreview={onPreview} onDelete={onDelete} />
+    <AttachmentActionMenu name={item.name} downloadUrl={downloadUrl} canDelete={canDelete} onPreview={onPreview} onDelete={onDelete}
+      onRetry={imageFailed ? () => { setImageFailed(false); setAttempt(value => value + 1); } : undefined} />
   </div>;
 }
 
-function AttachmentListFileIcon({ mimeType, url }: { mimeType: string; url: string }) {
-  const [imageFailed, setImageFailed] = useState(false);
+function AttachmentListFileIcon({ mimeType, url, imageFailed, onError }: { mimeType: string; url: string; imageFailed: boolean; onError: () => void }) {
   if (mimeType.startsWith("image/") && !imageFailed) return <span className="flex size-4 shrink-0 items-center justify-center overflow-hidden rounded-[3px] border border-[var(--clair-color-atomic-black-alpha-8)] bg-card">
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img src={url} alt="" className="size-full object-cover" onError={() => setImageFailed(true)} />
+    <img src={url} loading="lazy" alt="" className="size-full object-cover" onError={onError} />
   </span>;
-  return <span className="flex size-4 shrink-0 items-center justify-center" aria-label={attachmentTypeLabel(mimeType)}><AttachmentTypeIcon mimeType={mimeType} size="sm" /></span>;
+  return <span className="flex size-4 shrink-0 items-center justify-center" aria-label={imageFailed ? "이미지 미리보기 읽기 실패" : attachmentTypeLabel(mimeType)} title={imageFailed ? "미리보기를 불러오지 못했어요. 작업 메뉴에서 다시 불러올 수 있어요." : undefined}><AttachmentTypeIcon mimeType={mimeType} size="sm" /></span>;
 }
 
 function AttachmentTypeIcon({ mimeType, size }: { mimeType: string; size: "sm" | "lg" }) {
@@ -357,8 +383,8 @@ function LabResultFigmaIcon({ asset, size }: { asset: string | { src?: string };
   return <img src={src} width={size} height={size} alt="" aria-hidden="true" />;
 }
 
-function AttachmentActionMenu({ presentation = "list", name, downloadUrl, canDelete, onPreview, onDelete }: {
-  presentation?: "card" | "list"; name: string; downloadUrl: string; canDelete: boolean; onPreview: () => void; onDelete: () => void;
+function AttachmentActionMenu({ presentation = "list", name, downloadUrl, canDelete, onPreview, onDelete, onRetry }: {
+  presentation?: "card" | "list"; name: string; downloadUrl: string; canDelete: boolean; onPreview: () => void; onDelete: () => void; onRetry?: () => void;
 }) {
   return <DropdownMenu>
     <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-xs" className={presentation === "card" ? "border border-[var(--clair-color-atomic-black-alpha-8)] bg-card shadow-[var(--clair-shadow-xs)]" : undefined} aria-label={`${name} 작업 메뉴`} /> }>
@@ -366,6 +392,7 @@ function AttachmentActionMenu({ presentation = "list", name, downloadUrl, canDel
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end" className="w-36">
       <DropdownMenuItem onClick={onPreview}>미리보기</DropdownMenuItem>
+      {onRetry ? <DropdownMenuItem onClick={onRetry}>미리보기 다시 불러오기</DropdownMenuItem> : null}
       <DropdownMenuItem onClick={() => window.open(downloadUrl, "_blank", "noopener")}>다운로드</DropdownMenuItem>
       {canDelete ? <DropdownMenuItem variant="destructive" onClick={onDelete}>삭제</DropdownMenuItem> : null}
     </DropdownMenuContent>
