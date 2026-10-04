@@ -162,9 +162,49 @@ test("home enriches fulfillment context without snapshot names and fails closed 
     patients: [{ id: "patient", name: "나나" }], guardians: [{ id: "guardian", name: "김보호" }],
   }, [{ id: "work", workspaceId, encounterId: "encounter", queueType: "lab", status: "requested", createdAt: `${operatingDate}T09:00:00+09:00`, sourceSnapshot: { orderDisplayName: "CBC" } }]);
   const result = await createSupabaseHomeOperationsWorkItemGateway(client).listHomeOperationsWorkItems(gatewayInput);
-  expect(result.ok && result.items[0]).toMatchObject({ patientId: "patient", patientName: "나나", guardianName: "김보호" });
+  expect(result.ok && result.items[0]).toMatchObject({ patientId: "patient", patientName: "나나", guardianId: "guardian", guardianName: "김보호" });
   const unavailable = await createSupabaseHomeOperationsWorkItemGateway({ async rpc() { return { data: {}, error: null }; } }).listHomeOperationsWorkItems(gatewayInput);
   expect(unavailable).toEqual({ ok: false, error: "db_read_failed", retryable: true });
+});
+
+test("home joins registered user pictures by scoped identity and preserves multiple assignees", async () => {
+  const secondUserId = "second-vet";
+  const client = sourceClient({
+    appointments: [{ id: "appointment", status: "confirmed", scheduled_start_at: `${operatingDate}T10:00:00+09:00`, created_by_user_id: actorUserId, assigned_staff_user_ids: [actorUserId, secondUserId] }],
+    user_memberships: [{ user_id: actorUserId, users: { display_name: "김수의" } }, { user_id: secondUserId, users: { display_name: "이수의" } }],
+  });
+  const scopedReads: string[] = [];
+  const result = await createSupabaseHomeOperationsWorkItemGateway(client, {
+    async listWorkspaceStaff(input) {
+      scopedReads.push(input.workspaceId);
+      expect(input.operatingDate).toBeUndefined();
+      return { ok: true, staff: [
+        { id: actorUserId, displayName: "김수의", roles: [], status: "active", avatarUrl: "https://photos.test/signed-one" },
+        { id: secondUserId, displayName: "이수의", roles: [], status: "active", avatarUrl: "https://photos.test/signed-two" },
+        { id: "unrelated", displayName: "김수의", roles: [], status: "active", avatarUrl: "https://photos.test/wrong-name-match" },
+      ] };
+    },
+  }).listHomeOperationsWorkItems(gatewayInput);
+  expect(scopedReads).toEqual([workspaceId]);
+  expect(result.ok && result.items[0]).toMatchObject({
+    requesterUserId: actorUserId,
+    requesterAvatarUrl: "https://photos.test/signed-one",
+    assigneeUserIds: [actorUserId, secondUserId],
+    assigneeAvatarUrls: { [actorUserId]: "https://photos.test/signed-one", [secondUserId]: "https://photos.test/signed-two" },
+  });
+  expect(result.ok && result.items[0].assigneeAvatarUrls).not.toHaveProperty("unrelated");
+});
+
+test("optional profile read failure keeps Home work and names available", async () => {
+  const client = sourceClient({
+    appointments: [{ id: "appointment", status: "confirmed", scheduled_start_at: `${operatingDate}T10:00:00+09:00`, created_by_user_id: actorUserId }],
+    user_memberships: [{ user_id: actorUserId, users: { display_name: "김수의" } }],
+  });
+  const result = await createSupabaseHomeOperationsWorkItemGateway(client, {
+    async listWorkspaceStaff() { return { ok: false, error: "db_read_failed" }; },
+  }).listHomeOperationsWorkItems(gatewayInput);
+  expect(result).toMatchObject({ ok: true, sourceStatus: "live", items: [{ requesterName: "김수의", assigneeName: "김수의" }] });
+  expect(result.ok && result.items[0].requesterAvatarUrl).toBeUndefined();
 });
 
 test("billing uses invoice guardian context when encounter guardian is absent", async () => {

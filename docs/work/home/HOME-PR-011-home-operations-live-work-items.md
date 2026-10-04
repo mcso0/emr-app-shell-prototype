@@ -11,7 +11,7 @@ source_docs:
   - "docs/engineering/current-status.md"
 dependencies:
   - "HOME-PR-010"
-updated: "2026-07-05"
+updated: "2026-10-04"
 ---
 
 # Home Operations Live Work Items
@@ -85,3 +85,21 @@ User approved separating `원내 현황` from `내 업무`, implementation, test
 - Production smoke: app/login and Cheongdam home route; distinguish HTTP/unauthenticated checks from authenticated workflow evidence.
 
 Local verification: 12 Home UI tests and 10 Home server tests passed; lint, typecheck, docs, UX copy and secret scan passed. Build and remote release gates are recorded in the PR delivery evidence.
+
+## 2026-10-04 Hospital list identity presentation
+
+User approved implementing the reviewed HTML design, investigating before edits, commit/push/PR preparation and Production delivery. Exact candidate release evidence remains required before merge.
+
+- Hospital list work types use outline badges. Patient and guardian names have 20px fallback avatars.
+- Home toolbar hints retain the focused button's name when pointer movement over the search input or automatic action scrolling occurs. Focus/hover regression coverage verifies this behavior.
+- Requester and assignee cells center 24px round avatars. Hover and keyboard focus reveal names without navigating the row. More than three assignees use two avatars and a remaining-count avatar with the other names in its tooltip.
+- Request time includes a clock icon. Hospital status uses an 8px icon/text gap (reviewed HTML had 6px; prior application had 4px).
+- The existing 36px row geometry and horizontal scrolling remain. Avatar sizes are local to this Home list, with no viewport breakpoint or shared avatar-size change.
+- Registered user photos are read through the existing active-workspace staff gateway and joined by requester/assignee IDs. Private photo signing and removed-legacy-image rules remain owned by the staff profile reader. Optional photo-read failure preserves work and names.
+- Responses with user photos older than four minutes refresh once on hospital-list activation, visible-filter changes or window focus, before the five-minute private URL lifetime. No polling or URL lifetime change is introduced.
+- Patient/guardian profiles currently show fixed Figma images and have no photo registration/storage contract. Home does not treat those images as registered photos. The requested persistence expansion is pending the user's scope decision; it requires a separate explicit photo-storage/read/write scope before any remote migration.
+- No DB, storage, permission policy, real identity data, or existing Home source/mutation contract changes are included in this slice.
+- Branch: `codex/home-list-profile-avatars`; base: `efadd50a8f7c354511d8cda5415fafddc4b20742`.
+- Required checks: Home/staff reader and UI regression coverage, lint, typecheck, build, docs, UX copy, secrets, exact-candidate Release Check and Ready Preview.
+- Planned Production smoke: `/login` and the existing authenticated synthetic Cheongdam Home list, including avatars, tooltips and navigation.
+- Initial rollback candidate: Ready Production `dpl_77uqrDPz38MwBDM1ay3zEUgxaujg`; recheck the current deployment before merge.

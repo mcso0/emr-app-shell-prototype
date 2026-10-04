@@ -16,6 +16,9 @@ import { EmrEmptyState } from "@/components/emr/empty-state";
 import { EmrFilterToggle } from "@/components/emr/filter-toggle";
 import { EmrModuleListSidePanel } from "@/components/emr/module-list-side-panel";
 import { Badge } from "@/components/ui/badge";
+import { AnimalPatientAvatar } from "@/components/emr/animal-patient-avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -339,7 +342,9 @@ function HomeToolbarActions({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("resize", close);
   }, []);
   const describe = (target: EventTarget | null, container: HTMLElement) => {
-    const button = target instanceof Element ? target.closest('button[title]') : null;
+    const hovered = target instanceof Element ? target.closest('button[title]') : null;
+    const focused = document.activeElement?.closest('button[title]');
+    const button = hovered && container.contains(hovered) ? hovered : focused && container.contains(focused) ? focused : null;
     if (!button || !container.contains(button)) { setHint(null); return; }
     const rect = button.getBoundingClientRect();
     setHint({ text: button.getAttribute('title') || '', left: Math.max(130, Math.min(window.innerWidth - 130, rect.left + rect.width / 2)), top: rect.bottom + 8 });
@@ -347,11 +352,11 @@ function HomeToolbarActions({ children }: { children: ReactNode }) {
   return <>
     <div className={styles.toolbarActions} data-testid="home-toolbar-actions"
       onPointerOver={(event) => describe(event.target, event.currentTarget)}
-      onPointerLeave={() => setHint(null)}
+      onPointerLeave={(event) => describe(document.activeElement, event.currentTarget)}
       onPointerDown={() => setHint(null)}
       onFocusCapture={(event) => describe(event.target, event.currentTarget)}
       onBlurCapture={() => setHint(null)}
-      onScrollCapture={() => setHint(null)}
+      onScrollCapture={(event) => describe(document.activeElement, event.currentTarget)}
       onKeyDownCapture={(event) => { if (event.key === "Enter" || event.key === " " || event.key === "Escape") setHint(null); }}>
       {children}
     </div>
@@ -529,6 +534,18 @@ function requestTime(task: HomeTask) {
   return Number.isNaN(time.getTime()) ? "—" : new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "numeric", minute: "2-digit", hour12: true }).format(time);
 }
 
+function HospitalUserAvatar({ name, src, label, unassigned = false, count }: { name: string; src?: string; label: string; unassigned?: boolean; count?: number }) {
+  return <Tooltip>
+    <TooltipTrigger aria-label={`${label} ${name}`} className={styles.hospitalAvatarTrigger} onClick={(event) => event.stopPropagation()}>
+      <Avatar size="sm" roundness="round" className={cn(styles.hospitalUserAvatar, unassigned && styles.hospitalUnassignedAvatar)}>
+        {src && <AvatarImage src={src} alt="" />}
+        <AvatarFallback>{count ? `+${count}` : <UserIcon aria-hidden="true" />}</AvatarFallback>
+      </Avatar>
+    </TooltipTrigger>
+    <TooltipContent role="tooltip">{name}</TooltipContent>
+  </Tooltip>;
+}
+
 function HomeHospitalList({ tasks, date, onNavigate }: { tasks: HomeTask[]; date: string; onNavigate: (task: HomeTask) => void }) {
   const headings = ["업무", "환자", "보호자", "세부 업무", "상태", "요청 시각", "요청자", "담당자", ""];
   const isEmpty = tasks.length === 0;
@@ -538,16 +555,21 @@ function HomeHospitalList({ tasks, date, onNavigate }: { tasks: HomeTask[]; date
       {tasks.map((task) => {
         const state = getHospitalStatus(task);
         const stateLabel = hospitalStatuses.find((item) => item.id === state)?.label ?? state;
+        const owners = taskOwners(task);
+        const visibleOwners = owners.length > 3 ? owners.slice(0, 2) : owners;
         return <div role="row" tabIndex={0} key={task.id} className={styles.hospitalRow} data-testid={`home-hospital-row-${task.id}`} aria-label={`${task.patientName || "환자 미지정"} ${task.title}`}
           onClick={() => onNavigate(task)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onNavigate(task); } }}>
-          <span role="cell" title={typeLabel(task)}>{typeLabel(task)}</span>
-          <span role="cell" title={task.patientName || "환자 미지정"}>{task.patientName || "환자 미지정"}</span>
-          <span role="cell" title={task.clientName || "보호자 미지정"}>{task.clientName || "보호자 미지정"}</span>
+          <span role="cell" title={typeLabel(task)}><Badge variant="outline" size="md" className={styles.hospitalTypeBadge}>{typeLabel(task)}</Badge></span>
+          <span role="cell" className={styles.hospitalIdentity} title={task.patientName || "환자 미지정"}><AnimalPatientAvatar alt={task.patientName || "환자 미지정"} size="table" className={styles.hospitalPatientAvatar} /><span>{task.patientName || "환자 미지정"}</span></span>
+          <span role="cell" className={styles.hospitalIdentity} title={task.clientName || "보호자 미지정"}><Avatar className={styles.hospitalGuardianAvatar}><AvatarFallback><UserIcon aria-hidden="true" /></AvatarFallback></Avatar><span>{task.clientName || "보호자 미지정"}</span></span>
           <span role="cell" className={styles.hospitalDetails} title={task.queueCardSecondLineText || task.title}><span>{task.queueCardSecondLineText || task.title}</span><HomeTaskSignals task={task} date={date} /></span>
           <span role="cell" className={styles.hospitalState}><HospitalStateIcon state={state} />{stateLabel}</span>
-          <span role="cell" title={`${task.requestedAt} · ${elapsed(task)} 경과`}>{requestTime(task)}</span>
-          <span role="cell" title={task.requestedBy || "—"}>{task.requestedBy || "—"}</span>
-          <span role="cell" title={taskOwners(task).join(", ")}>{taskOwners(task).join(", ")}</span>
+          <span role="cell" className={styles.hospitalTime} title={`${task.requestedAt} · ${elapsed(task)} 경과`}><ClockIcon aria-hidden="true" />{requestTime(task)}</span>
+          <span role="cell" className={styles.hospitalUsers}>{task.requestedBy || task.requesterUserId ? <HospitalUserAvatar name={task.requestedBy || "요청자 지정됨"} src={task.requesterAvatarUrl} label="요청자" /> : <span className="text-muted-foreground">—</span>}</span>
+          <span role="cell" className={styles.hospitalUsers}>{visibleOwners.map((name, index) => {
+            const userId = task.assigneeUserIds?.[index] ?? (index === 0 ? task.assigneeUserId : undefined);
+            return <HospitalUserAvatar key={userId ?? `${name}-${index}`} name={name} src={userId ? task.assigneeAvatarUrls?.[userId] : undefined} label="담당자" unassigned={name === "미배정"} />;
+          })}{owners.length > 3 && <HospitalUserAvatar name={owners.slice(2).join(", ")} label="담당자" count={owners.length - 2} />}</span>
           <span role="cell" className={styles.hospitalRowAction}><Button variant="ghost" size="icon-xs" aria-label={`${task.patientName || "환자"} ${typeLabel(task)} 화면으로 이동`} onClick={(event) => { event.stopPropagation(); onNavigate(task); }}><ChevronRightIcon aria-hidden="true" /></Button></span>
         </div>;
       })}

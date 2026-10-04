@@ -27,6 +27,7 @@ import {
 } from "@/mocks/emr-domain";
 import type { PermissionId } from "@/types/emr-domain";
 import type { Encounter, Invoice } from "@/types/emr-domain";
+import type { WorkspaceStaffReadGateway } from "@/features/staff/server-workspace-staff-core";
 import type {
   HomeOperationsAccessIssue,
   HomeOperationsAttentionSignal,
@@ -437,10 +438,36 @@ export type SupabaseHomeOperationsWorkItemsRpcClient = {
 
 export function createSupabaseHomeOperationsWorkItemGateway(
   client: SupabaseHomeOperationsWorkItemsRpcClient,
+  staffGateway?: WorkspaceStaffReadGateway,
 ): HomeOperationsWorkItemGateway {
   return {
     async listHomeOperationsWorkItems(input) {
-      return listHomeOperationsWorkItemsFromExistingSources(client, input);
+      const result = await listHomeOperationsWorkItemsFromExistingSources(client, input);
+      if (!result.ok || !staffGateway) return result;
+      const visibleItems = result.items.filter((item) =>
+        item.workspaceId === input.workspaceId &&
+        input.allowedSourceTypes.includes(item.sourceType) &&
+        item.permissionMode === "full",
+      );
+      if (!visibleItems.some((item) => item.requesterUserId || item.assigneeUserId || item.assigneeUserIds?.length)) return result;
+      // Optional pictures must not turn a successful work read into an error.
+      // The staff gateway scopes active membership and signs private pictures.
+      try {
+        const staff = await staffGateway.listWorkspaceStaff({ workspaceId: input.workspaceId });
+        if (!staff.ok) return result;
+        const photos = new Map(staff.staff.filter((member) => member.status === "active" && member.avatarUrl).map((member) => [member.id, member.avatarUrl!]));
+        for (const item of visibleItems) {
+          item.requesterAvatarUrl = photos.get(item.requesterUserId ?? "");
+          const assigneeIds = item.assigneeUserIds?.length ? item.assigneeUserIds : item.assigneeUserId ? [item.assigneeUserId] : [];
+          item.assigneeAvatarUrls = Object.fromEntries(assigneeIds.flatMap((id) => {
+            const photo = photos.get(id);
+            return photo ? [[id, photo]] : [];
+          }));
+        }
+      } catch {
+        // Keep names and fallback avatars when the optional profile read fails.
+      }
+      return result;
     },
   };
 }
@@ -669,8 +696,9 @@ async function listHomeOperationsWorkItemsFromExistingSources(
   for (const item of items) {
     const encounter = encountersById.get(item.encounterId);
     item.patientId ??= getString(encounter?.patient_id);
+    item.guardianId ??= getString(encounter?.guardian_id);
     item.patientName ??= getString(patientsById.get(item.patientId)?.name);
-    item.guardianName ??= getString(guardiansById.get(getString(encounter?.guardian_id))?.name);
+    item.guardianName ??= getString(guardiansById.get(item.guardianId)?.name);
   }
   const memberNames = await listSnapshotRows(sourceClient, "user_memberships", input.workspaceId);
   if (memberNames.ok) {
