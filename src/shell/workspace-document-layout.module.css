@@ -65,6 +65,10 @@
   transition: none;
 }
 
+.center {
+  isolation: isolate;
+}
+
 .center[data-history-moving] {
   overflow: visible;
 }
