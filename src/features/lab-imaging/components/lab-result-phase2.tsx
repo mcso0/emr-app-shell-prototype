@@ -43,7 +43,7 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
 }) {
   const attachments = phase2?.attachments.filter(item => item.rowId === row.id) ?? [];
   const instruction = staffInstruction?.trim() ?? "";
-  return <div className="bg-[var(--emr-surface-muted)] px-2.5 pb-4 pt-2.5" data-testid={`lab-result-detail-${row.id}`}>
+  return <div className="bg-[var(--emr-surface-muted)] px-6 pb-4 pt-2.5" data-testid={`lab-result-detail-${row.id}`}>
     {instruction ? <section className="mb-3" aria-label="직원 전달 사항">
       <div className="flex h-7 items-center gap-1 px-2.5 emr-text-metadata text-muted-foreground">직원 전달 사항</div>
       <div className="px-2.5 py-2.5">
