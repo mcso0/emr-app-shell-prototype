@@ -317,10 +317,15 @@ Documentation validation: `npm run docs:check` passed (1072 Markdown files); foc
 - Release dependency: do not merge/deploy the application until the exact schema
   candidate is separately authorized, applied and verified remotely. The user
   already authorized application delivery; do not request that scope again.
-- Rollback: revert the application merge while retaining the additive nullable
-  schema so result-level files remain safe. Strict schema rollback may restore
-  the previous prepare function immediately, but restore NOT NULL only after
-  verifying that no null-scoped records exist; never delete files to force it.
+- Default rollback: ship a UI-only compatibility fix while retaining nullable
+  attachment types/parser, API/schema and access to existing overall files.
+  The previous application parser rejects null row IDs, so a plain application
+  revert is unsafe once result-level files exist. An old deployment is usable
+  only after new overall uploads are stopped and every workspace has zero
+  null-scoped records and no prepare/upload/finalize task in flight.
+  Restore NOT NULL only after verifying that no null-scoped records exist;
+  never delete or hide files to force a rollback. Remote rollback actions need
+  separate target/scope authorization.
 - Exact PR candidate, local/remote gates, Preview, read-only Production smoke,
   previous Ready deployment, and final delivery status belong in the PR and
   handoff. Stop if schema verification, required checks, source or smoke fails.
