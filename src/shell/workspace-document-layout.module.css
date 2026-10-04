@@ -1,3 +1,47 @@
+.panel {
+  isolation: isolate;
+}
+
+/* The content mask stays opaque; only its decorative elevation changes. */
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: var(--clair-shadow-lg);
+  border-radius: var(--emr-radius-panel);
+  opacity: 0;
+  transition: opacity 150ms cubic-bezier(.2, 0, 0, 1);
+}
+
+.panel[data-workspace-panel="left"]::before,
+.panel[data-workspace-panel="left"][data-presentation="drawer"] > .panelSurface {
+  border-radius: 0 var(--emr-radius-panel) var(--emr-radius-panel) 0;
+}
+
+.panel[data-workspace-panel="right"][data-presentation="drawer"] > .panelSurface {
+  border: 1px solid var(--emr-border-strong);
+  border-radius: var(--emr-radius-panel);
+}
+
+.panel[data-shadow-visible]::before {
+  opacity: 1;
+}
+
+.panel[data-starting-style]::before,
+.panel[data-ending-style]::before {
+  opacity: 0;
+}
+
+.panel[data-ending-style]::before,
+.panel[data-presentation="inline"]::before {
+  transition-duration: var(--clair-motion-duration-drawer-exit);
+}
+
+.panel[data-shadow-instant]::before {
+  transition: none;
+}
+
 .slide {
   transform: translateX(0);
   transition: transform var(--clair-motion-duration-drawer-enter) var(--clair-motion-easing-panel-enter);
@@ -34,6 +78,15 @@
   z-index: 10;
 }
 
+/* Keep the exiting content outside its edge hidden while allowing the inward shadow. */
+.panelClip[data-workspace-panel-clip="left"] {
+  clip-path: inset(0 -24px 0 0);
+}
+
+.panelClip[data-workspace-panel-clip="right"] {
+  clip-path: inset(0 0 0 -24px);
+}
+
 /* Nested financial/receipt confirmations must remain above outer profile drawers. */
 .panelPortal:has([data-nested-dialog-open]) {
   z-index: 50;
@@ -41,6 +94,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .slide {
+    transition: none;
+  }
+
+  .panel::before {
     transition: none;
   }
 }

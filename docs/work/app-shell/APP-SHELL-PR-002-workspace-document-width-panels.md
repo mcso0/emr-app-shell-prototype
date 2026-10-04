@@ -3,7 +3,7 @@ id: APP-SHELL-PR-002
 status: human_review
 area: app-shell
 priority: P1
-target_pr: User-approved five-module document alignment follow-up to main and Production
+target_pr: User-approved document drawer edge and bilateral elevation follow-up to main and Production
 updated: 2026-10-04
 source_docs:
   - docs/design/system/workspace-document-width-contract.md
@@ -313,3 +313,13 @@ Local full lint passed with five existing script warnings; TypeScript, optimized
 Existing boundary: at exactly 768px with the module queue and outer patient profile both open, the unchanged outer shell can leave a zero-width document area. This separate outer-slot behavior is excluded from the internal-panel slice. Nested receipt confirmation compact coexistence was verified at 1024px with nonzero work space; cancel restores the receipt action. Inner panels, compact focus and inputs at 768/320px without that outer-slot combination passed.
 
 Human Review records pending clinical acceptance. Conditional delivery authorization remains active. Exact Preview, Release Check, merge/source/alias and scoped Production smoke evidence belongs to the resulting PR. Rollback preflight: Ready Production `dpl_8hnyVCL8QrGfoQhbesDarhPjapzj`, source `08100acb7df5bce1f7c89766350f9537958c3c05`. Stop on candidate drift, failed required checks or unexpected Production source/smoke; no remote DB, clinical save, payment or provider action is included.
+
+## Accepted drawer edge and bilateral elevation — 2026-10-04
+
+승욱 accepted the revised interactive HTML and authorized: “오케이 좋다 수정하자. 수정하고, 커밋, 푸시, 피알, 오리진-메인에 머지. 배포 승인”. Scope is the common document-panel surface: left history edge geometry across all five modules and the shared drawer shadow on both sides, including Lab receipt. Base `10f0df3369be23922da2a9d24878c2a9e9d4bd0b`, attached clean worktree branch `codex/document-drawer-shadow`; primary-checkout WIP is preserved.
+
+Use the existing `--clair-shadow-lg` token on an opacity-only decorative layer, 150/140ms. Keep contents opaque and retain 180/140ms history/Lab receipt slides, 280px widths, non-modal input, list-only read feedback and mounted state. Separate the content mask from the outer Base UI portal to preserve nested confirmation/menu bounds. Track presentation causes so initial restoration, keyboard and compact changes remain immediate while ordinary inline/drawer resize fades only elevation. Imaging/billing right reference close/reset remains immediate. No dependency, data/API/permission change, remote DB mutation or real clinical/payment/provider action is included.
+
+Verification covers bilateral geometry/elevation, interrupted opacity transition, restored/keyboard/compact/reduced-motion behavior, unchanged input identity, existing five-module layouts, receipt loading, nested confirmations and reception drawers. Release requires local preflight, exact-candidate Release Check, Ready Preview, exact-head-protected merge and Production source/alias/smoke proof. Smoke uses reversible panel/width controls on synthetic documents and `/login`. Current rollback preflight is Ready Production `dpl_H8W3YcHoQ6iq4F3rtJLm8dDsjPg8`, source `10f0df3369be23922da2a9d24878c2a9e9d4bd0b`. Stop for candidate/scope drift, failed checks or unexpected deployment/smoke.
+
+Local result: **95 focused Chromium cases passed (2.1m)**, including four new elevation/edge interaction cases. Full lint passed with five pre-existing warnings and zero errors; changed-source/test lint, TypeScript, optimized mock production build, secret scan, docs links, UX copy and whitespace checks passed. Independent source review found and resolved nested-portal clipping and animation-cause edges before the final run. In-app browser at 1440px confirmed both 280px drawers, matching token shadows, opaque contents and an unclipped 420px nested receipt confirmation. The initial test failures concerned CSS token serialization and pseudo-element animation observation; corrected assertions passed in the final suite. No Storybook server was running; no dependency/API assumptions were added. Candidate, CI, Preview, merge and Production smoke evidence is recorded in the PR.
