@@ -287,3 +287,51 @@ Documentation validation: `npm run docs:check` passed (1072 Markdown files); foc
 - Existing responsive test baseline: before this change, the 1366px open-panel scenario also failed its expectation of horizontal overflow (`0` instead of `> 0`). Do not alter unrelated shell behavior or weaken that expectation as part of this padding correction.
 - Local verification passed: eight focused synthetic browser scenarios, secret scan, internal docs links, Korean UX copy, full lint (five existing script warnings), TypeScript and the webpack Production build. Shared installed dependencies match the candidate lockfile; CI verifies the default build separately.
 - Verification uses intercepted synthetic local APIs. Production smoke is read-only. Exact-candidate preflight, Release Check, Preview, merge/deployment/alias and rollback evidence are recorded in the PR and final handoff. Human acceptance remains separate from delivery.
+
+## Overall Finding Columns And Attachments — 2026-10-04
+
+- Authorization: 승욱 accepted the standalone HTML proposal, requested removal
+  of the prototype explanatory subtext, and authorized implementation plus
+  commit/push/PR/main merge and Production delivery for this scope.
+- Goal: equal text/upload columns in `검사결과 종합소견`, matching the item
+  detail's responsive grid and divider. Preserve autosave and read-only states.
+- Dependency found during inspection: current local and remote attachment
+  contracts require a result row. Real overall uploads need nullable `row_id`
+  and an updated existing prepare RPC; an arbitrary item row is not a valid
+  substitute. New remote schema application needs separate authorization.
+- Local scope: reuse the attachment area with explicit `rowId: null`; render
+  only result-level files there. Keep item files, API permissions, result locks,
+  canonical/editable-result checks, owner assignment, signed private paths,
+  byte/type/size checks, cancellation, cleanup, delete and audit contracts.
+- Schema candidate:
+  `supabase/migrations/20261004050013_lab_overall_result_attachments.sql`.
+  It drops only attachment `row_id` NOT NULL and replaces the same-signature
+  prepare function. Existing workspace/result and non-null item FKs, RLS,
+  grants and triggers remain. No existing record is changed or deleted.
+- Done criteria: matching desktop heights/widths, narrow stacking, no prototype
+  footer, item/overall isolation, explicit null prepare, reload/delete lifecycle,
+  autosave regression, denied invalid selectors and cross-workspace access.
+- Verification boundary: browser and server mutations use intercepted synthetic
+  fixtures. SQL executes in an empty disposable local database and rolls back.
+  Remote inspection is read-only; no remote migration or file upload is applied.
+- Release dependency: do not merge/deploy the application until the exact schema
+  candidate is separately authorized, applied and verified remotely. The user
+  already authorized application delivery; do not request that scope again.
+- Default rollback: ship a UI-only compatibility fix while retaining nullable
+  attachment types/parser, API/schema and access to existing overall files.
+  The previous application parser rejects null row IDs, so a plain application
+  revert is unsafe once result-level files exist. An old deployment is usable
+  only after new overall uploads are stopped and every workspace has zero
+  null-scoped records and no prepare/upload/finalize task in flight.
+  Restore NOT NULL only after verifying that no null-scoped records exist;
+  never delete or hide files to force a rollback. Remote rollback actions need
+  separate target/scope authorization.
+- Exact PR candidate, local/remote gates, Preview, read-only Production smoke,
+  previous Ready deployment, and final delivery status belong in the PR and
+  handoff. Stop if schema verification, required checks, source or smoke fails.
+- Local evidence: 13 Node server/lifecycle tests, 12 focused browser scenarios,
+  isolated RPC/FK SQL fixture, TypeScript, lint, build, docs, secret and UX-copy
+  gates passed. Lint has five pre-existing unrelated script warnings; build has
+  the existing docs-reader tracing warning. The SQL fixture is a reduced model,
+  not a full RLS/audit/storage replay. A read-only security review found no new
+  actionable boundary defect and confirmed the separate remote-schema gate.

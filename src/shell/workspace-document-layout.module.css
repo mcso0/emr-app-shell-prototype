@@ -19,9 +19,21 @@
   border-radius: 0 var(--emr-radius-panel) var(--emr-radius-panel) 0;
 }
 
+.panel[data-presentation="drawer"] > .panelSurface {
+  border: 1px solid var(--emr-border-default);
+}
+
+.panel[data-workspace-panel="left"][data-presentation="drawer"] > .panelSurface {
+  border-left-width: 0;
+}
+
+.panel[data-workspace-panel="right"]::before,
 .panel[data-workspace-panel="right"][data-presentation="drawer"] > .panelSurface {
-  border: 1px solid var(--emr-border-strong);
-  border-radius: var(--emr-radius-panel);
+  border-radius: var(--emr-radius-panel) 0 0 var(--emr-radius-panel);
+}
+
+.panel[data-workspace-panel="right"][data-presentation="drawer"] > .panelSurface {
+  border-right-width: 0;
 }
 
 .panel[data-shadow-visible]::before {
