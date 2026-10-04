@@ -25,9 +25,11 @@ An isolated detached worktree initially used verified main
 `0701ea78187fc8a5aab8a3c2e6e5d773936c350f` (#907), then integrated latest main
 `10f0df3369be23922da2a9d24878c2a9e9d4bd0b` (#908). Its four UI/docs files
 do not overlap this change. The upper-right toast/live-card placement is preserved
-byte-for-byte from #908. Release preparation then integrated latest main
-`efadd50a8f7c354511d8cda5415fafddc4b20742` (#909); its six files also do not
-overlap this candidate. The original checkout's WIP
+byte-for-byte from #908. Release preparation also preserved #909, #910, #914,
+#911, #915, #913 and #916 through verified main
+`e412d5fe8220c1e0650a64dfca3225d3c3ceb5de`. The PR's notification diff remains
+15 files; nullable overall-attachment schema/types/parser/API from #911 are
+preserved. The original checkout's WIP
 and dependencies remain untouched. Local dependencies were restored from the
 exact lockfile/cache because the original copied node_modules lacked main's
 react-pdf and react-zoom-pan-pinch packages.
@@ -108,11 +110,17 @@ Hosted migration history may receive the apply tool's execution-time version;
 verify name, exact stored SQL digest and function fingerprints rather than assume
 the local filename timestamp equals hosted history.
 
-Current official Production/rollback baseline verified during preparation:
-`dpl_77uqrDPz38MwBDM1ay3zEUgxaujg`,
-`https://emr-app-shell-prototype-fne8f2i9z-mcso0s-projects.vercel.app`,
-source SHA `efadd50a8f7c354511d8cda5415fafddc4b20742`, READY and serving
-`https://emr-app-shell-prototype.vercel.app`. Reconfirm immediately before approval.
+Compatible Production/rollback baseline verified at 2026-10-04 05:54 UTC:
+`dpl_8UeiEU9LZv8GMfmxypzr7TfqhQni`,
+`https://emr-app-shell-prototype-mco5afm0q-mcso0s-projects.vercel.app`,
+source SHA `e412d5fe8220c1e0650a64dfca3225d3c3ceb5de`, READY and serving
+`https://emr-app-shell-prototype.vercel.app`; login200, anonymous notification
+list401/counts401. This post-#911 source accepts explicit `rowId:null` overall
+attachments. Hosted schema metadata confirms nullable `row_id`, explicit-null
+prepare support and `lab_overall_result_attachments / 20261004052400` history.
+No attachment records were queried or assumed to exist. Pre-#911 efadd50a and
+dpl_77uqrDPz38MwBDM1ay3zEUgxaujg are superseded, not approved rollback candidates.
+Reconfirm deployment/source/alias and compatibility immediately before approval.
 
 Safe smoke is GET `/login`, unauthenticated GET notification list/counts (401),
 and read-only DB history/fingerprint/ACL/RLS checks. Authenticated notification
@@ -121,13 +129,16 @@ available; log counts/row lengths only. Do not visit authenticated reception/hom
 or queue/snapshot producer reads, or invoke read/archive/restore/read-all remotely.
 All state mutation verification remains local synthetic.
 
- Apply the additive migration
+Apply the additive notification migration
 before deploying the new app; there is intentionally no fallback to full-history
-RPCs if v2 is missing. Verify authenticated session, exact global counts, limits,
-old-ID state operations, role/workspace denial and error monitoring after release.
+RPCs if v2 is missing. Read-only session/count/limit/denial smoke may be included
+in exact release approval. Old-ID/state mutation checks remain local synthetic.
 No hosted mutation fixture is authorized by this work item.
 
-For application rollback, deploy the prior app; legacy RPCs/tables remain intact.
+For application rollback, use the separately approved compatible post-#911
+baseline above; legacy notification RPCs/tables remain intact. Notification RPC
+compatibility alone does not establish compatibility of pre-#911 apps with
+nullable attachment data.
 Leaving unused v2 functions is the smallest DB rollback. If removing them is
 required, after application rollback run in a separately approved migration:
 
@@ -141,4 +152,6 @@ drop function private.clair_notification_visible_v2(public.notification_events);
 Do not delete user acknowledgement rows during rollback. No historical cleanup,
 poll interval/cross-tab changes, UI history pagination, retention or realtime
 publication changes are included. The rollback drop packet was transactionally verified in the isolated DB,
-and the old reader/emitter remained present. No remaining approval-review rejection.
+and the old reader/emitter remained present. Hosted DDL/main/Production approval
+remains pending. Exact head, CI/Preview and current baseline evidence are reported
+in the PR approval packet; this document grants no remote action authorization.
