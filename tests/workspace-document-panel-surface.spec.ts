@@ -17,6 +17,8 @@ test("restored bilateral drawers keep opaque content, shared elevation and edge 
       return {
         corners: [content.borderTopLeftRadius, content.borderTopRightRadius, content.borderBottomRightRadius, content.borderBottomLeftRadius],
         borders: [content.borderTopWidth, content.borderRightWidth, content.borderBottomWidth, content.borderLeftWidth],
+        borderColors: [content.borderTopColor, content.borderRightColor, content.borderBottomColor, content.borderLeftColor],
+        shadowCorners: [shadow.borderTopLeftRadius, shadow.borderTopRightRadius, shadow.borderBottomRightRadius, shadow.borderBottomLeftRadius],
         contentOpacity: content.opacity, shadowOpacity: shadow.opacity, duration: shadow.transitionDuration,
         shadow: shadow.boxShadow, token: getComputedStyle(element).getPropertyValue("--clair-shadow-lg").trim(),
         shadowPointerEvents: shadow.pointerEvents, width: element.getBoundingClientRect().width,
@@ -24,8 +26,12 @@ test("restored bilateral drawers keep opaque content, shared elevation and edge 
       };
     });
     expect(surface.width).toBe(280);
-    expect(surface.corners).toEqual(side === "left" ? ["0px", "12px", "12px", "0px"] : ["12px", "12px", "12px", "12px"]);
-    expect(surface.borders).toEqual(side === "left" ? ["0px", "1px", "0px", "0px"] : ["1px", "1px", "1px", "1px"]);
+    expect(surface.corners).toEqual(side === "left" ? ["0px", "12px", "12px", "0px"] : ["12px", "0px", "0px", "12px"]);
+    expect(surface.shadowCorners).toEqual(surface.corners);
+    expect(surface.borders).toEqual(side === "left" ? ["1px", "1px", "1px", "0px"] : ["1px", "0px", "1px", "1px"]);
+    surface.borderColors.forEach((color, index) => {
+      if (surface.borders[index] === "1px") expect(color).toBe("rgb(229, 229, 229)");
+    });
     expect(surface.contentOpacity).toBe("1");
     expect(surface.shadowOpacity).toBe("1");
     expect(surface.duration).toBe("0s");

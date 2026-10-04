@@ -3,7 +3,7 @@ id: APP-SHELL-PR-002
 status: human_review
 area: app-shell
 priority: P1
-target_pr: User-approved document drawer edge and bilateral elevation follow-up to main and Production
+target_pr: User-approved document drawer border/corner correction to main and Production
 updated: 2026-10-04
 source_docs:
   - docs/design/system/workspace-document-width-contract.md
@@ -323,3 +323,11 @@ Use the existing `--clair-shadow-lg` token on an opacity-only decorative layer, 
 Verification covers bilateral geometry/elevation, interrupted opacity transition, restored/keyboard/compact/reduced-motion behavior, unchanged input identity, existing five-module layouts, receipt loading, nested confirmations and reception drawers. Release requires local preflight, exact-candidate Release Check, Ready Preview, exact-head-protected merge and Production source/alias/smoke proof. Smoke uses reversible panel/width controls on synthetic documents and `/login`. Current rollback preflight is Ready Production `dpl_H8W3YcHoQ6iq4F3rtJLm8dDsjPg8`, source `10f0df3369be23922da2a9d24878c2a9e9d4bd0b`. Stop for candidate/scope drift, failed checks or unexpected deployment/smoke.
 
 Local result: **95 focused Chromium cases passed (2.1m)**, including four new elevation/edge interaction cases. Full lint passed with five pre-existing warnings and zero errors; changed-source/test lint, TypeScript, optimized mock production build, secret scan, docs links, UX copy and whitespace checks passed. Independent source review found and resolved nested-portal clipping and animation-cause edges before the final run. In-app browser at 1440px confirmed both 280px drawers, matching token shadows, opaque contents and an unclipped 420px nested receipt confirmation. The initial test failures concerned CSS token serialization and pseudo-element animation observation; corrected assertions passed in the final suite. No Storybook server was running; no dependency/API assumptions were added. Candidate, CI, Preview, merge and Production smoke evidence is recorded in the PR.
+
+## Drawer border/corner correction — 2026-10-04
+
+승욱 requested right drawer right corners at 0px, with top/bottom/left borders only, and history top/bottom/right borders only; all visible outer borders use `neutral-200`. Continue the approved common-panel delivery scope. Base `26ef7bf27e6827fdb3bb7fd8866b284938749d47`, attached clean worktree branch `codex/document-drawer-border`. Preserve primary WIP and the intervening Lab padding changes.
+
+Scope is common drawer CSS and existing surface regression assertions. Use existing `--emr-border-default` (`--clair-color-atomic-neutral-200`, `#E5E5E5`); mirror the decorative shadow radius with the right surface. Inline dividers, 280px geometry, shadow/slide timing, loading, keyboard/reduced-motion, nested portals and data/API/permission behavior retain their contracts. Verify existing panel motion and all five module layouts, then exact-candidate Release Check, Ready Preview, protected merge and authenticated synthetic Lab border/corner/panel smoke. No clinical/financial/device action. Rollback baseline: Ready Production `dpl_CUHs7PJcxfeqkxMubHVSNvNk1PJH`, source `26ef7bf27e6827fdb3bb7fd8866b284938749d47`. Record final candidate/check/deployment evidence in the PR.
+
+Local result: **61 focused Chromium cases passed (1.4m)** across surface/motion, common workspace and all five document layouts. Full lint passed with five existing warnings and zero errors; TypeScript, optimized mock production build, secret scan, docs links, UX copy and diff checks passed. Actual local 1386px browser confirmed both 280px drawers, mirrored surface/shadow radii, three 1px border sides at `rgb(229, 229, 229)` and opaque contents. No new test suite, dependency, component prop or React behavior was introduced. Unchanged read-state and reception suites were not repeated for this CSS-only correction.
