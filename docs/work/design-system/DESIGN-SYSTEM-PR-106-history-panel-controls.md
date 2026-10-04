@@ -89,10 +89,66 @@ One manual GitHub Release Check for the exact commit and Ready PR Preview remain
 part of delivery preparation. Final remote evidence is recorded in the release
 packet after the commit is fixed, avoiding a self-referential commit hash here.
 
-## Delivery gate
+## Original delivery gate (historical)
 
 Remote `staging` is absent at inspection. A direct main release therefore needs
 승욱's explicit approval of the candidate and a fixed-staging exception. Prepare
 the same candidate's PR preview, source/check evidence, production smoke paths,
 rollback commit/deployment, and stop conditions before asking for that gate.
 No alias, secret, provider, financial, or real-data operation is included.
+
+
+## Approved controls simplification — 2026-10-04
+
+승욱 accepted the revised interactive HTML and approved implementation, commit,
+push, PR, and preparation for main/Production delivery. The exact-candidate
+Production approval still follows the active release-deployment-ops gate.
+
+Reuse the existing isolated checkout; preserve the primary checkout and the
+HTML proposal outside the release diff. Base: `origin/main` at `dc79ef89`.
+The old search-close-only WIP is included in this complete behavior correction.
+
+- Use existing DropdownMenu radio items for 최신순/오래된순. No visible title,
+  date-basis description, or menu divider; keep a hidden accessible name.
+- Replace EmrHistoryFilterDialog with EmrHistoryFilterPopover. Anchor it to the
+  existing trigger, use nonmodal Popover plus EmrPopoverShell, hide the title,
+  and keep compact scrolling fields and the apply/cancel/reset footer.
+- Search has one always-visible, in-input CircleCloseFillIcon (16 px), named
+  검색 취소. X and non-composing Escape cancel the pending query, remove the
+  effective query, close the input, and restore focus after the trigger remounts.
+  Remove external/native reset buttons and hide the header search button while open.
+- Hide the visible result/total line while retaining screen-reader feedback and
+  header counts. Keep applied filter chips. Remove the generic reset row; empty
+  results expose 필터 해제 only when filters are applied. That action clears
+  filters while preserving search, selection, and 조제/처치 category tabs.
+- Apply these controls to ChartHistoryAside, PatientHistoryAside (lab, imaging,
+  and combined 조제/처치), and BillingHistoryAside. Keep chart date modes,
+  current/historical read-only selection, patient-wide fulfillment reads,
+  billing period/status quick buttons, guardian scope, and checkout eligibility.
+- Keep current real filter metadata. The HTML's synthetic classifications,
+  7/30/90-day presets, event-only fulfillment examples, and pagination fixtures
+  do not introduce new product data contracts, filters, routes, or pagination.
+- No DB, API, permissions, shared-token, dependency, or financial mutation.
+
+Follow-up verification passed in the isolated release checkout:
+
+- Focused Playwright **12/12** (33.3 s): chart history/read-only and state
+  boundaries, lab/imaging controls, combined 조제/처치 category navigation,
+  billing search/date drafts/hidden selections, and history matching/date rules.
+- Shared control stories **4/4** (5.06 s): dropdown sorting, blank and populated
+  search cancellation, pending debounce cancellation, Korean composition,
+  preserved applied filters, and outside-click/Escape draft dismissal.
+- Secrets, docs, UX copy, full lint, TypeScript, production build, and diff
+  checks passed. Full lint retains five existing script warnings. The build
+  retains the existing `/docs` file-tracing warning. The story harness emits an
+  existing React `act` warning; all four story assertions pass.
+- Local synthetic lab-screen review confirms the anchored nonmodal filter,
+  hidden title/result line, compact fields, and one always-visible 16 px filled
+  circle X inside the input. No real patient or payment data was changed.
+
+The Storybook connector cannot resolve the isolated checkout's stories; its
+local Vitest story runner provides the recorded results. The full repository
+test suite was not run. Exact remote Release Check, Preview, candidate and
+rollback evidence belong in the release packet after the commit is fixed.
+The active release model is PR Preview → exact Release Check → explicit
+Production approval → main. The original staging exception above is historical.
