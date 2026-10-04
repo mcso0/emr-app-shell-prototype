@@ -477,13 +477,13 @@ test("billing guardian ledger aside shows guardian history controls", async ({
     contentAside.getByText("수납대기와 미납을 기본으로 보고"),
   ).toHaveCount(0);
   for (const label of ["1주", "2주", "1달", "3달", "6개월", "직접"]) {
-    await expect(contentAside.getByRole("button", { name: label })).toBeVisible();
+    await expect(contentAside.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
   for (const label of ["전체", "대기", "미납", "완료", "취소"]) {
-    await expect(contentAside.getByRole("button", { name: label })).toBeVisible();
+    await expect(contentAside.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
   await expect(
-    contentAside.getByRole("button", { name: "전체" }),
+    contentAside.getByRole("button", { name: "전체", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(
     contentAside.getByRole("button", { name: "대기" }),
@@ -539,6 +539,46 @@ test("billing guardian ledger aside shows guardian history controls", async ({
   await expect(contentAside.getByText("두부").first()).toBeVisible();
   await expect(contentAside.getByText("김도윤").first()).toBeVisible();
   await expect(contentAside.getByText("타 보호자 청구서 포함")).toBeVisible();
+});
+
+test("billing history search, date drafts, sorting and hidden selections preserve checkout", async ({ page }) => {
+  await page.goto("/w/clair-demo/billing?modulePanel=open&right=open&aside=history");
+  const aside = page.locator("#billing-content-aside");
+  const paid = aside.getByTestId("billing-ledger-row-invoice-coco-history-paid-260414");
+  await paid.getByRole("checkbox").check();
+  await aside.getByRole("button", { name: "정렬: 최신순" }).click();
+  await page.getByRole("radio", { name: "오래된순" }).click();
+  await expect(aside.locator('[data-testid^="billing-ledger-row-"]').first()).toHaveAttribute("data-testid", "billing-ledger-row-invoice-coco-history-voided-260315");
+  await aside.getByRole("button", { name: "검색", exact: true }).click();
+  const search = aside.getByRole("searchbox", { name: "수납 이력 검색" });
+  await search.fill("INV-260429-0042");
+  await expect(aside.locator('[data-testid^="billing-ledger-row-"]')).toHaveCount(1);
+  await expect(aside.getByText("조건에 가려진 선택 2건", { exact: false })).toBeVisible();
+  await expect(page.getByText("합산 제외 1건")).toBeVisible();
+  await search.fill("없는 청구서");
+  await expect(aside.getByTestId("billing-history-empty-state")).toContainText("검색 결과가 없습니다");
+  await search.press("Escape");
+  await expect(paid.getByRole("checkbox")).toBeChecked();
+  await aside.getByRole("button", { name: "직접", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "수납 이력 기간" });
+  await dialog.getByLabel("시작일").fill("2026-04-30");
+  await dialog.getByLabel("종료일").fill("2026-04-29");
+  await expect(dialog.getByRole("button", { name: "적용" })).toBeDisabled();
+  await dialog.getByLabel("시작일").fill("2026-04-29");
+  await dialog.getByRole("button", { name: "적용" }).click();
+  await expect(aside.locator('[data-testid^="billing-ledger-row-"]')).toHaveCount(1);
+  await expect(aside.getByTestId("billing-ledger-row-invoice-coco-history-unpaid-260429")).toBeVisible();
+  await aside.getByRole("button", { name: "직접", exact: true }).click();
+  await dialog.getByRole("button", { name: "조건 초기화" }).click();
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(aside.locator('[data-testid^="billing-ledger-row-"]')).toHaveCount(1);
+  await aside.getByRole("button", { name: "조건 해제", exact: true }).click();
+  await expect(paid.getByRole("checkbox")).toBeChecked();
+  await expect(page.getByText("수납 합산 121,500원").first()).toBeVisible();
+  await search.fill("코코");
+  await page.getByTestId("billing-queue-item-invoice-dubu-260501").click();
+  await expect(aside.getByRole("searchbox")).toHaveCount(0);
+  await expect(aside.getByText("두부").first()).toBeVisible();
 });
 
 test("billing selected checkout renders one grouped invoice table", async ({

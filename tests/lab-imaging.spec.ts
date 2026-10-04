@@ -225,7 +225,7 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(hctRow).toContainText(/%.*30.*45.*낮음/);
   await hctRow.getByRole("button", { name: "HCT 검사 소견 펼치기", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "검사 소견", exact: true })).toHaveCSS("height", "76px");
-  await expect(page.getByText("첨부 자료가 없습니다.", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("lab-result-detail-lab-row-coco-hct").getByText("첨부 자료가 없습니다.", { exact: true })).toBeVisible();
   await expect(hctRow.getByRole("button", { name: "HCT 검사 소견 접기", exact: true })).toHaveAttribute("aria-expanded", "true");
   await page.getByRole("textbox", { name: "HCT 결과값" }).fill("42");
   await expect(hctRow).toContainText(/%.*30.*45.*정상/);
@@ -641,6 +641,56 @@ test("imaging workspace renders reading, impression, and attachment flow", async
   await expect(page.getByText("처치 지시서")).toHaveCount(0);
 });
 
+for (const kind of ["lab", "imaging"] as const) {
+  test(`${kind} patient history controls use current entries and preserve selection`, async ({ page }) => {
+    await page.goto(`/w/clair-demo/${kind}?modulePanel=open&aside=history&right=closed`);
+    const aside = page.locator(`#${kind}-content-aside`);
+    const cards = aside.locator('[data-testid^="patient-history-item-"]');
+    await expect(cards.first()).toBeVisible();
+    const initialIds = await cards.evaluateAll((items) => items.map((item) => item.getAttribute("data-testid")));
+    const total = initialIds.length;
+    const selected = aside.locator('[data-selected="true"]');
+    const selectedId = await selected.first().getAttribute("data-testid");
+    const initialUrl = page.url();
+    await aside.getByRole("button", { name: "정렬: 최신순" }).click();
+    await page.getByRole("radio", { name: "오래된순" }).click();
+    await expect(cards).toHaveCount(total);
+    const ascendingIds = await cards.evaluateAll((items) => items.map((item) => item.getAttribute("data-testid")));
+    expect(ascendingIds).toEqual([...initialIds].reverse());
+    await aside.getByRole("button", { name: "검색", exact: true }).click();
+    const search = aside.getByRole("searchbox", { name: kind === "lab" ? "검사 이력 검색" : "영상 이력 검색" });
+    await search.fill("없는 검사");
+    await expect(aside.getByTestId(`${kind}-content-aside-empty-state`)).toContainText("검색 결과가 없습니다");
+    await expect(aside.getByText("선택한 이력이 조건에 가려져 있습니다")).toBeVisible();
+    expect(page.url()).toBe(initialUrl);
+    await search.press("Escape");
+    await expect(cards).toHaveCount(total);
+    if (selectedId) await expect(aside.getByTestId(selectedId)).toHaveAttribute("data-selected", "true");
+    await aside.getByRole("button", { name: "필터", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: kind === "lab" ? "검사 이력 필터" : "영상 이력 필터" });
+    await dialog.getByLabel("시작일").fill("2026-04-02");
+    await dialog.getByLabel("종료일").fill("2026-04-01");
+    await expect(dialog.getByRole("button", { name: "적용" })).toBeDisabled();
+    await dialog.getByLabel("시작일").fill("2026-04-01");
+    await dialog.getByRole("button", { name: "적용" }).click();
+    await expect(aside.getByTestId(`${kind}-content-aside-empty-state`)).toContainText("조건에 맞는 이력이 없습니다");
+    await aside.getByRole("button", { name: "필터", exact: true }).click();
+    await dialog.getByRole("button", { name: "조건 초기화" }).click();
+    await dialog.getByRole("button", { name: "취소", exact: true }).click();
+    await expect(cards).toHaveCount(0);
+    await aside.getByRole("button", { name: "조건 해제", exact: true }).last().click();
+    await expect(cards).toHaveCount(total);
+    await search.fill("다른 환자에는 유지하지 않을 검색");
+    await expect(cards).toHaveCount(0);
+    const nextQueueId = kind === "lab" ? "lab-queue-item-lab-result-kong-cbc" : "imaging-queue-item-imaging-kong-abdomen";
+    await page.getByTestId(nextQueueId).click();
+    await expect(aside.getByRole("searchbox")).toHaveCount(0);
+    await expect(aside.getByRole("button", { name: "정렬: 최신순" })).toBeVisible();
+    await expect(aside.getByRole("button", { name: "필터", exact: true })).toHaveAttribute("aria-pressed", "false");
+    await expect(cards.first()).toBeVisible();
+  });
+}
+
 test("imaging history aside keeps title count separate from evenly spaced actions", async ({
   page,
 }) => {
@@ -653,7 +703,7 @@ test("imaging history aside keeps title count separate from evenly spaced action
   const collapseButton = contentAside.getByRole("button", {
     name: "영상검사 이력 목록 접기",
   });
-  const actionLabels = ["영상검사 이력 목록 접기", "정렬", "필터", "검색"];
+  const actionLabels = ["영상검사 이력 목록 접기", "정렬: 최신순", "필터", "검색"];
   const actionMetrics = await contentAside.evaluate((root, labels) => {
     return labels.map((label) => {
       const button = root.querySelector(

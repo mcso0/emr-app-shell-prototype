@@ -3062,7 +3062,8 @@ export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: She
     <PatientHistoryAside
       id="lab-content-aside"
       label="임상검사 이력"
-      actions={<QueueActions />}
+      key={`${workspaceId}:${detail.patient.id}`}
+      kind="lab"
       entries={entries}
       status={legacyFixture ? "ready" : history.status}
       onCollapse={() => setContentAsideOpen(false)}
@@ -4103,6 +4104,7 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
         .map((item) => ({
           id: item.study.id,
           title: `${item.study.modality} · ${item.study.bodyPart}`,
+          modality: item.study.modality,
           timestamp: item.study.capturedAt ?? item.study.requestedAt,
           status: getStatusLabel("imagingStudy", item.study.status),
           assignee: item.radiologistName,
@@ -4119,6 +4121,7 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
         return {
           id: item.id,
           title,
+          modality: typeof modality === "string" ? modality : undefined,
           timestamp: item.createdAt,
           status: getPatientHistoryStatus(item.status),
           assignee: item.assignedToUserId
@@ -4132,7 +4135,8 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
   return <PatientHistoryAside
     id="imaging-content-aside"
     label="영상검사 이력"
-    actions={<QueueActions />}
+    key={`${workspaceId}:${detail.patient.id}`}
+    kind="imaging"
     entries={entries}
     status={legacyFixture ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}

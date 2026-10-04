@@ -75,7 +75,6 @@ import {
 } from "@/components/cds-icons/files-and-layout";
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import {
   EmrContentAsideHeader,
@@ -93,6 +92,9 @@ import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverShell } from "@/components/emr/popover-shell";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrEmptyState } from "@/components/emr/empty-state";
+import { EmrHistoryFilterDialog, EmrHistorySearch, EmrHistorySortButton, useHistorySearch } from "@/components/emr/history-controls";
+import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
+import { compareHistoryDates, emptyHistoryDateRange, matchesHistoryDate, matchesHistoryQuery, type HistoryDateRange, type HistorySortDirection } from "@/lib/history-controls";
 import { EmrInlineAlert, type EmrInlineAlertProps } from "@/components/emr/inline-alert";
 import { EmrInstructionHistoryToggle } from "@/components/emr/instruction-header-stack";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
@@ -2134,8 +2136,24 @@ function getPatientStatusLabel(status: "active" | "inactive" | "deceased") {
 }
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
-  const activeBundle = useActiveChartBundle(workspaceId);
   const bundle = useDisplayedChartBundle(workspaceId);
+  if (!bundle) return null;
+  return <ChartHistoryAside key={`${workspaceId}:${bundle.patient.id}`} workspaceId={workspaceId} bundle={bundle} />;
+}
+
+const chartHistoryStatuses = ["waiting", "in_consultation", "ordered", "ready_for_billing", "completed", "cancelled"] as const;
+type ChartHistoryFilters = { dates: HistoryDateRange; statuses: Array<(typeof chartHistoryStatuses)[number]>; veterinarians: string[] };
+const emptyChartHistoryFilters: ChartHistoryFilters = { dates: emptyHistoryDateRange, statuses: [], veterinarians: [] };
+
+function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundle: ChartBundle }) {
+  const activeBundle = useActiveChartBundle(workspaceId);
+  const search = useHistorySearch();
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const [direction, setDirection] = useState<HistorySortDirection>("newest");
+  const [filters, setFilters] = useState(emptyChartHistoryFilters);
+  const [draftFilters, setDraftFilters] = useState(emptyChartHistoryFilters);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const resetConditions = () => { search.clear(); setFilters(emptyChartHistoryFilters); setCollapsedHistoryGroups(new Set()); };
   const { hydrated, session, hydrate } = useAuthClient();
   useEffect(() => { hydrate(); }, [hydrate]);
   const personalProfile = useCurrentPersonalProfile({ hydrated, session });
@@ -2238,9 +2256,17 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
     () => getAdditionalChartIds(displayedHistoryRows),
     [displayedHistoryRows],
   );
+  const veterinarianOptions = useMemo(() => Array.from(new Set(displayedHistoryRows.map((row) => getChartHistoryVeterinarianName(row, bundle)))), [bundle, displayedHistoryRows]);
+  const visibleHistoryRows = useMemo(() => displayedHistoryRows.filter((row) => {
+    const date = historyDateMode === "created" ? getChartHistoryCreatedAt(row) : getEncounterVisitAt(row.encounter);
+    return matchesHistoryDate(date, filters.dates) &&
+      (!filters.statuses.length || filters.statuses.includes(row.encounter.status)) &&
+      (!filters.veterinarians.length || filters.veterinarians.includes(getChartHistoryVeterinarianName(row, bundle))) &&
+      matchesHistoryQuery(search.searchQuery, [row.encounter.encounterNo, row.encounter.visitPurpose, row.encounter.chiefComplaint, getChartHistoryVeterinarianName(row, bundle), getStatusLabel("encounter", row.encounter.status), ...row.diagnoses.map((diagnosis) => diagnosis.diagnosisText), row.chart?.assessment]);
+  }), [bundle, displayedHistoryRows, filters, historyDateMode, search.searchQuery]);
   const historyGroups = useMemo(
     () => {
-      const orderedRows = [...displayedHistoryRows].sort((a, b) => {
+      const orderedRows = [...visibleHistoryRows].sort((a, b) => {
         const aGroupAt =
           historyDateMode === "created"
             ? getChartHistoryCreatedAt(a)
@@ -2251,8 +2277,8 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
             : getEncounterVisitAt(b.encounter);
 
         return (
-          bGroupAt.localeCompare(aGroupAt) ||
-          getChartHistoryCreatedAt(b).localeCompare(getChartHistoryCreatedAt(a)) ||
+          compareHistoryDates(aGroupAt, bGroupAt, direction) ||
+          compareHistoryDates(getChartHistoryCreatedAt(a), getChartHistoryCreatedAt(b), direction) ||
           getChartHistoryRowId(b).localeCompare(getChartHistoryRowId(a))
         );
       });
@@ -2277,7 +2303,7 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
         [],
       );
     },
-    [displayedHistoryRows, historyDateMode],
+    [visibleHistoryRows, historyDateMode, direction],
   );
   const newChartCandidates = useMemo(
     () =>
@@ -2349,26 +2375,41 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
   return (
     <EmrContentAsidePanel id="chart-content-aside" className={historyStyles.panel}>
       <EmrContentAsideHeader
-        count={historyCount}
+        count={visibleHistoryRows.length}
         label="차트 이력"
         className={historyStyles.header}
         collapseAriaLabel="차트 이력 목록 접기"
         onCollapse={() => setContentAsideOpen(false)}
         actions={
           <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="필터">
+            <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel={historyDateMode === "created" ? "작성일" : "진료일"} />
+            <EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(filters.dates.start || filters.statuses.length || filters.veterinarians.length)} onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}>
               <CdsActionsListFilterIcon className="size-4" />
             </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="검색">
+            <EmrListHeaderIconButton ref={searchTriggerRef} ariaLabel="검색" aria-pressed={search.open} onClick={() => { if (search.open) search.clear(); search.setOpen(!search.open); }}>
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
+      {search.open ? <EmrHistorySearch search={search} onQueryChange={() => setCollapsedHistoryGroups(new Set())} label="차트 이력 검색" placeholder="내원 사유·진단·수의사 검색" onClose={() => { search.clear(); search.setOpen(false); searchTriggerRef.current?.focus(); }} /> : null}
+      <div className="flex shrink-0 flex-wrap items-center gap-1 emr-text-metadata text-muted-foreground" role="status" aria-live="polite">
+        <span>결과 {visibleHistoryRows.length} / 전체 {historyCount}건</span>
+        {filters.dates.start ? <Button size="sm" variant="outline" className="max-w-full" aria-label="날짜 조건 해제" onClick={() => setFilters((current) => ({ ...current, dates: emptyHistoryDateRange }))}><span className="truncate">{filters.dates.start} ~ {filters.dates.end} ×</span></Button> : null}
+        {filters.statuses.map((status) => <Button key={status} size="sm" variant="outline" aria-label={`${getStatusLabel("encounter", status)} 조건 해제`} onClick={() => setFilters((current) => ({ ...current, statuses: current.statuses.filter((value) => value !== status) }))}>{getStatusLabel("encounter", status)} ×</Button>)}
+        {filters.veterinarians.map((name) => <Button key={name} size="sm" variant="outline" aria-label={`${name} 조건 해제`} onClick={() => setFilters((current) => ({ ...current, veterinarians: current.veterinarians.filter((value) => value !== name) }))}>{name} ×</Button>)}
+      </div>
+      {displayedHistoryRows.some((row) => row.chart?.id === selectedChartId) && !visibleHistoryRows.some((row) => row.chart?.id === selectedChartId) ?
+        <EmrInlineAlert severity="info" title="선택한 차트가 조건에 가려져 있습니다" action={<Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button>}>선택한 차트는 계속 열려 있습니다.</EmrInlineAlert> : null}
+      <EmrHistoryFilterDialog open={filterOpen} title="차트 이력 필터" dateLabel={historyDateMode === "created" ? "작성일" : "진료일"} dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onCancel={() => setFilterOpen(false)} onReset={() => setDraftFilters(emptyChartHistoryFilters)} onApply={() => { setFilters(draftFilters); setCollapsedHistoryGroups(new Set()); setFilterOpen(false); }}>
+        <FieldSet><FieldLegend variant="label">진료 상태 · 여러 항목 선택 가능</FieldLegend><FieldGroup>
+          {chartHistoryStatuses.map((status) => <Field key={status} orientation="horizontal"><Checkbox id={`chart-history-status-${status}`} checked={draftFilters.statuses.includes(status)} onCheckedChange={(checked) => setDraftFilters((current) => ({ ...current, statuses: checked ? [...current.statuses, status] : current.statuses.filter((value) => value !== status) }))} /><FieldLabel htmlFor={`chart-history-status-${status}`}>{getStatusLabel("encounter", status)}</FieldLabel></Field>)}
+        </FieldGroup></FieldSet>
+        <FieldSet><FieldLegend variant="label">담당 수의사 · 여러 항목 선택 가능</FieldLegend><FieldGroup>
+          {veterinarianOptions.map((name, index) => <Field key={name} orientation="horizontal"><Checkbox id={`chart-history-vet-${index}`} checked={draftFilters.veterinarians.includes(name)} onCheckedChange={(checked) => setDraftFilters((current) => ({ ...current, veterinarians: checked ? [...current.veterinarians, name] : current.veterinarians.filter((value) => value !== name) }))} /><FieldLabel htmlFor={`chart-history-vet-${index}`}>{name}</FieldLabel></Field>)}
+        </FieldGroup></FieldSet>
+      </EmrHistoryFilterDialog>
       <div
         className="flex shrink-0 items-center px-1 py-2"
         data-testid="chart-history-date-mode-toolbar"
@@ -2493,16 +2534,14 @@ export function ChartContentAside({ workspaceId }: ShellComponentProps) {
               ))}
             </EmrContentHistoryGroup>
           ))}
-          {!historyGroups.length &&
-          chartHistoryStatus !== "loading" &&
-          chartHistoryStatus !== "error" ? (
+          {!historyGroups.length && chartHistoryStatus !== "loading" && chartHistoryStatus !== "error" ? (
             <div className="flex min-h-52 items-center justify-center">
               <EmrEmptyState
-                kind="no-data"
-                priority="supporting"
-                surface="content"
-                title="차트 이력이 없습니다"
-                description="작성된 차트가 있으면 선택한 날짜 기준으로 표시됩니다."
+                kind={!displayedHistoryRows.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"}
+                priority="supporting" surface="content"
+                title={!displayedHistoryRows.length ? "차트 이력이 없습니다" : search.searchQuery.trim() ? "검색 결과가 없습니다" : "조건에 맞는 차트가 없습니다"}
+                description={!displayedHistoryRows.length ? "작성된 차트가 있으면 선택한 날짜 기준으로 표시됩니다." : "검색어와 필터 조건을 확인해 주세요."}
+                primaryAction={displayedHistoryRows.length ? <Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button> : undefined}
                 testId="chart-history-empty-state"
               />
             </div>
