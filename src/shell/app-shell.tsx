@@ -709,6 +709,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       /> : null}
       <GlobalNotificationDrawer
         badgeCount={notificationBadgeCount}
+        globalUnreadCount={notificationCounts.unread}
         errorMessage={notificationErrorMessage}
         fallbackDetailNotificationId={notificationFallbackDetailId}
         loading={notificationRequestState === "loading"}

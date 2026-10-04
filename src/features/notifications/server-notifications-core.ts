@@ -314,19 +314,27 @@ export function createDemoNotificationPermissionAdapter(): WorkspacePermissionAd
   });
 }
 
-export async function readLiveNotifications({
+export async function readLiveNotifications(input: LiveNotificationCoreInput): Promise<LiveNotificationListResult> {
+  const result = await readAuthorizedNotificationSnapshot(input);
+  if (!result.ok) return result;
+  const safeLimit = normalizeNotificationLimit(input.limit ?? 20, normalizeNotificationFilter(input.filter) === "snapshot" ? 100 : 50);
+  return { ...result, notifications: result.notifications.slice(0, safeLimit),
+    nextCursor: result.notifications.length > safeLimit
+      ? result.notifications[safeLimit - 1]?.updatedAt ?? null : null };
+}
+
+async function readAuthorizedNotificationSnapshot({
   actorUserId,
   eventScopeId,
   eventStore = defaultLiveNotificationEventStore,
   filter = "all",
-  limit = 20,
   notifications,
   permissionAdapter = createDemoNotificationPermissionAdapter(),
   stateScopeId,
   stateStore = defaultLiveNotificationStateStore,
   workspaceId,
 }: LiveNotificationCoreInput): Promise<LiveNotificationListResult> {
-  const normalizedFilter = normalizeFilter(filter);
+  const normalizedFilter = normalizeNotificationFilter(filter);
   if (!normalizedFilter) {
     return buildError({
       code: "invalid_filter",
@@ -365,20 +373,17 @@ export async function readLiveNotifications({
       isNotificationVisibleToActor(notification, permission, actorUserId),
     )
     .map((notification) => mapNotificationDto({ notification, state, workspaceId }))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const counts = summarizeLiveNotifications(visibleNotifications);
   const filteredNotifications = applyFilter(visibleNotifications, normalizedFilter);
-  const safeLimit = normalizeLimit(limit, normalizedFilter === "snapshot" ? 100 : 50);
 
   return {
     ok: true,
     status: 200,
     workspaceId,
-    notifications: filteredNotifications.slice(0, safeLimit),
+    notifications: filteredNotifications,
     counts,
-    nextCursor: filteredNotifications.length > safeLimit
-      ? filteredNotifications[safeLimit - 1]?.updatedAt ?? null
-      : null,
+    nextCursor: null,
     enforcedBy: "live-notification-reader",
   };
 }
@@ -433,7 +438,7 @@ export async function markAllLiveNotificationsRead({
     });
   }
 
-  const current = await readLiveNotifications({
+  const current = await readAuthorizedNotificationSnapshot({
     actorUserId,
     eventScopeId,
     filter: "all",
@@ -461,7 +466,7 @@ export async function markAllLiveNotificationsRead({
     state.readAtById.set(notification.id, now);
   });
 
-  const afterMutation = await readLiveNotifications({
+  const afterMutation = await readAuthorizedNotificationSnapshot({
     actorUserId,
     eventScopeId,
     filter: "all",
@@ -509,7 +514,7 @@ async function mutateOneNotification(
     });
   }
 
-  const current = await readLiveNotifications({
+  const current = await readAuthorizedNotificationSnapshot({
     actorUserId,
     eventScopeId,
     filter: "all",
@@ -526,7 +531,7 @@ async function mutateOneNotification(
 
   const target = current.notifications.find((notification) => notification.id === notificationId);
   if (!target) {
-    const archived = await readLiveNotifications({
+    const archived = await readAuthorizedNotificationSnapshot({
       actorUserId,
       eventScopeId,
       filter: "archived",
@@ -558,7 +563,7 @@ async function mutateOneNotification(
   });
   mutate(state, notificationId, new Date().toISOString());
 
-  const afterMutation = await readLiveNotifications({
+  const afterMutation = await readAuthorizedNotificationSnapshot({
     actorUserId,
     eventScopeId,
     filter: "all",
@@ -573,7 +578,7 @@ async function mutateOneNotification(
 
   if (!afterMutation.ok) return afterMutation;
 
-  const archived = await readLiveNotifications({
+  const archived = await readAuthorizedNotificationSnapshot({
     actorUserId,
     eventScopeId,
     filter: "archived",
@@ -781,6 +786,16 @@ function getNotificationSourceRequiredPermission(
   return null;
 }
 
+// Only callers with an already authorized snapshot may use this mapper. It
+// sanitizes source routes without reapplying a stale request permission adapter.
+export function mapAuthorizedLiveNotificationRows({ actorUserId, stateScopeId, stateStore, workspaceId, notifications }: {
+  actorUserId: string; stateScopeId?: string | null; stateStore: LiveNotificationStateStore;
+  workspaceId: string; notifications: GlobalNotification[];
+}): LiveNotificationDto[] {
+  const state = stateStore.getUserState({ actorUserId: getNotificationStateActorId(actorUserId, stateScopeId), workspaceId });
+  return notifications.map(notification => mapNotificationDto({ notification, state, workspaceId }));
+}
+
 function mapNotificationDto({
   notification,
   state,
@@ -898,7 +913,7 @@ function applyFilter(notifications: LiveNotificationDto[], filter: LiveNotificat
   return notifications.filter((notification) => !notification.archivedAt);
 }
 
-function normalizeFilter(filter: string | null | undefined): LiveNotificationFilter | null {
+export function normalizeNotificationFilter(filter: string | null | undefined): LiveNotificationFilter | null {
   if (!filter || filter === "all") return "all";
   if (
     filter === "unread"
@@ -909,7 +924,7 @@ function normalizeFilter(filter: string | null | undefined): LiveNotificationFil
   return null;
 }
 
-function normalizeLimit(limit: number | null | undefined, maximum = 50) {
+export function normalizeNotificationLimit(limit: number | null | undefined, maximum = 50) {
   if (!limit || !Number.isFinite(limit)) return 20;
   return Math.max(1, Math.min(maximum, Math.floor(limit)));
 }

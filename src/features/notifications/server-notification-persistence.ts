@@ -1,7 +1,10 @@
 import type { GlobalNotification } from "@/features/notifications/mock-notifications";
 import {
   readLiveNotifications,
-  type LiveNotificationDto,
+  mapAuthorizedLiveNotificationRows,
+  normalizeNotificationFilter,
+  normalizeNotificationLimit,
+  type LiveNotificationCounts,
   type LiveNotificationEventInput,
   type LiveNotificationEventStore,
   type LiveNotificationListResult,
@@ -11,6 +14,19 @@ import {
 import type { WorkspacePermissionAdapter } from "@/features/auth/permission-resolver";
 
 export type SupabaseNotificationPersistenceRpcClient = {
+  rpc(
+    functionName: "clair_read_notification_snapshot_v2" | "clair_mutate_notification_user_state_v2",
+    args: {
+      p_workspace_id: string;
+      p_actor_user_id: string;
+      p_state_scope_id: string;
+      p_event_scope_id: string | null;
+      p_filter?: string | null;
+      p_limit?: number | null;
+      p_action?: "read" | "archive" | "restore" | "read-all";
+      p_notification_id?: string | null;
+    },
+  ): Promise<{ data: unknown; error: { message?: string } | null }>;
   rpc(
     functionName: "clair_emit_notification_event",
     args: {
@@ -122,6 +138,11 @@ export type NotificationUserStateListResult =
     }
   | NotificationPersistenceError;
 
+type NotificationSnapshotPersistenceResult =
+  | { ok: true; notifications: GlobalNotification[]; states: PersistedNotificationUserState[];
+      counts: LiveNotificationCounts; nextCursor: string | null; updatedCount?: number }
+  | NotificationPersistenceError;
+
 export type NotificationPersistenceGateway = ReturnType<
   typeof createSupabaseNotificationPersistenceGateway
 >;
@@ -149,6 +170,34 @@ export function createSupabaseNotificationPersistenceGateway(
   client: SupabaseNotificationPersistenceRpcClient,
 ) {
   return {
+    async readNotificationSnapshot(input: Omit<PersistedNotificationReadInput, "gateway" | "permissionAdapter"> & { actorUserId: string }): Promise<NotificationSnapshotPersistenceResult> {
+      const { data, error } = await client.rpc("clair_read_notification_snapshot_v2", {
+        p_workspace_id: input.workspaceId,
+        p_actor_user_id: input.actorUserId,
+        p_state_scope_id: getPersistedStateScopeId(input),
+        p_event_scope_id: input.eventScopeId ?? null,
+        p_filter: normalizeNotificationFilter(input.filter),
+        p_limit: normalizeNotificationLimit(input.limit, normalizeNotificationFilter(input.filter) === "snapshot" ? 100 : 50),
+      });
+      if (error) return mapSupabaseNotificationPersistenceError(error.message, "read");
+      return normalizeSnapshotResponse(data, "read");
+    },
+
+    async mutateNotificationState(input: Omit<PersistedNotificationMutationInput, "gateway" | "permissionAdapter" | "notificationId"> & {
+      action: "read" | "archive" | "restore" | "read-all"; notificationId?: string;
+    }): Promise<NotificationSnapshotPersistenceResult> {
+      const { data, error } = await client.rpc("clair_mutate_notification_user_state_v2", {
+        p_workspace_id: input.workspaceId,
+        p_actor_user_id: input.actorUserId,
+        p_state_scope_id: getPersistedStateScopeId(input),
+        p_event_scope_id: input.eventScopeId ?? null,
+        p_action: input.action,
+        p_notification_id: input.notificationId ?? null,
+      });
+      if (error) return mapSupabaseNotificationPersistenceError(error.message, "write");
+      return normalizeSnapshotResponse(data, "write");
+    },
+
     async emitNotificationEvent(
       event: LiveNotificationEventInput,
     ): Promise<NotificationPersistenceEmitResult> {
@@ -275,26 +324,24 @@ export async function readPersistedLiveNotifications({
     });
   }
 
-  const rows = await readPersistedNotificationRows({
-    actorUserId,
-    eventScopeId,
-    gateway,
-    stateScopeId,
-    workspaceId,
+  // Validate session, membership and filter before the RPC. The bounded DB
+  // snapshot applies the same visibility intersection before count and limit.
+  const access = await readLiveNotificationsFromPersistedRows({
+    actorUserId, eventScopeId, filter, limit, notifications: [], states: [],
+    permissionAdapter, stateScopeId, workspaceId,
+  });
+  if (!access.ok) return access;
+  const rows = await gateway.readNotificationSnapshot({
+    actorUserId, eventScopeId, filter, limit, stateScopeId, workspaceId,
   });
   if (!rows.ok) return rows;
-
-  return readLiveNotificationsFromPersistedRows({
-    actorUserId,
-    eventScopeId,
-    filter,
-    limit,
-    notifications: rows.notifications,
-    permissionAdapter,
-    states: rows.states,
-    stateScopeId,
-    workspaceId,
-  });
+  // SQL is authoritative for the returned rows AND counts in one snapshot.
+  // Re-filtering through the earlier adapter could make them diverge on a
+  // concurrent permission change; keep the safe DTO/source mapper here.
+  return { ...access, notifications: mapAuthorizedLiveNotificationRows({
+    actorUserId, stateScopeId, workspaceId, notifications: rows.notifications,
+    stateStore: createPersistedNotificationStateStore(rows.states),
+  }), counts: rows.counts, nextCursor: rows.nextCursor };
 }
 
 export async function readPersistedLiveNotificationCounts(
@@ -317,187 +364,46 @@ export async function readPersistedLiveNotificationCounts(
   };
 }
 
-export async function markPersistedLiveNotificationRead(
-  input: PersistedNotificationMutationInput,
-): Promise<LiveNotificationMutationResult | NotificationPersistenceError> {
-  return mutatePersistedLiveNotification(input, ({ notification, now }) => ({
-    readAt: notification.readAt ?? now,
-    archivedAt: notification.archivedAt,
-  }));
+export async function markPersistedLiveNotificationRead(input: PersistedNotificationMutationInput) {
+  return mutatePersistedLiveNotification(input, "read");
 }
 
-export async function archivePersistedLiveNotification(
-  input: PersistedNotificationMutationInput,
-): Promise<LiveNotificationMutationResult | NotificationPersistenceError> {
-  return mutatePersistedLiveNotification(input, ({ now }) => ({
-    readAt: now,
-    archivedAt: now,
-  }));
+export async function archivePersistedLiveNotification(input: PersistedNotificationMutationInput) {
+  return mutatePersistedLiveNotification(input, "archive");
 }
 
-export async function restorePersistedLiveNotification(
-  input: PersistedNotificationMutationInput,
-): Promise<LiveNotificationMutationResult | NotificationPersistenceError> {
-  return mutatePersistedLiveNotification(input, ({ notification }) => ({
-    readAt: notification.readAt,
-    archivedAt: null,
-  }));
+export async function restorePersistedLiveNotification(input: PersistedNotificationMutationInput) {
+  return mutatePersistedLiveNotification(input, "restore");
 }
 
-export async function markAllPersistedLiveNotificationsRead(
-  input: Omit<PersistedNotificationMutationInput, "notificationId">,
-): Promise<LiveNotificationMutationResult | NotificationPersistenceError> {
-  const current = await readPersistedLiveNotifications({
-    ...input,
-    filter: "all",
-    limit: 50,
-  });
-  if (!current.ok) return current;
-
-  const unreadNotifications = current.notifications.filter(
-    (notification) => !notification.archivedAt && !notification.readAt,
-  );
-
-  let updatedCount = 0;
-  if (unreadNotifications.length > 0) {
-    const persisted = await input.gateway.markNotificationUserStatesRead({
-      actorUserId: input.actorUserId,
-      notificationIds: unreadNotifications.map((notification) => notification.id),
-      stateScopeId: getPersistedStateScopeId(input),
-      workspaceId: input.workspaceId,
-    });
-    if (!persisted.ok) return persisted;
-    updatedCount = persisted.updatedCount ?? unreadNotifications.length;
-  }
-
-  const afterMutation = await readPersistedLiveNotifications({
-    ...input,
-    filter: "all",
-    limit: 50,
-  });
-  if (!afterMutation.ok) return afterMutation;
-
-  return {
-    ok: true,
-    status: 200,
-    workspaceId: input.workspaceId,
-    counts: afterMutation.counts,
-    updatedCount,
-    enforcedBy: "live-notification-writer",
-  };
+export async function markAllPersistedLiveNotificationsRead(input: Omit<PersistedNotificationMutationInput, "notificationId">) {
+  return mutatePersistedLiveNotification(input, "read-all");
 }
 
 async function mutatePersistedLiveNotification(
-  input: PersistedNotificationMutationInput,
-  nextState: (input: {
-    notification: LiveNotificationDto;
-    now: string;
-  }) => { archivedAt: string | null; readAt: string | null },
+  input: Omit<PersistedNotificationMutationInput, "notificationId"> & { notificationId?: string },
+  action: "read" | "archive" | "restore" | "read-all",
 ): Promise<LiveNotificationMutationResult | NotificationPersistenceError> {
-  const current = await readPersistedLiveNotifications({
-    ...input,
-    filter: "all",
-    limit: 50,
+  const access = await readLiveNotificationsFromPersistedRows({
+    ...input, filter: "snapshot", notifications: [], states: [],
   });
-  if (!current.ok) return current;
-
-  const notification = current.notifications.find(
-    (row) => row.id === input.notificationId,
-  );
-  if (!notification) {
-    return buildPersistedNotificationError({
-      code: "notification_not_found",
-      message: "알림을 찾을 수 없습니다.",
-      status: 404,
-      workspaceId: input.workspaceId,
-    });
-  }
-
-  const now = new Date().toISOString();
-  const state = nextState({ notification, now });
-  const persisted = await input.gateway.upsertNotificationUserState({
-    actorUserId: input.actorUserId,
-    archivedAt: state.archivedAt,
-    notificationId: input.notificationId,
-    readAt: state.readAt,
-    stateScopeId: getPersistedStateScopeId(input),
-    workspaceId: input.workspaceId,
-  });
-  if (!persisted.ok) return persisted;
-
-  const rows = await readPersistedNotificationRows({
-    actorUserId: input.actorUserId,
-    eventScopeId: input.eventScopeId,
-    gateway: input.gateway,
-    stateScopeId: input.stateScopeId,
-    workspaceId: input.workspaceId,
-  });
+  if (!access.ok) return access;
+  const rows = await input.gateway.mutateNotificationState({ ...input, action });
   if (!rows.ok) return rows;
-
-  const overrideStates = upsertPersistedState(rows.states, {
-    archivedAt: state.archivedAt,
-    notificationId: input.notificationId,
-    readAt: state.readAt,
+  const notifications = mapAuthorizedLiveNotificationRows({ ...input,
+    notifications: rows.notifications, stateStore: createPersistedNotificationStateStore(rows.states),
   });
-  const afterMutation = await readLiveNotificationsFromPersistedRows({
-    actorUserId: input.actorUserId,
-    eventScopeId: input.eventScopeId,
-    filter: "all",
-    limit: 50,
-    notifications: rows.notifications,
-    permissionAdapter: input.permissionAdapter,
-    states: overrideStates,
-    stateScopeId: input.stateScopeId,
-    workspaceId: input.workspaceId,
-  });
-  if (!afterMutation.ok) return afterMutation;
-
+  const notification = notifications.find(row => row.id === input.notificationId);
+  if (action !== "read-all" && !notification) {
+    return buildPersistedNotificationError({ code: "notification_not_found",
+      message: "알림을 찾을 수 없습니다.", status: 404, workspaceId: input.workspaceId });
+  }
   return {
-    ok: true,
-    status: 200,
-    workspaceId: input.workspaceId,
-    notification: afterMutation.notifications.find(
-      (row) => row.id === input.notificationId,
-    ),
-    counts: afterMutation.counts,
+    ok: true, status: 200, workspaceId: input.workspaceId,
+    ...(notification ? { notification } : {}), counts: rows.counts,
+    ...(action === "read-all" ? { updatedCount: rows.updatedCount ?? 0 } : {}),
     enforcedBy: "live-notification-writer",
   };
-}
-
-async function readPersistedNotificationRows({
-  actorUserId,
-  eventScopeId,
-  gateway,
-  stateScopeId,
-  workspaceId,
-}: {
-  actorUserId: string;
-  eventScopeId?: string | null;
-  gateway: NotificationPersistenceGateway;
-  stateScopeId?: string | null;
-  workspaceId: string;
-}): Promise<
-  | {
-      ok: true;
-      notifications: GlobalNotification[];
-      states: PersistedNotificationUserState[];
-    }
-  | NotificationPersistenceError
-> {
-  const events = await gateway.listNotificationEvents({ eventScopeId, workspaceId });
-  if (!events.ok) return events;
-
-  const states = await gateway.listNotificationUserStates({
-    actorUserId,
-    stateScopeId: getPersistedStateScopeId({
-      actorUserId,
-      stateScopeId,
-    }),
-    workspaceId,
-  });
-  if (!states.ok) return states;
-
-  return { ok: true, notifications: events.notifications, states: states.states };
 }
 
 function readLiveNotificationsFromPersistedRows({
@@ -575,16 +481,6 @@ function getPersistedStateScopeId({
   return stateScopeId?.trim() || actorUserId;
 }
 
-function upsertPersistedState(
-  states: PersistedNotificationUserState[],
-  nextState: PersistedNotificationUserState,
-) {
-  const existing = states.filter(
-    (state) => state.notificationId !== nextState.notificationId,
-  );
-  return [...existing, nextState];
-}
-
 function serializeNotificationEvent(
   event: LiveNotificationEventInput,
 ): Record<string, unknown> {
@@ -611,6 +507,27 @@ function serializeNotificationEvent(
     id: event.id ?? null,
     issuedAtLabel: event.issuedAtLabel ?? "방금 전",
     occurredAt: event.occurredAt ?? null,
+  };
+}
+
+function normalizeSnapshotResponse(data: unknown, operation: "read" | "write"): NotificationSnapshotPersistenceResult {
+  if (!isRecord(data) || data.ok !== true || !Array.isArray(data.notifications)
+    || !data.notifications.every(isGlobalNotification) || !Array.isArray(data.states)
+    || !data.states.every(isPersistedNotificationUserState) || !isRecord(data.counts)
+    || !["badge", "unread", "important", "archived"].every(key =>
+      Number.isSafeInteger(data.counts && (data.counts as Record<string, unknown>)[key])
+      && Number((data.counts as Record<string, unknown>)[key]) >= 0)
+    || !(data.nextCursor === null || typeof data.nextCursor === "string")
+    || (operation === "write" && (!Number.isSafeInteger(data.updatedCount) || Number(data.updatedCount) < 0))) {
+    return { ok: false, status: 500, error: operation === "read" ? "db_read_failed" : "db_write_failed" };
+  }
+  return {
+    ok: true,
+    notifications: data.notifications.map(row => ({ ...row, unread: true, archived: false })),
+    states: data.states,
+    counts: data.counts as LiveNotificationCounts,
+    nextCursor: data.nextCursor,
+    ...(typeof data.updatedCount === "number" ? { updatedCount: data.updatedCount } : {}),
   };
 }
 
