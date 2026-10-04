@@ -2235,6 +2235,7 @@ function LabResultInputSection({
           expandedRowId={expandedRowId}
           onExpandedRowChange={setExpandedRowId}
           phase2={phase2}
+          phase2Status={phase2Status}
           onPhase2Refresh={onPhase2Refresh}
           rows={rows}
         />
@@ -2429,6 +2430,7 @@ function LabResultDataTable({
   expandedRowId,
   onExpandedRowChange,
   phase2,
+  phase2Status,
   onPhase2Refresh,
   rows,
 }: {
@@ -2443,6 +2445,7 @@ function LabResultDataTable({
   expandedRowId: string | null;
   onExpandedRowChange: (rowId: string | null) => void;
   phase2: LabResultPhase2Data | null;
+  phase2Status: "loading" | "ready" | "error" | "permission_denied";
   onPhase2Refresh: () => void;
   rows: LabResultRow[];
 }) {
@@ -2643,7 +2646,7 @@ function LabResultDataTable({
             <div id={`lab-result-detail-${tableRow.original.id}`} className={tableRow.original.id === rows.at(-1)?.id ? "overflow-hidden rounded-b-[6px]" : undefined}>
               <LabResultRowDetail result={persistedResult} row={tableRow.original} staffInstruction={staffInstruction} finding={tableRow.original.note ?? ""}
                 onFindingChange={value => onMetadataChange(tableRow.original.id, { note: value })}
-                phase2={phase2} refresh={onPhase2Refresh} />
+                phase2={phase2} readStatus={phase2Status} refresh={onPhase2Refresh} />
             </div>
           </TableCell>
         </TableRow>
@@ -3919,7 +3922,7 @@ export function LabContent({
             phase2Status={phase2.status}
             onPhase2Refresh={phase2.refresh}
           />
-          <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} phase2={phase2.data} refresh={phase2.refresh} />
+          <LabOverallFinding key={`${workspaceId}:${displayDetail.result.id}:overall`} result={displayDetail.result} phase2={phase2.data} readStatus={phase2.status} refresh={phase2.refresh} />
           {displayDetail.attachments.length || allowDemoContent ? <AttachmentStrip
             allowDemoContent={allowDemoContent} attachments={displayDetail.attachments}
             showImageExample title="공통 첨부자료"

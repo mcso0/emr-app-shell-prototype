@@ -975,3 +975,291 @@ test("autosave: result input retains keyboard focus while typing and saving", as
   await expect(input).toHaveValue("abcdef");
   await expect(page.getByTestId("lab-result-save-status")).toHaveText("저장됨");
 });
+
+// The dark viewer is verified at the existing result-sheet entry point with synthetic protected bytes.
+test("viewer: dark actions, natural-pixel 1:1, rotation and per-file state are scoped to one modal", async ({ page }, testInfo) => {
+  const files = thumbnailFiles(["image/png", "application/pdf", "text/csv", "text/plain"]);
+  const png = await sharp({ create: { width: 1600, height: 900, channels: 4, background: { r: 250, g: 250, b: 255, alpha: 0.5 } } }).png().toBuffer();
+  const { detail } = await openReview(page, 0, true, 1, 1, files);
+  await page.route("**/result-attachments/thumbnail-0?**", route => route.fulfill({ contentType: "image/png", body: png }));
+  const trigger = detail.getByRole("button", { name: "합성자료-0.png 미리보기", exact: true });
+  await trigger.click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer).toHaveCSS("background-color", "rgb(23, 23, 23)");
+  const viewport = page.viewportSize()!;
+  await expect.poll(async () => (await viewer.boundingBox())!.width).toBeCloseTo(viewport.width * 0.8, 0);
+  await expect.poll(async () => (await viewer.boundingBox())!.height).toBeCloseTo(viewport.height * 0.86, 0);
+  await expect(viewer.locator("header")).toHaveCSS("height", "54px");
+  await expect(viewer.locator("header")).toHaveCSS("background-color", "rgb(38, 38, 38)");
+  await expect(viewer.locator("footer")).toHaveCSS("height", "40px");
+  await expect(viewer.locator("header > svg")).toHaveCount(1);
+  await expect(viewer.getByRole("button", { name: "미리보기 닫기" })).toBeFocused();
+  await expect(viewer.getByRole("button", { name: "다운로드", exact: true }).locator("svg")).toHaveCount(1);
+  await expect(viewer.getByRole("button", { name: "삭제", exact: true }).locator("svg")).toHaveCount(1);
+  await expect(viewer.getByLabel("현재 첨부 파일")).toHaveText("1 / 4");
+  await expect(viewer.getByLabel("이전 파일")).toBeDisabled();
+  await viewer.getByRole("button", { name: "1:1", exact: true }).click();
+  await expect(viewer.getByLabel("이미지 배율")).toHaveText("100%");
+  const image = viewer.getByRole("img");
+  expect((await image.boundingBox())!.width).toBeCloseTo(1600, 0);
+  await viewer.getByLabel("배경", { exact: true }).selectOption("checker");
+  await expect(viewer.getByTestId("lab-image-stage")).not.toHaveCSS("background-image", "none");
+  await viewer.getByRole("button", { name: "시계 방향으로 90도 회전" }).click();
+  await expect(viewer.getByText(/1600 × 900 px · 90°/)).toBeVisible();
+  await viewer.getByRole("button", { name: "1:1", exact: true }).click();
+  await expect(viewer.getByLabel("이미지 배율")).toHaveText("100%");
+  const imageRegion = viewer.getByRole("region", { name: /^이미지 미리보기/ });
+  await imageRegion.press("+");
+  await expect(viewer.getByLabel("이미지 배율")).toHaveText("125%");
+  await imageRegion.press("-");
+  await expect(viewer.getByLabel("이미지 배율")).toHaveText("100%");
+  const priorY = (await image.boundingBox())!.y;
+  await imageRegion.press("ArrowDown");
+  await expect.poll(async () => Math.abs((await image.boundingBox())!.y - priorY)).toBeGreaterThan(5);
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByLabel("현재 PDF 페이지")).toHaveText("1 / 2");
+  await viewer.getByRole("button", { name: "다음", exact: true }).click();
+  await viewer.getByLabel("PDF 확대").click();
+  await expect(viewer.getByLabel("현재 PDF 페이지")).toHaveText("2 / 2");
+  await expect(viewer.getByLabel("PDF 배율")).toHaveText("125%");
+  await viewer.getByLabel("이전 파일").click();
+  await expect(viewer.getByLabel("이미지 배율")).toHaveText("100%");
+  await expect(viewer.getByLabel("배경", { exact: true })).toHaveValue("checker");
+  await expect(viewer.getByText(/1600 × 900 px · 90°/)).toBeVisible();
+  await viewer.screenshot({ path: testInfo.outputPath("dark-image-viewer.png") });
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByLabel("현재 PDF 페이지")).toHaveText("2 / 2");
+  await expect(viewer.getByLabel("PDF 배율")).toHaveText("125%");
+  await viewer.getByRole("button", { name: "미리보기 닫기" }).click();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await expect(viewer.getByText(/1600 × 900 px · 0°/)).toBeVisible();
+  await expect(viewer.getByLabel("배경", { exact: true })).toHaveValue("dark");
+  await viewer.getByRole("button", { name: "미리보기 닫기" }).press("Escape");
+  await expect(trigger).toBeFocused();
+});
+
+test("viewer: CSV and TXT are literal, bounded, searchable and usable on mobile", async ({ page }, testInfo) => {
+  const { detail } = await openReview(page, 0, false, 1, 0, thumbnailFiles(["text/csv", "text/plain"]));
+  const csv = 'name,value,note\n001,3.5 mg/dL,"a,b"\n=1+1,0,"<img src=x onerror=alert(1)>"';
+  const text = '<script>alert("x")</script>\n한글 원문 검색\n' + "합성 내용 ".repeat(40000);
+  await page.route("**/result-attachments/thumbnail-0?**", route => route.fulfill({ contentType: "text/csv", body: csv }));
+  await page.route("**/result-attachments/thumbnail-1?**", route => route.fulfill({ contentType: "text/plain", body: text }));
+  await detail.getByRole("button", { name: "합성자료-0.csv 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByRole("cell", { name: "001", exact: true })).toBeVisible();
+  await expect(viewer.getByRole("cell", { name: "3.5 mg/dL", exact: true })).toBeVisible();
+  await expect(viewer.getByRole("cell", { name: "=1+1", exact: true })).toBeVisible();
+  await expect(viewer.getByRole("cell", { name: "a,b", exact: true })).toBeVisible();
+  await expect(viewer.locator("tbody img, tbody script")).toHaveCount(0);
+  await expect(viewer.getByRole("button", { name: "삭제", exact: true })).toHaveCount(0);
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toContainText('<script>alert("x")</script>');
+  await expect(viewer.locator("pre script")).toHaveCount(0);
+  await expect(viewer.getByText(/일부 미리보기: 앞 50,000자/)).toBeVisible();
+  await viewer.getByRole("searchbox", { name: "텍스트에서 찾기" }).fill("원문");
+  await expect(viewer.getByLabel("검색 결과 수")).toHaveText("1개");
+  await expect(viewer.locator("mark")).toHaveText("원문");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const bounds = await viewer.boundingBox();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(391);
+  for (const button of await viewer.locator("header button, footer button").all()) {
+    const target = (await button.boundingBox())!;
+    expect(target.height).toBeGreaterThanOrEqual(44);
+    expect(target.width).toBeGreaterThanOrEqual(44);
+  }
+  await viewer.screenshot({ path: testInfo.outputPath("dark-text-viewer-mobile.png") });
+  await viewer.getByRole("button", { name: "미리보기 닫기" }).press("Tab");
+  expect(await page.evaluate(() => document.querySelector("[data-testid='lab-attachment-viewer']")!.contains(document.activeElement))).toBe(true);
+});
+
+test("viewer: a delayed old response cannot replace the current file", async ({ page }) => {
+  const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain", "text/plain"]));
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  let started!: () => void;
+  const requestStarted = new Promise<void>(resolve => { started = resolve; });
+  await page.route("**/result-attachments/thumbnail-0?**", async route => { started(); await gate; await route.fulfill({ contentType: "text/plain", body: "STALE FILE CONTENT" }).catch(() => {}); });
+  await page.route("**/result-attachments/thumbnail-1?**", route => route.fulfill({ contentType: "text/plain", body: "CURRENT FILE CONTENT" }));
+  await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+  await requestStarted;
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toHaveText("CURRENT FILE CONTENT");
+  release();
+  await expect(viewer).not.toContainText("STALE FILE CONTENT");
+  await expect(viewer.getByRole("heading")).toHaveText("합성자료-1.txt");
+});
+
+for (const status of [403, 404, 500]) {
+  test(`viewer: protected read ${status} clears sensitive metadata or permits retry`, async ({ page }) => {
+    const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain"]));
+    let fail = true;
+    await page.route("**/result-attachments/thumbnail-0?**", route => route.fulfill({ status: fail ? status : 200, contentType: "text/plain", body: fail ? "" : "RECOVERED CONTENT" }));
+    await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+    const viewer = page.getByTestId("lab-attachment-viewer");
+    if (status === 500) {
+      await expect(viewer.getByText("미리보기를 불러오지 못했습니다.", { exact: true })).toBeVisible();
+      fail = false;
+      await viewer.getByRole("button", { name: "다시 읽기", exact: true }).click();
+      await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toHaveText("RECOVERED CONTENT");
+    } else {
+      await expect(viewer.getByText(status === 403 ? "파일을 열 수 있는 권한이 없습니다." : "파일을 찾을 수 없습니다.", { exact: true })).toBeVisible();
+      await expect(viewer).not.toContainText("합성자료-0.txt");
+      await expect(viewer.getByRole("button", { name: "다운로드", exact: true })).toHaveCount(0);
+      await expect(viewer.getByLabel("현재 첨부 파일")).toHaveCount(0);
+    }
+    await viewer.getByRole("button", { name: "미리보기 닫기" }).click();
+    await expect(detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true })).toBeFocused();
+  });
+}
+
+test("viewer: deletion cancel, failure and duplicate requests preserve preview; success restores fallback focus", async ({ page }) => {
+  const { detail, attachments } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain"]));
+  await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toBeVisible();
+  await viewer.getByRole("button", { name: "삭제", exact: true }).click();
+  const confirm = page.getByRole("dialog", { name: "첨부 파일 삭제", exact: true });
+  await expect(confirm.getByRole("button", { name: "취소", exact: true })).toBeFocused();
+  await confirm.getByRole("button", { name: "취소", exact: true }).press("Escape");
+  await expect(viewer.getByRole("button", { name: "삭제", exact: true })).toBeFocused();
+  let calls = 0;
+  let succeed = false;
+  let release!: () => void;
+  await page.route("**/result-attachments/thumbnail-0?**", async route => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    calls += 1;
+    if (!succeed) return route.fulfill({ status: 500, json: { ok: false } });
+    await new Promise<void>(resolve => { release = resolve; });
+    attachments.splice(0);
+    await route.fulfill({ json: { ok: true } });
+  });
+  await viewer.getByRole("button", { name: "삭제", exact: true }).click();
+  await confirm.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(confirm.getByRole("alert")).toContainText("삭제 결과를 확인하지 못했습니다.");
+  await confirm.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toBeVisible();
+  succeed = true;
+  await viewer.getByRole("button", { name: "삭제", exact: true }).click();
+  await confirm.getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(confirm.getByRole("button", { name: "삭제 중", exact: true })).toBeDisabled();
+  await page.keyboard.press("Enter");
+  expect(calls).toBe(2);
+  release();
+  await expect(viewer).toHaveCount(0);
+  await expect(detail.getByTestId("lab-attachment-card")).toHaveCount(0);
+  await expect(detail.getByLabel("합성 항목 첨부 자료", { exact: true })).toBeFocused();
+});
+
+test("viewer: authoritative access loss removes content and closes the modal", async ({ page }) => {
+  const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain"]));
+  await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toBeVisible();
+  await page.route("**/lab-imaging/result-phase2**", route => route.fulfill({ status: 403, json: { ok: false } }));
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(viewer).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "텍스트 미리보기" })).toHaveCount(0);
+});
+
+for (const status of [404, 403]) {
+  test(`viewer: delete ${status} has a distinct outcome and clears the modal`, async ({ page }) => {
+    const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain"]));
+    await page.route("**/result-attachments/thumbnail-0?**", route => route.request().method() === "DELETE"
+      ? route.fulfill({ status, json: { ok: false } }) : route.fallback());
+    await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+    await page.getByTestId("lab-attachment-viewer").getByRole("button", { name: "삭제", exact: true }).click();
+    await page.getByRole("dialog", { name: "첨부 파일 삭제" }).getByRole("button", { name: "삭제", exact: true }).click();
+    await expect(page.getByTestId("lab-attachment-viewer")).toHaveCount(0);
+    await expect(detail.getByRole("alert")).toContainText(status === 404 ? "이미 삭제됐거나 사용할 수 없는 파일입니다." : "파일 삭제 권한 또는 로그인 상태를 확인해 주세요.");
+    if (status === 404) await expect(detail.getByTestId("lab-attachment-card")).toHaveCount(0);
+  });
+}
+
+test("viewer: empty files, corrupt images and encrypted PDFs have explicit fallbacks", async ({ page }) => {
+  const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain", "image/png", "application/pdf"]));
+  await page.route("**/result-attachments/thumbnail-0?**", route => route.fulfill({ contentType: "text/plain", body: "" }));
+  await page.route("**/result-attachments/thumbnail-1?**", route => route.fulfill({ contentType: "image/png", body: "corrupt synthetic image" }));
+  await page.route("**/result-attachments/thumbnail-2?**", route => route.fulfill({ contentType: "application/pdf", path: "tests/fixtures/lab-viewer-encrypted.pdf" }));
+  await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByText("파일에 표시할 내용이 없습니다.", { exact: true })).toBeVisible();
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByText("이미지를 표시할 수 없습니다.", { exact: true })).toBeVisible();
+  await expect(viewer.getByRole("button", { name: "다시 읽기" })).toBeVisible();
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByText("암호로 보호된 PDF입니다.", { exact: true })).toBeVisible();
+  await expect(viewer.getByRole("button", { name: "다운로드", exact: true })).toBeEnabled();
+  await expect(viewer.getByRole("textbox")).toHaveCount(0);
+});
+
+test("viewer: file replacement and close release local object URLs", async ({ page }) => {
+  await page.addInitScript(() => {
+    const created: string[] = []; const revoked: string[] = [];
+    const create = URL.createObjectURL.bind(URL); const revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = value => { const url = create(value); created.push(url); return url; };
+    URL.revokeObjectURL = url => { revoked.push(url); revoke(url); };
+    Object.assign(window, { syntheticViewerUrls: { created, revoked } });
+  });
+  const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["image/png", "image/png"]));
+  await detail.getByRole("button", { name: "합성자료-0.png 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByRole("img")).toBeVisible();
+  const originalUrl = await viewer.getByRole("img").getAttribute("src");
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByRole("img")).toBeVisible();
+  const nextUrl = await viewer.getByRole("img").getAttribute("src");
+  expect(nextUrl).not.toBe(originalUrl);
+  await viewer.getByRole("button", { name: "미리보기 닫기" }).click();
+  const urls = await page.evaluate(() => (window as unknown as { syntheticViewerUrls: { revoked: string[] } }).syntheticViewerUrls);
+  expect(urls.revoked).toContain(originalUrl);
+  expect(urls.revoked).toContain(nextUrl);
+});
+
+test("viewer: an authoritative attachment removal cannot leave cached content visible", async ({ page }) => {
+  const { detail, attachments } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain"]));
+  await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toBeVisible();
+  attachments.splice(0);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(viewer).toHaveCount(0);
+  await expect(detail.getByLabel("합성 항목 첨부 자료", { exact: true })).toBeFocused();
+});
+
+test("viewer: JPEG orientation and WebP preserve decoded dimensions", async ({ page }) => {
+  const jpeg = await sharp({ create: { width: 1200, height: 800, channels: 3, background: "white" } }).jpeg().withMetadata({ orientation: 6 }).toBuffer();
+  const webp = await sharp({ create: { width: 800, height: 600, channels: 4, background: { r: 200, g: 220, b: 255, alpha: 0.5 } } }).webp().toBuffer();
+  const files = thumbnailFiles(["image/jpeg", "image/webp"]);
+  files[0].name = "합성 세로 사진.jpg"; files[1].name = "합성 투명 이미지.webp";
+  const { detail } = await openReview(page, 0, true, 1, 0, files);
+  await page.route("**/result-attachments/thumbnail-0?**", route => route.fulfill({ contentType: "image/jpeg", body: jpeg }));
+  await page.route("**/result-attachments/thumbnail-1?**", route => route.fulfill({ contentType: "image/webp", body: webp }));
+  await detail.getByRole("button", { name: "합성 세로 사진.jpg 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByText(/800 × 1200 px · 0°/)).toBeVisible();
+  await viewer.getByLabel("다음 파일").click();
+  await expect(viewer.getByText(/800 × 600 px · 0°/)).toBeVisible();
+  await viewer.getByLabel("배경", { exact: true }).selectOption("gray");
+  await expect(viewer.getByTestId("lab-image-stage")).toHaveCSS("background-color", "rgb(115, 115, 115)");
+  await expect(viewer.getByRole("img")).toHaveCSS("filter", "none");
+});
+
+test("viewer: a transient metadata failure preserves the last confirmed preview and can recover", async ({ page }) => {
+  const { detail } = await openReview(page, 0, true, 1, 0, thumbnailFiles(["text/plain"]));
+  await detail.getByRole("button", { name: "합성자료-0.txt 미리보기", exact: true }).click();
+  const viewer = page.getByTestId("lab-attachment-viewer");
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toHaveText("Synthetic attachment text");
+  let fail = true;
+  await page.route("**/lab-imaging/result-phase2**", route => fail ? route.fulfill({ status: 503, json: { ok: false } }) : route.fallback());
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(viewer.getByText("첨부 목록을 갱신하지 못했습니다. 마지막으로 확인한 미리보기입니다.")).toBeVisible();
+  await expect(viewer.getByRole("region", { name: "텍스트 미리보기" })).toHaveText("Synthetic attachment text");
+  await expect(viewer.getByRole("button", { name: "삭제", exact: true })).toHaveCount(0);
+  fail = false;
+  await viewer.getByRole("button", { name: "목록 다시 불러오기", exact: true }).click();
+  await expect(viewer.getByText("첨부 목록을 갱신하지 못했습니다. 마지막으로 확인한 미리보기입니다.")).toHaveCount(0);
+  await expect(viewer.getByRole("button", { name: "삭제", exact: true })).toBeVisible();
+});
