@@ -1,5 +1,6 @@
 "use client";
 
+import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
 import historyStyles from "./chart-history.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import orderScrollStyles from "./chart-order-scroll.module.css";
@@ -13295,21 +13296,11 @@ function OrderArea({
             nextCommittedRows.map((row) => [row.order.id, row]),
           );
           setDraftRows((currentRows) =>
-            currentRows
-              .filter((currentRow) => !isAttemptedRemovalRow(currentRow))
-              .map((currentRow) => {
-                const committedRow = committedById.get(currentRow.order.id);
-                if (!committedRow) return currentRow;
-                return {
-                  ...committedRow,
-                  billingName: currentRow.billingName,
-                  detailInputs: currentRow.detailInputs,
-                  detailSchemaVersion: currentRow.detailSchemaVersion,
-                  priority: currentRow.priority,
-                  quantityInput: currentRow.quantityInput,
-                  setSelectionIntent: currentRow.setSelectionIntent,
-                };
-              }),
+            mergeChartOrderDraftRowsAfterSave(
+              currentRows,
+              committedById,
+              isAttemptedRemovalRow,
+            ),
           );
         }
         if (result.etag) {
