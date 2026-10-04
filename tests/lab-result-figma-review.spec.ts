@@ -7,7 +7,7 @@ const rowId = "figma-review-row";
 const resultId = "figma-review-result";
 const instruction = "합성 검수용 직원 전달사항입니다.";
 
-async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0) {
+async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0, customAttachments?: LabResultAttachment[]) {
   await page.addInitScript(({ key, workspaceId }) => {
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검수 공간", representativeName: "합성 관리자",
@@ -24,7 +24,7 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
     encounterId: workItem.encounterId, workItemId: workItem.id, entryWriteRevision: 0,
     resultDefinitionSnapshot: { schemaVersion: 1 },
     rows: Array.from({ length: rowCount }, (_, i) => ({ id: i === 0 ? rowId : `${rowId}-${i}`, analyteName: i === 0 ? "합성 항목" : `합성 항목 ${i + 1}`, value: null, resultValueKind: "text", judgment: "not_judged", note: "" })) };
-  const attachments: LabResultAttachment[] = Array.from({ length: count }, (_, index) => ({ id: `review-file-${index}`, rowId,
+  const attachments: LabResultAttachment[] = customAttachments ?? Array.from({ length: count }, (_, index) => ({ id: `review-file-${index}`, rowId,
     name: index === 0 ? "긴-첨부자료-파일명-겹침-검수-문서.pdf" : `합성첨부-${index}.txt`,
     mimeType: index === 0 ? "application/pdf" : "text/plain", size: 1024 * (index + 1),
     uploadedAt: "2026-09-29T00:00:00Z", uploadedByUserId: "review-actor", uploadedByName: "합성" }));
@@ -38,6 +38,14 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
   await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-phase2**`, route => route.fulfill({ json: {
     ok: true, data: { resultId, orderId: workItem.orderId, overallFinding: "", overallRevision: 0, canEdit, events: [], attachments },
   } }));
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-attachments/**`, async route => {
+    if (route.request().method() !== "GET") return route.fallback();
+    const id = new URL(route.request().url()).pathname.split("/").at(-1);
+    const item = attachments.find(file => file.id === id);
+    if (!item) return route.fulfill({ status: 404 });
+    await route.fulfill({ headers: { "Content-Type": item.mimeType, "Cache-Control": "private, no-store" },
+      body: item.mimeType === "application/pdf" ? thumbnailPdf() : item.mimeType.startsWith("image/") ? thumbnailPng : "Synthetic attachment text" });
+  });
   await page.goto(`/w/${workspaceId}/lab?date=2026-09-29&labResultId=live-lab-${workItem.id}&modulePanel=closed&aside=closed&right=closed`);
   const row = page.getByTestId(`lab-result-row-${rowId}`);
   await expect(row).toBeVisible();
@@ -47,6 +55,123 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
   await expect(detail).toBeVisible();
   return { detail, row, attachments };
 }
+
+const thumbnailPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJxoAAAAASUVORK5CYII=", "base64");
+
+function thumbnailPdf() {
+  const streams = ["1 0 0 rg 0 0 200 300 re f", "0 0 1 rg 0 0 200 300 re f"];
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 300] /Resources << >> /Contents 4 0 R >>",
+    `<< /Length ${streams[0].length} >>\nstream\n${streams[0]}\nendstream`,
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 300] /Resources << >> /Contents 6 0 R >>",
+    `<< /Length ${streams[1].length} >>\nstream\n${streams[1]}\nendstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const [i, object] of objects.entries()) {
+    offsets.push(Buffer.byteLength(pdf)); pdf += `${i + 1} 0 obj\n${object}\nendobj\n`;
+  }
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.slice(1).map(offset => `${String(offset).padStart(10, "0")} 00000 n \n`).join("");
+  return Buffer.from(pdf + `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+}
+
+function thumbnailFiles(types: string[]) {
+  return types.map((mimeType, index): LabResultAttachment => ({ id: `thumbnail-${index}`, rowId,
+    name: `합성자료-${index}.${mimeType === "application/pdf" ? "pdf" : mimeType === "text/csv" ? "csv" : mimeType === "text/plain" ? "txt" : "png"}`,
+    mimeType, size: 1024, uploadedAt: "2026-10-04T00:00:00Z", uploadedByUserId: "synthetic-actor", uploadedByName: "합성" }));
+}
+
+test("thumbnail: PDF renders the real first page while CSV and TXT stay type icons", async ({ page }, testInfo) => {
+  const reads: string[] = [];
+  page.on("request", request => { if (request.url().includes("/result-attachments/")) reads.push(request.url()); });
+  const { detail } = await openReview(page, 0, false, 1, 0, thumbnailFiles(["application/pdf", "text/csv", "text/plain"]));
+  const canvas = detail.getByTestId("lab-pdf-thumbnail").locator("canvas");
+  await expect.poll(() => canvas.evaluate((element: HTMLCanvasElement) => {
+    if (!element.width || !element.height) return false;
+    const pixel = element.getContext("2d")!.getImageData(Math.floor(element.width / 2), Math.floor(element.height / 2), 1, 1).data;
+    return pixel[0] > 240 && pixel[1] < 20 && pixel[2] < 20;
+  })).toBe(true);
+  await expect(detail.getByText("PDF · 1페이지")).toBeVisible();
+  expect(reads.every(url => url.includes("/thumbnail-0?resultId="))).toBe(true);
+  const box = await canvas.boundingBox(); const thumb = await detail.getByTestId("lab-pdf-thumbnail").boundingBox();
+  expect(box!.height).toBeLessThanOrEqual(thumb!.height + 1);
+  expect(box!.width).toBeLessThanOrEqual(thumb!.width + 1);
+  await detail.screenshot({ path: testInfo.outputPath("pdf-first-page-and-type-icons.png") });
+  const cardReads = reads.length;
+  await detail.getByRole("button", { name: "목록 보기", exact: true }).click();
+  await expect(detail.getByTestId("lab-pdf-thumbnail")).toHaveCount(0);
+  expect(reads).toHaveLength(cardReads);
+  await detail.getByTitle("합성자료-0.pdf", { exact: true }).click();
+  const viewer = page.getByRole("dialog", { name: "합성자료-0.pdf", exact: true });
+  await expect(viewer.getByLabel("현재 PDF 페이지")).toHaveText("1 / 2");
+  await viewer.getByRole("button", { name: "다음", exact: true }).click();
+  await expect(viewer.getByLabel("현재 PDF 페이지")).toHaveText("2 / 2");
+});
+
+test("thumbnail: image read failure is separate from upload and keyboard retry restores it", async ({ page }, testInfo) => {
+  let reads = 0;
+  const { detail } = await openReview(page, 0, false, 1, 0, thumbnailFiles(["image/png"]));
+  await expect.poll(() => detail.locator('img[loading="lazy"]').evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-attachments/thumbnail-0?*`, async route => {
+    reads += 1;
+    await route.fulfill(reads === 1 || reads === 3 ? { status: 500 } : { contentType: "image/png", headers: { "Cache-Control": "private, no-store" }, body: thumbnailPng });
+  });
+  await page.reload();
+  await page.getByTestId(`lab-result-row-${rowId}`).getByRole("button", { name: /소견.*펼치기/ }).click();
+  const failure = detail.getByText("읽기 실패", { exact: true });
+  await expect(failure).toBeVisible();
+  const failureBox = await failure.boundingBox();
+  const previewBox = await detail.getByRole("button", { name: "합성자료-0.png 미리보기", exact: true }).boundingBox();
+  expect(failureBox!.y).toBeGreaterThanOrEqual(previewBox!.y);
+  expect(failureBox!.y + failureBox!.height).toBeLessThanOrEqual(previewBox!.y + (previewBox!.width * 107 / 190));
+  await expect(detail.getByText("업로드 실패", { exact: false })).toHaveCount(0);
+  await detail.screenshot({ path: testInfo.outputPath("thumbnail-read-failure.png") });
+  const retry = detail.getByRole("button", { name: "합성자료-0.png 미리보기 다시 불러오기" });
+  await retry.focus(); await retry.press("Enter");
+  const image = detail.getByTestId("lab-attachment-card").locator('img[loading="lazy"]');
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+  expect(reads).toBe(2);
+  await expect(detail.getByRole("button", { name: "합성자료-0.png 미리보기", exact: true })).toBeFocused();
+  await detail.getByRole("button", { name: "목록 보기", exact: true }).click();
+  await expect(detail.getByLabel("이미지 미리보기 읽기 실패")).toBeVisible();
+  await detail.getByRole("button", { name: "합성자료-0.png 작업 메뉴", exact: true }).click();
+  await page.getByRole("menuitem", { name: "미리보기 다시 불러오기", exact: true }).click();
+  await expect.poll(() => detail.getByTestId("lab-attachment-list-row").locator('img[loading="lazy"]').evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
+  expect(reads).toBe(4);
+});
+
+test("thumbnail: PDF load failure can retry without changing the stored attachment", async ({ page }) => {
+  const { detail } = await openReview(page, 0, false, 1, 0, thumbnailFiles(["application/pdf"]));
+  await expect.poll(() => detail.getByTestId("lab-pdf-thumbnail").locator("canvas").evaluate((element: HTMLCanvasElement) => element.width > 0)).toBe(true);
+  let reads = 0;
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-attachments/thumbnail-0?*`, async route => {
+    reads += 1; await route.fulfill(reads === 1 ? { status: 403 } : { contentType: "application/pdf", body: thumbnailPdf() });
+  });
+  await page.reload();
+  await page.getByTestId(`lab-result-row-${rowId}`).getByRole("button", { name: /소견.*펼치기/ }).click();
+  await expect(detail.getByText("읽기 실패", { exact: true })).toBeVisible();
+  await detail.getByRole("button", { name: "합성자료-0.pdf 미리보기 다시 불러오기" }).click();
+  await expect.poll(() => detail.getByTestId("lab-pdf-thumbnail").locator("canvas").evaluate((element: HTMLCanvasElement) => element.width > 0 && element.height > 0)).toBe(true);
+  await expect(detail.getByText("읽기 실패", { exact: true })).toHaveCount(0);
+  await expect(detail.getByText("합성자료-0.pdf", { exact: true })).toBeVisible();
+  expect(reads).toBe(2);
+});
+
+test("thumbnail: PDFs below the file viewport defer loading until scrolled into view", async ({ page }) => {
+  const reads: string[] = [];
+  page.on("request", request => { if (request.url().includes("/result-attachments/")) reads.push(request.url()); });
+  const { detail } = await openReview(page, 0, false, 1, 0, thumbnailFiles(Array(9).fill("application/pdf")));
+  await expect(detail.getByTestId("lab-attachment-card")).toHaveCount(9);
+  await expect.poll(() => reads.some(url => url.includes("/thumbnail-0?"))).toBe(true);
+  expect(reads.some(url => url.includes("/thumbnail-8?"))).toBe(false);
+  const viewport = detail.getByRole("region", { name: /첨부 카드 스크롤 영역/ });
+  await viewport.focus(); await page.keyboard.press("End");
+  await expect.poll(() => reads.some(url => url.includes("/thumbnail-8?"))).toBe(true);
+});
 
 test("overall finding uses equal text and upload columns without prototype subtext", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1386, height: 870 });
@@ -377,6 +502,7 @@ test("reference component width preserves accepted table and card geometry", asy
 test("deleting the ninth synthetic card removes overflow and its fade", async ({ page }) => {
   const { detail, attachments } = await openReview(page, 9);
   await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-attachments/review-file-0?resultId=*`, async route => {
+    if (route.request().method() === "GET") return route.fallback();
     expect(route.request().method()).toBe("DELETE");
     attachments.splice(0, 1);
     await route.fulfill({ json: { ok: true } });

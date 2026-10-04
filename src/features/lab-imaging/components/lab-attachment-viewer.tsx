@@ -81,7 +81,7 @@ function PdfPreview({ url }: { url: string }) {
       <Button variant="outline" size="xs" disabled={!pageCount || page >= pageCount} onClick={() => setPage(value => value + 1)}>다음</Button>
     </div>
     <div ref={stage} className="min-h-0 flex-1 overflow-auto rounded-md bg-[var(--emr-surface-workspace)] p-4 text-center">
-      <Document file={url} loading="PDF를 여는 중…" error="PDF를 표시할 수 없습니다. 다운로드를 이용해 주세요."
+      <Document file={url} suspense={false} loading="PDF를 여는 중…" error="PDF를 표시할 수 없습니다. 다운로드를 이용해 주세요."
         onLoadSuccess={({ numPages }) => { setPageCount(numPages); setPage(1); }}>
         <Page pageNumber={page} width={width} renderTextLayer={false} renderAnnotationLayer={false} loading="페이지를 그리는 중…" />
       </Document>

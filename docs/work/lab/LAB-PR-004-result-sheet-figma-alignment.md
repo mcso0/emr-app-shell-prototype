@@ -11,10 +11,23 @@ target_pr: "Scoped V5 alignment candidate"
 source_docs:
   - "docs/design/screens/lab/specs/result-sheet.md"
 dependencies: ["LAB-PR-003 baseline", "Narrative and instruction mapping", "Measured upload transport proof"]
-updated: "2026-10-03"
+updated: "2026-10-04"
 ---
 
 # LAB-PR-004 — Result Sheet Figma Alignment
+
+## Content Thumbnail Follow-Up — 2026-10-04
+
+- 승욱 requested implementation of the proposed thumbnail follow-up after the Unicode file-read fix was delivered in PR #918. This local candidate follows the HTML report's recommended scope: actual PDF first-page cards, image/PDF loading and read-failure/retry states, and retained CSV/TXT type icons. Optional CSV table/TXT content previews are not included.
+- Baseline: freshly fetched `origin/main` `861aaecc50d589461fb4b5d947834d727a8c2938`. Reuse the clean attached worktree on `codex/lab-attachment-thumbnail-preview`; preserve primary WIP and the previous release branch.
+- Reuse installed `react-pdf@11.0.0` and its bundled worker through a client-only dynamic component. Defer PDF data reads until the card is visible, draw only page 1 without text/annotation layers, fit portrait/landscape pages inside the existing aspect ratio, and show an explicit PDF/first-page label. A protected or unreadable PDF falls back and can retry; thumbnail rendering does not prompt for a PDF password.
+- Keep the protected URL, MIME/size validation, result/row/workspace ownership, private/no-store response, existing upload/delete/audit lifecycle, card hover/focus/touch behavior and measured file viewport. No dependency, backend, migration, remote DB/Storage write, real-file upload or Production change is included.
+- During the focused PDF workflow test, the full viewer returned to page 1 after Next. Its existing `loading/error` props now explicitly use `suspense={false}`, matching the installed library's documented opt-out and the intended viewer behavior.
+- Focused checks use intercepted synthetic metadata and real synthetic PDF/PNG bytes. Verify first-page pixels, retained non-PDF icons without text reads, preview navigation, deferred reads, image/PDF failure and retry, keyboard focus, layout and read-only access. Local test evidence does not establish live storage or Production acceptance.
+- Local verification completed: 23 Chromium checks passed together (four thumbnail workflows plus existing card/list sizing, resize/overflow, read-only, upload/cancel/retry/delete and overall-finding checks); 18 attachment lifecycle/storage-context checks passed. Changed-file ESLint, TypeScript during `npm run build`, docs links, Korean UX copy, tracked-file secret scan and `git diff --check` passed. The build completed with one `/docs` trace warning from unchanged `next.config.mjs`/`doc-reader.ts`.
+- Screenshot review found the longer failure message clipped inside small cards. Use a compact `읽기 실패` row and sibling `다시 읽기` button; assert that the failure row remains inside the thumbnail area. Keyboard retry restores focus to the preview control.
+- Delivery authorization: 승욱 subsequently requested commit, push, PR and `origin/main` merge for this verified follow-up. Prepare the exact candidate, Ready Preview, remote Release Check, smoke and rollback packet under the release skill's exact Production gate. The preceding PR #918 release remains a separate completed bug fix.
+- Release preflight: full `npm run lint` passed with five unused-variable warnings in unchanged WP10 scripts. A standalone typecheck exposed a malformed generated `.next/dev/types/validator.ts`; the cache was preserved in a temporary backup, route types regenerated using installed Next.js `next typegen`, and the standalone typecheck then passed. No application source or configuration changed for cache recovery.
 
 ## Goal And Authorization
 
