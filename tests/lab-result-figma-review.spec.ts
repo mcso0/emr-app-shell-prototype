@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import sharp from "sharp";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID as workspaceId } from "../src/lib/emr-domain/demo-workspaces";
 import type { LabResultAttachment } from "../src/features/lab-imaging/use-lab-result-phase2";
@@ -85,6 +86,39 @@ function thumbnailFiles(types: string[]) {
     mimeType, size: 1024, uploadedAt: "2026-10-04T00:00:00Z", uploadedByUserId: "synthetic-actor", uploadedByName: "합성" }));
 }
 
+async function expectOpaqueCardAction(action: Locator, channel: number) {
+  const { data, info } = await sharp(await action.screenshot({ animations: "disabled" })).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const offset = (4 * info.width + 4) * info.channels;
+  expect([...data.subarray(offset, offset + 3)]).toEqual([channel, channel, channel]);
+}
+
+test("attachment card actions stay opaque in both finding areas while focused, hovered and open", async ({ page }, testInfo) => {
+  const files = thumbnailFiles(["image/png", "application/pdf", "text/plain"]);
+  const { detail } = await openReview(page, 0, true, 1, 0, [
+    ...files,
+    ...files.map(file => ({ ...file, id: `overall-${file.id}`, rowId: null, name: `종합-${file.name}` })),
+  ]);
+  for (const region of [detail, page.getByTestId("lab-overall-finding")]) {
+    for (const card of await region.getByTestId("lab-attachment-card").all()) {
+      const action = card.getByRole("button", { name: /작업 메뉴$/ });
+      await action.focus();
+      await page.mouse.move(0, 0);
+      await expect(action).toBeFocused();
+      await expectOpaqueCardAction(action, 255);
+      await action.hover();
+      await expectOpaqueCardAction(action, 245);
+      await action.click();
+      await page.getByRole("menuitem", { name: "미리보기", exact: true }).hover();
+      await expect(action).toHaveAttribute("aria-expanded", "true");
+      await expect(action.locator("..")).toHaveCSS("opacity", "1");
+      await expectOpaqueCardAction(action, 245);
+      await page.keyboard.press("Escape");
+      await expect(action).toBeFocused();
+    }
+  }
+  await page.getByTestId("lab-overall-finding").screenshot({ path: testInfo.outputPath("opaque-card-actions.png") });
+});
+
 test("thumbnail: PDF renders the real first page while CSV and TXT stay type icons", async ({ page }, testInfo) => {
   const reads: string[] = [];
   page.on("request", request => { if (request.url().includes("/result-attachments/")) reads.push(request.url()); });
@@ -131,7 +165,9 @@ test("thumbnail: image read failure is separate from upload and keyboard retry r
   await expect(detail.getByText("업로드 실패", { exact: false })).toHaveCount(0);
   await detail.screenshot({ path: testInfo.outputPath("thumbnail-read-failure.png") });
   const retry = detail.getByRole("button", { name: "합성자료-0.png 미리보기 다시 불러오기" });
-  await retry.focus(); await retry.press("Enter");
+  await retry.focus(); await page.mouse.move(0, 0); await expectOpaqueCardAction(retry, 255);
+  await retry.hover(); await expectOpaqueCardAction(retry, 245);
+  await retry.press("Enter");
   const image = detail.getByTestId("lab-attachment-card").locator('img[loading="lazy"]');
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.complete && element.naturalWidth > 0)).toBe(true);
   expect(reads).toBe(2);

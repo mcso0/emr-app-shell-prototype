@@ -16,6 +16,14 @@ updated: "2026-10-04"
 
 # LAB-PR-004 — Result Sheet Figma Alignment
 
+## Shared Card Action Surface Follow-Up — 2026-10-04
+
+- 승욱 approved the investigated shared attachment-card correction and requested commit, push, PR, `origin/main` merge and Production delivery. Baseline: clean `origin/main` `eca2f35f48cbd2ebe200f2e4baae62a48d6483fc`; primary WIP remains untouched.
+- Apply one opaque Common/100 action-surface rule to the more trigger and thumbnail retry in `AttachmentCard`. Compose the existing 4% hover/open state over `--emr-surface-floating`; preserve focus rings, geometry, card motion and callbacks. Keep the more trigger visible while its menu is open. Item and overall findings and all supported file types reuse this card.
+- Before the fix, the rendered regression failed after the pointer moved into the open menu. After the fix, seven focused Chromium cases passed: actual white/4% pixels, focus/hover/open and Escape focus return across both finding areas and image/PDF/TXT cards, thumbnail loading/retry, item/overall isolation and read-only behavior. Retry validation first settles the existing focus-driven card movement before hovering the retry button.
+- Local secret, docs, UX-copy, lint, TypeScript and build gates passed. Lint retains five unrelated script warnings; build retains the existing docs-reader tracing warning. No dependency, API, permission, database, storage or remote data change is included.
+- Delivery gate: exact-candidate Release Check and Ready Preview, protected squash merge to `main`, then Ready Production/source/alias proof, `/login` and read-only annotated lab-route smoke. Rollback is the previous Ready application deployment or a PR reverting only this presentation change. Exact SHA, PR, workflow and deployment evidence belong in the PR.
+
 ## Content Thumbnail Follow-Up — 2026-10-04
 
 - 승욱 requested implementation of the proposed thumbnail follow-up after the Unicode file-read fix was delivered in PR #918. This local candidate follows the HTML report's recommended scope: actual PDF first-page cards, image/PDF loading and read-failure/retry states, and retained CSV/TXT type icons. Optional CSV table/TXT content previews are not included.
