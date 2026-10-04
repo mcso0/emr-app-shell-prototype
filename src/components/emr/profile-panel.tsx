@@ -119,7 +119,7 @@ export function EmrProfilePanel({
                 activateOnFocus
                 aria-label={tabsLabel}
                 variant="line"
-                className="absolute bottom-0 left-4 right-4 group-data-horizontal/tabs:h-[34px] max-w-[calc(100%-32px)] gap-2 overflow-x-auto p-0"
+                className="absolute -bottom-px left-4 right-4 group-data-horizontal/tabs:h-[35px] max-w-[calc(100%-32px)] gap-2 overflow-x-auto p-0"
                 onKeyDown={(event) => {
                   if (
                     !tabs.some((tab) => tab.disabledReason) ||
@@ -162,7 +162,7 @@ export function EmrProfilePanel({
                         : undefined
                     }
                     title={tab.disabledReason}
-                    className="h-7 flex-none self-start px-2 group-data-horizontal/tabs:after:bottom-[-6px] group-data-horizontal/tabs:after:h-px"
+                    className="h-7 flex-none self-start px-2 group-data-horizontal/tabs:after:bottom-[-8px] group-data-horizontal/tabs:after:h-0.5"
                   >
                     {tab.label}
                   </Tab>
