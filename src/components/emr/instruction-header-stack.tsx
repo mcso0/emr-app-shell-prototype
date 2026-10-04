@@ -114,7 +114,7 @@ export function EmrInstructionOutputMenu() {
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="size-7 rounded-lg text-[var(--emr-text-secondary)] [&_svg]:size-4"
+            className="text-[var(--emr-text-secondary)]"
             aria-label="문서 추가 작업"
             data-testid="instruction-output-menu-trigger"
           />

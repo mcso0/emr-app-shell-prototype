@@ -1,7 +1,7 @@
 ---
 status: active
-updated: "2026-09-27"
-related_work: "DESIGN-SYSTEM-PR-102"
+updated: "2026-10-04"
+related_work: "DESIGN-SYSTEM-PR-105"
 ---
 
 # Clinical Instruction Title Header
@@ -16,9 +16,21 @@ history side panel.
   high with a 160px display limit. Keep the complete ID in the DOM and title
   attribute when the badge truncates it.
 - The left and right control groups use 8px gaps. Supporting and primary
-  actions use the existing 28px small control size. When space is narrow, the
+  actions use the existing SM size: 28px height, 12px text and 12px icons.
+  Icon-only actions are 28×28px. Text-button widths follow their labels.
+  Use the shared 8px radius; keep the joined edges of split buttons square.
+  When space is narrow, the
   action group may move to a second row and stays right aligned without
   horizontal overflow.
+- Across 진료/차트, 영상검사, 조제, 처치, 임상병리검사, and 수납, order title-right
+  actions as: 넓게/좁게 보기, other outline actions, the current primary/status
+  action, its attached icon menu, then the existing ellipsis menu.
+  영상검사 keeps PACS, 수행기록·이력, and 종합소견 before the lifecycle action.
+  수납 keeps 수납 요약 before 담당하기/담당 취소. Chart call and completion
+  actions use SM, including both completion-button segments.
+  Keep metadata badges separate from this button-sizing contract.
+  Preserve state-dependent variants, disabled states, and visibility. Do not
+  add a primary action or ellipsis menu where the workflow has none.
 - Keep 수행기록·이력 and the current assignment or status action visible. Keep
   영상검사 PACS visible in the title. Put PDF 다운로드 and 출력하기 in the ghost
   ellipsis menu immediately after the last status action.

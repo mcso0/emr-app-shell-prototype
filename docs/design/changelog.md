@@ -2,6 +2,13 @@
 
 Use this file for small design-planning changes that do not need a standalone decision record.
 
+## 2026-10-04
+
+- `changed`: [Clinical title actions](system/instruction-title-header.md) use
+  SM 28px controls with 12px text/icons across six clinical screens. Put the
+  width toggle first, other outline actions before the primary/status action,
+  and existing icon/ellipsis menus last.
+
 ## 2026-09-29
 
 - `added`: [Lab result sheet reference](screens/lab/specs/result-sheet.md) consolidates the accepted V5 design and Figma annotations for LAB-PR-004.

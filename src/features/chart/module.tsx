@@ -17076,7 +17076,7 @@ export function ChartContent({
             completionAction={
               primaryAction === "call" ? (
                 <Button
-                  size="xs"
+                  size="sm"
                   disabled={primaryActionBusy}
                   onClick={handleOpenCallDialog}
                 >
@@ -17086,7 +17086,8 @@ export function ChartContent({
                 <ButtonGroup aria-label="차트 작성 완료 보조 액션">
                   <ButtonGroupPrimaryButton
                     aria-label="차트 작성 완료"
-                    className="h-7 rounded-l-lg px-3 text-xs"
+                    size="sm"
+                    className="rounded-l-lg"
                     disabled={primaryActionBusy}
                     onClick={() => setChartCompleteDialogOpen(true)}
                   >
@@ -17104,12 +17105,13 @@ export function ChartContent({
                           render={
                             <ButtonGroupIconButton
                               aria-label="진료 보조 액션 열기"
-                              className="h-7 w-7 rounded-r-lg"
+                              size="sm"
+                              className="rounded-r-lg"
                               disabled={primaryActionBusy}
                             />
                           }
                         >
-                          <CdsNavigationChevronDownIcon aria-hidden="true" />
+                          <CdsNavigationChevronDownIcon className="size-3" aria-hidden="true" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40">
                           <DropdownMenuItem

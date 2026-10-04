@@ -2502,28 +2502,12 @@ function BillingTitleCard({
               담당 {assigneeName}
             </Badge>
           ) : null}
-          <Button
-            type="button"
-            size="xs"
-            variant={assigneeName ? "outline" : "default"}
-            className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] px-[var(--clair-spacing-10)] shadow-[var(--clair-shadow-xs)]"
-            onClick={() => {
-              if (assigneeName) {
-                clearInvoiceAssignee(detail.invoice.id);
-                return;
-              }
-
-              assignInvoice(detail.invoice.id, assignmentActorName);
-            }}
-          >
-            {assigneeName ? "담당 취소" : "담당하기"}
-          </Button>
           <WorkspaceDocumentWidthToggle />
           <Button
             type="button"
-            size="xs"
+            size="sm"
             variant="outline"
-            className="emr-text-status h-[var(--emr-page-title-height)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-10)] text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
+            className="bg-card text-[var(--emr-text-secondary)] shadow-[var(--clair-shadow-xs)] data-[state=on]:border-[var(--clair-color-atomic-black-alpha-16)] data-[state=on]:bg-[var(--emr-state-selected)] data-[state=on]:text-[var(--emr-text-primary)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-100"
             disabled={!hasRightPanel}
             aria-label={
               (documentLayout?.rightVisible ?? rightPanelOpen) ? "수납 요약 패널 접기" : "수납 요약 패널 열기"
@@ -2535,6 +2519,22 @@ function BillingTitleCard({
             onClick={documentLayout?.toggleRight ?? (() => setRightPanelOpen(!rightPanelOpen))}
           >
             수납 요약
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={assigneeName ? "outline" : "default"}
+            className="shadow-[var(--clair-shadow-xs)]"
+            onClick={() => {
+              if (assigneeName) {
+                clearInvoiceAssignee(detail.invoice.id);
+                return;
+              }
+
+              assignInvoice(detail.invoice.id, assignmentActorName);
+            }}
+          >
+            {assigneeName ? "담당 취소" : "담당하기"}
           </Button>
         </div>
       }

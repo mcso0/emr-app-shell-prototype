@@ -137,7 +137,7 @@ export function FulfillmentWorkLifecycleAction({
           />
         }
       >
-        <ChevronDownIcon />
+        <ChevronDownIcon className={size === "sm" ? "size-3" : undefined} />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
         {items}

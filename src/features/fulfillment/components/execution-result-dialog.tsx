@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -194,12 +194,14 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
   </Dialog>;
 }
 
-export function FulfillmentExecutionActions({ workspaceId, workItemId, onSaved, ...lifecycle }: {
+export function FulfillmentExecutionActions({ workspaceId, workItemId, onSaved, children, ...lifecycle }: {
   workspaceId: string; workItemId: string; onSaved: () => Promise<void>;
+  children?: ReactNode;
 } & Parameters<typeof FulfillmentWorkLifecycleAction>[0]) {
   const [open, setOpen] = useState(false);
   return <>
     <Button variant="outline" size={lifecycle.size ?? "sm"} onClick={() => setOpen(true)}>수행기록·이력</Button>
+    {children}
     <FulfillmentWorkLifecycleAction {...lifecycle} onTransition={async (action, options) => {
       if (action === "complete") { setOpen(true); return true; }
       return lifecycle.onTransition(action, options);
