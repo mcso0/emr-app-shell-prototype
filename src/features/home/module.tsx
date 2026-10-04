@@ -28,10 +28,30 @@ export function HomeContent({ workspaceId }: ShellComponentProps) {
 
 function HomeOperationsContent({ workspaceId, today, role }: { workspaceId: string; today: string; role: ReturnType<typeof mapAuthRoleToHomeRole> }) {
   const view = useHomeWorkspaceStore((state) => state.view);
+  const layout = useHomeWorkspaceStore((state) => state.preferences.layout);
+  const hospitalFilter = useHomeWorkspaceStore((state) => state.filters.hospital);
+  const hospitalWorkType = useHomeWorkspaceStore((state) => state.hospitalWorkType);
   const query = useHomeWorkspaceStore((state) => state.queries[state.view]);
   const operatingDate = view === "mine" ? today : query.date;
   const legacy = isLegacySalesDemoWorkspace(workspaceId);
-  const { loading, refresh, response } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: view === "hospital" && query.includeCancelled, operatingDate, workspaceId, enabled: !legacy });
+  const { loading, refresh, response, receivedAt } = useHomeOperationsWorkItems({ includeCompleted: query.includeCompleted, includeCancelled: view === "hospital" && query.includeCancelled, operatingDate, workspaceId, enabled: !legacy });
+  useEffect(() => {
+    if (legacy || loading || view !== "hospital" || layout !== "list" || !response?.ok) return;
+    const hasPhotos = response.items.some((item) => item.requesterAvatarUrl || Object.keys(item.assigneeAvatarUrls ?? {}).length);
+    if (!hasPhotos) return;
+    let requested = false;
+    const refreshStalePhotos = () => {
+      // Private profile links expire after five minutes. Renew only when the
+      // list is activated/focused with an old response, without a polling loop.
+      if (!requested && Date.now() - receivedAt >= 4 * 60 * 1000) {
+        requested = true;
+        refresh();
+      }
+    };
+    refreshStalePhotos();
+    window.addEventListener("focus", refreshStalePhotos);
+    return () => window.removeEventListener("focus", refreshStalePhotos);
+  }, [hospitalFilter, hospitalWorkType, layout, legacy, loading, query, receivedAt, refresh, response, view]);
   const data = useMemo(() => {
     if (legacy) {
       const mock = getHomeMockData(role, workspaceId);
@@ -67,6 +87,7 @@ function useHomeOperationsWorkItems({
   const [response, setResponse] = useState<{
     body: HomeOperationsWorkItemsResponse;
     requestKey: string;
+    receivedAt: number;
   } | null>(null);
   const refresh = useCallback(() => setNonce((value) => value + 1), []);
 
@@ -86,12 +107,13 @@ function useHomeOperationsWorkItems({
     })
       .then(async (result) => (await result.json()) as HomeOperationsWorkItemsResponse)
       .then((body) => {
-        if (!controller.signal.aborted) setResponse({ body, requestKey });
+        if (!controller.signal.aborted) setResponse({ body, requestKey, receivedAt: Date.now() });
       })
       .catch(() => {
         if (!controller.signal.aborted) {
           setResponse({
             requestKey,
+            receivedAt: Date.now(),
             body: {
               ok: false,
               workspaceId,
@@ -114,6 +136,7 @@ function useHomeOperationsWorkItems({
     loading: response?.requestKey !== requestKey,
     refresh,
     response: response?.requestKey === requestKey ? response.body : null,
+    receivedAt: response?.requestKey === requestKey ? response.receivedAt : 0,
   };
 }
 

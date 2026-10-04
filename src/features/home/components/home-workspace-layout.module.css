@@ -152,7 +152,7 @@
 .hospitalTableHeader { min-height: 40px; padding: 0 8px; border-bottom: 1px solid var(--clair-color-atomic-neutral-100); color: var(--emr-text-tertiary); font-size: 12px; line-height: 16px; font-weight: 500; }
 .hospitalTableRows { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
 .emptyHospitalTableRows { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; gap: 0; padding: 0; }
-.hospitalRow { position: relative; min-height: 36px; padding: 8px; border-radius: 8px; color: var(--emr-text-primary); cursor: pointer; }
+.hospitalRow { position: relative; min-height: 36px; padding: var(--clair-spacing-6) var(--clair-spacing-8); border-radius: 8px; color: var(--emr-text-primary); cursor: pointer; }
 .hospitalRow:not(:last-child)::after { content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 1px; background: var(--clair-color-atomic-neutral-100); }
 .hospitalRow:hover, .hospitalRow:focus-within { background: var(--clair-color-atomic-black-alpha-6); }
 .hospitalRow:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: -2px; }
@@ -161,7 +161,22 @@
 .hospitalDetails > span { overflow: hidden; text-overflow: ellipsis; }
 .hospitalDetails > div { flex-shrink: 0; }
 .hospitalDetails [data-slot="badge"] { height: 20px; padding-block: 0; }
-.hospitalState { display: flex; align-items: center; gap: 4px; }
+.hospitalState { display: flex; align-items: center; gap: var(--clair-spacing-8); }
+.hospitalTypeBadge { border-radius: var(--clair-radius-atomic-6); }
+.hospitalIdentity { display: flex; align-items: center; gap: var(--clair-spacing-8); }
+.hospitalIdentity > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hospitalPatientAvatar { width: var(--clair-spacing-20); height: var(--clair-spacing-20); }
+.hospitalPatientAvatar svg, .hospitalGuardianAvatar svg, .hospitalUserAvatar svg { width: 14px; height: 14px; }
+.hospitalGuardianAvatar { width: var(--clair-spacing-20); height: var(--clair-spacing-20); }
+.hospitalTime { display: flex; align-items: center; gap: var(--clair-spacing-6); }
+.hospitalTime svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--emr-text-tertiary); }
+.hospitalTableHeader > [role="columnheader"]:nth-child(7), .hospitalTableHeader > [role="columnheader"]:nth-child(8) { text-align: center; }
+.hospitalUsers { display: flex; align-items: center; justify-content: center; gap: var(--clair-spacing-4); }
+.hospitalAvatarTrigger { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: var(--clair-spacing-24); height: var(--clair-spacing-24); border-radius: var(--clair-radius-full); cursor: default; }
+.hospitalAvatarTrigger:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: 2px; }
+.hospitalUserAvatar { width: var(--clair-spacing-24); height: var(--clair-spacing-24); }
+.hospitalUnassignedAvatar::after { border-style: dashed; }
+.hospitalUnassignedAvatar [data-slot="avatar-fallback"] { background: transparent; }
 .hospitalRowAction { display: flex; align-items: center; opacity: 0; }
 .hospitalRowAction button { width: 20px; height: 20px; min-height: 20px; padding: 0; }
 .hospitalRow:hover .hospitalRowAction, .hospitalRow:focus-within .hospitalRowAction { opacity: 1; }

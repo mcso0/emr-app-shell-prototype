@@ -381,11 +381,6 @@
     max-width: none !important;
   }
 
-  .lab-result-sheet-table-anchor tbody [data-column-id="analyteName"] [data-emr-table-content],
-  .lab-result-sheet-table-anchor tbody [data-column-id="unit"] [data-emr-table-content] {
-    padding-left: 14px;
-  }
-
   [data-emr-pinned-table-viewport="true"] [data-slot="table-container"] {
     background-color: var(--emr-surface-workspace);
     background-image: linear-gradient(

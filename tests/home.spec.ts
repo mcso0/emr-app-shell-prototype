@@ -12,13 +12,106 @@ const items = [
   { ...base, id: "dispensing:one", sourceId: "medicine", sourceType: "dispensing", title: "내가 요청한 약", patientName: "보리", assigneeName: undefined, sourceHref: `/w/${workspaceId}/dispensing?workItemId=medicine`, isMyWork: false, isRequestedWork: true },
   { ...base, id: "lab:done", sourceId: "done", sourceType: "lab", title: "완료한 검사", progressState: "completed", sourceHref: `/w/${workspaceId}/lab`, isMyWork: true },
 ];
-async function openHome(page: Page, status = "live") {
+async function openHome(page: Page, status = "live", responseItems = items) {
   await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
-    await route.fulfill({ json: status === "error" || status === "permission_denied" ? { ok: false, workspaceId, operatingDate: today, sourceStatus: status, error: { message: "테스트 조회 오류", retryable: status === "error" } } : { ok: true, workspaceId, operatingDate: today, generatedAt: new Date().toISOString(), sourceStatus: status, items, currentPatients: { present: 2, waiting: 1, inProgress: 1 } } });
+    await route.fulfill({ json: status === "error" || status === "permission_denied" ? { ok: false, workspaceId, operatingDate: today, sourceStatus: status, error: { message: "테스트 조회 오류", retryable: status === "error" } } : { ok: true, workspaceId, operatingDate: today, generatedAt: new Date().toISOString(), sourceStatus: status, items: responseItems, currentPatients: { present: 2, waiting: 1, inProgress: 1 } } });
   });
   await page.goto(`/w/${workspaceId}/home`);
   await expect(page.getByTestId("home-workspace")).toHaveAttribute("aria-busy", "false");
 }
+
+test("hospital avatars keep registered user photos, fallback identities and tooltip interaction", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openHome(page, "live", items.map((item) => item.id === "lab:one" ? {
+    ...item,
+    requesterUserId: "requester",
+    requesterName: "송민재",
+    requesterAvatarUrl: "/avatars/49110000-0000-4000-8000-000000000001.png",
+    assigneeUserId: "vet-one",
+    assigneeUserIds: ["vet-one", "vet-two"],
+    assigneeNames: ["이수지", "김수의"],
+    assigneeAvatarUrls: { "vet-one": "/avatars/49110000-0000-4000-8000-000000000003.png" },
+  } : item));
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  const row = page.getByTestId("home-hospital-row-lab:one");
+  const cells = row.getByRole("cell");
+  await expect(cells.nth(0).locator('[data-slot="badge"]')).toHaveAttribute("data-variant", "outline");
+  for (const index of [1, 2]) {
+    const avatar = cells.nth(index).locator('[data-slot="avatar"]');
+    await expect(avatar).toHaveCSS("width", "20px");
+    await expect(avatar).toHaveCSS("height", "20px");
+  }
+  await expect(cells.nth(4)).toHaveCSS("gap", "8px");
+  await expect(cells.nth(5).locator("svg")).toBeVisible();
+  const requester = row.getByRole("button", { name: "요청자 송민재", exact: true });
+  const assignee = row.getByRole("button", { name: "담당자 이수지", exact: true });
+  await expect(requester.locator("img")).toHaveAttribute("src", /000000000001\.png$/);
+  await expect(assignee.locator("img")).toHaveAttribute("src", /000000000003\.png$/);
+  await expect(row.getByRole("button", { name: "담당자 김수의" }).locator('[data-slot="avatar-fallback"]')).toBeVisible();
+  for (const cellIndex of [6, 7]) {
+    const cell = cells.nth(cellIndex);
+    await expect(cell).toHaveCSS("justify-content", "center");
+    for (const avatar of await cell.locator('[data-slot="avatar"]').all()) {
+      await expect(avatar).toHaveCSS("width", "24px");
+      await expect(avatar).toHaveCSS("height", "24px");
+      expect(await avatar.evaluate((element) => parseFloat(getComputedStyle(element).borderRadius))).toBeGreaterThanOrEqual(12);
+    }
+  }
+  await requester.hover();
+  await expect(page.getByRole("tooltip", { name: "송민재", exact: true })).toBeVisible();
+  await requester.click();
+  await expect(page).toHaveURL(/\/home/);
+  await requester.press("Tab");
+  await expect(assignee).toBeFocused();
+  await expect(page.getByRole("tooltip", { name: "이수지", exact: true })).toBeVisible();
+  await assignee.press("Enter");
+  await expect(page).toHaveURL(/\/home/);
+  const unassigned = page.getByTestId("home-hospital-row-dispensing:one").getByRole("button", { name: "담당자 미배정", exact: true });
+  await expect(unassigned.locator('[data-slot="avatar-fallback"]')).toBeVisible();
+  await unassigned.focus();
+  await expect(page.getByRole("tooltip", { name: "미배정", exact: true })).toBeVisible();
+  await page.screenshot({ path: "/tmp/home-list-profile-avatars.png", animations: "disabled" });
+});
+
+test("stale list activation renews user pictures once and keeps additional assignees accessible", async ({ page }) => {
+  const start = new Date();
+  await page.clock.setFixedTime(start);
+  let reads = 0;
+  await page.route(`**/api/workspaces/${workspaceId}/operations/work-items?**`, async (route) => {
+    reads += 1;
+    await route.fulfill({ json: {
+      ok: true, workspaceId, operatingDate: today, generatedAt: new Date().toISOString(), sourceStatus: "live",
+      items: [{ ...items[0], requesterUserId: "requester", requesterName: "송민재", requesterAvatarUrl: `/avatars/49110000-0000-4000-8000-000000000001.png?v=${reads}`,
+        assigneeUserIds: ["one", "two", "three", "four"], assigneeNames: ["김수의", "이수의", "박수의", "최수의"] }],
+    } });
+  });
+  await page.goto(`/w/${workspaceId}/home`);
+  await expect(page.getByTestId("home-workspace")).toHaveAttribute("aria-busy", "false");
+  const initialReads = reads;
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  const row = page.getByTestId("home-hospital-row-lab:one");
+  await expect(row.getByRole("button", { name: "요청자 송민재" }).locator("img")).toHaveAttribute("src", new RegExp(`v=${initialReads}$`));
+  expect(reads).toBe(initialReads);
+  const remaining = row.getByRole("button", { name: "담당자 박수의, 최수의", exact: true });
+  await expect(remaining).toHaveText("+2");
+  await remaining.hover();
+  await expect(page.getByRole("tooltip", { name: "박수의, 최수의", exact: true })).toBeVisible();
+  expect(await row.getByRole("cell").nth(7).getByRole("button").count()).toBe(3);
+  await page.getByRole("button", { name: "칸반", exact: true }).click();
+  await page.clock.setFixedTime(new Date(start.getTime() + 6 * 60 * 1000));
+  await page.getByRole("button", { name: "리스트", exact: true }).click();
+  await expect(row.getByRole("button", { name: "요청자 송민재" }).locator("img")).toHaveAttribute("src", new RegExp(`v=${initialReads + 1}$`));
+  expect(reads).toBe(initialReads + 1);
+  await page.clock.setFixedTime(new Date(start.getTime() + 12 * 60 * 1000));
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(row.getByRole("button", { name: "요청자 송민재" }).locator("img")).toHaveAttribute("src", new RegExp(`v=${initialReads + 2}$`));
+  expect(reads).toBe(initialReads + 2);
+  await page.clock.setFixedTime(new Date(start.getTime() + 18 * 60 * 1000));
+  await page.getByRole("button", { name: "검색", exact: true }).click();
+  await page.getByLabel("환자 보호자 업무 검색").fill("CBC");
+  await expect(row.getByRole("button", { name: "요청자 송민재" }).locator("img")).toHaveAttribute("src", new RegExp(`v=${initialReads + 3}$`));
+  expect(reads).toBe(initialReads + 3);
+});
 
 test("home data loading uses the centered shared empty state", async ({ page }) => {
   let release: (() => void) | undefined;
@@ -612,6 +705,7 @@ test("Home toolbar stays in one row and collapses actions at its own 900px bound
   expect((await tabs.boundingBox())!.width).toBeGreaterThanOrEqual(96);
   expect(await actions.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
   await completed.focus();
+  await page.getByLabel("환자 보호자 업무 검색").hover();
   await expect(page.getByRole("tooltip", { name: /완료 포함/ })).toBeVisible();
   expect(await page.getByRole("tooltip").evaluate((element) => element.parentElement === document.body)).toBe(true);
   await page.getByLabel("환자 보호자 업무 검색").press("Escape");
