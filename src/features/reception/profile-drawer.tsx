@@ -9,6 +9,8 @@ import {
   useState,
   type ComponentProps,
 } from "react";
+import { getProfileTodayItems } from "./profile-today";
+import { useProfileToday } from "./use-profile-today";
 import { useParams } from "next/navigation";
 import {
   CdsActionsPlusIcon,
@@ -644,29 +646,6 @@ const getAppointmentReservationItem = ({
     .join(" · "),
 });
 
-const getEncounterReservationItem = ({
-  encounter,
-  patient,
-  showPatientName,
-}: {
-  encounter: Encounter;
-  patient?: Patient;
-  showPatientName: boolean;
-}): ProfileReservationItem => ({
-  description: encounter.receptionMemo ?? encounter.chiefComplaint ?? encounter.visitPurpose ?? "접수 메모가 없습니다.",
-  id: encounter.id,
-  patientId: encounter.patientId,
-  patientName: patient?.name,
-  scheduledAt: encounter.checkedInAt ?? encounter.createdAt,
-  title: [
-    showPatientName ? patient?.name ?? "환자 미상" : undefined,
-    formatProfileSchedule(encounter.checkedInAt ?? encounter.createdAt),
-    encounter.receptionType === "appointment" ? "예약" : "접수",
-  ]
-    .filter(Boolean)
-    .join(" · "),
-});
-
 const getHistoryItems = ({
   encounters,
   guardian,
@@ -761,13 +740,7 @@ const getPatientProfileSidePanelModel = (bundle: PatientProfileBundle): ProfileS
   const reservations = bundle.appointments.map((appointment) =>
     getAppointmentReservationItem({ appointment, patient: bundle.patient, showPatientName: false })
   );
-  const today = bundle.activeEncounter
-    ? getEncounterReservationItem({
-        encounter: bundle.activeEncounter,
-        patient: bundle.patient,
-        showPatientName: false,
-      })
-    : reservations[0];
+  const todayItems = getProfileTodayItems({ appointments: bundle.appointments, encounters: bundle.encounters, patientNames: new Map([[bundle.patient.id, bundle.patient.name]]), workspaceId: bundle.patient.workspaceId, date: getWorkspaceOperatingDate(bundle.patient.workspaceId) });
 
   return {
     avatarAlt: `${bundle.patient.name} 환자 프로필`,
@@ -831,7 +804,7 @@ const getPatientProfileSidePanelModel = (bundle: PatientProfileBundle): ProfileS
       },
     ],
     reservations,
-    today,
+    todayItems,
     upcoming: reservations[0],
   };
 };
@@ -845,14 +818,7 @@ const getGuardianProfileSidePanelModel = (bundle: GuardianProfileBundle): Profil
       showPatientName: true,
     })
   );
-  const todayEncounter = bundle.encounters[0];
-  const today = todayEncounter
-    ? getEncounterReservationItem({
-        encounter: todayEncounter,
-        patient: patientById.get(todayEncounter.patientId),
-        showPatientName: true,
-      })
-    : reservations[0];
+  const todayItems = getProfileTodayItems({ appointments: bundle.appointments, encounters: bundle.encounters, patientNames: new Map(bundle.patients.map((patient) => [patient.id, patient.name])), workspaceId: bundle.guardian.workspaceId, date: getWorkspaceOperatingDate(bundle.guardian.workspaceId) });
   const primaryItems = bundle.patients.filter((patient) =>
     bundle.patientGuardians.some((link) => link.patientId === patient.id && link.isPrimary)
   );
@@ -921,7 +887,7 @@ const getGuardianProfileSidePanelModel = (bundle: GuardianProfileBundle): Profil
       },
     ],
     reservations,
-    today,
+    todayItems,
     upcoming: reservations[0],
   };
 };
@@ -1836,6 +1802,7 @@ export function PatientProfileDrawer({
     subjectType: "patient",
     workspaceId,
   });
+  const todayRead = useProfileToday({ enabled: preparedWorkspace, overview: liveRead.overview, subjectId: patientId, subjectType: "patient", workspaceId });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<ProfileSidePanelTab>(defaultTab);
@@ -1978,7 +1945,7 @@ export function PatientProfileDrawer({
     <ProfileSidePanel
       defaultTab={defaultTab}
       embedded
-      model={model}
+      model={preparedWorkspace ? { ...model, todayItems: todayRead.items, todayState: { status: todayRead.status } } : model}
       onLoadSection={(section, filter, append = false) => {
         if (section === "info") return;
         liveRead.loadSection(section, filter, { append, force: !append });
@@ -1986,6 +1953,7 @@ export function PatientProfileDrawer({
       sectionStates={sectionStates}
       tabAccess={tabAccess}
       onRetryOverview={liveRead.reloadOverview}
+      onRetryToday={todayRead.reload}
       editing={editing}
       saving={saving}
       onBeginEdit={editablePatient ? beginEdit : undefined}
@@ -2106,6 +2074,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
     subjectType: "guardian",
     workspaceId,
   });
+  const todayRead = useProfileToday({ enabled: preparedWorkspace, overview: liveRead.overview, subjectId: guardianId, subjectType: "guardian", workspaceId });
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState<
@@ -2205,7 +2174,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
   return (
     <ProfileSidePanel
       embedded
-      model={model}
+      model={preparedWorkspace ? { ...model, todayItems: todayRead.items, todayState: { status: todayRead.status } } : model}
       onLoadSection={(section, filter, append = false) => {
         if (section === "info") return;
         liveRead.loadSection(section, filter, { append, force: !append });
@@ -2213,6 +2182,7 @@ export function GuardianProfileDrawer({ guardianId }: { guardianId: EmrId }) {
       sectionStates={sectionStates}
       tabAccess={tabAccess}
       onRetryOverview={liveRead.reloadOverview}
+      onRetryToday={todayRead.reload}
       editing={editing}
       saving={saving}
       onBeginEdit={editableGuardian ? beginEdit : undefined}

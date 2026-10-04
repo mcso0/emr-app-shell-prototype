@@ -200,3 +200,23 @@ failure; rollback mutations require separate authorization.
 - Restore the source rectangle to 24 x 24 and regenerate the shared icon. Preserve inner SVG dimensions in the generator so subsequent Figma imports retain clipping and shape geometry. No profile data, API, permission, or layout changes.
 - Focused verification: generator import-to-component geometry regression and guardian profile browser clip-region regression; release also requires secrets/docs/UX-copy, lint, typecheck, build, exact-candidate Release Check, Ready preview, and production address-icon smoke.
 - Production rollback candidate: current Ready deployment `dpl_3z6bBiGMXveHQGkjjwLPHsVXNcrf`, source `bd321152d1ca4f095ab4c07840cd7cc81ebc9d73`. Stop before merge for failed verification or a changed candidate; verify the synthetic guardian profile after deployment.
+
+## 2026-10-04 Approved Today Section Slice
+
+- User approved implementation, commit/push/PR, and requested merge to `origin/main` after reviewable verification. Exact release candidate remains subject to the release gate.
+- Display today's 예약, 진료대기, 진료중, and 수납대기 at the top of both information tabs. Exclude ordered, completed, cancelled, and no-show. Omit department/room labels.
+- Order consulting, waiting, billing, reservation; within a state use time then stable ID. Guardian scope includes all current linked patients, including additional relationships.
+- Preserve one-line visit purpose with More/Collapse, fixed icon position, centered neutral/400 placeholders, and centered XS retry with leading refresh icon.
+- Use a profile-specific read-only GET composed from existing overview, calendar, and permission-gated operational Home source RPCs. No SQL/migration, row mutation, permission-policy, or notification change. Reuse `clair_get_home_operations_source_snapshot_v2`, already used by Home, to include active encounters from older appointments without historical offset scans or row-limit truncation. Return only scoped card fields.
+- Preserve the legacy mock operating date and live KST today. Cancel stale profile reads and refresh on reception changes, visible interval/focus, and day rollover. Preserve lazy activity tabs and edit/navigation contracts.
+- Implementation scope: profile UI/CSS/stories, profile-today projector and hook, profile-today server core/GET, focused server/projector/UI tests.
+- Verification: permission/workspace/relationship denial; allowed/excluded statuses; reservation and queue duplication; prior-day appointment check-in; more than 500 source rows; stale profile response; loading/error/retry; memo disclosure/icon geometry; existing profile tabs/edit/navigation; lint/typecheck/build/docs/secrets; exact-SHA Release Check and Preview readiness.
+
+### Today Section Verification
+
+- 22 new focused scenarios passed: 15 projection/server/auth cases and seven browser cases. Coverage includes the real guardian relationship JSON without workspaceId, all linked patients, denied reads before gateway access, cross-workspace filtering, reservation-to-encounter suppression, older appointment check-in, more than 500 source rows, long memo disclosure with fixed icon position, centered loading/error/empty and XS retry, permission-loss clearing, delayed profile responses, and KST midnight rollover.
+- Six added Storybook interaction cases passed. The synthetic patient state specimen was visually inspected. Existing profile geometry, loading/error, motion, 360px viewport and address icon cases passed.
+- The broader customer run returned 54 passed / three failed. Failures are in unchanged customer table column resize and pinned-boundary geometry checks; all three reproduced with identical assertions on untouched main `861aaecc50d589461fb4b5d947834d727a8c2938` in a separate clean worktree. Do not count these as passing.
+- Full local lint (zero errors, five inherited WP10 warnings), TypeScript, production build (inherited docs-reader tracing warning), docs links, Korean UX copy, secret scan and diff whitespace checks passed. Newly added files are included in the final staged secret scan before commit.
+- Read-only remote migration metadata records `20261003141044_home_scoped_operational_read`, the existing Home v2 reader dependency. No remote SQL, schema, data or permission mutation was performed.
+- Independent read-only boundary review found no remaining confirmed correctness or permission issue after the guardian contract fix and v2 source reuse. Local browser tests use synthetic mocked responses; authenticated hosted data reads remain a separate smoke boundary.

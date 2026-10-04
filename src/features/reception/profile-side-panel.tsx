@@ -1,13 +1,15 @@
 "use client";
 
 import {
+  useEffect,
   useId,
+  useRef,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
-import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsActionsRefreshCwIcon, CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
 import {
   CdsCommunicationMailIcon,
   CdsCommunicationMessageSquareIcon,
@@ -29,6 +31,8 @@ import {
 } from "@/components/cds-icons/navigation";
 import { CdsPeopleMapPinIcon, CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
+import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
+import type { ProfileTodayItem, ProfileTodayStatus } from "./profile-today";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -163,6 +167,8 @@ export type ProfileSidePanelModel = {
   reservations: ProfileReservationItem[];
   reservationMonth?: string;
   today?: ProfileReservationItem;
+  todayItems?: ProfileTodayItem[];
+  todayState?: ProfileTabState;
   upcoming?: ProfileReservationItem;
 };
 
@@ -179,6 +185,7 @@ type ProfileSidePanelProps = {
   onHeaderAction: (action: "message" | "reservation" | "walk-in") => void;
   onOpenRelated?: (item: ProfileRelatedItem) => void;
   onRetryOverview?: () => void;
+  onRetryToday?: () => void;
   onSaveEdit?: () => void;
   onTabChange?: (tab: ProfileSidePanelTab) => void;
   sectionStates?: Partial<Record<ProfileSidePanelTab, ProfileTabState>>;
@@ -396,15 +403,35 @@ function ProfileIdentity({
   );
 }
 
-function WorkCard({ item }: { item: ProfileReservationItem }) {
+function WorkCard({ item, todayStatus, showPatientName = false }: { item: ProfileReservationItem; todayStatus?: ProfileTodayStatus; showPatientName?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const descriptionId = useId();
+  const description = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    const element = description.current;
+    if (!todayStatus || !element || expanded) return;
+    const measure = () => setOverflowing(element.scrollWidth > element.clientWidth + 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    void document.fonts.ready.then(() => { if (element.isConnected) measure(); });
+    return () => observer.disconnect();
+  }, [todayStatus, expanded, item.description]);
   return (
-    <div className={styles.workCard}>
-      <span className={styles.stateIcon} aria-hidden="true">
-        <span className={styles.stateGlyph} />
+    <div className={cn(styles.workCard, todayStatus && styles.todayWorkCard)} data-today-status={todayStatus}>
+      <span className={styles.stateIcon} aria-hidden="true" data-testid={todayStatus ? "profile-today-icon" : undefined}>
+        {todayStatus && todayStatus !== "reservation" ? <EmrSidePanelStateIcon className={styles.todayStateGlyph} state={todayStatus === "consulting" ? "in-progress" : "to-do"} /> : <span className={styles.stateGlyph} />}
       </span>
       <div className={styles.workCopy}>
-        <p className={styles.workTitle}>{item.title}</p>
-        <p className={styles.workDescription}>{item.description}</p>
+        <p className={cn(styles.workTitle, todayStatus && styles.todayWorkTitle)}>
+          {showPatientName && item.patientName ? `${item.patientName} · ` : null}
+          <span className={todayStatus === "consulting" ? styles.consultingTitle : undefined}>{item.title}</span>
+        </p>
+        <div className={cn(todayStatus && styles.todayDescriptionRow)}>
+          <p id={descriptionId} ref={description} className={cn(styles.workDescription, expanded && styles.expandedDescription)}>{item.description}</p>
+          {todayStatus && overflowing ? <button type="button" className={styles.memoToggle} aria-expanded={expanded} aria-controls={descriptionId} onClick={() => setExpanded(!expanded)}>{expanded ? "접기" : "더보기"}</button> : null}
+        </div>
       </div>
     </div>
   );
@@ -483,9 +510,10 @@ function InformationTab({
   onBeginEdit,
   onOpenRelated,
   onRetryOverview,
+  onRetryToday,
 }: Pick<
   ProfileSidePanelProps,
-  "editContent" | "editing" | "model" | "onBeginEdit" | "onOpenRelated" | "onRetryOverview"
+  "editContent" | "editing" | "model" | "onBeginEdit" | "onOpenRelated" | "onRetryOverview" | "onRetryToday"
 > & { overviewState?: ProfileTabState }) {
   if (overviewState && overviewState.status !== "ready") {
     const label = overviewState.status === "loading"
@@ -509,17 +537,18 @@ function InformationTab({
     <EmrProfilePanelBody
       className={cn(styles.scrollContent, styles.infoContent)}
     >
-      {model.today ? (
-        <>
-          <section className={styles.infoSection}>
-            <h3 className={styles.sectionHeading}>오늘 접수/예약</h3>
-            <div className={styles.sectionBody}>
-              <WorkCard item={model.today} />
+      <section className={styles.infoSection} aria-label="오늘 접수/예약" data-testid="profile-today-section">
+        <h3 className={styles.sectionHeading}>오늘 접수/예약</h3>
+        <div className={styles.sectionBody}>
+          {model.todayState && model.todayState.status !== "ready" ? (
+            <div className={styles.todayFeedback} role="status">
+              <span>{model.todayState.status === "denied" ? "오늘 접수/예약을 볼 권한이 없습니다" : model.todayState.status === "error" || model.todayState.status === "not_found" ? "오늘 접수/예약을 불러오지 못했습니다" : "오늘 접수/예약을 불러오는 중입니다"}</span>
+              {(model.todayState.status === "error" || model.todayState.status === "not_found") && onRetryToday ? <Button size="xs" variant="outline" onClick={onRetryToday}><CdsActionsRefreshCwIcon aria-hidden="true" data-icon="inline-start" />다시 시도</Button> : null}
             </div>
-          </section>
-          <div className={styles.divider} aria-hidden="true" />
-        </>
-      ) : null}
+          ) : model.todayItems?.length ? model.todayItems.map((item) => <WorkCard key={`${item.id}:${item.description}`} item={item} todayStatus={item.status} showPatientName={model.kind === "guardian"} />) : model.todayItems === undefined && model.today ? <WorkCard key={`${model.today.id}:${model.today.description}`} item={model.today} todayStatus="reservation" /> : <div className={styles.todayFeedback} role="status">접수/예약 일정이 없습니다</div>}
+        </div>
+      </section>
+      <div className={styles.divider} aria-hidden="true" />
 
       {editing && editContent ? (
         <div className={styles.editSurface}>{editContent}</div>
@@ -1074,6 +1103,7 @@ export function ProfileSidePanel({
   onLoadSection,
   onOpenRelated,
   onRetryOverview,
+  onRetryToday,
   onSaveEdit,
   onTabChange,
   saving = false,
@@ -1124,6 +1154,7 @@ export function ProfileSidePanel({
             onBeginEdit={onBeginEdit}
             onOpenRelated={onOpenRelated}
             onRetryOverview={onRetryOverview}
+            onRetryToday={onRetryToday}
           />
         ) : null}
         {activeTab === "reservations" ? (
