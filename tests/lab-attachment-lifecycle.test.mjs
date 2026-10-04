@@ -82,8 +82,8 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
   const file = (method, attachmentId, download = false) => fileRoute[method](new Request(
     `https://example.test/attachments/${attachmentId}?resultId=result-a${download ? "&download=1" : ""}`, { method }),
   { params: Promise.resolve({ workspaceId: "workspace-a", attachmentId }) });
-  const prepare = async (rowId = "row-a") => {
-    const response = await post("prepare", { rowId, name: "synthetic.png", mimeType: "image/png", size: 179 });
+  const prepare = async (rowId = "row-a", name = "synthetic.png") => {
+    const response = await post("prepare", { rowId, name, mimeType: "image/png", size: 179 });
     assert.equal(response.status, 201);
     const body = await response.json();
     const bytes = new Uint8Array(179);
@@ -116,6 +116,33 @@ for (const rowId of ["row-a", null]) test(`generated ${rowId === null ? "overall
   assert.equal(h.objects.size, 0);
   assert.ok(h.records.get(attachmentId).storage_deleted_at);
   assert.equal((await h.file("GET", attachmentId)).status, 404);
+});
+
+for (const [label, name, fallback] of [
+  ["ASCII", "report.png", "report.png"],
+  ["Korean", "검사 결과.png", "__ __.png"],
+  ["decomposed Korean", "생성된 이미지 1 (2).png".normalize("NFD"), "_________ ______ 1 (2).png"],
+  ["emoji", "검사🧪.png", "____.png"],
+  ["quoted ASCII", "report's (review)!* \"quoted\" \\copy.png", "report's (review)!* _quoted_ _copy.png"],
+]) test(`${label} filename survives protected preview and download headers`, async () => {
+  const h = harness();
+  const attachmentId = await h.prepare(null, name);
+  assert.equal((await h.post("finalize", { attachmentId })).status, 200);
+  for (const download of [false, true]) {
+    const response = await h.file("GET", attachmentId, download);
+    assert.equal(response.status, 200);
+    const disposition = response.headers.get("Content-Disposition");
+    assert.ok(disposition.startsWith(`${download ? "attachment" : "inline"}; filename="${fallback}"; filename*=UTF-8''`));
+    assert.match(disposition, /^[\x20-\x7E]+$/);
+    const encodedName = disposition.split("filename*=UTF-8''")[1];
+    assert.equal(decodeURIComponent(encodedName), name);
+    assert.doesNotMatch(encodedName, /[!'()*]/);
+    assert.equal(response.headers.get("Content-Type"), "image/png");
+    assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+    assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
+    assert.deepEqual(new Uint8Array(await response.arrayBuffer()), new Uint8Array(await h.objects.values().next().value.arrayBuffer()));
+  }
+  assert.equal(h.records.get(attachmentId).file_name, name);
 });
 
 test("generated pending UUID can be discarded idempotently and cannot then finalize", async () => {

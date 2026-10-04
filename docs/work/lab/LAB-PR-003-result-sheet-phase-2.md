@@ -7,10 +7,19 @@ source_docs:
   - "docs/work/lab/LAB-PR-002-result-sheet-figma-phase-1.md"
   - "2026-09-27 approved phase-2 implementation report and interactive prototype"
 dependencies: []
-updated: "2026-09-29"
+updated: "2026-10-04"
 ---
 
 # Lab Result Sheet Phase 2
+
+## Unicode Filename Read Fix (2026-10-04)
+
+- 승욱 requested investigation before implementation, then approved the scoped file-read bug fix, verification, commit, push, PR, and preparation for `origin/main` merge. The exact-candidate Production gate remains required before merge.
+- Production inspection identified HTTP 500 / `ByteString` errors when the protected attachment GET inserted a Korean filename into `Content-Disposition`. Image cards switched to the existing type fallback; the full image viewer failed through the same route.
+- The code-only fix makes the legacy `filename` parameter printable ASCII and uses UTF-8 percent encoding for the original name in `filename*`, including reserved punctuation. Stored names, object paths, bytes, MIME, permissions, workspace/result ownership, private/no-store response policy, upload/delete, and existing thumbnail presentation remain unchanged. PDF/text thumbnail expansion is deferred.
+- Five filename regression cases cover ASCII, composed Korean, decomposed Korean, emoji, and quoted ASCII for inline preview and download, original-name decoding, exact bytes, and response safeguards. Four new cases failed before the fix. After the fix, all 18 lifecycle and scoped-context tests passed using the actual route with synthetic storage/context harnesses; this is not live storage integration evidence.
+- Local secret scan, docs links, UX copy, TypeScript, lint, build, and diff checks passed. Lint reports five existing warnings in unrelated WP10 scripts; build reports the existing `next.config.mjs` NFT trace warning. No unrelated fix is included.
+- No migration, remote DB/storage write, new dependency, or real file upload is included. The current approved work is application-only release preparation; the exact PR candidate, preflight, Ready Preview, Release Check, smoke path, and rollback evidence will be presented before Production approval.
 
 ## Goal
 
