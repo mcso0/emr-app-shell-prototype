@@ -217,6 +217,7 @@
 
 .sectionBody {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   margin-top: 12px;
 }
@@ -830,4 +831,79 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   .editButton {
     transition: none;
   }
+}
+
+.todayWorkCard .stateIcon {
+  align-self: flex-start;
+}
+
+.todayStateGlyph {
+  width: 24px;
+  height: 24px;
+}
+
+.todayWorkTitle {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.consultingTitle {
+  color: var(--profile-sky-600);
+}
+
+.todayDescriptionRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.todayDescriptionRow .workDescription {
+  min-width: 0;
+  flex: 1;
+}
+
+.expandedDescription {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+.memoToggle {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--profile-neutral-500);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.memoToggle:focus-visible {
+  outline: 2px solid var(--profile-sky-600);
+  outline-offset: 2px;
+}
+
+.todayFeedback {
+  display: flex;
+  min-height: 70px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 16px;
+  border: 1px solid var(--profile-neutral-200);
+  border-radius: 12px;
+  color: var(--clair-color-atomic-neutral-400);
+  background: var(--emr-surface-rightpanel);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.196px;
+  box-sizing: border-box;
 }
