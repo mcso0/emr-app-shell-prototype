@@ -20,10 +20,13 @@ export async function GET(request: Request, { params }: RouteContext) {
   const file = await context.trusted!.storage.from(LAB_RESULT_ATTACHMENT_BUCKET).download(found.data.storage_path);
   if (file.error || !file.data) return Response.json({ ok: false, error: "file_read_failed" }, { status: 500 });
   const disposition = new URL(request.url).searchParams.get("download") === "1" ? "attachment" : "inline";
-  const filename = found.data.file_name.replace(/[\r\n"\\]/g, "_");
+  // The legacy filename parameter must remain ASCII; filename* preserves the original Unicode name.
+  const filename = found.data.file_name.replace(/[^\x20-\x7E]|["\\]/g, "_");
+  const encodedFilename = encodeURIComponent(found.data.file_name)
+    .replace(/[!'()*]/g, (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`);
   return new Response(file.data, { headers: {
     "Content-Type": found.data.mime_type,
-    "Content-Disposition": `${disposition}; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(found.data.file_name)}`,
+    "Content-Disposition": `${disposition}; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
     "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
   } });
 }
