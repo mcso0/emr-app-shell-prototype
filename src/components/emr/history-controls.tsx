@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel
 import { Field, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getHistoryDateRangeError, type HistoryDateRange, type HistorySortDirection } from "@/lib/history-controls";
 
 export function useHistorySearch() {
@@ -36,11 +37,15 @@ export function EmrHistorySortButton({ direction, onChange, dateLabel }: {
   dateLabel: string;
 }) {
   const [open, setOpen] = useState(false);
+  const label = `정렬: ${direction === "newest" ? "최신순" : "오래된순"}`;
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger render={<EmrListHeaderIconButton ariaLabel={`정렬: ${direction === "newest" ? "최신순" : "오래된순"}`} />}>
-        <CdsUtilitiesSortIcon className="size-4" />
-      </DropdownMenuTrigger>
+      <Tooltip>
+        <TooltipTrigger render={<DropdownMenuTrigger render={<EmrListHeaderIconButton ariaLabel={label} />} />}>
+          <CdsUtilitiesSortIcon className="size-4" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{label}</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="sr-only">{dateLabel} 정렬</DropdownMenuLabel>
@@ -58,18 +63,17 @@ export function EmrHistorySortButton({ direction, onChange, dateLabel }: {
   );
 }
 
-export function EmrHistorySearch({ search, label, placeholder, onClose, onQueryChange }: {
+export function EmrHistorySearch({ search, label, onClose, onQueryChange }: {
   search: ReturnType<typeof useHistorySearch>;
   label: string;
-  placeholder: string;
   onClose: () => void;
   onQueryChange?: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
   return (
-    <div className="relative min-w-0 shrink-0">
-      <Input ref={inputRef} type="search" className="pr-8 [&::-webkit-search-cancel-button]:hidden" aria-label={label} placeholder={placeholder} value={search.query}
+    <div className="relative w-full min-w-0 shrink-0">
+      <Input ref={inputRef} type="search" className="h-[var(--clair-control-height-sm)] pr-8 [&::-webkit-search-cancel-button]:hidden" aria-label={label} placeholder="키워드 입력" value={search.query}
         onChange={(event) => { search.setQuery(event.target.value); onQueryChange?.(); }}
         onCompositionStart={() => search.setComposing(true)}
         onCompositionEnd={() => search.setComposing(false)}
@@ -79,16 +83,22 @@ export function EmrHistorySearch({ search, label, placeholder, onClose, onQueryC
           event.stopPropagation();
           onClose();
         }} />
-      <EmrListHeaderIconButton ariaLabel="검색 취소" iconSize="md" className="absolute right-1 top-1/2 -translate-y-1/2" onClick={onClose}>
+      <EmrListHeaderIconButton ariaLabel={search.query.length ? "검색어 초기화" : "검색 닫기"} iconSize="md" className="absolute right-1 top-1/2 -translate-y-1/2" onClick={() => {
+        if (!search.query.length) { onClose(); return; }
+        search.clear();
+        onQueryChange?.();
+        inputRef.current?.focus();
+      }}>
         <CircleCloseFillIcon className="size-4" aria-hidden="true" />
       </EmrListHeaderIconButton>
     </div>
   );
 }
 
-export function EmrHistoryFilterPopover({ open, trigger, title, dateLabel, dates, onDatesChange, onOpen, onApply, onCancel, onReset, children, requireDates = false }: {
+export function EmrHistoryFilterPopover({ open, trigger, tooltip, title, dateLabel, dates, onDatesChange, onOpen, onApply, onCancel, onReset, children, requireDates = false }: {
   open: boolean;
   trigger: ReactElement;
+  tooltip?: string;
   title: string;
   dateLabel: string;
   dates: HistoryDateRange;
@@ -104,7 +114,10 @@ export function EmrHistoryFilterPopover({ open, trigger, title, dateLabel, dates
   const error = getHistoryDateRangeError(dates, requireDates);
   return (
     <Popover open={open} modal={false} onOpenChange={(next) => { if (next) onOpen(); else onCancel(); }}>
-      <PopoverTrigger render={trigger} />
+      {tooltip ? <Tooltip>
+        <TooltipTrigger render={<PopoverTrigger render={trigger} />} />
+        <TooltipContent side="bottom">{tooltip}</TooltipContent>
+      </Tooltip> : <PopoverTrigger render={trigger} />}
       <EmrPopoverShell align="end" width="md" density="compact" bodyScroll bodyClassName="min-h-0 pt-3" className="max-h-(--available-height) max-w-[calc(100vw-2rem)]"
         footer={<>
           <Button size="sm" variant="ghost" onClick={onReset}>초기화</Button>

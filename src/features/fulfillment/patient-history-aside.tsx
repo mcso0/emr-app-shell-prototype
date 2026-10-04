@@ -184,6 +184,13 @@ export function PatientHistoryAside({
     field === "statuses" ? entry.status : field === "assignees" ? entry.assignee ?? "미정" : field === "names" ? entry.title : entry.modality ?? "정보 없음"
   )));
   const activeCount = filters.statuses.length + filters.assignees.length + filters.names.length + filters.modalities.length + (filters.dates.start ? 1 : 0);
+  const filterSummary = [
+    filters.dates.start ? `이력 기록일 ${filters.dates.start}–${filters.dates.end}` : "",
+    filters.statuses.length ? `상태 ${filters.statuses.join(", ")}` : "",
+    filters.assignees.length ? `담당자 ${filters.assignees.join(", ")}` : "",
+    filters.names.length ? `검사명 ${filters.names.join(", ")}` : "",
+    filters.modalities.length ? `검사 분류 ${filters.modalities.join(", ")}` : "",
+  ].filter(Boolean).join(" · ");
   const hiddenSelection = entries.some((entry) => entry.selected && !visibleEntries.some((visible) => visible.id === entry.id));
   const searchLabel = kind === "lab" ? "검사 이력 검색" : kind === "imaging" ? "영상 이력 검색" : "조제/처치 이력 검색";
   const filterTitle = kind === "lab" ? "검사 이력 필터" : kind === "imaging" ? "영상 이력 필터" : "조제/처치 이력 필터";
@@ -191,9 +198,10 @@ export function PatientHistoryAside({
   return (
     <EmrContentAsidePanel id={id} className={styles.panel}>
       <EmrContentAsideHeader className={styles.header} count={visibleEntries.length} label={label} onCollapse={onCollapse}
+        search={search.open ? <EmrHistorySearch search={search} label={searchLabel} onQueryChange={() => setCollapsedGroups(new Set())} onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
         actions={<>
           <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel="이력 기록일" />
-          <EmrHistoryFilterPopover open={filterOpen} onOpen={() => { setDraftFilters(filters); setFilterOpen(true); }} trigger={<EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(activeCount)}><CdsActionsListFilterIcon className="size-4" /></EmrListHeaderIconButton>} title={filterTitle} dateLabel="이력 기록일" dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onReset={() => setDraftFilters(emptyFilters)} onCancel={() => setFilterOpen(false)} onApply={() => { setFilters(draftFilters); setCollapsedGroups(new Set()); setFilterOpen(false); }}>
+          <EmrHistoryFilterPopover open={filterOpen} onOpen={() => { setDraftFilters(filters); setFilterOpen(true); }} trigger={<EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(activeCount)} className="relative [&>span]:overflow-visible"><CdsActionsListFilterIcon className="size-4" />{activeCount ? <span data-slot="history-filter-indicator" aria-hidden="true" className="pointer-events-none absolute right-[var(--clair-spacing-1)] top-[var(--clair-spacing-1)] size-[var(--clair-spacing-6)] rounded-full bg-[var(--clair-color-atomic-sky-500)]" /> : null}</EmrListHeaderIconButton>} tooltip={`필터 · ${filterSummary || "적용한 조건 없음"}`} title={filterTitle} dateLabel="이력 기록일" dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onReset={() => setDraftFilters(emptyFilters)} onCancel={() => setFilterOpen(false)} onApply={() => { setFilters(draftFilters); setCollapsedGroups(new Set()); setFilterOpen(false); }}>
             {([['statuses', '상태'], ['assignees', '담당자'], ...(kind === 'lab' ? [['names', '검사명']] : kind === 'imaging' ? [['modalities', '검사 분류']] : [])] as Array<["statuses" | "assignees" | "names" | "modalities", string]>).map(([field, title]) => <FieldSet key={field} className="gap-2!"><FieldLegend variant="label">{title}</FieldLegend><FieldGroup className="grid grid-cols-2 gap-2!">
               {facetOptions(field).map((value, index) => <Field key={value} orientation="horizontal"><Checkbox id={`${id}-${field}-${index}`} checked={draftFilters[field].includes(value)} onCheckedChange={(checked) => setDraftFilters((current) => ({ ...current, [field]: checked ? [...current[field], value] : current[field].filter((item) => item !== value) }))} /><FieldLabel htmlFor={`${id}-${field}-${index}`}>{value}</FieldLabel></Field>)}
             </FieldGroup></FieldSet>)}
@@ -202,12 +210,7 @@ export function PatientHistoryAside({
         </>}
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
-      {search.open ? <EmrHistorySearch search={search} label={searchLabel} placeholder="검사·오더명·상태·담당자 검색" onQueryChange={() => setCollapsedGroups(new Set())} onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
       {status === "ready" ? <p role="status" aria-live="polite" className="sr-only">결과 {visibleEntries.length} / 전체 {entries.length}건</p> : null}
-      {activeCount ? <div className="flex shrink-0 flex-wrap gap-1">
-        {filters.dates.start ? <Button size="sm" variant="outline" className="max-w-full" aria-label="날짜 조건 해제" onClick={() => setFilters((current) => ({ ...current, dates: emptyHistoryDateRange }))}><span className="truncate">{filters.dates.start} ~ {filters.dates.end} ×</span></Button> : null}
-        {(["statuses", "assignees", "names", "modalities"] as const).flatMap((field) => filters[field].map((value) => <Button key={`${field}-${value}`} size="sm" variant="outline" className="max-w-full" aria-label={`${value} 조건 해제`} onClick={() => setFilters((current) => ({ ...current, [field]: current[field].filter((item) => item !== value) }))}><span className="truncate">{value} ×</span></Button>))}
-      </div> : null}
       {status === "ready" && hiddenSelection ? <EmrInlineAlert severity="info" title="선택한 이력이 조건에 가려져 있습니다">선택한 기록은 계속 열려 있습니다.</EmrInlineAlert> : null}
       {showCategories ? <div className={styles.tabs}><SegmentedControl aria-label="조제/처치 이력 종류" items={[{ label: "전체", value: "all" }, { label: "조제", value: "dispensing" }, { label: "처치", value: "treatment" }]} size="sm" value={category} variant="tabs" onValueChange={(value) => { setCategory(value); setCollapsedGroups(new Set()); }} /></div> : null}
       <ScrollArea className={styles.scrollArea} viewportClassName="scroll-fade-y scroll-fade-8">

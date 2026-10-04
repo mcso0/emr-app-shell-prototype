@@ -657,8 +657,17 @@ for (const kind of ["lab", "imaging"] as const) {
     await expect(cards).toHaveCount(total);
     const ascendingIds = await cards.evaluateAll((items) => items.map((item) => item.getAttribute("data-testid")));
     expect(ascendingIds).toEqual([...initialIds].reverse());
+    const header = aside.locator('[data-slot="content-aside-search-header"]');
+    const headerBeforeSearch = await header.boundingBox();
+    const scrollBeforeSearch = await aside.locator('[data-slot="scroll-area"]').boundingBox();
     await aside.getByRole("button", { name: "검색", exact: true }).click();
     const search = aside.getByRole("searchbox", { name: kind === "lab" ? "검사 이력 검색" : "영상 이력 검색" });
+    await expect(search).toHaveAttribute("placeholder", "키워드 입력");
+    await expect(search).toHaveCSS("height", "28px");
+    expect(await header.boundingBox()).toEqual(headerBeforeSearch);
+    expect(await aside.locator('[data-slot="scroll-area"]').boundingBox()).toEqual(scrollBeforeSearch);
+    await expect(aside.getByRole("button", { name: "필터", exact: true })).toHaveCount(0);
+    await expect(aside.getByRole("button", { name: "정렬: 오래된순" })).toHaveCount(0);
     await search.fill("없는 검사");
     await expect(aside.getByTestId(`${kind}-content-aside-empty-state`)).toContainText("검색 결과가 없습니다");
     await expect(aside.getByText("선택한 이력이 조건에 가려져 있습니다")).toBeVisible();
@@ -677,6 +686,10 @@ for (const kind of ["lab", "imaging"] as const) {
     await dialog.getByLabel("시작일").fill("2026-04-01");
     await dialog.getByRole("button", { name: "적용" }).click();
     await expect(aside.getByTestId(`${kind}-content-aside-empty-state`)).toContainText("조건에 맞는 이력이 없습니다");
+    const indicator = aside.getByRole("button", { name: "필터", exact: true }).locator('[data-slot="history-filter-indicator"]');
+    await expect(indicator).toBeVisible();
+    await expect(indicator).toHaveCSS("width", "6px");
+    await expect(aside.getByRole("button", { name: "날짜 조건 해제", exact: true })).toHaveCount(0);
     await aside.getByRole("button", { name: "필터", exact: true }).click();
     await dialog.getByRole("button", { name: "초기화", exact: true }).click();
     await dialog.getByRole("button", { name: "취소", exact: true }).click();
@@ -687,11 +700,14 @@ for (const kind of ["lab", "imaging"] as const) {
     await aside.getByRole("button", { name: "필터 해제", exact: true }).click();
     await expect(search).toHaveValue("없는 검사");
     await expect(cards).toHaveCount(0);
-    await aside.getByRole("button", { name: "검색 취소", exact: true }).click();
+    await aside.getByRole("button", { name: "검색어 초기화", exact: true }).click();
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    await aside.getByRole("button", { name: "검색 닫기", exact: true }).click();
     await expect(cards).toHaveCount(total);
     await expect(aside.getByRole("button", { name: "검색", exact: true })).toBeFocused();
     await aside.getByRole("button", { name: "검색", exact: true }).click();
-    const cancel = aside.getByRole("button", { name: "검색 취소", exact: true });
+    const cancel = aside.getByRole("button", { name: "검색 닫기", exact: true });
     await expect(cancel).toBeEnabled();
     await expect(cancel.locator("svg")).toHaveCSS("width", "16px");
     await expect(cancel.locator("svg .oi-circle-close-fill")).toHaveCount(1);
@@ -769,7 +785,7 @@ test("imaging history aside keeps title count separate from evenly spaced action
   }
 });
 
-test("clinical history panels keep the chart aside frame and card spacing", async ({ page }) => {
+test("clinical history panels keep the approved header frames and card spacing", async ({ page }, testInfo) => {
   const panels = [
     ["treatment", "chart-content-aside"],
     ["lab", "lab-content-aside"],
@@ -791,7 +807,34 @@ test("clinical history panels keep the chart aside frame and card spacing", asyn
       };
     });
     // Surface width includes the inline/drawer border; content fits inside it.
-    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: "16px", width: 280 });
+    expect(metrics).toEqual({ headerHeight: moduleId === "treatment" ? 28 : 48, paddingLeft: "16px", width: 280 });
+    if (moduleId === "treatment") {
+      await expect(aside.getByTestId("chart-history-date-mode-toolbar")).toHaveCSS("height", "24px");
+    }
+    await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
+    // Compare inside the aside; overall panel height and entrance motion are outside this contract.
+    const readSearchFrame = () => aside.evaluate((panel) => {
+      const parent = panel.getBoundingClientRect();
+      return ['content-aside-search-header', 'scroll-area'].map((slot) => {
+        const box = panel.querySelector(`[data-slot="${slot}"]`)!.getBoundingClientRect();
+        return { x: box.x - parent.x, y: box.y - parent.y, width: box.width, ...(slot === "content-aside-search-header" ? { height: box.height } : {}) };
+      });
+    });
+    const beforeSearch = await readSearchFrame();
+    await aside.getByRole("button", { name: "검색", exact: true }).click();
+    await expect(aside.getByRole("searchbox")).toHaveCSS("height", "28px");
+    expect(await readSearchFrame()).toEqual(beforeSearch);
+    await expect(aside.getByRole("button", { name: "필터", exact: true })).toHaveCount(0);
+    if (moduleId === "treatment") {
+      await expect(aside.getByRole("button", { name: "작성일 기준", exact: true })).toBeVisible();
+    }
+    if (moduleId === "treatment" || moduleId === "lab") {
+      const screenshot = `output/playwright/history-header-search/${moduleId}-search.png`;
+      await page.screenshot({ path: screenshot });
+      await testInfo.attach(`${moduleId}-search`, { path: screenshot, contentType: "image/png" });
+    }
+    await aside.getByRole("button", { name: "검색 닫기", exact: true }).click();
+    expect(await readSearchFrame()).toEqual(beforeSearch);
     expect((await page.locator('[data-workspace-panel="left"]').boundingBox())!.width).toBe(280);
     await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
   }

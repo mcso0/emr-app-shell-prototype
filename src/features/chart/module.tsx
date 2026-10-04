@@ -2371,6 +2371,13 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
     return getShortDateTime(groupAt).slice(0, 8);
   }, [displayedHistoryRows, historyDateMode, selectedChartId]);
 
+  const filterActive = Boolean(filters.dates.start || filters.statuses.length || filters.veterinarians.length);
+  const filterSummary = [
+    filters.dates.start ? `${historyDateMode === "created" ? "작성일" : "진료일"} ${filters.dates.start}–${filters.dates.end}` : "",
+    filters.statuses.length ? `진료 상태 ${filters.statuses.map((status) => getStatusLabel("encounter", status)).join(", ")}` : "",
+    filters.veterinarians.length ? `담당 수의사 ${filters.veterinarians.join(", ")}` : "",
+  ].filter(Boolean).join(" · ");
+
   if (!bundle) return null;
 
   return (
@@ -2378,13 +2385,14 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
       <EmrContentAsideHeader
         count={visibleHistoryRows.length}
         label="차트 이력"
-        className={historyStyles.header}
+        className={`${historyStyles.header} h-[var(--clair-control-height-sm)]!`}
+        search={search.open ? <EmrHistorySearch search={search} onQueryChange={() => setCollapsedHistoryGroups(new Set())} label="차트 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
         collapseAriaLabel="차트 이력 목록 접기"
         onCollapse={() => setContentAsideOpen(false)}
         actions={
           <>
             <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel={historyDateMode === "created" ? "작성일" : "진료일"} />
-            <EmrHistoryFilterPopover open={filterOpen} onOpen={() => { setDraftFilters(filters); setFilterOpen(true); }} trigger={<EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(filters.dates.start || filters.statuses.length || filters.veterinarians.length)}><CdsActionsListFilterIcon className="size-4" /></EmrListHeaderIconButton>} title="차트 이력 필터" dateLabel={historyDateMode === "created" ? "작성일" : "진료일"} dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onCancel={() => setFilterOpen(false)} onReset={() => setDraftFilters(emptyChartHistoryFilters)} onApply={() => { setFilters(draftFilters); setCollapsedHistoryGroups(new Set()); setFilterOpen(false); }}>
+            <EmrHistoryFilterPopover open={filterOpen} onOpen={() => { setDraftFilters(filters); setFilterOpen(true); }} trigger={<EmrListHeaderIconButton ariaLabel="필터" aria-pressed={filterActive} className="relative [&>span]:overflow-visible"><CdsActionsListFilterIcon className="size-4" />{filterActive ? <span data-slot="history-filter-indicator" aria-hidden="true" className="pointer-events-none absolute right-[var(--clair-spacing-1)] top-[var(--clair-spacing-1)] size-[var(--clair-spacing-6)] rounded-full bg-[var(--clair-color-atomic-sky-500)]" /> : null}</EmrListHeaderIconButton>} tooltip={`필터 · ${filterSummary || "적용한 조건 없음"}`} title="차트 이력 필터" dateLabel={historyDateMode === "created" ? "작성일" : "진료일"} dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onCancel={() => setFilterOpen(false)} onReset={() => setDraftFilters(emptyChartHistoryFilters)} onApply={() => { setFilters(draftFilters); setCollapsedHistoryGroups(new Set()); setFilterOpen(false); }}>
               <FieldSet className="gap-2!"><FieldLegend variant="label">진료 상태</FieldLegend><FieldGroup className="grid grid-cols-2 gap-2!">
                 {chartHistoryStatuses.map((status) => <Field key={status} orientation="horizontal"><Checkbox id={`chart-history-status-${status}`} checked={draftFilters.statuses.includes(status)} onCheckedChange={(checked) => setDraftFilters((current) => ({ ...current, statuses: checked ? [...current.statuses, status] : current.statuses.filter((value) => value !== status) }))} /><FieldLabel htmlFor={`chart-history-status-${status}`}>{getStatusLabel("encounter", status)}</FieldLabel></Field>)}
               </FieldGroup></FieldSet>
@@ -2399,23 +2407,17 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
         }
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
-      {search.open ? <EmrHistorySearch search={search} onQueryChange={() => setCollapsedHistoryGroups(new Set())} label="차트 이력 검색" placeholder="내원 사유·진단·수의사 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
       <span className="sr-only" role="status" aria-live="polite">결과 {visibleHistoryRows.length} / 전체 {historyCount}건</span>
-      {Boolean(filters.dates.start || filters.statuses.length || filters.veterinarians.length) ? <div className="flex shrink-0 flex-wrap items-center gap-1 emr-text-metadata text-muted-foreground">
-        {filters.dates.start ? <Button size="sm" variant="outline" className="max-w-full" aria-label="날짜 조건 해제" onClick={() => setFilters((current) => ({ ...current, dates: emptyHistoryDateRange }))}><span className="truncate">{filters.dates.start} ~ {filters.dates.end} ×</span></Button> : null}
-        {filters.statuses.map((status) => <Button key={status} size="sm" variant="outline" aria-label={`${getStatusLabel("encounter", status)} 조건 해제`} onClick={() => setFilters((current) => ({ ...current, statuses: current.statuses.filter((value) => value !== status) }))}>{getStatusLabel("encounter", status)} ×</Button>)}
-        {filters.veterinarians.map((name) => <Button key={name} size="sm" variant="outline" aria-label={`${name} 조건 해제`} onClick={() => setFilters((current) => ({ ...current, veterinarians: current.veterinarians.filter((value) => value !== name) }))}>{name} ×</Button>)}
-      </div> : null}
       {displayedHistoryRows.some((row) => row.chart?.id === selectedChartId) && !visibleHistoryRows.some((row) => row.chart?.id === selectedChartId) ?
         <EmrInlineAlert severity="info" title="선택한 차트가 조건에 가려져 있습니다" action={<Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button>}>선택한 차트는 계속 열려 있습니다.</EmrInlineAlert> : null}
       <div
-        className="flex shrink-0 items-center px-1 py-2"
+        className="flex shrink-0 items-center px-1"
         data-testid="chart-history-date-mode-toolbar"
       >
         <SegmentedControl
           aria-label="차트 이력 표시 기준"
           items={chartHistoryDateModeItems}
-          size="sm"
+          size="xs"
           value={historyDateMode}
           variant="tabs"
           onValueChange={setHistoryDateMode}

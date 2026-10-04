@@ -91,8 +91,13 @@ test("combined patient history search, dates and staff filters keep category nav
   await dialog.getByRole("button", { name: "적용" }).click();
   await expect(cards.first()).toBeVisible();
   await expect(aside.locator('[data-testid^="dispensing-content-aside-group-"]')).toHaveCount(1);
-  await aside.getByRole("button", { name: "날짜 조건 해제", exact: true }).click();
+  await expect(aside.getByRole("button", { name: "날짜 조건 해제", exact: true })).toHaveCount(0);
+  await expect(aside.getByRole("button", { name: "필터", exact: true }).locator('[data-slot="history-filter-indicator"]')).toBeVisible();
+  await aside.getByRole("button", { name: "필터", exact: true }).click();
+  await dialog.getByRole("button", { name: "초기화", exact: true }).click();
+  await dialog.getByRole("button", { name: "적용", exact: true }).click();
   await expect(cards).toHaveCount(total);
+  await expect(aside.getByRole("button", { name: "필터", exact: true }).locator('[data-slot="history-filter-indicator"]')).toHaveCount(0);
 });
 
 test("actual execution UI starts empty, records completion, reloads history and appends an explicit correction", async ({ page }) => {

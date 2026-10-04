@@ -11,7 +11,7 @@
   padding-inline: 4px;
 }
 
-.header + div {
+.panel > [data-slot="content-aside-search-header"] + div {
   margin-top: -1px;
 }
 

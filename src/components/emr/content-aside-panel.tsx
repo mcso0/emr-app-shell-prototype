@@ -21,6 +21,8 @@ type EmrContentAsideHeaderProps = {
   collapseAriaLabel?: string;
   count?: ReactNode;
   onCollapse: () => void;
+  /** Replace the title/actions in the same frame without moving the list. */
+  search?: ReactNode;
 };
 
 export function EmrContentAsidePanel({
@@ -49,11 +51,12 @@ export function EmrContentAsideHeader({
   count,
   label,
   onCollapse,
+  search,
 }: EmrContentAsideHeaderProps) {
   const fallbackCollapseLabel =
     typeof label === "string" ? `${label} 목록 접기` : "이력 목록 접기";
 
-  return (
+  const header = (
     <EmrListHeader
       className={cn("mx-0 h-6 border-y-0", className)}
       count={count}
@@ -72,5 +75,16 @@ export function EmrContentAsideHeader({
         </>
       }
     />
+  );
+
+  if (search === undefined) return header;
+
+  return (
+    <div data-slot="content-aside-search-header" className="relative shrink-0">
+      <div className={search ? "invisible" : undefined} aria-hidden={search ? true : undefined} inert={search ? true : undefined}>
+        {header}
+      </div>
+      {search ? <div className={cn("absolute inset-0 flex min-w-0 items-center", className)}>{search}</div> : null}
+    </div>
   );
 }
