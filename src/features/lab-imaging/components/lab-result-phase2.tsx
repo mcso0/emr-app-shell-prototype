@@ -30,19 +30,21 @@ const LabAttachmentPdfThumbnail = dynamic(() => import("./lab-attachment-pdf-thu
 const attachmentCardActionClassName = "bg-[var(--emr-surface-floating)] hover:bg-[var(--emr-surface-floating)] aria-expanded:bg-[var(--emr-surface-floating)] hover:bg-[linear-gradient(var(--emr-state-hover),var(--emr-state-hover))] aria-expanded:bg-[linear-gradient(var(--emr-state-hover),var(--emr-state-hover))]";
 
 type UploadTask = { id: string; file: File; status: "queued" | "preparing" | "uploading" | "finalizing" | "failed"; loading: boolean; progress?: number; error?: string };
+type AttachmentCollectionStatus = "loading" | "ready" | "error" | "permission_denied";
 
 function attachmentPath(workspaceId: string, resultId: string, attachmentId: string, download = false) {
   const base = `/api/workspaces/${encodeURIComponent(workspaceId)}/lab-imaging/result-attachments/${encodeURIComponent(attachmentId)}?resultId=${encodeURIComponent(resultId)}`;
   return download ? `${base}&download=1` : base;
 }
 
-export function LabResultRowDetail({ result, row, staffInstruction, finding, onFindingChange, phase2, refresh }: {
+export function LabResultRowDetail({ result, row, staffInstruction, finding, onFindingChange, phase2, readStatus, refresh }: {
   result: LabResult;
   row: LabResultRow;
   staffInstruction?: string;
   finding: string;
   onFindingChange: (value: string) => void;
   phase2: LabResultPhase2Data | null;
+  readStatus?: AttachmentCollectionStatus;
   refresh: () => void;
 }) {
   const attachments = phase2?.attachments.filter(item => item.rowId === row.id) ?? [];
@@ -69,13 +71,13 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
         </div>
       </div>
       <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>
-      <LabResultAttachmentArea key={`${result.workspaceId}:${result.id}:${row.id}`} result={result} row={row} attachments={attachments} enabled={phase2 !== null} canEdit={phase2?.canEdit ?? false} refresh={refresh} />
+      <LabResultAttachmentArea key={`${result.workspaceId}:${result.id}:${row.id}`} result={result} row={row} attachments={attachments} enabled={phase2 !== null} readStatus={readStatus} canEdit={phase2?.canEdit ?? false} refresh={refresh} />
     </div>
   </div>;
 }
 
-export function LabResultAttachmentArea({ result, row, attachments, enabled, canEdit, refresh }: {
-  result: LabResult; row: LabResultRow | null; attachments: LabResultAttachment[]; enabled: boolean; canEdit: boolean; refresh: () => void;
+export function LabResultAttachmentArea({ result, row, attachments: sourceAttachments, enabled, readStatus = "ready", canEdit, refresh }: {
+  result: LabResult; row: LabResultRow | null; attachments: LabResultAttachment[]; enabled: boolean; readStatus?: AttachmentCollectionStatus; canEdit: boolean; refresh: () => void;
 }) {
   const rowId = row?.id ?? null;
   const scopeLabel = row?.analyteName ?? "검사결과 종합소견";
@@ -87,6 +89,15 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const [previewFiles, setPreviewFiles] = useState<LabResultAttachment[]>([]);
+  const attachments = sourceAttachments.filter(item => !removedIds.includes(item.id));
+  const viewerFiles = readStatus === "error" ? previewFiles.filter(item => !removedIds.includes(item.id)) : attachments;
+  const area = useRef<HTMLDivElement>(null);
+  const previewTrigger = useRef<HTMLElement | null>(null);
+  const cancelDelete = useRef<HTMLButtonElement>(null);
+  const deleteRequest = useRef<AbortController | null>(null);
+  const hadModal = useRef(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const tasksRef = useRef<UploadTask[]>([]);
   const active = useRef(0);
@@ -99,7 +110,57 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
     for (const task of tasksRef.current) cancelled.current.add(task.id);
     uploadRequests.current.forEach(abort => abort());
     uploadRequests.current.clear();
+    deleteRequest.current?.abort();
+    deleteRequest.current = null;
   }, [result.workspaceId, result.id, rowId]);
+
+  const currentPreview = enabled || readStatus === "error" ? viewerFiles.find(item => item.id === preview?.id) : undefined;
+  const currentDelete = enabled && canEdit ? attachments.find(item => item.id === pendingDelete?.id) : undefined;
+  useEffect(() => {
+    if (!preview) {
+      queueMicrotask(() => setPreviewFiles(files => files.length ? [] : files));
+      return;
+    }
+    if (!enabled) return;
+    let active = true;
+    queueMicrotask(() => { if (active) setPreviewFiles(sourceAttachments.filter(item => !removedIds.includes(item.id))); });
+    return () => { active = false; };
+  }, [enabled, preview, sourceAttachments, removedIds]);
+  const previewId = currentPreview?.id;
+  useEffect(() => {
+    if (!previewId) return;
+    const revalidate = () => { if (document.visibilityState === "visible") refresh(); };
+    window.addEventListener("focus", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => { window.removeEventListener("focus", revalidate); document.removeEventListener("visibilitychange", revalidate); };
+  }, [previewId, refresh]);
+  // Authoritative metadata loss must not let an old selection reopen if access returns.
+  useEffect(() => {
+    const previewLost = (!enabled && readStatus !== "error") || (preview && !currentPreview);
+    if (previewLost || (pendingDelete && !currentDelete)) {
+      deleteRequest.current?.abort();
+      deleteRequest.current = null;
+      queueMicrotask(() => { if (previewLost) setPreview(null); setPendingDelete(null); setDeleting(false); setDeleteError(null); });
+    }
+  }, [enabled, readStatus, preview, currentPreview, pendingDelete, currentDelete]);
+  const returnFocus = useCallback(() => {
+    const trigger = previewTrigger.current;
+    return trigger?.isConnected && trigger.getClientRects().length && !trigger.matches(":disabled") ? trigger : area.current;
+  }, []);
+  const modalOpen = Boolean(currentPreview || currentDelete);
+  useEffect(() => {
+    const closed = hadModal.current && !modalOpen;
+    hadModal.current = modalOpen;
+    // Nested dialog cleanup precedes DOM removal. Resolve the destination again
+    // after commit so a deleted trigger cannot leave focus on the document body.
+    if (closed) queueMicrotask(() => returnFocus()?.focus({ preventScroll: true }));
+  }, [modalOpen, returnFocus]);
+  const openPreview = (item: LabResultAttachment) => {
+    const focused = document.activeElement;
+    previewTrigger.current = focused instanceof HTMLElement && area.current?.contains(focused) ? focused : null;
+    setPreviewFiles(attachments);
+    setPreview(item);
+  };
 
   const discard = useCallback(async (attachmentId: string) => {
     const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
@@ -181,18 +242,48 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
     window.setTimeout(() => setTasks(current => current.map(item => item.id === task.id ? { ...item, loading: true } : item)), 200);
   };
   const deleteAttachment = async () => {
-    if (!pendingDelete) return;
+    if (!currentDelete || deleteRequest.current) return;
+    const controller = new AbortController();
+    deleteRequest.current = controller;
     setDeleting(true); setDeleteError(null);
+    const timer = window.setTimeout(() => controller.abort(), 30_000);
     try {
-      const response = await fetch(attachmentPath(result.workspaceId, result.id, pendingDelete.id), { method: "DELETE" });
+      const response = await fetch(attachmentPath(result.workspaceId, result.id, currentDelete.id), { method: "DELETE", signal: controller.signal });
+      if (deleteRequest.current !== controller) return;
+      if (response.status === 404 || response.status === 410) {
+        setRemovedIds(ids => [...ids, currentDelete.id]);
+        setUploadNotice("이미 삭제됐거나 사용할 수 없는 파일입니다. 첨부 목록을 다시 확인해 주세요.");
+        setPendingDelete(null); setPreview(null); refresh(); return;
+      }
+      if (response.status === 401 || response.status === 403) {
+        setUploadNotice("파일 삭제 권한 또는 로그인 상태를 확인해 주세요.");
+        setPendingDelete(null); setPreview(null); refresh(); return;
+      }
       if (!response.ok) throw new Error("첨부 파일을 삭제하지 못했습니다.");
+      setRemovedIds(ids => [...ids, currentDelete.id]);
       setPendingDelete(null); setPreview(null); refresh();
-    } catch (error) { setDeleteError(error instanceof Error ? error.message : "삭제 실패"); }
-    finally { setDeleting(false); }
+    } catch {
+      if (deleteRequest.current === controller) {
+        setDeleteError("삭제 결과를 확인하지 못했습니다. 목록을 확인한 뒤 다시 시도해 주세요.");
+        refresh();
+      }
+    } finally {
+      window.clearTimeout(timer);
+      if (deleteRequest.current === controller) { deleteRequest.current = null; setDeleting(false); }
+    }
   };
+  const deleteDialog = <Dialog open={Boolean(currentDelete)} onOpenChange={open => { if (!open && !deleteRequest.current) { setPendingDelete(null); setDeleteError(null); } }}>
+    <DialogContent className="sm:max-w-md" initialFocus={cancelDelete} finalFocus={() =>
+      document.querySelector<HTMLElement>("[data-testid='lab-viewer-delete']") ?? returnFocus()}>
+      <DialogTitle>첨부 파일 삭제</DialogTitle>
+      <p className="emr-text-dense">{currentDelete?.name}을(를) 삭제할까요? 목록에서 바로 사라지고 복구할 수 없습니다.</p>
+      {deleteError ? <p role="alert" className="text-destructive">{deleteError}</p> : null}
+      <div className="flex justify-end gap-2"><Button ref={cancelDelete} variant="outline" disabled={deleting} onClick={() => { setPendingDelete(null); setDeleteError(null); }}>취소</Button><Button variant="destructive" disabled={deleting} onClick={() => void deleteAttachment()}>{deleting ? "삭제 중" : "삭제"}</Button></div>
+    </DialogContent>
+  </Dialog>;
   const visibleTasks = tasks.filter(task => task.loading || task.status !== "queued");
   const itemCount = attachments.length + visibleTasks.length;
-  return <div className="group/attachments @container min-w-0" aria-label={`${scopeLabel} 첨부 자료`}>
+  return <div ref={area} tabIndex={-1} className="group/attachments @container min-w-0 outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${scopeLabel} 첨부 자료`}>
     {uploadNotice ? <p role="alert" className="mb-2 emr-text-metadata text-destructive">{uploadNotice}</p> : null}
     <div className="flex min-h-6 items-center justify-between gap-2">
       <span className="flex h-7 items-center gap-1 px-2.5 emr-text-metadata text-muted-foreground">첨부 자료{attachments.length ? <span className="text-foreground">{attachments.length}</span> : ""}</span>
@@ -222,10 +313,10 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
         </div> : null}
         <AttachmentFileViewport mode={mode} itemCount={itemCount} label={`${scopeLabel} 첨부 ${mode === "card" ? "카드" : "목록"} 스크롤 영역`}>
           {mode === "card" ? <div className="grid grid-cols-2 gap-2.5 @lg:grid-cols-4" data-testid="lab-attachment-card-grid">
-            {attachments.map(item => <AttachmentCard key={item.id} item={item} url={attachmentPath(result.workspaceId, result.id, item.id)} downloadUrl={attachmentPath(result.workspaceId, result.id, item.id, true)} canDelete={canEdit} onPreview={() => setPreview(item)} onDelete={() => setPendingDelete(item)} />)}
+            {attachments.map(item => <AttachmentCard key={item.id} item={item} url={attachmentPath(result.workspaceId, result.id, item.id)} downloadUrl={attachmentPath(result.workspaceId, result.id, item.id, true)} canDelete={canEdit} onPreview={() => openPreview(item)} onDelete={() => setPendingDelete(item)} />)}
             {visibleTasks.map(task => <UploadCard key={task.id} task={task} onCancel={() => removeTask(task)} onRetry={() => retryTask(task)} />)}
           </div> : <div className="flex flex-col gap-1 text-[12px] leading-4 tracking-[0.3px]" data-testid="lab-attachment-list">
-            {attachments.map(item => <AttachmentListRow key={item.id} item={item} url={attachmentPath(result.workspaceId, result.id, item.id)} downloadUrl={attachmentPath(result.workspaceId, result.id, item.id, true)} canDelete={canEdit} onPreview={() => setPreview(item)} onDelete={() => setPendingDelete(item)} />)}
+            {attachments.map(item => <AttachmentListRow key={item.id} item={item} url={attachmentPath(result.workspaceId, result.id, item.id)} downloadUrl={attachmentPath(result.workspaceId, result.id, item.id, true)} canDelete={canEdit} onPreview={() => openPreview(item)} onDelete={() => setPendingDelete(item)} />)}
             {visibleTasks.map(task => <UploadListRow key={task.id} task={task} onCancel={() => removeTask(task)} onRetry={() => retryTask(task)} />)}
           </div>}
         </AttachmentFileViewport>
@@ -235,16 +326,10 @@ export function LabResultAttachmentArea({ result, row, attachments, enabled, can
         <CdsActionsUploadIcon className="size-3" aria-hidden="true" /><span>첨부자료 업로드</span>
       </button> : <div className={`flex ${emptyHeight} items-center justify-center rounded-[8px] border border-dashed border-[var(--emr-border-default)] bg-transparent px-2 py-1 text-[12px] leading-4 tracking-[0.3px] font-medium text-muted-foreground`}>첨부 자료가 없습니다.</div>}
     </div>}
-    {preview ? <LabAttachmentViewer item={preview} url={attachmentPath(result.workspaceId, result.id, preview.id)} canDelete={canEdit}
-      onClose={() => setPreview(null)} onDownload={() => window.open(attachmentPath(result.workspaceId, result.id, preview.id, true), "_blank", "noopener")}
-      onDelete={() => setPendingDelete(preview)} /> : null}
-    <Dialog open={Boolean(pendingDelete)} onOpenChange={open => { if (!open && !deleting) { setPendingDelete(null); setDeleteError(null); } }}>
-      <DialogContent className="sm:max-w-md"><DialogTitle>첨부 파일 삭제</DialogTitle>
-        <p className="emr-text-dense">{pendingDelete?.name}을(를) 삭제할까요? 목록에서 바로 사라지고 복구할 수 없습니다.</p>
-        {deleteError ? <p role="alert" className="text-destructive">{deleteError}</p> : null}
-        <div className="flex justify-end gap-2"><Button variant="outline" disabled={deleting} onClick={() => setPendingDelete(null)}>취소</Button><Button variant="destructive" disabled={deleting} onClick={() => void deleteAttachment()}>{deleting ? "삭제 중" : "삭제"}</Button></div>
-      </DialogContent>
-    </Dialog>
+    {currentPreview ? <LabAttachmentViewer item={currentPreview} items={viewerFiles} scopeLabel={scopeLabel} metadataUnavailable={readStatus === "error"}
+      url={attachmentPath(result.workspaceId, result.id, currentPreview.id)} canDelete={canEdit} onSelect={setPreview} returnFocus={returnFocus} onRevalidate={refresh}
+      onClose={() => setPreview(null)} onDownload={() => window.open(attachmentPath(result.workspaceId, result.id, currentPreview.id, true), "_blank", "noopener")}
+      onDelete={() => setPendingDelete(currentPreview)}>{deleteDialog}</LabAttachmentViewer> : deleteDialog}
   </div>;
 }
 
@@ -457,7 +542,7 @@ function uploadProgressLabel(task: UploadTask) {
   return task.progress === undefined ? "—%" : `${task.progress}%`;
 }
 
-export function LabOverallFinding({ result, phase2, refresh }: { result: LabResult; phase2: LabResultPhase2Data | null; refresh: () => void }) {
+export function LabOverallFinding({ result, phase2, readStatus, refresh }: { result: LabResult; phase2: LabResultPhase2Data | null; readStatus?: AttachmentCollectionStatus; refresh: () => void }) {
   const autosave = useLabAutosave<string>(`${result.workspaceId}:${result.id}:overall`, async (finding, _requestId, expectedRevision) => {
     const endpoint = `/api/workspaces/${encodeURIComponent(result.workspaceId)}/lab-imaging/result-phase2`;
     const response = await fetch(endpoint, {
@@ -507,7 +592,7 @@ export function LabOverallFinding({ result, phase2, refresh }: { result: LabResu
       <div className="relative hidden md:block" aria-hidden="true"><span className="absolute inset-y-2 left-1/2 w-px -translate-x-1/2 bg-[var(--clair-color-atomic-black-alpha-6)]" /></div>
       <LabResultAttachmentArea key={`${result.workspaceId}:${result.id}:overall-attachments`} result={result} row={null}
         attachments={phase2?.attachments.filter(item => item.rowId === null) ?? []}
-        enabled={phase2 !== null} canEdit={phase2?.canEdit ?? false} refresh={refresh} />
+        enabled={phase2 !== null} readStatus={readStatus} canEdit={phase2?.canEdit ?? false} refresh={refresh} />
     </div>
   </section>;
 }
