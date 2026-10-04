@@ -80,7 +80,7 @@ export function WorkspaceDocumentWidthToggle({
 
 type PanelPosition = { left: number; top: number; right: number; height: number };
 function WorkspacePanel({
-  children, open, visible, drawer, side, controlsId, label, width, position, sliding = side === "left", instant = true, onClose,
+  children, open, visible, drawer, side, controlsId, label, width, position, sliding = side === "left", instant = true, presentationInstant, reduceMotion, onClose,
 }: {
   children: ReactNode;
   open: boolean;
@@ -93,11 +93,18 @@ function WorkspacePanel({
   position: PanelPosition;
   sliding?: boolean;
   instant?: boolean;
+  presentationInstant: boolean;
+  reduceMotion: boolean;
   onClose: (pointer: boolean) => void;
 }) {
   const popupRef = useRef<HTMLDivElement>(null);
   const [hasOpened, setHasOpened] = useState(open);
   if (open && !hasOpened) setHasOpened(true);
+  const [shadowState, setShadowState] = useState({ open, visible, drawer, instant: true });
+  if (shadowState.open !== open || shadowState.visible !== visible || shadowState.drawer !== drawer) {
+    // Resize changes elevation without replaying entry; keyboard/compact changes stay immediate.
+    setShadowState({ open, visible, drawer, instant: reduceMotion || presentationInstant || (shadowState.open !== open ? instant : shadowState.visible !== visible) });
+  }
 
   return (
     <div className={open && !visible ? "hidden" : "contents"} inert={!visible}>
@@ -118,7 +125,8 @@ function WorkspacePanel({
       {/* A stable portal preserves panel state and nested dialogs across presentation changes. */}
       <DialogPrimitive.Portal
         keepMounted={side === "left" && (open || hasOpened)}
-        className={cn("fixed overflow-hidden", styles.panelPortal)}
+        data-workspace-panel-portal={side}
+        className={cn("fixed", styles.panelPortal)}
         style={{
           left: Math.max(8, side === "left" ? position.left : position.right - width), top: Math.max(8, position.top),
           width, height: position.height, maxWidth: "calc(100vw - 16px)",
@@ -127,6 +135,8 @@ function WorkspacePanel({
           visibility: open && !visible ? "hidden" : undefined,
         }}
       >
+      {/* Nested Base UI portals stay outside this visual mask. */}
+      <div className={cn("absolute inset-0", styles.panelClip)} data-workspace-panel-clip={side}>
       <DialogPrimitive.Popup
         ref={popupRef}
         id={controlsId}
@@ -139,17 +149,19 @@ function WorkspacePanel({
         data-workspace-panel={side}
         data-presentation={drawer ? "drawer" : "inline"}
         data-instant={instant || undefined}
+        data-shadow-instant={shadowState.instant || reduceMotion || undefined}
+        data-shadow-visible={open && visible && drawer || undefined}
         className={cn(
-          "flex min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--emr-surface-content-panel)] outline-none",
+          "flex min-h-0 min-w-0 flex-col outline-none",
           "absolute inset-0", styles.panel, sliding && styles.slide,
-          side === "left" ? "border-r" : "border-l",
-          "border-[var(--emr-border-strong)]",
-          drawer && "rounded-[var(--emr-radius-panel)] border shadow-lg",
           !open && (!sliding || instant) && "hidden",
         )}
       >
-        {children}
+        <div className={cn("relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-content-panel)] border-[var(--emr-border-strong)]", styles.panelSurface, side === "left" ? "border-r" : "border-l")}>
+          {children}
+        </div>
       </DialogPrimitive.Popup>
+      </div>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
     </div>
@@ -201,6 +213,13 @@ export function WorkspaceDocumentLayout({
     areaWidth - (leftOpen ? leftWidth : 0) - (rightOpen ? rightWidth : 0) < minimumCenterWidth + (wasDrawer ? drawerReturnBuffer : 0);
   if (wasDrawer !== overlay) setWasDrawer(overlay);
   const compact = overlay && areaWidth < compactPanelWidth;
+  const [shadowPresentation, setShadowPresentation] = useState({ areaWidth, leftOpen, rightOpen, compact, instant: true });
+  if (shadowPresentation.areaWidth !== areaWidth || shadowPresentation.leftOpen !== leftOpen || shadowPresentation.rightOpen !== rightOpen || shadowPresentation.compact !== compact) {
+    const instant = compact || shadowPresentation.compact || (shadowPresentation.areaWidth !== areaWidth
+      ? shadowPresentation.areaWidth === 0 || areaWidth === 0
+      : shadowPresentation.leftOpen !== leftOpen ? !historyMotion : !receiptMotion);
+    setShadowPresentation({ areaWidth, leftOpen, rightOpen, compact, instant });
+  }
   const historyVisible = leftOpen && (!compact || compactSurface === "left");
   const rightVisible = rightOpen && (!compact || compactSurface === "right");
   const inlineLeft = leftOpen && !overlay;
@@ -379,7 +398,7 @@ export function WorkspaceDocumentLayout({
       },
     }}>
       <div ref={areaRef} onClickCapture={capturePanelClick} data-testid="workspace-document-area" data-presentation={overlay ? "drawer" : "inline"} className="relative grid min-h-0 flex-1 overflow-clip" style={{ gridTemplateColumns: `${inlineLeft ? leftWidth : 0}px minmax(0, 1fr) ${inlineRight ? rightWidth : 0}px` }}>
-        <WorkspacePanel key={historyControlsId} open={leftOpen} visible={historyVisible} drawer={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={panelWidth} position={panelPosition} instant={!historyMotion || Boolean(reduceMotion)} onClose={(pointer) => { preparePanelMotion("left", pointer); closeLeft(false); }}>
+        <WorkspacePanel key={historyControlsId} open={leftOpen} visible={historyVisible} drawer={overlay} side="left" controlsId={historyControlsId} label={config.historyLabel} width={panelWidth} position={panelPosition} instant={!historyMotion || Boolean(reduceMotion)} presentationInstant={shadowPresentation.instant} reduceMotion={reduceMotion} onClose={(pointer) => { preparePanelMotion("left", pointer); closeLeft(false); }}>
           {ContentAside ? <ContentAside {...slotProps} /> : null}
         </WorkspacePanel>
         <div ref={centerRef} data-testid="workspace-document-center" onFocusCapture={(event) => {
@@ -390,7 +409,7 @@ export function WorkspaceDocumentLayout({
             <div className="min-h-0 flex-1"><Content {...slotProps} /></div>
           </div>
         </div>
-        {RightPanel && config.rightLabel ? <WorkspacePanel key={rightControlsId} open={rightOpen} visible={rightVisible} drawer={overlay} side="right" controlsId={rightControlsId} label={config.rightLabel} width={panelWidth} position={rightPosition} sliding={receiptSliding} instant={!receiptMotion || Boolean(reduceMotion)} onClose={(pointer) => { preparePanelMotion("right", pointer); closeRight(false); }}>
+        {RightPanel && config.rightLabel ? <WorkspacePanel key={rightControlsId} open={rightOpen} visible={rightVisible} drawer={overlay} side="right" controlsId={rightControlsId} label={config.rightLabel} width={panelWidth} position={rightPosition} sliding={receiptSliding} instant={!receiptMotion || Boolean(reduceMotion)} presentationInstant={shadowPresentation.instant} reduceMotion={reduceMotion} onClose={(pointer) => { preparePanelMotion("right", pointer); closeRight(false); }}>
           {RightPanel ? <RightPanel {...slotProps} /> : null}
         </WorkspacePanel> : null}
         {compact ? <div data-testid="workspace-panel-switcher" role="group" aria-label="작업 영역 선택" className="absolute inset-x-0 bottom-0 z-20 flex min-h-16 items-center gap-1 border-t bg-card p-2">
