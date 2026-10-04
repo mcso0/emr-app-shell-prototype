@@ -1304,7 +1304,6 @@ export function DispensingContentAside({
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const setContentAsideOpen = useLayoutStore((state) => state.setContentAsideOpen);
   const setSelectedQueueItem = useLayoutStore((state) => state.setSelectedQueueItem);
-  const [filter, setFilter] = useState<"all" | "dispensing" | "treatment">("all");
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
@@ -1390,8 +1389,9 @@ export function DispensingContentAside({
     id="dispensing-content-aside"
     label="조제/처치 이력"
     entries={entries}
-    filter={filter}
-    onFilterChange={setFilter}
+    key={`${workspaceId}:${selectedWorkItem?.patientId ?? selectedQueueItem.id}`}
+    kind="fulfillment"
+    showCategories
     status={allowLegacyFixtureFallback && !selectedWorkItem ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}
   />;

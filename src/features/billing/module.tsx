@@ -36,6 +36,8 @@ import {
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
+import { EmrHistoryFilterDialog, EmrHistorySearch, EmrHistorySortButton, useHistorySearch } from "@/components/emr/history-controls";
+import { compareHistoryDates, emptyHistoryDateRange, matchesHistoryDate, matchesHistoryQuery, type HistoryDateRange, type HistorySortDirection } from "@/lib/history-controls";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
 import {
   EmrRightPanel,
@@ -117,6 +119,7 @@ import {
 } from "@/lib/emr-domain/demo-workspaces";
 import {
   addDaysToIsoDate,
+  addMonthsToIsoDate,
   formatKoreanOperatingDateLabel,
 } from "@/lib/emr-domain/demo-date";
 import { getStatusLabel } from "@/lib/emr-domain/status-labels";
@@ -156,12 +159,13 @@ const billingQueueGroups: Array<{
   { label: "완료", value: "closed", colorToken: "--emr-status-success-text" },
 ];
 
-type BillingLedgerDateRange = "1w" | "2w" | "1m" | "3m" | "6m" | "custom";
+type BillingLedgerDateRange = "all" | "1w" | "2w" | "1m" | "3m" | "6m" | "custom";
 
 const billingLedgerDateRangeItems: Array<{
   label: string;
   value: BillingLedgerDateRange;
 }> = [
+  { label: "전체 기간", value: "all" },
   { label: "1주", value: "1w" },
   { label: "2주", value: "2w" },
   { label: "1달", value: "1m" },
@@ -1574,25 +1578,11 @@ function getOrderWorkStatusBadgeLabel(status?: EmrOrderWorkStatus) {
   return status === "completed" ? "업무완료" : "업무진행";
 }
 
-function getBillingLedgerRangeStart(range: BillingLedgerDateRange) {
-  const current = new Date("2026-05-01T23:59:59+09:00");
-  const start = new Date(current);
-
-  if (range === "1w") start.setDate(current.getDate() - 7);
-  if (range === "2w") start.setDate(current.getDate() - 14);
-  if (range === "1m") start.setMonth(current.getMonth() - 1);
-  if (range === "3m") start.setMonth(current.getMonth() - 3);
-  if (range === "6m") start.setMonth(current.getMonth() - 6);
-  if (range === "custom") start.setMonth(current.getMonth() - 6);
-
-  return start;
-}
-
-function isBillingLedgerRowInRange(
-  row: BillingGuardianLedgerRow,
-  range: BillingLedgerDateRange,
-) {
-  return new Date(row.activityAt) >= getBillingLedgerRangeStart(range);
+function getBillingLedgerDateBounds(range: BillingLedgerDateRange, today: string, custom: HistoryDateRange): HistoryDateRange {
+  if (range === "all") return emptyHistoryDateRange;
+  if (range === "custom") return custom;
+  const start = range === "1w" ? addDaysToIsoDate(today, -6) : range === "2w" ? addDaysToIsoDate(today, -13) : addMonthsToIsoDate(today, range === "1m" ? -1 : range === "3m" ? -3 : -6);
+  return { start, end: today };
 }
 
 function isBillingLedgerRowCancelled(row: BillingGuardianLedgerRow) {
@@ -2975,6 +2965,18 @@ function GuardianBillingLedgerRow({
 
 export function BillingContentAside() {
   const { detail } = useBillingWorkspaceData();
+  if (!detail) return null;
+  return <BillingHistoryAside key={`${detail.invoice.workspaceId}:${detail.guardian?.id ?? "none"}`} detail={detail} />;
+}
+
+function BillingHistoryAside({ detail }: { detail: BillingDetail }) {
+  const search = useHistorySearch();
+  const searchTriggerRef = useRef<HTMLButtonElement>(null);
+  const [direction, setDirection] = useState<HistorySortDirection>("newest");
+  const [customDates, setCustomDates] = useState(emptyHistoryDateRange);
+  const [draftDates, setDraftDates] = useState(emptyHistoryDateRange);
+  const [dateDialogOpen, setDateDialogOpen] = useState(false);
+  const { todayDate } = useSelectedOperatingDate(detail.invoice.workspaceId);
   const { session: authSession } = useAuthClient();
   const actorHeaders = useMemo(
     () => getDemoActorHeader(authSession),
@@ -3075,9 +3077,10 @@ export function BillingContentAside() {
       ledgerRows.filter(
         (row) =>
           isBillingLedgerRowMatchingStatusFilter(row, statusFilters) &&
-          isBillingLedgerRowInRange(row, dateRange),
-      ),
-    [dateRange, ledgerRows, statusFilters],
+          matchesHistoryDate(row.activityAt, getBillingLedgerDateBounds(dateRange, todayDate, customDates)) &&
+          matchesHistoryQuery(search.searchQuery, [row.patient?.name, row.invoice.invoiceNo, row.lineSummary, row.requestedByName, getBillingLedgerRowStatusLabel(row)]),
+      ).sort((a, b) => compareHistoryDates(a.activityAt, b.activityAt, direction) || a.invoice.id.localeCompare(b.invoice.id)),
+    [customDates, dateRange, direction, ledgerRows, search.searchQuery, statusFilters, todayDate],
   );
   const visibleRowGroups = useMemo(
     () => groupBillingLedgerRowsByDate(visibleRows),
@@ -3099,6 +3102,8 @@ export function BillingContentAside() {
       return next.size ? next : new Set(["all"]);
     });
   };
+  const resetConditions = () => { search.clear(); setDateRange("all"); setStatusFilters(new Set(["all"])); };
+  const hiddenSelectionCount = ledgerRows.filter((row) => selectedInvoiceIds.includes(row.invoice.id) && !visibleRows.some((visible) => visible.invoice.id === row.invoice.id)).length;
 
   if (!detail) return null;
 
@@ -3111,16 +3116,16 @@ export function BillingContentAside() {
         onCollapse={() => setContentAsideOpen(false)}
         actions={
           <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="검색">
+            <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel="수납 이력일" />
+            <EmrListHeaderIconButton ref={searchTriggerRef} ariaLabel="검색" aria-pressed={search.open} onClick={() => { if (search.open) search.clear(); search.setOpen(!search.open); }}>
               <CdsActionsSearchIcon className="size-4" />
             </EmrListHeaderIconButton>
           </>
         }
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
+      {search.open ? <EmrHistorySearch search={search} label="수납 이력 검색" placeholder="환자·청구서·항목·요청자 검색" onClose={() => { search.clear(); search.setOpen(false); searchTriggerRef.current?.focus(); }} /> : null}
+      <div role="status" aria-live="polite" className="shrink-0 emr-text-metadata text-muted-foreground">결과 {visibleRows.length} / 전체 {ledgerRows.length}건</div>
       <div className="flex flex-wrap gap-1.5">
         {billingLedgerDateRangeItems.map((item) => (
           <Button
@@ -3130,12 +3135,19 @@ export function BillingContentAside() {
             variant={dateRange === item.value ? "secondary" : "outline"}
             className="h-7 bg-card px-2 emr-text-metadata"
             aria-pressed={dateRange === item.value}
-            onClick={() => setDateRange(item.value)}
+            onClick={() => {
+              if (item.value === "custom") {
+                setDraftDates(dateRange === "custom" ? customDates : getBillingLedgerDateBounds(dateRange === "all" ? "3m" : dateRange, todayDate, customDates));
+                setDateDialogOpen(true);
+              } else setDateRange(item.value);
+            }}
           >
             {item.label}
           </Button>
         ))}
       </div>
+      {dateRange === "custom" ? <Button size="sm" variant="outline" onClick={() => setDateRange("all")} aria-label="직접 기간 조건 해제" className="max-w-full"><span className="truncate">{customDates.start} ~ {customDates.end} ×</span></Button> : null}
+      <EmrHistoryFilterDialog open={dateDialogOpen} title="수납 이력 기간" dateLabel="수납 이력일" dates={draftDates} onDatesChange={setDraftDates} requireDates onReset={() => setDraftDates(emptyHistoryDateRange)} onCancel={() => setDateDialogOpen(false)} onApply={() => { setCustomDates(draftDates); setDateRange("custom"); setDateDialogOpen(false); }} />
       <div className="grid grid-cols-5 gap-1.5">
         {billingLedgerStatusFilterItems.map((group) => (
           <Button
@@ -3185,14 +3197,13 @@ export function BillingContentAside() {
               </EmrContentHistoryGroup>
             ))
           ) : (
-            <div className="rounded-md border border-dashed p-4 emr-text-dense text-muted-foreground">
-              조건에 맞는 수납 이력이 없습니다.
-            </div>
+            <EmrEmptyState surface="queue" density="compact" size="sm" kind={!ledgerRows.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"} title={!ledgerRows.length ? "수납 이력이 없습니다" : search.searchQuery.trim() ? "검색 결과가 없습니다" : "조건에 맞는 수납 이력이 없습니다"} description={ledgerRows.length ? "검색어와 기간·상태 조건을 확인해 주세요." : "보호자의 수납 이력이 등록되면 표시됩니다."} primaryAction={ledgerRows.length ? <Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button> : undefined} testId="billing-history-empty-state" />
           )}
         </div>
       </ScrollArea>
       <div className="shrink-0 border-t border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] py-3 emr-text-metadata text-muted-foreground">
         선택 {selectedInvoiceIds.length}건 · 중앙 checkout에 반영
+        {hiddenSelectionCount ? <div role="status" className="mt-1">조건에 가려진 선택 {hiddenSelectionCount}건 · 선택 유지 <Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button></div> : null}
       </div>
     </EmrContentAsidePanel>
   );

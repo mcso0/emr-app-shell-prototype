@@ -61,6 +61,40 @@ test("patient history combines dispensing and treatment orders and filters by ca
   await expect(aside).not.toContainText("피하 수액 처치");
 });
 
+test("combined patient history search, dates and staff filters keep category navigation", async ({ page }) => {
+  await page.goto("/w/clair-demo/dispensing?date=2026-05-01&workItemId=fulfill-order-coco-maropitant&modulePanel=closed&aside=history");
+  const aside = page.locator("#dispensing-content-aside");
+  const cards = aside.locator('[data-testid^="patient-history-item-"]');
+  await expect(cards.first()).toBeVisible();
+  const total = await cards.count();
+  await aside.getByRole("button", { name: "검색", exact: true }).click();
+  const search = aside.getByRole("searchbox", { name: "조제/처치 이력 검색" });
+  await search.fill("피하 수액");
+  await expect(aside).toContainText("피하 수액 처치");
+  await expect(aside).not.toContainText("Maropitant 16mg T");
+  await aside.getByRole("button", { name: "조제", exact: true }).click();
+  await expect(aside.getByTestId("dispensing-content-aside-empty-state")).toContainText("검색 결과가 없습니다");
+  await search.press("Escape");
+  await expect(aside).toContainText("Maropitant 16mg T");
+  await aside.getByRole("button", { name: "전체", exact: true }).click();
+  await expect(cards).toHaveCount(total);
+  await aside.getByRole("button", { name: "필터", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "조제/처치 이력 필터" });
+  const staff = dialog.getByRole("checkbox").last();
+  await staff.check();
+  await dialog.getByRole("button", { name: "적용" }).click();
+  await expect(cards.first()).toBeVisible();
+  await aside.getByRole("button", { name: "필터", exact: true }).click();
+  await dialog.getByRole("button", { name: "조건 초기화" }).click();
+  await dialog.getByLabel("시작일").fill("2026-05-01");
+  await dialog.getByLabel("종료일").fill("2026-05-01");
+  await dialog.getByRole("button", { name: "적용" }).click();
+  await expect(cards.first()).toBeVisible();
+  await expect(aside.locator('[data-testid^="dispensing-content-aside-group-"]')).toHaveCount(1);
+  await aside.getByRole("button", { name: "조건 해제", exact: true }).last().click();
+  await expect(cards).toHaveCount(total);
+});
+
 test("actual execution UI starts empty, records completion, reloads history and appends an explicit correction", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
@@ -826,7 +860,9 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await expect(historyAside).toContainText("요청");
   await expect(historyAside).not.toContainText("조제 시작 확인");
   await expect(historyAside).not.toContainText("user-tech");
-  const historyDialog = page.getByRole("dialog", { name: "조제/처치 이력", exact: true });
+  await expect(page.getByRole("dialog", { name: "조제/처치 이력", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "수행기록·이력", exact: true }).click();
+  const historyDialog = page.getByRole("dialog", { name: "실제 수행기록", exact: true });
   await expect(historyDialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(historyDialog).toBeHidden();
