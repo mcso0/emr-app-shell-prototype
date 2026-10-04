@@ -5,7 +5,7 @@ description: "Figma annotations, accepted V5 corrections, and code boundaries fo
 status: "accepted-design"
 tags: [lab, result-sheet, figma, attachments]
 related_work: "LAB-PR-004"
-updated: "2026-10-03"
+updated: "2026-10-04"
 ---
 
 # Lab Result Sheet — Implementation Reference
@@ -71,15 +71,17 @@ Values below describe a **1246px component**, not a fixed page width. Avoid a sc
 | Columns | Disclosure 24, item 280, result 240, unit 120, range 254, judgment 120, actor 160px. Range remains the flexible column. |
 | Header / row | 36px header / 40px default row. Body item/unit inset 14px; other body and header text inset 10px. Result input width 220px; additional result information remains in the item cell. Preserve the existing density selector rather than forcing every density to 40px. |
 | Row groups | Header divider 1px; expanded parent has no lower border. Expanded detail has a 1px lower border only when another row follows; final detail has 6px lower corners. Only one row opens at a time. |
-| Detail | Padding top/x 10px, bottom 16px; 12px gap between optional staff block and columns. Two 572.5px sections, 17px separator slot, 8px gaps. |
-| Detail contents | 28px label slot; 10px content padding. Finding/upload both 76px tall and 552.5px wide at reference size; visible box gap 53px, bottom inset 26px. Center separator 1px black-alpha 6%, inset 8px, 108px tall for an empty detail without staff notice. |
+| Detail | Padding top 10px / horizontal 24px / bottom 16px; 12px gap between optional staff block and columns. Two 558.5px sections, 17px separator slot, 8px gaps. |
+| Detail contents | 28px label slot; 10px content padding. Finding/upload both 76px tall and 538.5px wide at reference size; visible box gap 53px, bottom inset 26px. Center separator 1px black-alpha 6%, inset 8px, 108px tall for an empty detail without staff notice. |
 | Staff body | 36px single-line reference height, 8px horizontal inset, 1px border, radius 8px, no shadow. Recommended long-content behavior: wrap and grow without hiding instructions. |
-| Card | 130.625 × 108.552px; padding 8px, radius 6px, grid gap 10px. Thumbnail 114.625 × 64.552px, aspect ratio 190:107, radius 3px. |
+| Card | 127.125 × 106.581px; padding 8px, radius 6px, grid gap 10px. Thumbnail 111.125 × 62.581px, aspect ratio 190:107, radius 3px. |
 | Card text / actor | 12/16px, tracking 0.3px; actor 20 × 20px, bottom/right 8px. Shared Avatar has no assumed `xs` API; apply supported local sizing. |
 | List | 32px rows, 4px gaps, padding 4px vertical / 8px horizontal. Columns: flexible filename, 72px size, 88px time, 48px actor, 24px menu; 8px gaps. Header 24px with 10/14px text. |
 | Typography | Existing Pretendard; row 14/20px, tracking 0.196px; finding/labels/control text 12/16px, tracking 0.3px. |
 
-At reference dimensions, two card rows occupy approximately **227.104px** (`2 × 108.552 + 10`) and six list rows **212px** (`6 × 32 + 5 × 4`). These are **file viewport limits**, excluding labels, tools, padding, and the list header. Header plus 4px separation makes the list content 240px before outer padding.
+At reference dimensions, two card rows occupy approximately **223.162px** (`2 × 106.581 + 10`) and six list rows **212px** (`6 × 32 + 5 × 4`). These are **file viewport limits**, excluding labels, tools, padding, and the list header. Header plus 4px separation makes the list content 240px before outer padding.
+
+The 2026-10-04 browser annotation changes only the detail wrapper's horizontal padding from 10px to 24px at every viewport width. Retain the inner 10px content padding, so visible fields sit 34px from the detail edge. Keep the existing `md` detail stacking and attachment container queries; the reference widths above follow from the new inset.
 
 Use existing semantic surface, border, text, focus, and selected tokens. Figma reference colors include `#fafafa`, black-alpha 4% / 8%, and sky `#0080e5`; compare with current CDS mappings before choosing a feature-local treatment. Do not change global tokens, Input, Textarea, Button, Avatar, or EmrDataTable defaults to match one screen.
 

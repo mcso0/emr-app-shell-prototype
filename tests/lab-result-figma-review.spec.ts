@@ -278,8 +278,8 @@ test("reference component width preserves accepted table and card geometry", asy
   await expect(row).toHaveCSS("height", "40px");
   const card = detail.getByTestId("lab-attachment-card").first();
   const rect = (await card.boundingBox())!;
-  expect(Math.abs(rect.width - 130.625)).toBeLessThan(1.5);
-  expect(Math.abs(rect.height - 108.552)).toBeLessThan(1.5);
+  expect(Math.abs(rect.width - 127.125)).toBeLessThan(1.5);
+  expect(Math.abs(rect.height - 106.581)).toBeLessThan(1.5);
   await expect(page.getByRole("textbox", { name: "합성 항목 결과값", exact: true })).toHaveCSS("font-size", "12px");
   await group.screenshot({ path: testInfo.outputPath("reference-1246.png") });
 });
