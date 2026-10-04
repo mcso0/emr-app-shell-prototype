@@ -91,8 +91,10 @@ export interface HomeTask {
   sourceLabel: string;
   requestedBy?: string;
   requesterUserId?: string;
+  requesterAvatarUrl?: string;
   assigneeUserId?: string;
   assigneeUserIds?: string[];
+  assigneeAvatarUrls?: Record<string, string>;
   assigneeNames?: string[];
   isRequestedWork?: boolean;
   stateEnteredAt?: string;
@@ -221,6 +223,7 @@ export type HomeOperationsWorkItem = {
   assigneeName?: string;
   assigneeUserId?: string;
   assigneeUserIds?: string[];
+  assigneeAvatarUrls?: Record<string, string>;
   assigneeNames?: string[];
   attentionSignals: HomeOperationsAttentionSignal[];
   drawerSummary?: string;
@@ -241,6 +244,7 @@ export type HomeOperationsWorkItem = {
   requestedAt: string;
   scheduledAt?: string;
   requesterUserId?: string;
+  requesterAvatarUrl?: string;
   isRequestedWork?: boolean;
   requesterName?: string;
   sourceHref: string;

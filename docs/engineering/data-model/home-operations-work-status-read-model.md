@@ -40,6 +40,8 @@ The source snapshot keeps old encounter dependencies, all reception queues suppr
 
 The old SECURITY DEFINER aggregate remains a pre-existing DB boundary concern: it checks membership without all per-source permissions. This application change stops using it but does not revoke or migrate the remote function. Any DB remediation requires separately scoped authorization and verification.
 
+Home optionally enriches full-permission, allowed-source work with `requesterAvatarUrl` and `assigneeAvatarUrls` keyed by assigned user ID. The authenticated route reuses the active-workspace staff reader and its private signed-photo rules. Pictures are joined by exact ID, never by display name. A photo-read failure preserves work and fallback identities; it does not change source completeness. Hospital-list activation, visible-filter changes and window focus also refresh a photo-bearing response older than four minutes once; there is no polling or private URL lifetime change. Patient and guardian photo persistence does not yet exist; fixed profile-design images are not registered photo data.
+
 ## Historical Implementation In HOME-PR-011
 
 The first implementation uses an additive Supabase RPC plus a Next.js read endpoint:

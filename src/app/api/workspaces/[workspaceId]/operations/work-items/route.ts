@@ -17,6 +17,7 @@ import {
 } from "@/features/home/server-home-operations-work-items";
 import { isLegacySalesDemoWorkspace } from "@/lib/emr-domain/demo-workspaces";
 import { createClient } from "@/lib/supabase/server";
+import { createSupabaseWorkspaceStaffReadGateway, type SupabaseWorkspaceStaffClient } from "@/features/staff/server-workspace-staff-core";
 
 type RouteContext = {
   params: Promise<{
@@ -80,6 +81,7 @@ export async function GET(request: Request, { params }: RouteContext) {
     gateway: client
       ? createSupabaseHomeOperationsWorkItemGateway(
           client as unknown as SupabaseHomeOperationsWorkItemsRpcClient,
+          createSupabaseWorkspaceStaffReadGateway(client as unknown as SupabaseWorkspaceStaffClient),
         )
       : canUseDemoGateway
         ? createDemoHomeOperationsWorkItemGateway()
