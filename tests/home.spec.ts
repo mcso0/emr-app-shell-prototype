@@ -705,6 +705,7 @@ test("Home toolbar stays in one row and collapses actions at its own 900px bound
   expect((await tabs.boundingBox())!.width).toBeGreaterThanOrEqual(96);
   expect(await actions.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
   await completed.focus();
+  await page.getByLabel("환자 보호자 업무 검색").hover();
   await expect(page.getByRole("tooltip", { name: /완료 포함/ })).toBeVisible();
   expect(await page.getByRole("tooltip").evaluate((element) => element.parentElement === document.body)).toBe(true);
   await page.getByLabel("환자 보호자 업무 검색").press("Escape");

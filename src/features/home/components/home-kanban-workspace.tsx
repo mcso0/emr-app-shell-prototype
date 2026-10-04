@@ -342,7 +342,9 @@ function HomeToolbarActions({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("resize", close);
   }, []);
   const describe = (target: EventTarget | null, container: HTMLElement) => {
-    const button = target instanceof Element ? target.closest('button[title]') : null;
+    const hovered = target instanceof Element ? target.closest('button[title]') : null;
+    const focused = document.activeElement?.closest('button[title]');
+    const button = hovered && container.contains(hovered) ? hovered : focused && container.contains(focused) ? focused : null;
     if (!button || !container.contains(button)) { setHint(null); return; }
     const rect = button.getBoundingClientRect();
     setHint({ text: button.getAttribute('title') || '', left: Math.max(130, Math.min(window.innerWidth - 130, rect.left + rect.width / 2)), top: rect.bottom + 8 });
@@ -350,11 +352,11 @@ function HomeToolbarActions({ children }: { children: ReactNode }) {
   return <>
     <div className={styles.toolbarActions} data-testid="home-toolbar-actions"
       onPointerOver={(event) => describe(event.target, event.currentTarget)}
-      onPointerLeave={() => setHint(null)}
+      onPointerLeave={(event) => describe(document.activeElement, event.currentTarget)}
       onPointerDown={() => setHint(null)}
       onFocusCapture={(event) => describe(event.target, event.currentTarget)}
       onBlurCapture={() => setHint(null)}
-      onScrollCapture={() => setHint(null)}
+      onScrollCapture={(event) => describe(document.activeElement, event.currentTarget)}
       onKeyDownCapture={(event) => { if (event.key === "Enter" || event.key === " " || event.key === "Escape") setHint(null); }}>
       {children}
     </div>

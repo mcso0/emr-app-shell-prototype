@@ -91,6 +91,7 @@ Local verification: 12 Home UI tests and 10 Home server tests passed; lint, type
 User approved implementing the reviewed HTML design, investigating before edits, commit/push/PR preparation and Production delivery. Exact candidate release evidence remains required before merge.
 
 - Hospital list work types use outline badges. Patient and guardian names have 20px fallback avatars.
+- Home toolbar hints retain the focused button's name when pointer movement over the search input or automatic action scrolling occurs. Focus/hover regression coverage verifies this behavior.
 - Requester and assignee cells center 24px round avatars. Hover and keyboard focus reveal names without navigating the row. More than three assignees use two avatars and a remaining-count avatar with the other names in its tooltip.
 - Request time includes a clock icon. Hospital status uses an 8px icon/text gap (reviewed HTML had 6px; prior application had 4px).
 - The existing 36px row geometry and horizontal scrolling remain. Avatar sizes are local to this Home list, with no viewport breakpoint or shared avatar-size change.
