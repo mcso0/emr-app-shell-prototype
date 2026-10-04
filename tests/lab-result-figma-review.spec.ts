@@ -261,12 +261,13 @@ test("list caps at six rows, keeps column labels fixed, and reveals no bottom fa
   await expect(region).toHaveCSS("max-height", "212px");
   await expect.poll(async () => region.evaluate(el => el.clientHeight)).toBe(212);
   const header = detail.getByText("파일 크기", { exact: true });
-  const headerY = (await header.boundingBox())!.y;
+  // Focusing the list can scroll the outer result sheet; compare within this detail.
+  const headerOffset = (await header.boundingBox())!.y - (await detail.boundingBox())!.y;
   await expect(detail.getByTestId("lab-attachment-list-row")).toHaveCount(7);
   await expect(detail.getByTestId("lab-attachment-overflow-fade")).toBeVisible();
   await region.focus(); await page.keyboard.press("End");
   await expect(detail.getByTestId("lab-attachment-overflow-fade")).toHaveCount(0);
-  expect((await header.boundingBox())!.y).toBe(headerY);
+  expect((await header.boundingBox())!.y - (await detail.boundingBox())!.y).toBe(headerOffset);
   await expect(header).toHaveCSS("font-size", "10px");
   await expect(detail.getByTestId("lab-attachment-list-row").first()).toHaveCSS("font-size", "12px");
   await detail.screenshot({ path: testInfo.outputPath("list-seven-end.png") });
