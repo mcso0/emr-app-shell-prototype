@@ -1,12 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID as workspaceId } from "../src/lib/emr-domain/demo-workspaces";
+import type { LabResultAttachment } from "../src/features/lab-imaging/use-lab-result-phase2";
 
 const rowId = "figma-review-row";
 const resultId = "figma-review-result";
 const instruction = "합성 검수용 직원 전달사항입니다.";
 
-async function openReview(page: Page, count: number, canEdit = true, rowCount = 1) {
+async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0) {
   await page.addInitScript(({ key, workspaceId }) => {
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검수 공간", representativeName: "합성 관리자",
@@ -23,10 +24,15 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
     encounterId: workItem.encounterId, workItemId: workItem.id, entryWriteRevision: 0,
     resultDefinitionSnapshot: { schemaVersion: 1 },
     rows: Array.from({ length: rowCount }, (_, i) => ({ id: i === 0 ? rowId : `${rowId}-${i}`, analyteName: i === 0 ? "합성 항목" : `합성 항목 ${i + 1}`, value: null, resultValueKind: "text", judgment: "not_judged", note: "" })) };
-  const attachments = Array.from({ length: count }, (_, index) => ({ id: `review-file-${index}`, rowId,
+  const attachments: LabResultAttachment[] = Array.from({ length: count }, (_, index) => ({ id: `review-file-${index}`, rowId,
     name: index === 0 ? "긴-첨부자료-파일명-겹침-검수-문서.pdf" : `합성첨부-${index}.txt`,
     mimeType: index === 0 ? "application/pdf" : "text/plain", size: 1024 * (index + 1),
     uploadedAt: "2026-09-29T00:00:00Z", uploadedByUserId: "review-actor", uploadedByName: "합성" }));
+  attachments.push(...Array.from({ length: overallCount }, (_, index) => ({
+    id: `overall-file-${index}`, rowId: null, name: `종합소견-첨부-${index}.txt`,
+    mimeType: "text/plain", size: 1024, uploadedAt: "2026-09-29T00:00:00Z",
+    uploadedByUserId: "review-actor", uploadedByName: "합성",
+  })));
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items**`, route => route.fulfill({ json: { ok: true, workItems: [workItem] } }));
   await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-entries**`, route => route.fulfill({ json: result }));
   await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-phase2**`, route => route.fulfill({ json: {
@@ -41,6 +47,88 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
   await expect(detail).toBeVisible();
   return { detail, row, attachments };
 }
+
+test("overall finding uses equal text and upload columns without prototype subtext", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1386, height: 870 });
+  const { detail } = await openReview(page, 0);
+  const overall = page.getByTestId("lab-overall-finding");
+  const input = overall.getByLabel("검사결과 종합소견", { exact: true });
+  const upload = overall.getByRole("button", { name: "첨부자료 업로드", exact: true });
+  await expect(input).toBeEnabled();
+  await expect(upload).toBeEnabled();
+  const textBox = (await input.boundingBox())!;
+  const uploadBox = (await upload.boundingBox())!;
+  expect(Math.abs(textBox.y - uploadBox.y)).toBeLessThan(1);
+  expect(Math.abs(textBox.width - uploadBox.width)).toBeLessThan(1);
+  expect(uploadBox.x).toBeGreaterThan(textBox.x + textBox.width);
+  expect(textBox.height).toBe(128);
+  expect(uploadBox.height).toBe(128);
+  await expect(input).toHaveAttribute("maxlength", "10000");
+  await expect(detail.getByLabel("검사 소견", { exact: true })).toHaveCSS("height", "76px");
+  await expect(page.getByText("화면 시안 · 입력 내용과 선택한 파일은 서버로 전송되지 않습니다.", { exact: true })).toHaveCount(0);
+  await overall.screenshot({ path: testInfo.outputPath("overall-empty-desktop.png") });
+  await page.setViewportSize({ width: 740, height: 870 });
+  await expect.poll(async () => {
+    const text = (await input.boundingBox())!; const file = (await upload.boundingBox())!;
+    return file.y > text.y + text.height && Math.abs(file.x - text.x) < 1;
+  }).toBe(true);
+});
+
+test("overall attachments remain separate from item files and respect read-only access", async ({ page }) => {
+  const { detail } = await openReview(page, 1, false, 1, 1);
+  const overall = page.getByTestId("lab-overall-finding");
+  await expect(overall.getByTestId("lab-attachment-card")).toHaveCount(1);
+  await expect(overall.getByText("종합소견-첨부-0.txt", { exact: true })).toBeVisible();
+  await expect(overall.getByText("긴-첨부자료-파일명-겹침-검수-문서.pdf", { exact: true })).toHaveCount(0);
+  await expect(detail.getByTestId("lab-attachment-card")).toHaveCount(1);
+  await expect(detail.getByText("종합소견-첨부-0.txt", { exact: true })).toHaveCount(0);
+  await expect(overall.getByLabel("검사결과 종합소견", { exact: true })).toBeDisabled();
+  await overall.hover();
+  await expect(overall.getByRole("button", { name: "첨부 자료 추가", exact: true })).toHaveCount(0);
+  await expect(overall.getByRole("button", { name: /미리보기$/ })).toBeEnabled();
+  await expect(overall.locator('input[type="file"]')).toBeDisabled();
+});
+
+test("overall upload prepares explicit null, survives refresh and deletes only its own file", async ({ page }) => {
+  await installUploadHarness(page);
+  const { detail, attachments } = await openReview(page, 1);
+  const overall = page.getByTestId("lab-overall-finding");
+  const actions: Array<{action: string; rowId?: string | null}> = [];
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-attachments`, async route => {
+    const body = route.request().postDataJSON(); actions.push(body);
+    if (body.action === "prepare") {
+      expect(body.resultId).toBe(resultId); expect(body.rowId).toBeNull();
+      await route.fulfill({ json: { ok: true, attachmentId: "overall-upload", objectPath: "synthetic/overall", uploadToken: "synthetic-token", uploadUrl: "https://storage.example.test/signed" } });
+    } else if (body.action === "finalize") {
+      attachments.push({id: "overall-upload", rowId: null, name: "overall.txt", mimeType: "text/plain", size: 32,
+        uploadedAt: "2026-10-04T00:00:00Z", uploadedByUserId: "review-actor", uploadedByName: "합성"});
+      await route.fulfill({ json: { ok: true } });
+    } else await route.fulfill({ json: { ok: true } });
+  });
+  await overall.locator('input[type="file"]').setInputFiles({name: "overall.txt", mimeType: "text/plain", buffer: Buffer.from("synthetic overall attachment")});
+  await expect(overall.getByTestId("lab-upload-card")).toBeVisible();
+  await page.evaluate(() => {
+    const request = (window as unknown as { reviewUpload: EventTarget & { status: number } }).reviewUpload;
+    request.status = 200; request.dispatchEvent(new Event("load"));
+  });
+  await expect(overall.getByTestId("lab-upload-card")).toHaveCount(0);
+  await expect(overall.getByText("overall.txt", { exact: true })).toBeVisible();
+  expect(actions.map(action => action.action)).toEqual(["prepare", "finalize"]);
+  await expect(detail.getByTestId("lab-attachment-card")).toHaveCount(1);
+  await page.reload();
+  await expect(overall.getByText("overall.txt", { exact: true })).toBeVisible();
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-attachments/overall-upload?resultId=*`, async route => {
+    expect(route.request().method()).toBe("DELETE");
+    attachments.splice(attachments.findIndex(item => item.id === "overall-upload"), 1);
+    await route.fulfill({ json: { ok: true } });
+  });
+  const file = overall.getByTestId("lab-attachment-card");
+  await file.hover(); await file.getByRole("button", { name: /작업 메뉴$/ }).click();
+  await page.getByRole("menuitem", { name: "삭제", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "삭제", exact: true }).click();
+  await expect(overall.getByTestId("lab-attachment-card")).toHaveCount(0);
+  expect(attachments).toHaveLength(1); expect(attachments[0].rowId).toBe(rowId);
+});
 
 test("result table fits narrow and wide containers while preserving drafts and minimum-width scrolling", async ({ page }, testInfo) => {
   const { row, detail } = await openReview(page, 0);

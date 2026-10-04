@@ -15,13 +15,14 @@ create function private.clair_current_user_has_workspace_permission(scope text, 
     and (permission = 'lab:view' or current_setting('test.editor', true) = 'yes');
 $$;
 create table public.lab_result_entries(id uuid primary key, workspace_id text, result_id text,
-  result_status text, result_definition_origin text);
+  result_status text, result_definition_origin text, unique(workspace_id, id));
 create table public.lab_result_entry_rows(lab_result_entry_id uuid, workspace_id text, row_id text,
   primary key(lab_result_entry_id, row_id));
 create table public.lab_result_attachments(id uuid primary key, workspace_id text,
-  lab_result_entry_id uuid references public.lab_result_entries, row_id text,
+  lab_result_entry_id uuid references public.lab_result_entries, row_id text not null,
   uploaded_by_user_id uuid not null, file_name text not null check(length(file_name) between 1 and 200),
   mime_type text not null, byte_size integer not null check(byte_size between 1 and 20971520), storage_path text not null unique,
+  foreign key(workspace_id, lab_result_entry_id) references public.lab_result_entries(workspace_id, id),
   foreign key(lab_result_entry_id, row_id) references public.lab_result_entry_rows,
   check(mime_type='application/pdf' or byte_size <= 5242880));
 revoke all on public.lab_result_entries, public.lab_result_entry_rows, public.lab_result_attachments
@@ -33,6 +34,7 @@ insert into public.lab_result_entry_rows values('00000000-0000-4000-8000-0000000
   ('00000000-0000-4000-8000-000000000002','scope-b','row-b'),
   ('00000000-0000-4000-8000-000000000003','scope-a','row-closed');
 \ir ../supabase/migrations/20260929055945_lab_attachment_scoped_context.sql
+\ir ../supabase/migrations/20261004050013_lab_overall_result_attachments.sql
 set local test.actor = '00000000-0000-4000-8000-000000000099';
 set local test.workspace = 'scope-a';
 set local test.editor = 'yes';
@@ -51,6 +53,16 @@ do $$ begin
   exception when insufficient_privilege then null; end;
   perform public.clair_prepare_lab_result_attachment('scope-a','result-a','row-a',
     '00000000-0000-4000-8000-000000000010','synthetic.png','image/png',179);
+  perform public.clair_prepare_lab_result_attachment('scope-a','result-a',null,
+    '00000000-0000-4000-8000-000000000014','overall.png','image/png',179);
+  begin perform public.clair_prepare_lab_result_attachment('scope-a','result-closed',null,
+    '00000000-0000-4000-8000-000000000015','overall.png','image/png',179);
+    raise exception 'closed overall result allowed';
+  exception when invalid_parameter_value then null; end;
+  begin perform public.clair_prepare_lab_result_attachment('scope-a','result-b',null,
+    '00000000-0000-4000-8000-000000000016','overall.png','image/png',179);
+    raise exception 'foreign overall result allowed';
+  exception when invalid_parameter_value then null; end;
   begin perform public.clair_prepare_lab_result_attachment('scope-a','result-closed','row-closed',
     '00000000-0000-4000-8000-000000000011','synthetic.png','image/png',179);
     raise exception 'closed result allowed';
@@ -67,6 +79,10 @@ do $$ begin
     '00000000-0000-4000-8000-000000000013','synthetic.png','image/png',179);
     raise exception 'viewer upload allowed';
   exception when insufficient_privilege then null; end;
+  begin perform public.clair_prepare_lab_result_attachment('scope-a','result-a',null,
+    '00000000-0000-4000-8000-000000000017','overall.png','image/png',179);
+    raise exception 'viewer overall upload allowed';
+  exception when insufficient_privilege then null; end;
 end $$;
 set local test.actor = '';
 do $$ begin
@@ -76,7 +92,18 @@ do $$ begin
 end $$;
 reset role;
 do $$ begin
-  if (select count(*) from public.lab_result_attachments) <> 1 then raise exception 'unexpected metadata residue'; end if;
+  if (select count(*) from public.lab_result_attachments) <> 2 then raise exception 'unexpected metadata residue'; end if;
+  if not exists(select 1 from public.lab_result_attachments where row_id is null
+    and uploaded_by_user_id='00000000-0000-4000-8000-000000000099'
+    and storage_path='scope-a/00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000014.png')
+  then raise exception 'overall owner or path mismatch'; end if;
+  begin insert into public.lab_result_attachments(id,workspace_id,lab_result_entry_id,row_id,
+    uploaded_by_user_id,file_name,mime_type,byte_size,storage_path)
+    values('00000000-0000-4000-8000-000000000018','scope-b',
+      '00000000-0000-4000-8000-000000000001',null,
+      '00000000-0000-4000-8000-000000000099','foreign.png','image/png',179,'foreign');
+    raise exception 'overall workspace FK bypassed';
+  exception when foreign_key_violation then null; end;
   if not exists(select 1 from public.lab_result_attachments
     where uploaded_by_user_id='00000000-0000-4000-8000-000000000099'
       and storage_path='scope-a/00000000-0000-4000-8000-000000000001/00000000-0000-4000-8000-000000000010.png')

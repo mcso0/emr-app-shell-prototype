@@ -15,8 +15,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!context.ok) return context.response;
   const rateLimited = enforceWorkspaceMutationRateLimit({ request, actorUserId: context.actorUserId, workspaceId, operation: `lab_result_attachment_${body.action}` });
   if (rateLimited) return rateLimited;
-  if (body.action === "prepare" && (typeof body.rowId !== "string" || !body.rowId || body.rowId.length > 200)) return invalid();
-  const entry = await resolveLabResultEntry(context.client, workspaceId, body.resultId, body.action === "prepare" ? body.rowId as string : undefined);
+  // Only an explicit null selects overall attachments. Malformed/missing row
+  // selectors must not silently move an item upload into the overall scope.
+  if (body.action === "prepare" && body.rowId !== null && (typeof body.rowId !== "string" || !body.rowId || body.rowId.length > 200)) return invalid();
+  const entry = await resolveLabResultEntry(context.client, workspaceId, body.resultId,
+    body.action === "prepare" && typeof body.rowId === "string" ? body.rowId : undefined);
   if (!entry || (body.action !== "discard" && !["received", "entered"].includes(entry.result_status))) {
     return Response.json({ ok: false, error: "result_unavailable" }, { status: 409 });
   }
