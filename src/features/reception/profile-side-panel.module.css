@@ -907,3 +907,10 @@ button.relatedCard:focus-visible .relatedCardAffordance {
   letter-spacing: 0.196px;
   box-sizing: border-box;
 }
+
+.todayFeedbackMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}

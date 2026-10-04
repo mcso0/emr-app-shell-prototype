@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { CdsActionsRefreshCwIcon, CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import {
   CdsCommunicationMailIcon,
   CdsCommunicationMessageSquareIcon,
@@ -542,7 +543,12 @@ function InformationTab({
         <div className={styles.sectionBody}>
           {model.todayState && model.todayState.status !== "ready" ? (
             <div className={styles.todayFeedback} role="status">
-              <span>{model.todayState.status === "denied" ? "오늘 접수/예약을 볼 권한이 없습니다" : model.todayState.status === "error" || model.todayState.status === "not_found" ? "오늘 접수/예약을 불러오지 못했습니다" : "오늘 접수/예약을 불러오는 중입니다"}</span>
+              <span className={styles.todayFeedbackMessage}>
+                {(model.todayState.status === "idle" || model.todayState.status === "loading") && (
+                  <CdsAlertsLoaderIcon aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin motion-reduce:animate-none" />
+                )}
+                {model.todayState.status === "denied" ? "오늘 접수/예약을 볼 권한이 없습니다" : model.todayState.status === "error" || model.todayState.status === "not_found" ? "오늘 접수/예약을 불러오지 못했습니다" : "오늘 접수/예약을 불러오는 중입니다"}
+              </span>
               {(model.todayState.status === "error" || model.todayState.status === "not_found") && onRetryToday ? <Button size="xs" variant="outline" onClick={onRetryToday}><CdsActionsRefreshCwIcon aria-hidden="true" data-icon="inline-start" />다시 시도</Button> : null}
             </div>
           ) : model.todayItems?.length ? model.todayItems.map((item) => <WorkCard key={`${item.id}:${item.description}`} item={item} todayStatus={item.status} showPatientName={model.kind === "guardian"} />) : model.todayItems === undefined && model.today ? <WorkCard key={`${model.today.id}:${model.today.description}`} item={model.today} todayStatus="reservation" /> : <div className={styles.todayFeedback} role="status">접수/예약 일정이 없습니다</div>}
