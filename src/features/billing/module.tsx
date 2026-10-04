@@ -3113,6 +3113,7 @@ function BillingHistoryAside({ detail }: { detail: BillingDetail }) {
       <EmrContentAsideHeader
         count={visibleRows.length}
         label="수납이력"
+        search={search.open ? <EmrHistorySearch search={search} label="수납 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
         collapseAriaLabel="보호자 수납 이력 접기"
         onCollapse={() => setContentAsideOpen(false)}
         actions={
@@ -3125,7 +3126,6 @@ function BillingHistoryAside({ detail }: { detail: BillingDetail }) {
         }
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
-      {search.open ? <EmrHistorySearch search={search} label="수납 이력 검색" placeholder="환자·청구서·항목·요청자 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
       <div role="status" aria-live="polite" className="sr-only">결과 {visibleRows.length} / 전체 {ledgerRows.length}건</div>
       <div className="flex flex-wrap gap-1.5">
         {billingLedgerDateRangeItems.map((item) => {

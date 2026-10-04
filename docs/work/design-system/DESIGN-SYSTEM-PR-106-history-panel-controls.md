@@ -3,7 +3,7 @@ id: DESIGN-SYSTEM-PR-106
 status: human_review
 area: design-system
 priority: P1
-updated: 2026-10-04
+updated: 2026-10-05
 source_docs:
   - docs/work/chart/CHART-PR-025-live-patient-chart-history.md
   - docs/work/chart/CHART-PR-028-history-information-hierarchy.md
@@ -152,3 +152,74 @@ test suite was not run. Exact remote Release Check, Preview, candidate and
 rollback evidence belong in the release packet after the commit is fixed.
 The active release model is PR Preview → exact Release Check → explicit
 Production approval → main. The original staging exception above is historical.
+
+## Approved header search revision — 2026-10-05
+
+승욱 accepted the updated interactive HTML and requested product implementation.
+Use `codex/history-header-search` from inspected `origin/main` (`c66f81c4`),
+in the existing isolated checkout. Preserve the primary checkout and the HTML
+artifacts. The initial request covered local implementation and verification.
+
+- `EmrContentAsideHeader.search` replaces only the title/action frame. Keep its
+  layout footprint, and hide/inert the default title, count, collapse, sort and
+  filter controls while searching. No extra search row or result-count row.
+- Use existing Input with `sm` height 28px and `키워드 입력`. Preserve each
+  screen's accessible search name and the 250ms/IME search contract.
+- Keep one always-visible filled circle X: populated input clears the pending
+  and effective query and keeps the input focused; empty input closes search
+  and restores trigger focus. Non-composing Escape still cancels and closes.
+- Keep chart 진료일/작성일 tabs visible and operable during search. The approved
+  compact chart frame uses a 28px first row plus the existing 24px `xs` tabs.
+  PatientHistoryAside keeps its existing 48px frame and 16px panel inset.
+- Remove chart and patient-history applied-condition chips. Indicate applied
+  conditions with a decorative 6px sky/500 dot at the filter button's upper
+  right, using existing spacing/color tokens. Tooltip describes the applied
+  conditions; draft edits/cancel do not change the dot. Clear via the existing
+  filter reset/apply flow or filter-empty action. Filters keep selected history.
+- Both sort directions keep the existing icon without a dot. Show current
+  order through dropdown radio check, Tooltip and the accessible button name.
+- Preserve billing's period/status quick controls and checkout selections,
+  combined 조제/처치 category tabs, patient-wide history reads, loading/error/
+  permission/empty feedback, historical read-only state and navigation.
+- No API, DB, auth, financial, dependency, shared-token or remote release change.
+  Synthetic HTML facets/presets remain proposal-only.
+
+Local verification completed:
+
+- Focused screen/helper checks: **11/11 passed** across two runs (10 state/
+  boundary checks, then the updated four-route geometry check). Covers billing
+  selections, chart read-only/loading/error/empty state and searchable date-mode
+  tabs, lab/imaging selected history, combined category navigation, dates and
+  search matching. The previous all-48px geometry assertion was updated to the
+  approved chart 28px row + 24px tabs; measure inside the aside to exclude shell
+  entrance motion and overall panel height. Header frame and list-start metrics
+  remain equal before opening search, while open and after closing it.
+- Shared stories: **5/5 passed** (four history-control stories and the existing
+  content-aside default). Checks two-stage X, input focus, pending debounce,
+  Korean composition, applied filter indicator, and draft dismissal.
+- TypeScript, scoped ESLint, docs references, production build and diff checks
+  passed. Existing build warning: `/docs` tracing in `doc-reader.ts`. Existing
+  story-runner React `act` warning remains; all assertions pass.
+- Visual evidence: `output/playwright/history-header-search/treatment-search.png`
+  and `lab-search.png`. These use local synthetic demo fixtures. Storybook MCP
+  endpoints 6006/6007 were unavailable; source inspection and the local Vitest
+  story runner supplied component verification.
+- Full repository suite, authenticated live data and remote release were not
+  run. Product source and verification live on `codex/history-header-search`;
+  the primary checkout, standalone HTML, API and financial contracts are intact.
+
+### Delivery authorization — 2026-10-05
+
+After reviewing the completed local implementation, 승욱 explicitly requested
+commit, push, PR, merge to `origin/main`, and approved deployment of this same
+header-search revision. Deliver only the 12 tracked files in this slice.
+Keep prototype bundles, screenshots, local logs and unrelated primary-checkout
+work out of the commit. Preserve the current API, DB, auth and financial scope.
+
+Run the full local release preflight and one manual Release Check for the exact
+PR head. Confirm its Ready Preview before an exact-head-protected squash merge.
+Record candidate, checks, previous Production deployment, merge and final Ready
+Production evidence in the local release packet. Verify `/login` and the scoped
+history controls when an authenticated synthetic session is available. If no
+such session is available, report that limit separately from HTTP/build proof.
+Stop on failed gates, unexpected source/deployment, secrets or scope expansion.
