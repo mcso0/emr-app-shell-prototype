@@ -3044,7 +3044,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(aside.getByText("접수 이력", { exact: false })).toHaveCount(0);
 
   await aside.getByRole("button", { name: "정렬: 최신순" }).click();
-  await page.getByRole("radio", { name: "오래된순" }).click();
+  await page.getByRole("menuitemradio", { name: "오래된순" }).click();
   await expect(aside.locator('[data-testid^="chart-history-item-"]').first()).toHaveAttribute("data-testid", `chart-history-item-${currentChartId}`);
   await aside.getByRole("button", { name: "검색", exact: true }).click();
   const asideSearch = aside.getByRole("searchbox", { name: "차트 이력 검색" });
@@ -3054,9 +3054,9 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await expect(aside.getByText("선택한 차트가 조건에 가려져 있습니다")).toBeVisible();
   await asideSearch.fill("없는 진단");
   await expect(aside.getByTestId("chart-history-empty-state")).toContainText("검색 결과가 없습니다");
-  await asideSearch.press("Escape");
+  await aside.getByRole("button", { name: "검색 취소", exact: true }).click();
   await expect(currentHistoryItem).toBeVisible();
-  await asideSearch.press("Escape");
+  await expect(asideSearch).toHaveCount(0);
   await expect(aside.getByRole("button", { name: "검색", exact: true })).toBeFocused();
   await aside.getByRole("button", { name: "필터", exact: true }).click();
   const historyFilter = page.getByRole("dialog", { name: "차트 이력 필터" });
@@ -3073,13 +3073,13 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await historyDateMode.getByRole("button", { name: "진료일 기준" }).click();
   await expect(oldHistoryItem).toBeVisible();
   await aside.getByRole("button", { name: "필터", exact: true }).click();
-  await historyFilter.getByRole("button", { name: "조건 초기화" }).click();
+  await historyFilter.getByRole("button", { name: "초기화", exact: true }).click();
   await historyFilter.getByRole("button", { name: "취소", exact: true }).click();
   await expect(currentHistoryItem).toHaveCount(0);
   await aside.getByRole("button", { name: "조건 해제", exact: true }).click();
   await expect(currentHistoryItem).toBeVisible();
   await aside.getByRole("button", { name: "정렬: 오래된순" }).click();
-  await page.getByRole("radio", { name: "최신순" }).click();
+  await page.getByRole("menuitemradio", { name: "최신순" }).click();
 
   await expect(
     page.getByRole("heading", { name: "Subject/Object" }),

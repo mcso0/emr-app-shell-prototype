@@ -6,7 +6,7 @@ import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { EmrHistoryFilterDialog, EmrHistorySearch, EmrHistorySortButton, useHistorySearch } from "@/components/emr/history-controls";
+import { EmrHistoryFilterPopover, EmrHistorySearch, EmrHistorySortButton, useHistorySearch } from "@/components/emr/history-controls";
 import { EmrEmptyState } from "@/components/emr/empty-state";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -165,7 +165,7 @@ export function PatientHistoryAside({
   const [filterOpen, setFilterOpen] = useState(false);
   const [category, setCategory] = useState<"all" | "dispensing" | "treatment">("all");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
-  const resetConditions = () => { search.clear(); setFilters(emptyFilters); setCategory("all"); setCollapsedGroups(new Set()); };
+  const resetFilters = () => { setFilters(emptyFilters); setCollapsedGroups(new Set()); };
   const visibleEntries = entries.filter((entry) =>
     (category === "all" || entry.category === category) &&
     matchesHistoryDate(entry.timestamp, filters.dates) &&
@@ -184,7 +184,6 @@ export function PatientHistoryAside({
     field === "statuses" ? entry.status : field === "assignees" ? entry.assignee ?? "미정" : field === "names" ? entry.title : entry.modality ?? "정보 없음"
   )));
   const activeCount = filters.statuses.length + filters.assignees.length + filters.names.length + filters.modalities.length + (filters.dates.start ? 1 : 0);
-  const filtered = Boolean(activeCount || search.searchQuery.trim() || category !== "all");
   const hiddenSelection = entries.some((entry) => entry.selected && !visibleEntries.some((visible) => visible.id === entry.id));
   const searchLabel = kind === "lab" ? "검사 이력 검색" : kind === "imaging" ? "영상 이력 검색" : "조제/처치 이력 검색";
   const filterTitle = kind === "lab" ? "검사 이력 필터" : kind === "imaging" ? "영상 이력 필터" : "조제/처치 이력 필터";
@@ -194,27 +193,29 @@ export function PatientHistoryAside({
       <EmrContentAsideHeader className={styles.header} count={visibleEntries.length} label={label} onCollapse={onCollapse}
         actions={<>
           <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel="이력 기록일" />
-          <EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(activeCount)} onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}><CdsActionsListFilterIcon className="size-4" /></EmrListHeaderIconButton>
-          <EmrListHeaderIconButton ref={searchTriggerRef} ariaLabel="검색" aria-pressed={search.open} onClick={() => { if (search.open) search.clear(); search.setOpen(!search.open); }}><CdsActionsSearchIcon className="size-4" /></EmrListHeaderIconButton>
+          <EmrHistoryFilterPopover open={filterOpen} onOpen={() => { setDraftFilters(filters); setFilterOpen(true); }} trigger={<EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(activeCount)}><CdsActionsListFilterIcon className="size-4" /></EmrListHeaderIconButton>} title={filterTitle} dateLabel="이력 기록일" dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onReset={() => setDraftFilters(emptyFilters)} onCancel={() => setFilterOpen(false)} onApply={() => { setFilters(draftFilters); setCollapsedGroups(new Set()); setFilterOpen(false); }}>
+            {([['statuses', '상태'], ['assignees', '담당자'], ...(kind === 'lab' ? [['names', '검사명']] : kind === 'imaging' ? [['modalities', '검사 분류']] : [])] as Array<["statuses" | "assignees" | "names" | "modalities", string]>).map(([field, title]) => <FieldSet key={field} className="gap-2!"><FieldLegend variant="label">{title}</FieldLegend><FieldGroup className="grid grid-cols-2 gap-2!">
+              {facetOptions(field).map((value, index) => <Field key={value} orientation="horizontal"><Checkbox id={`${id}-${field}-${index}`} checked={draftFilters[field].includes(value)} onCheckedChange={(checked) => setDraftFilters((current) => ({ ...current, [field]: checked ? [...current[field], value] : current[field].filter((item) => item !== value) }))} /><FieldLabel htmlFor={`${id}-${field}-${index}`}>{value}</FieldLabel></Field>)}
+            </FieldGroup></FieldSet>)}
+          </EmrHistoryFilterPopover>
+          {!search.open ? <EmrListHeaderIconButton ref={searchTriggerRef} ariaLabel="검색" onClick={() => search.setOpen(true)}><CdsActionsSearchIcon className="size-4" /></EmrListHeaderIconButton> : null}
         </>}
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
-      {search.open ? <EmrHistorySearch search={search} label={searchLabel} placeholder="검사·오더명·상태·담당자 검색" onQueryChange={() => setCollapsedGroups(new Set())} onClose={() => { search.clear(); search.setOpen(false); searchTriggerRef.current?.focus(); }} /> : null}
-      {status === "ready" ? <p role="status" aria-live="polite" className="shrink-0 emr-text-metadata text-muted-foreground">결과 {visibleEntries.length} / 전체 {entries.length}건</p> : null}
-      {filtered ? <Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button> : null}
+      {search.open ? <EmrHistorySearch search={search} label={searchLabel} placeholder="검사·오더명·상태·담당자 검색" onQueryChange={() => setCollapsedGroups(new Set())} onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
+      {status === "ready" ? <p role="status" aria-live="polite" className="sr-only">결과 {visibleEntries.length} / 전체 {entries.length}건</p> : null}
+      {activeCount ? <div className="flex shrink-0 flex-wrap gap-1">
+        {filters.dates.start ? <Button size="sm" variant="outline" className="max-w-full" aria-label="날짜 조건 해제" onClick={() => setFilters((current) => ({ ...current, dates: emptyHistoryDateRange }))}><span className="truncate">{filters.dates.start} ~ {filters.dates.end} ×</span></Button> : null}
+        {(["statuses", "assignees", "names", "modalities"] as const).flatMap((field) => filters[field].map((value) => <Button key={`${field}-${value}`} size="sm" variant="outline" className="max-w-full" aria-label={`${value} 조건 해제`} onClick={() => setFilters((current) => ({ ...current, [field]: current[field].filter((item) => item !== value) }))}><span className="truncate">{value} ×</span></Button>))}
+      </div> : null}
       {status === "ready" && hiddenSelection ? <EmrInlineAlert severity="info" title="선택한 이력이 조건에 가려져 있습니다">선택한 기록은 계속 열려 있습니다.</EmrInlineAlert> : null}
-      <EmrHistoryFilterDialog open={filterOpen} title={filterTitle} dateLabel="이력 기록일" dates={draftFilters.dates} onDatesChange={(dates) => setDraftFilters((current) => ({ ...current, dates }))} onReset={() => setDraftFilters(emptyFilters)} onCancel={() => setFilterOpen(false)} onApply={() => { setFilters(draftFilters); setCollapsedGroups(new Set()); setFilterOpen(false); }}>
-        {([['statuses', '상태'], ['assignees', '담당자'], ...(kind === 'lab' ? [['names', '검사명']] : kind === 'imaging' ? [['modalities', '검사 분류']] : [])] as Array<["statuses" | "assignees" | "names" | "modalities", string]>).map(([field, title]) => <FieldSet key={field}><FieldLegend variant="label">{title} · 여러 항목 선택 가능</FieldLegend><FieldGroup>
-          {facetOptions(field).map((value, index) => <Field key={value} orientation="horizontal"><Checkbox id={`${id}-${field}-${index}`} checked={draftFilters[field].includes(value)} onCheckedChange={(checked) => setDraftFilters((current) => ({ ...current, [field]: checked ? [...current[field], value] : current[field].filter((item) => item !== value) }))} /><FieldLabel htmlFor={`${id}-${field}-${index}`}>{value}</FieldLabel></Field>)}
-        </FieldGroup></FieldSet>)}
-      </EmrHistoryFilterDialog>
       {showCategories ? <div className={styles.tabs}><SegmentedControl aria-label="조제/처치 이력 종류" items={[{ label: "전체", value: "all" }, { label: "조제", value: "dispensing" }, { label: "처치", value: "treatment" }]} size="sm" value={category} variant="tabs" onValueChange={(value) => { setCategory(value); setCollapsedGroups(new Set()); }} /></div> : null}
       <ScrollArea className={styles.scrollArea} viewportClassName="scroll-fade-y scroll-fade-8">
         <div className={styles.groups}>
           {status === "loading" ? <p className={styles.message}>이력을 불러오는 중입니다.</p> : null}
           {status === "permission_denied" ? <EmrInlineAlert severity="warning" title="이력을 볼 권한이 없습니다." /> : null}
           {status === "error" ? <EmrInlineAlert severity="warning" title="이력을 불러오지 못했습니다." /> : null}
-          {status === "ready" && !groups.size ? <EmrEmptyState surface="queue" size="sm" density="compact" kind={!entries.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"} title={!entries.length ? "기록된 이력이 없습니다" : search.searchQuery.trim() ? "검색 결과가 없습니다" : "조건에 맞는 이력이 없습니다"} description={!entries.length ? "환자의 이력이 등록되면 표시됩니다." : "검색어와 필터 조건을 확인해 주세요."} primaryAction={entries.length ? <Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button> : undefined} testId={`${id}-empty-state`} /> : null}
+          {status === "ready" && !groups.size ? <EmrEmptyState surface="queue" size="sm" density="compact" kind={!entries.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"} title={!entries.length ? "기록된 이력이 없습니다" : search.searchQuery.trim() ? "검색 결과가 없습니다" : "조건에 맞는 이력이 없습니다"} description={!entries.length ? "환자의 이력이 등록되면 표시됩니다." : "검색어와 필터 조건을 확인해 주세요."} primaryAction={entries.length && activeCount ? <Button size="sm" variant="outline" onClick={resetFilters}>필터 해제</Button> : undefined} testId={`${id}-empty-state`} /> : null}
           {status === "ready" ? [...groups].map(([date, items]) => <EmrContentHistoryGroup key={date} collapsed={collapsedGroups.has(date)} count={items.length} dataTestId={`${id}-group-${date}`} label={date === "날짜 미상" ? date : formatShortOperatingDate(date)} onToggle={() => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(date)) next.delete(date); else next.add(date); return next; })}>
             {items.map((entry) => <HistoryCard key={entry.id} entry={entry} />)}
           </EmrContentHistoryGroup>) : null}

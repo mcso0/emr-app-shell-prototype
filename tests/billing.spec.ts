@@ -547,7 +547,7 @@ test("billing history search, date drafts, sorting and hidden selections preserv
   const paid = aside.getByTestId("billing-ledger-row-invoice-coco-history-paid-260414");
   await paid.getByRole("checkbox").check();
   await aside.getByRole("button", { name: "정렬: 최신순" }).click();
-  await page.getByRole("radio", { name: "오래된순" }).click();
+  await page.getByRole("menuitemradio", { name: "오래된순" }).click();
   await expect(aside.locator('[data-testid^="billing-ledger-row-"]').first()).toHaveAttribute("data-testid", "billing-ledger-row-invoice-coco-history-voided-260315");
   await aside.getByRole("button", { name: "검색", exact: true }).click();
   const search = aside.getByRole("searchbox", { name: "수납 이력 검색" });
@@ -569,12 +569,13 @@ test("billing history search, date drafts, sorting and hidden selections preserv
   await expect(aside.locator('[data-testid^="billing-ledger-row-"]')).toHaveCount(1);
   await expect(aside.getByTestId("billing-ledger-row-invoice-coco-history-unpaid-260429")).toBeVisible();
   await aside.getByRole("button", { name: "직접", exact: true }).click();
-  await dialog.getByRole("button", { name: "조건 초기화" }).click();
+  await dialog.getByRole("button", { name: "초기화", exact: true }).click();
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(aside.locator('[data-testid^="billing-ledger-row-"]')).toHaveCount(1);
   await aside.getByRole("button", { name: "조건 해제", exact: true }).click();
   await expect(paid.getByRole("checkbox")).toBeChecked();
   await expect(page.getByText("수납 합산 121,500원").first()).toBeVisible();
+  await aside.getByRole("button", { name: "검색", exact: true }).click();
   await search.fill("코코");
   await page.getByTestId("billing-queue-item-invoice-dubu-260501").click();
   await expect(aside.getByRole("searchbox")).toHaveCount(0);

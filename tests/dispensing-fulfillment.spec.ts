@@ -85,13 +85,13 @@ test("combined patient history search, dates and staff filters keep category nav
   await dialog.getByRole("button", { name: "적용" }).click();
   await expect(cards.first()).toBeVisible();
   await aside.getByRole("button", { name: "필터", exact: true }).click();
-  await dialog.getByRole("button", { name: "조건 초기화" }).click();
+  await dialog.getByRole("button", { name: "초기화", exact: true }).click();
   await dialog.getByLabel("시작일").fill("2026-05-01");
   await dialog.getByLabel("종료일").fill("2026-05-01");
   await dialog.getByRole("button", { name: "적용" }).click();
   await expect(cards.first()).toBeVisible();
   await expect(aside.locator('[data-testid^="dispensing-content-aside-group-"]')).toHaveCount(1);
-  await aside.getByRole("button", { name: "조건 해제", exact: true }).last().click();
+  await aside.getByRole("button", { name: "날짜 조건 해제", exact: true }).click();
   await expect(cards).toHaveCount(total);
 });
 
