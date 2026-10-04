@@ -259,7 +259,7 @@ export function LiveNotificationDelivery({
     <div
       ref={toastStackRef}
       aria-label="새 알림"
-      className="fixed right-4 bottom-4 z-40 grid gap-2"
+      className="fixed right-4 top-[var(--emr-toast-offset-top)] z-40 grid gap-2"
     >
       {stack.visible.map((notification) => (
         <NotificationToastCard

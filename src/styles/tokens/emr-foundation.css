@@ -194,6 +194,13 @@
   --emr-rightpanel-footer-compact-height: 53px;
   --emr-rightpanel-footer-single-height: 65px;
   --emr-rightpanel-footer-stacked-height: 105px;
+  --emr-toast-offset-top: calc(
+    var(--emr-topbar-control-size) +
+    var(--emr-main-content-header-height-default) +
+    var(--emr-rightpanel-header-height) +
+    var(--clair-spacing-32) +
+    env(safe-area-inset-top, 0px)
+  );
 
   /* Chart / Plan Order amount detail */
   --emr-chart-order-amount-detail-width: 360px;
