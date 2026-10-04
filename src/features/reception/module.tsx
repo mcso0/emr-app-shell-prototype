@@ -194,14 +194,16 @@ import type {
   ReceptionPatientGuardianLookupResponse,
 } from "@/features/reception/patient-guardian-lookup";
 import type {
-  ReceptionCalendarReadRecord,
   ReceptionCalendarReadResponse,
 } from "@/features/reception/reception-calendar-read";
 import type {
-  ReceptionQueueReadRecord,
   ReceptionQueueReadResponse,
 } from "@/features/reception/reception-queue-read";
 import type { ReceptionSnapshotReadResponse } from "@/features/reception/reception-snapshot-read";
+import {
+  refreshReceptionReads as refreshReceptionReadCoordinator,
+  type ReceptionRefreshResult,
+} from "@/features/reception/reception-read-coordinator";
 import type {
   ReceptionEncounterCancelResponse,
 } from "@/features/reception/encounter-cancel";
@@ -1128,57 +1130,6 @@ function ReceptionPatientLookupStateMessage({
   );
 }
 
-type ReceptionReadbackProfileRecord =
-  | ReceptionCalendarReadRecord
-  | ReceptionQueueReadRecord;
-
-const getReceptionReadbackRecords = ({
-  calendarResult,
-  queueResult,
-}: {
-  calendarResult: ReceptionCalendarReadResponse;
-  queueResult: ReceptionQueueReadResponse;
-}): ReceptionReadbackProfileRecord[] => [
-  ...(calendarResult.ok ? calendarResult.records : []),
-  ...(queueResult.ok ? queueResult.queue : []),
-];
-
-const getReadbackPatientIds = (records: ReceptionReadbackProfileRecord[]) =>
-  Array.from(
-    new Set(
-      records
-        .map((record) => {
-          if (record.patient?.id) return record.patient.id;
-          if ("encounter" in record && record.encounter) {
-            return record.encounter.patientId;
-          }
-          if ("appointment" in record && record.appointment) {
-            return record.appointment.patientId;
-          }
-
-          return undefined;
-        })
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-
-const getEmbeddedReadbackLookupItems = (
-  records: ReceptionReadbackProfileRecord[],
-): ReceptionPatientGuardianLookupItem[] =>
-  records
-    .map((record) =>
-      record.patient
-        ? {
-            patient: record.patient,
-            ...(record.primaryGuardian
-              ? { primaryGuardian: record.primaryGuardian }
-              : {}),
-          }
-        : null,
-    )
-    .filter(
-      (item): item is ReceptionPatientGuardianLookupItem => Boolean(item),
-    );
 
 async function submitWalkInEncounter({
   actorRole,
@@ -1484,10 +1435,6 @@ async function loadReceptionCalendar({
   }
 }
 
-type ReceptionRefreshResult = {
-  ok: boolean;
-  stale?: boolean;
-};
 
 async function loadReceptionSnapshot({
   actorId,
@@ -7260,126 +7207,28 @@ export function ReceptionContent() {
     selectedPatientId,
   ]);
   const refreshReceptionReads = useCallback(
-    ({ showLoading = false }: { showLoading?: boolean } = {}) => {
-      const refreshKey = `${workspaceId}\u0000${operatingDate}`;
-      const inFlight = receptionReadInFlightRef.current;
-      if (inFlight?.key === refreshKey) return inFlight.promise;
-
-      const requestSeq = receptionReadRequestSeqRef.current + 1;
-      receptionReadRequestSeqRef.current = requestSeq;
-      const isLatestRequest = () => receptionReadRequestSeqRef.current === requestSeq;
-
-      const refreshPromise = (async (): Promise<ReceptionRefreshResult> => {
-        if (showLoading) {
-          setReceptionCalendarReadStatus("loading");
-          setReceptionQueueReadStatus("loading");
-        }
-
-        const { calendarResult, queueResult } =
-          liveStaffSourceEnabled && shouldUseSupabaseAuth()
-            ? await loadReceptionSnapshot({
-                actorId: authSession?.id,
-                date: operatingDate,
-                workspaceId,
-              })
-            : await Promise.all([
-                loadReceptionCalendar({
-                  actorId: authSession?.id,
-                  date: operatingDate,
-                  workspaceId,
-                }),
-                loadReceptionQueue({
-                  actorId: authSession?.id,
-                  date: operatingDate,
-                  workspaceId,
-                }),
-              ]).then(([calendarResult, queueResult]) => ({
-                calendarResult,
-                queueResult,
-              }));
-
-        if (!isLatestRequest()) {
-          return { ok: false, stale: true };
-        }
-
-        const readbackRecords = getReceptionReadbackRecords({
-          calendarResult,
-          queueResult,
-        });
-        const embeddedLookupItems = getEmbeddedReadbackLookupItems(readbackRecords);
-
-        embeddedLookupItems.forEach(applyPatientGuardianLookupItem);
-
-        const currentPatients = usePatientProfileStore.getState().patients;
-        const knownPatientIds = new Set([
-          ...currentPatients.map((patient) => patient.id),
-          ...embeddedLookupItems.map((item) => item.patient.id),
-        ]);
-        const missingReadbackPatientIds = getReadbackPatientIds(
-          readbackRecords,
-        ).filter((patientId) => !knownPatientIds.has(patientId));
-
-        if (liveStaffSourceEnabled && missingReadbackPatientIds.length > 0) {
-          const profileResult = await loadReceptionPatientGuardianProfiles({
-            actorId: authSession?.id,
-            workspaceId,
-          });
-
-          if (!isLatestRequest()) {
-            return { ok: false, stale: true };
-          }
-
-          if (profileResult.ok) {
-            const missingPatientIds = new Set(missingReadbackPatientIds);
-            profileResult.patients
-              .filter((item) => missingPatientIds.has(item.patient.id))
-              .forEach(applyPatientGuardianLookupItem);
-          }
-        }
-
-        if (!calendarResult.ok) {
-          setReceptionCalendarReadStatus(
-            "error",
-            getReceptionReadFailureMessage(calendarResult, workspaceId),
-          );
-        } else {
-          applyPersistedReceptionCalendar(calendarResult.records);
-          if (calendarResult.operatingSchedule) {
-            setOperatingSchedule(calendarResult.operatingSchedule);
-          }
-        }
-
-        if (!queueResult.ok) {
-          setReceptionQueueReadStatus(
-            "error",
-            getReceptionReadFailureMessage(queueResult, workspaceId),
-          );
-        } else {
-          applyPersistedReceptionQueue(queueResult.queue, queueResult.summary);
-        }
-
-        return { ok: calendarResult.ok && queueResult.ok };
-      })();
-
-      receptionReadInFlightRef.current = {
-        key: refreshKey,
-        promise: refreshPromise,
-      };
-      void refreshPromise.then(
-        () => {
-          if (receptionReadInFlightRef.current?.promise === refreshPromise) {
-            receptionReadInFlightRef.current = null;
-          }
-        },
-        () => {
-          if (receptionReadInFlightRef.current?.promise === refreshPromise) {
-            receptionReadInFlightRef.current = null;
-          }
-        },
-      );
-
-      return refreshPromise;
-    },
+    ({ showLoading = false }: { showLoading?: boolean } = {}) =>
+      refreshReceptionReadCoordinator({
+        applyPatientGuardianLookupItem,
+        applyPersistedReceptionCalendar,
+        applyPersistedReceptionQueue,
+        actorId: authSession?.id,
+        getPatients: () => usePatientProfileStore.getState().patients,
+        getReceptionReadFailureMessage,
+        liveStaffSourceEnabled,
+        loadReceptionCalendar,
+        loadReceptionPatientGuardianProfiles,
+        loadReceptionQueue,
+        loadReceptionSnapshot,
+        operatingDate,
+        receptionReadInFlightRef,
+        receptionReadRequestSeqRef,
+        setOperatingSchedule,
+        setReceptionCalendarReadStatus,
+        setReceptionQueueReadStatus,
+        shouldUseSupabaseAuth,
+        workspaceId,
+      }, { showLoading }),
     [
       applyPatientGuardianLookupItem,
       applyPersistedReceptionCalendar,
