@@ -330,7 +330,12 @@ export const TodayEmpty: Story = {
 };
 export const TodayLoading: Story = {
   render: () => <Specimen defaultTab="info" model={{ ...patientModel, todayItems: [], todayState: { status: "loading" } }} />,
-  play: async ({ canvas }) => { await expect(canvas.getByText("오늘 접수/예약을 불러오는 중입니다")).toBeVisible(); await expect(canvas.getByText("환자명", { exact: true })).toBeVisible(); },
+  play: async ({ canvas }) => {
+    const message = canvas.getByText("오늘 접수/예약을 불러오는 중입니다");
+    await expect(message).toBeVisible();
+    await expect(message.querySelector('svg[aria-hidden="true"]')).toBeVisible();
+    await expect(canvas.getByText("환자명", { exact: true })).toBeVisible();
+  },
 };
 export const TodayDenied: Story = {
   render: () => <Specimen defaultTab="info" model={{ ...guardianModel, todayItems: [], todayState: { status: "denied" } }} />,
