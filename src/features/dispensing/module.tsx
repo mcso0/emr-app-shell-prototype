@@ -67,7 +67,7 @@ import {
   usePatientFulfillmentHistory,
   type PatientHistoryEntry,
 } from "@/features/fulfillment/patient-history-aside";
-import type { FulfillmentEligibleAssignee } from "@/features/fulfillment/server-fulfillment-assignee-core";
+import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
 import type {
   FulfillmentWorkItemAction,
   FulfillmentWorkItemStatus,
@@ -221,27 +221,6 @@ type DispensingContentBodyProps = Pick<
   selectedDate: string;
   selectedQueueItem: OrderQueueItem | null;
 };
-
-async function loadFulfillmentEligibleAssigneesRoute({
-  workItemId,
-  workspaceId,
-}: {
-  workItemId: string;
-  workspaceId: string;
-}): Promise<FulfillmentEligibleAssignee[]> {
-  const response = await fetch(
-    `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/assignees`,
-    { headers: { "x-clair-demo-session-user-id": "user-tech" } },
-  );
-  const body = (await response.json()) as {
-    assignees?: FulfillmentEligibleAssignee[];
-    ok?: boolean;
-  };
-  if (!response.ok || !body.ok || !Array.isArray(body.assignees)) {
-    throw new Error("eligible_assignees_unavailable");
-  }
-  return body.assignees;
-}
 
 export function DispensingSlotAvailabilityProvider({
   children,
