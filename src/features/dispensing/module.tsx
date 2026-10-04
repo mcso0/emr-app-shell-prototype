@@ -1631,7 +1631,7 @@ function GroupStatusAction({
               />
             }
           >
-            <ChevronDownIcon />
+            <ChevronDownIcon className={size === "sm" ? "size-3" : undefined} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-36">
             <DropdownMenuItem
@@ -2140,6 +2140,7 @@ function DispensingContentBody({
             }
             actions={
               <>
+                <WorkspaceDocumentWidthToggle />
                 {hasRightPanel && instructionType === "처치" ? (
                   <Button
                     variant="outline"
@@ -2187,7 +2188,6 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
-                <WorkspaceDocumentWidthToggle />
                 <EmrInstructionOutputMenu />
               </>
             }

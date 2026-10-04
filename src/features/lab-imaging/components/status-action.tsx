@@ -79,7 +79,7 @@ export function LabImagingStatusAction<TStatus extends string>({
               />
             }
           >
-            <ChevronDownIcon />
+            <ChevronDownIcon className="size-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-36">
             <DropdownMenuItem className="h-8 cursor-pointer" onClick={onComplete}>

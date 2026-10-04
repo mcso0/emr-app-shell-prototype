@@ -3745,6 +3745,7 @@ export function LabContent({
             }
             actions={
               <>
+                <WorkspaceDocumentWidthToggle />
                 <Button
                   type="button"
                   variant="outline"
@@ -3792,7 +3793,6 @@ export function LabContent({
                     onCancelAssignment={cancelAssignment}
                   />
                 )}
-                <WorkspaceDocumentWidthToggle />
                 <EmrInstructionOutputMenu />
               </>
             }
@@ -4559,6 +4559,17 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
     );
   }
 
+  const summaryAction = (
+    <Button variant="outline" size="sm" className="bg-card" disabled={!hasRightPanel}
+      aria-label={(documentLayout?.rightVisible ?? rightPanelOpen) ? "종합소견 패널 접기" : "종합소견 패널 열기"}
+      aria-controls={documentLayout?.rightControlsId ?? "imaging-summary-panel"}
+      aria-expanded={documentLayout?.rightVisible ?? rightPanelOpen} aria-pressed={documentLayout?.rightVisible ?? rightPanelOpen}
+      data-state={(documentLayout?.rightVisible ?? rightPanelOpen) ? "on" : "off"}
+      onClick={documentLayout?.toggleRight ?? (() => setRightPanelOpen(!rightPanelOpen))}>
+      종합소견 <Badge variant="secondary" className="ml-1">{detail.attachments.length}</Badge>
+    </Button>
+  );
+
   const titleBar = (
     <EmrInstructionTitleBar
             className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
@@ -4583,6 +4594,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
             }
             actions={
               <>
+                <WorkspaceDocumentWidthToggle showWhenUnavailable />
                 <Button variant="outline" size="sm" className="bg-card">
                   PACS
                 </Button>
@@ -4598,30 +4610,26 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                     onTransition={transitionFulfillment}
                     startPhase="interpretation_in_progress"
                     status={fulfillmentWorkItem.status}
-                  />
+                  >
+                    {summaryAction}
+                  </FulfillmentExecutionActions>
                 ) : (
-                  <LabImagingStatusAction
-                    activeLabel="판독중"
-                    activeStatus="reading"
-                    completeLabel="판독완료"
-                    completedStatus="completed"
-                    menuAriaLabel="판독 상태 액션"
-                    requestedStatus="requested"
-                    status={assignment.status}
-                    onStart={startAssignment}
-                    onComplete={completeAssignment}
-                    onCancelAssignment={cancelAssignment}
-                  />
+                  <>
+                    {summaryAction}
+                    <LabImagingStatusAction
+                      activeLabel="판독중"
+                      activeStatus="reading"
+                      completeLabel="판독완료"
+                      completedStatus="completed"
+                      menuAriaLabel="판독 상태 액션"
+                      requestedStatus="requested"
+                      status={assignment.status}
+                      onStart={startAssignment}
+                      onComplete={completeAssignment}
+                      onCancelAssignment={cancelAssignment}
+                    />
+                  </>
                 )}
-                <WorkspaceDocumentWidthToggle showWhenUnavailable />
-                <Button variant="outline" size="sm" className="bg-card" disabled={!hasRightPanel}
-                  aria-label={(documentLayout?.rightVisible ?? rightPanelOpen) ? "종합소견 패널 접기" : "종합소견 패널 열기"}
-                  aria-controls={documentLayout?.rightControlsId ?? "imaging-summary-panel"}
-                  aria-expanded={documentLayout?.rightVisible ?? rightPanelOpen} aria-pressed={documentLayout?.rightVisible ?? rightPanelOpen}
-                  data-state={(documentLayout?.rightVisible ?? rightPanelOpen) ? "on" : "off"}
-                  onClick={documentLayout?.toggleRight ?? (() => setRightPanelOpen(!rightPanelOpen))}>
-                  종합소견 <Badge variant="secondary" className="ml-1">{detail.attachments.length}</Badge>
-                </Button>
                 <EmrInstructionOutputMenu />
               </>
             }
