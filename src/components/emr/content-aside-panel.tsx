@@ -58,7 +58,7 @@ export function EmrContentAsideHeader({
 
   const header = (
     <EmrListHeader
-      className={cn("mx-0 h-6 border-y-0", className)}
+      className={cn("mx-0 h-[var(--clair-layout-panel-header)] border-y-0", className)}
       count={count}
       label={label}
       headerActions={

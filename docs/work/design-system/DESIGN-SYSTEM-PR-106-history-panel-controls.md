@@ -168,8 +168,9 @@ artifacts. The initial request covered local implementation and verification.
 - Keep one always-visible filled circle X: populated input clears the pending
   and effective query and keeps the input focused; empty input closes search
   and restores trigger focus. Non-composing Escape still cancels and closes.
-- Keep chart 진료일/작성일 tabs visible and operable during search. The approved
-  compact chart frame uses a 28px first row plus the existing 24px `xs` tabs.
+- Keep chart 진료일/작성일 tabs visible and operable during search. The initial
+  implementation incorrectly shrank the chart frame to 28px and used 24px `xs`
+  tabs. The fixed-48px correction below supersedes those dimensions.
   PatientHistoryAside keeps its existing 48px frame and 16px panel inset.
 - Remove chart and patient-history applied-condition chips. Indicate applied
   conditions with a decorative 6px sky/500 dot at the filter button's upper
@@ -190,8 +191,8 @@ Local verification completed:
   boundary checks, then the updated four-route geometry check). Covers billing
   selections, chart read-only/loading/error/empty state and searchable date-mode
   tabs, lab/imaging selected history, combined category navigation, dates and
-  search matching. The previous all-48px geometry assertion was updated to the
-  approved chart 28px row + 24px tabs; measure inside the aside to exclude shell
+  search matching. The previous all-48px geometry assertion was incorrectly
+  changed to chart 28px row + 24px tabs; measure inside the aside to exclude shell
   entrance motion and overall panel height. Header frame and list-start metrics
   remain equal before opening search, while open and after closing it.
 - Shared stories: **5/5 passed** (four history-control stories and the existing
@@ -223,3 +224,49 @@ Production evidence in the local release packet. Verify `/login` and the scoped
 history controls when an authenticated synthetic session is available. If no
 such session is available, report that limit separately from HTTP/build proof.
 Stop on failed gates, unexpected source/deployment, secrets or scope expansion.
+
+## Fixed 48px history headers — 2026-10-05
+
+승욱 corrected the prior release: every history-sidepanel header is fixed at
+48px, including chart, lab, imaging, combined dispensing/treatment and billing.
+He requested per-screen verification, then commit, push, PR and origin/main merge
+only after those checks pass. The initial chart shrink was an implementation
+error, not a user-approved change in the header size.
+
+- Use the existing `--clair-layout-panel-header` (48px) in
+  `EmrContentAsideHeader`; its previous 24px default also made billing too short.
+- Remove chart's 28px override and restore its original date-basis `sm` tabs
+  and `py-2` spacing. The separate date-basis toolbar is 44px; it is not part of
+  the 48px header and remains visible/operable during search.
+- Keep the approved search input at 28px inside the 48px header frame. Keep
+  keyword copy, two-stage X, filter indicator, sort checks and focus contracts.
+- Production callers: ChartHistoryAside; PatientHistoryAside for lab, imaging
+  and combined dispensing/treatment; BillingHistoryAside. No other production
+  callers of EmrContentAsideHeader exist in the inspected source.
+- Preserve API/DB/auth, selections, permissions, financial behavior, unrelated
+  primary-checkout work and standalone HTML. No new dependency or token.
+- Update the existing geometry check to cover all five routes and require 48px
+  before, during and after search. Verify original chart date-basis spacing and
+  unchanged list start while searching; save each route's search screenshot.
+
+Verification completed in the isolated `codex/history-header-height-restore`
+checkout from `origin/main` (`5e41e333`):
+
+| Route / history kind | Before search | During search | After search |
+| --- | --- | --- | --- |
+| treatment / chart | 48px | 48px | 48px |
+| lab | 48px | 48px | 48px |
+| imaging | 48px | 48px | 48px |
+| dispensing / dispensing and treatment | 48px | 48px | 48px |
+| billing | 48px | 48px | 48px |
+
+The per-route geometry check passed (8.0s), together with six focused state
+checks and five shared stories. Search input stays 28px; panel width stays
+280px. Clinical insets stay 16px and billing's existing inset stays 12px.
+The first expanded geometry run assumed billing also had a 16px inset; its
+48px header already passed. Correcting that test-only assumption preserved the
+billing layout. The final five-route check passes without product changes.
+Screenshots are in `output/playwright/history-header-height-restore/`.
+
+Exact candidate, local release gates, Preview, Release Check, merge and
+Production evidence are recorded in that directory's release packet once fixed.
