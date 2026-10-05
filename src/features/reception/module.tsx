@@ -1,5 +1,11 @@
 "use client";
 
+import { getReceptionDemoActorId } from "@/features/reception/reception-demo-actor";
+import {
+  submitReceptionEncounterCancel,
+  submitReceptionEncounterRestore,
+  submitReceptionAppointmentRestore,
+} from "@/features/reception/reception-lifecycle-client";
 import { parsePatientVitalDraft, getPatientVitalFieldWarnings, type PatientVitalField } from "@/features/patient-vitals/patient-vital-validation";
 
 import {
@@ -620,12 +626,7 @@ const dispatchReceptionCalendarDragClear = () => {
   window.dispatchEvent(new Event(receptionCalendarDragClearEvent));
 };
 
-function getReceptionDemoActorId(role?: string) {
-  if (role === "hospital_admin" || role === "billing_admin")
-    return "user-admin";
-  if (role === "vet") return "user-vet";
-  return "user-front-desk";
-}
+
 
 function getMockReceptionStaffRoles(
   role: (typeof mockStaffUsers)[number]["role"],
@@ -1237,103 +1238,11 @@ async function submitAppointmentCheckIn({
   }
 }
 
-async function submitReceptionEncounterCancel({
-  actorRole,
-  encounterId,
-  workspaceId,
-}: {
-  actorRole?: string;
-  encounterId: string;
-  workspaceId: string;
-}): Promise<ReceptionEncounterCancelResponse> {
-  try {
-    const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/encounters/${encodeURIComponent(encounterId)}/cancel`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
-        },
-        body: JSON.stringify({ cancelReason: "접수 화면에서 취소" }),
-      },
-    );
-    const body = (await response.json()) as ReceptionEncounterCancelResponse;
 
-    if (!response.ok || !body.ok) {
-      if (!body.ok) return { ...body, status: response.status };
-      return { ok: false, status: response.status, error: "db_write_failed" };
-    }
 
-    return body;
-  } catch {
-    return { ok: false, status: 500, error: "db_write_failed" };
-  }
-}
 
-async function submitReceptionEncounterRestore({
-  actorRole,
-  encounterId,
-  workspaceId,
-}: {
-  actorRole?: string;
-  encounterId: string;
-  workspaceId: string;
-}): Promise<ReceptionEncounterRestoreResponse> {
-  try {
-    const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/encounters/${encodeURIComponent(encounterId)}/restore`,
-      {
-        method: "POST",
-        headers: {
-          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
-        },
-      },
-    );
-    const body = (await response.json()) as ReceptionEncounterRestoreResponse;
 
-    if (!response.ok || !body.ok) {
-      if (!body.ok) return { ...body, status: response.status };
-      return { ok: false, status: response.status, error: "db_write_failed" };
-    }
 
-    return body;
-  } catch {
-    return { ok: false, status: 500, error: "db_write_failed" };
-  }
-}
-
-async function submitReceptionAppointmentRestore({
-  actorRole,
-  appointmentId,
-  workspaceId,
-}: {
-  actorRole?: string;
-  appointmentId: string;
-  workspaceId: string;
-}): Promise<ReceptionAppointmentRestoreResponse> {
-  try {
-    const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/appointments/${encodeURIComponent(appointmentId)}/restore`,
-      {
-        method: "POST",
-        headers: {
-          "x-clair-demo-session-user-id": getReceptionDemoActorId(actorRole),
-        },
-      },
-    );
-    const body = (await response.json()) as ReceptionAppointmentRestoreResponse;
-
-    if (!response.ok || !body.ok) {
-      if (!body.ok) return { ...body, status: response.status };
-      return { ok: false, status: response.status, error: "db_write_failed" };
-    }
-
-    return body;
-  } catch {
-    return { ok: false, status: 500, error: "db_write_failed" };
-  }
-}
 
 async function submitReceptionEncounterUpdate({
   actorRole,
