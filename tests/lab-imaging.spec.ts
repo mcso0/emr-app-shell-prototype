@@ -785,11 +785,13 @@ test("imaging history aside keeps title count separate from evenly spaced action
   }
 });
 
-test("clinical history panels keep the approved header frames and card spacing", async ({ page }, testInfo) => {
+test("all history panels keep fixed 48px headers before during and after search", async ({ page }, testInfo) => {
+  const verifiedHeaders: Array<{ screen: string; heights: Array<number | undefined> }> = [];
   const panels = [
     ["treatment", "chart-content-aside"],
     ["lab", "lab-content-aside"],
     ["imaging", "imaging-content-aside"],
+    ["billing", "billing-content-aside"],
     ["dispensing", "dispensing-content-aside"],
   ] as const;
 
@@ -807,9 +809,9 @@ test("clinical history panels keep the approved header frames and card spacing",
       };
     });
     // Surface width includes the inline/drawer border; content fits inside it.
-    expect(metrics).toEqual({ headerHeight: moduleId === "treatment" ? 28 : 48, paddingLeft: "16px", width: 280 });
+    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: moduleId === "billing" ? "12px" : "16px", width: 280 });
     if (moduleId === "treatment") {
-      await expect(aside.getByTestId("chart-history-date-mode-toolbar")).toHaveCSS("height", "24px");
+      await expect(aside.getByTestId("chart-history-date-mode-toolbar")).toHaveCSS("height", "44px");
     }
     await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
     // Compare inside the aside; overall panel height and entrance motion are outside this contract.
@@ -821,20 +823,22 @@ test("clinical history panels keep the approved header frames and card spacing",
       });
     });
     const beforeSearch = await readSearchFrame();
+    expect(beforeSearch[0].height).toBe(48);
     await aside.getByRole("button", { name: "검색", exact: true }).click();
     await expect(aside.getByRole("searchbox")).toHaveCSS("height", "28px");
-    expect(await readSearchFrame()).toEqual(beforeSearch);
+    const duringSearch = await readSearchFrame();
+    expect(duringSearch).toEqual(beforeSearch);
     await expect(aside.getByRole("button", { name: "필터", exact: true })).toHaveCount(0);
     if (moduleId === "treatment") {
       await expect(aside.getByRole("button", { name: "작성일 기준", exact: true })).toBeVisible();
     }
-    if (moduleId === "treatment" || moduleId === "lab") {
-      const screenshot = `output/playwright/history-header-search/${moduleId}-search.png`;
-      await page.screenshot({ path: screenshot });
-      await testInfo.attach(`${moduleId}-search`, { path: screenshot, contentType: "image/png" });
-    }
+    const screenshot = `output/playwright/history-header-height-restore/${moduleId}-search.png`;
+    await page.screenshot({ path: screenshot });
+    await testInfo.attach(`${moduleId}-search`, { path: screenshot, contentType: "image/png" });
     await aside.getByRole("button", { name: "검색 닫기", exact: true }).click();
-    expect(await readSearchFrame()).toEqual(beforeSearch);
+    const afterSearch = await readSearchFrame();
+    expect(afterSearch).toEqual(beforeSearch);
+    verifiedHeaders.push({ screen: moduleId, heights: [beforeSearch[0].height, duringSearch[0].height, afterSearch[0].height] });
     expect((await page.locator('[data-workspace-panel="left"]').boundingBox())!.width).toBe(280);
     await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
   }
@@ -842,6 +846,8 @@ test("clinical history panels keep the approved header frames and card spacing",
   await expect(page.locator("#dispensing-content-aside").getByRole("group", {
     name: "조제/처치 이력 종류",
   })).toBeVisible();
+  console.info("Verified history headers:", JSON.stringify(verifiedHeaders));
+  await testInfo.attach("fixed-header-heights", { body: JSON.stringify(verifiedHeaders, null, 2), contentType: "application/json" });
 });
 
 test("Cheongdam imaging workspace renders live fulfillment rows without legacy study fixtures", async ({

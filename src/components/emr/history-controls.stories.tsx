@@ -48,6 +48,7 @@ export const Controls: Story = {
     await expect(canvas.getAllByRole("listitem")[0]).toHaveTextContent("이수지");
     const frame = canvasElement.querySelector('[data-slot="content-aside-search-header"]')!;
     const height = frame.getBoundingClientRect().height;
+    expect(height).toBe(48);
     const listTop = canvas.getByRole("list").getBoundingClientRect().top;
     await userEvent.click(canvas.getByRole("button", { name: "검색" }));
     await expect(canvas.getAllByRole("button", { name: "검색 닫기" })).toHaveLength(1);

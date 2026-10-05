@@ -2385,7 +2385,7 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
       <EmrContentAsideHeader
         count={visibleHistoryRows.length}
         label="차트 이력"
-        className={`${historyStyles.header} h-[var(--clair-control-height-sm)]!`}
+        className={historyStyles.header}
         search={search.open ? <EmrHistorySearch search={search} onQueryChange={() => setCollapsedHistoryGroups(new Set())} label="차트 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
         collapseAriaLabel="차트 이력 목록 접기"
         onCollapse={() => setContentAsideOpen(false)}
@@ -2411,13 +2411,13 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
       {displayedHistoryRows.some((row) => row.chart?.id === selectedChartId) && !visibleHistoryRows.some((row) => row.chart?.id === selectedChartId) ?
         <EmrInlineAlert severity="info" title="선택한 차트가 조건에 가려져 있습니다" action={<Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button>}>선택한 차트는 계속 열려 있습니다.</EmrInlineAlert> : null}
       <div
-        className="flex shrink-0 items-center px-1"
+        className="flex shrink-0 items-center px-1 py-2"
         data-testid="chart-history-date-mode-toolbar"
       >
         <SegmentedControl
           aria-label="차트 이력 표시 기준"
           items={chartHistoryDateModeItems}
-          size="xs"
+          size="sm"
           value={historyDateMode}
           variant="tabs"
           onValueChange={setHistoryDateMode}
