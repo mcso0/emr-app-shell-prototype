@@ -2154,7 +2154,6 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
   const [draftFilters, setDraftFilters] = useState(emptyChartHistoryFilters);
   const [filterOpen, setFilterOpen] = useState(false);
   const resetFilters = () => { setFilters(emptyChartHistoryFilters); setCollapsedHistoryGroups(new Set()); };
-  const resetConditions = () => { search.clear(); resetFilters(); };
   const { hydrated, session, hydrate } = useAuthClient();
   useEffect(() => { hydrate(); }, [hydrate]);
   const personalProfile = useCurrentPersonalProfile({ hydrated, session });
@@ -2408,8 +2407,6 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       <span className="sr-only" role="status" aria-live="polite">결과 {visibleHistoryRows.length} / 전체 {historyCount}건</span>
-      {displayedHistoryRows.some((row) => row.chart?.id === selectedChartId) && !visibleHistoryRows.some((row) => row.chart?.id === selectedChartId) ?
-        <EmrInlineAlert severity="info" title="선택한 차트가 조건에 가려져 있습니다" action={<Button size="sm" variant="outline" onClick={resetConditions}>조건 해제</Button>}>선택한 차트는 계속 열려 있습니다.</EmrInlineAlert> : null}
       <div
         className="flex shrink-0 items-center px-1 py-2"
         data-testid="chart-history-date-mode-toolbar"

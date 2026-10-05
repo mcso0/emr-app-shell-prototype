@@ -670,7 +670,7 @@ for (const kind of ["lab", "imaging"] as const) {
     await expect(aside.getByRole("button", { name: "정렬: 오래된순" })).toHaveCount(0);
     await search.fill("없는 검사");
     await expect(aside.getByTestId(`${kind}-content-aside-empty-state`)).toContainText("검색 결과가 없습니다");
-    await expect(aside.getByText("선택한 이력이 조건에 가려져 있습니다")).toBeVisible();
+    await expect(aside.getByText("선택한 이력이 조건에 가려져 있습니다")).toHaveCount(0);
     expect(page.url()).toBe(initialUrl);
     await search.press("Escape");
     await expect(cards).toHaveCount(total);
@@ -785,7 +785,7 @@ test("imaging history aside keeps title count separate from evenly spaced action
   }
 });
 
-test("all history panels keep fixed 48px headers before during and after search", async ({ page }, testInfo) => {
+test("all history panels search live during composition without selection notices and keep 48px headers", async ({ page }, testInfo) => {
   const verifiedHeaders: Array<{ screen: string; heights: Array<number | undefined> }> = [];
   const panels = [
     ["treatment", "chart-content-aside"],
@@ -832,7 +832,25 @@ test("all history panels keep fixed 48px headers before during and after search"
     if (moduleId === "treatment") {
       await expect(aside.getByRole("button", { name: "작성일 기준", exact: true })).toBeVisible();
     }
-    const screenshot = `output/playwright/history-header-height-restore/${moduleId}-search.png`;
+    const rows = aside.locator(moduleId === "treatment" ? '[data-testid^="chart-history-item-"]' : moduleId === "billing" ? '[data-testid^="billing-ledger-row-"]' : '[data-testid^="patient-history-item-"]');
+    const initialCount = await rows.count();
+    expect(initialCount).toBeGreaterThan(0);
+    const search = aside.getByRole("searchbox");
+    await search.fill("NO_MATCH_HISTORY_20261005");
+    await expect(rows).toHaveCount(0);
+    await search.fill("");
+    await expect(rows).toHaveCount(initialCount);
+    // Keep IME composition open: results must update without Enter, blur, or compositionend.
+    await search.dispatchEvent("compositionstart");
+    await search.fill("없는 이력 키워드");
+    await expect(rows).toHaveCount(0);
+    await expect(aside.getByText(/선택한 (차트|이력)이?가? 조건에 가려져 있습니다/)).toHaveCount(0);
+    expect(await readSearchFrame()).toEqual(beforeSearch);
+    await search.dispatchEvent("compositionend");
+    await aside.getByRole("button", { name: "검색어 초기화", exact: true }).click();
+    await expect(search).toHaveValue("");
+    await expect(rows).toHaveCount(initialCount);
+    const screenshot = `output/playwright/history-search-live-results/${moduleId}-search.png`;
     await page.screenshot({ path: screenshot });
     await testInfo.attach(`${moduleId}-search`, { path: screenshot, contentType: "image/png" });
     await aside.getByRole("button", { name: "검색 닫기", exact: true }).click();
