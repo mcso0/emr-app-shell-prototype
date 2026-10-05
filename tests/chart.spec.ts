@@ -4975,9 +4975,10 @@ test("chart detail loading centers the md empty state and disables chart actions
   await expect(emptyState).toBeVisible();
   await expect(emptyState.locator("[data-slot='icon-wrapper']")).toHaveCount(0);
   await expect(emptyState).toContainText("등록된 오더가 없습니다");
-  await expect(emptyState).toContainText(
+  await expect(emptyState).not.toContainText(
     "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요.",
   );
+  await expect(emptyState.locator("p")).toHaveCount(0);
   await expect(
     emptyState.getByRole("button", { name: "+ Order" }),
   ).toBeVisible();

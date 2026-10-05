@@ -9663,7 +9663,7 @@ function ChartOrderTable({
               description={
                 hasAnyRows
                   ? "분류나 필터를 바꾸면 오더가 다시 보입니다."
-                  : "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요."
+                  : undefined
               }
               icon={hasAnyRows ? undefined : false}
               kind={hasAnyRows ? "no-filter-results" : "no-data"}
