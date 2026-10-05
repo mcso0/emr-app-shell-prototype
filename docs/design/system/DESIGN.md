@@ -80,6 +80,20 @@ CLAiR keeps the generated Clair token output as the base layer and adds a small 
 
 Generated files such as `src/styles/tokens/clair.css` should not be edited by hand.
 
+### Operation-result toasts
+
+Operation-result Sonner toasts use the application's light palette and sit
+16px from the viewport top and left on desktop and mobile. Their position is
+independent of shell headers and the separately owned live-notification stack.
+Keep the existing maximum of three visible operation toasts.
+
+The 24px close button is transparent at rest, uses `--emr-state-hover` (black
+4%) on hover, and `--emr-state-selected` (black 6%) while pressed. This quiet
+dismiss command has no persistent selection; the 6% press is a scoped exception
+to the general 8% active token. Preserve its accessible label, keyboard
+dismissal, and visible focus ring. Scope these styles to the toaster and make
+them independent of Sonner's runtime stylesheet insertion order.
+
 ## Color
 
 CLAiR uses a bright clinical surface ladder:
