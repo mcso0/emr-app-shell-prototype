@@ -597,7 +597,6 @@ export function AssessmentClassificationSearchDialog({
               size="md"
               priority="supporting"
               title="선택된 진단명이 없습니다"
-              description="탐색 영역에서 진단명을 선택해 주세요."
               className={styles.emptyState}
             />
           )}
