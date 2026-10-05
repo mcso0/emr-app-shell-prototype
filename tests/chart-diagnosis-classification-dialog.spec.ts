@@ -172,6 +172,9 @@ test("classification dialog explores, reviews, and commits catalog diagnoses", a
     dialog.getByText("선택된 진단명이 없습니다", { exact: true }),
   );
   await expect(
+    dialog.getByText("탐색 영역에서 진단명을 선택해 주세요.", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
     dialog
       .getByText("선택된 진단명이 없습니다", { exact: true })
       .locator("xpath=ancestor::section[1]"),

@@ -9446,6 +9446,45 @@ test("chart order catalog preloads and reopens without another read", async ({ p
   expect(catalogReads).toBe(1);
 });
 
+test("chart order selection empty state keeps its title without guidance", async ({ page }) => {
+  await page.route(
+    "**/api/workspaces/clair-demo/hospital-admin/order-catalog?mode=chart-search",
+    async (route) => {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { ok: true, rows: [], status: 200 },
+        status: 200,
+      });
+    },
+  );
+  await page.setViewportSize({ width: 1303, height: 870 });
+  await page.goto(kongScenarioUrl);
+  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+
+  const dialog = page.getByRole("dialog", { name: "오더 추가" });
+  const selectedColumn = dialog.getByRole("region", { name: "선택한 오더", exact: true });
+  const title = selectedColumn.getByRole("heading", { name: "선택한 오더가 없습니다", exact: true });
+  await expect(title).toBeVisible();
+  await expect(
+    selectedColumn.getByText("오더 목록에서 추가할 항목을 선택해 주세요.", { exact: true }),
+  ).toHaveCount(0);
+  const offsets = await title.evaluate((element) => {
+    const root = element.closest<HTMLElement>("[data-kind]");
+    const viewport = root?.closest<HTMLElement>("[data-slot='scroll-area-viewport']");
+    if (!root || !viewport) throw new Error("empty-state viewport is missing");
+    const rects = Array.from(root.children).map((child) => child.getBoundingClientRect());
+    const bounds = viewport.getBoundingClientRect();
+    return {
+      x: (Math.min(...rects.map((rect) => rect.left)) + Math.max(...rects.map((rect) => rect.right))) / 2 - (bounds.left + bounds.right) / 2,
+      y: (Math.min(...rects.map((rect) => rect.top)) + Math.max(...rects.map((rect) => rect.bottom))) / 2 - (bounds.top + bounds.bottom) / 2,
+    };
+  });
+  expect(Math.abs(offsets.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(offsets.y)).toBeLessThanOrEqual(1);
+  await dialog.getByRole("button", { name: "오더 추가 닫기" }).click();
+  await expect(dialog).toBeHidden();
+});
+
 test("chart catalog dialog searches 108 service-review dispensing candidates at target scale", async ({
   page,
 }) => {
