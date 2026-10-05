@@ -1,4 +1,6 @@
-.toaster :global([data-sonner-toast][data-styled="true"] [data-close-button]) {
+/* Include the toaster attribute so Sonner's later-injected state rules cannot
+   override this app's close-button presentation at equal specificity. */
+.toaster:global([data-sonner-toaster]) :global([data-sonner-toast][data-styled="true"] [data-close-button]) {
   top: 12px;
   right: 12px;
   left: auto;
@@ -11,6 +13,14 @@
   color: var(--emr-text-secondary);
 }
 
-.toaster :global([data-sonner-toast][data-styled="true"] [data-close-button]:hover) {
+.toaster:global([data-sonner-toaster]) :global([data-sonner-toast][data-styled="true"] [data-close-button]:hover) {
   background: var(--emr-state-hover);
+}
+
+.toaster:global([data-sonner-toaster]) :global([data-sonner-toast][data-styled="true"] [data-close-button]:active) {
+  background: var(--emr-state-selected);
+}
+
+.toaster:global([data-sonner-toaster]) :global([data-sonner-toast][data-styled="true"] [data-close-button]:focus-visible) {
+  box-shadow: 0 0 0 2px var(--emr-state-focus-ring);
 }

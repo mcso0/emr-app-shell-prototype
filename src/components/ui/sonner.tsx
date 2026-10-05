@@ -1,6 +1,5 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 import styles from "./sonner.module.css"
 import {
@@ -12,11 +11,10 @@ import {
 } from "@/components/icons"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
-
+  // Match the app's light surfaces independently of the operating system.
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme="light"
       className={`toaster group ${styles.toaster}`}
       icons={{
         success: (
