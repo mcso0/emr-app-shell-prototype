@@ -3062,7 +3062,7 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await asideSearch.fill("슬개골 이수지");
   await expect(oldHistoryItem).toBeVisible();
   await expect(currentHistoryItem).toHaveCount(0);
-  await expect(aside.getByText("선택한 차트가 조건에 가려져 있습니다")).toBeVisible();
+  await expect(aside.getByText("선택한 차트가 조건에 가려져 있습니다")).toHaveCount(0);
   await asideSearch.fill("없는 진단");
   await expect(aside.getByTestId("chart-history-empty-state")).toContainText("검색 결과가 없습니다");
   await expect(historyDateMode.getByRole("button", { name: "진료일 기준" })).toBeVisible();
@@ -3097,7 +3097,10 @@ test("live patient chart history shows every chart by created_at and keeps past 
   await historyFilter.getByRole("button", { name: "초기화", exact: true }).click();
   await historyFilter.getByRole("button", { name: "취소", exact: true }).click();
   await expect(currentHistoryItem).toHaveCount(0);
-  await aside.getByRole("button", { name: "조건 해제", exact: true }).click();
+  await expect(aside.getByText("선택한 차트가 조건에 가려져 있습니다")).toHaveCount(0);
+  await aside.getByRole("button", { name: "필터", exact: true }).click();
+  await historyFilter.getByRole("button", { name: "초기화", exact: true }).click();
+  await historyFilter.getByRole("button", { name: "적용", exact: true }).click();
   await expect(currentHistoryItem).toBeVisible();
   await aside.getByRole("button", { name: "정렬: 오래된순" }).click();
   await page.getByRole("menuitemradio", { name: "최신순" }).click();

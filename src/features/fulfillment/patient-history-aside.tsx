@@ -191,7 +191,6 @@ export function PatientHistoryAside({
     filters.names.length ? `검사명 ${filters.names.join(", ")}` : "",
     filters.modalities.length ? `검사 분류 ${filters.modalities.join(", ")}` : "",
   ].filter(Boolean).join(" · ");
-  const hiddenSelection = entries.some((entry) => entry.selected && !visibleEntries.some((visible) => visible.id === entry.id));
   const searchLabel = kind === "lab" ? "검사 이력 검색" : kind === "imaging" ? "영상 이력 검색" : "조제/처치 이력 검색";
   const filterTitle = kind === "lab" ? "검사 이력 필터" : kind === "imaging" ? "영상 이력 필터" : "조제/처치 이력 필터";
 
@@ -211,7 +210,6 @@ export function PatientHistoryAside({
       />
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       {status === "ready" ? <p role="status" aria-live="polite" className="sr-only">결과 {visibleEntries.length} / 전체 {entries.length}건</p> : null}
-      {status === "ready" && hiddenSelection ? <EmrInlineAlert severity="info" title="선택한 이력이 조건에 가려져 있습니다">선택한 기록은 계속 열려 있습니다.</EmrInlineAlert> : null}
       {showCategories ? <div className={styles.tabs}><SegmentedControl aria-label="조제/처치 이력 종류" items={[{ label: "전체", value: "all" }, { label: "조제", value: "dispensing" }, { label: "처치", value: "treatment" }]} size="sm" value={category} variant="tabs" onValueChange={(value) => { setCategory(value); setCollapsedGroups(new Set()); }} /></div> : null}
       <ScrollArea className={styles.scrollArea} viewportClassName="scroll-fade-y scroll-fade-8">
         <div className={styles.groups}>

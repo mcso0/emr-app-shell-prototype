@@ -270,3 +270,66 @@ Screenshots are in `output/playwright/history-header-height-restore/`.
 
 Exact candidate, local release gates, Preview, Release Check, merge and
 Production evidence are recorded in that directory's release packet once fixed.
+
+
+## Approved live search and quiet selection — 2026-10-05
+
+승욱 reported that search results appeared stale while typing and requested
+shared live results plus removal of the blue selected-history notice. He then
+explicitly authorized implementation and, after those conditions pass,
+commit/push/PR/origin-main merge. Reuse this work item and the existing isolated
+checkout; preserve the dirty primary checkout and prototype/evidence files.
+Source branch: `codex/history-search-live-results`, based on inspected
+`origin/main` `b83addbd718f321737246d1526e2dace6b987ded`.
+
+### Cause and final contract
+
+This supersedes the earlier 250ms/composition-result contract for history search.
+
+- `useHistorySearch` maintained input and effective-query state separately,
+  delaying updates 250ms and stopping them while IME composition was active.
+  New live-input and composition regressions both reproduced the stale count
+  (2 records remained when the current input matched 1).
+- The current input now drives the existing client-side history matcher in the
+  same update. Remove the debounce timer and composition-result gate for all
+  five routes: chart, lab, imaging, combined 조제/처치, and billing. No Enter,
+  focus loss, or composition-end event is needed to update results.
+- Keep the existing normalized, case-insensitive, multiword matching and each
+  module's fields/date/status/category filters. This change does not add new
+  server search, pagination, matching fields, or initial-consonant matching.
+- Remove the blue `선택한 차트가 조건에 가려져 있습니다` and shared patient-history
+  `선택한 이력이 조건에 가려져 있습니다` notices, including their now-unused
+  derived state/reset callback. Search/filter changes still preserve selected
+  record, URL, open clinical detail, historical read-only state and permissions.
+- Keep billing's checkout selection/hidden-selection and financial feedback.
+  Keep loading/error/permission/empty feedback, accessible result counts,
+  filters, sort, category/date tabs, 48px headers, and 28px inputs.
+- Keep one filled X: populated input clears and keeps focus; empty input closes
+  search and restores trigger focus. Escape during active IME composition does
+  not close search; ordinary Escape still closes it.
+- No API/DB/auth/data/financial/dependency/shared-token change.
+
+### Verification and delivery
+
+- Before the product fix: both new live-input/IME regressions failed with the
+  old result count, confirming the shared behavior.
+- After the product fix: shared browser stories passed 6/6, including live
+  typing/deletion/paste, active composition, X/Escape, and fixed header geometry.
+- Expanded route verification checks active-composition search and absence of
+  the blue selected-history notice on all five routes, and keeps the existing
+  selection/date/filter/billing/48px regressions.
+- Focused screen/helper verification passed 10/10 across two runs: 9 checks
+  initially passed, then the chart read-only/selection check passed after its
+  removed notice-button interaction was updated to the existing filter
+  reset/apply flow. The initial failure was a stale test expectation, not a
+  failed search or header assertion.
+- Secrets, docs, UX copy, full lint, TypeScript, production build and diff checks
+  passed. Existing warnings remain: six lint warnings (one local prototype,
+  five existing scripts), Storybook React act, and `/docs` tracing.
+- Visual evidence: `output/playwright/history-search-live-results/`. The five
+  route DOM checks retain 48/48/48px and the original padding/width. Fixtures
+  are synthetic; no production clinical or financial data was changed.
+- Full repository suite was not run. Exact-head Release Check, Ready Preview,
+  protected main merge and scoped authenticated chart smoke follow under the
+  user's conditional delivery authorization. Human Review retains user
+  acceptance; it does not stop that authorized delivery work.

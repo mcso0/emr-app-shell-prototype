@@ -16,19 +16,8 @@ import { getHistoryDateRangeError, type HistoryDateRange, type HistorySortDirect
 export function useHistorySearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [composing, setComposing] = useState(false);
-  const timerRef = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    if (!open || composing) return;
-    timerRef.current = window.setTimeout(() => setSearchQuery(query), 250);
-    return () => window.clearTimeout(timerRef.current);
-  }, [composing, open, query]);
-  const clear = () => {
-    window.clearTimeout(timerRef.current);
-    setQuery(""); setSearchQuery(""); setComposing(false);
-  };
-  return { open, setOpen, query, setQuery, searchQuery, setComposing, clear };
+  const clear = () => setQuery("");
+  return { open, setOpen, query, setQuery, searchQuery: query, clear };
 }
 
 export function EmrHistorySortButton({ direction, onChange, dateLabel }: {
@@ -75,8 +64,6 @@ export function EmrHistorySearch({ search, label, onClose, onQueryChange }: {
     <div className="relative w-full min-w-0 shrink-0">
       <Input ref={inputRef} type="search" className="h-[var(--clair-control-height-sm)] pr-8 [&::-webkit-search-cancel-button]:hidden" aria-label={label} placeholder="키워드 입력" value={search.query}
         onChange={(event) => { search.setQuery(event.target.value); onQueryChange?.(); }}
-        onCompositionStart={() => search.setComposing(true)}
-        onCompositionEnd={() => search.setComposing(false)}
         onKeyDown={(event) => {
           if (event.key !== "Escape" || event.nativeEvent.isComposing) return;
           event.preventDefault();

@@ -92,6 +92,22 @@ export const Controls: Story = {
   },
 };
 
+export const LiveSearch: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "검색" }));
+    const input = canvas.getByRole("searchbox");
+    await userEvent.type(input, "이");
+    await expect(canvas.getByRole("status")).toHaveTextContent("결과 1건");
+    await userEvent.type(input, "수지 없는 이름");
+    await expect(canvas.getByRole("status")).toHaveTextContent("결과 0건");
+    await userEvent.clear(input);
+    await expect(canvas.getByRole("status")).toHaveTextContent("결과 2건");
+    fireEvent.change(input, { target: { value: "김도윤 초진" } });
+    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("결과 1건"), { timeout: 200 });
+  },
+};
+
 export const ComposingSearch: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -100,11 +116,12 @@ export const ComposingSearch: Story = {
     fireEvent.compositionStart(input);
     fireEvent.change(input, { target: { value: "이수지" } });
     fireEvent.keyDown(input, { key: "Escape", isComposing: true });
-    await new Promise((resolve) => setTimeout(resolve, 300));
     await expect(input).toBeInTheDocument();
-    await expect(canvas.getByRole("status")).toHaveTextContent("결과 2건");
+    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("결과 1건"), { timeout: 200 });
+    fireEvent.change(input, { target: { value: "없는 이름" } });
+    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("결과 0건"), { timeout: 200 });
     fireEvent.compositionEnd(input);
-    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("결과 1건"));
+    await expect(canvas.getByRole("status")).toHaveTextContent("결과 0건");
     await userEvent.click(canvas.getByRole("button", { name: "검색어 초기화" }));
     await expect(input).toHaveValue("");
     await expect(input).toHaveFocus();
