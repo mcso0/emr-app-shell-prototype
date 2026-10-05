@@ -9663,7 +9663,7 @@ function ChartOrderTable({
               description={
                 hasAnyRows
                   ? "분류나 필터를 바꾸면 오더가 다시 보입니다."
-                  : "+ Order에서 현재 차트에 필요한 오더를 추가해 주세요."
+                  : undefined
               }
               icon={hasAnyRows ? undefined : false}
               kind={hasAnyRows ? "no-filter-results" : "no-data"}
@@ -11469,7 +11469,6 @@ function ChartOrderCatalogDialog({
               size="md"
               priority="supporting"
               title="선택한 오더가 없습니다"
-              description="오더 목록에서 추가할 항목을 선택해 주세요."
               className={orderCatalogDialogStyles.emptyState}
             />
           )}
