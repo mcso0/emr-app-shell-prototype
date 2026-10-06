@@ -45,7 +45,7 @@ export function comparePatientQueueRows(a: PatientQueueRow, b: PatientQueueRow, 
   const urgent = Number(b.priority === "urgent") - Number(a.priority === "urgent");
   const status = statusRank(a) - statusRank(b);
   const ordering = sort === "assignee"
-    ? (a.card.assigneeName ?? "zzzz").localeCompare(b.card.assigneeName ?? "zzzz", "ko")
+    ? (a.card.assigneeName ?? a.assignedToUserId ?? "zzzz").localeCompare(b.card.assigneeName ?? b.assignedToUserId ?? "zzzz", "ko")
     : sort === "wait" ? (b.waitMinutes ?? 0) - (a.waitMinutes ?? 0)
     : queueTimestamp(a.requestedAt) - queueTimestamp(b.requestedAt);
   return urgent || status || ordering || a.id.localeCompare(b.id);

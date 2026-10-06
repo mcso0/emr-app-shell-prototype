@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
+import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID as fixtureWorkspace } from "../src/lib/emr-domain/demo-workspaces";
 
 const startRoute = "/w/clair-demo/reception?modulePanel=closed&right=closed&date=2026-05-01";
 const rail = (page: Page) => page.getByRole("navigation", { name: "워크스페이스 주요 메뉴" });
@@ -102,14 +104,18 @@ test("top expand pins the current page even when a different preview is shown", 
 test("existing right header pins without remounting search or changing geometry", async ({ page }) => {
   await enter(page);
   await hover(page);
-  const button = shown(page, "reception").getByRole("button", { name: "사이드 패널 펼치기", exact: true });
-  const header = shown(page, "reception").getByRole("button", { name: /사이드 패널 (펼치기|접기)/ }).locator("..");
+  const button = shown(page, "reception").getByRole("button", { name: "사이드 패널 고정", exact: true });
+  const header = shown(page, "reception").getByRole("button", { name: /사이드 패널 (고정|접기)/ }).locator("..");
   const before = await header.boundingBox();
   const buttonBox = await button.boundingBox();
   expect(before?.height).toBe(56);
   expect(buttonBox?.width).toBe(24);
   expect(buttonBox?.height).toBe(24);
   expect(Math.round(before!.x + before!.width - buttonBox!.x - buttonBox!.width)).toBe(16);
+  const floatingIcon = await button.locator("svg").evaluate(icon => ({ width: getComputedStyle(icon).width, height: getComputedStyle(icon).height, color: getComputedStyle(icon).color, rotate: getComputedStyle(icon).rotate }));
+  expect(floatingIcon.width).toBe("16px");
+  expect(floatingIcon.height).toBe("16px");
+  expect(floatingIcon.rotate).toBe("-20deg");
   const headerNode = await header.elementHandle();
   await shown(page, "reception").getByRole("button", { name: "검색", exact: true }).click();
   const input = shown(page, "reception").getByRole("searchbox", { name: "대기열 검색", exact: true });
@@ -124,6 +130,8 @@ test("existing right header pins without remounting search or changing geometry"
   await expect(input).toHaveValue("하루");
   expect(await input.evaluate((node, old) => node === old, inputNode)).toBe(true);
   expect(await header.evaluate((node, old) => node === old, headerNode)).toBe(true);
+  const dockedIcon = await shown(page, "reception").getByRole("button", { name: "사이드 패널 접기", exact: true }).locator("svg").evaluate(icon => ({ width: getComputedStyle(icon).width, height: getComputedStyle(icon).height, color: getComputedStyle(icon).color, rotate: getComputedStyle(icon).rotate }));
+  expect(dockedIcon).toEqual({ ...floatingIcon, rotate: "none" });
   const after = await header.boundingBox();
   expect(after?.width).toBe(before?.width);
   expect(after?.height).toBe(before?.height);
@@ -135,7 +143,7 @@ test("existing right header pins without remounting search or changing geometry"
 test("foreign preview header explicitly navigates and pins its module", async ({ page }) => {
   await enter(page);
   await hover(page, "고객관리", "customer");
-  await shown(page, "customer").getByRole("button", { name: "사이드 패널 펼치기", exact: true }).click();
+  await shown(page, "customer").getByRole("button", { name: "사이드 패널 고정", exact: true }).click();
   await expect(page).toHaveURL(/\/customer\?.*modulePanel=open/);
   await expect(host(page)).toHaveAttribute("data-panel-mode", "docked");
   await expect(shown(page, "customer")).toBeVisible();
@@ -146,7 +154,7 @@ test("ArrowRight opens without navigation; Escape returns focus and prevents reo
   const initialUrl = page.url();
   await menu(page, "고객관리").press("ArrowRight");
   await expect(shown(page, "customer")).toBeVisible();
-  await expect(shown(page, "customer").getByRole("button", { name: "사이드 패널 펼치기", exact: true })).toBeFocused();
+  await expect(shown(page, "customer").getByRole("button", { name: "사이드 패널 고정", exact: true })).toBeFocused();
   expect(page.url()).toBe(initialUrl);
   await page.keyboard.press("Escape");
   await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
@@ -175,6 +183,7 @@ test("owned card menu survives pointer exit and receives Escape before preview",
 
 for (const action of ["filter choice", "group toggle"] as const) {
   test(`mouse button focus after ${action} cannot block switching or reopening previews`, async ({ page }) => {
+    await fixtureChartQueue(page);
     await enter(page, "/w/clair-demo/billing?modulePanel=closed&right=open&date=2026-05-01");
     await hover(page, "진료/차트", "treatment");
     const initialUrl = page.url();
@@ -182,7 +191,6 @@ for (const action of ["filter choice", "group toggle"] as const) {
       const filter = shown(page, "treatment").getByRole("button", { name: "대기열 필터", exact: true });
       await filter.click();
       await page.getByRole("menuitemradio", { name: "담당 미정", exact: true }).click();
-      await filter.click();
       await expect(page.locator('[data-slot="dropdown-menu-content"][data-module-side-panel-owner="module-side-panel-treatment"]')).not.toBeVisible();
       await expect(filter).toBeFocused();
     } else {
@@ -209,7 +217,7 @@ test("keyboard focus retains preview until deliberate mouse hover switches it", 
   await enter(page);
   const initialUrl = page.url();
   await menu(page, "고객관리").press("ArrowRight");
-  await expect(shown(page, "customer").getByRole("button", { name: "사이드 패널 펼치기", exact: true })).toBeFocused();
+  await expect(shown(page, "customer").getByRole("button", { name: "사이드 패널 고정", exact: true })).toBeFocused();
   await page.waitForTimeout(350);
   await expect(shown(page, "customer")).toBeVisible();
   await hover(page, "영상검사", "imaging");
@@ -313,7 +321,7 @@ test("canceling a duplicate tab pin leaves the current page closed", async ({ pa
   await enter(page, currentRoute);
   await expect(page.getByRole("tablist", { name: "열린 업무 탭" }).getByRole("tab")).toHaveCount(2);
   await hover(page, "고객관리", "customer");
-  await shown(page, "customer").getByRole("button", { name: "사이드 패널 펼치기", exact: true }).click();
+  await shown(page, "customer").getByRole("button", { name: "사이드 패널 고정", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "같은 업무가 이미 열려 있습니다" });
   await expect(dialog).toBeVisible();
   await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
@@ -382,7 +390,8 @@ test("reopening a cached preview uses the current operating date", async ({ page
   await hover(page);
   await shown(page, "reception").getByRole("button", { name: "26.05.02 (토) 선택", exact: true }).click();
   await expect(page).toHaveURL(/date=2026-05-02/);
-  await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+  await expect(shown(page, "reception")).toBeVisible();
   await outside(page);
   await hover(page, "진료/차트", "treatment");
   await expect.poll(() => dates.at(-1)).toBe("2026-05-02");
@@ -422,7 +431,7 @@ test("the existing patient grouping view survives floating-to-pin", async ({ pag
   const count = await group.count();
   const firstGroup = group.first();
   const node = await firstGroup.elementHandle();
-  await shown(page, "lab").getByRole("button", { name: "사이드 패널 펼치기", exact: true }).click();
+  await shown(page, "lab").getByRole("button", { name: "사이드 패널 고정", exact: true }).click();
   await expect(page).toHaveURL(/\/lab\?.*modulePanel=open/);
   await expect(host(page)).toHaveAttribute("data-panel-mode", "docked");
   await expect(group).toHaveCount(count);
@@ -439,7 +448,7 @@ test("reopening a foreign preview reads a fresh queue on the same date", async (
   await hover(page, "진료/차트", "treatment");
   await expect.poll(() => reads).toBeGreaterThan(0);
   const completedReads = reads;
-  const header = shown(page, "treatment").getByRole("button", { name: "사이드 패널 펼치기", exact: true });
+  const header = shown(page, "treatment").getByRole("button", { name: "사이드 패널 고정", exact: true });
   const node = await header.elementHandle();
   await outside(page);
   await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
@@ -479,4 +488,149 @@ test("reopening reception does not join an invalidated pending read", async ({ p
   await page.waitForTimeout(300);
   await expect(shown(page, "reception").getByText("서버 대기열을 불러오지 못했습니다", { exact: true })).toHaveCount(0);
   await expect(page).toHaveURL(/\/home\?.*modulePanel=closed/);
+});
+
+
+test("current date changes retain the floating panel", async ({ page }) => {
+  await enter(page);
+  await hover(page);
+  await shown(page, "reception").getByRole("button", { name: "26.05.02 (토) 선택", exact: true }).click();
+  await expect(page).toHaveURL(/date=2026-05-02/);
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+  await expect(shown(page, "reception")).toBeVisible();
+});
+
+test("foreign preview changes date without navigating the main page", async ({ page }) => {
+  const dates: string[] = [];
+  await page.route("**/chart/live-queue?*", async route => {
+    dates.push(new URL(route.request().url()).searchParams.get("date") ?? "");
+    await route.fulfill({ json: { ok: true, queue: [], status: 200 } });
+  });
+  await enter(page);
+  const initialUrl = page.url();
+  await hover(page, "진료/차트", "treatment");
+  await expect.poll(() => dates.at(-1)).toBe("2026-05-01");
+  await shown(page, "treatment").getByRole("button", { name: "다음 날짜", exact: true }).click();
+  await expect.poll(() => dates.at(-1)).toBe("2026-05-02");
+  expect(page.url()).toBe(initialUrl);
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+  await expect(shown(page, "treatment")).toContainText("26.05.02");
+});
+
+
+async function fixtureChartQueue(page: Page) {
+  await page.route("**/chart/live-queue?*", route => route.fulfill({ json: {
+    ok: true, status: 200, queue: [{
+      encounter: { id: "synthetic-sidebar-chart", workspaceId: "clair-demo", patientId: "synthetic-sidebar-patient", encounterNo: "E-SYNTHETIC", chiefComplaint: "합성 진료", status: "in_consultation", checkedInAt: "2026-05-01T01:00:00Z", startedAt: "2026-05-01T01:00:00Z", createdAt: "2026-05-01T01:00:00Z", updatedAt: "2026-05-01T01:00:00Z" },
+      patient: { id: "synthetic-sidebar-patient", workspaceId: "clair-demo", patientNo: "P-SYNTHETIC", name: "합성 환자", species: "dog", sex: "male", handlingCautionLocked: false, status: "active", createdAt: "2026-05-01T01:00:00Z", updatedAt: "2026-05-01T01:00:00Z" },
+      queueEntry: { id: "synthetic-sidebar-queue", workspaceId: "clair-demo", encounterId: "synthetic-sidebar-chart", queueType: "consultation", status: "in_progress", priority: "normal", sortOrder: 1, enteredAt: "2026-05-01T01:00:00Z" },
+    }],
+  } }));
+}
+const datePanels = [["임상병리검사", "lab"], ["영상검사", "imaging"], ["조제/처치", "dispensing"], ["수납", "billing"]] as const;
+for (const [name, id] of datePanels) {
+  for (const current of [false, true]) {
+    test(`${id} ${current ? "current" : "foreign"} date arrows keep the floating queue`, async ({ page }) => {
+      const dates: string[] = [];
+      await page.route(id === "billing" ? "**/billing/queue?*" : "**/fulfillment/work-items?*", async route => {
+        dates.push(new URL(route.request().url()).searchParams.get("date") ?? "");
+        await route.fulfill({ json: { ok: true, workItems: [], rows: [] } });
+      });
+      await enter(page, current ? `/w/clair-demo/${id}?modulePanel=closed&right=closed&date=2026-05-01` : startRoute);
+      const initialUrl = page.url();
+      await hover(page, name, id);
+      await shown(page, id).getByRole("button", { name: "다음 날짜", exact: true }).click();
+      await expect.poll(() => dates.at(-1)).toBe("2026-05-02");
+      await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+      await expect(shown(page, id)).toContainText("26.05.02");
+      if (current) await expect(page).toHaveURL(/date=2026-05-02/);
+      else expect(page.url()).toBe(initialUrl);
+      await shown(page, id).getByRole("button", { name: "이전 날짜", exact: true }).click();
+      await expect.poll(() => dates.at(-1)).toBe("2026-05-01");
+      await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+      if (!current) expect(page.url()).toBe(initialUrl);
+    });
+  }
+}
+test("foreign reception calendar changes only its preview date", async ({ page }) => {
+  const dates: string[] = [];
+  await page.route("**/reception/queue?*", async route => {
+    dates.push(new URL(route.request().url()).searchParams.get("date") ?? "");
+    await route.fulfill({ status: 403, json: { ok: false, status: 403, denialReason: "permission_missing" } });
+  });
+  await enter(page, "/w/clair-demo/customer?modulePanel=closed&date=2026-05-01");
+  const initialUrl = page.url();
+  await hover(page);
+  await shown(page, "reception").getByRole("button", { name: "26.05.02 (토) 선택", exact: true }).click();
+  await expect.poll(() => dates.at(-1)).toBe("2026-05-02");
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+  expect(page.url()).toBe(initialUrl);
+});
+for (const [name, id] of [["진료/차트", "treatment"], ...datePanels] as const) {
+  const api = id === "treatment" ? "**/chart/live-queue?*" : id === "billing" ? "**/billing/queue?*" : "**/fulfillment/work-items?*";
+  test(`${id} floating read failure retries within its selected date`, async ({ page }) => {
+    let failing = true;
+    const dates: string[] = [];
+    await page.route(api, async route => {
+      dates.push(new URL(route.request().url()).searchParams.get("date") ?? "");
+      await route.fulfill({ status: failing ? 500 : 200, json: failing ? { ok: false, status: 500, error: "fixture-failure" } : { ok: true, status: 200, queue: [], workItems: [], rows: [] } });
+    });
+    await grantFixtureWorkspace(page);
+    await enter(page, startRoute.replace("clair-demo", fixtureWorkspace));
+    const initialUrl = page.url();
+    await hover(page, name, id);
+    await expect(shown(page, id).getByText(/업무 대기열을 불러오지 못했습니다|수납 업무를 불러오지 못했습니다/)).toBeVisible();
+    await expect(shown(page, id).getByText(/업무가 없습니다/)).toHaveCount(0);
+    const before = dates.length;
+    failing = false;
+    await shown(page, id).getByRole("button", { name: "재시도", exact: true }).click();
+    await expect.poll(() => dates.length).toBeGreaterThan(before);
+    await expect(shown(page, id).getByText(/업무가 없습니다/).first()).toBeVisible();
+    await expect(shown(page, id).getByRole("button", { name: "재시도", exact: true })).toHaveCount(0);
+    await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+    expect(page.url()).toBe(initialUrl);
+  });
+  test(`${id} HTML permission denial is distinct from empty and has no retry`, async ({ page }) => {
+    await page.route(api, route => route.fulfill({ status: 403, contentType: "text/html", body: "<p>fixture denied</p>" }));
+    await enter(page);
+    await hover(page, name, id);
+    await expect(shown(page, id).getByText(/권한이 없습니다/)).toBeVisible();
+    await expect(shown(page, id).getByRole("button", { name: "재시도", exact: true })).toHaveCount(0);
+    await expect(shown(page, id).getByText(/업무가 없습니다/)).toHaveCount(0);
+  });
+}
+
+async function grantFixtureWorkspace(page: Page) {
+  await page.addInitScript(([key, id]) => {
+    localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: id, workspaces: [{ id, displayName: "합성 병원", subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session" }], memberships: [{ id: "synthetic-sidebar-membership", workspaceId: id, userSessionId: "playwright-default-session", roles: ["hospital_admin"], status: "active" }], invitations: [] }));
+  }, [SESSION_WORKSPACES_STORAGE_KEY, fixtureWorkspace]);
+  await page.route("**/api/workspaces", route => route.fulfill({ json: { ok: true, workspaces: [{ id: fixtureWorkspace, status: "active", displayName: "합성 병원", roles: ["hospital_admin"] }] } }));
+}
+
+test("floating date-picker portal closes after selection and reopening retains its date", async ({ page }) => {
+  const dates: string[] = [];
+  await page.route("**/fulfillment/work-items?*", route => {
+    dates.push(new URL(route.request().url()).searchParams.get("date")!);
+    return route.fulfill({ json: { ok: true, workItems: [] } });
+  });
+  await grantFixtureWorkspace(page);
+  await enter(page, startRoute.replace("clair-demo", fixtureWorkspace));
+  const initialUrl = page.url();
+  await hover(page, "임상병리검사", "lab");
+  await shown(page, "lab").getByRole("button", { name: /날짜 선택/ }).click();
+  const popup = page.locator('[data-slot="popover-content"][data-module-side-panel-owner="module-side-panel-lab"]');
+  await expect(popup).toBeVisible();
+  await popup.getByRole("button", { name: /26\.05\.02/ }).click();
+  await expect(popup).toBeHidden();
+  await expect.poll(() => dates.at(-1)).toBe("2026-05-02");
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "floating");
+  expect(page.url()).toBe(initialUrl);
+  await outside(page);
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
+  await hover(page, "임상병리검사", "lab");
+  await expect(shown(page, "lab")).toContainText("26.05.02");
+  await expect.poll(() => dates.at(-1)).toBe("2026-05-02");
+  await shown(page, "lab").getByRole("button", { name: "사이드 패널 고정", exact: true }).click();
+  await expect(page).toHaveURL(/\/lab\?.*date=2026-05-02/);
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "docked");
 });

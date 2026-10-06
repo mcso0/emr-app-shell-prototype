@@ -52,16 +52,18 @@ export function ShellMain({
   const modulePanelOpen = useLayoutStore((state) => state.modulePanelOpen);
   const activeDrawer = useLayoutStore((state) => state.activeDrawer);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
-  const routeKey = `${pathname}?${search}`;
+  // Query updates within a panel (especially its date) are not page exits.
+  const routeKey = pathname;
   const [preview, setPreview] = useState<{ moduleId: string; route: string } | null>(null);
   const [cachedSearch, setCachedSearch] = useState<Record<string, string>>(() =>
     modulePanelOpen && moduleDefinition.sidePanel ? { [moduleDefinition.id]: search } : {});
-  const [observedRoute, setObservedRoute] = useState({ routeKey, modulePanelOpen, activeDrawer });
-  if (observedRoute.routeKey !== routeKey || observedRoute.modulePanelOpen !== modulePanelOpen || observedRoute.activeDrawer !== activeDrawer) {
-    setObservedRoute({ routeKey, modulePanelOpen, activeDrawer });
-    setPreview(null);
+  const [observedRoute, setObservedRoute] = useState({ routeKey, search, modulePanelOpen, activeDrawer });
+  if (observedRoute.routeKey !== routeKey || observedRoute.search !== search || observedRoute.modulePanelOpen !== modulePanelOpen || observedRoute.activeDrawer !== activeDrawer) {
+    if (observedRoute.routeKey !== routeKey || observedRoute.modulePanelOpen !== modulePanelOpen || observedRoute.activeDrawer !== activeDrawer) setPreview(null);
+    setObservedRoute({ routeKey, search, modulePanelOpen, activeDrawer });
     setCachedSearch((cache) => moduleDefinition.sidePanel && (modulePanelOpen || cache[moduleDefinition.id] !== undefined) && cache[moduleDefinition.id] !== search ? { ...cache, [moduleDefinition.id]: search } : cache);
   }
+  const previewBaseSearch = useRef<Record<string, string>>({});
   const panelHost = useRef<HTMLDivElement>(null);
   const panelArea = useRef<HTMLDivElement>(null);
   const trigger = useRef<{ moduleId: string; element: HTMLElement } | null>(null);
@@ -130,7 +132,7 @@ export function ShellMain({
   const focusHeader = useCallback(() => {
     focusFrame.current = requestAnimationFrame(() => {
       const id = current.current.shownModuleId;
-      panelHost.current?.querySelector<HTMLButtonElement>(`[data-side-panel-module="${id}"] button[aria-label$="패널 펼치기"], [data-side-panel-module="${id}"] button[aria-label$="패널 접기"]`)?.focus({ preventScroll: true });
+      panelHost.current?.querySelector<HTMLButtonElement>(`[data-side-panel-module="${id}"] button[aria-label$="패널 고정"], [data-side-panel-module="${id}"] button[aria-label$="패널 접기"]`)?.focus({ preventScroll: true });
     });
   }, []);
   const openPreview = useCallback((moduleId: string, element: HTMLElement, keyboard = false) => {
@@ -139,8 +141,12 @@ export function ShellMain({
     cancelTimers();
     keyboardFocus.current = keyboard;
     lastTrigger.current = element;
-    const previewSearch = moduleId === moduleDefinition.id ? search : navigationSearch;
-    setCachedSearch((cache) => cache[moduleId] === previewSearch ? cache : { ...cache, [moduleId]: previewSearch });
+    const reuseSearch = previewBaseSearch.current[moduleId] === navigationSearch;
+    previewBaseSearch.current[moduleId] = navigationSearch;
+    setCachedSearch((cache) => {
+      const previewSearch = moduleId === moduleDefinition.id ? search : reuseSearch ? cache[moduleId] ?? navigationSearch : navigationSearch;
+      return cache[moduleId] === previewSearch ? cache : { ...cache, [moduleId]: previewSearch };
+    });
     setPreview({ moduleId, route: current.current.routeKey });
     if (keyboard) focusHeader();
   }, [blockedByDialog, cancelTimers, focusHeader, moduleDefinition.id, navigationSearch, search]);
@@ -199,7 +205,17 @@ export function ShellMain({
     focusHeader();
   };
   const navigateFromPanel = (href: string, moduleId: string) => {
+    closePreview();
     onNavigateModule(getSidePanelNavigationHref(href, useLayoutStore.getState().modulePanelOpen), moduleId);
+  };
+  const changePanelDate = (href: string, moduleId: string) => {
+    if (moduleId === moduleDefinition.id) {
+      onNavigateModule(getSidePanelNavigationHref(href, modulePanelOpen), moduleId);
+      return;
+    }
+    const url = new URL(href, "https://clair.invalid");
+    if (url.pathname !== `/w/${workspaceId}/${moduleId}`) return;
+    setCachedSearch(cache => ({ ...cache, [moduleId]: url.searchParams.toString() }));
   };
   const togglePanel = (moduleId: string) => {
     if (modulePanelOpen) {
@@ -224,7 +240,7 @@ export function ShellMain({
     panelInside.current = false;
     if (!modulePanelOpen && focusFrame.current !== undefined) cancelAnimationFrame(focusFrame.current);
     return cancelTimers;
-  }, [routeKey, moduleDefinition.id, moduleDefinition.sidePanel, modulePanelOpen, search, activeDrawer, cancelTimers]);
+  }, [routeKey, moduleDefinition.id, moduleDefinition.sidePanel, modulePanelOpen, activeDrawer, cancelTimers]);
 
   useLayoutEffect(() => {
     if (!sheet) return;
@@ -340,7 +356,7 @@ export function ShellMain({
             activeModuleId={moduleDefinition.id}
             navigationSearch={navigationSearch}
             workspaceId={workspaceId}
-            onNavigateModule={onNavigateModule}
+            onNavigateModule={navigateFromPanel}
             onExpandModulePanel={expandCurrentPanel}
             previewModuleId={floatingModuleId}
             previewEnabled={desktop}
@@ -377,7 +393,7 @@ export function ShellMain({
                   const SidePanel = definition.sidePanel!;
                   const shown = visible && definition.id === shownModuleId;
                   return (
-                    <ModuleSidePanelContext.Provider key={definition.id} value={{ moduleId: definition.id, ownerId: `module-side-panel-${definition.id}`, isCurrentModule: definition.id === moduleDefinition.id, visible: shown, floating: shown && floating, pathname: `/w/${workspaceId}/${definition.id}`, search: cachedSearch[definition.id] ?? navigationSearch, onToggle: () => togglePanel(definition.id), onNavigate: navigateFromPanel }}>
+                    <ModuleSidePanelContext.Provider key={definition.id} value={{ moduleId: definition.id, ownerId: `module-side-panel-${definition.id}`, isCurrentModule: definition.id === moduleDefinition.id, visible: shown, floating: shown && floating, pathname: `/w/${workspaceId}/${definition.id}`, search: cachedSearch[definition.id] ?? navigationSearch, onToggle: () => togglePanel(definition.id), onDateChange: href => changePanelDate(href, definition.id), onNavigate: navigateFromPanel }}>
                       <motion.div id={`module-side-panel-${definition.id}`} data-side-panel-module={definition.id} hidden={!shown} inert={!shown} aria-hidden={!shown} initial={false} animate={{ opacity: shown ? 1 : 0, x: shown ? 0 : -12 }} transition={modulePanelTransition} className="h-full min-h-0">
                         <SidePanel workspaceId={workspaceId} moduleId={definition.id} moduleLabel={definition.label} hasContentAside={Boolean(definition.contentAside)} hasRightPanel={Boolean(definition.rightPanel)} onNavigateWorkspaceSurface={navigateFromPanel} />
                       </motion.div>

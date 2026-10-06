@@ -1095,12 +1095,7 @@ export function DispensingSidePanel({
     setSelectedQueueItem("dispensing", itemId);
   }
   function handleSelectDate(date: string) {
-    selectDate(date);
-    setSelectedQueueItem("dispensing", "");
-    setSelectedQueueItem("treatment", "");
-    if (!onNavigateWorkspaceSurface) return;
-    onNavigateWorkspaceSurface(
-      buildWorkspaceSurfaceRoute({
+    const href = buildWorkspaceSurfaceRoute({
         moduleId: "dispensing",
         params: { date },
         removeParams: [
@@ -1114,9 +1109,14 @@ export function DispensingSidePanel({
         ],
         search: searchParams,
         workspaceId,
-      }),
-      "dispensing",
-    );
+      });
+    if (!panelPresentation || panelPresentation.isCurrentModule) {
+      selectDate(date);
+      setSelectedQueueItem("dispensing", "");
+      setSelectedQueueItem("treatment", "");
+    }
+    if (panelPresentation) panelPresentation.onDateChange(href);
+    else onNavigateWorkspaceSurface?.(href, "dispensing");
   }
 
   return (
@@ -1126,6 +1126,8 @@ export function DispensingSidePanel({
       patientGrouping={{ workspaceId, readable: fulfillmentQueue.status !== "permission_denied", ready: fulfillmentQueue.status === "ready" || fulfillmentQueue.status === "empty" }}
       items={items}
       loading={fulfillmentQueue.status === "loading"}
+      readStatus={fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied" ? fulfillmentQueue.status : undefined}
+      onRetry={() => { void fulfillmentQueue.refresh(); }}
       loadingTitle="조제/처치 업무를 불러오는 중입니다"
       listLabel="조제/처치 업무"
       statuses={statuses}

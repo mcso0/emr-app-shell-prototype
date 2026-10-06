@@ -3,6 +3,7 @@
 import { useState, type ComponentProps, type KeyboardEvent, type ReactNode } from "react";
 import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
 import {
+  CdsActionsPinIcon,
   CdsActionsSearchIcon,
   CdsActionsXIcon,
 } from "@/components/cds-icons/actions-and-controls";
@@ -202,11 +203,12 @@ export function EmrSubpanelTitle({
       {titleActions ? <div className="ml-2 flex shrink-0 items-center">{titleActions}</div> : null}
       {onCollapse ? (
         <EmrSubpanelHeaderIconButton
-          aria-label={panel?.floating ? "사이드 패널 펼치기" : collapseLabel}
+          aria-label={panel?.floating ? "사이드 패널 고정" : collapseLabel}
+          title={panel?.floating ? "사이드 패널 고정" : undefined}
           onClick={panel?.onToggle ?? onCollapse}
           className={cn((tabs || titleActions) && "ml-2")}
         >
-          <SidebarGnbIcon />
+          {panel?.floating ? <CdsActionsPinIcon aria-hidden="true" className="-rotate-20" /> : <SidebarGnbIcon />}
         </EmrSubpanelHeaderIconButton>
       ) : null}
     </div>
@@ -591,6 +593,7 @@ export function EmrQueueEmptyState({
   kind = "no-data",
   placement = "body-center",
   reserveActionSpace = true,
+  primaryAction,
   title,
   ...props
 }: {
@@ -602,6 +605,7 @@ export function EmrQueueEmptyState({
   kind?: EmrEmptyStateKind;
   placement?: EmrQueueStatePlacement;
   reserveActionSpace?: boolean;
+  primaryAction?: ReactNode;
   title?: ReactNode;
 } & ComponentProps<"div">) {
   const resolvedIcon = icon ? (
@@ -625,6 +629,7 @@ export function EmrQueueEmptyState({
         kind={kind}
         priority="supporting"
         reserveActionSpace={reserveActionSpace}
+        primaryAction={primaryAction}
         size="md"
         surface="queue"
         title={title ?? children}

@@ -31,12 +31,15 @@ Feature modules should reuse `EmrSubpanelTitle` and should not add local height 
 
 ## Floating presentation
 
-The collapsed rail preview reuses the same sidebar component and header. Preserve the title, existing right-side 24px control, SVG, padding and frame. Do not add a left control or move the existing control. In a preview, that control performs explicit expand/pin and uses the accessible label `사이드 패널 펼치기`; in a docked panel it keeps the existing collapse action. Rail menu activation navigates without pinning. The outer shell owns transient hover presentation and portal/focus boundaries.
+The collapsed rail preview reuses the same sidebar component and header. Preserve the title, existing right-side 24px control, 16px SVG size, neutral-400 color, padding and frame. Do not add a left control or move the existing control. Only while floating, use the shared pin icon rotated -20 degrees and the accessible label `사이드 패널 고정`. Clicking it explicitly docks the panel. The docked panel retains its existing sidebar SVG and collapse action. Rail menu activation navigates without pinning. The outer shell owns transient hover presentation and portal/focus boundaries.
 
 See [APP-SHELL-PR-003](../../work/app-shell/APP-SHELL-PR-003-sidebar-hover-preview.md) for the interaction rules and verification boundary.
 
+Date selection retains the floating panel and reads the selected date. Current-module date selection updates its existing route; a foreign preview changes only its scoped date. Other page navigation closes the preview. Single-choice filter/sort menus dismiss after selection and allow subsequent hover switching.
+
 ## Revision history
 
+- 2026-10-06: approved floating-only pin glyph; preserved button geometry and docked icon; retained floating date selection.
 - 2026-07-12: established the shared `52px` frame and horizontal-only inset contract.
 - 2026-07-14: updated the shared frame to `56px` for the follow-up module side-panel header request; the separate content-aside and right-drawer header contracts remain unchanged.
 - 2026-07-14: clarified that workspace right-panel headers use their own shared component and contract.

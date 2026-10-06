@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { ModuleSidePanelContext } from "./module-side-panel-context";
 
 import {
   CdsActionsFilterIcon,
@@ -128,5 +130,30 @@ export const CollapsedGroup: Story = {
           "사용할 때: 상태 그룹을 접어 queue를 빠르게 훑게 할 때. 쓰지 말아야 할 때: 핵심 경고나 validation 메시지를 숨길 때.",
       },
     },
+  },
+};
+
+function FloatingPinExample() {
+  const [floating, setFloating] = useState(true);
+  return <ModuleSidePanelContext.Provider value={{ moduleId: "synthetic", ownerId: "synthetic-owner", isCurrentModule: true, visible: true, floating, pathname: "/synthetic", search: "", onToggle: () => setFloating(value => !value), onDateChange: () => undefined, onNavigate: () => undefined }}>
+    <div className="h-[240px]"><EmrSubpanel><EmrSubpanelTitle title="합성 대기열" onCollapse={() => setFloating(false)} /><EmrSubpanelBody>기존 패널 내용</EmrSubpanelBody></EmrSubpanel></div>
+  </ModuleSidePanelContext.Provider>;
+}
+export const FloatingPin: Story = {
+  render: () => <FloatingPinExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const pin = canvas.getByRole("button", { name: "사이드 패널 고정" });
+    const before = pin.getBoundingClientRect();
+    const icon = pin.querySelector("svg")!;
+    await waitFor(() => expect(getComputedStyle(icon).rotate).toBe("-20deg"));
+    await expect(getComputedStyle(icon).width).toBe("16px");
+    const color = getComputedStyle(icon).color;
+    await userEvent.click(pin);
+    const collapse = canvas.getByRole("button", { name: "사이드 패널 접기" });
+    await expect(collapse.getBoundingClientRect()).toEqual(before);
+    await expect(getComputedStyle(collapse.querySelector("svg")!).color).toBe(color);
+    await expect(getComputedStyle(collapse.querySelector("svg")!).rotate).toBe("none");
+    await expect(canvas.getByText("기존 패널 내용")).toBeVisible();
   },
 };

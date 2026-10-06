@@ -12,6 +12,7 @@ export type ModuleSidePanelContextValue = {
   pathname: string;
   search: string;
   onToggle: () => void;
+  onDateChange: (href: string) => void;
   onNavigate: (href: string, moduleId: string) => void;
 };
 
@@ -52,6 +53,7 @@ export function useModuleSidePanelRouter() {
       },
       replace: (href: string, options?: Parameters<typeof router.replace>[1]) => {
         if (panel.isCurrentModule) router.replace(getSidePanelNavigationHref(href, false), options);
+        else if (new URL(href, "https://clair.invalid").pathname === panel.pathname) panel.onDateChange(href);
         else panel.onNavigate(href, destinationModule(href));
       },
     };
