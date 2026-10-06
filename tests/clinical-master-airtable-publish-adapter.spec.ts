@@ -268,6 +268,20 @@ test("supports an already-normalized snapshot without reintroducing authoring fi
   expect(result.payload.records[0]).not.toHaveProperty("sourceKey");
 });
 
+test("normalized adapter preserves explicit taxonomy clears without adding missing execution fields", () => {
+  const normalized = normalizeClinicalMasterAirtableAuthoringExport(makePilotFixture());
+  const order = normalized.records.find((record) => record.recordType === "order")!;
+  Object.assign(order.detail, { adminSubcategoryCode: null, labFamilyCode: null });
+  const result = adaptNormalizedClinicalMasterAirtableAuthoringExport(normalized);
+  const detail = result.payload.records.find((record) => record.masterKey === order.masterKey)!.detail;
+  expect(detail).toMatchObject({ adminSubcategoryCode: null, labFamilyCode: null });
+  expect(detail).not.toHaveProperty("executionPreset");
+  for (const legacy of result.payload.records.filter((record) => record.recordType === "order" && record.masterKey !== order.masterKey)) {
+    expect(legacy.detail).not.toHaveProperty("adminSubcategoryCode");
+    expect(legacy.detail).not.toHaveProperty("labFamilyCode");
+  }
+});
+
 test("preserves fallback identity keys and existing classification-path record relations", () => {
   const fixture = makePilotFixture();
   addRecord(fixture, "cm.route.chart-only", "task_route", "차트 기록", "Chart only", { routeCode: "NT_CHART_ONLY" });
