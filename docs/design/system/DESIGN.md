@@ -83,7 +83,7 @@ Generated files such as `src/styles/tokens/clair.css` should not be edited by ha
 ### Operation-result toasts
 
 Operation-result Sonner toasts use the application's light palette and sit
-16px from the viewport top and left on desktop and mobile. Their position is
+16px from the viewport top and right on desktop and mobile. Their position is
 independent of shell headers and the separately owned live-notification stack.
 Keep the existing maximum of three visible operation toasts.
 

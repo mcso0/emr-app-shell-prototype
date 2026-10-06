@@ -8042,6 +8042,39 @@ function ChartOrderTable({
     });
   }, [rows]);
   const [sortHold, setSortHold] = useState<{ ids: string[]; source: "inline" | "detail" } | null>(null);
+  const checkboxPointerCleanupRef = useRef<(() => void) | null>(null);
+  useEffect(() => () => checkboxPointerCleanupRef.current?.(), []);
+  const releaseInlineSortHold = () => {
+    checkboxPointerCleanupRef.current?.();
+    setSortHold(current => current?.source === "inline" ? null : current);
+  };
+  const holdCheckboxPointer = (pointerId: number) => {
+    checkboxPointerCleanupRef.current?.();
+    let frame: number | null = null;
+    const stopListening = () => {
+      window.removeEventListener("pointerup", finish, true);
+      window.removeEventListener("pointercancel", finish, true);
+      window.removeEventListener("blur", releaseInlineSortHold);
+    };
+    const finish = (event: globalThis.PointerEvent) => {
+      if (event.pointerId !== pointerId) return;
+      stopListening();
+      if (event.type === "pointercancel") {
+        releaseInlineSortHold();
+      } else {
+        // pointerup precedes click. Release after click, also if no click arrives.
+        frame = window.requestAnimationFrame(releaseInlineSortHold);
+      }
+    };
+    checkboxPointerCleanupRef.current = () => {
+      stopListening();
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      checkboxPointerCleanupRef.current = null;
+    };
+    window.addEventListener("pointerup", finish, true);
+    window.addEventListener("pointercancel", finish, true);
+    window.addEventListener("blur", releaseInlineSortHold);
+  };
   // Closing the detail editor commits the editing boundary before sorting again.
   if (sortHold?.source === "detail" && !detailOpen) setSortHold(null);
   const sortedRows = useMemo(() => sortChartOrderGroups(rows, (a, b) => {
@@ -9293,6 +9326,11 @@ function ChartOrderTable({
   return (
     <div
       data-slot="chart-order-table-surface"
+      onPointerDownCapture={(event) => {
+        if ((event.target as HTMLElement).closest('[role="checkbox"]')) {
+          holdCheckboxPointer(event.pointerId);
+        }
+      }}
       onFocusCapture={(event) => {
         const target = event.target as HTMLElement;
         if (target.matches('input:not([type="checkbox"]), textarea, select, [contenteditable="true"], [role="combobox"]')) {
@@ -9301,14 +9339,24 @@ function ChartOrderTable({
       }}
       onClickCapture={(event) => {
         // Let a clicked row action fire before releasing the edited row position.
-        if ((event.target as HTMLElement).closest('button:not([role="combobox"])')) {
-          setSortHold(current => current?.source === "inline" ? null : current);
+        if ((event.target as HTMLElement).closest('button:not([role="combobox"]), [role="checkbox"]')) {
+          releaseInlineSortHold();
+        }
+      }}
+      onKeyDownCapture={(event) => {
+        if ((event.target as HTMLElement).closest('[role="checkbox"]') &&
+          (event.key === "Tab" || event.key === "Escape")) {
+          releaseInlineSortHold();
         }
       }}
       onBlurCapture={(event) => {
         const next = event.relatedTarget as HTMLElement | null;
+        if ((event.target as HTMLElement).closest('[role="checkbox"]')) {
+          releaseInlineSortHold();
+          return;
+        }
         if (next?.closest('[role="listbox"], [role="dialog"], [data-slot="popover-content"]')) return;
-        if (next && event.currentTarget.contains(next) && next.closest('button')) return;
+        if (next && event.currentTarget.contains(next) && next.closest('button, [role="checkbox"]')) return;
         if (next && event.currentTarget.contains(next) && next.matches('input:not([type="checkbox"]), textarea, select, [contenteditable="true"], [role="combobox"]')) return;
         setSortHold(current => current?.source === "inline" ? null : current);
       }}

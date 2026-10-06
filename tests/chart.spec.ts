@@ -11355,9 +11355,10 @@ test("chart status presentation keeps edits in place until blur and hides unconf
   const table = page.getByRole("table", { name: "처방/오더 테이블" });
   const rows = table.locator('tbody tr[data-testid^="chart-order-row-"]');
   const ids = () => rows.evaluateAll(elements => elements.map(element => element.getAttribute("data-testid")));
-  const initialIds = await ids();
   const target = page.getByTestId("chart-order-row-status-draft-cbc");
   await expect(target).toHaveAttribute("data-order-confirmation", "ready");
+  await expect(page.getByTestId("chart-order-save-status")).toHaveText("저장됨", { timeout: 10_000 });
+  const initialIds = await ids();
   await expect(target.locator('td[data-column-id="status"]')).toHaveText("-");
   const orderFooter = page.getByTestId("chart-order-footer");
   const readFooterConfirmationCounts = async () => {
@@ -11440,4 +11441,190 @@ test("chart empty notice waits for a successful list and dismissal stays encount
   } finally {
     releaseList();
   }
+});
+
+test.describe("chart checkbox activation boundary", () => {
+  test.beforeEach(async ({ page, baseURL }) => {
+    // This fixture writes only to the disposable, credential-free mock server.
+    expect(baseURL).toBeTruthy();
+    const server = new URL(baseURL!);
+    expect(server.protocol).toBe("http:");
+    expect(["127.0.0.1", "localhost"]).toContain(server.hostname);
+    await page.route("**/*", route => new URL(route.request().url()).origin === server.origin
+      ? route.fallback() : route.abort("blockedbyclient"));
+    // Only draft rows matter here; hold no downstream loader request open.
+    await page.route("**/api/workspaces/clair-demo/chart/order-actions?*", route => route.fulfill({
+      json: { ok: true, status: 200, rows: [], orderActions: [] },
+    }));
+    await page.route("**/api/workspaces/clair-demo/chart/order-lifecycle?*", route => route.fulfill({
+      json: { ok: true, status: 200, lifecycles: [] },
+    }));
+    await page.route("**/api/workspaces/clair-demo/chart/order-execution?*", route => route.fulfill({
+      json: { ok: true, status: 200, execution: { workspaceId: "clair-demo", encounterId: kongEncounterId,
+        tasks: [], events: [], revisions: [], queues: [], billingCandidates: [] } },
+    }));
+    await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?*", route => route.fulfill({
+      json: { ok: true, status: 200, candidates: [] },
+    }));
+    await page.goto(kongScenarioUrl);
+    await restoreKongOrderDraftDefaults(page);
+    // networkidle alone does not prove the sequential order loader is ready.
+    await expect(page.getByTestId("chart-order-save-status")).toHaveText("저장됨", { timeout: 10_000 });
+    await page.getByLabel("Maropitant 16mg T 수량 수정", { exact: true }).blur();
+  });
+
+  const checkbox = (page: Page) => page.getByRole("checkbox", { name: "CBC 검사 선택", exact: true });
+  const quantity = (page: Page) => page.getByLabel("CBC 검사 수량 수정", { exact: true });
+  const row = (page: Page) => page.getByTestId("chart-order-row-order-kong-cbc");
+  const rowIds = (page: Page) => page.locator('[data-slot="chart-order-table-surface"] [data-testid^="chart-order-row-"]')
+    .evaluateAll(elements => elements.map(element => element.getAttribute("data-testid")));
+
+  async function editAndHold(page: Page) {
+    await expect(row(page)).toHaveAttribute("data-order-confirmation", "ready");
+    const ids = await rowIds(page);
+    await quantity(page).fill("");
+    await expect(quantity(page)).toBeFocused();
+    await expect(row(page)).toHaveAttribute("data-order-confirmation", "invalid");
+    expect(await rowIds(page)).toEqual(ids);
+    const box = await checkbox(page).boundingBox();
+    expect(box).not.toBeNull();
+    return { ids, box: box! };
+  }
+
+  async function expectSortResumed(page: Page, ids: Array<string | null>) {
+    // The edited CBC is invalid; the two ready rows precede it again.
+    await expect.poll(() => rowIds(page)).toEqual([
+      ...ids.filter(id => id !== "chart-order-row-order-kong-cbc"),
+      "chart-order-row-order-kong-cbc",
+    ]);
+    await expect(quantity(page)).toHaveValue("");
+  }
+
+  test("pointer down retains the target until up and click, then sorting resumes", async ({ page }) => {
+    const { ids, box } = await editAndHold(page);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await expect(checkbox(page)).toBeFocused();
+    // Check before pointerup: a retrying locator must not hide a moving target.
+    expect(await rowIds(page)).toEqual(ids);
+    expect((await checkbox(page).boundingBox())!.y).toBe(box.y);
+    await page.mouse.up();
+    await expect(checkbox(page)).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: "복부 초음파 선택", exact: true })).not.toBeChecked();
+    await expect(page.getByTestId("chart-order-footer")).toContainText("선택 오더 1건");
+    await expectSortResumed(page, ids);
+  });
+
+  test("original check and uncheck assertions survive repeated edited-row selections", async ({ page }) => {
+    for (let count = 0; count < 2; count += 1) {
+      await editAndHold(page);
+      await checkbox(page).check();
+      await expect(checkbox(page)).toBeChecked();
+      await checkbox(page).uncheck();
+      await expect(checkbox(page)).not.toBeChecked();
+      await quantity(page).fill("1");
+      await quantity(page).blur();
+      await expect(row(page)).toHaveAttribute("data-order-confirmation", "ready");
+    }
+    await expect(page.getByTestId("chart-order-footer")).toContainText("선택 오더 0건");
+  });
+
+  for (const interruption of ["pointercancel", "outside pointerup", "suppressed click", "window blur"] as const) {
+    test(`${interruption} releases sorting without selecting or losing edits`, async ({ page }) => {
+      const { ids, box } = await editAndHold(page);
+      await checkbox(page).evaluate(element => {
+        element.addEventListener("pointerdown", event => {
+          element.setAttribute("data-test-pointer-id", String((event as PointerEvent).pointerId));
+        }, { once: true });
+      });
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      expect(await rowIds(page)).toEqual(ids);
+      if (interruption === "pointercancel") {
+        const pointerId = Number(await checkbox(page).getAttribute("data-test-pointer-id"));
+        await checkbox(page).dispatchEvent("pointercancel", { pointerId, pointerType: "mouse", isPrimary: true });
+      } else if (interruption === "window blur") {
+        await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+      } else if (interruption === "suppressed click") {
+        await page.evaluate(() => window.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+        }, { capture: true, once: true }));
+      }
+      if (interruption !== "suppressed click") await page.mouse.move(20, 20);
+      await page.mouse.up();
+      await expect(checkbox(page)).not.toBeChecked();
+      await expectSortResumed(page, ids);
+      // A following edit starts a fresh boundary; no canceled gesture holds the old order.
+      await quantity(page).fill("1");
+      await quantity(page).blur();
+      await expect.poll(() => rowIds(page)).toEqual(ids);
+    });
+  }
+
+  test("checkbox focus then blur releases sorting without activation", async ({ page }) => {
+    const { ids } = await editAndHold(page);
+    await checkbox(page).focus();
+    await expect(checkbox(page)).toBeFocused();
+    expect(await rowIds(page)).toEqual(ids);
+    await checkbox(page).blur();
+    await expect(checkbox(page)).not.toBeChecked();
+    await expectSortResumed(page, ids);
+  });
+
+  async function tabBackToCheckbox(page: Page) {
+    for (let count = 0; count < 10; count += 1) {
+      if (await checkbox(page).evaluate(element => element === document.activeElement)) break;
+      await page.keyboard.press("Shift+Tab");
+    }
+    await expect(checkbox(page)).toBeFocused();
+  }
+
+  test("Tab and Space retain row identity after leaving the inline editor", async ({ page }) => {
+    const { ids } = await editAndHold(page);
+    await tabBackToCheckbox(page);
+    // Tab passes the readonly billing switch, which already ends inline editing.
+    await expectSortResumed(page, ids);
+    const sortedIds = await rowIds(page);
+    await page.keyboard.down("Space");
+    await expect(checkbox(page)).not.toBeChecked();
+    expect(await rowIds(page)).toEqual(sortedIds);
+    await page.keyboard.up("Space");
+    await expect(checkbox(page)).toBeChecked();
+    await expect(checkbox(page)).toBeFocused();
+    await expectSortResumed(page, ids);
+    await page.keyboard.press("Space");
+    await expect(checkbox(page)).not.toBeChecked();
+  });
+
+  test("Tab leaves an unactivated checkbox and resumes sorting", async ({ page }) => {
+    const { ids } = await editAndHold(page);
+    // Isolate Tab leaving the checkbox from other readonly cells on the way in.
+    await checkbox(page).focus();
+    expect(await rowIds(page)).toEqual(ids);
+    await page.keyboard.press("Tab");
+    await expect(checkbox(page)).not.toBeFocused();
+    await expect(checkbox(page)).not.toBeChecked();
+    await expectSortResumed(page, ids);
+  });
+
+  test("a failed autosave does not leave the edited row locked after selection", async ({ page }) => {
+    await page.route("**/api/workspaces/clair-demo/chart/order-drafts", route =>
+      route.request().method() === "PATCH"
+        ? route.fulfill({ status: 503, json: { ok: false, status: 503, error: "db_write_failed" } })
+        : route.fallback());
+    await page.getByRole("button", { name: /청구금액 오름차순 정렬/ }).click();
+    const ids = await rowIds(page);
+    await quantity(page).fill("5");
+    await expect(page.getByTestId("chart-order-state-error")).toBeVisible();
+    expect(await rowIds(page)).toEqual(ids);
+    await checkbox(page).check();
+    await expect(checkbox(page)).toBeChecked();
+    await expect(quantity(page)).toHaveValue("5");
+    await expect.poll(() => rowIds(page)).toEqual([
+      ...ids.filter(id => id !== "chart-order-row-order-kong-cbc"),
+      "chart-order-row-order-kong-cbc",
+    ]);
+    await expect(page.getByTestId("chart-order-state-error")).toBeVisible();
+  });
 });

@@ -19,7 +19,7 @@ Start from current `origin/main`; the primary checkout was behind remote main.
 User authorized implementation, visual verification, commit, push, PR, and merge
 to main after the checks pass. Main is the production deployment branch.
 
-1. Place operation-result Sonner toasts at the viewport top-left, with 16px
+1. Place operation-result Sonner toasts at the viewport top-right, with 16px
    desktop/mobile insets. Remove their shell-header/live-notification height
    dependency. Preserve the independent live notification stack.
 2. Default the shared toaster to the application's light palette instead of
@@ -35,7 +35,7 @@ to main after the checks pass. Main is the production deployment branch.
 
 ## Evidence and Decisions
 
-- Root layout currently uses top-right and the shell/header offset plus live
+- Before the original fix, root layout used top-right and the shell/header offset plus live
   notification height; observed desktop inset was 192px.
 - System dark preference is enabled on the inspected deployed browser. Sonner
   dark close-button hover uses `--normal-bg-hover`, approximately #1F1F1F.
@@ -67,7 +67,7 @@ staging aliases, environment/secrets changes.
 
 ## Result
 
-- Operation toasts now use top-left 16px desktop/mobile insets and a light
+- Operation toasts now use top-right 16px desktop/mobile insets and a light
   default theme. Explicit caller overrides remain supported.
 - Toaster-scoped selector specificity protects rest/hover/press/focus from
   Sonner's runtime stylesheet; no global token or button changes.
@@ -84,3 +84,18 @@ staging aliases, environment/secrets changes.
 - Release evidence belongs to the attached PR and exact-candidate Release Check.
   User authorized main merge once verification passes; no staging alias changes.
 - Closeout: `docs/completed/design-system/2026-10-05-toast-position-close-button-report.html`.
+
+## Placement Correction
+
+After PR #937 shipped, the user corrected the requested horizontal edge from
+left to right. This follow-up changes only the root position, geometry
+assertions, and owning documentation. Keep top/right 16px desktop/mobile
+insets, the light theme, and close-button 4% hover/6% press/focus unchanged.
+The existing commit/push/PR/main-merge authorization applies to this correction;
+verify the final candidate and production smoke before reporting completion.
+Rollback candidate: production deployment `dpl_3u4qhH43RbC6JYpENFfhAFRwRD6n`
+on merge SHA `c6816a5de37d198027f00de0d952c3ecae2fc73d`.
+Correction verification: the same 10 browser checks passed with actual top/right
+16px geometry; desktop/mobile and both system themes retain 4% hover, 6% press,
+visible keyboard focus, and pointer/keyboard dismissal. Required release checks
+and the production result are recorded on the follow-up PR.
