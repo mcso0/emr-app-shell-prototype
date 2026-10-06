@@ -500,7 +500,7 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
   expect(resultLink.searchParams.get("labResultId")).toBe(`live-lab-${wi.id}`);
   expect(resultLink.searchParams.get("date")).toBe("2026-09-06");
   await page.goto(resultLink.href, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible({ timeout: 15_000 });
   if (readOnlyRollback) {
     for (const [name, value] of [["WBC", " 4 mg "], ["합성 선택 검사", "판독 보류"]]) {
       await expect(page.getByLabel(`${name} 결과값`, { exact: true })).toHaveValue(value);

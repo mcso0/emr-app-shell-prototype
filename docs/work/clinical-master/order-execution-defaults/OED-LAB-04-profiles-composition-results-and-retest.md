@@ -74,7 +74,7 @@ Validation and delivery boundary:
   historical metadata and atomic retest revision. Local SQL apply/reapply tests
   the real baseline evaluator/row trigger/completion guard and rolls back inside
   an owned network-isolated Postgres container.
-- Actual input component interaction tests pass (7). Six additional mocked
+- Actual input component interaction tests pass (9). Six additional mocked
   browser cases pass for in-flight revisions, delayed readback, retries, conflict
   preservation, read-only access and keyboard focus. TypeScript/build, touched
   source lint and documentation links pass. Build retains the existing PRD
@@ -89,6 +89,53 @@ Validation and delivery boundary:
   Never remove warning-state support while warned rows exist. An application
   rollback must preserve their readability and raw data. No rollback or forward
   migration has been run remotely.
+
+### Delivery preparation, 2026-10-06
+
+승욱 requested commit, push, PR and `origin/main` merge after implementation.
+The feature was rebased without conflicts onto verified `origin/main`
+`cd660768d456b68454c737b2d2b39cff3dfce480`. Its Ready Production deployment is
+`dpl_JDGYz64mh6YfMpqvqFVcDhx7viSx`. Exact-candidate Production and remote DB
+approval gates remain required by the release runbook. No remote apply, merge
+or Production activation is recorded here.
+
+Remote preflight confirms the connected Supabase project `clair-emr-staging`
+has no new warning evaluator/token/state support. Validator, evaluator and
+completion-guard function bodies match the local baseline exactly; the optional
+qualifier insertion anchor occurs once. Candidate migration SHA-256:
+`eb96bd23584ed8d5f3db436e45c2ebc1c33e65a2a276ff05cb3f6e7ac15feaab`.
+The proposed remote action is only this migration, first rollback-only rehearsal
+and unchanged-baseline verification, then persistent apply and readback. It
+changes shared V2 validation/state support across the project, not a per-order
+master definition. No existing result backfill, clinical threshold authoring,
+profile publication, RLS, membership or provider operation is included.
+
+Post-apply checks will verify the function/constraint contract and pure synthetic
+numeric/coded/permission/completion-token examples. Post-merge smoke is `/login`
+plus authenticated read-only laboratory result/control inspection in the
+prepared Cheongdam workspace. No real patient write, synthetic order creation,
+result overwrite or attachment operation is implicitly approved by this packet.
+If authenticated access is unavailable, report that limit; do not substitute an
+HTTP probe for authenticated acceptance.
+
+After any warned value exists, the old Production deployment is not a safe
+application rollback. Keep the forward DB contract and warning-aware reader.
+A concrete local recovery candidate is `625cf25e29666a4c1dcda5a3736ca4297010e32b`
+on `codex/lab-result-entry-readonly-recovery`: it disables result-value and
+measurement controls while preserving raw warnings and existing note/file
+permissions. Its mocked warning-result read/reload/no-POST case and build pass.
+It is prepared, not deployed or pushed. The equivalent
+[recovery patch](./artifacts/lab-result-entry-warnings/read-only-recovery.patch)
+has SHA-256 `4a0c931946b006bf32fd365e6ff9218f4f0c9d84f799e8f989c31bceca335f22`
+and passes an apply check against the feature candidate. This is a UI recovery
+candidate, not a server-wide write shutdown or canonical permission change.
+Any recovery deployment needs its own reviewed candidate and authorization.
+
+Stop before merge for missing DB approval/apply proof, changed candidate,
+non-Ready Preview, failed/unknown exact Release Check, failed required checks,
+missing smoke/compatible recovery evidence or unapproved data actions. Record
+PR, final SHA and remote checks in the PR rather than inventing completed release
+facts in this source checkpoint.
 
 - All86 original identities are reconciled with90 exact atomic orders,35 versioned
   compositions (including nested groups) and24 immutable result profiles. The34

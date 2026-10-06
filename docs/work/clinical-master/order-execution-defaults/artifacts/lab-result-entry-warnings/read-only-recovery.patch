@@ -1,0 +1,28 @@
+diff --git a/src/features/lab-imaging/module.tsx b/src/features/lab-imaging/module.tsx
+index d43f7585..56a5cf04 100644
+--- a/src/features/lab-imaging/module.tsx
++++ b/src/features/lab-imaging/module.tsx
+@@ -2447,8 +2447,8 @@ function LabResultDataTable({
+         header: "결과값",
+         meta: { label: "결과값", resize: "none" },
+         cell: ({ row, table }) => {
+-          const { canEdit, onValueChange, onMetadataChange } = table.options.meta as LabResultTableContext;
+-          return <LabResultValueControl disabled={!canEdit} row={row.original} onValueChange={onValueChange} onMetadataChange={onMetadataChange} />;
++          const { onValueChange, onMetadataChange } = table.options.meta as LabResultTableContext;
++          return <LabResultValueControl disabled row={row.original} onValueChange={onValueChange} onMetadataChange={onMetadataChange} />;
+         },
+       },
+       {
+@@ -2460,10 +2460,10 @@ function LabResultDataTable({
+         header: "측정 불가",
+         meta: { align: "center", label: "측정 불가", resize: "none" },
+         cell: ({ row, table }) => {
+-          const { canEdit, onMetadataChange } = table.options.meta as LabResultTableContext;
++          const { onMetadataChange } = table.options.meta as LabResultTableContext;
+           return row.original.interpretationRule ? <EmrTableCheckbox
+             aria-label={`${row.original.analyteName} 측정 불가`}
+-            disabled={!canEdit}
++            disabled
+             checked={row.original.resultPresence === "instrument_no_result"}
+             onCheckedChange={checked => onMetadataChange(row.original.id, { resultPresence: checked ? "instrument_no_result" : "value" })}
+           /> : null;
