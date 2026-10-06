@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-10-03
+last_updated: 2026-10-06
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -289,3 +289,41 @@ new index can be removed without changing business data.
 
 See [CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md)
 for local equivalence, performance, regressions, and release limits.
+
+## Patient View Of Execution Queues
+
+Lab, imaging, and combined dispensing/treatment sidebars opt into a local
+오더별/환자별 toggle. Patient groups use the authorized workspace and actual
+patient ID within the selected server operating day, across encounters and
+SOAP charts. Missing patient identities stay task-specific. Names are display
+labels only. Type/status/search counts retain their existing task semantics.
+Urgency is independent of lifecycle status. Patient priority/latest sorting
+uses raw priority/status and immutable request creation time; equal task ranks
+use the chosen request/assignee/wait sort. Paused belongs to 진행중 filtering.
+Assignment filtering uses assignedToUserId, not whether a display name resolves.
+
+Selection still uses exact lab result, imaging study, or fulfillment queue
+item/work item IDs. Switching views never writes or replaces the selected
+task. Filtering out the selection retains its detail and provides a condition
+reset action. A private realtime event still triggers the existing API refetch;
+only newly returned stable IDs produce a new-work notice. The current reading
+anchor remains until the user requests 목록에서 보기. Authentication or
+permission denial clears cached queue rows; network failures retain their
+existing recovery behavior. No synthetic scenario controls enter the app.
+
+The additive v2 projection returns nullable originChartId and
+originChartCreatedAt from the exact workspace/encounter/order/soap_notes joins.
+The origin ID is the successfully scoped SOAP row ID. Invalid/missing/foreign
+origins return NULL metadata without dropping work. No sourceSnapshot, business
+row, permission, or audit mutation is introduced. Display uses immutable chart
+created_at, includes the date, and adds a deterministic per-time record ordinal
+for simultaneous charts. That ordinal is a UI disambiguator within the complete
+authorized group, not a stored chart number. Legacy origins remain explicitly
+unconfirmed and are never inferred from encounter or timestamps. SOAP content
+and unowned clinical fields are not included.
+
+Apply the projection migration before the app release. Old callers ignore
+the extra keys; the previous RPC definition can be restored independently of
+app rollback without business data changes. Hosted apply remains separately
+approved. See [CLINICAL-FULFILLMENT-PR-011](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-011-patient-queue-view.md)
+for synthetic proofs, verification, and delivery evidence.

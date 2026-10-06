@@ -128,11 +128,14 @@ type FulfillmentWorkItem = {
   completedAt?: string | null;
   createdAt?: string;
   encounterId: string;
+  originChartId?: string | null;
+  originChartCreatedAt?: string | null;
   guardianName?: string | null;
   id: string;
   orderId: string;
   patientId?: string | null;
   patientName?: string | null;
+  priority?: string;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
   requesterName?: string | null;
@@ -303,7 +306,7 @@ function getFulfillmentReadFailureStatus(result: {
   denialReason?: string;
   status?: number;
 }): DispensingFulfillmentQueueStatus {
-  if (result.status === 403 || result.denialReason === "permission_missing") {
+  if (result.status === 401 || result.status === 403 || result.denialReason === "unauthenticated" || result.denialReason === "permission_missing") {
     return "permission_denied";
   }
 
@@ -329,7 +332,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
       if (seq === requestSeq.current) setQueueState({ cacheKey, snapshot: next });
     };
     try {
-      const [dispensingResponse, treatmentResponse] = await Promise.all([
+      const [dispensingResult, treatmentResult] = await Promise.allSettled([
         fetch(
           `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
           {
@@ -343,42 +346,41 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
           },
         ),
       ]);
-      const dispensingBody = (await dispensingResponse.json()) as {
-        denialReason?: string;
-        ok?: boolean;
-        status?: number;
-        summary?: FulfillmentWorkItemReadSummary;
-        workItems?: FulfillmentWorkItem[];
-      };
-      const treatmentBody = (await treatmentResponse.json()) as {
-        denialReason?: string;
-        ok?: boolean;
-        status?: number;
-        summary?: FulfillmentWorkItemReadSummary;
-        workItems?: FulfillmentWorkItem[];
-      };
-      if (!dispensingResponse.ok || !dispensingBody.ok) {
-        const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
-
-        apply({
-          sourceTotalCount: previousSnapshot?.sourceTotalCount,
-          status: getFulfillmentReadFailureStatus({
-            denialReason: dispensingBody.denialReason,
-            status: dispensingResponse.status,
-          }),
-          workItems: previousSnapshot?.workItems ?? [],
-        });
+      const dispensingResponse = dispensingResult.status === "fulfilled" ? dispensingResult.value : undefined;
+      const treatmentResponse = treatmentResult.status === "fulfilled" ? treatmentResult.value : undefined;
+      // HTTP denial must win over network or non-JSON failures from the other queue.
+      if ([dispensingResponse, treatmentResponse].some(response => response?.status === 401 || response?.status === 403)) {
+        apply({ sourceTotalCount: 0, status: "permission_denied", workItems: [] });
         return;
       }
-      if (!treatmentResponse.ok || !treatmentBody.ok) {
+      if (!dispensingResponse || !treatmentResponse) throw new Error("queue_read_failed");
+      const dispensingBody = ((await dispensingResponse.json().catch(() => null)) ?? {}) as {
+        denialReason?: string;
+        ok?: boolean;
+        status?: number;
+        summary?: FulfillmentWorkItemReadSummary;
+        workItems?: FulfillmentWorkItem[];
+      };
+      const treatmentBody = ((await treatmentResponse.json().catch(() => null)) ?? {}) as {
+        denialReason?: string;
+        ok?: boolean;
+        status?: number;
+        summary?: FulfillmentWorkItemReadSummary;
+        workItems?: FulfillmentWorkItem[];
+      };
+      const denied = [
+        { status: dispensingResponse.status, denialReason: dispensingBody.denialReason },
+        { status: treatmentResponse.status, denialReason: treatmentBody.denialReason },
+      ].some(result => getFulfillmentReadFailureStatus(result) === "permission_denied");
+      if (denied) {
+        apply({ sourceTotalCount: 0, status: "permission_denied", workItems: [] });
+        return;
+      }
+      if (!dispensingResponse.ok || !dispensingBody.ok || !treatmentResponse.ok || !treatmentBody.ok) {
         const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
-
         apply({
           sourceTotalCount: previousSnapshot?.sourceTotalCount,
-          status: getFulfillmentReadFailureStatus({
-            denialReason: treatmentBody.denialReason,
-            status: treatmentResponse.status,
-          }),
+          status: "error",
           workItems: previousSnapshot?.workItems ?? [],
         });
         return;
@@ -600,6 +602,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const time = formatOperatingShortTime(timestamp);
 
   return {
+    patientQueue: { assignedToUserId: workItem.assignedToUserId, patientId: workItem.patientId, workspaceId: workItem.workspaceId, status: workItem.status, priority: workItem.priority, requestedAt: workItem.createdAt, originChartId: workItem.originChartId, originChartCreatedAt: workItem.originChartCreatedAt },
     id: `live-fulfillment-${workItem.id}`,
     instructionId: `${isTreatment ? "TR" : "RX"}-${workItem.id.slice(0, 8).toUpperCase()}`,
     patientName:
@@ -1112,6 +1115,7 @@ export function DispensingSidePanel({
     <EmrOrderQueueSidePanel
       emptyObjectLabel="조제/처치 업무"
       getTaskCardItem={getDispensingTaskCardItem}
+      patientGrouping={{ workspaceId, readable: fulfillmentQueue.status !== "permission_denied", ready: fulfillmentQueue.status === "ready" || fulfillmentQueue.status === "empty" }}
       items={items}
       loading={fulfillmentQueue.status === "loading"}
       loadingTitle="조제/처치 업무를 불러오는 중입니다"

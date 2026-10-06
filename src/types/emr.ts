@@ -87,6 +87,16 @@ export type OrderQueueStatusDefinition = {
 };
 
 export type OrderQueueItem = {
+  patientQueue?: {
+    assignedToUserId?: string | null;
+    patientId?: string | null;
+    workspaceId?: string;
+    status?: string;
+    priority?: string;
+    requestedAt?: string;
+    originChartId?: string | null;
+    originChartCreatedAt?: string | null;
+  };
   id: string;
   instructionId: string;
   patientName: string;
