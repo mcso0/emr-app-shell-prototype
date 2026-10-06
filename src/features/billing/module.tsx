@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderQueueSortMenu, OrderQueueFilterMenu, type OrderQueueSortKey, type OrderQueueDetailFilter } from "@/components/emr/order-queue-side-panel";
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import {
@@ -19,11 +20,9 @@ import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import guardianPersonIcon from "@/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg";
 import {
-  CdsActionsListFilterIcon,
   CdsActionsRefreshCcwIcon,
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   EmrContentAsideHeader,
   EmrContentAsidePanel,
@@ -1671,7 +1670,7 @@ function useBillingQueue(workspaceId: string) {
     let next: BillingQueueState;
     try {
       const response = await fetch(`/api/workspaces/${workspaceId}/billing/queue?date=${selectedDate}`, { headers: actorHeaders });
-      const body = await response.json() as { ok?: boolean; rows?: BillingQueueItem[] };
+      const body = response.status === 401 || response.status === 403 ? { ok: false } : await response.json() as { ok?: boolean; rows?: BillingQueueItem[] };
       next = response.ok && body.ok && Array.isArray(body.rows)
         ? { status: "ready", rows: body.rows.filter(row => row.invoice.workspaceId === workspaceId) }
         : { status: response.status === 401 || response.status === 403 ? "permission_denied" : "error", rows: [] };
@@ -1780,6 +1779,8 @@ export function BillingSidePanel({
     Set<BillingFilter>
   >(() => new Set());
   const [searchActive, setSearchActive] = useState(false);
+  const [queueSort, setQueueSort] = useState<OrderQueueSortKey>();
+  const [queueFilter, setQueueFilter] = useState<OrderQueueDetailFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId, searchParams.get("date"));
@@ -1800,13 +1801,19 @@ export function BillingSidePanel({
       baseGroupedRows.map((group) => ({
         ...group,
         rows: group.rows.filter((row) =>
-          matchesBillingQueueSearch(
+          (queueFilter === "all" || queueFilter === `status:${group.value}`) && matchesBillingQueueSearch(
             getBillingQueueSearchText(row, invoiceAssignees[row.invoice.id]),
             searchQuery,
           ),
-        ),
+        ).sort((left, right) => {
+          if (!queueSort) return 0;
+          const leftTime = ("billingRequestedAt" in left.invoice ? left.invoice.billingRequestedAt : undefined) ?? left.invoice.issuedAt ?? left.invoice.createdAt;
+          const rightTime = ("billingRequestedAt" in right.invoice ? right.invoice.billingRequestedAt : undefined) ?? right.invoice.issuedAt ?? right.invoice.createdAt;
+          const byTime = (Date.parse(leftTime) || 0) - (Date.parse(rightTime) || 0);
+          return queueSort === "assignee" ? (invoiceAssignees[left.invoice.id] ?? "").localeCompare(invoiceAssignees[right.invoice.id] ?? "", "ko") || byTime : byTime;
+        }),
       })),
-    [baseGroupedRows, invoiceAssignees, searchQuery],
+    [baseGroupedRows, invoiceAssignees, searchQuery, queueSort, queueFilter],
   );
   const totalRowCount = groupedRows.reduce(
     (total, group) => total + group.rows.length,
@@ -1820,7 +1827,7 @@ export function BillingSidePanel({
     baseRowCount > 0
       ? "조건에 맞는 수납 업무가 없습니다"
       : "수납 업무가 없습니다";
-  const queueControlsDisabled = baseRowCount === 0;
+  const queueControlsDisabled = baseRowCount === 0 && queueFilter === "all";
   const closeSearch = useCallback(() => {
     setSearchQuery("");
     setSearchActive(false);
@@ -1851,11 +1858,15 @@ export function BillingSidePanel({
     selectInvoice(invoiceId);
   }
   function handleSelectDate(date: string) {
-    selectDate(date);
-    selectInvoice("");
-    onNavigateWorkspaceSurface?.(buildWorkspaceSurfaceRoute({
+    const href = buildWorkspaceSurfaceRoute({
       moduleId: "billing", params: { date }, removeParams: ["invoiceId", "encounterId", "orderIds", "scenario", "patientId"], search: searchParams, workspaceId,
-    }), "billing");
+    });
+    if (!panelPresentation || panelPresentation.isCurrentModule) {
+      selectDate(date);
+      selectInvoice("");
+    }
+    if (panelPresentation) panelPresentation.onDateChange(href);
+    else onNavigateWorkspaceSurface?.(href, "billing");
   }
   const toggleGroup = (groupId: BillingFilter) => {
     setCollapsedGroupIds((current) => {
@@ -1903,20 +1914,9 @@ export function BillingSidePanel({
         }}
         headerActions={
           <>
-            <EmrListHeaderIconButton
-              ariaLabel="정렬"
-              data-testid="billing-queue-sort-control"
-              disabled={queueControlsDisabled}
-            >
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton
-              ariaLabel="필터"
-              data-testid="billing-queue-filter-control"
-              disabled={queueControlsDisabled}
-            >
-              <CdsActionsListFilterIcon className="size-4" />
-            </EmrListHeaderIconButton>
+            <OrderQueueSortMenu ariaLabel="정렬" dataTestId="billing-queue-sort-control" sortKey={queueSort} onSortKeyChange={setQueueSort} disabled={queueControlsDisabled} />
+            <OrderQueueFilterMenu ariaLabel="필터" dataTestId="billing-queue-filter-control" filter={queueFilter} onFilterChange={setQueueFilter} showUnassigned={false}
+              statuses={billingQueueGroups.map(group => ({ id: group.value, label: group.label }))} disabled={queueControlsDisabled} />
             <EmrListHeaderIconButton
               ariaLabel="검색"
               data-testid="billing-queue-search-control"
@@ -1931,7 +1931,9 @@ export function BillingSidePanel({
         {billingQueue.status === "loading" && baseRowCount === 0 ? (
           <EmrQueueLoadingState placement="panel-center" title="수납 업무를 불러오는 중입니다" />
         ) : billingQueue.status === "error" || billingQueue.status === "permission_denied" ? (
-          <EmrQueueEmptyState placement="panel-center" title={billingQueue.status === "permission_denied" ? "수납 업무를 볼 권한이 없습니다" : "수납 업무를 불러오지 못했습니다"} />
+          <EmrQueueEmptyState placement="panel-center" kind={billingQueue.status === "permission_denied" ? "no-permission" : "read-error"}
+            title={billingQueue.status === "permission_denied" ? "수납 업무를 볼 권한이 없습니다" : "수납 업무를 불러오지 못했습니다"}
+            primaryAction={billingQueue.status === "error" ? <Button variant="outline" size="sm" onClick={() => { void billingQueue.refresh(); }}>재시도</Button> : undefined} />
         ) : baseRowCount > 0 && totalRowCount === 0 && searchQuery.trim() ? (
           <EmrListSearchEmptyState
             objectLabel="수납 대기열 항목"

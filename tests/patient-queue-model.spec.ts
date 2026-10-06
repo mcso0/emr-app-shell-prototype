@@ -36,3 +36,9 @@ test("source chart labels include date, stable simultaneous-record distinction, 
   expect(patientQueueChartLabels([...rows].reverse())).toEqual(labels);
   expect([...labels.values()].join(" ")).not.toContain("chart-");
 });
+
+test("unresolved live assignee IDs group consistently without displaying synthetic names", () => {
+  const rows = [row("b", { assignedToUserId: "user-b" }), row("a", { assignedToUserId: "user-a" }), row("c", { assignedToUserId: null })];
+  expect(groupPatientQueue(rows, "priority", "assignee")[0].items.map(item => item.id)).toEqual(["a", "b", "c"]);
+  expect(rows.every(item => item.card.assigneeName === undefined)).toBe(true);
+});

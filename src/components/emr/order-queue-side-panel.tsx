@@ -30,6 +30,7 @@ import {
   getTaskQueueEventKindFromStatus,
   type EmrTaskQueueCardItem,
 } from "@/components/emr/task-queue-card";
+import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import {
   DropdownMenu,
@@ -53,8 +54,8 @@ type OrderQueueFilterItem = {
   value: string;
 };
 
-type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
-type OrderQueueSortKey = "request" | "assignee" | "wait";
+export type OrderQueueDetailFilter = "all" | "unassigned" | `status:${string}`;
+export type OrderQueueSortKey = "request" | "assignee" | "wait";
 type OrderQueueActionContext = "chart" | "order";
 type OrderQueueTypeFilterPlacement = "title" | "list-header";
 type OrderQueueActionItemsResolver = (
@@ -79,6 +80,8 @@ type EmrOrderQueueSidePanelProps = {
   listLabel?: string;
   loading?: boolean;
   loadingTitle?: string;
+  readStatus?: "error" | "permission_denied";
+  onRetry?: () => void;
   onCollapse?: () => void;
   onDateChange?: (date: string) => void;
   onSelectItem?: (itemId: string) => void;
@@ -213,6 +216,8 @@ export function EmrOrderQueueSidePanel({
   listLabel = "전체 오더",
   loading = false,
   loadingTitle,
+  readStatus,
+  onRetry,
   onCollapse,
   onDateChange,
   onSelectItem,
@@ -277,7 +282,7 @@ export function EmrOrderQueueSidePanel({
   }, [patientRows, visibleItems]);
   const sourceItemCount = sourceTotalCount ?? items.length;
   const sourceHasItems = sourceItemCount > 0;
-  const queueControlsDisabled = !sourceHasItems;
+  const queueControlsDisabled = !sourceHasItems && detailFilter === "all" && filter === "all";
   const effectiveSelectedItemId =
     selectedItemId && visibleItems.some((item) => item.id === selectedItemId)
       ? selectedItemId
@@ -443,7 +448,12 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrSubpanelBody density="queue">
-        {patientGrouping ? <PatientQueueContent key={`${patientGrouping.workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={selectedItemId} groupSort={patientSort} orderSort={sortKey} onSelect={id => onSelectItem?.(id)} readable={patientGrouping.readable} ready={patientGrouping.ready} onClearConditions={() => { setDetailFilter("all"); setFilter("all"); closeSearch(); }}>{queueBody}</PatientQueueContent> : queueBody}
+        {readStatus ? <EmrQueueEmptyState
+          kind={readStatus === "permission_denied" ? "no-permission" : "read-error"}
+          placement="panel-center"
+          title={readStatus === "permission_denied" ? "업무 대기열을 볼 권한이 없습니다" : "업무 대기열을 불러오지 못했습니다"}
+          primaryAction={readStatus === "error" && onRetry ? <Button variant="outline" size="sm" onClick={onRetry}>재시도</Button> : undefined}
+        /> : patientGrouping ? <PatientQueueContent key={`${patientGrouping.workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={selectedItemId} groupSort={patientSort} orderSort={sortKey} onSelect={id => onSelectItem?.(id)} readable={patientGrouping.readable} ready={patientGrouping.ready} onClearConditions={() => { setDetailFilter("all"); setFilter("all"); closeSearch(); }}>{queueBody}</PatientQueueContent> : queueBody}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -480,25 +490,29 @@ function getOrderQueueEmptyStateDescription({
   return `오늘 표시할 ${emptyObjectLabel}가 없습니다`;
 }
 
-function OrderQueueSortMenu({
+export function OrderQueueSortMenu({
+  ariaLabel = "대기열 정렬",
+  dataTestId = "order-queue-sort-control",
   disabled = false,
   onSortKeyChange,
   sortKey,
   patientSort,
 }: {
+  ariaLabel?: string;
+  dataTestId?: string;
   patientSort?: { value: PatientQueueSort; onChange: (value: PatientQueueSort) => void };
   disabled?: boolean;
   onSortKeyChange: (value: OrderQueueSortKey) => void;
-  sortKey: OrderQueueSortKey;
+  sortKey?: OrderQueueSortKey;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <EmrListHeaderIconButton
-            ariaLabel="대기열 정렬"
+            ariaLabel={ariaLabel}
             data-sort-key={sortKey}
-            data-testid="order-queue-sort-control"
+            data-testid={dataTestId}
             disabled={disabled}
           >
             <CdsUtilitiesSortIcon aria-hidden="true" className="size-4" />
@@ -507,9 +521,9 @@ function OrderQueueSortMenu({
       />
       <DropdownMenuContent align="end" className="w-36">
         <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">정렬</div>
-        <DropdownMenuRadioGroup value={sortKey} onValueChange={(value) => onSortKeyChange(value as OrderQueueSortKey)}>
+        <DropdownMenuRadioGroup value={sortKey ?? ""} onValueChange={(value) => onSortKeyChange(value as OrderQueueSortKey)}>
           {(Object.keys(orderQueueSortLabels) as OrderQueueSortKey[]).map((key) => (
-            <DropdownMenuRadioItem key={key} value={key}>
+            <DropdownMenuRadioItem closeOnClick key={key} value={key}>
               {orderQueueSortLabels[key]}
             </DropdownMenuRadioItem>
           ))}
@@ -520,25 +534,32 @@ function OrderQueueSortMenu({
   );
 }
 
-function OrderQueueFilterMenu({
+export function OrderQueueFilterMenu({
+  ariaLabel = "대기열 필터",
+  dataTestId = "order-queue-filter-control",
+  showUnassigned = true,
   disabled = false,
   filter,
   onFilterChange,
   statuses,
 }: {
   disabled?: boolean;
+  ariaLabel?: string;
+  dataTestId?: string;
+  showUnassigned?: boolean;
   filter: OrderQueueDetailFilter;
   onFilterChange: (value: OrderQueueDetailFilter) => void;
-  statuses: OrderQueueStatusDefinition[];
+  statuses: Pick<OrderQueueStatusDefinition, "id" | "label">[];
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <EmrListHeaderIconButton
-            ariaLabel="대기열 필터"
+            ariaLabel={ariaLabel}
+            aria-pressed={filter !== "all"}
             data-filter={filter}
-            data-testid="order-queue-filter-control"
+            data-testid={dataTestId}
             disabled={disabled}
           />
         }
@@ -548,11 +569,11 @@ function OrderQueueFilterMenu({
       <DropdownMenuContent align="end" className="w-44">
         <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">필터</div>
         <DropdownMenuRadioGroup value={filter} onValueChange={(value) => onFilterChange(value as OrderQueueDetailFilter)}>
-          <DropdownMenuRadioItem value="all">전체 조건</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="unassigned">담당 미정</DropdownMenuRadioItem>
+          <DropdownMenuRadioItem closeOnClick value="all">전체 조건</DropdownMenuRadioItem>
+          {showUnassigned ? <DropdownMenuRadioItem closeOnClick value="unassigned">담당 미정</DropdownMenuRadioItem> : null}
           <DropdownMenuSeparator />
           {statuses.map((status) => (
-            <DropdownMenuRadioItem key={status.id} value={`status:${status.id}`}>
+            <DropdownMenuRadioItem closeOnClick key={status.id} value={`status:${status.id}`}>
               {status.label}
             </DropdownMenuRadioItem>
           ))}

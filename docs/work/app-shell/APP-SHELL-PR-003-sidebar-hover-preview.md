@@ -3,7 +3,7 @@ id: APP-SHELL-PR-003
 status: human_review
 area: app-shell
 priority: P1
-target_pr: codex/sidebar-hover-focus-fix -> main; regression delivery approved
+target_pr: codex/sidebar-panel-interactions-fix -> main; exact candidate preparation
 updated: 2026-10-06
 source_docs:
   - docs/design/system/side-panel-header-contract.md
@@ -80,3 +80,24 @@ Release path: `codex/sidebar-hover-focus-fix` -> exact-head Release Check and Re
 
 
 Follow-up local validation: all 24 sidebar Playwright cases passed (20 existing and 4 added). The two reported mouse paths failed before the correction and pass afterward, including switching to a different sidebar, closing outside, reopening and retained filter/group state. Keyboard-to-mouse handoff, focused search/IME and the existing search Escape sequence also pass. Full local lint passes with 0 errors and 5 pre-existing WP10 script warnings. A TypeScript AST extraction confirms the full ShellMain return JSX is byte-identical to `455e5507`; module/sidebar/components/styles/framework/dependency files have no diff. Secrets, docs, UX copy and whitespace checks pass. Default build, standalone types, exact-head remote check and final deployment evidence are recorded in the follow-up PR.
+
+
+## Follow-up: date, controls and failure states (2026-10-06)
+
+승욱 approved implementation after the deployed-sidebar audit, then requested resume. Scope: retain floating date navigation; restore functional filter/sort choices; keep repeat hover working after actions; distinguish queue errors/denials from empty results; replace only the floating header glyph with a tilted pin. Existing sidebar structure, header position, card elements, size, colors, tokens and initial row order remain the visual contract. No database, API/RLS, provider, payment, environment or dependency change is included.
+
+Baseline research used main `24485eeae2c971868b2fb6eac0736f7edf6fa802` (#943). The isolated worktree preserves primary-checkout WIP. Main advanced to `9a16bf0d3e29cff17bdf1ea900db88f8ecea9deb` (#936) during validation; that commit adds four unrelated chart-save test files and changes no product code. The final rebase also includes main `475d69136fb6179c7fa4cda353383b369d6d154f` (#944), whose approved task-card status badge/footer changes are retained without modification.
+
+Confirmed causes and corrections:
+
+- ShellMain treated every query update as an exit; queue date callbacks also used the ordinary navigation/close path. Separate panel-date changes from explicit navigation. Current dates retain existing URL/store behavior; foreign dates use the cached panel route only, with no current operating-date mutation. Cached preview dates persist when reopening under the same main navigation context.
+- Reception/Billing and Lab/Imaging order-mode filter/sort buttons were placeholders. Reuse the existing radio menus and apply filters/sorting to projected rows inside the unchanged status groups. Preserve source order until explicit sort selection. Parse timestamps numerically. Lab/Imaging unresolved live assignee labels sort by existing assigned user identity, without injecting mock names or displaying IDs; known labels still sort by name. Billing assignee sorting uses only its existing local display-name map; the queue API has no assigned-user field, so it does not offer the unassigned filter.
+- Radio selections kept the owned portal open. Close only the queue single-choice items on selection. Retain multi-select and generic menu behavior.
+- Raw-zero queues disabled active filters. Keep controls available until the existing active condition can be cleared. Reception distinguishes filter-zero from raw-zero with an existing empty-state clear action.
+- Failed/denied queue reads previously fell through to empty/cached presentation. Use existing shared failure feedback before grouped/normal cards; retry the scoped selected date for retryable reads. HTTP401/403 is denial even when the body is HTML. Existing workspace/date request guards remain in place.
+- Only floating header glyph/accessible label changes to pin/-20 degrees/`사이드 패널 고정`. Docked glyph, 56px header, right-side 24px button, 16px SVG/inset and neutral-400 color remain unchanged.
+
+Verification uses synthetic browser API fixtures only. The pre-fix current and foreign date cases failed; both pass after separation. Shared Storybook tests cover floating-to-docked glyph/geometry, cached-card suppression on failures, retry, denial without retry and popup closure. Final local and exact-candidate release evidence is recorded below or in the follow-up PR. Production remains subject to the existing exact-candidate release gate.
+
+
+Local validation: the 92-case sidebar/queue suite passed. After the controlled-menu value correction and fixture hardening, the four affected functional-control cases pass individually; a new date-picker portal/reopen/foreign-pin case also passes. Nine shared Storybook browser cases pass. Numeric timestamp ordering, initial source order, identity-based unassigned filtering, filter clearing on an empty date, HTML denial, retry, retained pin/input DOM and late A-B-C/A-B-A reads are covered. Final integrated candidate secrets/docs/UX-copy/whitespace checks, full lint (0 errors; five pre-existing WP10 warnings), standalone TypeScript and default build passed. Exact candidate and remote Release Check are recorded in the PR. Stylesheets, tokens and dependencies have no diff. Local mock browser images contain only synthetic fixtures. Production/browser authentication and provider delivery are separate release checks.

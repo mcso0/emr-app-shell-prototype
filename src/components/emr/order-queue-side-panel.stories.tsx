@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import type { OrderQueueItem, OrderQueueStatusDefinition } from "@/types/emr";
 
@@ -67,7 +69,7 @@ function EmrOrderQueueSidePanelExample({
   typeFilterVisible,
 }: EmrOrderQueueSidePanelStoryArgs) {
   return (
-    <div className="h-[520px]">
+    <div className="h-[520px] w-[288px]">
       <EmrOrderQueueSidePanel
         items={queueItems}
         selectedItemId="sample-1"
@@ -120,5 +122,43 @@ export const Default: Story = {
           "사용할 때: EMR order queue shell의 filter/group/card 조합을 검토할 때. 쓰지 말아야 할 때: 실제 오더 mutation, 담당 배정, provider 연동 동작을 검증할 때.",
       },
     },
+  },
+};
+
+function ReadFailureExample({ denied = false }: { denied?: boolean }) {
+  const [failed, setFailed] = useState(true);
+  return <div className="h-[520px] w-[288px]"><EmrOrderQueueSidePanel title="합성 대기열" items={queueItems} statuses={queueStatuses} readStatus={failed ? denied ? "permission_denied" : "error" : undefined} onRetry={() => setFailed(false)} /></div>;
+}
+export const ReadFailureRetry: Story = {
+  render: () => <ReadFailureExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText("업무 대기열을 불러오지 못했습니다")).toBeVisible());
+    await expect(canvas.queryByTestId("order-queue-item-sample-1")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "재시도" }));
+    await expect(canvas.getByTestId("order-queue-item-sample-1")).toBeVisible();
+  },
+};
+export const PermissionDenied: Story = {
+  render: () => <ReadFailureExample denied />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByText("업무 대기열을 볼 권한이 없습니다")).toBeVisible());
+    await expect(canvas.queryByRole("button", { name: "재시도" })).not.toBeInTheDocument();
+    await expect(canvas.queryByTestId("order-queue-item-sample-1")).not.toBeInTheDocument();
+  },
+};
+export const FilterChoiceCloses: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "대기열 필터" }));
+    await userEvent.click(await body.findByRole("menuitemradio", { name: "진행" }));
+    await waitFor(() => expect(body.queryByRole("menu")).not.toBeInTheDocument());
+    await expect(canvas.getByTestId("order-queue-item-sample-1")).toBeVisible();
+    await expect(canvas.queryByTestId("order-queue-item-sample-2")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "대기열 필터" }));
+    await userEvent.click(await body.findByRole("menuitemradio", { name: "전체 조건" }));
+    await expect(canvas.getByTestId("order-queue-item-sample-2")).toBeVisible();
   },
 };

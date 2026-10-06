@@ -1,5 +1,6 @@
 "use client";
 
+import { OrderQueueSortMenu, OrderQueueFilterMenu, type OrderQueueSortKey, type OrderQueueDetailFilter } from "@/components/emr/order-queue-side-panel";
 import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { getReceptionDemoActorId } from "@/features/reception/reception-demo-actor";
@@ -29,7 +30,6 @@ import { toast } from "sonner";
 import { subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import {
-  CdsActionsListFilterIcon,
   CdsActionsPlusIcon,
   CdsActionsSearchIcon,
   CdsActionsTrash2Icon,
@@ -60,7 +60,6 @@ import {
   CdsPeopleUserIcon,
   CdsPeopleUserMinusIcon,
 } from "@/components/cds-icons/people-and-places";
-import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import {
   StaffOperationalProfilePanel,
   type StaffCalendarAppointmentWork,
@@ -70,6 +69,7 @@ import {
   EmrListHeaderIconButton,
   EmrListSearchEmptyState,
   EmrQueueLoadingState,
+  EmrQueueEmptyState,
   EmrSubpanel,
   EmrSubpanelBody,
   EmrSubpanelTitle,
@@ -3337,6 +3337,8 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     (state) => state.persistedCalendarAppointments,
   );
   const [listMode, setListMode] = useState<ReceptionSideListMode>("all");
+  const [queueSort, setQueueSort] = useState<OrderQueueSortKey>();
+  const [queueFilter, setQueueFilter] = useState<OrderQueueDetailFilter>("all");
   const [previousOperatingDate, setPreviousOperatingDate] = useState<string>();
   const [searchOpen, setSearchOpen] = useState(false);
   const [cardActionFeedback, setCardActionFeedback] =
@@ -3535,8 +3537,14 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     ],
   );
   const filteredQueueItems = useMemo(
-    () => getFilteredReceptionQueueSideItems(queueItems, searchQuery),
-    [queueItems, searchQuery],
+    () => getFilteredReceptionQueueSideItems(queueItems, searchQuery)
+      .filter(item => queueFilter === "all" || (queueFilter === "unassigned"
+        ? !(item.encounter?.primaryVeterinarianId ?? item.appointment?.assignedVeterinarianId)
+        : `status:${item.statusGroup}` === queueFilter))
+      .sort((left, right) => !queueSort ? 0 : queueSort === "assignee"
+        ? (left.veterinarianName ?? "").localeCompare(right.veterinarianName ?? "", "ko") || ((Date.parse(left.sortAt) || 0) - (Date.parse(right.sortAt) || 0))
+        : ((Date.parse(left.sortAt) || 0) - (Date.parse(right.sortAt) || 0))),
+    [queueItems, searchQuery, queueFilter, queueSort],
   );
   const visibleQueueItems = useMemo(
     () => getReceptionSideQueueItems(filteredQueueItems, listMode),
@@ -3586,10 +3594,12 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     (nextOperatingDate: string, recordHistory = true) => {
       if (nextOperatingDate === operatingDate) return;
 
-      dispatchReceptionCalendarDragClear();
-      setCalendarDraftSelection(undefined);
+      if (!panelPresentation || panelPresentation.isCurrentModule) {
+        dispatchReceptionCalendarDragClear();
+        setCalendarDraftSelection(undefined);
+        setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
+      }
       setPreviousOperatingDate(recordHistory ? operatingDate : undefined);
-      setWorkspaceOperatingDate(workspaceId, nextOperatingDate);
       router.replace(
         buildReceptionOperatingDateRoute({
           operatingDate: nextOperatingDate,
@@ -3601,6 +3611,7 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
     },
     [
       operatingDate,
+      panelPresentation,
       pathname,
       router,
       searchParams,
@@ -3747,12 +3758,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
         }}
         headerActions={
           <>
-            <EmrListHeaderIconButton ariaLabel="정렬">
-              <CdsUtilitiesSortIcon className="size-4" />
-            </EmrListHeaderIconButton>
-            <EmrListHeaderIconButton ariaLabel="필터">
-              <CdsActionsListFilterIcon className="size-4" />
-            </EmrListHeaderIconButton>
+            <OrderQueueSortMenu ariaLabel="정렬" sortKey={queueSort} onSortKeyChange={setQueueSort} />
+            <OrderQueueFilterMenu ariaLabel="필터" filter={queueFilter} onFilterChange={setQueueFilter}
+              statuses={Object.entries(receptionQueueGroupMeta).map(([id, group]) => ({ id, label: group.label }))} />
             <EmrListHeaderIconButton
               ariaLabel="검색"
               onClick={() => setSearchOpen(true)}
@@ -3846,6 +3854,9 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
             query={searchQuery}
             onClear={() => setSearchQuery("")}
           />
+        ) : queueItems.length > 0 && queueFilter !== "all" ? (
+          <EmrQueueEmptyState kind="no-filter-results" placement="panel-center" title="조건에 맞는 접수/예약 항목이 없습니다"
+            primaryAction={<Button variant="outline" size="sm" onClick={() => setQueueFilter("all")}>필터 해제</Button>} />
         ) : (
           <ReceptionEmptyState>
             {emptyStateCopy}

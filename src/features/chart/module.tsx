@@ -1773,7 +1773,7 @@ export function ChartSidePanel({
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const { records: liveQueueRecords, status: liveQueueStatus } = useScopedChartLiveQueue(workspaceId);
+  const { records: liveQueueRecords, status: liveQueueStatus, error: liveQueueError } = useScopedChartLiveQueue(workspaceId);
   const requestConsultationCall = useChartStore(
     (state) => state.requestConsultationCall,
   );
@@ -1889,6 +1889,11 @@ export function ChartSidePanel({
       items={items}
       listLabel="진료 대기열"
       loading={liveQueueStatus === "loading"}
+      readStatus={liveQueueStatus === "error" ? (liveQueueError === "permission_missing" || liveQueueError === "unauthenticated" ? "permission_denied" : "error") : undefined}
+      onRetry={() => {
+        if (foreignPreview) void refreshPreviewQueue();
+        else void useLayoutStore.getState().moduleRefreshActions.treatment?.onRefresh?.();
+      }}
       loadingTitle="진료차트 정보를 불러오는 중입니다"
       selectedDate={selectedDate}
       selectedItemId={selectedEncounterId}
@@ -3524,6 +3529,9 @@ async function loadChartLiveQueue({
         headers: actorHeaders,
       },
     );
+    if (response.status === 401 || response.status === 403) {
+      return { ok: false, status: response.status === 401 ? 401 : 403, denialReason: response.status === 401 ? "unauthenticated" : "permission_missing" };
+    }
     const body = (await response.json()) as ChartLiveQueueResponse;
 
     if (!response.ok || !body.ok) {
