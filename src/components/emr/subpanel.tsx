@@ -204,7 +204,6 @@ export function EmrSubpanelTitle({
       {onCollapse ? (
         <EmrSubpanelHeaderIconButton
           aria-label={panel?.floating ? "사이드 패널 고정" : collapseLabel}
-          title={panel?.floating ? "사이드 패널 고정" : undefined}
           onClick={panel?.onToggle ?? onCollapse}
           className={cn((tabs || titleActions) && "ml-2")}
         >
