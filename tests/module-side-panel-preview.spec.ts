@@ -173,6 +173,75 @@ test("owned card menu survives pointer exit and receives Escape before preview",
   await expect(popup).not.toBeVisible();
 });
 
+for (const action of ["filter choice", "group toggle"] as const) {
+  test(`mouse button focus after ${action} cannot block switching or reopening previews`, async ({ page }) => {
+    await enter(page, "/w/clair-demo/billing?modulePanel=closed&right=open&date=2026-05-01");
+    await hover(page, "진료/차트", "treatment");
+    const initialUrl = page.url();
+    if (action === "filter choice") {
+      const filter = shown(page, "treatment").getByRole("button", { name: "대기열 필터", exact: true });
+      await filter.click();
+      await page.getByRole("menuitemradio", { name: "담당 미정", exact: true }).click();
+      await filter.click();
+      await expect(page.locator('[data-slot="dropdown-menu-content"][data-module-side-panel-owner="module-side-panel-treatment"]')).not.toBeVisible();
+      await expect(filter).toBeFocused();
+    } else {
+      await shown(page, "treatment").getByRole("button", { name: "진행중 접기", exact: true }).click();
+      await expect(shown(page, "treatment").getByRole("button", { name: "진행중 펼치기", exact: true })).toBeFocused();
+    }
+    await hover(page, "영상검사", "imaging");
+    await outside(page);
+    await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
+    await hover(page, "진료/차트", "treatment");
+    if (action === "filter choice") {
+      await expect(shown(page, "treatment").getByRole("button", { name: "대기열 필터", exact: true })).toHaveAttribute("data-filter", "unassigned");
+    } else {
+      await expect(shown(page, "treatment").getByRole("button", { name: "진행중 펼치기", exact: true })).toBeVisible();
+    }
+    await outside(page);
+    await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
+    await hover(page, "수납", "billing");
+    expect(page.url()).toBe(initialUrl);
+  });
+}
+
+test("keyboard focus retains preview until deliberate mouse hover switches it", async ({ page }) => {
+  await enter(page);
+  const initialUrl = page.url();
+  await menu(page, "고객관리").press("ArrowRight");
+  await expect(shown(page, "customer").getByRole("button", { name: "사이드 패널 펼치기", exact: true })).toBeFocused();
+  await page.waitForTimeout(350);
+  await expect(shown(page, "customer")).toBeVisible();
+  await hover(page, "영상검사", "imaging");
+  await outside(page);
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
+  expect(page.url()).toBe(initialUrl);
+});
+
+test("focused search and IME retain preview while ordinary mouse focus does not", async ({ page }) => {
+  await enter(page);
+  await hover(page);
+  await shown(page, "reception").getByRole("button", { name: "검색", exact: true }).click();
+  const input = shown(page, "reception").getByRole("searchbox", { name: "대기열 검색", exact: true });
+  await input.fill("하루");
+  await input.dispatchEvent("compositionstart");
+  await outside(page);
+  await menu(page, "영상검사").hover();
+  await page.waitForTimeout(350);
+  await expect(shown(page, "reception")).toBeVisible();
+  await expect(input).toBeFocused();
+  await expect(input).toHaveValue("하루");
+  await input.dispatchEvent("compositionend");
+  await input.press("Escape");
+  await expect(input).toHaveValue("");
+  await input.press("Escape");
+  await expect(input).not.toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(host(page)).toHaveAttribute("data-panel-mode", "hidden");
+  await outside(page);
+  await hover(page, "영상검사", "imaging");
+});
+
 test("search and unavailable menu keep tooltips; unavailable menu cannot navigate", async ({ page }) => {
   await enter(page);
   await hover(page);

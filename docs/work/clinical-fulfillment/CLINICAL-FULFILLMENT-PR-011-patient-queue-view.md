@@ -31,7 +31,8 @@ Only synthetic local fixtures are authorized for database verification.
   selection and new-work notices. No fake scenario controls or business writes.
 - Add nullable originChartId/originChartCreatedAt to existing scoped v2 read RPC/DTO.
   Use orders.origin_chart_id and exact scoped SOAP identity, never encounter as chart.
-  Display actual creation time; no fabricated chart numbers, avatars, or origin backfill.
+  Preserve actual chart creation metadata; no fabricated chart numbers, avatars, or origin backfill.
+  The approved visual follow-up removes chart labels from patient queue cards.
 - Preserve server permissions, workspace/date scopes, immutable snapshots and mutations.
 
 ## Out of scope
@@ -98,4 +99,54 @@ synthetic/demo lab, imaging and dispensing queue view switching, exact selection
 type/search counts and denied/empty behavior without execution mutations.
 PR/head SHA, exact Release Check, Ready Preview, and final approval packet are
 recorded in the task delivery evidence after the candidate is committed.
-Hosted apply and main/Production remain pending exact approval.
+The original feature was delivered in PR #940, merged as
+`9ef8e51d9ae8eedaadf2c01c688349d1f648c7c2`. Its hosted projection and Production
+delivery were approved separately in this task.
+
+## Approved visual follow-up — 2026-10-06
+
+승욱 approved the revised interactive prototype and explicitly requested commit,
+push, PR, origin/main merge and Production deployment. The final browser comment
+removes chart labels from patient cards. Baseline app/Production source:
+`455e55071c257b3e167da71370b158ef3b4f9eb0`.
+
+- Reuse the CDS pet toggle and 18px roundrect avatar with the existing pet fallback.
+- Keep avatar left inset; align the tree at 28px and cards at 40px within the panel.
+- Apply 4px between patient cards, 12px between patient groups, 2px between request
+  and title, 4px before the footer, and 22px metadata/status badges.
+- Omit a patient-card type badge only when its text duplicates the title. Retain
+  distinct modality and 조제/처치 labels. Keep long text truncation and footer wrapping.
+- Position the existing more-menu action at top/right 4px without inflating the
+  request row. Preserve its menu, propagation guards, keyboard/focus and selection.
+- Remove all patient-card chart label display. Keep origin DTO/API/DB metadata and
+  exact work-item selection unchanged. No backend, migration, data or default
+  order-card change belongs to this follow-up.
+
+Focused stories and existing three-module browser checks cover duplicate labels,
+menu actions, unchanged selection/URL/filter/permission behavior and no writes.
+Exact candidate, release verification, preview, smoke and rollback evidence follow
+after implementation checks.
+
+The release candidate is rebased onto current `origin/main`
+`fc2894de8057124b3c1c1dc2498df9d190bcd87e` (PR #942's separate hover-preview fix).
+Preflight evidence: 12 queue model/browser checks and six focused Storybook stories
+pass. The browser checks exercise lab, imaging and dispensing selection/URL,
+filters, combined permission precedence and no-write behavior. Story interactions
+cover more-menu actions without selecting the card. Actual Storybook DOM measurements
+confirm 18px avatars with 6px radius, 4px card/header gaps, 12px group gaps,
+8px card radius and 22px metadata badges. Production build, TypeScript, docs,
+UX-copy and secret checks pass; lint has zero errors and five existing WP10 warnings.
+
+Production smoke will inspect the synthetic Cheongdam lab, imaging and dispensing
+queues and switch the view without executing clinical actions. Stop on an unexpected
+candidate, failed exact Release Check, non-Ready Preview/Production or smoke failure.
+Rollback candidate is the previous Ready deployment at
+`https://emr-app-shell-prototype-hgx4jrcdi-mcso0s-projects.vercel.app`, source
+`fc2894de8057124b3c1c1dc2498df9d190bcd87e`. Final PR/check/deployment evidence is
+recorded in the task's delivery report.
+
+Storybook 10.4.6's navigation mock omits the `ReadonlyURLSearchParams` export used
+by the already-deployed panel context from PR #941. A Storybook-only alias reuses
+its existing mocked hooks and Next 16.2.6's readonly params class. The alias runs
+after the framework's mock plugin for both the iframe and Vitest. Production
+imports/configuration and dependencies remain unchanged.

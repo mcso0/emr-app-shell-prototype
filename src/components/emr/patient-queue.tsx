@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { CdsPeopleUsersIcon } from "@/components/cds-icons/people-and-places";
+import { CdsGnbPetGnbIcon } from "@/components/cds-icons/gnb";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
 import { CdsActionsListFilterIcon } from "@/components/cds-icons/actions-and-controls";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenu
 import { EmrListHeaderIconButton, EmrQueueEmptyState } from "@/components/emr/subpanel";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
 import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
-import { groupPatientQueue, patientQueueChartLabels, patientQueueKey, patientQueueStatus, patientQueueStatusLabels, type PatientQueueRow, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
+import { groupPatientQueue, patientQueueKey, patientQueueStatus, patientQueueStatusLabels, type PatientQueueRow, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
 
 export function PatientQueueToggle({ active, disabled, onChange }: { active: boolean; disabled: boolean; onChange: () => void }) {
   return (
@@ -24,7 +24,7 @@ export function PatientQueueToggle({ active, disabled, onChange }: { active: boo
           className={active ? "bg-[var(--emr-status-info-bg)] text-[var(--emr-status-info-text)]" : undefined}
           onClick={onChange}
         >
-          <CdsPeopleUsersIcon aria-hidden="true" className="size-4" />
+          <CdsGnbPetGnbIcon aria-hidden="true" className="size-4" />
         </EmrListHeaderIconButton>
       } />
       <TooltipContent role="tooltip" side="bottom">{active ? "오더별 보기로 전환" : "환자별로 그룹핑"}</TooltipContent>
@@ -104,17 +104,15 @@ export function PatientQueueContent({ active, allRows, rows, selectedId, groupSo
     capture();
   }, [active, allRows, rows, selectedId, collapsed, revealId, readable, capture, viewport]);
   const hiddenSelection = selectedId && allRows.some(row => row.id === selectedId) && !rows.some(row => row.id === selectedId);
-  const chartLabels = patientQueueChartLabels(allRows);
   return <div ref={root} className="contents">
     {!readable ? <EmrQueueEmptyState placement="panel-center" title="업무 대기열을 볼 권한이 없습니다" /> : <>
       {readable && hiddenSelection ? <div role="status" className="emr-text-metadata rounded-md border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-2 text-[var(--emr-status-info-text)]">선택한 업무는 현재 검색·필터에 포함되지 않습니다. <button className="underline" onClick={() => { onClearConditions(); setRevealId(selectedId); }}>조건 해제하고 보기</button></div> : null}
       {active && newIds.length > 0 && readable ? <div role="status" className="emr-text-metadata flex items-center justify-between rounded-md bg-[var(--emr-status-info-bg)] p-2 text-[var(--emr-status-info-text)]"><span>새 업무 {newIds.length}건 추가</span><button className="underline" onClick={() => { const id = newIds[0]; if (!rows.some(row => row.id === id)) onClearConditions(); setRevealId(id); setNewIds([]); }}>목록에서 보기</button></div> : null}
       {active && rows.length ? groups.map(group => {
         const first = group.items[0];
-        return <EmrSidePanelCollapsibleGroup key={group.key} dataTestId={`patient-queue-group-${group.key}`} accessibleLabel={`${first.card.patientName} · ${first.card.guardianName}`} collapsed={collapsed.has(group.key)} count={group.items.length} indicatorVisible={false} stateIconState={false} label={<span className="flex min-w-0 items-center gap-1"><Avatar className="size-5 shrink-0"><AvatarFallback className="text-[10px]">{first.card.patientName.slice(0,1)}</AvatarFallback></Avatar><span className="truncate" title={`${first.card.patientName} · ${first.card.guardianName}`}>{first.card.patientName} · {first.card.guardianName}</span>{group.urgentCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-danger-text)]">긴급 {group.urgentCount}</span> : null}{group.returnedCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-warning-text)]">재요청 {group.returnedCount}</span> : null}</span>} onToggle={() => setCollapsed(current => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
-          <div className="flex flex-col gap-2 border-l border-[var(--emr-border-default)] pl-2">{group.items.map(row => {
-            const chartLabel = chartLabels.get(row.id);
-            return <div key={row.id} data-patient-queue-item={row.id}><EmrTaskQueueCard item={{ ...row.card, assigneeName: row.assignedToUserId ? row.card.assigneeName ?? "확인 불가" : row.card.assigneeName }} selected={selectedId === row.id} onSelect={() => onSelect(row.id)} patientView={{ chartLabel, statusLabel: patientQueueStatusLabels[patientQueueStatus(row.status)] ?? "대기", urgent: row.priority === "urgent" }} /></div>;
+        return <EmrSidePanelCollapsibleGroup key={group.key} className="mb-[var(--clair-spacing-4)] last:mb-0" dataTestId={`patient-queue-group-${group.key}`} accessibleLabel={`${first.card.patientName} · ${first.card.guardianName}`} collapsed={collapsed.has(group.key)} count={group.items.length} indicatorVisible={false} stateIconState={false} label={<span className="flex min-w-0 items-center gap-[var(--clair-spacing-8)]"><Avatar roundness="roundrect" className="size-[18px] shrink-0"><AvatarFallback><CdsGnbPetGnbIcon className="size-3.5" aria-hidden="true" /></AvatarFallback></Avatar><span className="truncate" title={`${first.card.patientName} · ${first.card.guardianName}`}>{first.card.patientName} · {first.card.guardianName}</span>{group.urgentCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-danger-text)]">긴급 {group.urgentCount}</span> : null}{group.returnedCount ? <span className="shrink-0 text-[10px] text-[var(--emr-status-warning-text)]">재요청 {group.returnedCount}</span> : null}</span>} onToggle={() => setCollapsed(current => { const next = new Set(current); if (next.has(group.key)) next.delete(group.key); else next.add(group.key); return next; })}>
+          <div className="relative ml-[var(--clair-spacing-24)] flex flex-col gap-[var(--clair-spacing-4)] before:absolute before:inset-y-0 before:-left-[var(--clair-spacing-12)] before:w-px before:bg-[var(--emr-border-default)]">{group.items.map(row => {
+            return <div key={row.id} data-patient-queue-item={row.id}><EmrTaskQueueCard item={{ ...row.card, assigneeName: row.assignedToUserId ? row.card.assigneeName ?? "확인 불가" : row.card.assigneeName }} selected={selectedId === row.id} onSelect={() => onSelect(row.id)} patientView={{ statusLabel: patientQueueStatusLabels[patientQueueStatus(row.status)] ?? "대기", urgent: row.priority === "urgent" }} /></div>;
           })}</div>
         </EmrSidePanelCollapsibleGroup>;
       }) : children}

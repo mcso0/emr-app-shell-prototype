@@ -69,6 +69,7 @@ export function ShellMain({
   const suppressedTrigger = useRef<HTMLElement | null>(null);
   const panelInside = useRef(false);
   const composing = useRef(false);
+  const keyboardFocus = useRef(false);
   const dragging = useRef(false);
   const openTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -108,10 +109,19 @@ export function ShellMain({
   const blockedByDialog = useCallback(() =>
     [...document.querySelectorAll<HTMLElement>('[role="dialog"][aria-modal="true"]')].some((element) =>
       !owns(element) && !element.hasAttribute("data-closed") && element.getClientRects().length > 0), [owns]);
-  const locked = useCallback(() => composing.current || dragging.current || owns(document.activeElement) || hasOwnedPopup(), [owns, hasOwnedPopup]);
+  const locked = useCallback(() => {
+    const active = document.activeElement;
+    const editing = active instanceof HTMLElement &&
+      (active.matches('input:not([type="checkbox"]):not([type="radio"]), textarea, select') || active.isContentEditable);
+    // Mouse clicks leave focus on buttons after menus close. Only editing or
+    // keyboard interaction should retain the preview on that focus alone.
+    return composing.current || dragging.current || hasOwnedPopup() ||
+      (owns(active) && (keyboardFocus.current || editing));
+  }, [owns, hasOwnedPopup]);
   const closePreview = useCallback((returnFocus = false) => {
     cancelTimers();
     const focusInside = owns(document.activeElement);
+    keyboardFocus.current = false;
     suppressedTrigger.current = trigger.current?.element ?? null;
     panelInside.current = false;
     setPreview(null);
@@ -127,6 +137,7 @@ export function ShellMain({
     if (!current.current.desktop || useLayoutStore.getState().modulePanelOpen || useLayoutStore.getState().activeDrawer || blockedByDialog()) return;
     if (!modules.some((module) => module.id === moduleId && module.sidePanel)) return;
     cancelTimers();
+    keyboardFocus.current = keyboard;
     lastTrigger.current = element;
     const previewSearch = moduleId === moduleDefinition.id ? search : navigationSearch;
     setCachedSearch((cache) => cache[moduleId] === previewSearch ? cache : { ...cache, [moduleId]: previewSearch });
@@ -152,6 +163,7 @@ export function ShellMain({
   }, [closePreview, locked, openPreview]);
   const handlePreviewEnter = (moduleId: string, element: HTMLElement, pointerType: string) => {
     if (pointerType !== "mouse") return;
+    keyboardFocus.current = false;
     cancelTimers();
     trigger.current = { moduleId, element };
     if (!modules.some((module) => module.id === moduleId && module.sidePanel)) {
@@ -222,6 +234,7 @@ export function ShellMain({
 
   useEffect(() => {
     const pointerDown = (event: PointerEvent) => {
+      keyboardFocus.current = false;
       if (event.pointerType !== "mouse") closePreview();
       if (owns(event.target) || trigger.current?.element.contains(event.target as Node)) return;
       dragging.current = event.pointerType === "mouse";
@@ -233,7 +246,13 @@ export function ShellMain({
       if (panelInside.current) clearTimeout(closeTimer.current);
       else scheduleClose();
     };
+    const pointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || !current.current.floatingModuleId || !keyboardFocus.current) return;
+      keyboardFocus.current = false;
+      scheduleClose();
+    };
     const keyDown = (event: KeyboardEvent) => {
+      keyboardFocus.current = true;
       if (event.defaultPrevented || blockedByDialog() || hasOwnedPopup()) return;
       if (event.key === "Escape") {
         if (current.current.sheet) { event.preventDefault(); setModulePanelOpen(false); restoreTriggerFocus(); }
@@ -260,6 +279,7 @@ export function ShellMain({
     });
     document.addEventListener("pointerdown", pointerDown, true);
     document.addEventListener("pointerover", pointerOver);
+    document.addEventListener("pointermove", pointerMove);
     document.addEventListener("keydown", keyDown);
     document.addEventListener("visibilitychange", visibility);
     document.addEventListener("dragstart", dragStart);
@@ -273,6 +293,7 @@ export function ShellMain({
       if (focusFrame.current !== undefined) cancelAnimationFrame(focusFrame.current);
       document.removeEventListener("pointerdown", pointerDown, true);
       document.removeEventListener("pointerover", pointerOver);
+      document.removeEventListener("pointermove", pointerMove);
       document.removeEventListener("keydown", keyDown);
       document.removeEventListener("visibilitychange", visibility);
       document.removeEventListener("dragstart", dragStart);

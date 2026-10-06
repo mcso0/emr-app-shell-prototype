@@ -2,6 +2,7 @@
 
 import { ClockIcon } from "@/components/icons";
 import { EmrStatusBadge } from "@/components/emr/status-badge";
+import { cn } from "@/lib/utils";
 import {
   EmrSidePanelCard,
   EmrSidePanelCardAction,
@@ -39,7 +40,7 @@ type EmrTaskQueueCardProps = {
   className?: string;
   item: EmrTaskQueueCardItem;
   selected: boolean;
-  patientView?: { chartLabel?: string; statusLabel: string; urgent: boolean };
+  patientView?: { statusLabel: string; urgent: boolean };
   onSelect?: () => void;
 };
 
@@ -64,12 +65,33 @@ export function EmrTaskQueueCard({
   const eventMeta =
     item.eventText ?? `${item.eventTime} ${item.eventActorName} ${eventLabel}`;
 
-  if (patientView) return <EmrSidePanelCard className={className} selectionVariant="modulePanel" selected={selected} testId={item.testId} onSelect={onSelect}>
-    <div className="emr-text-metadata flex min-w-0 items-center gap-1 text-[var(--emr-sidepanel-task-card-label-text)]"><ClockIcon className="size-3 shrink-0" aria-hidden="true" /><span className="min-w-0 flex-1 truncate">{item.eventTime} {item.eventActorName} {eventLabel}</span><EmrSidePanelCardAction ariaLabel={item.actionAriaLabel} density={item.actionMenuDensity} items={item.actionItems} testId={item.actionTestId} /></div>
-    {patientView.chartLabel ? <div className="emr-text-metadata truncate text-[var(--emr-sidepanel-task-card-label-text)]" title={patientView.chartLabel}>{patientView.chartLabel}</div> : null}
-    <div className="emr-text-metadata flex min-w-0 items-center gap-1 font-medium">{item.secondLineBadgeLabel ? <span className="shrink-0 rounded border px-1 text-[10px]">{item.secondLineBadgeLabel}</span> : null}{patientView.urgent ? <span className="shrink-0 text-[10px] text-[var(--emr-status-danger-text)]">긴급</span> : null}<span className="truncate">{item.secondLineText}</span></div>
-    <div className="flex min-w-0 items-center gap-1 overflow-hidden"><EmrSidePanelMetaBadge label="요청" value={item.eventActorName} maxWidthClassName="max-w-[88px]" /><EmrSidePanelMetaBadge label="담당" value={item.assigneeName ?? "미지정"} maxWidthClassName="max-w-[80px]" /><EmrStatusBadge className="ml-auto shrink-0" label={patientView.statusLabel === "대기" ? "대기중" : patientView.statusLabel} marker="none" /></div>
-  </EmrSidePanelCard>;
+  if (patientView) {
+    const showTypeBadge = item.secondLineBadgeLabel && item.secondLineBadgeLabel.trim() !== item.secondLineText.trim();
+
+    return (
+      <EmrSidePanelCard className={cn("gap-[var(--clair-spacing-4)] rounded-[var(--clair-radius-atomic-8)]", className)} selectionVariant="modulePanel" selected={selected} testId={item.testId} onSelect={onSelect}>
+        <div className="flex min-w-0 flex-col gap-[var(--clair-spacing-2)]">
+          <div className="emr-text-metadata flex min-w-0 items-center gap-1 pr-[var(--clair-spacing-24)] text-[var(--emr-sidepanel-task-card-label-text)]">
+            <ClockIcon className="size-3 shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate">{item.eventTime} {item.eventActorName} {eventLabel}</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-1 text-[13px] leading-[18px] font-medium">
+            {showTypeBadge ? <span className="max-w-[110px] shrink-0 truncate rounded border px-1 text-[10px] leading-[14px]">{item.secondLineBadgeLabel}</span> : null}
+            {patientView.urgent ? <span className="shrink-0 text-[10px] text-[var(--emr-status-danger-text)]">긴급</span> : null}
+            <span className="min-w-0 truncate" title={item.secondLineText}>{item.secondLineText}</span>
+          </div>
+        </div>
+        <div className="absolute top-[var(--clair-spacing-4)] right-[var(--clair-spacing-4)]">
+          <EmrSidePanelCardAction ariaLabel={item.actionAriaLabel} density={item.actionMenuDensity} items={item.actionItems} testId={item.actionTestId} />
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-4)] [&>span]:h-[22px] [&>span]:px-[var(--clair-spacing-4)] [&>span]:py-0 [&>span]:font-normal">
+          <EmrSidePanelMetaBadge label="요청" value={item.eventActorName} maxWidthClassName="max-w-[88px]" />
+          <EmrSidePanelMetaBadge label="담당" value={item.assigneeName ?? "미지정"} maxWidthClassName="max-w-[80px]" />
+          <EmrStatusBadge className="ml-auto shrink-0" label={patientView.statusLabel === "대기" ? "대기중" : patientView.statusLabel} marker="none" />
+        </div>
+      </EmrSidePanelCard>
+    );
+  }
 
   return (
     <EmrSidePanelCard
