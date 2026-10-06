@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCoreRowModel,
@@ -703,6 +705,8 @@ function useFulfillmentQueue(
   queueType: FulfillmentQueueType,
   selectedDate?: string,
 ) {
+  const panelPresentation = useModuleSidePanel();
+  const enabled = panelPresentation?.visible !== false;
   const workspaceId = useWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
   const cacheKey = getFulfillmentQueueCacheKey(
@@ -758,9 +762,10 @@ function useFulfillmentQueue(
   }, [cacheKey, load]);
 
   useEffect(() => {
+    if (!enabled) return;
     void load();
     return () => { requestSeq.current += 1; };
-  }, [load]);
+  }, [enabled, load]);
 
   useEffect(() => {
     const listener = (nextSnapshot: FulfillmentQueueSnapshot) =>
@@ -1611,7 +1616,9 @@ export function LabSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const queryLabResultId = searchParams.get("labResultId");
   const selectedLabResultId = useLabImagingStore(
     (state) => state.selectedLabResultId,
@@ -1633,6 +1640,7 @@ export function LabSidePanel({
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
   useQueueRealtimeRefresh({
+    enabled: panelPresentation?.visible !== false,
     onQueueChange: fulfillmentQueue.refresh,
     scopeKey: `lab:${selectedDate}`,
     workspaceId,
@@ -1650,6 +1658,7 @@ export function LabSidePanel({
     [baseItems, fulfillmentQueue.workItems, legacySalesDemo],
   );
   useEffect(() => {
+    if (passivePanel) return;
     if (queryLabResultId) {
       if (items.some((item) => item.result.id === queryLabResultId)) {
         selectLabResult(queryLabResultId);
@@ -1665,7 +1674,7 @@ export function LabSidePanel({
     if (!selectedLabResultId) return;
     if (items.some((item) => item.result.id === selectedLabResultId)) return;
     selectLabResult("");
-  }, [items, queryLabResultId, selectLabResult, selectedLabResultId]);
+  }, [passivePanel, items, queryLabResultId, selectLabResult, selectedLabResultId]);
   function handleSelectLabResult(resultId: string) {
     const item = items.find((candidate) => candidate.result.id === resultId);
     if (!item) return;
@@ -1855,7 +1864,9 @@ export function ImagingSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const queryImagingStudyId = searchParams.get("imagingStudyId");
   const selectedImagingStudyId = useLabImagingStore(
     (state) => state.selectedImagingStudyId,
@@ -1879,6 +1890,7 @@ export function ImagingSidePanel({
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
   useQueueRealtimeRefresh({
+    enabled: panelPresentation?.visible !== false,
     onQueueChange: fulfillmentQueue.refresh,
     scopeKey: `imaging:${selectedDate}`,
     workspaceId,
@@ -1896,6 +1908,7 @@ export function ImagingSidePanel({
     [baseItems, fulfillmentQueue.workItems, legacySalesDemo],
   );
   useEffect(() => {
+    if (passivePanel) return;
     if (queryImagingStudyId) {
       if (items.some((item) => item.study.id === queryImagingStudyId)) {
         selectImagingStudy(queryImagingStudyId);
@@ -1911,7 +1924,7 @@ export function ImagingSidePanel({
     if (!selectedImagingStudyId) return;
     if (items.some((item) => item.study.id === selectedImagingStudyId)) return;
     selectImagingStudy("");
-  }, [items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
+  }, [passivePanel, items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
   function handleSelectImagingStudy(studyId: string) {
     const item = items.find((candidate) => candidate.study.id === studyId);
     if (!item) return;

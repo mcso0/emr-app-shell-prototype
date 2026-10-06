@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useModuleSidePanel, useModuleSidePanelPopupActions } from "@/components/emr/module-side-panel-context"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
@@ -9,8 +10,9 @@ import { CloseIcon } from "@/components/icons"
 
 type DialogMotion = "default" | "none"
 
-function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+function Dialog({ actionsRef, ...props }: DialogPrimitive.Root.Props) {
+  const panelActions = useModuleSidePanelPopupActions<DialogPrimitive.Root.Actions>(actionsRef);
+  return <DialogPrimitive.Root actionsRef={panelActions} data-slot="dialog" {...props} />
 }
 
 function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -59,11 +61,13 @@ function DialogContent({
   overlayClassName?: string
   showCloseButton?: boolean
 }) {
+  const panel = useModuleSidePanel();
   return (
     <DialogPortal>
       <DialogOverlay className={overlayClassName} motion={motion} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        data-module-side-panel-owner={panel?.ownerId}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 outline-none sm:max-w-sm",
           motion === "none"

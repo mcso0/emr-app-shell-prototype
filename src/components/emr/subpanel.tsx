@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ComponentProps, type KeyboardEvent, type ReactNode } from "react";
+import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
 import {
   CdsActionsSearchIcon,
   CdsActionsXIcon,
@@ -184,6 +185,7 @@ export function EmrSubpanelTitle({
   tabsClassName,
   titleActions,
 }: EmrSubpanelTitleProps) {
+  const panel = useModuleSidePanel();
   return (
     <div
       className={cn(
@@ -200,8 +202,8 @@ export function EmrSubpanelTitle({
       {titleActions ? <div className="ml-2 flex shrink-0 items-center">{titleActions}</div> : null}
       {onCollapse ? (
         <EmrSubpanelHeaderIconButton
-          aria-label={collapseLabel}
-          onClick={onCollapse}
+          aria-label={panel?.floating ? "사이드 패널 펼치기" : collapseLabel}
+          onClick={panel?.onToggle ?? onCollapse}
           className={cn((tabs || titleActions) && "ml-2")}
         >
           <SidebarGnbIcon />

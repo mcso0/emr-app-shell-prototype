@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import {
   useCallback,
   useEffect,
@@ -314,6 +316,8 @@ function getFulfillmentReadFailureStatus(result: {
 }
 
 function useDispensingFulfillmentQueue(selectedDate?: string) {
+  const panelPresentation = useModuleSidePanel();
+  const enabled = panelPresentation?.visible !== false;
   const [mutationError, setMutationError] = useState<string | null>(null);
   const workspaceId = getWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
@@ -425,9 +429,10 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
 
   useEffect(() => {
     // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
+    if (!enabled) return;
     void load();
     return () => { requestSeq.current += 1; };
-  }, [load]);
+  }, [enabled, load]);
 
   useEffect(() => {
     const listener = (nextSnapshot: DispensingFulfillmentQueueSnapshot) =>
@@ -1010,7 +1015,9 @@ export function DispensingSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const queryEncounterId = searchParams.get("encounterId");
   const queryWorkItemId = searchParams.get("workItemId");
   const queryQueueItemId = searchParams.get("queueItemId");
@@ -1020,6 +1027,7 @@ export function DispensingSidePanel({
     useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   useQueueRealtimeRefresh({
+    enabled: panelPresentation?.visible !== false,
     onQueueChange: fulfillmentQueue.refresh,
     scopeKey: `dispensing-treatment:${selectedDate}`,
     workspaceId,
@@ -1030,6 +1038,7 @@ export function DispensingSidePanel({
   );
   const statuses = getOrderQueueStatuses("dispensing");
   useEffect(() => {
+    if (passivePanel) return;
     const queryQueueItem =
       (queryQueueItemId ? items.find((item) => item.id === queryQueueItemId) : undefined) ??
       (queryWorkItemId ? items.find((item) => item.id === `live-fulfillment-${queryWorkItemId}`) : undefined) ??
@@ -1048,8 +1057,7 @@ export function DispensingSidePanel({
     if (items.some((item) => item.id === selectedQueueItemIds.dispensing))
       return;
     setSelectedQueueItem("dispensing", "");
-  }, [
-    fulfillmentQueue.workItems,
+  }, [passivePanel, fulfillmentQueue.workItems,
     items,
     queryEncounterId,
     queryWorkItemId,

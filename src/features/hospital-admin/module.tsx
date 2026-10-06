@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import { LabResultProfileSelection } from "@/features/lab-imaging/components/result-profile-selection";
 
 import {
@@ -14,7 +16,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
@@ -1502,10 +1504,85 @@ export function HospitalAdminConceptScreen({
   );
 }
 
+function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRetryKey = 0) {
+  const { hydrated, hydrate, session } = useAuthClient();
+  const beginCatalogLoad = useHospitalAdminStore((state) => state.beginCatalogLoad);
+  const finishCatalogLoad = useHospitalAdminStore((state) => state.finishCatalogLoad);
+  useEffect(() => {
+    if (enabled) hydrate();
+  }, [enabled, hydrate]);
+
+  useEffect(() => {
+    if (!enabled || !hydrated) return;
+
+    const controller = new AbortController();
+    let canceled = false;
+
+    const loadCatalog = async () => {
+      await Promise.resolve();
+      if (canceled) return;
+      const generation = beginCatalogLoad(workspaceId);
+
+      if (!session) {
+        finishCatalogLoad(workspaceId, generation, { status: "denied" });
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-catalog`,
+          {
+            headers: getDemoActorHeaders(session),
+            signal: controller.signal,
+          },
+        );
+        const body = (await response.json()) as OrderCatalogAdminReadResponse;
+        if (canceled) return;
+
+        if (!response.ok || !body.ok) {
+          finishCatalogLoad(workspaceId, generation, { status:
+            response.status === 401 || response.status === 403
+              ? "denied"
+              : "error",
+          });
+          return;
+        }
+
+        finishCatalogLoad(workspaceId, generation, { status: "ready",
+          orders: mapWorkspaceCatalogItemsToHospitalOrders(body.items),
+          capabilities: body.capabilities ?? deniedCatalogCapabilities,
+        });
+      } catch (error: unknown) {
+        if (canceled || (error as { name?: string }).name === "AbortError") return;
+        finishCatalogLoad(workspaceId, generation, { status: "error" });
+      }
+    };
+
+    void loadCatalog();
+
+    return () => {
+      canceled = true;
+      controller.abort();
+    };
+  }, [
+    catalogRetryKey,
+    enabled,
+    hydrated,
+    session,
+    beginCatalogLoad,
+    finishCatalogLoad,
+    workspaceId,
+  ]);
+
+  return session;
+}
+
 export function HospitalAdminSidePanel({ moduleLabel, workspaceId }: ShellComponentProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  useHospitalCatalogRead(workspaceId, Boolean(panelPresentation?.visible && !panelPresentation.isCurrentModule));
+  const pathname = useModuleSidePanelPathname();
+  const router = useModuleSidePanelRouter();
+  const searchParams = useModuleSidePanelSearchParams();
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const cancelPendingSectionChange = useHospitalAdminStore(
     (state) => state.cancelPendingSectionChange,
@@ -1759,7 +1836,6 @@ export function HospitalAdminSidePanel({ moduleLabel, workspaceId }: ShellCompon
 
 export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const searchParams = useSearchParams();
-  const { hydrated, hydrate, session } = useAuthClient();
   const activeSection = useHospitalAdminStore((state) => state.activeSection);
   const clearSelectedOrders = useHospitalAdminStore(
     (state) => state.clearSelectedOrders,
@@ -1791,8 +1867,6 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const setFocusedOrderId = useHospitalAdminStore(
     (state) => state.setFocusedOrderId,
   );
-  const beginCatalogLoad = useHospitalAdminStore(state => state.beginCatalogLoad);
-  const finishCatalogLoad = useHospitalAdminStore(state => state.finishCatalogLoad);
   const setSearchQuery = useHospitalAdminStore((state) => state.setSearchQuery);
   const toggleOrderSelection = useHospitalAdminStore(
     (state) => state.toggleOrderSelection,
@@ -2714,70 +2788,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       ),
     );
   };
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-
-    const controller = new AbortController();
-    let canceled = false;
-
-    const loadCatalog = async () => {
-      await Promise.resolve();
-      if (canceled) return;
-      const generation = beginCatalogLoad(workspaceId);
-
-      if (!session) {
-        finishCatalogLoad(workspaceId, generation, { status: "denied" });
-        return;
-      }
-
-      try {
-        const response = await fetch(
-          `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-catalog`,
-          {
-            headers: getDemoActorHeaders(session),
-            signal: controller.signal,
-          },
-        );
-        const body = (await response.json()) as OrderCatalogAdminReadResponse;
-        if (canceled) return;
-
-        if (!response.ok || !body.ok) {
-          finishCatalogLoad(workspaceId, generation, { status:
-            response.status === 401 || response.status === 403
-              ? "denied"
-              : "error",
-          });
-          return;
-        }
-
-        finishCatalogLoad(workspaceId, generation, { status: "ready",
-          orders: mapWorkspaceCatalogItemsToHospitalOrders(body.items),
-          capabilities: body.capabilities ?? deniedCatalogCapabilities,
-        });
-      } catch (error: unknown) {
-        if (canceled || (error as { name?: string }).name === "AbortError") return;
-        finishCatalogLoad(workspaceId, generation, { status: "error" });
-      }
-    };
-
-    void loadCatalog();
-
-    return () => {
-      canceled = true;
-      controller.abort();
-    };
-  }, [
-    catalogRetryKey,
-    hydrated,
-    session,
-    beginCatalogLoad,
-    finishCatalogLoad,
-    workspaceId,
-  ]);
+  const session = useHospitalCatalogRead(workspaceId, true, catalogRetryKey);
 
   if (activeSection === "members") {
     return (

@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
+
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import {
@@ -85,9 +87,82 @@ function isCustomerProfileReadLoading({
   return status === "idle" || status === "loading";
 }
 
+function useCustomerProfileRead(workspaceId: string, enabled: boolean, profileReadAttempt = 0) {
+  const setProfileReadState = useCustomerStore((state) => state.setProfileReadState);
+  const authSession = useMockAuthStore((state) => state.session);
+  const applyPatientGuardianLookupItem = usePatientProfileStore((state) => state.applyPatientGuardianLookupItem);
+  useLayoutEffect(() => {
+    if (!enabled || !isPreparedEmptyClinicWorkspace(workspaceId)) return;
+
+    setProfileReadState({ status: "loading", workspaceId });
+  }, [enabled, setProfileReadState, workspaceId]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (!isPreparedEmptyClinicWorkspace(workspaceId)) {
+      setProfileReadState({ status: "ready", workspaceId });
+      return;
+    }
+
+    let cancelled = false;
+    setProfileReadState({ status: "loading", workspaceId });
+
+    async function loadSeededCustomerProfiles() {
+      try {
+        const headers = authSession?.id
+          ? { "x-clair-demo-session-user-id": authSession.id }
+          : undefined;
+        const response = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?query=`,
+          {
+            cache: "no-store",
+            headers,
+          },
+        );
+        const result =
+          (await response.json()) as ReceptionPatientGuardianLookupResponse;
+
+        if (cancelled) return;
+        if (!response.ok || !result.ok) {
+          setProfileReadState({
+            status:
+              response.status === 401 || response.status === 403
+                ? "denied"
+                : "error",
+            workspaceId,
+          });
+          return;
+        }
+
+        result.patients.forEach((item) => applyPatientGuardianLookupItem(item));
+        setProfileReadState({ status: "ready", workspaceId });
+      } catch {
+        if (!cancelled) {
+          setProfileReadState({ status: "error", workspaceId });
+        }
+      }
+    }
+
+    void loadSeededCustomerProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    applyPatientGuardianLookupItem,
+    authSession?.id,
+    profileReadAttempt,
+    enabled,
+    setProfileReadState,
+    workspaceId,
+  ]);
+}
+
 export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
+  const panelPresentation = useModuleSidePanel();
   const params = useParams<{ workspaceId?: string | string[] }>();
   const workspaceId = getCustomerWorkspaceId(params.workspaceId);
+  useCustomerProfileRead(workspaceId, Boolean(panelPresentation?.visible && !panelPresentation.isCurrentModule));
   const listMode = useCustomerStore((state) => state.listMode);
   const setListMode = useCustomerStore((state) => state.setListMode);
   const guardians = usePatientProfileStore((state) => state.guardians);
@@ -175,7 +250,12 @@ export function CustomerSidePanel({ moduleLabel }: ShellComponentProps) {
           ),
           icon: <Icon className="size-4 shrink-0" />,
           label: item.label,
-          onClick: () => setListMode(item.value),
+          onClick: () => {
+            setListMode(item.value);
+            if (panelPresentation && !panelPresentation.isCurrentModule) {
+              panelPresentation.onNavigate(`${panelPresentation.pathname}?${panelPresentation.search}`, "customer");
+            }
+          },
           testId: `customer-side-panel-${item.value}`,
         };
       }),
@@ -317,13 +397,6 @@ export function CustomerContent() {
   const workspaceId = getCustomerWorkspaceId(params.workspaceId);
   const listMode = useCustomerStore((state) => state.listMode);
   const profileReadState = useCustomerStore((state) => state.profileReadState);
-  const setProfileReadState = useCustomerStore(
-    (state) => state.setProfileReadState,
-  );
-  const authSession = useMockAuthStore((state) => state.session);
-  const applyPatientGuardianLookupItem = usePatientProfileStore(
-    (state) => state.applyPatientGuardianLookupItem,
-  );
   const guardians = usePatientProfileStore((state) => state.guardians);
   const patientGuardians = usePatientProfileStore(
     (state) => state.patientGuardians,
@@ -331,69 +404,7 @@ export function CustomerContent() {
   const patients = usePatientProfileStore((state) => state.patients);
   const [profileReadAttempt, setProfileReadAttempt] = useState(0);
 
-  useLayoutEffect(() => {
-    if (!isPreparedEmptyClinicWorkspace(workspaceId)) return;
-
-    setProfileReadState({ status: "loading", workspaceId });
-  }, [setProfileReadState, workspaceId]);
-
-  useEffect(() => {
-    if (!isPreparedEmptyClinicWorkspace(workspaceId)) {
-      setProfileReadState({ status: "ready", workspaceId });
-      return;
-    }
-
-    let cancelled = false;
-    setProfileReadState({ status: "loading", workspaceId });
-
-    async function loadSeededCustomerProfiles() {
-      try {
-        const headers = authSession?.id
-          ? { "x-clair-demo-session-user-id": authSession.id }
-          : undefined;
-        const response = await fetch(
-          `/api/workspaces/${encodeURIComponent(workspaceId)}/reception/patient-guardian-lookup?query=`,
-          {
-            cache: "no-store",
-            headers,
-          },
-        );
-        const result =
-          (await response.json()) as ReceptionPatientGuardianLookupResponse;
-
-        if (cancelled) return;
-        if (!response.ok || !result.ok) {
-          setProfileReadState({
-            status:
-              response.status === 401 || response.status === 403
-                ? "denied"
-                : "error",
-            workspaceId,
-          });
-          return;
-        }
-
-        result.patients.forEach((item) => applyPatientGuardianLookupItem(item));
-        setProfileReadState({ status: "ready", workspaceId });
-      } catch {
-        if (!cancelled) {
-          setProfileReadState({ status: "error", workspaceId });
-        }
-      }
-    }
-
-    void loadSeededCustomerProfiles();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    applyPatientGuardianLookupItem,
-    authSession?.id,
-    profileReadAttempt,
-    setProfileReadState,
-    workspaceId,
-  ]);
+  useCustomerProfileRead(workspaceId, true, profileReadAttempt);
   const patientRows = useMemo(
     () =>
       getCustomerPatientRows({

@@ -777,7 +777,8 @@ test("hospital admin can create and select a route-backed workspace", async ({
 test("workspace route blocks session workspaces without active membership", async ({
   page,
 }) => {
-  await page.goto("/login");
+  // This fixture targets clair-demo rather than the independently changing login default.
+  await page.goto(`/login?next=${encodeURIComponent("/w/clair-demo/reception?modulePanel=open&right=closed")}`);
 
   await page.getByRole("button", { name: /병원 관리자/ }).click();
   await page.getByLabel("브라우저에 유지").check();

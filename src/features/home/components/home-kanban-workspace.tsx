@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
 import { createPortal } from "react-dom";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { CdsActionsSearchIcon } from "@/components/cds-icons/actions-and-controls";
@@ -91,6 +92,12 @@ type HomeKanbanWorkspaceProps = {
 };
 
 export function HomeNavigationSidePanel() {
+  const panelPresentation = useModuleSidePanel();
+  const enterHome = () => {
+    if (panelPresentation && !panelPresentation.isCurrentModule) {
+      panelPresentation.onNavigate(`${panelPresentation.pathname}?${panelPresentation.search}`, "home");
+    }
+  };
   const view = useHomeWorkspaceStore((state) => state.view);
   const setView = useHomeWorkspaceStore((state) => state.setView);
   const setModulePanelOpen = useLayoutStore((state) => state.setModulePanelOpen);
@@ -103,8 +110,8 @@ export function HomeNavigationSidePanel() {
     onToggleSection={() => undefined}
     items={[
       { id: "hospital-group", type: "groupLabel", label: "병원현황" },
-      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <ClipboardListIcon />, onClick: () => setView("hospital") },
-      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <ListTodoIcon />, onClick: () => setView("mine") },
+      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <ClipboardListIcon />, onClick: () => { setView("hospital"); enterHome(); } },
+      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <ListTodoIcon />, onClick: () => { setView("mine"); enterHome(); } },
     ]}
   />;
 }

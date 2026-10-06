@@ -47,7 +47,7 @@ import { WorkspaceTabsBar } from "@/shell/workspace-tabs-bar";
 
 type AppShellProps = {
   workspaceId: string;
-  moduleId: string;
+  moduleId?: string;
 };
 
 type PendingUrlState = {
@@ -122,7 +122,8 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const moduleDefinition = useMemo(() => getModule(moduleId), [moduleId]);
+  const currentModuleId = moduleId ?? pathname.split("/")[3] ?? "";
+  const moduleDefinition = useMemo(() => getModule(currentModuleId), [currentModuleId]);
   const navigationSearch = useMemo(
     () =>
       getCrossModuleNavigationSearch(search, {
@@ -299,10 +300,9 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     const pendingUrlState: PendingUrlState = { search };
     const currentLayoutState = useLayoutStore.getState();
     const currentUrlDrawer = currentLayoutState.retainedReceptionDrawer ?? currentLayoutState.activeDrawer;
-    const moduleHasSidePanel = Boolean(moduleDefinition.sidePanel);
 
-    if (modulePanel || !moduleHasSidePanel) {
-      const nextModulePanelOpen = moduleHasSidePanel ? modulePanel === "open" : true;
+    if (modulePanel) {
+      const nextModulePanelOpen = modulePanel === "open";
       if (currentLayoutState.modulePanelOpen !== nextModulePanelOpen) {
         pendingUrlState.modulePanelOpen = nextModulePanelOpen;
       }
@@ -671,6 +671,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--emr-surface-app)] text-foreground">
       <WorkspaceStaffPresenceReporter workspaceId={workspaceId} />
       <ShellMain
+        key={`${workspaceId}:${authSession?.id ?? "anonymous"}:${activeTabId ?? "initial"}`}
         moduleDefinition={moduleDefinition}
         navigationSearch={navigationSearch}
         topBar={

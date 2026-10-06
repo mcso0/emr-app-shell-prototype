@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
 import historyStyles from "./chart-history.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
@@ -1100,7 +1102,9 @@ function useDisplayedChartBundle(workspaceId: string) {
 }
 
 function useChartOperatingDate(workspaceId: string) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const requestedDate = searchParams.get("date");
   const { selectedDate: requestedSelectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId, requestedDate);
@@ -1116,9 +1120,10 @@ function useChartOperatingDate(workspaceId: string) {
       : requestedSelectedDate;
 
   useEffect(() => {
+    if (passivePanel) return;
     if (storedSelectedDate === selectedDate) return;
     selectOperatingDate(workspaceId, selectedDate);
-  }, [selectOperatingDate, selectedDate, storedSelectedDate, workspaceId]);
+  }, [passivePanel, selectOperatingDate, selectedDate, storedSelectedDate, workspaceId]);
 
   return {
     selectedDate,
@@ -1761,13 +1766,14 @@ export function ChartSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const router = useModuleSidePanelRouter();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const selectedEncounterId = useChartStore(
     (state) => state.selectedEncounterId,
   );
-  const liveQueueRecords = useChartStore((state) => state.liveQueueRecords);
-  const liveQueueStatus = useChartStore((state) => state.liveQueueStatus);
+  const { records: liveQueueRecords, status: liveQueueStatus } = useScopedChartLiveQueue(workspaceId);
   const requestConsultationCall = useChartStore(
     (state) => state.requestConsultationCall,
   );
@@ -1778,6 +1784,35 @@ export function ChartSidePanel({
     getAuthRuntimeMode().authProvider === "mock";
   const { selectedDate, todayDate } = useChartOperatingDate(workspaceId);
   const requestedDate = searchParams.get("date");
+  const { session: previewAuthSession } = useAuthClient();
+  const previewActorHeaders = useMemo(() => getDemoActorHeader(previewAuthSession), [previewAuthSession]);
+  const previewReadSeq = useRef(0);
+  const foreignPreview = Boolean(panelPresentation?.visible && !panelPresentation.isCurrentModule);
+  const refreshPreviewQueue = useCallback(async () => {
+    const sequence = ++previewReadSeq.current;
+    const queue = useChartStore.getState();
+    const scope = { workspaceId, date: selectedDate };
+    const sameScope = queue.liveQueueScope?.workspaceId === workspaceId && queue.liveQueueScope.date === selectedDate;
+    queue.setLiveQueueState({ scope, status: "loading", records: sameScope ? undefined : [] });
+    const result = await loadChartLiveQueue({ actorHeaders: previewActorHeaders, date: selectedDate, workspaceId });
+    const latestScope = useChartStore.getState().liveQueueScope;
+    if (previewReadSeq.current !== sequence || latestScope?.workspaceId !== workspaceId || latestScope.date !== selectedDate) return;
+    queue.setLiveQueueState(result.ok
+      ? { scope, status: "ready", records: result.queue }
+      : { scope, status: "error", records: [], error: result.denialReason ?? result.error ?? "db_read_failed" });
+  }, [previewActorHeaders, selectedDate, workspaceId]);
+  useEffect(() => {
+    if (!foreignPreview) return;
+    void refreshPreviewQueue();
+    return () => { previewReadSeq.current += 1; };
+  }, [foreignPreview, refreshPreviewQueue]);
+  useQueueRealtimeRefresh({
+    enabled: foreignPreview,
+    onQueueChange: refreshPreviewQueue,
+    scopeKey: `chart-sidebar:${selectedDate}`,
+    workspaceId,
+  });
+
   const mockItems = useMemo(
     () => (legacySalesDemo ? getChartQueueItems() : emptyChartQueueItems),
     [legacySalesDemo],
@@ -1793,6 +1828,7 @@ export function ChartSidePanel({
   );
   const explicitQueryEncounterId = useExplicitChartEncounterId();
   useEffect(() => {
+    if (passivePanel) return;
     if (requestedDate === null || isIsoOperatingDate(requestedDate)) return;
 
     router.replace(
@@ -1804,7 +1840,7 @@ export function ChartSidePanel({
       }),
       { scroll: false },
     );
-  }, [requestedDate, router, searchParams, selectedDate, workspaceId]);
+  }, [passivePanel, requestedDate, router, searchParams, selectedDate, workspaceId]);
   const selectWorkspaceEncounter = (itemId: string) => {
     const href = buildWorkspaceSurfaceRoute({
       moduleId: "treatment",
@@ -1824,6 +1860,7 @@ export function ChartSidePanel({
   };
 
   useEffect(() => {
+    if (passivePanel) return;
     if (liveMode || items.length === 0) return;
     if (items.some((item) => item.id === selectedEncounterId)) return;
     if (explicitQueryEncounterId) return;
@@ -1831,8 +1868,7 @@ export function ChartSidePanel({
       items.find((item) => item.id === legacySalesDemoDefaultEncounterId)?.id ??
         items[0].id,
     );
-  }, [
-    items,
+  }, [passivePanel, items,
     explicitQueryEncounterId,
     liveMode,
     selectEncounter,

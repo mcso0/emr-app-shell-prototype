@@ -3,7 +3,7 @@ id: "DESIGN-SYSTEM-SIDE-PANEL-HEADER-CONTRACT"
 status: active
 area: design-system
 doc_type: contract
-updated: 2026-07-14
+updated: 2026-10-06
 ---
 
 # Shared Side-Panel Header Contract
@@ -28,6 +28,12 @@ The shared token contract lives in `src/styles/tokens/emr-foundation.css`:
 - `--emr-sidepanel-header-padding-y`
 
 Feature modules should reuse `EmrSubpanelTitle` and should not add local height or vertical-padding overrides for this header.
+
+## Floating presentation
+
+The collapsed rail preview reuses the same sidebar component and header. Preserve the title, existing right-side 24px control, SVG, padding and frame. Do not add a left control or move the existing control. In a preview, that control performs explicit expand/pin and uses the accessible label `사이드 패널 펼치기`; in a docked panel it keeps the existing collapse action. Rail menu activation navigates without pinning. The outer shell owns transient hover presentation and portal/focus boundaries.
+
+See [APP-SHELL-PR-003](../../work/app-shell/APP-SHELL-PR-003-sidebar-hover-preview.md) for the interaction rules and verification boundary.
 
 ## Revision history
 
