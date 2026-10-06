@@ -1426,7 +1426,7 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
 
   const collapseButton = page.getByRole("button", { name: "사이드 패널 접기", exact: true });
   const collapseIcon = collapseButton.locator("svg");
-  const expectedIconColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-500)");
+  const expectedIconColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-400)");
   const expectedHoverBackground = await resolveCssColor(page, "var(--emr-state-hover)");
   const expectedSelectedBackground = await resolveCssColor(page, "var(--emr-state-active)");
   const expectedDisabledColor = await resolveCssColor(page, "var(--emr-text-disabled)");
@@ -1506,24 +1506,18 @@ test("module side panel can collapse and reopen from the rail", async ({ page })
   await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
 });
 
-test("home normalizes a collapsed module panel before navigating back to modules", async ({ page }) => {
+test("home navigation preserves the collapsed module panel", async ({ page }) => {
+  await mockResetWorkspaceTabsSession(page);
   await page.goto("/w/clair-demo/dispensing?modulePanel=closed&aside=closed");
-  await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toBeVisible();
-
-  await getNavRail(page).getByRole("link", { name: "원내 현황" }).click();
-
+  await expect(page.getByRole("button", { name: "사이드 패널 펼치기", exact: true })).toBeVisible();
+  await getNavRail(page).getByRole("link", { name: "홈 화면", exact: true }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
-  await expect(page).toHaveURL(/modulePanel=open/);
-  await expect(page.getByRole("button", { name: "사이드 패널 펼치기" })).toHaveCount(0);
-  await expect(page.getByTestId("module-side-panel-title")).toHaveCount(0);
-  await expect(page.getByTestId("home-dashboard")).toBeVisible();
-  await expect(page.getByText("운영 병목 보드")).toBeVisible();
-
-  await getNavRail(page).getByRole("link", { name: "조제/처치" }).click();
-
+  await expect(page).toHaveURL(/modulePanel=closed/);
+  await expect(page.getByTestId("module-side-panel-host")).toHaveAttribute("data-panel-mode", "hidden");
+  await getNavRail(page).getByRole("link", { name: "조제/처치", exact: true }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/dispensing/);
-  await expect(page).toHaveURL(/modulePanel=open/);
-  await expect(page.getByTestId("module-side-panel-title")).toHaveText("조제/처치");
+  await expect(page).toHaveURL(/modulePanel=closed/);
+  await expect(page.getByTestId("module-side-panel-host")).toHaveAttribute("data-panel-mode", "hidden");
 });
 
 test("shell navigation keeps demo query context across modules", async ({ page }) => {

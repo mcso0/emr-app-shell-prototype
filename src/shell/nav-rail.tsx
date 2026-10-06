@@ -30,6 +30,13 @@ type NavRailProps = {
   navigationSearch?: string;
   workspaceId: string;
   onNavigateModule?: (href: string, moduleId: string) => void;
+  onExpandModulePanel?: () => void;
+  previewModuleId?: string | null;
+  previewEnabled?: boolean;
+  onPreviewEnter?: (moduleId: string, element: HTMLElement, pointerType: string) => void;
+  onPreviewLeave?: (element: HTMLElement, relatedTarget: EventTarget | null, pointerType: string) => void;
+  onPreviewKeyboard?: (moduleId: string, element: HTMLElement) => void;
+  inert?: boolean;
 };
 
 type RailNavItem = {
@@ -78,7 +85,7 @@ function getModuleItem(moduleId: string): RailNavItem | null {
   };
 }
 
-export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, onNavigateModule }: NavRailProps) {
+export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, onNavigateModule, onExpandModulePanel, inert, ...previewProps }: NavRailProps) {
   const { modulePanelOpen, setModulePanelOpen } = useLayoutStore();
   const reduceMotion = useReducedMotion();
   const railLayoutTransition = reduceMotion
@@ -94,10 +101,10 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
   );
 
   return (
-    <nav className={RAIL_ROOT_CLASS_NAME} aria-label="워크스페이스 주요 메뉴">
+    <nav className={RAIL_ROOT_CLASS_NAME} aria-label="워크스페이스 주요 메뉴" inert={inert}>
       <div className="flex min-h-0 w-[var(--emr-navrail-content-width)] flex-1 flex-col items-center gap-[var(--emr-navrail-content-gap)] overflow-y-auto">
         <AnimatePresence initial={false}>
-          {!modulePanelOpen ? (
+          {!modulePanelOpen && modules.some((module) => module.id === activeModuleId && module.sidePanel) ? (
             <motion.div
               key="collapsed-panel-toggle"
               initial={reduceMotion ? false : NAV_RAIL_PANEL_TOGGLE_ENTER_FROM}
@@ -116,7 +123,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
                     <button
                       type="button"
                       className={RAIL_ITEM_CLASS_NAME}
-                      onClick={() => setModulePanelOpen(true)}
+                      onClick={onExpandModulePanel ?? (() => setModulePanelOpen(true))}
                       aria-label="사이드 패널 펼치기"
                     >
                       <IconFrame>
@@ -141,6 +148,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
           onNavigateModule={onNavigateModule}
+          {...previewProps}
         />
         <RailLayoutItem transition={railLayoutTransition}>
           <GlobalCommandPalette
@@ -157,6 +165,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
           onNavigateModule={onNavigateModule}
+          {...previewProps}
         />
         <NavDivider transition={railLayoutTransition} />
         <NavSection
@@ -166,6 +175,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
           onNavigateModule={onNavigateModule}
+          {...previewProps}
         />
       </div>
       <div className="flex w-[var(--emr-navrail-content-width)] shrink-0 flex-col items-center justify-center pb-[var(--emr-navrail-footer-padding-bottom)]">
@@ -187,6 +197,7 @@ function NavSection({
   navigationSearch,
   workspaceId,
   onNavigateModule,
+  ...previewProps
 }: {
   activeModuleId: string;
   items: RailNavItem[];
@@ -194,7 +205,7 @@ function NavSection({
   navigationSearch: string;
   workspaceId: string;
   onNavigateModule?: (href: string, moduleId: string) => void;
-}) {
+} & Pick<NavRailProps, "previewModuleId" | "previewEnabled" | "onPreviewEnter" | "onPreviewLeave" | "onPreviewKeyboard">) {
   return (
     <>
       {items.map((item) => (
@@ -206,6 +217,7 @@ function NavSection({
           navigationSearch={navigationSearch}
           workspaceId={workspaceId}
           onNavigateModule={onNavigateModule}
+          {...previewProps}
         />
       ))}
     </>
@@ -219,6 +231,7 @@ function RailModuleItem({
   navigationSearch,
   workspaceId,
   onNavigateModule,
+  ...previewProps
 }: {
   active: boolean;
   item: RailNavItem;
@@ -226,7 +239,10 @@ function RailModuleItem({
   navigationSearch: string;
   workspaceId: string;
   onNavigateModule?: (href: string, moduleId: string) => void;
-}) {
+} & Pick<NavRailProps, "previewModuleId" | "previewEnabled" | "onPreviewEnter" | "onPreviewLeave" | "onPreviewKeyboard">) {
+  const modulePanelOpen = useLayoutStore((state) => state.modulePanelOpen);
+  const hasSidePanel = Boolean(modules.find((module) => module.id === item.moduleId)?.sidePanel);
+  const previewsOnHover = Boolean(previewProps.previewEnabled && hasSidePanel && !modulePanelOpen);
   const Icon = item.icon;
   const href = `/w/${workspaceId}/${item.moduleId}${navigationSearch ? `?${navigationSearch}` : ""}`;
   const unavailable = item.moduleId === "inpatient";
@@ -262,7 +278,7 @@ function RailModuleItem({
 
   return (
     <RailLayoutItem transition={transition}>
-      <Tooltip>
+      <Tooltip disabled={previewsOnHover}>
         <TooltipTrigger
           render={
             unavailable ? (
@@ -272,6 +288,9 @@ function RailModuleItem({
                 aria-current={active ? "page" : undefined}
                 aria-disabled="true"
                 aria-label={itemLabel}
+                data-module-side-panel-trigger={item.moduleId}
+                onPointerEnter={(event) => previewProps.onPreviewEnter?.(item.moduleId!, event.currentTarget, event.pointerType)}
+                onPointerLeave={(event) => previewProps.onPreviewLeave?.(event.currentTarget, event.relatedTarget, event.pointerType)}
                 data-testid={active ? "nav-rail-active-item" : undefined}
               >
                 {icon}
@@ -282,8 +301,18 @@ function RailModuleItem({
                 className={itemClassName}
                 aria-current={active ? "page" : undefined}
                 aria-label={itemLabel}
+                data-module-side-panel-trigger={item.moduleId}
+                onPointerEnter={(event) => previewProps.onPreviewEnter?.(item.moduleId!, event.currentTarget, event.pointerType)}
+                onPointerLeave={(event) => previewProps.onPreviewLeave?.(event.currentTarget, event.relatedTarget, event.pointerType)}
                 data-testid={active ? "nav-rail-active-item" : undefined}
                 onClick={handleClick}
+                aria-controls={hasSidePanel ? `module-side-panel-${item.moduleId}` : undefined}
+                aria-expanded={hasSidePanel ? (active && modulePanelOpen) || previewProps.previewModuleId === item.moduleId : undefined}
+                onKeyDown={(event) => {
+                  if (event.key !== "ArrowRight" || !previewsOnHover) return;
+                  event.preventDefault();
+                  previewProps.onPreviewKeyboard?.(item.moduleId!, event.currentTarget);
+                }}
               >
                 {icon}
               </Link>
