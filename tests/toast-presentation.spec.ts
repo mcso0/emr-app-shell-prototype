@@ -21,15 +21,15 @@ for (const colorScheme of ["light", "dark"] as const) {
       // the same root toaster at the mobile breakpoint.
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await toast.hover({ position: { x: 20, y: 20 } });
-      await expect(toaster).toHaveAttribute("data-x-position", "left");
+      await expect(toaster).toHaveAttribute("data-x-position", "right");
       await expect(toaster).toHaveAttribute("data-y-position", "top");
       await expect(toaster).toHaveAttribute("data-sonner-theme", "light");
       await expect(toaster).toHaveCSS("top", "16px");
-      await expect(toaster).toHaveCSS("left", "16px");
+      await expect(toaster).toHaveCSS("right", "16px");
       await expect.poll(async () => {
         const box = await toast.boundingBox();
-        return box ? { x: Math.round(box.x), y: Math.round(box.y), inside: box.x + box.width <= viewport.width } : null;
-      }).toEqual({ x: 16, y: 16, inside: true });
+        return box ? { rightInset: Math.round(viewport.width - box.x - box.width), y: Math.round(box.y), inside: box.x >= 0 && box.x + box.width <= viewport.width } : null;
+      }).toEqual({ rightInset: 16, y: 16, inside: true });
       await expect(close).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
       await close.hover();
       await expect(close).toHaveCSS("background-color", "rgba(0, 0, 0, 0.04)");

@@ -40,7 +40,7 @@ export default function RootLayout({
           <WorkspaceEntrySplashProvider>
             {children}
             <Toaster
-              position="top-left"
+              position="top-right"
               visibleToasts={3}
               offset={16}
               mobileOffset={16}
