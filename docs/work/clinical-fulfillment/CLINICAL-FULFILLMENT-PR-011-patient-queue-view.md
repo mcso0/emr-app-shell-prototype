@@ -150,3 +150,48 @@ by the already-deployed panel context from PR #941. A Storybook-only alias reuse
 its existing mocked hooks and Next 16.2.6's readonly params class. The alias runs
 after the framework's mock plugin for both the iframe and Vitest. Production
 imports/configuration and dependencies remain unchanged.
+
+
+## Approved task-card badge follow-up — 2026-10-06
+
+승욱 approved the final badge prototype and explicitly authorized implementation,
+commit, push, PR, origin/main merge and Production deployment in this task.
+Baseline origin/main and Ready Production source:
+`24485eeae2c971868b2fb6eac0736f7edf6fa802`.
+
+- Use the existing neutral side-panel status chip in patient view, matching the
+  requester/assignee surface, typography, border and radius.
+- Restore the existing `EmrSidePanelStateIcon` through the shared status resolver.
+  The chip's existing icon wrapper sizes it to 12px. Preserve semantic state colors.
+- Set icon-to-text spacing to 4px inside task-card chips in both grouping views.
+  Scope the order-view spacing through the existing patient-grouping container;
+  reception, billing, home and non-grouping chart cards retain their spacing. Preserve
+  the existing 4px patient / 6px order gaps between chips and card geometry.
+- App cards already omit chart labels in both views. Retain DTO/API/DB metadata.
+  No data, schema, permission, queue behavior or other shared chip changes.
+
+Verification targets: focused task-card/patient-queue Storybook interactions and
+computed badge styles; existing lab, imaging and dispensing queue selection,
+view switching, filter/permission and no-write browser checks; required release
+preflight and exact-candidate Release Check with Ready Preview.
+
+Production smoke uses the existing synthetic Cheongdam workspace. Inspect and
+switch queues without executing clinical actions. Stop on candidate/main drift,
+failed checks, non-Ready deployments or smoke failure. Rollback target is the
+previous Ready deployment `dpl_HZqYjKooAxKsyDYKryFZPKb7dD4h`, source
+`24485eeae2c971868b2fb6eac0736f7edf6fa802`. Candidate/PR/check, Ready deployment,
+alias, smoke and rollback evidence will be reported after delivery.
+
+
+Local badge verification: six focused Storybook stories and 12 existing queue
+model/browser tests pass. The browser tests cover all three modules, exact
+selection/URL, view switching, hidden selection/filter recovery, combined denial
+precedence and no fulfillment writes. Actual Storybook DOM confirms chip height
+22px, icon 12px, inner gap4, white surface/8%-black border and text `#525252`.
+Long names truncate and the footer wraps; menu actions retain selection guards.
+A non-grouping card still has its original gap2/outer gap6. Independent read-only
+review confirms grouping-container scoping and no other-screen changes.
+
+TypeScript, Production build, secrets, docs and UX copy checks pass. Lint has zero
+errors and five pre-existing WP10 script warnings. The build retains the existing
+Turbopack tracing warning from the docs reader. No API/DB/data changes are included.
