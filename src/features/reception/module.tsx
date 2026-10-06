@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import { getReceptionDemoActorId } from "@/features/reception/reception-demo-actor";
 import {
   submitReceptionEncounterCancel,
@@ -3323,9 +3325,10 @@ type ReceptionCardActionFeedback = {
 
 export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
   const params = useParams<{ workspaceId?: string | string[] }>();
-  const pathname = usePathname();
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const pathname = useModuleSidePanelPathname();
+  const router = useModuleSidePanelRouter();
+  const panelPresentation = useModuleSidePanel();
+  const searchParams = useModuleSidePanelSearchParams();
   const draftCheckIns = useReceptionStore((state) => state.draftCheckIns);
   const queueReadError = useReceptionStore((state) => state.queueReadError);
   const queueReadStatus = useReceptionStore((state) => state.queueReadStatus);
@@ -3420,6 +3423,66 @@ export function ReceptionSidePanel({ moduleLabel }: ShellComponentProps) {
       })),
     [veterinarians],
   );
+  const previewReadSeq = useRef(0);
+  const previewReadInFlight = useRef<{ key: string; promise: Promise<ReceptionRefreshResult> } | null>(null);
+  const previewReadRetry = useReceptionStore((state) => state.readRetryNonce);
+  const foreignPreview = Boolean(panelPresentation?.visible && !panelPresentation.isCurrentModule);
+  useEffect(() => {
+    if (!foreignPreview || !liveStaffSourceEnabled) return;
+    const store = useReceptionStaffResourceStore.getState();
+    const resource = store.resourcesByKey[staffResourceKey];
+    if (resource?.updatedAt && Date.now() - resource.updatedAt < 30_000) return;
+    let cancelled = false;
+    store.setResourceLoading(staffResourceKey);
+    void loadWorkspaceStaff({ actorId: authSession?.id, operatingDate, workspaceId }).then((result) => {
+      if (cancelled) return;
+      store.setResourceResult(staffResourceKey, {
+        actorUserId: result.ok ? result.actorUserId : undefined,
+        status: result.ok ? "ready" : "error",
+        staff: mapWorkspaceStaffToReceptionStaff(result),
+        veterinarians: mapWorkspaceStaffToVeterinarians(result),
+      });
+    });
+    return () => { cancelled = true; };
+  }, [authSession?.id, foreignPreview, liveStaffSourceEnabled, operatingDate, staffResourceKey, workspaceId]);
+  useEffect(() => {
+    if (!foreignPreview) return;
+    const reception = useReceptionStore.getState();
+    const profiles = usePatientProfileStore.getState();
+    const refresh = (showLoading = false) => refreshReceptionReadCoordinator({
+      applyPatientGuardianLookupItem: profiles.applyPatientGuardianLookupItem,
+      applyPersistedReceptionCalendar: reception.applyPersistedReceptionCalendar,
+      applyPersistedReceptionQueue: reception.applyPersistedReceptionQueue,
+      actorId: authSession?.id,
+      getPatients: () => usePatientProfileStore.getState().patients,
+      getReceptionReadFailureMessage,
+      liveStaffSourceEnabled,
+      loadReceptionCalendar,
+      loadReceptionPatientGuardianProfiles,
+      loadReceptionQueue,
+      loadReceptionSnapshot,
+      operatingDate,
+      receptionReadInFlightRef: previewReadInFlight,
+      receptionReadRequestSeqRef: previewReadSeq,
+      setOperatingSchedule: () => undefined,
+      setReceptionCalendarReadStatus: reception.setReceptionCalendarReadStatus,
+      setReceptionQueueReadStatus: reception.setReceptionQueueReadStatus,
+      shouldUseSupabaseAuth,
+      workspaceId,
+    }, { showLoading });
+    void refresh(true);
+    const unsubscribe = liveStaffSourceEnabled ? subscribeVisibleRefresh({
+      intervalMs: 60_000,
+      onRefresh: () => { void refresh(); },
+    }) : undefined;
+    return () => {
+      unsubscribe?.();
+      previewReadSeq.current += 1;
+      previewReadInFlight.current = null;
+    };
+  }, [authSession?.id, foreignPreview, liveStaffSourceEnabled, operatingDate, previewReadRetry, workspaceId]);
+
+
   const queueAppointments = useMemo(
     () =>
       getTodayAppointments(draftCheckIns, persistedCalendarAppointments, {

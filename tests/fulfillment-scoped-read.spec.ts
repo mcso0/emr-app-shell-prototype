@@ -21,7 +21,7 @@ function row(id: string, createdAt: string, dueAt: string | null, status = "requ
 }
 
 test("each queue passes operating date and patient scope to the DB and preserves summary and snapshot", async () => {
-  for (const queueType of ["lab", "dispensing", "treatment"] satisfies FulfillmentQueueType[]) {
+  for (const queueType of ["lab", "imaging", "dispensing", "treatment"] satisfies FulfillmentQueueType[]) {
     const calls: Array<{ name: string; args: Record<string, unknown> }> = [];
     const data = ["requested", "in_progress", "paused", "completed", "cancelled", "returned"].map(
       (status, index) => ({ ...row(`${workItemId}-${index}`, "2025-01-01T00:00Z", "2026-10-02T15:00Z", status), queueType, orderType: queueType }),
@@ -65,4 +65,14 @@ test("exact work item lookup passes id without date and missing v2 fails without
   expect(await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab", workItemId })).toEqual({ ok: false, status: 500, error: "db_read_failed" });
   expect(calls).toHaveLength(1);
   expect(calls[0]).toMatchObject({ p_work_item_id: workItemId, p_date: undefined });
+});
+
+test("origin projection remains nullable and does not replace immutable snapshots", async () => {
+  const data = [row("legacy", "2026-10-03T01:00Z", null), { ...row("source", "2026-10-03T01:00Z", null), originChartId: "99300000-0000-4000-8000-000000000055", originChartCreatedAt: "2026-10-02T01:00:00Z" }, { ...row("invalid", "2026-10-03T01:00Z", null), originChartId: "", originChartCreatedAt: "invalid" }];
+  const gateway = createSupabaseFulfillmentWorkItemGateway({ async rpc() { return { data, error: null }; } });
+  const result = await gateway.listWorkItems({ workspaceId: "clair-demo", queueType: "lab" });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.workItems.map(item => [item.originChartId, item.originChartCreatedAt])).toEqual([[null,null], ["99300000-0000-4000-8000-000000000055", "2026-10-02T01:00:00Z"], [null,null]]);
+  expect(result.workItems.map(item => item.sourceSnapshot)).toEqual(data.map(item => item.sourceSnapshot));
 });

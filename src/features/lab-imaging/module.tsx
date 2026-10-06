@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCoreRowModel,
@@ -54,6 +56,8 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { PatientQueueContent, PatientQueueToggle, PatientQueueSortMenu, PatientQueueFilterMenu } from "@/components/emr/patient-queue";
+import { matchesPatientQueueFilter, type PatientQueueRow, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import {
   EmrEmptyState,
@@ -409,11 +413,14 @@ type FulfillmentWorkItem = {
   completedAt?: string | null;
   createdAt?: string;
   encounterId: string;
+  originChartId?: string | null;
+  originChartCreatedAt?: string | null;
   guardianName?: string | null;
   id: string;
   orderId: string;
   patientId?: string | null;
   patientName?: string | null;
+  priority?: string;
   queueType: FulfillmentQueueType;
   requestedByUserId?: string;
   requesterName?: string | null;
@@ -698,6 +705,8 @@ function useFulfillmentQueue(
   queueType: FulfillmentQueueType,
   selectedDate?: string,
 ) {
+  const panelPresentation = useModuleSidePanel();
+  const enabled = panelPresentation?.visible !== false;
   const workspaceId = useWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
   const cacheKey = getFulfillmentQueueCacheKey(
@@ -721,9 +730,13 @@ function useFulfillmentQueue(
         `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
         { headers: { "x-clair-demo-session-user-id": "user-tech" } },
       );
+      if (response.status === 401 || response.status === 403) {
+        return { ...emptyFulfillmentQueueSnapshot, status: "permission_denied" };
+      }
       const body = await response.json() as { ok?: boolean; denialReason?: string; summary?: FulfillmentWorkItemReadSummary; workItems?: FulfillmentWorkItem[] };
       if (!response.ok || !body.ok || !Array.isArray(body.workItems)) {
-        return { ...(previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: response.status === 401 || response.status === 403 || body.denialReason === "permission_missing" ? "permission_denied" : "error" };
+        const denied = response.status === 401 || response.status === 403 || body.denialReason === "unauthenticated" || body.denialReason === "permission_missing";
+        return { ...(denied ? emptyFulfillmentQueueSnapshot : previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: denied ? "permission_denied" : "error" };
       }
       return { summary: body.summary, workItems: body.workItems, status: "ready" };
     } catch {
@@ -749,9 +762,10 @@ function useFulfillmentQueue(
   }, [cacheKey, load]);
 
   useEffect(() => {
+    if (!enabled) return;
     void load();
     return () => { requestSeq.current += 1; };
-  }, [load]);
+  }, [enabled, load]);
 
   useEffect(() => {
     const listener = (nextSnapshot: FulfillmentQueueSnapshot) =>
@@ -1432,6 +1446,24 @@ function getImagingWorkItemSearchText(item: ImagingWorkItem) {
     .join(" ");
 }
 
+function getPatientQueueRows(items: Array<LabWorkItem | ImagingWorkItem>, workItems: FulfillmentWorkItem[]): PatientQueueRow[] {
+  const source = new Map(workItems.map(work => [`live-${work.queueType === "lab" ? "lab" : "imaging"}-${work.id}`, work]));
+  const byOrder = getWorkItemsByOrderId(workItems);
+  return items.map(item => {
+    const isLab = "result" in item;
+    const id = isLab ? item.result.id : item.study.id;
+    const work = source.get(id) ?? (item.order ? byOrder.get(item.order.id) : undefined);
+    const card = isLab
+      ? getLabTaskQueueCardItem({ item, testId: `lab-queue-item-${id}`, actionTestId: `lab-queue-item-action-${id}` })
+      : getImagingTaskQueueCardItem({ item, testId: `imaging-queue-item-${id}`, actionTestId: `imaging-queue-item-action-${id}` });
+    const requestedAt = work?.createdAt ?? item.order?.requestedAt;
+    return { id, card, assignedToUserId: work ? work.assignedToUserId : item.order?.currentAssigneeUserId, patientId: work ? work.patientId : item.patient.id, workspaceId: work?.workspaceId ?? item.patient.workspaceId,
+      status: work?.status ?? item.order?.status ?? (isLab ? item.result.status : item.study.status), priority: work?.priority ?? item.order?.priority,
+      requestedAt, originChartId: work?.originChartId, originChartCreatedAt: work?.originChartCreatedAt,
+      waitMinutes: requestedAt ? Math.max(0, Math.floor((Date.now() - Date.parse(requestedAt)) / 60000)) : 0 };
+  });
+}
+
 function QueueActions({
   disabled = false,
   onSearch,
@@ -1584,7 +1616,9 @@ export function LabSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const queryLabResultId = searchParams.get("labResultId");
   const selectedLabResultId = useLabImagingStore(
     (state) => state.selectedLabResultId,
@@ -1598,10 +1632,15 @@ export function LabSidePanel({
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<
     Set<LabResult["status"]>
   >(() => new Set());
+  const [patientView, setPatientView] = useState(false);
+  const [patientSort, setPatientSort] = useState<PatientQueueSort>("priority");
+  const [patientOrderSort, setPatientOrderSort] = useState<PatientQueueOrderSort>("request");
+  const [patientFilter, setPatientFilter] = useState("all");
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
   useQueueRealtimeRefresh({
+    enabled: panelPresentation?.visible !== false,
     onQueueChange: fulfillmentQueue.refresh,
     scopeKey: `lab:${selectedDate}`,
     workspaceId,
@@ -1619,6 +1658,7 @@ export function LabSidePanel({
     [baseItems, fulfillmentQueue.workItems, legacySalesDemo],
   );
   useEffect(() => {
+    if (passivePanel) return;
     if (queryLabResultId) {
       if (items.some((item) => item.result.id === queryLabResultId)) {
         selectLabResult(queryLabResultId);
@@ -1634,7 +1674,7 @@ export function LabSidePanel({
     if (!selectedLabResultId) return;
     if (items.some((item) => item.result.id === selectedLabResultId)) return;
     selectLabResult("");
-  }, [items, queryLabResultId, selectLabResult, selectedLabResultId]);
+  }, [passivePanel, items, queryLabResultId, selectLabResult, selectedLabResultId]);
   function handleSelectLabResult(resultId: string) {
     const item = items.find((candidate) => candidate.result.id === resultId);
     if (!item) return;
@@ -1686,13 +1726,16 @@ export function LabSidePanel({
   )
     ? selectedLabResultId
     : undefined;
+  const patientRows = useMemo(() => getPatientQueueRows(items, fulfillmentQueue.workItems), [items, fulfillmentQueue.workItems]);
+  const patientRowsById = useMemo(() => new Map(patientRows.map(row => [row.id, row])), [patientRows]);
   const filteredItems = useMemo(
     () =>
       items.filter((item) =>
-        matchesQueueSearch(getLabWorkItemSearchText(item), searchQuery),
+        matchesQueueSearch(getLabWorkItemSearchText(item), searchQuery) && (!patientView || matchesPatientQueueFilter(patientRowsById.get(item.result.id)!, patientFilter)),
       ),
-    [items, searchQuery],
+    [items, searchQuery, patientView, patientRowsById, patientFilter],
   );
+  const visiblePatientRows = useMemo(() => { const ids = new Set(filteredItems.map(item => item.result.id)); return patientRows.filter(row => ids.has(row.id)); }, [filteredItems, patientRows]);
   const groups = useMemo(
     () =>
       labStatusOrder
@@ -1764,13 +1807,18 @@ export function LabSidePanel({
           resultCount,
         }}
         headerActions={
-          <QueueActions
-            disabled={queueControlsDisabled}
-            onSearch={() => setSearchActive(true)}
-          />
+          <>
+            <PatientQueueToggle active={patientView} disabled={queueControlsDisabled || fulfillmentQueue.status === "permission_denied"} onChange={() => {
+              if (patientView && effectiveSelectedLabResultId) { const selected = items.find(item => item.result.id === effectiveSelectedLabResultId); if (selected) setCollapsedStatusIds(current => { const next = new Set(current); next.delete(selected.result.status); return next; }); }
+              setPatientView(current => !current);
+            }} />
+            {patientView ? <><PatientQueueSortMenu orderSort={patientOrderSort} onOrderSort={setPatientOrderSort} groupSort={patientSort} onGroupSort={setPatientSort} disabled={queueControlsDisabled} /><PatientQueueFilterMenu value={patientFilter} onChange={setPatientFilter} disabled={queueControlsDisabled} /><EmrListHeaderIconButton ariaLabel="검색" onClick={() => setSearchActive(true)}><CdsActionsSearchIcon className="size-4" /></EmrListHeaderIconButton></> : <QueueActions disabled={queueControlsDisabled} onSearch={() => setSearchActive(true)} />}
+          </>
         }
       />
       <EmrSubpanelBody density="queue">
+        <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedLabResultId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectLabResult} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"} ready={fulfillmentQueue.status === "ready"}>
+
         {showLabQueueLoadingState ? (
           <EmrQueueLoadingState
             placement="panel-center"
@@ -1806,6 +1854,7 @@ export function LabSidePanel({
             />
           ))
         )}
+        </PatientQueueContent>
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -1815,7 +1864,9 @@ export function ImagingSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const queryImagingStudyId = searchParams.get("imagingStudyId");
   const selectedImagingStudyId = useLabImagingStore(
     (state) => state.selectedImagingStudyId,
@@ -1831,10 +1882,15 @@ export function ImagingSidePanel({
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<
     Set<ImagingStudyStatus>
   >(() => new Set());
+  const [patientView, setPatientView] = useState(false);
+  const [patientSort, setPatientSort] = useState<PatientQueueSort>("priority");
+  const [patientOrderSort, setPatientOrderSort] = useState<PatientQueueOrderSort>("request");
+  const [patientFilter, setPatientFilter] = useState("all");
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
   useQueueRealtimeRefresh({
+    enabled: panelPresentation?.visible !== false,
     onQueueChange: fulfillmentQueue.refresh,
     scopeKey: `imaging:${selectedDate}`,
     workspaceId,
@@ -1852,6 +1908,7 @@ export function ImagingSidePanel({
     [baseItems, fulfillmentQueue.workItems, legacySalesDemo],
   );
   useEffect(() => {
+    if (passivePanel) return;
     if (queryImagingStudyId) {
       if (items.some((item) => item.study.id === queryImagingStudyId)) {
         selectImagingStudy(queryImagingStudyId);
@@ -1867,7 +1924,7 @@ export function ImagingSidePanel({
     if (!selectedImagingStudyId) return;
     if (items.some((item) => item.study.id === selectedImagingStudyId)) return;
     selectImagingStudy("");
-  }, [items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
+  }, [passivePanel, items, queryImagingStudyId, selectImagingStudy, selectedImagingStudyId]);
   function handleSelectImagingStudy(studyId: string) {
     const item = items.find((candidate) => candidate.study.id === studyId);
     if (!item) return;
@@ -1919,13 +1976,16 @@ export function ImagingSidePanel({
   )
     ? selectedImagingStudyId
     : undefined;
+  const patientRows = useMemo(() => getPatientQueueRows(items, fulfillmentQueue.workItems), [items, fulfillmentQueue.workItems]);
+  const patientRowsById = useMemo(() => new Map(patientRows.map(row => [row.id, row])), [patientRows]);
   const filteredItems = useMemo(
     () =>
       items.filter((item) =>
-        matchesQueueSearch(getImagingWorkItemSearchText(item), searchQuery),
+        matchesQueueSearch(getImagingWorkItemSearchText(item), searchQuery) && (!patientView || matchesPatientQueueFilter(patientRowsById.get(item.study.id)!, patientFilter)),
       ),
-    [items, searchQuery],
+    [items, searchQuery, patientView, patientRowsById, patientFilter],
   );
+  const visiblePatientRows = useMemo(() => { const ids = new Set(filteredItems.map(item => item.study.id)); return patientRows.filter(row => ids.has(row.id)); }, [filteredItems, patientRows]);
   const groups = useMemo(
     () =>
       imagingStatusOrder
@@ -1997,13 +2057,18 @@ export function ImagingSidePanel({
           resultCount,
         }}
         headerActions={
-          <QueueActions
-            disabled={queueControlsDisabled}
-            onSearch={() => setSearchActive(true)}
-          />
+          <>
+            <PatientQueueToggle active={patientView} disabled={queueControlsDisabled || fulfillmentQueue.status === "permission_denied"} onChange={() => {
+              if (patientView && effectiveSelectedImagingStudyId) { const selected = items.find(item => item.study.id === effectiveSelectedImagingStudyId); if (selected) setCollapsedStatusIds(current => { const next = new Set(current); next.delete(selected.study.status); return next; }); }
+              setPatientView(current => !current);
+            }} />
+            {patientView ? <><PatientQueueSortMenu orderSort={patientOrderSort} onOrderSort={setPatientOrderSort} groupSort={patientSort} onGroupSort={setPatientSort} disabled={queueControlsDisabled} /><PatientQueueFilterMenu value={patientFilter} onChange={setPatientFilter} disabled={queueControlsDisabled} /><EmrListHeaderIconButton ariaLabel="검색" onClick={() => setSearchActive(true)}><CdsActionsSearchIcon className="size-4" /></EmrListHeaderIconButton></> : <QueueActions disabled={queueControlsDisabled} onSearch={() => setSearchActive(true)} />}
+          </>
         }
       />
       <EmrSubpanelBody density="queue">
+        <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedImagingStudyId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectImagingStudy} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"} ready={fulfillmentQueue.status === "ready"}>
+
         {showImagingQueueLoadingState ? (
           <EmrQueueLoadingState
             placement="panel-center"
@@ -2039,6 +2104,7 @@ export function ImagingSidePanel({
             />
           ))
         )}
+        </PatientQueueContent>
       </EmrSubpanelBody>
     </EmrSubpanel>
   );

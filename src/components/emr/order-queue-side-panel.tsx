@@ -6,6 +6,8 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { PatientQueueContent, PatientQueueToggle, PatientQueueSortOptions } from "@/components/emr/patient-queue";
+import type { PatientQueueSort } from "@/features/work-queue/patient-queue";
 import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import {
   EmrDateNavigator,
@@ -62,6 +64,7 @@ type OrderQueueActionItemsResolver = (
 ) => EmrRowActionMenuItem[];
 
 type EmrOrderQueueSidePanelProps = {
+  patientGrouping?: { workspaceId: string; readable: boolean; ready: boolean };
   items: OrderQueueItem[];
   statuses: OrderQueueStatusDefinition[];
   title: string;
@@ -179,7 +182,7 @@ function getResolvedStatuses(
 
 function matchesDetailFilter(item: OrderQueueItem, filter: OrderQueueDetailFilter) {
   if (filter === "all") return true;
-  if (filter === "unassigned") return !item.assigneeName;
+  if (filter === "unassigned") return item.patientQueue ? !item.patientQueue.assignedToUserId : !item.assigneeName;
 
   return item.statusId === filter.replace("status:", "");
 }
@@ -206,6 +209,7 @@ export function EmrOrderQueueSidePanel({
   getFilterValue = (item) => item.orderTypeCategory,
   getTaskCardItem = getDefaultTaskCardItem,
   items,
+  patientGrouping,
   listLabel = "전체 오더",
   loading = false,
   loadingTitle,
@@ -227,6 +231,8 @@ export function EmrOrderQueueSidePanel({
   const [filter, setFilter] = useState<string>("all");
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [patientView, setPatientView] = useState(false);
+  const [patientSort, setPatientSort] = useState<PatientQueueSort>("priority");
   const [sortKey, setSortKey] = useState<OrderQueueSortKey>("request");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
   const actionContext: OrderQueueActionContext = listLabel.includes("진료") ? "chart" : "order";
@@ -259,6 +265,16 @@ export function EmrOrderQueueSidePanel({
         .sort((a, b) => compareOrderQueueItems(a, b, sortKey)),
     [resolvedStatuses, scopedItems, searchQuery, sortKey]
   );
+  const patientRows = useMemo(() => items.map(item => ({
+    ...item.patientQueue, workspaceId: patientGrouping?.workspaceId, id: item.id, waitMinutes: item.patientQueue?.requestedAt && Number.isFinite(Date.parse(item.patientQueue.requestedAt))
+      ? Math.max(0, Math.floor((Date.now() - Date.parse(item.patientQueue.requestedAt)) / 60000)) : item.waitMinutes,
+    status: item.patientQueue?.status ?? item.statusId,
+    card: { ...getTaskCardItem(item), actionItems: getActionItems(item, () => onSelectItem?.(item.id), actionContext) },
+  })), [items, patientGrouping?.workspaceId, getTaskCardItem, getActionItems, onSelectItem, actionContext]);
+  const visiblePatientRows = useMemo(() => {
+    const ids = new Set(visibleItems.map(item => item.id));
+    return patientRows.filter(row => ids.has(row.id));
+  }, [patientRows, visibleItems]);
   const sourceItemCount = sourceTotalCount ?? items.length;
   const sourceHasItems = sourceItemCount > 0;
   const queueControlsDisabled = !sourceHasItems;
@@ -320,6 +336,44 @@ export function EmrOrderQueueSidePanel({
     });
   };
 
+  const queueBody = (<>
+
+        {showLoadingState ? (
+          <EmrQueueLoadingState placement="panel-center" title={loadingTitle} />
+        ) : groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
+          const collapsed = collapsedStatusIds.has(status.id);
+
+          return (
+            <OrderQueueGroup
+              key={status.id}
+              collapsed={collapsed}
+              getActionItems={getActionItems}
+              getTaskCardItem={getTaskCardItem}
+              actionContext={actionContext}
+              items={groupItems}
+              onSelectItem={onSelectItem}
+              onToggle={() => toggleStatus(status.id)}
+              selectedItemId={effectiveSelectedItemId}
+              status={status}
+            />
+          );
+        }) : sourceHasItems && searchQuery.trim() ? (
+          <EmrListSearchEmptyState
+            objectLabel="대기열 항목"
+            placement="panel-center"
+            query={searchQuery}
+            onClear={() => setSearchQuery("")}
+          />
+        ) : (
+          <EmrQueueEmptyState
+            description={emptyStateDescription}
+            placement="panel-center"
+            title={emptyStateTitle}
+          />
+        )}
+
+  </>);
+
   return (
     <EmrSubpanel className={className}>
       <EmrSubpanelTitle
@@ -362,9 +416,14 @@ export function EmrOrderQueueSidePanel({
         }}
         headerActions={
           <>
+            {patientGrouping ? <PatientQueueToggle active={patientView} disabled={queueControlsDisabled || !patientGrouping.readable} onChange={() => {
+              if (patientView && selectedItemId) { const selected = items.find(item => item.id === selectedItemId); if (selected) setCollapsedStatusIds(current => { const next = new Set(current); next.delete(selected.statusId); return next; }); }
+              setPatientView(current => !current);
+            }} /> : null}
             <OrderQueueSortMenu
               disabled={queueControlsDisabled}
               sortKey={sortKey}
+              patientSort={patientGrouping && patientView ? { value: patientSort, onChange: setPatientSort } : undefined}
               onSortKeyChange={setSortKey}
             />
             <OrderQueueFilterMenu
@@ -384,39 +443,7 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrSubpanelBody density="queue">
-        {showLoadingState ? (
-          <EmrQueueLoadingState placement="panel-center" title={loadingTitle} />
-        ) : groupedItems.length > 0 ? groupedItems.map(({ items: groupItems, status }) => {
-          const collapsed = collapsedStatusIds.has(status.id);
-
-          return (
-            <OrderQueueGroup
-              key={status.id}
-              collapsed={collapsed}
-              getActionItems={getActionItems}
-              getTaskCardItem={getTaskCardItem}
-              actionContext={actionContext}
-              items={groupItems}
-              onSelectItem={onSelectItem}
-              onToggle={() => toggleStatus(status.id)}
-              selectedItemId={effectiveSelectedItemId}
-              status={status}
-            />
-          );
-        }) : sourceHasItems && searchQuery.trim() ? (
-          <EmrListSearchEmptyState
-            objectLabel="대기열 항목"
-            placement="panel-center"
-            query={searchQuery}
-            onClear={() => setSearchQuery("")}
-          />
-        ) : (
-          <EmrQueueEmptyState
-            description={emptyStateDescription}
-            placement="panel-center"
-            title={emptyStateTitle}
-          />
-        )}
+        {patientGrouping ? <PatientQueueContent key={`${patientGrouping.workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={selectedItemId} groupSort={patientSort} orderSort={sortKey} onSelect={id => onSelectItem?.(id)} readable={patientGrouping.readable} ready={patientGrouping.ready} onClearConditions={() => { setDetailFilter("all"); setFilter("all"); closeSearch(); }}>{queueBody}</PatientQueueContent> : queueBody}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
@@ -457,7 +484,9 @@ function OrderQueueSortMenu({
   disabled = false,
   onSortKeyChange,
   sortKey,
+  patientSort,
 }: {
+  patientSort?: { value: PatientQueueSort; onChange: (value: PatientQueueSort) => void };
   disabled?: boolean;
   onSortKeyChange: (value: OrderQueueSortKey) => void;
   sortKey: OrderQueueSortKey;
@@ -485,6 +514,7 @@ function OrderQueueSortMenu({
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
+        {patientSort ? <PatientQueueSortOptions value={patientSort.value} onChange={patientSort.onChange} /> : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -151,6 +151,8 @@ export type FulfillmentWorkItem = {
   detailedPhase?: string | null;
   destinationModule?: ClinicalOrderDestinationModule | null;
   encounterId: string;
+  originChartId?: string | null;
+  originChartCreatedAt?: string | null;
   guardianName?: string | null;
   id: string;
   orderId: string;
@@ -3158,6 +3160,8 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
 
   return {
     ...row,
+    originChartId: typeof row.originChartId === "string" && row.originChartId.trim() ? row.originChartId : null,
+    originChartCreatedAt: typeof row.originChartCreatedAt === "string" && Number.isFinite(Date.parse(row.originChartCreatedAt)) ? row.originChartCreatedAt : null,
     sourceSnapshot: {
       ...sourceSnapshotWithoutLineage,
       ...(dispensingLineage ? { dispensingLineage } : {}),

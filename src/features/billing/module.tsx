@@ -1,5 +1,7 @@
 "use client";
 
+import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
+
 import {
   useCallback,
   useEffect,
@@ -1651,7 +1653,9 @@ const billingQueueRequestIds = new Map<string, number>();
 const emptyBillingQueue: BillingQueueState = { status: "loading", rows: [] };
 
 function useBillingQueue(workspaceId: string) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const enabled = panelPresentation?.visible !== false;
+  const searchParams = useModuleSidePanelSearchParams();
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const { session } = useAuthClient();
   const ownerKey = getBillingProtectedSnapshotOwnerKey(session, workspaceId);
@@ -1681,9 +1685,10 @@ function useBillingQueue(workspaceId: string) {
     return load();
   }, [scopeKey, load]);
   useEffect(() => {
+    if (!enabled) return;
     void load();
     return () => { seq.current += 1; };
-  }, [load]);
+  }, [enabled, load]);
   useEffect(() => {
     const listener = (value: BillingQueueState) => setState({ scopeKey, value });
     const listeners = billingQueueListeners.get(scopeKey) ?? new Set();
@@ -1758,7 +1763,9 @@ export function BillingSidePanel({
   onNavigateWorkspaceSurface,
   workspaceId,
 }: ShellComponentProps) {
-  const searchParams = useSearchParams();
+  const panelPresentation = useModuleSidePanel();
+  const passivePanel = Boolean(panelPresentation && (!panelPresentation.isCurrentModule || !panelPresentation.visible));
+  const searchParams = useModuleSidePanelSearchParams();
   const queryInvoiceId = searchParams.get("invoiceId");
   const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const invoices = useBillingStore((state) => state.invoices);
@@ -1819,11 +1826,12 @@ export function BillingSidePanel({
     setSearchActive(false);
   }, []);
   useEffect(() => {
+    if (passivePanel) return;
     if (!queryInvoiceId || queryInvoiceId === selectedInvoiceId) return;
     if (!invoices.some((invoice) => invoice.id === queryInvoiceId)) return;
 
     selectInvoice(queryInvoiceId);
-  }, [invoices, queryInvoiceId, selectInvoice, selectedInvoiceId]);
+  }, [passivePanel, invoices, queryInvoiceId, selectInvoice, selectedInvoiceId]);
   function handleSelectInvoice(invoiceId: string) {
     const row = baseGroupedRows.flatMap(group => group.rows).find(item => item.invoice.id === invoiceId);
     if (onNavigateWorkspaceSurface) {
