@@ -28,6 +28,30 @@ function cloneFixture(): ClinicalMasterPublishPayload {
   return JSON.parse(JSON.stringify(fixture)) as ClinicalMasterPublishPayload;
 }
 
+function configuredOrderPayload(): ClinicalMasterPublishPayload {
+  const payload = cloneFixture();
+  const order = payload.records.find((record) => record.recordType === "order")!;
+  Object.assign(order.detail, {
+    executionPreset: {
+      presetId: "00000000-0000-4000-8000-000000000002",
+      presetKey: "fixture.lab.manual.v1",
+      presetRevision: 1,
+      clinicalOrderType: "clinical_lab",
+      detailSchemaVersion: 2,
+      defaultDetailInputs: { specimenLabel: " EDTA " },
+      fieldPolicies: { specimenLabel: { editable: true } },
+      provenance: { source: "synthetic contract fixture" },
+      presetStatus: "synthetic_unreviewed",
+      clinicalUseAllowed: false,
+      contentSha256: "a".repeat(64),
+      sourceArtifactSha256: "b".repeat(64),
+    },
+    adminSubcategoryCode: "clinical-pathology",
+    labFamilyCode: "cbc",
+  });
+  return payload;
+}
+
 test("Phase 1A-1 migration contains only the private master foundation", () => {
   for (const table of [
     "master_releases",
@@ -182,6 +206,74 @@ test("normalization is deterministic while PostgreSQL remains fingerprint author
     }).sourceFingerprint
   ).toBeUndefined();
   expect(publisherSource).not.toContain("computeClinicalMasterSourceFingerprint");
+});
+
+test("normalization preserves execution settings and taxonomy without changing preset content", () => {
+  const payload = configuredOrderPayload();
+  const original = structuredClone(payload);
+  const expected = payload.records.find((record) => record.recordType === "order")!.detail;
+  expect(validateClinicalMasterPublishPayload(payload)).toEqual([]);
+
+  const normalized = normalizeClinicalMasterPublishPayload(payload);
+  expect(normalized.records.find((record) => record.recordType === "order")!.detail).toMatchObject({
+    executionPreset: expected.executionPreset,
+    adminSubcategoryCode: "clinical-pathology",
+    labFamilyCode: "cbc",
+  });
+  expect(normalizeClinicalMasterPublishPayload(normalized)).toEqual(normalized);
+  expect(payload).toEqual(original);
+});
+
+test("normalization preserves explicit taxonomy clears and absent legacy fields", () => {
+  const cleared = configuredOrderPayload();
+  const order = cleared.records.find((record) => record.recordType === "order")!;
+  order.detail.adminSubcategoryCode = null;
+  order.detail.labFamilyCode = null;
+  expect(validateClinicalMasterPublishPayload(cleared)).toEqual([]);
+  expect(normalizeClinicalMasterPublishPayload(cleared).records.find((record) => record.recordType === "order")!.detail)
+    .toMatchObject({ adminSubcategoryCode: null, labFamilyCode: null });
+
+  const legacy = normalizeClinicalMasterPublishPayload(fixture).records.find((record) => record.recordType === "order")!.detail;
+  for (const key of ["executionPreset", "adminSubcategoryCode", "labFamilyCode"]) {
+    expect(legacy).not.toHaveProperty(key);
+  }
+});
+
+test("publisher forwards accepted execution settings and rejects invalid settings before execution", async () => {
+  const received: ClinicalMasterPublishPayload[] = [];
+  const executor: ClinicalMasterPublisherExecutor = {
+    async publish(payload) {
+      received.push(payload);
+      return {
+        releaseId: "00000000-0000-4000-8000-000000000001",
+        releaseNo: 1,
+        sourceFingerprint: "0".repeat(64),
+        idempotent: false,
+        recordCount: payload.records.length,
+      };
+    },
+  };
+  const payload = configuredOrderPayload();
+  const expected = payload.records.find((record) => record.recordType === "order")!.detail;
+  await publishClinicalMasterRelease({ payload, executor });
+  expect(received[0].records.find((record) => record.recordType === "order")!.detail).toMatchObject({
+    executionPreset: expected.executionPreset,
+    adminSubcategoryCode: "clinical-pathology",
+    labFamilyCode: "cbc",
+  });
+
+  for (const code of ["execution_preset_invalid", "order_taxonomy_invalid"]) {
+    const invalid = configuredOrderPayload();
+    const detail = invalid.records.find((record) => record.recordType === "order")!.detail;
+    if (code === "execution_preset_invalid") {
+      (detail.executionPreset as Record<string, unknown>).clinicalUseAllowed = true;
+    } else {
+      detail.labFamilyCode = "unknown-family";
+    }
+    expect(validateClinicalMasterPublishPayload(invalid).map((issue) => issue.code)).toContain(code);
+    await expect(publishClinicalMasterRelease({ payload: invalid, executor })).rejects.toBeInstanceOf(ClinicalMasterValidationError);
+  }
+  expect(received).toHaveLength(1);
 });
 
 test("TypeScript validation rejects nested prices, unknown fields, tuple conflicts, and name collisions", () => {

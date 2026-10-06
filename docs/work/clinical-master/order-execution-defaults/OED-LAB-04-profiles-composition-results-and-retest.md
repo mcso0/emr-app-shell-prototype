@@ -31,6 +31,32 @@ continues. Do not hide an unanswered choice in an automatic runtime default.
 
 ## Current local integration checkpoint
 
+### Publisher order-detail preservation, 2026-10-06
+
+The follow-up starts from verified `origin/main`
+`5e968e4614f8fac740991ee93cf901e2df1db23d` in an isolated worktree.
+The existing TypeScript validator accepts `executionPreset`,
+`adminSubcategoryCode` and `labFamilyCode`, but order normalization omitted them
+before executor dispatch. Preserve these accepted fields without rewriting the
+immutable preset envelope or inventing missing values. Explicit taxonomy `null`
+clears remain distinct from absent legacy fields. Existing validation and
+PostgreSQL content-hash/release authority remain unchanged.
+
+Four new regressions fail on the baseline and pass after the fix. The30 focused
+publisher/adapter/preset/dispensing contract tests pass in memory or by static
+SQL inspection, without an app server or database. The two affected suites are
+included in the existing server-free catalog-contract configuration.
+The19 laboratory profile contracts also pass. Secret scan, docs links, UX copy,
+TypeScript and Production build pass. Full lint passes with five existing WP10
+unused-variable warnings; the build retains the existing PRD-reader tracing warning.
+
+This correction does not expand RAW Airtable authoring fields or permit generated
+preset revision/hash fields through that adapter's authority filter. Its positive
+regression covers the accepted normalized snapshot's explicit-null taxonomy.
+No master publication/adoption, profile binding, result write, migration or
+permission change is included. Exact-candidate PR checks and Production approval
+remain pending; local tests do not prove a deployed publication transaction.
+
 ### Lab entry warning implementation, 2026-10-06
 
 This slice starts from verified Production Ready SHA

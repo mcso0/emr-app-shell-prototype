@@ -4,6 +4,8 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testMatch: [
+    "clinical-master-phase1a1.spec.ts",
+    "clinical-master-airtable-publish-adapter.spec.ts",
     "chart-live-selection-boundary.spec.ts",
     "chart-order-draft-delta-save.spec.ts",
     "chart-order-confirm-history.spec.ts",

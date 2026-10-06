@@ -535,6 +535,16 @@ function normalizeDetail(recordType: ClinicalMasterRecordType, detail: Record<st
         defaultBillingReflectionEnabled: trimmed.defaultBillingReflectionEnabled ?? true,
         defaultQuantity: trimmed.defaultQuantity ?? 1,
         species: Array.isArray(trimmed.species) ? trimmed.species : [],
+        // Preserve the validated preset envelope; PostgreSQL verifies its content hash.
+        ...(trimmed.executionPreset !== undefined
+          ? { executionPreset: trimmed.executionPreset }
+          : {}),
+        ...(trimmed.adminSubcategoryCode !== undefined
+          ? { adminSubcategoryCode: trimmed.adminSubcategoryCode }
+          : {}),
+        ...(trimmed.labFamilyCode !== undefined
+          ? { labFamilyCode: trimmed.labFamilyCode }
+          : {}),
         ...(trimmed.planOrderAuthority !== undefined
           ? {
               planOrderAuthority: normalizedPlanOrderAuthority(
