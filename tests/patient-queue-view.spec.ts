@@ -82,7 +82,8 @@ for (const queueModule of ["lab", "imaging", "dispensing"]) {
     const groups = page.locator('section[data-testid^="patient-queue-group-"]');
     await expect(groups).toHaveCount(3);
     await expect(groups.first()).toContainText("긴급 1");
-    await expect(groups.filter({ hasText: "재요청 1" })).toContainText("기록 1");
+    await expect(groups.filter({ hasText: "재요청 1" })).not.toContainText("기록 1");
+    await expect(groups.filter({ hasText: "출처 차트 미확인" })).toHaveCount(0);
     const id = queueModule === "dispensing" ? "live-fulfillment-synthetic-dispensing-1" : `live-${queueModule}-synthetic-${queueModule}-1`;
     const target = page.locator(`[data-patient-queue-item="${id}"]`);
     await target.click();

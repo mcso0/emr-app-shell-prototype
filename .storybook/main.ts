@@ -1,4 +1,6 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite";
+import { fileURLToPath } from "node:url";
+import { mergeConfig } from "vite";
 
 const config: StorybookConfig = {
   stories: [
@@ -20,6 +22,19 @@ const config: StorybookConfig = {
     },
   ],
   framework: "@storybook/nextjs-vite",
+  viteFinal: async (config) => mergeConfig(config, {
+    plugins: [{
+      name: "clair-storybook-next-navigation",
+      enforce: "post",
+      config: () => ({
+        resolve: {
+          alias: {
+            "next/navigation": fileURLToPath(new URL("./next-navigation-shim.ts", import.meta.url)),
+          },
+        },
+      }),
+    }],
+  }),
   staticDirs: ["../public"],
   typescript: {
     reactDocgen: "react-docgen-typescript",
