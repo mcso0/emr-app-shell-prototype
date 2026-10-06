@@ -1,7 +1,8 @@
 "use client";
 
 import { ClockIcon } from "@/components/icons";
-import { EmrStatusBadge } from "@/components/emr/status-badge";
+import { EmrSidePanelStateIcon } from "@/components/emr/side-panel-state-icon";
+import { getEmrSidePanelStatusIconState } from "@/components/emr/side-panel-status-title";
 import { cn } from "@/lib/utils";
 import {
   EmrSidePanelCard,
@@ -66,6 +67,7 @@ export function EmrTaskQueueCard({
     item.eventText ?? `${item.eventTime} ${item.eventActorName} ${eventLabel}`;
 
   if (patientView) {
+    const statusLabel = patientView.statusLabel === "대기" ? "대기중" : patientView.statusLabel;
     const showTypeBadge = item.secondLineBadgeLabel && item.secondLineBadgeLabel.trim() !== item.secondLineText.trim();
 
     return (
@@ -84,10 +86,15 @@ export function EmrTaskQueueCard({
         <div className="absolute top-[var(--clair-spacing-4)] right-[var(--clair-spacing-4)]">
           <EmrSidePanelCardAction ariaLabel={item.actionAriaLabel} density={item.actionMenuDensity} items={item.actionItems} testId={item.actionTestId} />
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-4)] [&>span]:h-[22px] [&>span]:px-[var(--clair-spacing-4)] [&>span]:py-0 [&>span]:font-normal">
+        <div data-slot="task-queue-card-footer" className="flex min-w-0 flex-wrap items-center gap-[var(--clair-spacing-4)] [&>span]:gap-[var(--clair-spacing-4)] [&>span]:h-[22px] [&>span]:px-[var(--clair-spacing-4)] [&>span]:py-0 [&>span]:font-normal">
           <EmrSidePanelMetaBadge label="요청" value={item.eventActorName} maxWidthClassName="max-w-[88px]" />
           <EmrSidePanelMetaBadge label="담당" value={item.assigneeName ?? "미지정"} maxWidthClassName="max-w-[80px]" />
-          <EmrStatusBadge className="ml-auto shrink-0" label={patientView.statusLabel === "대기" ? "대기중" : patientView.statusLabel} marker="none" />
+          <EmrSidePanelStatusBadge
+            icon={<EmrSidePanelStateIcon aria-hidden="true" state={getEmrSidePanelStatusIconState({ label: statusLabel })} />}
+            maxWidthClassName="ml-auto max-w-none"
+          >
+            {statusLabel}
+          </EmrSidePanelStatusBadge>
         </div>
       </EmrSidePanelCard>
     );
@@ -122,7 +129,7 @@ export function EmrTaskQueueCard({
         ) : null}
         <span className="min-w-0 flex-1 truncate">{item.secondLineText}</span>
       </div>
-      <div className="flex h-6 min-w-0 items-center gap-[var(--clair-spacing-6)] overflow-hidden">
+      <div data-slot="task-queue-card-footer" className="flex h-6 min-w-0 items-center gap-[var(--clair-spacing-6)] overflow-hidden">
         <EmrSidePanelStatusBadge
           icon={<ClockIcon aria-hidden="true" />}
           maxWidthClassName="max-w-[144px]"

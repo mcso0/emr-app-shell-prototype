@@ -109,6 +109,13 @@ const selectPatientCard = fn();
 const openPatientAction = fn();
 
 export const PatientView: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: "환자별 업무 카드의 상태는 요청자·담당자와 같은 중립 배지를 사용합니다. 기존 업무 상태 아이콘은 12px이며, 환자 그룹핑 대기열에서 두 보기의 배지 내부 아이콘과 텍스트 간격은 4px입니다. 긴 이름, 미지정 담당자, 메뉴와 선택 동작을 확인합니다.",
+      },
+    },
+  },
   render: () => <div className="flex w-[232px] flex-col gap-1">
     <EmrTaskQueueCard selected={false} onSelect={selectPatientCard} patientView={{ statusLabel: "대기", urgent: false }} item={{
       patientName: "합성 환자", guardianName: "합성 보호자", receptionType: "외래",

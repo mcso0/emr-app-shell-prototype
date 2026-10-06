@@ -104,7 +104,7 @@ export function PatientQueueContent({ active, allRows, rows, selectedId, groupSo
     capture();
   }, [active, allRows, rows, selectedId, collapsed, revealId, readable, capture, viewport]);
   const hiddenSelection = selectedId && allRows.some(row => row.id === selectedId) && !rows.some(row => row.id === selectedId);
-  return <div ref={root} className="contents">
+  return <div ref={root} className="contents [&_[data-slot=task-queue-card-footer]>span]:gap-[var(--clair-spacing-4)]">
     {!readable ? <EmrQueueEmptyState placement="panel-center" title="업무 대기열을 볼 권한이 없습니다" /> : <>
       {readable && hiddenSelection ? <div role="status" className="emr-text-metadata rounded-md border border-[var(--emr-status-info-border)] bg-[var(--emr-status-info-bg)] p-2 text-[var(--emr-status-info-text)]">선택한 업무는 현재 검색·필터에 포함되지 않습니다. <button className="underline" onClick={() => { onClearConditions(); setRevealId(selectedId); }}>조건 해제하고 보기</button></div> : null}
       {active && newIds.length > 0 && readable ? <div role="status" className="emr-text-metadata flex items-center justify-between rounded-md bg-[var(--emr-status-info-bg)] p-2 text-[var(--emr-status-info-text)]"><span>새 업무 {newIds.length}건 추가</span><button className="underline" onClick={() => { const id = newIds[0]; if (!rows.some(row => row.id === id)) onClearConditions(); setRevealId(id); setNewIds([]); }}>목록에서 보기</button></div> : null}
