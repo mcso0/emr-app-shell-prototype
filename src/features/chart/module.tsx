@@ -3,6 +3,7 @@
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
+import { prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
 import historyStyles from "./chart-history.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import orderScrollStyles from "./chart-order-scroll.module.css";
@@ -6354,53 +6355,6 @@ const getChartDraftRowCatalogSourceKey = (row: ChartOrderDraftRow) => {
 
   return row.order.workspaceCatalogItemId ?? row.order.serviceItemId;
 };
-
-const hasChartCatalogDraftIdentity = (row: ChartOrderDraftRow) =>
-  Boolean(row.catalogSearchRow) ||
-  /^catalog-(?:individual|set)-/.test(row.order.id);
-
-const chartOrderDraftUuidPattern =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function isChartOrderDraftUuid(value: string) {
-  return chartOrderDraftUuidPattern.test(value);
-}
-
-function prepareChartOrderDraftRowsForPersistence(rows: ChartOrderDraftRow[]) {
-  const orderIdMap = new Map<string, string>();
-  const nextRows = rows.map((row) => {
-    if (
-      isChartOrderDraftUuid(row.order.id) ||
-      !hasChartCatalogDraftIdentity(row)
-    ) {
-      return row;
-    }
-
-    const nextOrderId = createChartOrderDraftId();
-    orderIdMap.set(row.order.id, nextOrderId);
-
-    return {
-      ...row,
-      order: {
-        ...row.order,
-        id: nextOrderId,
-      },
-    };
-  });
-
-  return { orderIdMap, rows: nextRows };
-}
-
-function remapChartOrderIdSet(
-  orderIds: Set<string>,
-  orderIdMap: Map<string, string>,
-) {
-  if (orderIdMap.size === 0) return orderIds;
-
-  return new Set(
-    Array.from(orderIds).map((orderId) => orderIdMap.get(orderId) ?? orderId),
-  );
-}
 
 const applyPersistedOrderActions = (
   rows: ChartOrderDraftRow[],
@@ -13255,6 +13209,7 @@ function OrderArea({
         );
         const preparedDraft = prepareChartOrderDraftRowsForPersistence(
           persistenceSourceRows,
+          createChartOrderDraftId,
         );
         if (preparedDraft.orderIdMap.size > 0) {
           const preparedById = new Map(
@@ -13950,6 +13905,7 @@ function OrderArea({
 
     const preparedDraft = prepareChartOrderDraftRowsForPersistence(
       draftRowsRef.current,
+      createChartOrderDraftId,
     );
     const attemptedDraftEditVersion = draftEditVersionRef.current;
     const nextConfirmationOrderIds = remapChartOrderIdSet(
