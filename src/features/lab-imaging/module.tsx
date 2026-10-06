@@ -22,7 +22,6 @@ import { CdsContentLink2Icon } from "@/components/cds-icons/content-and-editor";
 import {
   CdsFilesFileIcon,
   CdsFilesImageIcon,
-  CdsFilesMoreHorizontalIcon,
 } from "@/components/cds-icons/files-and-layout";
 import { CdsNavigationArrowDownIcon, CdsNavigationChevronsRightIcon } from "@/components/cds-icons/navigation";
 import {
@@ -84,8 +83,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
+import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
+import { LabResultValueControl } from "./components/lab-result-value-control";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
@@ -2172,15 +2171,32 @@ function LabResultInputSection({
       resultState: evaluation?.valid ? evaluation.state : row.resultState };
   }), [autosave.state.draft, result.rows]);
   const queueChange = autosave.change;
+  const measurementDrafts = useRef<{ resultId: string; rows: Map<string, Pick<LabResultRow, "value" | "qualifier" | "deviceFlag">> }>({ resultId: result.id, rows: new Map() });
   const handleMetadataChange = useCallback((rowId: string, patch: Partial<LabResultRow>) => {
-    queueChange(rows.map(row => row.id === rowId ? { ...row, ...patch } : row));
-  }, [queueChange, rows]);
+    if (measurementDrafts.current.resultId !== result.id) measurementDrafts.current = { resultId: result.id, rows: new Map() };
+    queueChange(rows.map(row => {
+      if (row.id !== rowId) return row;
+      if (patch.resultPresence === "instrument_no_result") {
+        if (row.resultPresence !== "instrument_no_result") measurementDrafts.current.rows.set(row.id, {
+          value: row.value, qualifier: row.qualifier, deviceFlag: row.deviceFlag,
+        });
+        return { ...row, ...patch, value: undefined, qualifier: "exact", deviceFlag: undefined };
+      }
+      if (patch.resultPresence === "value" && row.resultPresence === "instrument_no_result") {
+        const previous = measurementDrafts.current.rows.get(row.id);
+        measurementDrafts.current.rows.delete(row.id);
+        return { ...row, ...patch, ...previous };
+      }
+      return { ...row, ...patch };
+    }));
+  }, [queueChange, rows, result.id]);
   const handleValueChange = useCallback((rowId: string, value: string) => {
     queueChange(rows.map(row => row.id === rowId ? { ...row, value } : row));
   }, [queueChange, rows]);
   const abnormalRows = rows.filter(
     (row) => row.judgment !== "normal" && row.judgment !== "not_judged",
   );
+  const notJudgedRows = rows.filter(row => row.judgment === "not_judged");
   const catalogMessage =
     catalogStatus === "loading"
       ? "결과지 항목을 불러오는 중"
@@ -2204,6 +2220,8 @@ function LabResultInputSection({
           <span className="emr-text-metadata font-medium text-destructive">
             비정상 {abnormalRows.length}
           </span>
+        ) : notJudgedRows.length ? (
+          <span className="emr-text-metadata font-medium text-muted-foreground">미판정 {notJudgedRows.length}</span>
         ) : (
           <span className="emr-text-metadata font-medium text-muted-foreground">
             정상 범위
@@ -2284,131 +2302,6 @@ function LabResultInputSection({
     </div> : null}
     </div>
   );
-}
-
-function LabResultValueControl({
-  row,
-  disabled = false,
-  onValueChange,
-}: {
-  row: LabResultRow;
-  disabled?: boolean;
-  onValueChange: (rowId: string, value: string) => void;
-}) {
-  const rule = row.interpretationRule;
-  const noResult = row.resultPresence === "instrument_no_result";
-  const label = `${row.analyteName} 결과값`;
-
-  return (
-    <div className="relative flex w-full min-w-0 items-center">
-      {rule?.resultValueKind === "coded" ? (
-        <select
-          aria-label={label}
-          className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 !text-[12px] !leading-4 !tracking-[0.3px]"
-          disabled={disabled || noResult}
-          value={row.value ?? ""}
-          onChange={(event) => onValueChange(row.id, event.target.value)}
-        >
-          <option value="">{noResult ? "측정 불가" : "선택 안 함"}</option>
-          {rule.codes.map((code) => (
-            <option key={code.code} value={code.code}>{code.label}</option>
-          ))}
-        </select>
-      ) : (
-        <Input
-          aria-label={label}
-          className={cn("h-7 min-w-0 flex-1 bg-card !text-[12px] !leading-4 !tracking-[0.3px]", row.qualifier && row.qualifier !== "exact" && "pr-9")}
-          data-testid={`lab-result-input-${row.id}`}
-          disabled={disabled || noResult}
-          inputMode={rule?.resultValueKind === "numeric" || row.resultInputType === "number" ? "decimal" : undefined}
-          placeholder={noResult ? "측정 불가" : "검사 결과값 입력"}
-          value={row.value ?? ""}
-          onChange={(event) => onValueChange(row.id, event.target.value)}
-        />
-      )}
-      {!noResult && row.qualifier && row.qualifier !== "exact" ? (
-        <span className="emr-text-metadata pointer-events-none absolute right-2 text-muted-foreground">
-          {row.qualifier === "less_than" ? "미만" : "초과"}
-        </span>
-      ) : null}
-
-    </div>
-  );
-}
-
-function LabResultMetadataControl({ row, disabled, onMetadataChange }: {
-  row: LabResultRow;
-  disabled: boolean;
-  onMetadataChange: (rowId: string, patch: Partial<LabResultRow>) => void;
-}) {
-  const rule = row.interpretationRule;
-  const noResult = row.resultPresence === "instrument_no_result";
-  return <>
-      {rule ? (
-        <Popover>
-          <PopoverTrigger
-            render={
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`${row.analyteName} 추가 결과 정보`}
-                disabled={disabled}
-              />
-            }
-          >
-            <CdsFilesMoreHorizontalIcon className="size-4" aria-hidden="true" />
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-64">
-            <PopoverTitle className="emr-text-dense">{row.analyteName} 추가 결과 정보</PopoverTitle>
-            <label className="flex flex-col gap-1 emr-text-metadata text-muted-foreground">
-              결과 상태
-              <select
-                aria-label={`${row.analyteName} 결과 상태`}
-                className="h-8 rounded-md border border-input bg-background px-2 text-foreground"
-                value={row.resultPresence ?? "value"}
-                onChange={(event) => {
-                  const presence = event.target.value as "value" | "instrument_no_result";
-                  onMetadataChange(row.id, { resultPresence: presence, qualifier: "exact", deviceFlag: undefined,
-                    ...(presence === "instrument_no_result" ? { value: "" } : {}) });
-                }}
-              >
-                <option value="value">결과 입력</option>
-                <option value="instrument_no_result">측정 불가</option>
-              </select>
-            </label>
-            {rule.resultValueKind === "numeric" && !noResult ? (
-              <>
-                <label className="flex flex-col gap-1 emr-text-metadata text-muted-foreground">
-                  부등호
-                  <select
-                    aria-label={`${row.analyteName} 부등호`}
-                    className="h-8 rounded-md border border-input bg-background px-2 text-foreground"
-                    value={row.qualifier ?? "exact"}
-                    onChange={(event) => onMetadataChange(row.id, { qualifier: event.target.value as LabResultRow["qualifier"] })}
-                  >
-                    <option value="exact">정확한 값</option>
-                    <option value="less_than">미만 (&lt;)</option>
-                    <option value="greater_than">초과 (&gt;)</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 emr-text-metadata text-muted-foreground">
-                  장비 경고
-                  <Input
-                    aria-label={`${row.analyteName} 장비 경고`}
-                    className="h-8"
-                    maxLength={200}
-                    placeholder="장비 경고(있는 경우)"
-                    value={row.deviceFlag ?? ""}
-                    onChange={(event) => onMetadataChange(row.id, { deviceFlag: event.target.value || undefined })}
-                  />
-                </label>
-              </>
-            ) : null}
-          </PopoverContent>
-        </Popover>
-      ) : null}
-  </>;
 }
 
 function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
@@ -2531,12 +2424,11 @@ function LabResultDataTable({
           textMode: "two-line-if-long",
         },
         cell: ({ row, table }) => {
-          const { persistedResult, canEdit, onMetadataChange } = table.options.meta as LabResultTableContext;
+          const { persistedResult } = table.options.meta as LabResultTableContext;
           const savedRow = persistedResult.rows.find((saved) => saved.id === row.original.id);
           return (
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
-              <LabResultMetadataControl disabled={!canEdit} row={row.original} onMetadataChange={onMetadataChange} />
               {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
               (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
                 <AtomicLabRetestAction result={persistedResult} row={savedRow} />
@@ -2555,8 +2447,26 @@ function LabResultDataTable({
         header: "결과값",
         meta: { label: "결과값", resize: "none" },
         cell: ({ row, table }) => {
-          const { canEdit, onValueChange } = table.options.meta as LabResultTableContext;
-          return <LabResultValueControl disabled={!canEdit} row={row.original} onValueChange={onValueChange} />;
+          const { canEdit, onValueChange, onMetadataChange } = table.options.meta as LabResultTableContext;
+          return <LabResultValueControl disabled={!canEdit} row={row.original} onValueChange={onValueChange} onMetadataChange={onMetadataChange} />;
+        },
+      },
+      {
+        id: "measurementUnavailable",
+        size: 88,
+        minSize: 80,
+        enableSorting: false,
+        enableResizing: false,
+        header: "측정 불가",
+        meta: { align: "center", label: "측정 불가", resize: "none" },
+        cell: ({ row, table }) => {
+          const { canEdit, onMetadataChange } = table.options.meta as LabResultTableContext;
+          return row.original.interpretationRule ? <EmrTableCheckbox
+            aria-label={`${row.original.analyteName} 측정 불가`}
+            disabled={!canEdit}
+            checked={row.original.resultPresence === "instrument_no_result"}
+            onCheckedChange={checked => onMetadataChange(row.original.id, { resultPresence: checked ? "instrument_no_result" : "value" })}
+          /> : null;
         },
       },
       {
@@ -2639,7 +2549,7 @@ function LabResultDataTable({
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     columns,
-    // Stable cell renderers retain input focus and open popovers during autosave.
+    // Stable cell renderers retain input focus during autosave.
     meta: { assigneeName, canEdit: phase2 === null || phase2.canEdit, persistedResult, expandedRowId, onExpandedRowChange, onValueChange, onMetadataChange } satisfies LabResultTableContext,
     data: rows,
     enableColumnResizing: false,

@@ -5,12 +5,12 @@ description: "Figma annotations, accepted V5 corrections, and code boundaries fo
 status: "accepted-design"
 tags: [lab, result-sheet, figma, attachments]
 related_work: "LAB-PR-004"
-updated: "2026-10-04"
+updated: "2026-10-06"
 ---
 
 # Lab Result Sheet — Implementation Reference
 
-This document records the accepted design and the scoped implementation decisions. Read the [execution plan](../../../../work/lab/LAB-PR-004-result-sheet-figma-alignment.md) before changing code. The user subsequently authorized implementation, parent verification, and delivery after the checks pass; see the execution plan for the active scope.
+This document records the accepted design and the scoped implementation decisions. Read the [execution plan](../../../../work/lab/LAB-PR-004-result-sheet-figma-alignment.md) before changing code. Its historical delivery authorization applies to that work's scope. The laboratory input changes approved on 2026-10-06 use [OED-LAB-04](../../../../work/clinical-master/order-execution-defaults/OED-LAB-04-profiles-composition-results-and-retest.md) and currently cover local implementation and validation.
 
 ## Sources And Precedence
 
@@ -68,8 +68,8 @@ Values below describe a **1246px component**, not a fixed page width. Avoid a sc
 | Toolbar | Three outline actions in order: 기본 간격 82px / 수정이력 79px / 링크 복사 82px; height 28px, gap 8px, radius 8px, icon 12px. Save/retry/status and reset/reload overflow remain below the group. |
 | Group title | Fold 24px with 14px icon and 6px radius; title 14/20 medium; fold/title gap 8px, title/count gap 6px, count/status gap 8px. Count height 20px, horizontal padding 6px, radius 6px, black-alpha 4%. |
 | Table | 1214px surface; padding 4px top / 8px other sides; radius 8px; inner row width 1198px. |
-| Columns | Disclosure 24, item 280, result 240, unit 120, range 254, judgment 120, actor 160px. Range remains the flexible column. |
-| Header / row | 36px header / 40px default row. Body item/unit inset 14px; other body and header text inset 10px. Result input width 220px; additional result information remains in the item cell. Preserve the existing density selector rather than forcing every density to 40px. |
+| Columns | Disclosure 24, item 280, result 240, measurement unavailable 88 (minimum 80), unit 120, range 254, judgment 120, actor 160px. Range remains the flexible column. |
+| Header / row | 36px header / 40px default minimum row. Body item/unit inset 14px; other body and header text inset 10px. The result cell accommodates its qualifier, input and wrapped warnings; the additional-result menu is removed. Preserve the existing density selector and allow taller content. |
 | Row groups | Header divider 1px; expanded parent has no lower border. Expanded detail has a 1px lower border only when another row follows; final detail has 6px lower corners. Only one row opens at a time. |
 | Detail | Padding top 10px / horizontal 24px / bottom 16px; 12px gap between optional staff block and columns. Two 558.5px sections, 17px separator slot, 8px gaps. |
 | Detail contents | 28px label slot; 10px content padding. Finding/upload both 76px tall and 538.5px wide at reference size; visible box gap 53px, bottom inset 26px. Center separator 1px black-alpha 6%, inset 8px, 108px tall for an empty detail without staff notice. |
@@ -87,7 +87,7 @@ Use existing semantic surface, border, text, focus, and selected tokens. Figma r
 
 Some Figma examples swap range/actor widths. Use one consistent column grid; do not vary columns by expanded state. At narrow widths, preserve the existing responsive detail stacking and table overflow. Recommended card behavior is four columns where space permits, two on narrow containers, with the two-row cap based on actual layout. Validate rather than shrinking unreadable controls.
 
-Responsive table follow-up approved 2026-10-03: keep the existing design and column definitions. Measure the table viewport's content width, excluding padding. Between 904px and the 1198px preferred column total, distribute shrinkage in proportion to each column's existing `size - minSize`. Keep the 24px disclosure fixed. Below 904px, preserve minimum column widths and scroll inside the table. At 1198px and above, retain the reference widths and existing range-column growth. Document width toggles, shell panels, and window resizing use the same rule; result/finding drafts and disclosure state remain intact. No typography, spacing, wrapping, toolbar, or detail-design change is included.
+Responsive table follow-up approved 2026-10-03: measure the table viewport's content width, excluding padding. Distribute shrinkage in proportion to each column's existing `size - minSize`. Keep the 24px disclosure fixed. Below the current minimum column total, preserve minimum widths and scroll inside the table; above the preferred total, retain reference widths and range-column growth. The 2026-10-06 measurement column adds 80px minimum / 88px preferred to the prior 904px / 1198px totals. Document width toggles, shell panels, and window resizing use the same rule; result/finding drafts and disclosure state remain intact.
 
 ## Attachment And Upload Behavior
 
@@ -166,6 +166,31 @@ Investigation during LAB-PR-004 resolved the existing-field and transport mappin
 ## Preserved Product Contracts
 
 Keep result save/reload and revision conflicts, numeric/coded/text values, qualifiers, device flags, `instrument_no_result`, clinical range/judgment semantics, retest eligibility, overall finding and history. Their omission from a Figma specimen does not authorize removal. The unavailable `차트에 복사하기` placeholder is omitted from the approved three-action toolbar; chart copying remains an unimplemented capability.
+
+## Laboratory Result Input — Approved 2026-10-06
+
+Frozen V2 rules define numeric, coded/select and narrative entry. Numeric entry
+defaults to `=`; show `<`/`>` choices only with explicit `allowedQualifiers`.
+Keep existing qualified results readable. Coded results expose their defined
+choices and `직접 입력`; narrative values remain separate from item findings.
+
+Show wrong-format, unlisted-code and configured input/display-range warnings
+below the result control. Preserve the entered raw value and save it as
+`not_judged`. A warning in one row does not block another row's save. Never invent
+an analyzer/critical threshold or substitute the normal interval for an input
+limit. Size, malformed metadata/profile, permissions and write conflicts retain
+their existing blocking behavior.
+
+Replace the additional-result menu with the `측정 불가` checkbox column. Checked
+rows disable entry and store null / `exact` / no active device flag. Unchecking
+restores the previous value and historical metadata only from that result's
+session draft. Add no restoration subtext. Remove the device-flag editor; manual
+device observations use 검사 소견. Keep historical flag storage/read behavior.
+
+V1 rows do not gain fabricated rules, choices or limits. Required warning or
+unavailable results still prevent completion under the existing policy. This
+scope excludes imaging, dispensing and treatment and does not approve remote
+master/profile changes or deployment.
 
 ## AS-IS → TO-BE Follow-Up — 2026-09-29
 
