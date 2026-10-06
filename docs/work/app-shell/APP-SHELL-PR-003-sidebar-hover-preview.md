@@ -3,7 +3,7 @@ id: APP-SHELL-PR-003
 status: human_review
 area: app-shell
 priority: P1
-target_pr: codex/sidebar-hover-preview -> main; Production delivery approved
+target_pr: codex/sidebar-hover-focus-fix -> main; regression delivery approved
 updated: 2026-10-06
 source_docs:
   - docs/design/system/side-panel-header-contract.md
@@ -32,7 +32,7 @@ Implementation uses origin/main `9ef8e51d9ae8eedaadf2c01c688349d1f648c7c2` (#940
 1. Keep persisted layout state separate from a transient preview module. Desktop mouse hover opens after 120ms; exit closes after 220ms. A 20px hit bridge covers the existing rail inset/gap. Do not resize main content for a preview.
 2. Preserve each visited sidebar instance within one workspace/session/tab scope. Float-to-pin retains local input, group and scroll state. Hidden instances are inert; workspace/session/tab changes clear this cache.
 3. Hover another available sidebar menu changes preview only. Clicking or pressing Enter on a menu navigates and preserves pin state. Rail top expand pins the current page. The existing right header button pins the previewed module; a foreign preview's explicit pin navigates with `modulePanel=open`. A canceled duplicate-tab dialog must leave the current page unpinned.
-4. Retain a preview while its focus, IME input, drag or owned popup is active. Escape closes a child popup first, then preview and restores trigger focus. Outside click closes preview and continues the original click. Navigation, workspace/tab/session change, active drawer, global modal, blur and hidden document cancel it.
+4. Retain a preview while focused editing, keyboard interaction, IME input, drag or an owned popup is active. Residual focus on a mouse-clicked button must not block switching or closing. Deliberate mouse movement resumes hover behavior while editing/IME and open-popup protection remain active. Escape closes a child popup first, then preview and restores trigger focus. Outside click closes preview and continues the original click. Navigation, workspace/tab/session change, active drawer, global modal, blur and hidden document cancel it.
 5. Keep existing search/unavailable-menu tooltips. ArrowRight opens a keyboard preview; Enter remains navigation. Disable automatic preview for touch/compact screens. At widths below 768px, explicit expand uses the same unchanged sidebar in a 288px modal sheet with focus containment and Escape/backdrop dismissal. Reduced motion disables movement.
 
 ## Boundaries
@@ -66,3 +66,17 @@ The attached `codex/sidebar-hover-preview` worktree contains only this local imp
 - Production action: squash merge the scoped PR with expected-head protection.
 - Smoke: `/login`, workspace access redirect and browser console/network; if an existing authenticated session is available, inspect Reception preview, navigation and explicit pin using read-only synthetic-workspace UI. No clinical/data mutation is requested.
 - Stop conditions: candidate changes, failed/unknown required checks, Preview not Ready, unexpected Production source, missing rollback evidence, secret exposure or required route smoke failure.
+
+
+## Follow-up: mouse button focus regression (2026-10-06)
+
+PR #941 shipped the initial hover feature at main `455e55071c257b3e167da71370b158ef3b4f9eb0`, Ready Production `dpl_GbBPhEw96yQNoHCHSHjcLT7EUK3V`. The user reported that filtering or another sidebar action prevents subsequent menu previews. 승욱 explicitly authorized "수정 하고 배포해" for this regression on 2026-10-06.
+
+Reproduction on that deployed source used an isolated mock-auth browser with every API request intercepted. Selecting and closing a filter, or toggling an ordinary queue group, leaves focus on its trigger. ShellMain treated any owned focus as an active interaction. Other menu hover kept the old sidebar and pointer exit could not close it. Two focused regression cases fail on the pre-fix code. No DB action was sent by the reproduction.
+
+The correction is confined to ShellMain: distinguish pointer-button focus from keyboard interaction and focused editable controls. Existing popup ownership, IME, drag, Escape ordering and focus restoration remain in place. No sidebar JSX, visual prop, stylesheet, component, API, permission, environment or dependency changes belong to this correction. Add coverage for filter/group actions, repeat hover, state retention, keyboard-to-mouse switching and focused search/IME.
+
+Release path: `codex/sidebar-hover-focus-fix` -> exact-head Release Check and Ready Preview -> expected-head squash merge to main -> Ready Production and official-alias source verification. The current Ready deployment above is the rollback candidate. Smoke is `/login` plus read-only synthetic Cheongdam filter/group-menu dismissal and preview/navigation inspection if the existing authenticated browser remains available. No clinical workflow action, payment/checkout action, remote settings or DB change is authorized. Final candidate/check/deployment/smoke evidence is recorded in the follow-up PR.
+
+
+Follow-up local validation: all 24 sidebar Playwright cases passed (20 existing and 4 added). The two reported mouse paths failed before the correction and pass afterward, including switching to a different sidebar, closing outside, reopening and retained filter/group state. Keyboard-to-mouse handoff, focused search/IME and the existing search Escape sequence also pass. Full local lint passes with 0 errors and 5 pre-existing WP10 script warnings. A TypeScript AST extraction confirms the full ShellMain return JSX is byte-identical to `455e5507`; module/sidebar/components/styles/framework/dependency files have no diff. Secrets, docs, UX copy and whitespace checks pass. Default build, standalone types, exact-head remote check and final deployment evidence are recorded in the follow-up PR.
