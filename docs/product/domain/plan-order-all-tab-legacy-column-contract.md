@@ -21,7 +21,7 @@ tags:
   - order-table
   - dispensing
   - billing
-last_updated: 2026-09-20
+last_updated: 2026-10-06
 ---
 
 # Plan/Order `전체` Tab Legacy Column Contract
@@ -1448,6 +1448,11 @@ this document; underlying lifecycle, authorization, and billing rules remain.
 - Keep the edited row in place during input. Reorder after editing ends or
   confirmation succeeds, not on each keystroke. Failed confirmation must not
   move a row into the confirmed group.
+- Moving focus from an inline editor to a selection checkbox keeps the row in
+  place until checkbox activation completes. Resume sorting after activation,
+  pointer cancellation/release without a click, focus loss, or Tab/Escape away
+  from the checkbox. These boundaries preserve row IDs, selected order IDs,
+  keyboard focus, and the existing default/explicit sort comparators.
 - Explicit user-selected column sorting takes precedence over the default.
 - Keep set parents and children together; sort groups by their parent, retaining
   child order. Excluded children keep existing inclusion semantics and must not
