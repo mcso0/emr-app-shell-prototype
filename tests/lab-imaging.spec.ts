@@ -426,12 +426,14 @@ test("lab workspace renders shared empty state for true-empty live result rows",
 });
 
 test("CBC V2 actual persisted results load, preserve blank, submit typed states and reload", async ({ page }) => {
+  test.setTimeout(90_000); // Multiple full reloads verify persisted values and session-only restoration.
+  const readOnlyRollback = process.env.LAB_WARNINGS_READ_ONLY_ROLLBACK === "1";
   await page.setViewportSize({ width: 1920, height: 1080 });
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const profiles = JSON.parse(readFileSync("docs/work/clinical-master/order-execution-defaults/artifacts/oed-lab-04/cbc-runtime.non-applied.v1.json", "utf8")).profiles;
   const profile = profiles.find((p: { profileKey: string }) => p.profileKey === "cm.lab-profile.clair-demo-cbc.dog");
-  const rule = profile.rules.find((r: { code: string }) => r.code === "WBC");
+  const rule = { ...profile.rules.find((r: { code: string }) => r.code === "WBC"), allowedQualifiers: ["exact", "less_than"] };
   const wi = { id: "97050000-0000-4000-8000-000000000011", orderId: "97050000-0000-4000-8000-000000000012",
     encounterId: "97050000-0000-4000-8000-000000000013", workspaceId, queueType: "lab", status: "in_progress", requestCycle: 1, rowRevision: 1,
     sourceSnapshot: { orderDisplayName: "합성 CBC WBC", patientName: "합성 검증 환자", detail: { species: "dog" } } };
@@ -441,7 +443,15 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
       integrationStatus: "not_integrated", device: { name: "직접 등록한 합성 CBC 수기" } } },
     rows: [{ id: "frozen-wbc-row", analyteName: "WBC", value: null as string | null, unit: rule.unit, decimalScale: rule.decimalScale,
       resultValueKind: "numeric", judgment: "not_judged", interpretationRule: rule,
-      referenceRange: `${rule.referenceInterval.low}–${rule.referenceInterval.high}`, resultState: "not_entered", resultPresence: "value", qualifier: "exact", deviceFlag: null }] };
+      referenceRange: `${rule.referenceInterval.low}–${rule.referenceInterval.high}` as string | null, resultState: "not_entered", resultPresence: "value", qualifier: "exact", deviceFlag: null as string | null }] };
+  result.rows.push({ ...result.rows[0], id: "frozen-coded-row", analyteName: "합성 선택 검사", unit: null, decimalScale: null,
+    resultValueKind: "coded", referenceRange: null, interpretationRule: { ...rule, resultValueKind: "coded", unit: null,
+      decimalScale: null, numericMin: null, numericMax: null, referenceInterval: null, displayRange: null, allowedQualifiers: undefined,
+      codes: [{ code: "negative", label: "음성", judgment: "normal" }, { code: "positive", label: "양성", judgment: "abnormal" }] } });
+  if (readOnlyRollback) {
+    Object.assign(result.rows[0], { value: " 4 mg ", resultState: "invalid_numeric_format" });
+    Object.assign(result.rows[1], { value: "판독 보류", resultState: "unrecognized_code" });
+  }
   let posted: Record<string, unknown> | null = null; let catalogRequests = 0; let retestPosted: Record<string, unknown> | null = null;
   const deviceId = "97050000-0000-4000-8000-000000000021";
   await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-profiles**`, route => route.fulfill({ json: { ok: true, configuration: {
@@ -462,12 +472,16 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
   await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-entries**`, async route => {
     if (route.request().method() === "POST") {
       posted = route.request().postDataJSON();
-      const row = (posted!.rows as Array<Record<string, unknown>>)[0];
-      result.rows[0].value = row.value as string; result.rows[0].qualifier = row.qualifier as string;
-      const evaluation = evaluateLabProfileValue(rule, { value: row.value as string | null,
-        qualifier: row.qualifier as "exact" | "less_than" | "greater_than", resultState: "value" });
-      if (!evaluation.valid) throw new Error(evaluation.error);
-      result.rows[0].resultState = evaluation.state; result.rows[0].judgment = evaluation.judgment;
+      for (const row of posted!.rows as Array<Record<string, unknown>>) {
+        const saved = result.rows.find(saved => saved.id === row.rowId)!;
+        saved.value = row.value as string | null; saved.qualifier = row.qualifier as string;
+        saved.resultPresence = row.resultState as string; saved.deviceFlag = row.deviceFlag as string | null;
+        const evaluation = evaluateLabProfileValue(saved.interpretationRule, { value: saved.value,
+          qualifier: row.qualifier as "exact" | "less_than" | "greater_than",
+          resultState: row.resultState as "value" | "instrument_no_result", deviceFlag: row.deviceFlag as string | null });
+        if (!evaluation.valid) throw new Error(evaluation.error);
+        saved.resultState = evaluation.state; saved.judgment = evaluation.judgment;
+      }
       result.entryWriteRevision++;
       await route.fulfill({ json: { ok: true, entryWriteRevision: result.entryWriteRevision } });
     } else {
@@ -476,7 +490,7 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
     }
   });
   const url = `/w/${workspaceId}/lab?date=2026-09-06&modulePanel=open&aside=closed&labResultId=live-lab-${wi.id}`;
-  await page.goto(url);
+  await page.goto(url, { waitUntil: "domcontentloaded" });
   await expect(page.getByTestId("lab-frozen-profile")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "임상병리검사 결과지 링크 복사" })).toBeVisible();
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
@@ -485,31 +499,86 @@ test("CBC V2 actual persisted results load, preserve blank, submit typed states 
   expect(resultLink.pathname).toBe(`/w/${workspaceId}/lab`);
   expect(resultLink.searchParams.get("labResultId")).toBe(`live-lab-${wi.id}`);
   expect(resultLink.searchParams.get("date")).toBe("2026-09-06");
-  await page.goto(resultLink.href);
-  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible();
+  await page.goto(resultLink.href, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "임상병리검사 결과지" })).toBeVisible({ timeout: 15_000 });
+  if (readOnlyRollback) {
+    for (const [name, value] of [["WBC", " 4 mg "], ["합성 선택 검사", "판독 보류"]]) {
+      await expect(page.getByLabel(`${name} 결과값`, { exact: true })).toHaveValue(value);
+      await expect(page.getByLabel(`${name} 결과값`, { exact: true })).toBeDisabled();
+      await expect(page.getByLabel(`${name} 측정 불가`, { exact: true })).toBeDisabled();
+    }
+    await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("수치 형식이 아닙니다");
+    await expect(page.getByTestId("lab-result-row-frozen-coded-row")).toContainText("선택지에 없는 결과");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(" 4 mg ");
+    await expect(page.getByLabel("합성 선택 검사 결과값", { exact: true })).toHaveValue("판독 보류");
+    expect(posted).toBeNull();
+    return;
+  }
   await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue("");
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
   const wbcRow = page.getByTestId("lab-result-row-frozen-wbc-row");
-  await expect(wbcRow.locator('[data-column-id="analyteName"]').getByRole("button", { name: "WBC 추가 결과 정보" })).toHaveCount(1);
+  await expect(wbcRow.locator('[data-column-id="analyteName"]').getByRole("button", { name: "WBC 추가 결과 정보" })).toHaveCount(0);
   await expect(wbcRow.locator('[data-column-id="value"]').getByRole("button")).toHaveCount(0);
   await expect(page.getByLabel("WBC 결과값", { exact: true })).toBeVisible();
-  await expect.poll(async () => (await page.getByLabel("WBC 결과값", { exact: true }).boundingBox())?.width).toBeCloseTo(220, 0);
+  await expect.poll(async () => (await page.getByLabel("WBC 결과값", { exact: true }).boundingBox())?.width).toBeGreaterThan(120);
   await page.getByLabel("WBC 결과값", { exact: true }).fill(String(rule.referenceInterval.low));
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row").getByText("정상", { exact: true })).toBeVisible();
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row").getByRole("textbox")).toHaveCount(1);
-  await page.getByRole("button", { name: "WBC 추가 결과 정보" }).click();
   await page.getByLabel("WBC 부등호").selectOption("less_than");
   await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("미판정");
   await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
   expect(posted).toMatchObject({ resultId: result.resultId, expectedEntryWriteRevision: result.entryWriteRevision - 1,
-    rows: [{ rowId: "frozen-wbc-row", qualifier: "less_than", deviceFlag: null, resultState: "value" }] });
-  await page.reload();
+    rows: expect.arrayContaining([{ rowId: "frozen-wbc-row", qualifier: "less_than", deviceFlag: null, resultState: "value", note: null, value: String(rule.referenceInterval.low) }]) });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(String(rule.referenceInterval.low));
-  await page.getByRole("button", { name: "WBC 추가 결과 정보" }).click();
   await expect(page.getByLabel("WBC 부등호")).toHaveValue("less_than");
-  await page.keyboard.press("Escape");
-  await expect(page.getByLabel("WBC 부등호")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "WBC 추가 결과 정보" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "WBC 추가 결과 정보" })).toHaveCount(0);
+  await expect(page.getByLabel("WBC 장비 경고")).toHaveCount(0);
+  result.rows[0].deviceFlag = "historical flag";
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByLabel("WBC 측정 불가", { exact: true }).check();
+  await expect(page.getByLabel("WBC 결과값", { exact: true })).toBeDisabled();
+  await expect.poll(() => result.rows[0].resultState).toBe("instrument_no_result");
+  expect(result.rows[0].value).toBeNull();
+  expect(result.rows[0].qualifier).toBe("exact");
+  await page.getByRole("table", { name: "임상병리 검사 결과 입력" }).screenshot({
+    path: ".omo/evidence/lab-result-entry-warnings/measurement-unavailable.png",
+  });
+  await page.getByLabel("WBC 측정 불가", { exact: true }).uncheck();
+  await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(String(rule.referenceInterval.low));
+  await expect(page.getByLabel("WBC 부등호")).toHaveValue("less_than");
+  await expect.poll(() => result.rows[0].deviceFlag).toBe("historical flag");
+  await expect(page.getByText("기존 입력은 체크 해제 시 복원됩니다.")).toHaveCount(0);
+  await page.getByLabel("WBC 부등호").selectOption("exact");
+  await page.getByLabel("WBC 결과값", { exact: true }).fill(" 4 mg ");
+  await expect(wbcRow).toContainText("입력한 값은 저장됩니다");
+  // A warning in WBC must not block the independent coded row's save.
+  await page.getByLabel("합성 선택 검사 결과값", { exact: true }).selectOption("code:positive");
+  await expect.poll(() => result.rows.map(row => row.value)).toEqual([" 4 mg ", "positive"]);
+  await expect.poll(() => result.rows[0].resultState).toBe("invalid_numeric_format");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("WBC 결과값", { exact: true })).toHaveValue(" 4 mg ");
+  await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("수치 형식이 아닙니다");
+  await page.getByLabel("합성 선택 검사 결과값", { exact: true }).selectOption("direct");
+  await page.getByLabel("합성 선택 검사 결과값", { exact: true }).fill("판독 보류");
+  await expect.poll(() => result.rows[1].resultState).toBe("unrecognized_code");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(page.getByLabel("합성 선택 검사 결과값", { exact: true })).toHaveValue("판독 보류");
+  await expect(page.getByTestId("lab-result-row-frozen-coded-row")).toContainText("선택지에 없는 결과");
+  const codedWarning = page.getByTestId("lab-result-row-frozen-coded-row").getByRole("status");
+  expect(await codedWarning.evaluate(element => ({
+    textFits: element.scrollWidth <= element.clientWidth,
+    rowFits: element.getBoundingClientRect().bottom <= element.closest("td")!.getBoundingClientRect().bottom,
+  }))).toEqual({ textFits: true, rowFits: true });
+  await page.getByRole("table", { name: "임상병리 검사 결과 입력" }).screenshot({
+    path: ".omo/evidence/lab-result-entry-warnings/saved-warnings.png",
+  });
+  await page.getByLabel("WBC 결과값", { exact: true }).fill("-1");
+  await expect(page.getByTestId("lab-result-row-frozen-wbc-row")).toContainText("입력 범위를 벗어납니다");
+  await expect.poll(() => result.rows[0].resultState).toBe("outside_input_range");
+  await page.getByLabel("WBC 결과값", { exact: true }).fill(String(rule.referenceInterval.low));
+  await expect.poll(() => result.rows[0].value).toBe(String(rule.referenceInterval.low));
   expect(catalogRequests).toBe(0);
   await page.getByRole("button", { name: "WBC만 재검 요청" }).click();
   const retest = page.getByTestId("lab-atomic-retest-dialog");

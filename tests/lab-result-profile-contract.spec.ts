@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { evaluateLabProfileValue as evaluate, parseLabResultProfile, type LabResultProfile } from "../src/features/lab-imaging/result-profile-contract";
+import { evaluateLabProfileValue as evaluate, isLabProfileRule, parseLabResultProfile, type LabResultProfile } from "../src/features/lab-imaging/result-profile-contract";
 import { parsePersistedLabResult } from "../src/features/lab-imaging/persisted-result-contract";
 import type { LabResult } from "../src/types/emr-domain";
 import { createAtomicLabRetest, parseAtomicLabRetestInput } from "../src/features/lab-imaging/server-atomic-retest-core";
@@ -76,7 +76,9 @@ test("empty is not zero and interval boundaries are inclusive without rounding",
   expect(evaluate(wbc, { value: "0" })).toMatchObject({ valid: true, value: "0", judgment: "low" });
 });
 for (const invalid of ["-1", "NaN", "1e2", "Infinity", "1,000", "4 mg", "--2"]) {
-  test(`numeric profile rejects ${invalid}`, () => expect(evaluate(wbc, { value: invalid })).toMatchObject({ valid: false }));
+  test(`numeric profile preserves ${invalid} with a warning`, () => expect(evaluate(wbc, { value: invalid })).toMatchObject({
+    valid: true, value: invalid, judgment: "not_judged", state: invalid === "-1" ? "outside_input_range" : "invalid_numeric_format",
+  }));
 }
 test("instrument state, qualifiers, flags and documented display bounds never invent judgment", () => {
   expect(evaluate(wbc, { value: null, resultState: "instrument_no_result" })).toMatchObject({ valid: true, state: "instrument_no_result", judgment: "not_judged" });
@@ -86,11 +88,31 @@ test("instrument state, qualifiers, flags and documented display bounds never in
   expect(evaluate({ ...wbc, displayRange: { low: 0, high: 10 } }, { value: "11" })).toMatchObject({ valid: true, state: "outside_documented_display_range", judgment: "not_judged" });
   expect(evaluate(wbc, { value: null, qualifier: "less_than" })).toMatchObject({ valid: false });
 });
-test("coded abnormal is not numeric high; unsupported or unrecognized codes fail", () => {
+test("coded abnormal is not numeric high; unknown codes save while unsupported definitions fail", () => {
   expect(evaluate(coded, { value: "abnormal" })).toMatchObject({ valid: true, judgment: "abnormal" });
   expect(evaluate(coded, { value: "not_performed" })).toMatchObject({ valid: true, judgment: "not_judged" });
-  expect(evaluate(coded, { value: "made-up" })).toMatchObject({ valid: false });
+  expect(evaluate(coded, { value: "made-up" })).toMatchObject({ valid: true, value: "made-up", state: "unrecognized_code", judgment: "not_judged" });
   expect(evaluate({ ...coded, supported: false }, { value: "normal" })).toMatchObject({ valid: false });
+});
+test("raw text, whitespace, oversized numbers and defined bounds retain the original value", () => {
+  expect(evaluate(wbc, { value: " \t4 mg\n" })).toMatchObject({ valid: true, value: " \t4 mg\n", state: "invalid_numeric_format" });
+  expect(evaluate(wbc, { value: "\u00a04\u00a0" })).toMatchObject({ valid: true, value: "\u00a04\u00a0", state: "recorded" });
+  expect(evaluate(wbc, { value: "9".repeat(4096) })).toMatchObject({ valid: true, state: "invalid_numeric_format" });
+  expect(evaluate(wbc, { value: "0." + "0".repeat(4000) + "1" })).toMatchObject({ valid: true, state: "recorded", judgment: "low" });
+  expect(evaluate({ ...wbc, numericMax: 10 }, { value: "11" })).toMatchObject({ valid: true, value: "11", state: "outside_input_range" });
+  expect(evaluate({ ...wbc, referenceInterval: { low: 1, high: 10, lowInclusive: true, highInclusive: true } }, { value: "10.0000000000000001" })).toMatchObject({ valid: true, judgment: "high" });
+  expect(evaluate({ ...wbc, numericMax: 10 }, { value: "10.0000000000000001" })).toMatchObject({ valid: true, state: "outside_input_range" });
+  expect(evaluate(wbc, { value: "x".repeat(4097) })).toMatchObject({ valid: false, error: "invalid_text" });
+  expect(evaluate({ ...coded, resultValueKind: "text", codes: [] }, { value: "001\n관찰 소견" })).toMatchObject({ valid: true, value: "001\n관찰 소견", state: "recorded_without_interval" });
+});
+test("qualifier permissions are explicit, immutable-rule data; missing legacy permissions remain readable", () => {
+  for (const allowedQualifiers of [["exact", "greater_than"], ["exact"], ["exact", "less_than", "greater_than"]])
+    expect(isLabProfileRule({ ...wbc, allowedQualifiers })).toBe(true);
+  for (const allowedQualifiers of [[], ["greater_than"], ["exact", "exact"], ["exact", "gte"], ["exact", ["less_than"]], null])
+    expect(isLabProfileRule({ ...wbc, allowedQualifiers })).toBe(false);
+  expect(isLabProfileRule({ ...coded, allowedQualifiers: ["exact"] })).toBe(false);
+  expect(evaluate({ ...wbc, allowedQualifiers: ["exact"] }, { value: "4", qualifier: "less_than" })).toMatchObject({ valid: true, state: "unsupported_qualifier", judgment: "not_judged" });
+  expect(evaluate({ ...wbc, allowedQualifiers: ["exact", "greater_than"] }, { value: "4", qualifier: "greater_than" })).toMatchObject({ valid: true, state: "qualified_result" });
 });
 const expected = { workspaceId: "synthetic-workspace", orderId: "order", workItemId: "task", encounterId: "encounter" };
 const base: LabResult = { id: "queue-only-placeholder", workspaceId: expected.workspaceId, orderId: expected.orderId,
@@ -98,7 +120,7 @@ const base: LabResult = { id: "queue-only-placeholder", workspaceId: expected.wo
 const result = () => ({ ...expected, ok: true, resultId: "actual-persisted-result-id", entryWriteRevision: 0,
   resultDefinitionSnapshot: { schemaVersion: 2, resultProfile: { profileKey: manual.profileKey, revision: 1,
     clinicalUseAllowed: false, integrationStatus: "not_integrated", device: { name: "Explicit manual" } } },
-  rows: [{ id: "row", analyteName: "WBC", value: null, unit: wbc.unit, referenceRange: "1–10", judgment: "not_judged",
+  rows: [{ id: "row", analyteName: "WBC", value: null as string | null, unit: wbc.unit, referenceRange: "1–10", judgment: "not_judged",
     resultValueKind: "numeric", decimalScale: wbc.decimalScale, interpretationRule: wbc,
     resultPresence: "value", resultState: "not_entered", qualifier: "exact", deviceFlag: null }] });
 test("persisted result reader uses exact identity, rejects cross-workspace and corrupted interpretation", () => {
@@ -108,6 +130,16 @@ test("persisted result reader uses exact identity, rejects cross-workspace and c
   expect(parsePersistedLabResult(wrong, expected, base)).toBeNull();
   const duplicate = result(); duplicate.rows.push(duplicate.rows[0]);
   expect(parsePersistedLabResult(duplicate, expected, base)).toBeNull();
+});
+test("saved warning rows reread with exact raw values and reject invented normal judgments", () => {
+  for (const [value, state] of [["4 mg", "invalid_numeric_format"], ["-1", "outside_input_range"]]) {
+    const saved = result(); saved.rows[0].value = value; saved.rows[0].resultState = state;
+    expect(parsePersistedLabResult(saved, expected, base)?.rows[0]).toMatchObject({ value, resultState: state, judgment: "not_judged" });
+    saved.rows[0].judgment = "normal";
+    expect(parsePersistedLabResult(saved, expected, base)).toBeNull();
+  }
+  const legacy = result(); legacy.resultDefinitionSnapshot.schemaVersion = 1;
+  expect(parsePersistedLabResult(legacy, expected, base)?.rows[0].interpretationRule).toBeUndefined();
 });
 
 test("atomic retest requires explicit specimen, billing, profile, and exact prior revision", async () => {
