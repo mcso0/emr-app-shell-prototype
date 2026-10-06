@@ -7,7 +7,7 @@ area: chart
 priority: P1
 source_docs:
   - docs/product/domain/plan-order-all-tab-legacy-column-contract.md
-updated: 2026-09-17
+updated: 2026-10-06
 ---
 
 # Plan/Order confirmation and work-state presentation
@@ -187,3 +187,44 @@ Release Check was cancelled; the final updated head gets its own required run.
   worktree and 29,356 on this candidate. Its binary baseline was not refreshed
   because that would absorb unrelated existing chart changes. The focused
   footer regression is the acceptance check for this slice.
+
+## Checkbox activation boundary — local follow-up, 2026-10-06
+
+The owner initially approved local UI implementation, regression tests and
+PR-ready preparation. On 2026-10-06 the owner also approved commit, push, a
+separate draft PR, exact-head Release Check and automatic Preview verification.
+Its base is current main `501db6880128e98de932a60d0877c6dc0e55d42b`. Main merge,
+Production delivery, DB/permission changes and hosted clinical writes remain
+outside this follow-up.
+
+- Inline-editor blur to a selection checkbox now retains the existing row order
+  through activation. Click releases the inline hold after the selected-ID
+  update; pointerup without a click releases it on the next animation frame.
+- Pointer cancellation, window/focus loss and Tab/Escape away release the hold.
+  Unmount removes transient listeners and the pending animation frame. Detail
+  editing keeps its existing independent boundary.
+- Before the product fix, two controlled-ready tests failed: pointerdown moved
+  CBC from first to last before pointerup, and the original checkbox `check()`
+  did not change selection. Both passed with the fix. Ten focused Chromium
+  regressions cover completion, cancellation, repeated selection, focus/blur,
+  keyboard Space/Tab and a synthetic 503 save failure without a lingering hold.
+- PR #936 remains a separate draft. Its five unmodified synthetic browser tests
+  passed against this worktree's server using an external test configuration.
+  All 76 current contract tests passed: 67 save/scope tests plus nine order
+  presentation/grouping tests. No store, save sequence, API, permission or DB
+  changes are included.
+- The existing status-presentation test initially captured an empty order list
+  before loading completed. Untouched main reproduced the same failure. Its
+  existing grouping/count assertions remain intact; only the initial snapshot
+  now waits for the ready row and completed order loader. All four related
+  existing browser tests then passed, including the original ETag-conflict case.
+- Final webpack production build, then standalone `tsc --noEmit`, passed without
+  a concurrent dev/test server. The first build caught a new native-listener
+  annotation resolving to React's `PointerEvent`; `globalThis.PointerEvent`
+  fixes the type collision and emits identical JavaScript.
+- Full lint and final scoped lint, docs links, secret scan, Korean UX copy and
+  diff whitespace checks passed. Total focused verification: 95 passing tests,
+  with no retries or skips. Evidence is local Chromium/mock; pointercancel and
+  window-blur interruption are dispatched browser events. Full UI suites,
+  WebKit/touch, hosted clinical traffic and remote delivery remain outside this
+  follow-up. The existing checkout's HEAD and tracked WIP hash were preserved.
