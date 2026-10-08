@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { Script } from "node:vm";
 import ts from "typescript";
-import { remapChartOrderIdSet } from "../src/features/chart/chart-order-draft-identity";
+import { isChartOrderDraftRowInRootIds, remapChartOrderIdSet } from "../src/features/chart/chart-order-draft-identity";
 import { mergeChartOrderDraftRowsAfterSave } from "../src/features/chart/chart-order-draft-response-merge";
 import {
   getChartOrderDraftInFlightSave,
@@ -129,6 +129,7 @@ function harness() {
     createChartOrderDraftId: () => { throw new Error("IDs are already prepared in this synthetic harness"); },
     applyPersistedOrderDrafts: (_rows: Row[], persisted: Row[]) => persisted,
     mergeChartOrderDraftRowsAfterSave,
+    isChartOrderDraftRowInRootIds,
     remapChartOrderIdSet,
     getChartOrderDraftInFlightSave,
     registerChartOrderDraftSaveOperation,

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { classifyChartOrderSaveFailure } from "../src/features/chart/chart-order-save-failure-decision";
+import { isChartOrderDraftRowInRootIds } from "../src/features/chart/chart-order-draft-identity";
 import {
   getChartOrderDraftInFlightSave,
   registerChartOrderDraftSaveOperation,
@@ -73,6 +74,7 @@ function harness() {
     chartOrderContinuousSaveDelayMs: 800, chartOrderDiscreteSaveDelayMs: 0,
     committedRows: [row("1")], billingRefreshes: 0,
     classifyChartOrderSaveFailure,
+    isChartOrderDraftRowInRootIds,
     getChartOrderDraftInFlightSave,
     registerChartOrderDraftSaveOperation,
     prepareChartOrderDraftRowsForPersistence: (rows: Row[]) => ({ rows, orderIdMap: new Map() }),

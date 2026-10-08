@@ -4,7 +4,7 @@ import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchP
 
 import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
 import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
-import { prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
+import { isChartOrderDraftRowInRootIds, prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
 import historyStyles from "./chart-history.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import orderScrollStyles from "./chart-order-scroll.module.css";
@@ -12017,12 +12017,7 @@ function OrderArea({
       new Set(
         draftRows
           .filter(
-            (row) =>
-              pendingRemovedRootOrderIds.has(row.order.id) ||
-              Boolean(
-                row.runtimeRow?.parentOrderId &&
-                pendingRemovedRootOrderIds.has(row.runtimeRow.parentOrderId),
-              ),
+            (row) => isChartOrderDraftRowInRootIds(row, pendingRemovedRootOrderIds),
           )
           .map((row) => row.order.id),
       ),
@@ -13206,11 +13201,7 @@ function OrderArea({
         );
         const attemptedAddedOrderIds = new Set(pendingAddedOrderIdsRef.current);
         const isAttemptedRemovalRow = (row: ChartOrderDraftRow) =>
-          attemptedRemovedRootOrderIds.has(row.order.id) ||
-          Boolean(
-            row.runtimeRow?.parentOrderId &&
-            attemptedRemovedRootOrderIds.has(row.runtimeRow.parentOrderId),
-          );
+          isChartOrderDraftRowInRootIds(row, attemptedRemovedRootOrderIds);
         const persistenceSourceRows = draftRowsRef.current.filter(
           (row) => !isAttemptedRemovalRow(row),
         );
@@ -13274,12 +13265,7 @@ function OrderArea({
             );
             setDraftRows((currentRows) =>
               currentRows.filter(
-                (row) =>
-                  !failedInFlightAddRemovals.has(row.order.id) &&
-                  !(
-                    row.runtimeRow?.parentOrderId &&
-                    failedInFlightAddRemovals.has(row.runtimeRow.parentOrderId)
-                  ),
+                (row) => !isChartOrderDraftRowInRootIds(row, failedInFlightAddRemovals),
               ),
             );
           }
@@ -14144,10 +14130,7 @@ function OrderArea({
         .filter(
           (row) =>
             !isChartOrderConfirmedRow(row) &&
-            (rootIds.has(row.order.id) ||
-              (row.runtimeRow?.parentOrderId
-                ? rootIds.has(row.runtimeRow.parentOrderId)
-                : false)),
+            isChartOrderDraftRowInRootIds(row, rootIds),
         )
         .map((row) => row.order.id),
     );
@@ -14156,12 +14139,7 @@ function OrderArea({
       return;
     }
     const nextRows = draftRowsRef.current.filter(
-      (row) =>
-        !localOnlyRootIds.has(row.order.id) &&
-        !(
-          row.runtimeRow?.parentOrderId &&
-          localOnlyRootIds.has(row.runtimeRow.parentOrderId)
-        ),
+      (row) => !isChartOrderDraftRowInRootIds(row, localOnlyRootIds),
     );
     draftRowsRef.current = nextRows;
     setDraftRows(nextRows);

@@ -52,3 +52,17 @@ export function remapChartOrderIdSet(
     Array.from(orderIds).map((orderId) => orderIdMap.get(orderId) ?? orderId),
   );
 }
+
+type ChartOrderDraftRootMembershipRow = {
+  order: { id: string };
+  runtimeRow?: { parentOrderId?: string | null } | null;
+};
+
+export function isChartOrderDraftRowInRootIds(
+  row: ChartOrderDraftRootMembershipRow,
+  rootIds: ReadonlySet<string>,
+): boolean {
+  return rootIds.has(row.order.id) || Boolean(
+    row.runtimeRow?.parentOrderId && rootIds.has(row.runtimeRow.parentOrderId),
+  );
+}

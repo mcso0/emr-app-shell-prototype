@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { Script } from "node:vm";
 import ts from "typescript";
 import { mergeChartOrderDraftRowsAfterSave } from "../src/features/chart/chart-order-draft-response-merge";
+import { isChartOrderDraftRowInRootIds } from "../src/features/chart/chart-order-draft-identity";
 
 import type { ChartOrderSetSelectionIntent } from "../src/features/hospital-admin/server-order-catalog";
 import type { ClinicalOrderPriority } from "../src/types/emr-domain";
@@ -34,7 +35,7 @@ const compiled = ts.transpileModule("export function predicate(attemptedRemovedR
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
 }).outputText;
 const exports = {} as { predicate: (attempted: ReadonlySet<string>) => (row: Row) => boolean };
-new Script(compiled).runInNewContext({ exports });
+new Script(compiled).runInNewContext({ exports, isChartOrderDraftRowInRootIds });
 const merge = (rows: readonly Row[], committed: ReadonlyMap<string, Row>, attempted: ReadonlySet<string>) =>
   mergeChartOrderDraftRowsAfterSave(rows, committed, exports.predicate(attempted));
 
