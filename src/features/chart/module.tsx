@@ -3,7 +3,8 @@
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
-import { prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
+import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
+import { isChartOrderDraftRowInRootIds, prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
 import historyStyles from "./chart-history.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import orderScrollStyles from "./chart-order-scroll.module.css";
@@ -285,7 +286,10 @@ import {
   replaceSoapDocumentScope,
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
-import { registerChartOrderDraftSaveOperation } from "@/features/chart/chart-order-draft-save-operation";
+import {
+  getChartOrderDraftInFlightSave,
+  registerChartOrderDraftSaveOperation,
+} from "@/features/chart/chart-order-draft-save-operation";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import {
   chartLifecycleError,
@@ -12013,12 +12017,7 @@ function OrderArea({
       new Set(
         draftRows
           .filter(
-            (row) =>
-              pendingRemovedRootOrderIds.has(row.order.id) ||
-              Boolean(
-                row.runtimeRow?.parentOrderId &&
-                pendingRemovedRootOrderIds.has(row.runtimeRow.parentOrderId),
-              ),
+            (row) => isChartOrderDraftRowInRootIds(row, pendingRemovedRootOrderIds),
           )
           .map((row) => row.order.id),
       ),
@@ -13180,9 +13179,11 @@ function OrderArea({
     );
   };
   const commitDraftRows = ({ silent = false } = {}): Promise<boolean> => {
-    const inFlightSave = orderDraftSavePromiseRef.current;
+    const inFlightSave = getChartOrderDraftInFlightSave(
+      orderDraftSavePromiseRef,
+      orderDraftSaveInFlightRef,
+    );
     if (inFlightSave) return inFlightSave;
-    if (orderDraftSaveInFlightRef.current) return Promise.resolve(false);
     if (
       writeDisabled || draftWriteDisabled || orderDraftReadError ||
       orderDraftSaveState === "loading" ||
@@ -13200,11 +13201,7 @@ function OrderArea({
         );
         const attemptedAddedOrderIds = new Set(pendingAddedOrderIdsRef.current);
         const isAttemptedRemovalRow = (row: ChartOrderDraftRow) =>
-          attemptedRemovedRootOrderIds.has(row.order.id) ||
-          Boolean(
-            row.runtimeRow?.parentOrderId &&
-            attemptedRemovedRootOrderIds.has(row.runtimeRow.parentOrderId),
-          );
+          isChartOrderDraftRowInRootIds(row, attemptedRemovedRootOrderIds);
         const persistenceSourceRows = draftRowsRef.current.filter(
           (row) => !isAttemptedRemovalRow(row),
         );
@@ -13268,18 +13265,11 @@ function OrderArea({
             );
             setDraftRows((currentRows) =>
               currentRows.filter(
-                (row) =>
-                  !failedInFlightAddRemovals.has(row.order.id) &&
-                  !(
-                    row.runtimeRow?.parentOrderId &&
-                    failedInFlightAddRemovals.has(row.runtimeRow.parentOrderId)
-                  ),
+                (row) => !isChartOrderDraftRowInRootIds(row, failedInFlightAddRemovals),
               ),
             );
           }
-          const conflict =
-            result.denialReason === "revision_conflict" ||
-            result.error === "revision_conflict";
+          const { conflict } = classifyChartOrderSaveFailure(result);
           if (conflict) void refreshBillingSummary();
           orderDraftConflictRef.current = conflict;
           setOrderDraftSaveState(conflict ? "conflict" : "error");
@@ -13881,15 +13871,10 @@ function OrderArea({
         );
         return;
       }
-      const conflict =
-        retryResult.denialReason === "revision_conflict" ||
-        retryResult.error === "revision_conflict";
+      const { conflict, retainPendingConfirmation } =
+        classifyChartOrderSaveFailure(retryResult);
       if (conflict) void refreshBillingSummary();
-      const retryable =
-        retryResult.status >= 500 ||
-        retryResult.denialReason === "confirmation_in_progress" ||
-        retryResult.error === "confirmation_in_progress";
-      if (!retryable) pendingConfirmationRef.current = null;
+      if (!retainPendingConfirmation) pendingConfirmationRef.current = null;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       toast.error(
         getChartOrderPersistenceErrorMessage(
@@ -13972,9 +13957,7 @@ function OrderArea({
 
       if (!effectiveDraftResult.ok) {
         orderDraftSaveInFlightRef.current = false;
-        const conflict =
-          effectiveDraftResult.denialReason === "revision_conflict" ||
-          effectiveDraftResult.error === "revision_conflict";
+        const { conflict } = classifyChartOrderSaveFailure(effectiveDraftResult);
         if (conflict) void refreshBillingSummary();
         orderDraftConflictRef.current = conflict;
         setOrderDraftSaveState(conflict ? "conflict" : "error");
@@ -14085,15 +14068,10 @@ function OrderArea({
     }
 
     if (!result.ok) {
-      const conflict =
-        result.denialReason === "revision_conflict" ||
-        result.error === "revision_conflict";
+      const { conflict, retainPendingConfirmation } =
+        classifyChartOrderSaveFailure(result);
       if (conflict) void refreshBillingSummary();
-      const retryable =
-        result.status >= 500 ||
-        result.denialReason === "confirmation_in_progress" ||
-        result.error === "confirmation_in_progress";
-      if (!retryable) pendingConfirmationRef.current = null;
+      if (!retainPendingConfirmation) pendingConfirmationRef.current = null;
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       toast.error(
@@ -14152,10 +14130,7 @@ function OrderArea({
         .filter(
           (row) =>
             !isChartOrderConfirmedRow(row) &&
-            (rootIds.has(row.order.id) ||
-              (row.runtimeRow?.parentOrderId
-                ? rootIds.has(row.runtimeRow.parentOrderId)
-                : false)),
+            isChartOrderDraftRowInRootIds(row, rootIds),
         )
         .map((row) => row.order.id),
     );
@@ -14164,12 +14139,7 @@ function OrderArea({
       return;
     }
     const nextRows = draftRowsRef.current.filter(
-      (row) =>
-        !localOnlyRootIds.has(row.order.id) &&
-        !(
-          row.runtimeRow?.parentOrderId &&
-          localOnlyRootIds.has(row.runtimeRow.parentOrderId)
-        ),
+      (row) => !isChartOrderDraftRowInRootIds(row, localOnlyRootIds),
     );
     draftRowsRef.current = nextRows;
     setDraftRows(nextRows);

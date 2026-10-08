@@ -14,6 +14,10 @@ const candidateRemovalMigration = readFileSync(
   "utf8",
 );
 const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
+const chartSaveOperation = readFileSync(
+  "src/features/chart/chart-order-draft-save-operation.ts",
+  "utf8",
+);
 
 test("shared draft migration covers every editable value in readback and ETag input", () => {
   for (const key of [
@@ -103,6 +107,9 @@ test("chart draft clears a local add-delete net-zero change without a request", 
 
 test("chart draft serializes edits made during an in-flight save", () => {
   expect(chartModule).toMatch(
+    /const inFlightSave = getChartOrderDraftInFlightSave\(\s*orderDraftSavePromiseRef,\s*orderDraftSaveInFlightRef,\s*\);\s*if \(inFlightSave\) return inFlightSave;/,
+  );
+  expect(chartSaveOperation).toMatch(
     /const inFlightSave = orderDraftSavePromiseRef\.current;\s*if \(inFlightSave\) return inFlightSave;\s*if \(orderDraftSaveInFlightRef\.current\) return Promise\.resolve\(false\);/,
   );
   expect(chartModule).toMatch(
