@@ -285,7 +285,10 @@ import {
   replaceSoapDocumentScope,
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
-import { registerChartOrderDraftSaveOperation } from "@/features/chart/chart-order-draft-save-operation";
+import {
+  getChartOrderDraftInFlightSave,
+  registerChartOrderDraftSaveOperation,
+} from "@/features/chart/chart-order-draft-save-operation";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import {
   chartLifecycleError,
@@ -13180,9 +13183,11 @@ function OrderArea({
     );
   };
   const commitDraftRows = ({ silent = false } = {}): Promise<boolean> => {
-    const inFlightSave = orderDraftSavePromiseRef.current;
+    const inFlightSave = getChartOrderDraftInFlightSave(
+      orderDraftSavePromiseRef,
+      orderDraftSaveInFlightRef,
+    );
     if (inFlightSave) return inFlightSave;
-    if (orderDraftSaveInFlightRef.current) return Promise.resolve(false);
     if (
       writeDisabled || draftWriteDisabled || orderDraftReadError ||
       orderDraftSaveState === "loading" ||
