@@ -3,6 +3,7 @@
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
+import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
 import { prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
 import historyStyles from "./chart-history.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
@@ -13282,9 +13283,7 @@ function OrderArea({
               ),
             );
           }
-          const conflict =
-            result.denialReason === "revision_conflict" ||
-            result.error === "revision_conflict";
+          const { conflict } = classifyChartOrderSaveFailure(result);
           if (conflict) void refreshBillingSummary();
           orderDraftConflictRef.current = conflict;
           setOrderDraftSaveState(conflict ? "conflict" : "error");
@@ -13886,15 +13885,10 @@ function OrderArea({
         );
         return;
       }
-      const conflict =
-        retryResult.denialReason === "revision_conflict" ||
-        retryResult.error === "revision_conflict";
+      const { conflict, retainPendingConfirmation } =
+        classifyChartOrderSaveFailure(retryResult);
       if (conflict) void refreshBillingSummary();
-      const retryable =
-        retryResult.status >= 500 ||
-        retryResult.denialReason === "confirmation_in_progress" ||
-        retryResult.error === "confirmation_in_progress";
-      if (!retryable) pendingConfirmationRef.current = null;
+      if (!retainPendingConfirmation) pendingConfirmationRef.current = null;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       toast.error(
         getChartOrderPersistenceErrorMessage(
@@ -13977,9 +13971,7 @@ function OrderArea({
 
       if (!effectiveDraftResult.ok) {
         orderDraftSaveInFlightRef.current = false;
-        const conflict =
-          effectiveDraftResult.denialReason === "revision_conflict" ||
-          effectiveDraftResult.error === "revision_conflict";
+        const { conflict } = classifyChartOrderSaveFailure(effectiveDraftResult);
         if (conflict) void refreshBillingSummary();
         orderDraftConflictRef.current = conflict;
         setOrderDraftSaveState(conflict ? "conflict" : "error");
@@ -14090,15 +14082,10 @@ function OrderArea({
     }
 
     if (!result.ok) {
-      const conflict =
-        result.denialReason === "revision_conflict" ||
-        result.error === "revision_conflict";
+      const { conflict, retainPendingConfirmation } =
+        classifyChartOrderSaveFailure(result);
       if (conflict) void refreshBillingSummary();
-      const retryable =
-        result.status >= 500 ||
-        result.denialReason === "confirmation_in_progress" ||
-        result.error === "confirmation_in_progress";
-      if (!retryable) pendingConfirmationRef.current = null;
+      if (!retainPendingConfirmation) pendingConfirmationRef.current = null;
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
       toast.error(
