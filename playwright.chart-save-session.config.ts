@@ -5,7 +5,12 @@ const baseURL = "http://127.0.0.1:3194";
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "chart-order-save-session-browser.spec.ts",
+  testMatch: [
+    "chart-order-save-session-browser.spec.ts",
+    "chart-order-autosave-flush-boundaries-browser-characterization.spec.ts",
+    "chart-order-workspace-save-session-browser.spec.ts",
+    "chart-order-workspace-switch-flush-browser.spec.ts",
+  ],
   outputDir: "test-results/chart-save-session",
   timeout: 45_000,
   workers: 1,
