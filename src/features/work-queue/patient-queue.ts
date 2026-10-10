@@ -1,5 +1,3 @@
-import type { EmrTaskQueueCardItem } from "@/components/emr/task-queue-card";
-
 export type PatientQueueSort = "priority" | "latest";
 export type PatientQueueOrderSort = "request" | "assignee" | "wait";
 export type PatientQueueMetadata = {
@@ -14,7 +12,8 @@ export type PatientQueueMetadata = {
 };
 export type PatientQueueRow = PatientQueueMetadata & {
   id: string;
-  card: EmrTaskQueueCardItem;
+  // The adapter supplies the undecorated name used for sorting, separately from card copy.
+  assigneeSortName?: string;
   waitMinutes?: number;
 };
 export const patientQueueStatusLabels: Record<string, string> = {
@@ -45,13 +44,13 @@ export function comparePatientQueueRows(a: PatientQueueRow, b: PatientQueueRow, 
   const urgent = Number(b.priority === "urgent") - Number(a.priority === "urgent");
   const status = statusRank(a) - statusRank(b);
   const ordering = sort === "assignee"
-    ? (a.card.assigneeName ?? a.assignedToUserId ?? "zzzz").localeCompare(b.card.assigneeName ?? b.assignedToUserId ?? "zzzz", "ko")
+    ? (a.assigneeSortName ?? a.assignedToUserId ?? "zzzz").localeCompare(b.assigneeSortName ?? b.assignedToUserId ?? "zzzz", "ko")
     : sort === "wait" ? (b.waitMinutes ?? 0) - (a.waitMinutes ?? 0)
     : queueTimestamp(a.requestedAt) - queueTimestamp(b.requestedAt);
   return urgent || status || ordering || a.id.localeCompare(b.id);
 }
-export function groupPatientQueue(rows: PatientQueueRow[], sort: PatientQueueSort, orderSort: PatientQueueOrderSort) {
-  const groups = new Map<string, PatientQueueRow[]>();
+export function groupPatientQueue<T extends PatientQueueRow>(rows: T[], sort: PatientQueueSort, orderSort: PatientQueueOrderSort) {
+  const groups = new Map<string, T[]>();
   for (const row of rows) {
     const key = patientQueueKey(row);
     const items = groups.get(key) ?? [];

@@ -235,7 +235,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "CDS V2 patient/guardian profile side panel at the 380 x 1105 Figma source viewport. Story data is synthetic and exists only for visual regression.",
+          "역할: 환자·보호자의 정보·이력·예약·수납 내용 구성. 소유자: 기능 UI, 현재 소스는 features/reception입니다. Customer는 제품 기준 분류입니다. 환자·보호자 드로어가 사용하며, Design System/EMR/Profile Panel의 공통 틀을 재사용합니다. CDS V2 380 x 1105 기준의 합성 예제입니다. 전체 v1 사용자 승인은 아직 기록되지 않았습니다. 기준: docs/design/system/component-ownership-rules.md.",
       },
     },
   },

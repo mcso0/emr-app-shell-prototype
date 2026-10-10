@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-08-29"
+updated: "2026-10-10"
 linear_issue: "DEN-141"
 linear_project: "00 UI 시스템 인벤토리 및 리팩토링 기준"
 source_docs:
@@ -37,6 +37,82 @@ Do not extract UI only because a file is long. Extract when the boundary has a c
 | `src/features/<feature>/components/*` | feature workflow sections, local dialogs, local search rows, local drawer fields, domain-specific table cells | reusable cross-screen primitives unless proven stable |
 | Local inline markup | tiny one-off layout or content that is easier to read in place | repeated control styling, repeated status logic, complex keyboard/focus behavior |
 | `src/shell/*` | global navigation, workspace tabs, app shell layout, command palette, drawer routing | feature-specific cards, feature forms, product workflow changes |
+
+## Presentation Versus Feature Adapters
+
+
+An owner is the code area responsible for a change, not a named person.
+`CustomerListHeader` wraps `EmrTableWorkspaceHeader` to supply customer-specific
+labels and test IDs; preserve this adapter. `EmrProfilePanel` supplies a shared
+frame while reception's `ProfileSidePanel` supplies patient/guardian content.
+These are complementary responsibilities, not duplicate implementations.
+
+For patient queues, `features/work-queue/patient-queue.ts` owns rule inputs and
+group/sort behavior without importing a UI card type. `PatientQueueDisplayRow`
+in the shared UI combines those inputs with the existing card contract. Callers
+prepare the explicit assignee sort name and card together; changing card copy
+must not silently redefine sorting. Preserve existing fallback and identity rules.
+
+Storybook Patterns/Templates are synthetic usage examples. Product features
+need not import them. The representative inventory below records callers, Storybook placement and
+scoped review status. The separate uncommitted v1 recipes/catalog are not part
+of this delivery; this PR does not add their implementation.
+
+## Representative UI Ownership And Review Inventory
+
+Checked against local source and Storybook on 2026-10-10. Owners below are code
+responsibilities, not assigned people. Usage lists are representative source
+callers, not proof of every rendered route or a deployment. `DS` abbreviates
+`Design System` in the Storybook column. This isolated inventory covers existing
+product components; prior uncommitted v1 catalog/recipe work is excluded.
+
+Keep three facts separate:
+
+- **Product usage:** an existing product caller, or a Storybook-only example.
+- **Automated verification:** named checks and their recorded result/date in the
+  [active work item](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-011-patient-queue-view.md#approved-minimal-rulepresentation-separation--2026-10-10).
+  A passing synthetic story does not prove production integration.
+- **Human acceptance:** only the explicitly reviewed scope is accepted. Earlier
+  local v1 review notes do not prove those WIP changes are in this PR. **Pending**
+  below means full v1 acceptance is not recorded; it does not mean an existing product component is unfinished.
+
+| UI | Role and owner | Representative product usage | Storybook path | Human review scope |
+| --- | --- | --- | --- | --- |
+| Button / Input | Basic UI owns generic controls/accessibility; feature owns values/actions | Auth, customer forms, chart, billing | DS/UI/Button; DS/UI/Input | Full v1 acceptance pending |
+| EmrDataTable | Shared EMR owns table rendering/scroll; feature owns data, selection and sorting state | Customer tables, hospital order management, chart, lab, billing, dispensing | DS/EMR/EmrDataTable | Sort appearance and synthetic list refinements partially reviewed; full v1 pending |
+| EmrTableWorkspaceHeader | Shared EMR owns title/count/search layout; feature owns criteria | CustomerListHeader adapter; hospital module/order sets direct usage | DS/EMR/EmrTableWorkspaceHeader | Synthetic list review only; full v1 pending |
+| EmrEmptyState | Shared EMR owns feedback presentation; caller selects state/copy/retry | Customer tables, chart, lab, billing, profiles | DS/EMR/EmrEmptyState | Example icon/copy restoration verified; human review pending |
+| EmrPatientContextBar | Shared EMR owns summary presentation; feature supplies data/permitted actions | Chart workspace, lab module, dispensing module | No standalone story in this slice; prior local v1 story is excluded | Prior local 14px review is outside this PR; full v1 pending |
+| EmrProfilePanel | Shared EMR owns frame, identity, tabs and state surfaces | Reception patient/guardian profile; staff operational profile | DS/EMR/Profile Panel | Full v1 acceptance pending |
+| ProfileSidePanel | Feature owns patient/guardian information, history, reservations and billing content; current source is features/reception | Patient/guardian profile drawers | Features/Customer/Patient Guardian Profile Side Panel | Full v1 acceptance pending; Customer is the product grouping, not a source-folder claim |
+| History Controls | Shared EMR owns search/filter controls; feature owns history/query/selection | Chart, billing, fulfillment patient-history aside | DS/EMR/History Controls | Full v1 acceptance pending |
+| EmrDialogShell | Shared EMR owns dialog regions; feature owns validation/save/open state | Registration, chart, execution result, atomic retest, billing | DS/EMR/EmrDialogShell | Existing 18px title retained; full v1 pending |
+| PatientQueue | Shared EMR owns presentation; features/work-queue supplies grouping/status/priority rules | Lab module; dispensing via EmrOrderQueueSidePanel | DS/EMR/PatientQueue | Full v1 acceptance pending; rule/display inputs separated in the approved minimal follow-up |
+| WorkspaceDocumentLayout | Shell owns production layout/width behavior; feature owns content | Chart, lab/imaging, dispensing/treatment, billing | No standalone story in this slice; prior local template WIP is excluded | Existing adoption is separate from full v1 acceptance, which is pending |
+
+The profile frame and patient/guardian content are complementary stories. The
+feature imports the shared frame; keep both. Likewise, keep CustomerListHeader
+as a feature adapter, not a duplicate header implementation.
+
+Approved Storybook classification correction: `EMR/Profile Panel` becomes
+`Design System/EMR/Profile Panel`. Its generated ID prefix changes from
+`emr-profile-panel--` to `design-system-emr-profile-panel--`; Docs uses
+`design-system-emr-profile-panel--docs`. Old bookmarks need the new prefix.
+Other story titles, production component paths and APIs are unchanged.
+
+Earlier local v1 work retained a separate customer/guardian header-geometry
+check failure. That visual work is excluded here; this PR does not claim to
+resolve or revalidate it. Existing local recipe examples and their descriptions
+remain in the primary checkout, outside this PR.
+The later approved queue follow-up separates rule inputs from card presentation
+without moving files or changing behavior. `PatientQueueRow` owns rule metadata
+and the explicit `assigneeSortName`; `PatientQueueDisplayRow` adds the existing
+card shape at the UI boundary. Adapters preserve the previous name value and
+name → assigned ID → fallback ordering. Grouping returns the original rows.
+The UI still calls the existing grouping helper; no broader layer change is
+required. Product geometry fixes and example-file moves remain outside scope.
+See [queue work evidence](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-011-patient-queue-view.md#approved-minimal-rulepresentation-separation--2026-10-10).
+
 
 ## Extraction Criteria
 

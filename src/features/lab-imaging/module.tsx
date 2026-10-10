@@ -55,8 +55,8 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
-import { PatientQueueContent, PatientQueueToggle, PatientQueueSortMenu, PatientQueueFilterMenu } from "@/components/emr/patient-queue";
-import { comparePatientQueueRows, matchesPatientQueueFilter, type PatientQueueRow, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
+import { PatientQueueContent, PatientQueueToggle, PatientQueueSortMenu, PatientQueueFilterMenu, type PatientQueueDisplayRow } from "@/components/emr/patient-queue";
+import { comparePatientQueueRows, matchesPatientQueueFilter, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
 import {
   EmrEmptyState,
@@ -1445,7 +1445,7 @@ function getImagingWorkItemSearchText(item: ImagingWorkItem) {
     .join(" ");
 }
 
-function getPatientQueueRows(items: Array<LabWorkItem | ImagingWorkItem>, workItems: FulfillmentWorkItem[]): PatientQueueRow[] {
+function getPatientQueueRows(items: Array<LabWorkItem | ImagingWorkItem>, workItems: FulfillmentWorkItem[]): PatientQueueDisplayRow[] {
   const source = new Map(workItems.map(work => [`live-${work.queueType === "lab" ? "lab" : "imaging"}-${work.id}`, work]));
   const byOrder = getWorkItemsByOrderId(workItems);
   return items.map(item => {
@@ -1456,7 +1456,7 @@ function getPatientQueueRows(items: Array<LabWorkItem | ImagingWorkItem>, workIt
       ? getLabTaskQueueCardItem({ item, testId: `lab-queue-item-${id}`, actionTestId: `lab-queue-item-action-${id}` })
       : getImagingTaskQueueCardItem({ item, testId: `imaging-queue-item-${id}`, actionTestId: `imaging-queue-item-action-${id}` });
     const requestedAt = work?.createdAt ?? item.order?.requestedAt;
-    return { id, card, assignedToUserId: work ? work.assignedToUserId : item.order?.currentAssigneeUserId, patientId: work ? work.patientId : item.patient.id, workspaceId: work?.workspaceId ?? item.patient.workspaceId,
+    return { id, card, assigneeSortName: card.assigneeName, assignedToUserId: work ? work.assignedToUserId : item.order?.currentAssigneeUserId, patientId: work ? work.patientId : item.patient.id, workspaceId: work?.workspaceId ?? item.patient.workspaceId,
       status: work?.status ?? item.order?.status ?? (isLab ? item.result.status : item.study.status), priority: work?.priority ?? item.order?.priority,
       requestedAt, originChartId: work?.originChartId, originChartCreatedAt: work?.originChartCreatedAt,
       waitMinutes: requestedAt ? Math.max(0, Math.floor((Date.now() - Date.parse(requestedAt)) / 60000)) : 0 };

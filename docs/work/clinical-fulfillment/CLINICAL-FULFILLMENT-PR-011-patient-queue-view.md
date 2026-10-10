@@ -7,7 +7,7 @@ source_docs:
   - docs/product/domain/encounter-multi-chart-contract.md
   - docs/engineering/data-model/order-fulfillment-handoff-contract.md
   - docs/work/lab/LAB-PR-001-result-workspace-structure.md
-updated: 2026-10-06
+updated: 2026-10-10
 ---
 
 # Patient View For Execution Queues
@@ -195,3 +195,84 @@ review confirms grouping-container scoping and no other-screen changes.
 TypeScript, Production build, secrets, docs and UX copy checks pass. Lint has zero
 errors and five pre-existing WP10 script warnings. The build retains the existing
 Turbopack tracing warning from the docs reader. No API/DB/data changes are included.
+
+
+## Approved minimal rule/presentation separation — 2026-10-10
+
+승욱 approved the proposed local-only separation with identical UI/business
+behavior, no folder moves or DB changes, and verification of sorting, selection
+and scroll continuity. Existing WIP is preserved. This follow-up does not invoke
+prior release or hosted DB approvals.
+
+`PatientQueueRow` now contains rule metadata and explicit `assigneeSortName`,
+without importing `EmrTaskQueueCardItem`. The shared UI owns
+`PatientQueueDisplayRow`, which adds the existing card contract. Lab/imaging
+and the common order-panel adapter copy the existing assignee name into the
+rule input. Name → assigned ID → "zzzz" fallback, Korean comparison, urgency,
+status rank, wait/request time and stable ID ties are unchanged. Generic grouping
+retains each original input row and its extra display fields. The shared UI
+still calls the existing helper; no new architecture layer or dependency.
+
+Rule tests no longer require a full card fixture. A regression demonstrates
+that changing card copy does not change explicit assignee ordering and that
+metadata-only rows produce the same order. Existing card rendering, callbacks,
+selection/scroll effects, server/API/DB/permissions and folder paths are intact.
+
+Verification with bundled Node24.19.0:
+
+- Temporary before/after comparison: 180 synthetic rows, 12 group/order/direction
+  combinations and all sampled status/filter results are identical. Includes
+  missing/empty names, unresolved assigned IDs, status aliases, invalid times,
+  urgency, missing patient identity and separate workspaces.
+- Focused Playwright18/18: six model checks; eight patient-view/denial checks
+  for lab, imaging and combined dispensing/treatment; four queue-control checks.
+  App runs use mock auth and intercepted synthetic API responses on port3108.
+- Storybook PatientQueue2/2: exact selection across view toggles, hidden-selection
+  recovery, new-row notice, reading-position drift under3px, and denied display.
+- Related common order-panel stories4/4 and updated Overview1/1 also pass;
+  total focused Storybook checks7/7. Catalog remains374 stories and passes
+  integrity checking; docs check passes1107 files; whitespace checks pass.
+- TypeScript and focused ESLint pass.
+- AST comparison confirms all JSX subtrees in the three affected product UI
+  files are identical to the before-change snapshot. Source hash comparison
+  confirms no DB files or unrelated product sources changed in this follow-up.
+
+This is local implementation and synthetic verification, not a new production
+release or full design acceptance. Broader queue restructuring remains deferred.
+
+
+## Isolated PR slice — 2026-10-10
+
+승욱 authorized commit, push and PR creation for the recent documentation,
+Storybook classification and minimal queue refactor only. After the dependency
+inventory, 승욱 explicitly selected an independent slice excluding the earlier
+uncommitted v1 catalog/recipe implementation. No main merge or Production action
+is authorized by this follow-up.
+
+Prepared from current origin/main in a separate managed worktree. The primary
+checkout and its WIP remain untouched. The representative inventory lives in
+component-ownership-rules.md; the standalone Overview contains only role/review
+explanations with no v1-scope or recipe imports. Shared/feature profile descriptions
+point to that owner and the shared profile title uses Design System/EMR.
+
+Excluded: v1 catalog generator/scope/recipes, tokens, table sorting/spacing work,
+other story additions, architecture docs/HTML, package/config changes, screenshots,
+DB files and unrelated tests. Earlier local374-story results above describe the
+primary checkout; this isolated candidate must use its own verification below.
+
+
+Isolated candidate verification (base `a2ad386c`, Node24.19.0):
+
+- Playwright18/18 on the clean worktree with mock auth and synthetic API fixtures.
+- Focused Storybook31/31 on this worktree's local port6011, including the
+  independent Overview, shared/feature profiles, queue continuity and order panel.
+  The isolated index contains345 stories; prior local374-story WIP is excluded.
+- Storybook build and CLI smoke pass. Browser inspection confirms the independent
+  Overview and its link to the renamed shared Profile Panel.
+- Full lint passes with five existing unrelated script warnings; typecheck,
+  docs links and secret scan pass. No environment or package/config changes.
+- Product queue patch is identical to the verified primary-checkout slice;
+  original WIP stays in the primary checkout. Only this13-file slice is staged.
+
+PR creation does not authorize merging to main. Automatic Preview verification
+and exact remote head are reported in the PR/task delivery result.
