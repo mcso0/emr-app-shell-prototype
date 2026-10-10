@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-08-29"
+updated: "2026-10-11"
 linear_issue: "DEN-225"
 linear_project: "12 CLAiR EMR Table Density & Data Grid Ergonomics"
 source_docs:
@@ -275,6 +275,16 @@ Acceptance rules:
 - When a body identity has a leading avatar/icon, pass its measured width and gap to `EmrTableIdentityCellContent`; the visual occupies the space before the shared text axis and must not move the identity text.
 - Mark the opted-in title/header block with `data-emr-table-workspace-header="true"`; the shared pinned workspace contract owns its 0px padding-top.
 - Mark the aligned footer with `data-emr-table-workspace-footer="true"` so its total text inherits the same identity inset.
+- The first non-pinned header/body cell after the left pinned edge owns a
+  10px boundary inset. Its direct `data-emr-table-content="true"` hook uses
+  a 10px leading margin and zero leading padding so the content surface
+  starts 10px after the boundary. Preserve nested body badge/button padding
+  and the hook's trailing padding; do not apply the nested header-child
+  normalization to body children.
+- `EmrDataTable` columns with `cellPadding: "none"` retain their
+  `emr-data-table-cell-content--no-boundary-inset` opt-out for full-bleed or
+  centered presentation. Boundary normalization must exclude those hooks
+  and must not reach later scroll columns or right-pinned cells.
 - Verify left/right offsets, multiple pinned cells, keyboard focus visibility, loading, hover, selected, and narrow desktop behavior.
 - Use `EmrTableFeedbackSurface` around `EmrEmptyState` for terminal no-data,
   no-filter-results, read-error, and no-permission states. Do not leave the

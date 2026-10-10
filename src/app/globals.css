@@ -990,8 +990,12 @@
 
   .emr-table-surface[data-emr-pinning="columns"]
     [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
-    + [data-slot="table-head"]:not([data-emr-column-pinned])
-    > :first-child[data-emr-table-content="true"] {
+    + :where([data-slot="table-head"], [data-slot="table-cell"]):not(
+      [data-emr-column-pinned]
+    )
+    > :first-child[data-emr-table-content="true"]:not(
+      .emr-data-table-cell-content--no-boundary-inset
+    ) {
     padding-inline-start: 0 !important;
   }
 

@@ -82,6 +82,149 @@ function TableExample({
   );
 }
 
+function PinnedTableExample({
+  density,
+  roundedHeader = false,
+}: Pick<TableStoryArgs, "density"> & { roundedHeader?: boolean }) {
+  return (
+    <EmrPinnedTableWorkspace
+      className="w-[520px] overflow-hidden"
+      data-testid="pinned-table-workspace"
+      identityTextInset={48}
+      selectionColumnWidth={44}
+    >
+      <EmrPinnedTableViewport pinnedColumnWidth={224}>
+      <Table
+        containerStyle={{ overflow: "visible" }}
+        data-testid="pinned-table"
+        density={density}
+        layout="scroll"
+        minWidth={840}
+        overscrollAxes="none"
+        pinning="columns"
+      >
+        <colgroup>
+          <col style={{ width: 44 }} />
+          <col style={{ width: 180 }} />
+          <col style={{ width: 120 }} />
+          <col />
+          <col style={{ width: 80 }} />
+        </colgroup>
+        <TableHeader>
+          <TableRow>
+            <EmrTableSelectionHeaderCell
+              className="w-11 min-w-11 max-w-11"
+              pinned="left"
+              pinnedOffset={0}
+            >
+              <EmrTableCheckbox aria-label="전체 선택" />
+            </EmrTableSelectionHeaderCell>
+            <EmrTableHeaderCell
+              className="!p-0 overflow-hidden"
+              identity
+              pinned="left"
+              pinnedOffset={44}
+              pinnedEdge
+            >
+              대상
+            </EmrTableHeaderCell>
+            <EmrTableHeaderCell
+              className="!p-0"
+              data-testid="pinned-scroll-header"
+            >
+              {roundedHeader ? (
+                <button
+                  type="button"
+                  data-testid="pinned-scroll-header-surface"
+                  className="inline-flex min-h-6 items-center rounded-lg bg-[var(--emr-state-hover)] px-2.5 py-1 text-xs"
+                >
+                  상태
+                </button>
+              ) : (
+                <span data-testid="pinned-scroll-header-surface">상태</span>
+              )}
+            </EmrTableHeaderCell>
+            <TableHead>담당</TableHead>
+            <TableHead pinned="right" pinnedOffset={0} pinnedEdge>
+              작업
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow>
+            <EmrTableSelectionCell
+              className="w-11 min-w-11 max-w-11"
+              controlVisibility="contextual"
+              pinned="left"
+              pinnedOffset={0}
+            >
+              <EmrTableCheckbox aria-label="합성 환자 A 선택" />
+            </EmrTableSelectionCell>
+            <TableCell
+              className="!p-0 overflow-hidden"
+              pinned="left"
+              pinnedOffset={44}
+              pinnedEdge
+            >
+              <EmrTableIdentityCellContent>
+                합성 환자 A
+              </EmrTableIdentityCellContent>
+            </TableCell>
+            <TableCell>
+              <div
+                data-emr-table-content="true"
+                className="emr-table-cell-content flex items-center px-2"
+              >
+                <span
+                  data-testid="pinned-scroll-body-surface"
+                  className="inline-flex rounded-md bg-[var(--emr-surface-muted)] px-2 py-1"
+                >
+                  대기
+                </span>
+              </div>
+            </TableCell>
+            <TableCell>샘플 담당</TableCell>
+            <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
+              보기
+            </TableCell>
+          </TableRow>
+          <TableRow data-state="selected">
+            <EmrTableSelectionCell
+              className="w-11 min-w-11 max-w-11"
+              controlVisibility="contextual"
+              pinned="left"
+              pinnedOffset={0}
+            >
+              <EmrTableCheckbox aria-label="합성 환자 B 선택" checked />
+            </EmrTableSelectionCell>
+            <TableCell pinned="left" pinnedOffset={44} pinnedEdge>
+              합성 환자 B
+            </TableCell>
+            <TableCell>
+              <div
+                data-emr-table-content="true"
+                className="emr-table-cell-content flex items-center px-2"
+              >
+                <span
+                  data-testid="selected-pinned-scroll-body-surface"
+                  className="inline-flex rounded-md bg-[var(--emr-surface-muted)] px-2 py-1"
+                >
+                  진행
+                </span>
+              </div>
+            </TableCell>
+            <TableCell>샘플 담당</TableCell>
+            <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
+              보기
+            </TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+      </EmrPinnedTableViewport>
+    </EmrPinnedTableWorkspace>
+  );
+}
+
 const meta = {
   title: "Design System/UI/Table",
   component: TableExample,
@@ -252,143 +395,14 @@ export const BothAxisOverscroll: Story = {
   },
 };
 
-export const PinnedColumns: Story = {
-  render: (args) => (
-    <EmrPinnedTableWorkspace
-      className="w-[520px] overflow-hidden"
-      data-testid="pinned-table-workspace"
-      identityTextInset={48}
-      selectionColumnWidth={44}
-    >
-      <EmrPinnedTableViewport pinnedColumnWidth={224}>
-      <Table
-        data-testid="pinned-table"
-        density={args.density}
-        layout="scroll"
-        minWidth={840}
-        pinning="columns"
-      >
-        <colgroup>
-          <col style={{ width: 44 }} />
-          <col style={{ width: 180 }} />
-          <col style={{ width: 120 }} />
-          <col />
-          <col style={{ width: 80 }} />
-        </colgroup>
-        <TableHeader>
-          <TableRow>
-            <EmrTableSelectionHeaderCell
-              className="w-11 min-w-11 max-w-11"
-              pinned="left"
-              pinnedOffset={0}
-            >
-              <EmrTableCheckbox aria-label="전체 선택" />
-            </EmrTableSelectionHeaderCell>
-            <EmrTableHeaderCell
-              className="!p-0 overflow-hidden"
-              identity
-              pinned="left"
-              pinnedOffset={44}
-              pinnedEdge
-            >
-              대상
-            </EmrTableHeaderCell>
-            <EmrTableHeaderCell
-              className="!p-0"
-              data-testid="pinned-scroll-header"
-            >
-              <button
-                type="button"
-                data-testid="pinned-scroll-header-surface"
-                className="inline-flex min-h-6 items-center rounded-lg bg-[var(--emr-state-hover)] px-2.5 py-1 text-xs"
-              >
-                상태
-              </button>
-            </EmrTableHeaderCell>
-            <TableHead>담당</TableHead>
-            <TableHead pinned="right" pinnedOffset={0} pinnedEdge>
-              작업
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          <TableRow>
-            <EmrTableSelectionCell
-              className="w-11 min-w-11 max-w-11"
-              controlVisibility="contextual"
-              pinned="left"
-              pinnedOffset={0}
-            >
-              <EmrTableCheckbox aria-label="합성 환자 A 선택" />
-            </EmrTableSelectionCell>
-            <TableCell
-              className="!p-0 overflow-hidden"
-              pinned="left"
-              pinnedOffset={44}
-              pinnedEdge
-            >
-              <EmrTableIdentityCellContent>
-                합성 환자 A
-              </EmrTableIdentityCellContent>
-            </TableCell>
-            <TableCell>
-              <div
-                data-emr-table-content="true"
-                className="emr-table-cell-content flex items-center px-2"
-              >
-                <span
-                  data-testid="pinned-scroll-body-surface"
-                  className="inline-flex rounded-md bg-[var(--emr-surface-muted)] px-2 py-1"
-                >
-                  대기
-                </span>
-              </div>
-            </TableCell>
-            <TableCell>샘플 담당</TableCell>
-            <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
-              보기
-            </TableCell>
-          </TableRow>
-          <TableRow data-state="selected">
-            <EmrTableSelectionCell
-              className="w-11 min-w-11 max-w-11"
-              controlVisibility="contextual"
-              pinned="left"
-              pinnedOffset={0}
-            >
-              <EmrTableCheckbox aria-label="합성 환자 B 선택" checked />
-            </EmrTableSelectionCell>
-            <TableCell pinned="left" pinnedOffset={44} pinnedEdge>
-              합성 환자 B
-            </TableCell>
-            <TableCell>
-              <div
-                data-emr-table-content="true"
-                className="emr-table-cell-content flex items-center px-2"
-              >
-                <span
-                  data-testid="selected-pinned-scroll-body-surface"
-                  className="inline-flex rounded-md bg-[var(--emr-surface-muted)] px-2 py-1"
-                >
-                  진행
-                </span>
-              </div>
-            </TableCell>
-            <TableCell>샘플 담당</TableCell>
-            <TableCell pinned="right" pinnedOffset={0} pinnedEdge>
-              보기
-            </TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-      </EmrPinnedTableViewport>
-    </EmrPinnedTableWorkspace>
-  ),
-  play: async ({ canvasElement }) => {
+function pinnedColumnsPlay(roundedHeader: boolean): NonNullable<Story["play"]> {
+  return async ({ canvasElement }) => {
     const table = canvasElement.querySelector(
       '[data-testid="pinned-table"]',
     ) as HTMLTableElement | null;
-    const container = table?.parentElement;
+    const container = table?.closest<HTMLElement>(
+      '[data-emr-pinned-table-scroll-owner="true"]',
+    );
     const viewport = table?.closest(
       '[data-emr-pinned-table-viewport="true"]',
     ) as HTMLDivElement | null;
@@ -467,6 +481,19 @@ export const PinnedColumns: Story = {
       throw new Error("Pinned table story did not render the required cells.");
     }
 
+    if (roundedHeader) {
+      if (!(firstScrollHeaderSurface instanceof HTMLButtonElement)) {
+        throw new Error("Rounded-header fixture must contain its test button.");
+      }
+    } else if (
+      firstScrollHeader.querySelector("button") ||
+      firstScrollHeaderSurface.tagName !== "SPAN" ||
+      getComputedStyle(firstScrollHeaderSurface).borderRadius !== "0px" ||
+      getComputedStyle(firstScrollHeaderSurface).backgroundColor !== "rgba(0, 0, 0, 0)"
+    ) {
+      throw new Error("Default pinned status header must remain plain text.");
+    }
+
     const initialLeftPositions = leftCells.map(
       (cell) => cell.getBoundingClientRect().left,
     );
@@ -516,7 +543,19 @@ export const PinnedColumns: Story = {
     }
 
     container.scrollLeft = 0;
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      if (
+        container.scrollLeft === 0 &&
+        !viewport.hasAttribute("data-overflow-x-start")
+      ) break;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    if (
+      container.scrollLeft !== 0 ||
+      viewport.hasAttribute("data-overflow-x-start")
+    ) {
+      throw new Error("Pinned inset check did not reach the scroll origin.");
+    }
 
     for (const [label, cell] of [
       ["header", firstScrollHeader],
@@ -570,10 +609,26 @@ export const PinnedColumns: Story = {
       if (
         surfaceRect.left < cellRect.left - 1 ||
         surfaceRect.right > cellRect.right + 1 ||
-        getComputedStyle(surface).borderRadius === "0px"
+        ((label !== "header" || roundedHeader) &&
+          getComputedStyle(surface).borderRadius === "0px")
       ) {
         throw new Error(
           `Pinned ${label} rounded content surface is clipped by its cell.`,
+        );
+      }
+    }
+
+    for (const surface of [
+      firstScrollBodySurface,
+      selectedScrollBodySurface,
+    ]) {
+      const styles = getComputedStyle(surface);
+      if (
+        styles.paddingInlineStart !== "8px" ||
+        styles.paddingInlineEnd !== "8px"
+      ) {
+        throw new Error(
+          "Pinned boundary normalization changed the badge's inner padding.",
         );
       }
     }
@@ -604,36 +659,59 @@ export const PinnedColumns: Story = {
       }
     }
 
-    const viewportRect = viewport.getBoundingClientRect();
-    const dimmerRect = dimmer.getBoundingClientRect();
-    const dividerRect = divider.getBoundingClientRect();
-    const dimmerStyles = getComputedStyle(dimmer);
-    const dividerStyles = getComputedStyle(divider);
-    if (
-      dimmerStyles.position !== "absolute" ||
-      dimmerStyles.width !== "6px" ||
-      dimmerStyles.backgroundColor !== "rgba(0, 0, 0, 0.04)" ||
-      dimmerStyles.opacity !== "1" ||
-      dimmerStyles.pointerEvents !== "none" ||
-      Math.abs(dimmerRect.left - viewportRect.left - 224) > 1 ||
-      Math.abs(dimmerRect.height - viewportRect.height) > 1 ||
-      Number.parseInt(dimmerStyles.zIndex, 10) <= 12
-    ) {
-      throw new Error(
-        "Pinned dimmer does not match the fixed 6px black-alpha-4 Figma layer.",
-      );
+    if (getComputedStyle(dimmer).opacity !== "0") {
+      throw new Error("Pinned left dimmer must be hidden at the scroll origin.");
     }
-    if (
-      dividerStyles.position !== "absolute" ||
-      dividerStyles.width !== "1px" ||
-      dividerStyles.backgroundColor === "rgba(0, 0, 0, 0)" ||
-      dividerStyles.pointerEvents !== "none" ||
-      Math.abs(dividerRect.left - viewportRect.left - 223) > 1 ||
-      Math.abs(dividerRect.height - viewportRect.height) > 1 ||
-      Number.parseInt(dividerStyles.zIndex, 10) <=
-        Number.parseInt(dimmerStyles.zIndex, 10)
-    ) {
-      throw new Error("Pinned divider is not fixed above the dimmer layer.");
+    try {
+      container.scrollLeft = 120;
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        if (
+          container.scrollLeft > 0 &&
+          viewport.hasAttribute("data-overflow-x-start")
+        ) break;
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+      }
+      if (
+        container.scrollLeft <= 0 ||
+        !viewport.hasAttribute("data-overflow-x-start")
+      ) {
+        throw new Error("Pinned dimmer check did not reach a scrolled viewport.");
+      }
+
+      const viewportRect = viewport.getBoundingClientRect();
+      const dimmerRect = dimmer.getBoundingClientRect();
+      const dividerRect = divider.getBoundingClientRect();
+      const dimmerStyles = getComputedStyle(dimmer);
+      const dividerStyles = getComputedStyle(divider);
+      if (
+        dimmerStyles.position !== "absolute" ||
+        dimmerStyles.width !== "6px" ||
+        dimmerStyles.backgroundColor !== "rgba(0, 0, 0, 0.04)" ||
+        dimmerStyles.opacity !== "1" ||
+        dimmerStyles.pointerEvents !== "none" ||
+        Math.abs(dimmerRect.left - viewportRect.left - 224) > 1 ||
+        Math.abs(dimmerRect.height - viewportRect.height) > 1 ||
+        Number.parseInt(dimmerStyles.zIndex, 10) <= 12
+      ) {
+        throw new Error(
+          "Pinned dimmer does not match the fixed 6px black-alpha-4 Figma layer.",
+        );
+      }
+      if (
+        dividerStyles.position !== "absolute" ||
+        dividerStyles.width !== "1px" ||
+        dividerStyles.backgroundColor === "rgba(0, 0, 0, 0)" ||
+        dividerStyles.pointerEvents !== "none" ||
+        Math.abs(dividerRect.left - viewportRect.left - 223) > 1 ||
+        Math.abs(dividerRect.height - viewportRect.height) > 1 ||
+        Number.parseInt(dividerStyles.zIndex, 10) <=
+          Number.parseInt(dimmerStyles.zIndex, 10)
+      ) {
+        throw new Error("Pinned divider is not fixed above the dimmer layer.");
+      }
+    } finally {
+      container.scrollLeft = 0;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
     }
 
     const firstBodyRow = table.querySelector(
@@ -685,6 +763,30 @@ export const PinnedColumns: Story = {
         "Pinned table has more than one horizontal overflow owner.",
       );
     }
+  };
+}
+
+export const PinnedColumns: Story = {
+  render: (args) => <PinnedTableExample density={args.density} />,
+  play: pinnedColumnsPlay(false),
+  parameters: {
+    docs: {
+      description: {
+        story: "일반 텍스트 헤더와 좌우 고정 열, 10px 경계 여백, 단일 스크롤 영역을 검증합니다.",
+      },
+    },
+  },
+};
+
+export const PinnedColumnsRoundedContent: Story = {
+  render: (args) => <PinnedTableExample density={args.density} roundedHeader />,
+  play: pinnedColumnsPlay(true),
+  parameters: {
+    docs: {
+      description: {
+        story: "둥근 헤더 버튼과 본문 배지의 경계 잘림 및 내부 여백을 검사하는 전용 예시입니다. 일반 헤더 표현은 Pinned Columns를 참고하세요.",
+      },
+    },
   },
 };
 

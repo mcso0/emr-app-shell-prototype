@@ -601,14 +601,20 @@ test("customer workspace renders animal master list and opens the common patient
 
   expect(patientNameHeaderBox).not.toBeNull();
   expect(patientNameResizeGripBox).not.toBeNull();
+  const patientNameResizeStartX =
+    (Math.max(patientNameHeaderBox!.x, patientNameResizeGripBox!.x) +
+      Math.min(
+        patientNameHeaderBox!.x + patientNameHeaderBox!.width,
+        patientNameResizeGripBox!.x + patientNameResizeGripBox!.width,
+      )) / 2;
   await page.mouse.move(
-    patientNameResizeGripBox!.x + patientNameResizeGripBox!.width / 2,
+    patientNameResizeStartX,
     patientNameResizeGripBox!.y + patientNameResizeGripBox!.height / 2,
   );
   await page.mouse.down();
   try {
     await page.mouse.move(
-      patientNameResizeGripBox!.x + patientNameResizeGripBox!.width / 2 + 24,
+      patientNameResizeStartX + 24,
       patientNameResizeGripBox!.y + patientNameResizeGripBox!.height / 2,
       { steps: 4 },
     );
@@ -1249,6 +1255,72 @@ test("customer patient table keeps animal identity pinned while data columns scr
       '[data-emr-pinned-table-dimmer="true"]',
     ),
   ).toHaveCount(1);
+});
+
+test("customer tables keep fixed identity widths when the viewport grows and the grow column is hidden", async ({
+  page,
+}) => {
+  for (const list of [
+    { kind: "patient", title: "동물", fallbackId: "messageConsent" },
+    { kind: "guardian", title: "보호자", fallbackId: "recentWork" },
+  ]) {
+    await page.goto("/w/clair-demo/customer?modulePanel=open&aside=closed");
+    if (list.kind === "guardian") {
+      await page.getByTestId("customer-side-panel-guardian").click();
+    }
+    await page
+      .getByRole("button", { name: "사이드 패널 접기", exact: true })
+      .click();
+
+    const section = page.getByTestId(`customer-${list.kind}-table`);
+    const table = section.getByRole("table");
+    const selectionHeader = table.locator('th[data-column-id="select"]');
+    const identityHeader = table.locator('th[data-column-id="name"]');
+    const identityCell = table.locator('tbody tr:first-child td[data-column-id="name"]');
+    const heading = section.getByRole("heading", { name: list.title, exact: true });
+    const headerText = identityHeader.locator('[data-emr-table-identity-text="true"]');
+    const bodyText = identityCell.locator('[data-emr-cell-text-mode]');
+
+    for (const width of [1900, 1000]) {
+      await page.setViewportSize({ width, height: 1024 });
+      await expect(selectionHeader).toHaveCSS("width", "44px");
+      await expect(identityHeader).toHaveCSS("width", "184px");
+      await expect(identityCell).toHaveCSS("width", "184px");
+      const [headingBox, headerBox, bodyBox] = await Promise.all([
+        heading.boundingBox(),
+        headerText.boundingBox(),
+        bodyText.boundingBox(),
+      ]);
+      expect(Math.abs(headerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(bodyBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+    }
+
+    await page.setViewportSize({ width: 1900, height: 1024 });
+    await section.getByRole("button", { name: `${list.title} 컬럼 표시 설정` }).click();
+    await page.getByRole("menuitemcheckbox", { name: "등록일시", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(table.locator('th[data-column-id="registeredAt"]')).toHaveCount(0);
+    const fallbackHeader = table.locator(`th[data-column-id="${list.fallbackId}"]`);
+    const fallbackSize = Number(await fallbackHeader.getAttribute("data-emr-column-size"));
+    await expect.poll(async () => (await fallbackHeader.boundingBox())!.width).toBeGreaterThan(fallbackSize);
+    await expect(selectionHeader).toHaveCSS("width", "44px");
+    await expect(identityHeader).toHaveCSS("width", "184px");
+
+    const grip = identityHeader.getByRole("button", { name: `${list.title}명 컬럼 너비 조절` });
+    await grip.focus();
+    for (const [key, expectedWidth] of [["ArrowRight", 192], ["ArrowLeft", 184]] as const) {
+      await page.keyboard.press(key);
+      await expect(identityHeader).toHaveCSS("width", `${expectedWidth}px`);
+      await expect(identityCell).toHaveCSS("width", `${expectedWidth}px`);
+      await expect(selectionHeader).toHaveCSS("width", "44px");
+    }
+
+    await section.getByRole("button", { name: `${list.title} 컬럼 표시 설정` }).click();
+    await page.getByRole("menuitemcheckbox", { name: "등록일시", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(table.locator('th[data-column-id="registeredAt"]')).toHaveCount(1);
+    await expect(identityHeader).toHaveCSS("width", "184px");
+  }
 });
 
 test("customer table aligns selection header and row checkboxes", async ({
