@@ -18,6 +18,7 @@ import {
 } from "@/features/auth/workspace-session";
 import { useWorkspaceEntrySplash } from "@/features/auth/workspace-entry-splash-provider";
 import { useHospitalAdminStore } from "@/features/hospital-admin/store";
+import { useChartStore } from "@/features/chart/store";
 import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
 import { LiveNotificationDelivery } from "@/features/notifications/live-notification-delivery";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
@@ -138,6 +139,11 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const tabsInitializedRef = useRef<string | null>(null);
   const urlStateReadyRef = useRef(false);
   const { hydrated: authHydrated, session: authSession, hydrate: hydrateAuth } = useAuthClient();
+  const workspaceSwitchScopeRef = useRef<object | null>(null);
+  const workspaceSwitchPendingRef = useRef<{
+    scope: object;
+    discardUnsavedWorkspaceWork: boolean;
+  } | null>(null);
   const { completeWorkspaceEntrySplash } = useWorkspaceEntrySplash();
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
@@ -187,6 +193,15 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const settingsDirty = useHospitalAdminStore((state) => state.settingsDirty);
   const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
   const moduleRefreshAction = moduleRefreshActions[moduleDefinition.id];
+
+  useLayoutEffect(() => {
+    const scope = { workspaceId, sessionId: authSession?.id, role: authSession?.role, moduleId: moduleDefinition.id };
+    workspaceSwitchScopeRef.current = scope;
+    return () => {
+      if (workspaceSwitchScopeRef.current === scope) workspaceSwitchScopeRef.current = null;
+      if (workspaceSwitchPendingRef.current?.scope === scope) workspaceSwitchPendingRef.current = null;
+    };
+  }, [workspaceId, authSession?.id, authSession?.role, moduleDefinition.id]);
 
   useEffect(() => {
     completeWorkspaceEntrySplash();
@@ -594,38 +609,63 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     pushRoute(href, nextModuleId);
   }
 
-  function performWorkspaceSwitch(workspace: WorkspaceListOption) {
-    const targetModuleId =
-      moduleDefinition.id === "orders" &&
-      !workspace.roles.includes("hospital_admin")
-        ? "home"
-        : moduleDefinition.id;
-    const targetModule = getModule(targetModuleId);
-    const targetRoute = buildWorkspaceSwitchRoute({
-      contentAsideOpen,
-      hasContentAside: Boolean(targetModule.contentAside),
-      hasRightPanel: Boolean(targetModule.rightPanel),
-      moduleId: targetModule.id,
-      modulePanelOpen,
-      rightPanelOpen,
-      workspaceId: workspace.id,
-    });
-
-    if (authSession?.id) {
-      const selected = selectSessionWorkspaceForUser(
-        workspace.id,
-        authSession.id,
-        window.sessionStorage,
-        window.localStorage
-      );
-
-      if (selected) {
-        window.dispatchEvent(new Event(SESSION_WORKSPACES_STORAGE_KEY));
+  async function performWorkspaceSwitch(workspace: WorkspaceListOption, discardUnsavedWorkspaceWork = false) {
+    const scope = workspaceSwitchScopeRef.current;
+    if (!scope || workspaceSwitchPendingRef.current || workspace.id === workspaceId) return;
+    const request = { scope, discardUnsavedWorkspaceWork };
+    workspaceSwitchPendingRef.current = request;
+    try {
+      let flushed: boolean;
+      try {
+        flushed = await useChartStore.getState().flushEditors();
+      } catch {
+        if (workspaceSwitchScopeRef.current === scope) {
+          toast.error("작업 내용을 저장하지 못했습니다. 다시 시도해주세요.");
+        }
+        return;
       }
-    }
+      if (!flushed || workspaceSwitchScopeRef.current !== scope || workspaceSwitchPendingRef.current !== request) return;
 
-    pendingTabRouteRef.current = targetRoute;
-    router.push(targetRoute, { scroll: false });
+      const targetModuleId =
+        moduleDefinition.id === "orders" &&
+        !workspace.roles.includes("hospital_admin")
+          ? "home"
+          : moduleDefinition.id;
+      const targetModule = getModule(targetModuleId);
+      const targetRoute = buildWorkspaceSwitchRoute({
+        contentAsideOpen,
+        hasContentAside: Boolean(targetModule.contentAside),
+        hasRightPanel: Boolean(targetModule.rightPanel),
+        moduleId: targetModule.id,
+        modulePanelOpen,
+        rightPanelOpen,
+        workspaceId: workspace.id,
+      });
+
+      if (discardUnsavedWorkspaceWork) {
+        setPendingWorkspaceSwitch(null);
+        setNotificationNavigationDirty(false);
+        setSettingsDirty(false);
+      }
+
+      if (authSession?.id) {
+        const selected = selectSessionWorkspaceForUser(
+          workspace.id,
+          authSession.id,
+          window.sessionStorage,
+          window.localStorage
+        );
+
+        if (selected) {
+          window.dispatchEvent(new Event(SESSION_WORKSPACES_STORAGE_KEY));
+        }
+      }
+
+      pendingTabRouteRef.current = targetRoute;
+      router.push(targetRoute, { scroll: false });
+    } finally {
+      if (workspaceSwitchPendingRef.current === request) workspaceSwitchPendingRef.current = null;
+    }
   }
 
   function handleSelectWorkspace(workspace: WorkspaceListOption) {
@@ -638,17 +678,21 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       return;
     }
 
-    performWorkspaceSwitch(workspace);
+    void performWorkspaceSwitch(workspace);
   }
 
   function confirmWorkspaceSwitch() {
     if (!pendingWorkspaceSwitch) return;
 
     const workspace = pendingWorkspaceSwitch;
+    void performWorkspaceSwitch(workspace, true);
+  }
+
+  function cancelWorkspaceSwitch() {
     setPendingWorkspaceSwitch(null);
-    setNotificationNavigationDirty(false);
-    setSettingsDirty(false);
-    performWorkspaceSwitch(workspace);
+    if (workspaceSwitchPendingRef.current?.discardUnsavedWorkspaceWork) {
+      workspaceSwitchPendingRef.current = null;
+    }
   }
 
   function activateDuplicateTab() {
@@ -767,7 +811,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       </Dialog>
       <Dialog
         open={Boolean(pendingWorkspaceSwitch)}
-        onOpenChange={(open) => !open && setPendingWorkspaceSwitch(null)}
+        onOpenChange={(open) => !open && cancelWorkspaceSwitch()}
       >
         {pendingWorkspaceSwitch ? (
           <EmrConfirmDialogContent
@@ -777,7 +821,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             confirmLabel="저장하지 않고 전환"
             description={`작성 중인 내용은 저장되지 않습니다. 대상 워크스페이스: ${pendingWorkspaceSwitch.displayName}`}
             title="워크스페이스를 전환할까요?"
-            onCancel={() => setPendingWorkspaceSwitch(null)}
+            onCancel={cancelWorkspaceSwitch}
             onConfirm={confirmWorkspaceSwitch}
           />
         ) : null}
