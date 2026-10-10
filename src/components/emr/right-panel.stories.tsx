@@ -75,6 +75,7 @@ function EmrRightPanelExample({
 const meta = {
   title: "Design System/EMR/EmrRightPanel",
   component: EmrRightPanelExample,
+  render: (args) => <EmrRightPanelExample {...args} />,
   tags: ["autodocs"],
   parameters: {
     docs: {

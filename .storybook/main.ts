@@ -20,6 +20,8 @@ const config: StorybookConfig = {
         },
       },
     },
+    fileURLToPath(new URL("./emr-data-table-manifest.preset.ts", import.meta.url)),
+    fileURLToPath(new URL("./story-example-manifests.preset.ts", import.meta.url)),
   ],
   framework: "@storybook/nextjs-vite",
   viteFinal: async (config) => mergeConfig(config, {

@@ -597,12 +597,14 @@ function EmrDataTableSkeletonRows<TData>({
 function EmrDataTableHeader<TData>({
   columnGap,
   group,
+  growColumnId,
   hasRowOverlay,
   leadingInset,
   trailingSpace,
 }: {
   columnGap: number;
   group: HeaderGroup<TData>;
+  growColumnId: string | undefined;
   hasRowOverlay: boolean;
   leadingInset: number;
   trailingSpace: number;
@@ -708,7 +710,9 @@ function EmrDataTableHeader<TData>({
             sortDirection={sortDirection || undefined}
             sortLabel={canSort ? getSortLabel(label, sortDirection) : undefined}
             style={{
-              width: column.getSize() + effectiveColumnGap,
+              width: column.id === growColumnId
+                ? undefined
+                : column.getSize() + effectiveColumnGap,
               minWidth: column.getSize() + effectiveColumnGap,
               maxWidth: column.getSize() + effectiveColumnGap,
             }}
@@ -1015,6 +1019,7 @@ export function EmrDataTable<TData>({
             columnGap={columnGap}
             key={group.id}
             group={group}
+            growColumnId={growColumnId}
             hasRowOverlay={hasRowOverlay}
             leadingInset={leadingInset}
             trailingSpace={trailingSpace}

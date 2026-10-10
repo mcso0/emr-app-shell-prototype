@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { EmrRowActionMenu } from "./row-action-menu";
 import {
   EmrDataTable,
+  type EmrDataTableProps,
   type EmrDataTableRowState,
   type EmrDataTableViewportMode,
 } from "./emr-data-table";
@@ -34,7 +35,7 @@ type StoryRow = {
   rowState: EmrDataTableRowState;
 };
 
-type EmrDataTableStoryArgs = {
+export type EmrDataTableStoryArgs = {
   activeDetailRow: boolean;
   density: "compact" | "standard" | "comfortable";
   loading: boolean;
@@ -117,7 +118,7 @@ function StorySelectionControl({
   );
 }
 
-function EmrDataTableStory({
+export function useEmrDataTableStoryProps({
   activeDetailRow,
   density,
   loading,
@@ -130,7 +131,7 @@ function EmrDataTableStory({
   showContextualActions,
   sortable,
   viewportMode,
-}: EmrDataTableStoryArgs) {
+}: EmrDataTableStoryArgs): EmrDataTableProps<StoryRow> {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>(() => {
     const initialSelection: RowSelectionState = {};
@@ -316,91 +317,97 @@ function EmrDataTableStory({
     },
   });
 
+  return {
+    "aria-label": "EmrDataTable 공통 Storybook 예시",
+    density,
+    initialLoading: loading,
+    overscrollAxes: "both",
+    renderAfterRows: ({ visibleColumnCount }) => (
+      <tr data-emr-data-table-extra-row="true">
+        <td
+          colSpan={visibleColumnCount}
+          className="h-10 px-3 text-xs text-muted-foreground"
+        >
+          추가 행 슬롯: {visibleColumnCount}개 컬럼
+        </td>
+      </tr>
+    ),
+    skeletonRowCount: 4,
+    table,
+    viewportMode,
+    getRowState: (row) => row.original.rowState,
+    getRowOverlayAriaLabel: (row) => `${row.original.name} 행 작업`,
+    renderRowOverlay: rowOverlay
+      ? ({ row }) => (
+          <>
+            <EmrIconButton
+              aria-label={`${row.original.name} 상세`}
+              className="size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
+              data-testid={`story-row-detail-${row.id}`}
+              disabled={row.original.rowState === "disabled"}
+            >
+              <CdsMedicalFileSearchIcon aria-hidden="true" />
+            </EmrIconButton>
+            <EmrIconButton
+              aria-label={`${row.original.name} 수정`}
+              className="size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
+              disabled={row.original.rowState === "disabled"}
+            >
+              <CdsContentEdit2Icon aria-hidden="true" />
+            </EmrIconButton>
+            <EmrRowActionMenu
+              ariaLabel={`${row.original.name} 더보기`}
+              density="compact"
+              items={[
+                { key: "history", label: "이력 보기" },
+                { key: "remove", label: "삭제", variant: "destructive" },
+              ]}
+            />
+          </>
+        )
+      : undefined,
+    renderSelectionActionBar: ({
+      selectedRows: selected,
+      table: selectedTable,
+    }) => (
+      <>
+        <span className="grid min-w-[104px] border-r border-[var(--emr-border-default)] pr-3">
+          <strong className="text-xs">{selected.length}개 선택</strong>
+          <span className="text-[10px] text-[var(--emr-text-secondary)]">
+            같은 상태 cohort
+          </span>
+        </span>
+        <Button size="sm" variant="outline">
+          이력 보기
+        </Button>
+        <Button size="sm">선택 작업</Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => selectedTable.toggleAllRowsSelected(false)}
+        >
+          선택 해제
+        </Button>
+      </>
+    ),
+    getRowProps: (row) => {
+      const active = activeDetailRow && row.original.id === "sample-1";
+
+      return {
+        "aria-current": active ? "true" : undefined,
+        "data-detail-active": active ? "true" : undefined,
+        "data-state": active ? "selected" : undefined,
+      };
+    },
+  };
+}
+
+function EmrDataTableStory(args: EmrDataTableStoryArgs) {
+  const props = useEmrDataTableStoryProps(args);
+
   return (
     <div className="flex h-[420px] min-w-0 flex-col rounded-xl border bg-white p-4">
-      <EmrDataTable
-        aria-label="EmrDataTable 공통 Storybook 예시"
-        density={density}
-        initialLoading={loading}
-        overscrollAxes="both"
-        renderAfterRows={({ visibleColumnCount }) => (
-          <tr data-emr-data-table-extra-row="true">
-            <td
-              colSpan={visibleColumnCount}
-              className="h-10 px-3 text-xs text-muted-foreground"
-            >
-              추가 행 슬롯: {visibleColumnCount}개 컬럼
-            </td>
-          </tr>
-        )}
-        skeletonRowCount={4}
-        table={table}
-        viewportMode={viewportMode}
-        getRowState={(row) => row.original.rowState}
-        getRowOverlayAriaLabel={(row) => `${row.original.name} 행 작업`}
-        renderRowOverlay={rowOverlay
-          ? ({ row }) => (
-              <>
-                <EmrIconButton
-                  aria-label={`${row.original.name} 상세`}
-                  className="size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
-                  data-testid={`story-row-detail-${row.id}`}
-                  disabled={row.original.rowState === "disabled"}
-                >
-                  <CdsMedicalFileSearchIcon aria-hidden="true" />
-                </EmrIconButton>
-                <EmrIconButton
-                  aria-label={`${row.original.name} 수정`}
-                  className="size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
-                  disabled={row.original.rowState === "disabled"}
-                >
-                  <CdsContentEdit2Icon aria-hidden="true" />
-                </EmrIconButton>
-                <EmrRowActionMenu
-                  ariaLabel={`${row.original.name} 더보기`}
-                  density="compact"
-                  items={[
-                    { key: "history", label: "이력 보기" },
-                    { key: "remove", label: "삭제", variant: "destructive" },
-                  ]}
-                />
-              </>
-            )
-          : undefined}
-        renderSelectionActionBar={({
-          selectedRows: selected,
-          table: selectedTable,
-        }) => (
-          <>
-            <span className="grid min-w-[104px] border-r border-[var(--emr-border-default)] pr-3">
-              <strong className="text-xs">{selected.length}개 선택</strong>
-              <span className="text-[10px] text-[var(--emr-text-secondary)]">
-                같은 상태 cohort
-              </span>
-            </span>
-            <Button size="sm" variant="outline">
-              이력 보기
-            </Button>
-            <Button size="sm">선택 작업</Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => selectedTable.toggleAllRowsSelected(false)}
-            >
-              선택 해제
-            </Button>
-          </>
-        )}
-        getRowProps={(row) => {
-          const active = activeDetailRow && row.original.id === "sample-1";
-
-          return {
-            "aria-current": active ? "true" : undefined,
-            "data-detail-active": active ? "true" : undefined,
-            "data-state": active ? "selected" : undefined,
-          };
-        }}
-      />
+      <EmrDataTable {...props} />
     </div>
   );
 }
@@ -408,6 +415,8 @@ function EmrDataTableStory({
 const meta = {
   title: "Design System/EMR/EmrDataTable",
   component: EmrDataTableStory,
+  excludeStories: ["useEmrDataTableStoryProps"],
+  render: (args) => <EmrDataTableStory {...args} />,
   tags: ["autodocs"],
   parameters: {
     docs: {
@@ -476,6 +485,7 @@ function assertRowDivider(cell: Element | null, label: string) {
 }
 
 type ViewportContractCase = {
+  loading?: boolean;
   pinned: boolean;
   rowCount: EmrDataTableStoryArgs["rowCount"];
   viewportMode: EmrDataTableViewportMode;
@@ -505,170 +515,257 @@ async function assertViewportContract(
     throw new Error("EmrDataTable viewport contract targets are missing.");
   }
 
-  storyFrame.style.width = "720px";
-  await new Promise((resolve) => requestAnimationFrame(resolve));
+  const originalFrameWidth = storyFrame.style.width;
+  try {
+    storyFrame.style.width = "720px";
+    await new Promise((resolve) => requestAnimationFrame(resolve));
 
-  await expect(dataTableRoot).toHaveAttribute(
-    "data-emr-data-table-viewport-mode",
-    contract.viewportMode,
-  );
-  await expect(
-    dataTableRoot.querySelectorAll(
-      'tbody tr[data-emr-data-table-row="true"]',
-    ).length,
-  ).toBe(contract.rowCount === "zero" ? 0 : contract.rowCount === "one" ? 1 : 11);
-
-  const horizontalOwners = Array.from(
-    dataTableRoot.querySelectorAll<HTMLElement>("*"),
-  ).filter((element) => {
-    const overflowX = getComputedStyle(element).overflowX;
-    return overflowX === "auto" || overflowX === "scroll";
-  });
-  await expect(horizontalOwners).toHaveLength(1);
-  await expect(horizontalOwners[0]).toBe(scrollOwner);
-
-  const frameRect = storyFrame.getBoundingClientRect();
-  const frameStyles = getComputedStyle(storyFrame);
-  const frameContentBottom =
-    frameRect.bottom - Number.parseFloat(frameStyles.paddingBottom);
-  const rootRect = dataTableRoot.getBoundingClientRect();
-  const scrollOwnerRect = scrollOwner.getBoundingClientRect();
-
-  if (contract.viewportMode === "fill") {
-    await expect(Math.abs(rootRect.bottom - frameContentBottom)).toBeLessThanOrEqual(1);
-    await expect(Math.abs(scrollOwnerRect.bottom - rootRect.bottom)).toBeLessThanOrEqual(1);
-  } else {
-    await expect(rootRect.height).toBeLessThan(scrollOwner.scrollHeight + 1);
-    if (contract.rowCount !== "many") {
-      await expect(rootRect.height).toBeLessThan(
-        frameRect.height -
-          Number.parseFloat(frameStyles.paddingTop) -
-          Number.parseFloat(frameStyles.paddingBottom),
-      );
-    }
-    await expect(scrollOwner.scrollHeight - scrollOwner.clientHeight).toBeLessThanOrEqual(1);
-  }
-
-  if (contract.rowCount === "many" && contract.viewportMode === "fill") {
-    await expect(scrollOwner.scrollHeight).toBeGreaterThan(scrollOwner.clientHeight);
-    const stickyHeader = dataTableRoot.querySelector(
-      '[data-slot="table-header"]',
-    ) as HTMLElement | null;
-    if (!stickyHeader) throw new Error("Sticky table header is missing.");
-    await expect(getComputedStyle(stickyHeader).position).toBe("sticky");
-  }
-
-  if (contract.pinned) {
-    const pinnedCell = dataTableRoot.querySelector(
-      '[data-emr-column-pinned="left"]',
-    ) as HTMLElement | null;
-    if (!pinnedViewport || !pinnedCell) {
-      throw new Error("Pinned viewport contract targets are missing.");
-    }
-    await expect(getComputedStyle(tableContainer).overflowX).toBe("visible");
-    await expect(getComputedStyle(pinnedCell).position).toBe("sticky");
-
-    let horizontalScrollbar: HTMLElement | null = null;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      horizontalScrollbar = pinnedViewport.querySelector(
-        '[data-emr-pinned-table-scrollbar="horizontal"]',
-      ) as HTMLElement | null;
-      if (horizontalScrollbar) break;
-      await new Promise((resolve) => window.setTimeout(resolve, 25));
-    }
-    if (!horizontalScrollbar) {
-      throw new Error("Pinned horizontal scrollbar is missing.");
-    }
-    if (contract.viewportMode === "fill") {
+    await expect(dataTableRoot).toHaveAttribute(
+      "data-emr-data-table-viewport-mode",
+      contract.viewportMode,
+    );
+    await expect(
+      dataTableRoot.querySelectorAll(
+        'tbody tr[data-emr-data-table-row="true"]',
+      ).length,
+    ).toBe(
+      contract.loading || contract.rowCount === "zero"
+        ? 0
+        : contract.rowCount === "one"
+          ? 1
+          : 11,
+    );
+    if (contract.loading) {
       await expect(
-        Math.abs(
-          horizontalScrollbar.getBoundingClientRect().bottom - rootRect.bottom,
-        ),
-      ).toBeLessThanOrEqual(1);
+        dataTableRoot.querySelectorAll(
+          'tbody tr[data-emr-data-table-skeleton-row="true"]',
+        ).length,
+      ).toBe(4);
     }
+
+    for (const width of [1900, 1000, 720]) {
+      storyFrame.style.width = `${width}px`;
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      for (const header of dataTableRoot.querySelectorAll<HTMLElement>(
+        'thead th[data-column-id]',
+      )) {
+        const columnId = header.dataset.columnId;
+        const declaredWidth = Number(header.dataset.emrColumnSize);
+        const headerRect = header.getBoundingClientRect();
+        if (columnId === "note") {
+          await expect(headerRect.width).toBeGreaterThanOrEqual(declaredWidth);
+        } else {
+          await expect(Math.abs(headerRect.width - declaredWidth)).toBeLessThanOrEqual(1);
+        }
+        const bodyCell = dataTableRoot.querySelector<HTMLElement>(
+          `tbody tr:first-child td[data-column-id="${columnId}"]`,
+        );
+        if (bodyCell) {
+          const bodyRect = bodyCell.getBoundingClientRect();
+          await expect(Math.abs(bodyRect.left - headerRect.left)).toBeLessThanOrEqual(1);
+          await expect(Math.abs(bodyRect.width - headerRect.width)).toBeLessThanOrEqual(1);
+        }
+      }
+      const identityHeaderText = dataTableRoot.querySelector<HTMLElement>(
+        'th[data-column-id="name"] [data-emr-table-identity-text="true"]',
+      );
+      const identityBodyContent = dataTableRoot.querySelector<HTMLElement>(
+        'tbody tr:first-child td[data-column-id="name"] .emr-data-table-cell-content',
+      );
+      if (identityHeaderText && identityBodyContent) {
+        await expect(
+          Math.abs(
+            identityHeaderText.getBoundingClientRect().left -
+              identityBodyContent.getBoundingClientRect().left,
+          ),
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+
+    const horizontalOwners = Array.from(
+      dataTableRoot.querySelectorAll<HTMLElement>("*"),
+    ).filter((element) => {
+      const overflowX = getComputedStyle(element).overflowX;
+      return overflowX === "auto" || overflowX === "scroll";
+    });
+    await expect(horizontalOwners).toHaveLength(1);
+    await expect(horizontalOwners[0]).toBe(scrollOwner);
+
+    const frameRect = storyFrame.getBoundingClientRect();
+    const frameStyles = getComputedStyle(storyFrame);
+    const frameContentBottom =
+      frameRect.bottom - Number.parseFloat(frameStyles.paddingBottom);
+    const rootRect = dataTableRoot.getBoundingClientRect();
+    const scrollOwnerRect = scrollOwner.getBoundingClientRect();
+
+    if (contract.viewportMode === "fill") {
+      await expect(Math.abs(rootRect.bottom - frameContentBottom)).toBeLessThanOrEqual(1);
+      await expect(Math.abs(scrollOwnerRect.bottom - rootRect.bottom)).toBeLessThanOrEqual(1);
+    } else {
+      await expect(rootRect.height).toBeLessThan(scrollOwner.scrollHeight + 1);
+      if (contract.rowCount !== "many") {
+        await expect(rootRect.height).toBeLessThan(
+          frameRect.height -
+            Number.parseFloat(frameStyles.paddingTop) -
+            Number.parseFloat(frameStyles.paddingBottom),
+        );
+      }
+      await expect(scrollOwner.scrollHeight - scrollOwner.clientHeight).toBeLessThanOrEqual(1);
+    }
+
+    if (!contract.loading && contract.rowCount === "many" && contract.viewportMode === "fill") {
+      await expect(scrollOwner.scrollHeight).toBeGreaterThan(scrollOwner.clientHeight);
+      const stickyHeader = dataTableRoot.querySelector(
+        '[data-slot="table-header"]',
+      ) as HTMLElement | null;
+      if (!stickyHeader) throw new Error("Sticky table header is missing.");
+      await expect(getComputedStyle(stickyHeader).position).toBe("sticky");
+    }
+
+    if (contract.pinned) {
+      const pinnedCell = dataTableRoot.querySelector(
+        '[data-emr-column-pinned="left"]',
+      ) as HTMLElement | null;
+      if (!pinnedViewport || !pinnedCell) {
+        throw new Error("Pinned viewport contract targets are missing.");
+      }
+      await expect(getComputedStyle(tableContainer).overflowX).toBe("visible");
+      await expect(getComputedStyle(pinnedCell).position).toBe("sticky");
+
+      let horizontalScrollbar: HTMLElement | null = null;
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        horizontalScrollbar = pinnedViewport.querySelector(
+          '[data-emr-pinned-table-scrollbar="horizontal"]',
+        ) as HTMLElement | null;
+        if (horizontalScrollbar) break;
+        await new Promise((resolve) => window.setTimeout(resolve, 25));
+      }
+      if (!horizontalScrollbar) {
+        throw new Error("Pinned horizontal scrollbar is missing.");
+      }
+      if (contract.viewportMode === "fill") {
+        await expect(
+          Math.abs(
+            horizontalScrollbar.getBoundingClientRect().bottom - rootRect.bottom,
+          ),
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+  } finally {
+    storyFrame.style.width = originalFrameWidth;
   }
 }
 
-function viewportContractStory(contract: ViewportContractCase): Story {
-  return {
-    args: contract,
-    play: async ({ canvasElement }) => {
-      await assertViewportContract(canvasElement, contract);
-    },
-  };
-}
+const viewportContractPlay: Story["play"] = async ({ canvasElement, args }) => {
+  await assertViewportContract(canvasElement, args);
+};
+export const FillNonPinnedZeroRows: Story = {
+  args: {
+    pinned: false,
+    rowCount: "zero",
+    viewportMode: "fill",
+  },
+  play: viewportContractPlay,
+};
 
-export const FillNonPinnedZeroRows = viewportContractStory({
-  pinned: false,
-  rowCount: "zero",
-  viewportMode: "fill",
-});
+export const FillNonPinnedOneRow: Story = {
+  args: {
+    pinned: false,
+    rowCount: "one",
+    viewportMode: "fill",
+  },
+  play: viewportContractPlay,
+};
 
-export const FillNonPinnedOneRow = viewportContractStory({
-  pinned: false,
-  rowCount: "one",
-  viewportMode: "fill",
-});
+export const FillNonPinnedManyRows: Story = {
+  args: {
+    pinned: false,
+    rowCount: "many",
+    viewportMode: "fill",
+  },
+  play: viewportContractPlay,
+};
 
-export const FillNonPinnedManyRows = viewportContractStory({
-  pinned: false,
-  rowCount: "many",
-  viewportMode: "fill",
-});
+export const FillPinnedZeroRows: Story = {
+  args: {
+    pinned: true,
+    rowCount: "zero",
+    viewportMode: "fill",
+  },
+  play: viewportContractPlay,
+};
 
-export const FillPinnedZeroRows = viewportContractStory({
-  pinned: true,
-  rowCount: "zero",
-  viewportMode: "fill",
-});
+export const FillPinnedOneRow: Story = {
+  args: {
+    pinned: true,
+    rowCount: "one",
+    viewportMode: "fill",
+  },
+  play: viewportContractPlay,
+};
 
-export const FillPinnedOneRow = viewportContractStory({
-  pinned: true,
-  rowCount: "one",
-  viewportMode: "fill",
-});
+export const FillPinnedManyRows: Story = {
+  args: {
+    pinned: true,
+    rowCount: "many",
+    viewportMode: "fill",
+  },
+  play: viewportContractPlay,
+};
 
-export const FillPinnedManyRows = viewportContractStory({
-  pinned: true,
-  rowCount: "many",
-  viewportMode: "fill",
-});
+export const ContentNonPinnedZeroRows: Story = {
+  args: {
+    pinned: false,
+    rowCount: "zero",
+    viewportMode: "content",
+  },
+  play: viewportContractPlay,
+};
 
-export const ContentNonPinnedZeroRows = viewportContractStory({
-  pinned: false,
-  rowCount: "zero",
-  viewportMode: "content",
-});
+export const ContentNonPinnedOneRow: Story = {
+  args: {
+    pinned: false,
+    rowCount: "one",
+    viewportMode: "content",
+  },
+  play: viewportContractPlay,
+};
 
-export const ContentNonPinnedOneRow = viewportContractStory({
-  pinned: false,
-  rowCount: "one",
-  viewportMode: "content",
-});
+export const ContentNonPinnedManyRows: Story = {
+  args: {
+    pinned: false,
+    rowCount: "many",
+    viewportMode: "content",
+  },
+  play: viewportContractPlay,
+};
 
-export const ContentNonPinnedManyRows = viewportContractStory({
-  pinned: false,
-  rowCount: "many",
-  viewportMode: "content",
-});
+export const ContentPinnedZeroRows: Story = {
+  args: {
+    pinned: true,
+    rowCount: "zero",
+    viewportMode: "content",
+  },
+  play: viewportContractPlay,
+};
 
-export const ContentPinnedZeroRows = viewportContractStory({
-  pinned: true,
-  rowCount: "zero",
-  viewportMode: "content",
-});
+export const ContentPinnedOneRow: Story = {
+  args: {
+    pinned: true,
+    rowCount: "one",
+    viewportMode: "content",
+  },
+  play: viewportContractPlay,
+};
 
-export const ContentPinnedOneRow = viewportContractStory({
-  pinned: true,
-  rowCount: "one",
-  viewportMode: "content",
-});
-
-export const ContentPinnedManyRows = viewportContractStory({
-  pinned: true,
-  rowCount: "many",
-  viewportMode: "content",
-});
+export const ContentPinnedManyRows: Story = {
+  args: {
+    pinned: true,
+    rowCount: "many",
+    viewportMode: "content",
+  },
+  play: viewportContractPlay,
+};
 
 export const AllColumnsScroll: Story = {
   play: async ({ canvasElement }) => {
@@ -803,6 +900,14 @@ export const LeftAndRightPinned: Story = {
 
 export const Loading: Story = {
   args: { loading: true },
+  play: async ({ canvasElement }) => {
+    await assertViewportContract(canvasElement, {
+      loading: true,
+      pinned: false,
+      rowCount: "many",
+      viewportMode: "fill",
+    });
+  },
 };
 
 export const Selection: Story = {
@@ -824,28 +929,51 @@ export const Sorting: Story = {
 export const Resizing: Story = {
   args: { pinned: true, resizable: true },
   play: async ({ canvasElement }) => {
-    const pinnedBoundaryHeader = canvasElement.querySelector(
-      'th[data-column-id="name"][data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
-    );
-    const pinnedBoundaryGrip = pinnedBoundaryHeader?.querySelector(
-      'button[aria-label="이름 컬럼 너비 조절"]',
-    ) as HTMLButtonElement | null;
-    const scrollingGrip = canvasElement.querySelector(
-      'th[data-column-id="owner"] button[aria-label="담당 컬럼 너비 조절"]',
-    ) as HTMLButtonElement | null;
-
-    if (!pinnedBoundaryGrip || !scrollingGrip) {
-      throw new Error("Resizable EmrDataTable story grips are missing.");
-    }
-
-    await waitFor(() => {
-      expect(getComputedStyle(pinnedBoundaryGrip).width).toBe("8px");
-      expect(getComputedStyle(pinnedBoundaryGrip).cursor).toBe("col-resize");
-      expect(getComputedStyle(pinnedBoundaryGrip, "::before").opacity).toBe(
-        "0",
+    const storyFrame = canvasElement.firstElementChild as HTMLElement;
+    const originalFrameWidth = storyFrame.style.width;
+    try {
+      await assertViewportContract(canvasElement, {
+        pinned: true,
+        rowCount: "many",
+        viewportMode: "fill",
+      });
+      const pinnedBoundaryHeader = canvasElement.querySelector(
+        'th[data-column-id="name"][data-emr-column-pinned="left"][data-emr-pinned-edge="true"]',
       );
-      expect(getComputedStyle(scrollingGrip, "::before").opacity).toBe("1");
-    });
+      const pinnedBoundaryGrip = pinnedBoundaryHeader?.querySelector(
+        'button[aria-label="이름 컬럼 너비 조절"]',
+      ) as HTMLButtonElement | null;
+      const scrollingGrip = canvasElement.querySelector(
+        'th[data-column-id="owner"] button[aria-label="담당 컬럼 너비 조절"]',
+      ) as HTMLButtonElement | null;
+
+      if (!pinnedBoundaryGrip || !scrollingGrip) {
+        throw new Error("Resizable EmrDataTable story grips are missing.");
+      }
+
+      await waitFor(() => {
+        expect(getComputedStyle(pinnedBoundaryGrip).width).toBe("8px");
+        expect(getComputedStyle(pinnedBoundaryGrip).cursor).toBe("col-resize");
+        expect(getComputedStyle(pinnedBoundaryGrip, "::before").opacity).toBe(
+          "0",
+        );
+        expect(getComputedStyle(scrollingGrip, "::before").opacity).toBe("1");
+      });
+
+      storyFrame.style.width = "1900px";
+      for (const [key, expectedWidth] of [["ArrowRight", 188], ["ArrowLeft", 180]] as const) {
+        pinnedBoundaryGrip.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+        await waitFor(() => {
+          expect(Math.abs(pinnedBoundaryHeader!.getBoundingClientRect().width - expectedWidth)).toBeLessThanOrEqual(1);
+          const bodyCell = canvasElement.querySelector(
+            'tbody tr:first-child td[data-column-id="name"]',
+          );
+          expect(Math.abs(bodyCell!.getBoundingClientRect().width - expectedWidth)).toBeLessThanOrEqual(1);
+        });
+      }
+    } finally {
+      storyFrame.style.width = originalFrameWidth;
+    }
   },
 };
 
