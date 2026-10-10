@@ -9,8 +9,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { EmrListHeaderIconButton, EmrQueueEmptyState } from "@/components/emr/subpanel";
 import { EmrSidePanelCollapsibleGroup } from "@/components/emr/side-panel-collapsible-group";
-import { EmrTaskQueueCard } from "@/components/emr/task-queue-card";
+import { EmrTaskQueueCard, type EmrTaskQueueCardItem } from "@/components/emr/task-queue-card";
 import { groupPatientQueue, patientQueueKey, patientQueueStatus, patientQueueStatusLabels, type PatientQueueRow, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
+
+// Shared presentation combines rule inputs with the existing card contract.
+export type PatientQueueDisplayRow = PatientQueueRow & { card: EmrTaskQueueCardItem };
 
 export function PatientQueueToggle({ active, disabled, onChange }: { active: boolean; disabled: boolean; onChange: () => void }) {
   return (
@@ -43,7 +46,7 @@ export function PatientQueueFilterMenu({ value, onChange, disabled }: { value: s
 
 // A date/workspace-keyed instance keeps UI continuity separate from business selection.
 export function PatientQueueContent({ active, allRows, rows, selectedId, groupSort, orderSort, onSelect, onClearConditions, readable = true, ready, children }: {
-  active: boolean; allRows: PatientQueueRow[]; rows: PatientQueueRow[]; selectedId?: string;
+  active: boolean; allRows: PatientQueueDisplayRow[]; rows: PatientQueueDisplayRow[]; selectedId?: string;
   groupSort: PatientQueueSort; orderSort: PatientQueueOrderSort; onSelect: (id: string) => void;
   onClearConditions: () => void; readable?: boolean; ready: boolean; children: ReactNode;
 }) {

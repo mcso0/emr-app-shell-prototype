@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-06-15"
+updated: "2026-10-10"
 source_docs:
   - "docs/design/system/DESIGN.md"
   - "docs/design/system/component-ownership-rules.md"
@@ -22,6 +22,11 @@ Storybook is the executable component catalog for CLAiR EMR. The canonical desig
 - Use `src/components/ui/*` stories for generic shadcn/Base UI primitives.
 - Use `src/components/emr/*` stories for established EMR shared patterns.
 - Use `Design System/Recipes/*` only for small synthetic composition examples that dogfood documented primitives.
+- Use `Design System/UI/*` for basic UI, `Design System/EMR/*` for shared EMR UI, and `Features/<product area>/*` for feature content. Product grouping need not match a legacy source folder.
+- `Design System/Overview` explains responsibilities and review boundaries; it is not a production workflow layer.
+- Patterns/Templates describe synthetic usage and composition, not mandatory runtime layers. This slice does not add the separate local v1 recipe implementation.
+- Preserve titles/IDs unless a taxonomy change is explicitly approved. The approved Profile Panel correction moves `EMR/Profile Panel` to `Design System/EMR/Profile Panel`; generated IDs use `design-system-emr-profile-panel--` and old bookmarks need that prefix.
+- State the role, code owner and caller responsibility in descriptions. Keep product usage, automated checks and human acceptance separate; see the inventory in `component-ownership-rules.md`.
 - Keep feature workflow stories out of Storybook until the feature has stable mock data, providers, and visual QA scope.
 - Do not add or change runtime component APIs just to make a story easier.
 

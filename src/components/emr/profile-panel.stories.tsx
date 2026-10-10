@@ -98,7 +98,7 @@ function Specimen({ kind, state, longContent }: SpecimenProps) {
 }
 
 const meta = {
-  title: "EMR/Profile Panel",
+  title: "Design System/EMR/Profile Panel",
   component: Specimen,
   tags: ["autodocs"],
   args: { kind: "patient", state: "ready" },
@@ -106,7 +106,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Shared profile presentation. Feature callers retain data, permissions, edits and navigation. All examples are synthetic.",
+          "역할: 프로필의 공통 틀·탭·상태 표시. 소유자: 공통 EMR UI. 환자·보호자 프로필과 직원 프로필이 사용합니다. 기능이 데이터·권한·편집·이동을 담당합니다. 환자·보호자 내용은 Features/Customer/Patient Guardian Profile Side Panel에서 확인합니다. 이 예제는 합성 데이터이며, 전체 v1 사용자 승인은 아직 기록되지 않았습니다. 기준: docs/design/system/component-ownership-rules.md.",
       },
     },
   },

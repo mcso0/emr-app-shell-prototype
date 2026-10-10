@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { groupPatientQueue, matchesPatientQueueFilter, patientQueueChartLabels, type PatientQueueRow } from "../src/features/work-queue/patient-queue";
 function row(id: string, patch: Partial<PatientQueueRow> = {}): PatientQueueRow {
-  return { id, workspaceId: "synthetic", patientId: "patient-a", status: "requested", priority: "normal", requestedAt: "2026-10-03T01:00:00Z", card: { patientName: "합성 동명이인", guardianName: "합성 보호자", receptionType: "외래", eventTime: "10:00", eventActorName: "합성 요청자", secondLineText: id, actionAriaLabel: id }, ...patch };
+  return { id, workspaceId: "synthetic", patientId: "patient-a", status: "requested", priority: "normal", requestedAt: "2026-10-03T01:00:00Z", ...patch };
 }
 test("patient identity separates same names, workspaces and missing identities without changing source rows", () => {
   const rows = [row("a"), row("b", { patientId: "patient-b" }), row("c", { workspaceId: "foreign" }), row("d", { patientId: null }), row("e", { patientId: null }), row("f")];
@@ -13,7 +13,7 @@ test("patient identity separates same names, workspaces and missing identities w
 });
 test("urgency is independent of status and equal ranks respect request, wait and assignee sort", () => {
   const a = row("a", { status: "paused", waitMinutes: 2 });
-  const b = row("b", { status: "in_progress", requestedAt: "2026-10-03T02:00:00Z", waitMinutes: 9, card: { ...a.card, assigneeName: "가 담당" } });
+  const b = row("b", { status: "in_progress", requestedAt: "2026-10-03T02:00:00Z", waitMinutes: 9, assigneeSortName: "가 담당" });
   const rows = [row("cancel", { status: "cancelled" }), row("urgent", { status: "completed", priority: "urgent" }), row("return", { status: "returned" }), b, a];
   expect(groupPatientQueue(rows, "priority", "request")[0].items.map(i => i.id)).toEqual(["urgent", "return", "a", "b", "cancel"]);
   expect(groupPatientQueue([a,b], "priority", "wait")[0].items.map(i => i.id)).toEqual(["b", "a"]);
@@ -40,5 +40,19 @@ test("source chart labels include date, stable simultaneous-record distinction, 
 test("unresolved live assignee IDs group consistently without displaying synthetic names", () => {
   const rows = [row("b", { assignedToUserId: "user-b" }), row("a", { assignedToUserId: "user-a" }), row("c", { assignedToUserId: null })];
   expect(groupPatientQueue(rows, "priority", "assignee")[0].items.map(item => item.id)).toEqual(["a", "b", "c"]);
-  expect(rows.every(item => item.card.assigneeName === undefined)).toBe(true);
+  expect(rows.every(item => item.assigneeSortName === undefined)).toBe(true);
+});
+
+
+test("assignee ordering uses explicit rule inputs independently of card copy", () => {
+  const rows = [
+    { ...row("a", { assigneeSortName: "가 담당", assignedToUserId: "user-z" }), card: { assigneeName: "하 담당 · 표시 전용" } },
+    { ...row("b", { assigneeSortName: "나 담당", assignedToUserId: "user-a" }), card: { assigneeName: "가 담당 · 표시 전용" } },
+  ];
+  expect(groupPatientQueue(rows, "priority", "assignee")[0].items.map(item => item.id)).toEqual(["a", "b"]);
+  const metadata = rows.map(item => row(item.id, { assigneeSortName: item.assigneeSortName, assignedToUserId: item.assignedToUserId }));
+  expect(groupPatientQueue(metadata, "priority", "assignee")[0].items.map(item => item.id)).toEqual(["a", "b"]);
+  const changedCopy = rows.map(item => ({ ...item, card: { assigneeName: "다른 표시 문구" } }));
+  expect(groupPatientQueue(changedCopy, "priority", "assignee")[0].items.map(item => item.id)).toEqual(["a", "b"]);
+  expect(groupPatientQueue(rows, "priority", "assignee")[0].items[0]).toBe(rows[0]);
 });

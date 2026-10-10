@@ -6,7 +6,7 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
-import { PatientQueueContent, PatientQueueToggle, PatientQueueSortOptions } from "@/components/emr/patient-queue";
+import { PatientQueueContent, PatientQueueToggle, PatientQueueSortOptions, type PatientQueueDisplayRow } from "@/components/emr/patient-queue";
 import type { PatientQueueSort } from "@/features/work-queue/patient-queue";
 import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
 import {
@@ -270,12 +270,16 @@ export function EmrOrderQueueSidePanel({
         .sort((a, b) => compareOrderQueueItems(a, b, sortKey)),
     [resolvedStatuses, scopedItems, searchQuery, sortKey]
   );
-  const patientRows = useMemo(() => items.map(item => ({
-    ...item.patientQueue, workspaceId: patientGrouping?.workspaceId, id: item.id, waitMinutes: item.patientQueue?.requestedAt && Number.isFinite(Date.parse(item.patientQueue.requestedAt))
-      ? Math.max(0, Math.floor((Date.now() - Date.parse(item.patientQueue.requestedAt)) / 60000)) : item.waitMinutes,
-    status: item.patientQueue?.status ?? item.statusId,
-    card: { ...getTaskCardItem(item), actionItems: getActionItems(item, () => onSelectItem?.(item.id), actionContext) },
-  })), [items, patientGrouping?.workspaceId, getTaskCardItem, getActionItems, onSelectItem, actionContext]);
+  const patientRows = useMemo<PatientQueueDisplayRow[]>(() => items.map(item => {
+    const card = { ...getTaskCardItem(item), actionItems: getActionItems(item, () => onSelectItem?.(item.id), actionContext) };
+    return {
+      ...item.patientQueue, workspaceId: patientGrouping?.workspaceId, id: item.id, waitMinutes: item.patientQueue?.requestedAt && Number.isFinite(Date.parse(item.patientQueue.requestedAt))
+        ? Math.max(0, Math.floor((Date.now() - Date.parse(item.patientQueue.requestedAt)) / 60000)) : item.waitMinutes,
+      status: item.patientQueue?.status ?? item.statusId,
+      assigneeSortName: card.assigneeName,
+      card,
+    };
+  }), [items, patientGrouping?.workspaceId, getTaskCardItem, getActionItems, onSelectItem, actionContext]);
   const visiblePatientRows = useMemo(() => {
     const ids = new Set(visibleItems.map(item => item.id));
     return patientRows.filter(row => ids.has(row.id));

@@ -2,9 +2,8 @@ import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { EmrSubpanel, EmrSubpanelBody } from "./subpanel";
-import { PatientQueueContent, PatientQueueToggle } from "./patient-queue";
-import type { PatientQueueRow } from "@/features/work-queue/patient-queue";
-function row(n: number): PatientQueueRow {
+import { PatientQueueContent, PatientQueueToggle, type PatientQueueDisplayRow } from "./patient-queue";
+function row(n: number): PatientQueueDisplayRow {
   return { id: `synthetic-${n}`, workspaceId: "synthetic", patientId: `patient-${n}`, requestedAt: `2026-10-03T01:${String(n).padStart(2,"0")}:00Z`, status: "requested", priority: "normal", card: { patientName: `합성 환자 ${n}`, guardianName: "합성 보호자", receptionType: "외래", eventActorName: "합성 요청자", eventTime: "10:00", secondLineText: `합성 업무 ${n}`, actionAriaLabel: `합성 업무 ${n} 메뉴`, testId: `synthetic-card-${n}` } };
 }
 function ContinuityExample() {
