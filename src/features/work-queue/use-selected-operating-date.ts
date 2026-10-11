@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCurrentOperatingDate, getWorkspaceOperatingDate, isIsoOperatingDate } from "@/lib/emr-domain/demo-date";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
+import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
 
 export function useSelectedOperatingDate(workspaceId: string, requestedDate?: string | null) {
+  const panel = useModuleSidePanel();
+  const visible = panel?.visible !== false;
   const [todayDate, setTodayDate] = useState(() =>
     getAuthRuntimeMode().authProvider === "supabase"
       ? getCurrentOperatingDate()
@@ -23,16 +26,18 @@ export function useSelectedOperatingDate(workspaceId: string, requestedDate?: st
   }, [workspaceId]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !visible) return;
 
+    const resumeId = window.setTimeout(refreshTodayDate, 0);
     window.addEventListener("focus", refreshTodayDate);
     const intervalId = window.setInterval(refreshTodayDate, 60_000);
 
     return () => {
+      window.clearTimeout(resumeId);
       window.removeEventListener("focus", refreshTodayDate);
       window.clearInterval(intervalId);
     };
-  }, [refreshTodayDate]);
+  }, [refreshTodayDate, visible]);
 
   return {
     isToday: selectedDate === todayDate,

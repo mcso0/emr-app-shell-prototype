@@ -156,6 +156,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const [notificationErrorMessage, setNotificationErrorMessage] = useState<string | null>(null);
   const [notificationReloadKey, setNotificationReloadKey] = useState(0);
   const [duplicateNavigation, setDuplicateNavigation] = useState<PendingDuplicateTabNavigation | null>(null);
+  const duplicateNavigationVersionRef = useRef(0);
   const [pendingWorkspaceSwitch, setPendingWorkspaceSwitch] =
     useState<WorkspaceListOption | null>(null);
   const [skipDuplicateWarning, setSkipDuplicateWarning] = useState(false);
@@ -175,6 +176,12 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     tabs,
   } = useWorkspaceTabsStore();
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
+  const [renderedTab, setRenderedTab] = useState({ id: activeTabId, revision: 0 });
+  // Commit the content reset with its destination route, never with the departing route.
+  if (activeTab && activeTab.history[activeTab.historyIndex] === currentRoute && renderedTab.id !== activeTabId) {
+    setRenderedTab({ id: activeTabId, revision: renderedTab.revision + (renderedTab.id ? 1 : 0) });
+  }
+  const tabNavigationPendingRef = useRef(false);
   const {
     activeDrawer,
     retainedReceptionDrawer,
@@ -473,18 +480,45 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   }
 
   function handleActivateTab(tabId: string) {
-    navigateToTabRoute(activateTab(tabId));
+    if (tabId === activeTabId) return;
+    void runWithSavedEditors(() => navigateToTabRoute(activateTab(tabId)));
   }
 
   function handleCloseTab(tabId: string) {
-    navigateToTabRoute(closeTab(tabId));
+    if (tabs.length <= 1) return;
+    if (tabId !== activeTabId) {
+      closeTab(tabId);
+      return;
+    }
+    void runWithSavedEditors(() => navigateToTabRoute(closeTab(tabId)));
   }
 
   function handleNewTab() {
-    const route = buildWorkspaceHomeRoute(workspaceId);
+    void runWithSavedEditors(() => {
+      const route = buildWorkspaceHomeRoute(workspaceId);
+      toast.success("새 탭이 생성되었습니다.");
+      navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
+    });
+  }
 
-    toast.success("새 탭이 생성되었습니다.");
-    navigateToTabRoute(createTab({ workspaceId, route, moduleId: "home" }));
+  async function runWithSavedEditors(navigate: () => void) {
+    if (tabNavigationPendingRef.current || workspaceSwitchPendingRef.current) return;
+    const scope = workspaceSwitchScopeRef.current;
+    const state = useWorkspaceTabsStore.getState();
+    const tab = state.tabs.find((item) => item.id === state.activeTabId);
+    const route = tab?.history[tab.historyIndex];
+    tabNavigationPendingRef.current = true;
+    try {
+      if (!await useChartStore.getState().flushEditors()) return;
+      const latest = useWorkspaceTabsStore.getState();
+      const currentTab = latest.tabs.find((item) => item.id === latest.activeTabId);
+      if (scope !== workspaceSwitchScopeRef.current || latest.activeTabId !== state.activeTabId || currentTab?.history[currentTab.historyIndex] !== route) return;
+      navigate();
+    } catch {
+      if (scope === workspaceSwitchScopeRef.current) toast.error("작업 내용을 저장하지 못했습니다. 다시 시도해주세요.");
+    } finally {
+      tabNavigationPendingRef.current = false;
+    }
   }
 
   function handleRetryNotifications() {
@@ -604,14 +638,16 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
       return;
     }
 
-    pendingTabRouteRef.current = href;
-    router.push(href, { scroll: false });
-    pushRoute(href, nextModuleId);
+    void runWithSavedEditors(() => {
+      pendingTabRouteRef.current = href;
+      router.push(href, { scroll: false });
+      pushRoute(href, nextModuleId);
+    });
   }
 
   async function performWorkspaceSwitch(workspace: WorkspaceListOption, discardUnsavedWorkspaceWork = false) {
     const scope = workspaceSwitchScopeRef.current;
-    if (!scope || workspaceSwitchPendingRef.current || workspace.id === workspaceId) return;
+    if (!scope || workspaceSwitchPendingRef.current || tabNavigationPendingRef.current || workspace.id === workspaceId) return;
     const request = { scope, discardUnsavedWorkspaceWork };
     workspaceSwitchPendingRef.current = request;
     try {
@@ -697,25 +733,35 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
 
   function activateDuplicateTab() {
     if (!duplicateNavigation) return;
-    if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
-    const route = activateTab(duplicateNavigation.existingTab.id);
+    const version = duplicateNavigationVersionRef.current;
+    void runWithSavedEditors(() => {
+      if (version !== duplicateNavigationVersionRef.current) return;
+      if (skipDuplicateWarning) writeDuplicateWarningPreference(workspaceId);
+      const route = activateTab(duplicateNavigation.existingTab.id);
+      setDuplicateNavigation(null);
+      navigateToTabRoute(route);
+    });
+  }
+
+  function cancelDuplicateNavigation() {
+    duplicateNavigationVersionRef.current += 1;
     setDuplicateNavigation(null);
-    navigateToTabRoute(route);
   }
 
   function handleTabBack() {
-    navigateToTabRoute(goBack());
+    void runWithSavedEditors(() => navigateToTabRoute(goBack()));
   }
 
   function handleTabForward() {
-    navigateToTabRoute(goForward());
+    void runWithSavedEditors(() => navigateToTabRoute(goForward()));
   }
 
   return (
     <div className="h-screen min-h-0 overflow-hidden bg-[var(--emr-surface-app)] text-foreground">
       <WorkspaceStaffPresenceReporter workspaceId={workspaceId} />
       <ShellMain
-        key={`${workspaceId}:${authSession?.id ?? "anonymous"}:${activeTabId ?? "initial"}`}
+        key={`${workspaceId}:${authSession?.id ?? "anonymous"}`}
+        workspaceTabRevision={renderedTab.revision}
         moduleDefinition={moduleDefinition}
         navigationSearch={navigationSearch}
         topBar={
@@ -769,7 +815,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onRetry={handleRetryNotifications}
         onRestoreNotification={handleRestoreNotification}
       />
-      <Dialog open={Boolean(duplicateNavigation)} onOpenChange={(open) => !open && setDuplicateNavigation(null)}>
+      <Dialog open={Boolean(duplicateNavigation)} onOpenChange={(open) => !open && cancelDuplicateNavigation()}>
         {duplicateNavigation ? (
           <EmrDialogShell
             title="같은 업무가 이미 열려 있습니다"
@@ -792,7 +838,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
                     type="button"
                     variant="outline"
                     className="whitespace-nowrap px-3"
-                    onClick={() => setDuplicateNavigation(null)}
+                    onClick={cancelDuplicateNavigation}
                   >
                     닫기
                   </Button>

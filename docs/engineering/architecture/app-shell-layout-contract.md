@@ -98,3 +98,11 @@ Patterns
   HistoryAsideWorkflow
 Screens
 ```
+
+## Workspace Tab Lifecycle
+
+- Tab activation, new-tab creation, active-tab close, tab history, and shell module navigation wait for registered chart editors to finish saving. A failed save keeps the current surface open. Closing an inactive tab only changes tab metadata.
+- Tab content and its cached module panels reset when the destination route is committed. Navigation chrome stays mounted within the same workspace and user session.
+- Hidden module panels retain local filter state within a tab but pause their operating-date timer and fulfillment queue subscription. The last queue consumer cancels its pending read and releases its cache. Queue reads are shared only within the same workspace, date, queue type, and optional selected item.
+- A selected lab result outside the current date uses the permission-checked exact `workItemId` lookup. It does not trigger an unbounded historical queue read.
+- Browser session tab state is the immediate restore source. Server saves are debounced and serialized per workspace; server restore cannot overwrite newer local navigation. Tab metadata persistence does not replace clinical draft persistence.

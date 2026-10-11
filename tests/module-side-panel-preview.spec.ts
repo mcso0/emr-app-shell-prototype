@@ -533,7 +533,10 @@ for (const [name, id] of datePanels) {
     test(`${id} ${current ? "current" : "foreign"} date arrows keep the floating queue`, async ({ page }) => {
       const dates: string[] = [];
       await page.route(id === "billing" ? "**/billing/queue?*" : "**/fulfillment/work-items?*", async route => {
-        dates.push(new URL(route.request().url()).searchParams.get("date") ?? "");
+        const params = new URL(route.request().url()).searchParams;
+        // Result detail and patient history can be outside this date.
+        if (params.has("date")) dates.push(params.get("date")!);
+        else expect(params.get("workItemId") || params.get("patientId")).toBeTruthy();
         await route.fulfill({ json: { ok: true, workItems: [], rows: [] } });
       });
       await enter(page, current ? `/w/clair-demo/${id}?modulePanel=closed&right=closed&date=2026-05-01` : startRoute);

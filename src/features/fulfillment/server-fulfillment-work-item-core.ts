@@ -223,6 +223,7 @@ export type FulfillmentWorkItemFilters = {
   encounterId?: string | null;
   orderId?: string | null;
   patientId?: string | null;
+  workItemId?: string | null;
   queueType?: string | null;
   status?: string | null;
 };
@@ -341,7 +342,7 @@ export type FulfillmentWorkItemReadResult =
       ok: false;
       status: 400;
       error: "invalid_input";
-      fieldErrors: Partial<Record<"date" | "queueType" | "status", string>>;
+      fieldErrors: Partial<Record<"date" | "queueType" | "status" | "workItemId", string>>;
     }
   | {
       ok: false;
@@ -514,6 +515,7 @@ export async function readFulfillmentWorkItems({
     date: normalized.date,
     orderId: normalized.orderId,
     patientId: normalized.patientId,
+    workItemId: normalized.workItemId,
     queueType,
     status: normalized.status,
     workspaceId,
@@ -2608,6 +2610,7 @@ function normalizeFilters(input: FulfillmentWorkItemFilters) {
     encounterId: trimToUndefined(input.encounterId),
     orderId: trimToUndefined(input.orderId),
     patientId: trimToUndefined(input.patientId),
+    workItemId: input.workItemId == null ? undefined : input.workItemId.trim(),
     queueType: trimToUndefined(input.queueType) as
       FulfillmentQueueType | undefined,
     status: trimToUndefined(input.status) as
@@ -2616,8 +2619,11 @@ function normalizeFilters(input: FulfillmentWorkItemFilters) {
 }
 
 function validateReadFilters(input: ReturnType<typeof normalizeFilters>) {
-  const fieldErrors: Partial<Record<"date" | "queueType" | "status", string>> =
+  const fieldErrors: Partial<Record<"date" | "queueType" | "status" | "workItemId", string>> =
     {};
+  if (input.workItemId !== undefined && !normalizeUuidForRpc(input.workItemId)) {
+    fieldErrors.workItemId = "invalid_work_item_id";
+  }
   if (input.date && !isIsoOperatingDate(input.date)) {
     fieldErrors.date = "invalid_date";
   }

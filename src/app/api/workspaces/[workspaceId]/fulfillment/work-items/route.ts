@@ -61,6 +61,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       encounterId: url.searchParams.get("encounterId"),
       orderId: url.searchParams.get("orderId"),
       patientId: url.searchParams.get("patientId"),
+      workItemId: url.searchParams.get("workItemId"),
       queueType: url.searchParams.get("queueType"),
       status: url.searchParams.get("status"),
     },
