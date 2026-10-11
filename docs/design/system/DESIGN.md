@@ -126,6 +126,16 @@ only. New implementation must use `--emr-state-hover`,
 confused with an interaction state. Pinned table cells must compose the state
 overlay over their opaque base surface so scrolling content cannot show through.
 
+## Scroll Boundaries
+
+All app scroll containers stop at their boundaries without rubber-band bounce
+or scroll chaining to an ancestor. `src/app/globals.css` covers the document,
+textareas, shared scroll viewports, and scroll utilities; CSS modules apply
+`overscroll-behavior: none` on their scroll owners. Do not apply this rule to
+clipping-only children: their wheel input must reach the scroll owner.
+Keep native scrolling, wheel handlers,
+horizontal scrolling, and scrollbar interactions unchanged within bounds.
+
 ## Typography
 
 The app shell uses the self-hosted Pretendard variable font package as the primary sans stack. This improves Korean UI rhythm while keeping system fallbacks available.

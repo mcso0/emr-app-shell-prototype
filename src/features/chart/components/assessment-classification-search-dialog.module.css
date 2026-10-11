@@ -18,6 +18,7 @@
   min-height: 0;
   grid-template-columns: 1fr;
   overflow-y: auto !important;
+  overscroll-behavior: none;
   padding: 0 !important;
   background: var(--emr-surface-panel);
 }

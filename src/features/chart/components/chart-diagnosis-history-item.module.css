@@ -105,7 +105,7 @@
 .row[data-actions-visible] .action { opacity: 1; }
 .row[data-actions-visible] .view { pointer-events: auto; }
 .row .view { width: 66px; height: 24px; border-radius: var(--clair-radius-atomic-8); background: var(--emr-surface-panel); }
-.tooltipList { max-height: min(240px, calc(var(--available-height, 280px) - 24px)); max-width: 260px; overflow-y: auto; overscroll-behavior: contain; }
+.tooltipList { max-height: min(240px, calc(var(--available-height, 280px) - 24px)); max-width: 260px; overflow-y: auto; overscroll-behavior: none; }
 .tooltipList, .tooltipText { white-space: normal; overflow-wrap: anywhere; }
 .measurement { position: absolute; left: 0; top: 0; display: flex; width: max-content; visibility: hidden; pointer-events: none; }
 
