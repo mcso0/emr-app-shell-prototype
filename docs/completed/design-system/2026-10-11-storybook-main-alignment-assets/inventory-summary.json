@@ -1,0 +1,67 @@
+{
+  "allSourceFiles": 1090,
+  "sourceByExtension": {
+    ".css": 23,
+    ".ico": 1,
+    ".svg": 225,
+    ".ts": 501,
+    ".tsx": 340
+  },
+  "parsedSourceFiles": 841,
+  "sourceRoles": {
+    "runtime": 735,
+    "story": 106
+  },
+  "runtimeUiFiles": 231,
+  "runtimeUiCoverage": {
+    "composed-in-story": 72,
+    "dependency-only": 20,
+    "documented": 45,
+    "no-story-candidate": 94
+  },
+  "componentAndRenderFunctionCandidates": 2047,
+  "runtimeComponentAndRenderFunctionCandidates": 1703,
+  "jsxOccurrences": 11767,
+  "jsxKinds": {
+    "custom": 6492,
+    "fragment": 214,
+    "intrinsic": 5061
+  },
+  "reactCreateElementOccurrences": 15,
+  "reactCreateElementKinds": {
+    "custom": 5,
+    "intrinsic": 10
+  },
+  "storyFiles": 106,
+  "storyExportCandidates": 490,
+  "storiesWithPlay": 229,
+  "index": {
+    "supplied": true,
+    "version": 5,
+    "totalEntries": 588,
+    "byType": {
+      "docs": 99,
+      "story": 489
+    },
+    "unlocatedSourceEntries": []
+  },
+  "sourceParseDiagnostics": 0,
+  "infrastructureFiles": 7,
+  "infrastructureByExtension": {
+    ".ts": 5,
+    ".tsx": 2
+  },
+  "supportingSourceAssets": 249,
+  "supportingSourceAssetsByExtension": {
+    ".css": 23,
+    ".ico": 1,
+    ".svg": 225
+  },
+  "publicAssets": 30,
+  "publicAssetsByExtension": {
+    ".html": 1,
+    ".jpg": 1,
+    ".png": 17,
+    ".svg": 11
+  }
+}

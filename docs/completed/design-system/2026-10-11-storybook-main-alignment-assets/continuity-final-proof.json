@@ -1,0 +1,8 @@
+{
+  "story": "design-system-emr-patientqueue--continuity",
+  "dev": "pass",
+  "static": "pass",
+  "method": "manager Interactions terminal status",
+  "scope": "loaded font; initial selected-row reveal settled; relative scroll viewport offset <3px; new badge/filter/permission assertions",
+  "at": "2026-10-11T06:20:32.677Z"
+}

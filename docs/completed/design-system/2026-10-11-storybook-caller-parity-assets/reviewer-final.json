@@ -1,0 +1,226 @@
+{
+  "reviewer": "wave2_independent_review",
+  "objective": "Approved Storybook caller-parity wave2; source/caller contracts, fixture isolation and meaningful assertions.",
+  "recoveryContext": "Reconstructed after22:12KST reboot deleted prior /private/tmp evidence. Current PRD source was inspected afresh; earlier source verdicts below are retained session context. They are not new broad re-verification.",
+  "verdict": "ACCEPTED_SOURCE_REVIEW_NO_REMAINING_BLOCKER_IN_REVIEWED_SCOPE",
+  "openFindings": [],
+  "finalIntegration": "/Users/iseung-ug/.codex/worktrees/storybook-main-alignment/emr-app-shell-prototype",
+  "finalCandidateHashBasis": [
+    {
+      "path": "src/stories/prd-viewer-caller-parity.stories.tsx",
+      "integrationHash": "90ec994a0550bfbb1c7300f9ab51a11368d179784eb6851ab80f882eba3fd727",
+      "laneHash": "90ec994a0550bfbb1c7300f9ab51a11368d179784eb6851ab80f882eba3fd727",
+      "byteEqual": true,
+      "identicalIgnoringLeadingIndentation": true
+    },
+    {
+      "path": "src/stories/prd-viewer-caller-parity.stories.fixture.tsx",
+      "integrationHash": "db6cc7af28b26393c0a65be081a3636d7b0be17624a4eea9cf356923f8a8e304",
+      "laneHash": "353aa9878cf5bddba0f258f1d9d041e3440c6e842739560cc81b6cbd785e8b0f",
+      "byteEqual": false,
+      "identicalIgnoringLeadingIndentation": true
+    }
+  ],
+  "candidateBoundary": "Keep integration fixture db6cc7af28b26393c0a65be081a3636d7b0be17624a4eea9cf356923f8a8e304 as final. It differs from A21c lane353aa9878cf5bddba0f258f1d9d041e3440c6e842739560cc81b6cbd785e8b0f only by indentation in async cleanup lines87–105. Source equivalence was inspected; byte equality is explicitly not claimed.",
+  "freshClosure": {
+    "finding": "A21-MERMAID-TEMP-DOM",
+    "status": "CLOSED_BY_CURRENT_SOURCE",
+    "refs": [
+      {
+        "path": "src/stories/prd-viewer-caller-parity.stories.fixture.tsx",
+        "lines": [
+          60,
+          77
+        ],
+        "fact": "Only exact synthetic valid/invalid charts with source ID prefix and no container are tracked. Calls delegate to original public mermaid.render and return the same original promise."
+      },
+      {
+        "path": "src/stories/prd-viewer-caller-parity.stories.fixture.tsx",
+        "lines": [
+          83,
+          107
+        ],
+        "fact": "Idempotent async cleanup unmounts source first, awaits all owned queued promises, removes only owned new ID/d-ID/i-ID nodes differing from the snapshot, then restores original renderer and exact globals."
+      },
+      {
+        "path": "src/stories/prd-viewer-caller-parity.stories.tsx",
+        "lines": [
+          115,
+          135
+        ],
+        "fact": "Both actual Mermaid client stories install diagram tracking and preserve real SVG/error assertions."
+      },
+      {
+        "path": "src/lib/prd-viewer/mermaid-diagram.tsx",
+        "lines": [
+          15,
+          52
+        ],
+        "fact": "Actual exported source still performs genuine Mermaid rendering; source cancellation prevents post-unmount React state writes. Fixture supplies missing temporary-DOM ownership cleanup."
+      }
+    ],
+    "runtimeReplay": "Reviewer did not execute tests/browser/manager transition or renderer. This is source closure; parent replaces lost runtime logs with fresh validation.",
+    "humanDecisionNeeded": false
+  },
+  "markdownBoundary": {
+    "currentStaticHtmlBytes": 2384,
+    "currentStaticHtmlSha256": "20d8bad8ade5784a3a7daea97d38fcb54f919e2a6f6bdf07a442b8922b300de4",
+    "sameAsPreviouslyReviewedActualServerOutput": true,
+    "currentDocsRef": "src/stories/prd-viewer-caller-parity.stories.tsx:140",
+    "scope": "Original Node-rendered static Markdown HTML. Server Mermaid loading fallback is included. React hydration/client SVG and full filesystem/page workflow are excluded explicitly. Separate actual Mermaid client stories cover SVG/error.",
+    "provenanceLimit": "Before reboot reviewer compared literal exactly against actual Node output and four source hashes. Parent now reports regenerated actual2384-byte server output with the same20d8bad8 SHA256; reviewer did not rerun generator. Static/hydration/client boundaries remain explicit."
+  },
+  "retainedSourceClosureVerdicts": [
+    {
+      "scope": "A app-root/auth fixtures",
+      "verdict": "Accepted source generation/unmount/drain and terminal-write receipts; intentionally unconsumed/cancelled read responses no longer block cleanup; invitation receipt storage restoration included. Current source was not broadly re-reviewed after reboot."
+    },
+    {
+      "scope": "B hospital5",
+      "verdict": "Accepted hydration/status acknowledgments registered before response return and actual review detail→summary→catalog→UI terminal chain before store/client/fetch restoration. No claim of new interrupted-manager replay."
+    },
+    {
+      "scope": "Parent Billing denial cleanup",
+      "verdict": "Accepted response-body tickets held through the next task because the actual await continuation starts fallback PATCH within the preceding Promise chain. Unmount/release drains both denied writes before restoring fetch/store; no financial-success simulation or permission-policy change."
+    },
+    {
+      "scope": "C39 Profile",
+      "verdict": "Accepted actual terminal store receipts plus public toast.getHistory acknowledgments; dismissed toasts still acknowledge terminal completion while active-only dismissal stays scoped."
+    },
+    {
+      "scope": "C41 Reception",
+      "verdict": "Accepted exact actual calendar/day and queue reads, typed response profiles, source mutation acknowledgment after unmount, and actual searchbox/card selectors. Display variants do not claim registration or real write workflow."
+    },
+    {
+      "scope": "C36 Vital",
+      "verdict": "Accepted clear operation as all measurement fields null while preserving historical measurement origin metadata; actual dialog/action contracts retained."
+    },
+    {
+      "scope": "Parent CustomerArchiveTable",
+      "verdict": "Accepted actual scoped GET/PATCH/count semantics, loading-abort/unmount and terminal loading/count restoration boundary."
+    },
+    {
+      "scope": "Parent Next Link shim and inpatient caller stories",
+      "verdict": "Accepted actual child handler before navigation interception for observed modern callers, plus actual inpatient composition/date semantics. No broader framework navigation or unseen caller claim."
+    },
+    {
+      "scope": "A20 Login",
+      "verdict": "Accepted actual LoginForm/Splash, exact local OTP responses, synchronous mock session/store/storage writes and actual successful navigation acknowledgment before restoration. No real provider/session claim."
+    },
+    {
+      "scope": "A/B source matrices and infrastructure",
+      "verdict": "Previously accepted scoped IDs/source classifications and narrow manifest/checker fixes. No new post-reboot assertion that every source/caller is covered or that all catalog entries pass."
+    }
+  ],
+  "preservedSourceOnlyOrExistingRuntimeLimitations": [
+    {
+      "item": "Schedule save/dirty guard",
+      "boundary": "Parent previously observed actual POST/grid update followed by unchanged dirty guard; preserve runtime behavior. Changing product behavior requires a separate user scope choice, not fixture concealment."
+    },
+    {
+      "item": "SOAP heading Enter",
+      "boundary": "Parent previously observed actual two-to-three headings mutation on Enter; unchanged source behavior remains explicit. Example scope is actual editor/collapsible composition rather than whole SoapPanel workflow."
+    },
+    {
+      "item": "Global command dynamic result filtering",
+      "boundary": "Previously confirmed existing missing filter-keyword behavior stays exposed; do not fabricate dynamic result success."
+    },
+    {
+      "item": "Dispensing table headers",
+      "boundary": "Existing actual OrderWorkTable/EmrDataTable header-label contract can show raw field names; story fixture does not replace the actual header behavior."
+    },
+    {
+      "item": "Command accessible name",
+      "boundary": "DOM hidden-label composition and native CUA accessible-name observations differ; no proof of universal browser/screen-reader loss."
+    },
+    {
+      "item": "Unused vertical tabs/toggle-group orientation",
+      "boundary": "Source forwarding limitation was found without a deployed vertical caller; record as unused source boundary, not a verified product regression."
+    }
+  ],
+  "verificationLimits": {
+    "reviewerActions": "Read-only source/hash/diff inspection. Wrote only this review evidence. No tests, server, browser, network, repo changes or agents.",
+    "lostLogs": "Prior test/native/browser reports are historical session facts, not current saved PASS evidence.",
+    "currentValidation": "Fresh parent recovery validation is complete as separately attributed in latestParentVerification; this final independent verdict remains a scoped source review.",
+    "testKinds": "Keep direct Chromium Vitest, native MCP, real manager transitions and manual420 browser evidence distinct. Custom addon-Vitest viewport config alone does not establish420 because the installed addon overrides it."
+  },
+  "finalRecoveryDeltaReview": {
+    "verdict": "ACCEPTED_NO_ASSERTION_WEAKENING_OR_NEW_FIXTURE_RISK_FOUND",
+    "scope": "Only four recovery story/fixture changes. No broader source audit, tests, browser, server or source edits.",
+    "CExactDiff": "/Users/iseung-ug/.codex/visualizations/2026/10/11/01a12974-bc02-7fd2-a9f3-fa6ebe49c255/storybook-parity-recovery/C/repairs/r1/diff.patch",
+    "hashes": [
+      {
+        "path": "src/features/fulfillment/patient-history-aside.stories.tsx",
+        "integrationHash": "daa15531c8601450d83c01299dc99dde2343a0e9b1881356aaba75ff1e9b83bf",
+        "laneHash": "daa15531c8601450d83c01299dc99dde2343a0e9b1881356aaba75ff1e9b83bf",
+        "byteEqual": true
+      },
+      {
+        "path": "src/features/lab-imaging/components/lab-attachment-viewer.stories.tsx",
+        "integrationHash": "b19c3ceff32063add579bf4114e6c8898e51e806d9c87f1072f64639a259ec0e",
+        "laneHash": "b19c3ceff32063add579bf4114e6c8898e51e806d9c87f1072f64639a259ec0e",
+        "byteEqual": true
+      },
+      {
+        "path": "src/features/lab-imaging/components/lab-result-phase2.stories.tsx",
+        "integrationHash": "9760741bea59f160eea582a46170f48b12b6eaeed45171bd194e79b0c8397035",
+        "laneHash": "9760741bea59f160eea582a46170f48b12b6eaeed45171bd194e79b0c8397035",
+        "byteEqual": true
+      },
+      {
+        "path": "src/stories/login-caller-parity.stories.fixture.tsx",
+        "integrationHash": "3f2568564bf656d36aaf6d27b6bd4ca77ab9743e2e23a7e94c712d4a1842c205",
+        "laneHash": "3f2568564bf656d36aaf6d27b6bd4ca77ab9743e2e23a7e94c712d4a1842c205",
+        "byteEqual": true
+      }
+    ],
+    "reviews": [
+      {
+        "path": "src/features/fulfillment/patient-history-aside.stories.tsx",
+        "lines": [
+          86,
+          86
+        ],
+        "verdict": "Original exact 검사 분류 visibility assertion remains. waitFor now retries both lookup and visible state after the actual filter click. No scenario/data/action changes."
+      },
+      {
+        "path": "src/features/lab-imaging/components/lab-attachment-viewer.stories.tsx",
+        "lines": [
+          53,
+          86
+        ],
+        "verdict": "Preserves page1/page2 total and image100% assertions. Adds absent-error and exact requested-page visible canvas assertions together. Installed react-pdf Canvas.js64 hides canvas while rendering and79 reveals after actual render promise; Page.js232 exposes data-page-number. This improves readiness and prevents an old page canvas from satisfying the new page check. Bounded10s condition wait; no mocked success or fixed sleep."
+      },
+      {
+        "path": "src/features/lab-imaging/components/lab-result-phase2.stories.tsx",
+        "lines": [
+          125,
+          134
+        ],
+        "verdict": "Adds viewer visibility before original preview text/search count/download/CSV/Escape/card and disabled bulk-download checks; none removed. No fixture/API/lifecycle changes."
+      },
+      {
+        "path": "src/stories/login-caller-parity.stories.fixture.tsx",
+        "lines": [
+          44,
+          59
+        ],
+        "verdict": "Cached cleanupPromise returns the same terminal promise on repeated calls. Existing source unmount, subscription cleanup, actual successful mock-login router acknowledgment, nested auth restoration, request snapshot and lease restoration retain their order. No second restoration can overwrite a subsequent fixture."
+      }
+    ],
+    "openFindings": [],
+    "reviewerExecution": "Source and bounded saved-artifact reads only; no validation commands executed."
+  },
+  "latestParentVerification": {
+    "nativeArtifact": "/Users/iseung-ug/.codex/visualizations/2026/10/11/01a1294e-f129-7c01-8d7c-edd1114ffbc2/storybook-parity-recovery/native-final.json",
+    "nativeArtifactSections": {
+      "Passing Stories": {
+        "storyIdCount": 699,
+        "uniqueStoryIdCount": 699
+      }
+    },
+    "parentReported": "699/699 native PASS; typecheck, lint154, docs, build and catalog699 examples/531 props PASS. These are parent validation results, separate from reviewer source acceptance.",
+    "reviewerReadBoundary": "Read saved native Passing Stories IDs; did not rerun native tests or other checks.",
+    "serverSsrRegeneration": "Parent reports original actual server renderer regenerated2384bytes with SHA25620d8bad8ade5784a3a7daea97d38fcb54f919e2a6f6bdf07a442b8922b300de4; reviewer did not execute generator."
+  }
+}

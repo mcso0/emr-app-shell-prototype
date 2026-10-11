@@ -1,0 +1,167 @@
+[
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrdialogshell--confirm",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrpopovershell--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrrowactionmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrtabledensityselector--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-dialog--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-dropdownmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-popover--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-sheet--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--toolbar-roving-keyboard",
+    "outcome": "fail",
+    "message": "Error: Error: Playwright selector deadline exceeded\nlocator.waitFor(visible) timed out for selector internal:label=\"Stor"
+  },
+  {
+    "mode": "dev",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--formatting-and-history",
+    "outcome": "fail",
+    "message": "Error: Error: Playwright selector deadline exceeded\nlocator.waitFor(visible) timed out for selector internal:label=\"Stor"
+  },
+  {
+    "mode": "dev",
+    "id": "features-customer-patient-guardian-profile-side-panel--today-patient-states",
+    "outcome": "fail",
+    "message": "Error: Error: Playwright selector deadline exceeded\nlocator.waitFor(visible) timed out for selector internal:label=\"Stor"
+  },
+  {
+    "mode": "dev",
+    "id": "features-staff-profile-side-panel-v2-content--work-status-ready-and-navigation",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--toolbar-roving-keyboard",
+    "outcome": "pass",
+    "targetedRecheck": true
+  },
+  {
+    "mode": "dev",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--formatting-and-history",
+    "outcome": "pass",
+    "targetedRecheck": true
+  },
+  {
+    "mode": "dev",
+    "id": "features-customer-patient-guardian-profile-side-panel--today-patient-states",
+    "outcome": "pass",
+    "targetedRecheck": true
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrdialogshell--confirm",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrpopovershell--default",
+    "outcome": "not-complete"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrrowactionmenu--default",
+    "outcome": "not-complete"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrtabledensityselector--default",
+    "outcome": "not-complete"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-dialog--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-dropdownmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrpopovershell--default",
+    "outcome": "pass",
+    "targetedRecheck": true
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrrowactionmenu--default",
+    "outcome": "pass",
+    "targetedRecheck": true
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrtabledensityselector--default",
+    "outcome": "pass",
+    "targetedRecheck": true
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-popover--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-sheet--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--toolbar-roving-keyboard",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--formatting-and-history",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-customer-patient-guardian-profile-side-panel--today-patient-states",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-staff-profile-side-panel-v2-content--work-status-ready-and-navigation",
+    "outcome": "initial-load-pending"
+  },
+  {
+    "mode": "static",
+    "id": "features-staff-profile-side-panel-v2-content--work-status-ready-and-navigation",
+    "outcome": "pass",
+    "targetedRecheck": true
+  }
+]

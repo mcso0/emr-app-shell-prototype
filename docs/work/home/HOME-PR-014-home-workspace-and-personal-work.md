@@ -14,6 +14,10 @@ updated: "2026-10-03"
 
 # Home Workspace And Personal Work
 
+## Local date and mobile regression follow-up — 2026-10-11
+
+The approved Storybook alignment candidate fixes long desktop date truncation with intrinsic control width while retaining compact sizes and badge rules. New tests cover eight viewport widths from390 to1440px, both today and another date. The390px visual test now asserts and closes the existing modal Home panel before clicking background controls; the shell interaction contract is unchanged. This follow-up changes no Home data reader, permissions or remote state. See [DESIGN-SYSTEM-PR-109](../design-system/DESIGN-SYSTEM-PR-109-origin-main-storybook-full-audit.md#final-review-regression-follow-up--2026-10-11) for local evidence and limits. No commit, push or deployment.
+
 ## Audit item5 — scoped operational reads (2026-10-03)
 
 User approved investigation, scoped implementation and local synthetic verification
@@ -341,3 +345,13 @@ Delivery: the exact candidate, manual Release Check, Ready Preview, merge,
 Production smoke and rollback deployment are recorded in the scoped PR. The
 request explicitly authorizes this work branch's direct main release; no fixed
 staging alias or branch is included.
+
+
+## 2026-10-11 local empty-state alignment follow-up
+
+- User approved the four inspected Home empty-state alignment fixes in the existing Storybook integration checkout. Commit, push, and deployment are explicitly excluded. Earlier release approvals do not extend this scope.
+- Runtime: center read-error and permission-denied beneath the toolbar; center all-statuses-hidden in the visible board area; center empty hospital lists in the visible viewport, including horizontal scrolling, while preserving table headers.
+- Preserve refresh callbacks, filters, column recovery, source navigation, loading, and populated board/list behavior. Shared empty-state components and data contracts are unchanged.
+- Storybook: 10 Home workspace stories pass, including three new variants. Geometry checks cover 1440×680 and 720×480, horizontal scroll ends, retry, filter reset, and column restoration.
+- TypeScript and focused ESLint pass. Existing application Home tests: 29 passed, 2 failed. Failures concern populated-view date text clipping and a shell navigation overlay intercepting the board toggle at 390px; these surfaces are outside this empty-state change. No baseline rerun was performed, so they are recorded as remaining verification limitations, not confirmed pre-existing failures.
+- Local evidence: `/private/tmp/clair-home-empty-align-20261011/` contains typecheck output, application test output, the preservation snapshot, and the corrected error screenshot. Human visual acceptance remains pending.

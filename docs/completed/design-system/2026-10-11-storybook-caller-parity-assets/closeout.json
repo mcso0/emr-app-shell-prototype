@@ -1,0 +1,94 @@
+{
+  "readyForHumanReview": true,
+  "createdAt": "2026-10-11T13:35:31.018152+00:00",
+  "candidateDigest": "80d1b2b3d19a04f26deab6fdc8078f2a2fc4ea9887e10768157828ede5d6847d",
+  "artifactFiles": [
+    "closeout.json",
+    "reconciliation.json",
+    "combined-matrix.json",
+    "combined-source-coverage.json",
+    "baseline-502-ids.json",
+    "candidate-manifest.json",
+    "preservation.json",
+    "native-final.json",
+    "native-index-proof.json",
+    "story-tests-final.json",
+    "story-tests-sequential.json",
+    "focused-post-reboot.json",
+    "catalog-static.json",
+    "dev-static-comparison.json",
+    "manifest-differences.json",
+    "browser-known12.json",
+    "reviewer-final.json",
+    "validation.json",
+    "typecheck-final.log",
+    "lint-final.log",
+    "docs-check.log",
+    "build-storybook.log",
+    "source-inventory.json",
+    "human-decisions.json",
+    "A/markdown-server-regeneration-result.json",
+    "A/render-markdown-server-fixture.cjs",
+    "A/matrix.json",
+    "B/matrix.json",
+    "C/matrix.json"
+  ],
+  "verificationRows": [
+    [
+      "전체 예시",
+      "699/699 native Chromium 렌더·작성된 play 통과. 자동 접근성 스캔은 실행하지 않음."
+    ],
+    [
+      "목록 보존",
+      "기존 502개 유지, 총 699개. 누락·중복 0개."
+    ],
+    [
+      "소스 검토",
+      "런타임 UI 231개 모두 분류. 추가 CSS·문서 registry 2개는 보조 근거. 컴포넌트·렌더 함수 후보 1,703개 목록도 보존."
+    ],
+    [
+      "문서·Props",
+      "130개 그룹 · 예시 699개 컴파일 · Props 531개 검사 · 오류 0개."
+    ],
+    [
+      "개발 / 정적",
+      "동일한 예시·컴포넌트 문서. 각 12개 회귀 사례 통과. 초회 로딩 지연·동적 import 실패는 같은 후보 재검사 기록과 함께 보존."
+    ],
+    [
+      "코드 검사",
+      "TypeScript, 154개 관련 파일 ESLint, 문서 링크, diff, Storybook 정적 빌드 통과."
+    ],
+    [
+      "서버 문서 예시",
+      "실제 MarkdownRenderer를 Node에서 다시 렌더한 HTML 2,384바이트가 예시와 완전히 일치. 클라이언트 hydration 검증은 제외."
+    ],
+    [
+      "보존 범위",
+      "기준 main 유지. 981개 런타임 비교에서 앞서 승인한 Home·표 4개 외 추가 차이 없음. 기본 작업 폴더의 병행 작업은 유지."
+    ],
+    [
+      "리뷰·한계",
+      "변경별 독립 소스 리뷰 완료. 합성 상태·작성된 상호작용 범위이며 운영 데이터·실제 인증·DB·RLS·결제·전체 접근성 검증은 아님."
+    ]
+  ],
+  "native": {
+    "passing": 699,
+    "a11y": false
+  },
+  "browser": {
+    "dev": 12,
+    "static": 12
+  },
+  "runtimeUiFiles": 231,
+  "sourceRows": 233,
+  "humanDecisions": 5,
+  "recoveryBoundary": "Original temporary logs lost during reboot. Native/type/lint/build/catalog/browser/SSR final evidence rerun and saved persistently. Lane reconstruction records prior observations separately; parent final evidence is authoritative.",
+  "delivery": "Local only; no commit/push/PR/merge/deploy/public exposure/user acceptance.",
+  "reportBrowserVerification": {
+    "rendered": true,
+    "searchQuery": "Billing",
+    "visibleMatches": 9,
+    "clearRestores": 699,
+    "screenshot": "report-preview.png"
+  }
+}

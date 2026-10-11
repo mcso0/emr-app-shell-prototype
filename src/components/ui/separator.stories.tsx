@@ -1,4 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { expect, userEvent } from "storybook/test";
+import { EmrRegistrationSection } from "@/components/emr/registration-dialog";
 
 import { Button } from "./button";
 import { Separator } from "./separator";
@@ -8,6 +11,7 @@ type SeparatorStoryArgs = {
 };
 
 function SeparatorExample({ orientation }: SeparatorStoryArgs) {
+  const [viewed, setViewed] = useState(false);
   if (orientation === "vertical") {
     return (
       <div className="flex h-16 items-center gap-3 rounded-md border border-border bg-card p-4">
@@ -15,9 +19,10 @@ function SeparatorExample({ orientation }: SeparatorStoryArgs) {
         <Separator orientation="vertical" />
         <span className="text-sm text-muted-foreground">보조 정보</span>
         <Separator orientation="vertical" />
-        <Button type="button" variant="outline" size="sm">
+        <Button type="button" variant="outline" size="sm" onClick={() => setViewed((value) => !value)}>
           보기
         </Button>
+        {viewed ? <output aria-label="합성 구분 영역 보기">보조 정보 선택</output> : null}
       </div>
     );
   }
@@ -46,7 +51,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use Separator to divide related groups inside one surface without creating a new panel. 사용할 때: menu groups, metadata rows, or sections need a subtle boundary. 쓰지 말아야 할 때: spacing alone is enough, or content needs a semantic heading/table boundary instead.",
+          "orientation Control은 Separator에 전달하는 실제 방향입니다. 나머지 콘텐츠와 높이는 SeparatorExample이 제공하며 구분할 영역과 배치는 호출자가 소유합니다. Use Separator to divide related groups inside one surface without creating a new panel. 사용할 때: menu groups, metadata rows, or sections need a subtle boundary. 쓰지 말아야 할 때: spacing alone is enough, or content needs a semantic heading/table boundary instead.",
       },
     },
   },
@@ -67,12 +72,33 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+function assertSeparatorGeometry(canvasElement: HTMLElement, orientation: "horizontal" | "vertical") {
+  const separators = canvasElement.querySelectorAll<HTMLElement>('[role="separator"]');
+  if (!separators.length) throw new Error("Expected a semantic separator.");
+  for (const separator of separators) {
+    const rect = separator.getBoundingClientRect();
+    if (
+      separator.dataset.orientation !== orientation ||
+      separator.getAttribute("aria-orientation") !== orientation ||
+      (orientation === "horizontal"
+        ? Math.abs(rect.height - 1) > 0.1 || rect.width < 20
+        : Math.abs(rect.width - 1) > 0.1 || rect.height < 20)
+    ) throw new Error(`The ${orientation} separator must expose its orientation and a visible 1px rule.`);
+  }
+}
+
 export const Horizontal: Story = {
+  render: () => <div className="grid max-w-xl gap-3">
+    <EmrRegistrationSection separated={false} title="보호자 정보"><p>합성 보호자 초안</p></EmrRegistrationSection>
+    <EmrRegistrationSection title="연락처 및 주소"><p>합성 연락처 초안</p></EmrRegistrationSection>
+  </div>,
+  play: async ({ canvasElement }) => assertSeparatorGeometry(canvasElement, "horizontal"),
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
-          "사용할 때: 한 surface 안에서 섹션을 조용히 나눌 때. 쓰지 말아야 할 때: heading이나 card boundary가 필요한 큰 구조.",
+          "실제 등록 폼 EmrRegistrationSection 사이의 수평 구분선입니다. section 구조와 색·방향은 원본이 소유하며 내용만 합성 문구입니다.",
       },
     },
   },
@@ -81,6 +107,11 @@ export const Horizontal: Story = {
 export const Vertical: Story = {
   args: {
     orientation: "vertical",
+  },
+  play: async ({ canvasElement, canvas }) => {
+    assertSeparatorGeometry(canvasElement, "vertical");
+    await userEvent.click(canvas.getByRole("button", { name: "보기" }));
+    await expect(canvas.getByLabelText("합성 구분 영역 보기")).toHaveTextContent("보조 정보 선택");
   },
   parameters: {
     docs: {

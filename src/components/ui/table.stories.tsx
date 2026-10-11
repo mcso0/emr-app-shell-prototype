@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { userEvent } from "storybook/test";
+import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { ChartAssessmentTable, type ChartAssessmentDiagnosis } from "@/features/chart/components/chart-assessment-table";
+import { EmrEmptyState } from "@/components/emr/empty-state";
 
 import {
   EmrPinnedTableViewport,
@@ -82,10 +85,32 @@ function TableExample({
   );
 }
 
+const syntheticDiagnoses: ChartAssessmentDiagnosis[] = [
+  { id: "synthetic-b", encounterId: "synthetic-encounter", diagnosisText: "나 합성 진단", diagnosisType: "suspected", catalogMatched: true, isPrimary: false, systemLabel: "합성 계통", createdByUserId: "synthetic-user", createdAt: "2026-10-11T00:00:00Z", sortOrder: 0 },
+  { id: "synthetic-a", encounterId: "synthetic-encounter", diagnosisText: "가 합성 진단", diagnosisType: "confirmed", catalogMatched: false, isPrimary: true, systemLabel: "미분류", createdByUserId: "synthetic-user", createdAt: "2026-10-11T00:00:00Z", sortOrder: 1 },
+];
+function AssessmentTableCaller() {
+  const [rows, setRows] = useState(syntheticDiagnoses);
+  const [receipt, setReceipt] = useState("변경 없음");
+  const update = (id: string, patch: Partial<ChartAssessmentDiagnosis>, action: string) => { setRows((current) => current.map((row) => row.id === id ? { ...row, ...patch } : row)); setReceipt(`${action}:${id}`); };
+  return <div className="grid w-full max-w-5xl gap-3"><div className="h-[300px] min-w-[680px]">
+    <ChartAssessmentTable diagnoses={rows} loading={false} writeDisabled={false} getVeterinarianName={() => "합성 수의사"}
+      onPrimaryChange={(id, checked) => update(id, { isPrimary: checked }, "primary")}
+      onConfirmedChange={(id, checked) => { const row = rows.find((value) => value.id === id); update(id, { diagnosisType: checked ? "confirmed" : row?.diagnosisType === "confirmed" ? "suspected" : row?.diagnosisType }, "confirmed"); }}
+      onClosedChange={(id, checked) => { const row = rows.find((value) => value.id === id); update(id, { closedAt: checked ? row?.closedAt ?? "2026-10-11T00:00:00Z" : undefined, closedByUserId: checked ? row?.closedByUserId ?? row?.createdByUserId : undefined }, "closed"); }}
+      onRemove={(id) => { setRows((current) => current.filter((row) => row.id !== id)); setReceipt(`remove:${id}`); }}
+      loadingState={<p role="status">합성 진단 불러오는 중</p>}
+      emptyState={<EmrEmptyState kind="no-data" priority="supporting" surface="table" title="선택된 진단이 없습니다." />} />
+  </div><output aria-label="합성 진단 변경">{receipt}</output></div>;
+}
+
 function PinnedTableExample({
   density,
   roundedHeader = false,
 }: Pick<TableStoryArgs, "density"> & { roundedHeader?: boolean }) {
+  const [selected, setSelected] = useState<string[]>(["B"]);
+  const [headerCount, setHeaderCount] = useState(0);
+  const setRowSelected = (id: string, checked: boolean) => setSelected((current) => checked ? [...current.filter((value) => value !== id), id] : current.filter((value) => value !== id));
   return (
     <EmrPinnedTableWorkspace
       className="w-[520px] overflow-hidden"
@@ -117,7 +142,7 @@ function PinnedTableExample({
               pinned="left"
               pinnedOffset={0}
             >
-              <EmrTableCheckbox aria-label="전체 선택" />
+              <EmrTableCheckbox aria-label="전체 선택" checked={selected.length === 2} indeterminate={selected.length > 0 && selected.length < 2} onCheckedChange={(checked) => setSelected(checked ? ["A", "B"] : [])} />
             </EmrTableSelectionHeaderCell>
             <EmrTableHeaderCell
               className="!p-0 overflow-hidden"
@@ -136,6 +161,7 @@ function PinnedTableExample({
                 <button
                   type="button"
                   data-testid="pinned-scroll-header-surface"
+                  onClick={() => setHeaderCount((value) => value + 1)}
                   className="inline-flex min-h-6 items-center rounded-lg bg-[var(--emr-state-hover)] px-2.5 py-1 text-xs"
                 >
                   상태
@@ -151,14 +177,14 @@ function PinnedTableExample({
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow>
+          <TableRow data-state={selected.includes("A") ? "selected" : undefined}>
             <EmrTableSelectionCell
               className="w-11 min-w-11 max-w-11"
               controlVisibility="contextual"
               pinned="left"
               pinnedOffset={0}
             >
-              <EmrTableCheckbox aria-label="합성 환자 A 선택" />
+              <EmrTableCheckbox aria-label="합성 환자 A 선택" checked={selected.includes("A")} onCheckedChange={(checked) => setRowSelected("A", Boolean(checked))} />
             </EmrTableSelectionCell>
             <TableCell
               className="!p-0 overflow-hidden"
@@ -188,14 +214,14 @@ function PinnedTableExample({
               보기
             </TableCell>
           </TableRow>
-          <TableRow data-state="selected">
+          <TableRow data-state={selected.includes("B") ? "selected" : undefined}>
             <EmrTableSelectionCell
               className="w-11 min-w-11 max-w-11"
               controlVisibility="contextual"
               pinned="left"
               pinnedOffset={0}
             >
-              <EmrTableCheckbox aria-label="합성 환자 B 선택" checked />
+              <EmrTableCheckbox aria-label="합성 환자 B 선택" checked={selected.includes("B")} onCheckedChange={(checked) => setRowSelected("B", Boolean(checked))} />
             </EmrTableSelectionCell>
             <TableCell pinned="left" pinnedOffset={44} pinnedEdge>
               합성 환자 B
@@ -221,6 +247,8 @@ function PinnedTableExample({
         </TableBody>
       </Table>
       </EmrPinnedTableViewport>
+      <output aria-label="합성 테이블 선택">{selected.length ? selected.join(" · ") : "선택 없음"}</output>
+      {roundedHeader ? <output aria-label="합성 헤더 작업">실행 {headerCount}회</output> : null}
     </EmrPinnedTableWorkspace>
   );
 }
@@ -278,13 +306,34 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: 같은 column 구조를 가진 업무 목록을 비교할 때. 쓰지 말아야 할 때: 각 항목이 서로 다른 상세 UI를 가져야 하는 카드 목록.",
-      },
-    },
+  render: () => <AssessmentTableCaller />,
+  parameters: { controls: { disable: true }, docs: { description: { story: "실제 ChartAssessmentTable의 Table·헤더·체크박스·행·삭제 구성을 사용합니다. chart/module의 행별 주진단·확진·종결 변경을 로컬 합성 행에 반영합니다. 정렬은 원본이 처리합니다. 임상 판단·저장·서버 권한은 검증하지 않습니다. 기존 고객 실제 목록과 차트 finance 예제는 그대로 유지합니다." } } },
+  play: async ({ canvas, canvasElement }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "진단명 정렬" }));
+    await waitFor(() => expect(canvasElement.querySelector('[data-slot="chart-assessment-table-row"]')).toHaveTextContent("가 합성 진단"));
+    await userEvent.click(canvas.getByRole("button", { name: "진단명 정렬" }));
+    await waitFor(() => expect(canvasElement.querySelector('[data-slot="chart-assessment-table-row"]')).toHaveTextContent("나 합성 진단"));
+    for (const [name, action] of [["주진단", "primary"], ["확진", "confirmed"], ["종결", "closed"]]) {
+      const control = canvas.getByRole("checkbox", { name: `나 합성 진단 ${name}` });
+      await userEvent.click(control); await waitFor(() => { expect(control).toHaveAttribute("aria-checked", "true"); expect(canvas.getByLabelText("합성 진단 변경")).toHaveTextContent(`${action}:synthetic-b`); });
+    }
+    for (const label of ["나 합성 진단", "가 합성 진단"]) {
+      const button = canvas.getByRole("button", { name: `${label} 삭제` });
+      if (label === "나 합성 진단") {
+        await userEvent.hover(button.closest("tr")!); await userEvent.click(button);
+      } else {
+        button.focus(); await expect(button).toHaveFocus();
+        await waitFor(() => expect(getComputedStyle(button.closest('[data-slot="chart-assessment-delete-overlay"]')!).pointerEvents).toBe("auto"));
+        await userEvent.keyboard("{Enter}");
+      }
+      await waitFor(() => expect(canvas.queryByRole("checkbox", { name: `${label} 주진단` })).not.toBeInTheDocument());
+    }
+    // The source empty state enters with a 150ms fade. Wait for its visible
+    // outcome after the last row is removed; DOM presence alone is earlier.
+    await waitFor(() => {
+      expect(canvas.getByText("선택된 진단이 없습니다.")).toBeVisible();
+      expect(canvas.getByRole("table", { name: "진단명 목록" })).toBeVisible();
+    });
   },
 };
 
@@ -320,10 +369,10 @@ export const ScrollLayout: Story = {
     const styles = getComputedStyle(container);
     if (
       styles.overscrollBehaviorX !== "none" ||
-      styles.overscrollBehaviorY !== "auto"
+      styles.overscrollBehaviorY !== "none"
     ) {
       throw new Error(
-        "The default scroll table must block horizontal overscroll without trapping vertical page scroll.",
+        "The current app-wide CSS blocks overscroll on both axes; the story must reflect that source behavior.",
       );
     }
   },
@@ -331,7 +380,7 @@ export const ScrollLayout: Story = {
     docs: {
       description: {
         story:
-          "사용할 때: column 수가 많아 최소 너비를 유지해야 할 때. 쓰지 말아야 할 때: 작은 표를 불필요하게 가로 스크롤로 숨길 때.",
+          "사용할 때: column 수가 많아 최소 너비를 유지해야 할 때. 쓰지 말아야 할 때: 작은 표를 불필요하게 가로 스크롤로 숨길 때. 현재 globals.css의 스크롤 뷰포트 대상 overscroll-behavior: none !important가 Table의 horizontal 기본값보다 우선하여 양축의 스크롤 연결을 막습니다. 이 예제는 현재 main 동작을 검증하며 세로 스크롤 연결 개선을 증명하지 않습니다.",
       },
     },
   },
@@ -386,6 +435,7 @@ export const BothAxisOverscroll: Story = {
     }
   },
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
@@ -500,7 +550,7 @@ function pinnedColumnsPlay(roundedHeader: boolean): NonNullable<Story["play"]> {
     const initialDimmerLeft = dimmer.getBoundingClientRect().left;
     const initialDividerLeft = divider.getBoundingClientRect().left;
     container.scrollLeft = 240;
-    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await waitFor(() => { expect(container.scrollLeft).toBeGreaterThan(0); expect(viewport).toHaveAttribute("data-overflow-x-start"); });
 
     if (table.dataset.emrPinning !== "columns") {
       throw new Error("Table did not expose the shared pinning mode.");
@@ -543,13 +593,7 @@ function pinnedColumnsPlay(roundedHeader: boolean): NonNullable<Story["play"]> {
     }
 
     container.scrollLeft = 0;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      if (
-        container.scrollLeft === 0 &&
-        !viewport.hasAttribute("data-overflow-x-start")
-      ) break;
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-    }
+    await waitFor(() => { expect(container.scrollLeft).toBe(0); expect(viewport).not.toHaveAttribute("data-overflow-x-start"); });
     if (
       container.scrollLeft !== 0 ||
       viewport.hasAttribute("data-overflow-x-start")
@@ -664,13 +708,7 @@ function pinnedColumnsPlay(roundedHeader: boolean): NonNullable<Story["play"]> {
     }
     try {
       container.scrollLeft = 120;
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        if (
-          container.scrollLeft > 0 &&
-          viewport.hasAttribute("data-overflow-x-start")
-        ) break;
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-      }
+      await waitFor(() => { expect(container.scrollLeft).toBeGreaterThan(0); expect(viewport).toHaveAttribute("data-overflow-x-start"); expect(getComputedStyle(dimmer).opacity).toBe("1"); });
       if (
         container.scrollLeft <= 0 ||
         !viewport.hasAttribute("data-overflow-x-start")
@@ -711,7 +749,7 @@ function pinnedColumnsPlay(roundedHeader: boolean): NonNullable<Story["play"]> {
       }
     } finally {
       container.scrollLeft = 0;
-      await new Promise((resolve) => requestAnimationFrame(resolve));
+      await waitFor(() => { expect(container.scrollLeft).toBe(0); expect(viewport).not.toHaveAttribute("data-overflow-x-start"); });
     }
 
     const firstBodyRow = table.querySelector(
@@ -763,10 +801,21 @@ function pinnedColumnsPlay(roundedHeader: boolean): NonNullable<Story["play"]> {
         "Pinned table has more than one horizontal overflow owner.",
       );
     }
+    const canvas = within(canvasElement);
+    const all = canvas.getByRole("checkbox", { name: "전체 선택" });
+    await expect(all).toHaveAttribute("aria-checked", "mixed");
+    await userEvent.click(all);
+    await waitFor(() => { expect(all).toHaveAttribute("aria-checked", "true"); expect(table.querySelectorAll('tbody tr[data-state="selected"]')).toHaveLength(2); });
+    await userEvent.click(canvas.getByRole("checkbox", { name: "합성 환자 A 선택" }));
+    await waitFor(() => expect(canvas.getByLabelText("합성 테이블 선택")).toHaveTextContent("B"));
+    await userEvent.click(canvas.getByRole("checkbox", { name: "합성 환자 B 선택" }));
+    await waitFor(() => { expect(canvas.getByLabelText("합성 테이블 선택")).toHaveTextContent("선택 없음"); expect(table.querySelectorAll('tbody tr[data-state="selected"]')).toHaveLength(0); });
+    if (roundedHeader) { await userEvent.click(firstScrollHeaderSurface); await expect(canvas.getByLabelText("합성 헤더 작업")).toHaveTextContent("실행 1회"); }
   };
 }
 
 export const PinnedColumns: Story = {
+  argTypes: { layout: { control: false, table: { disable: true } }, minWidth: { control: false, table: { disable: true } }, pinning: { control: false, table: { disable: true } }, showCaption: { control: false, table: { disable: true } } },
   render: (args) => <PinnedTableExample density={args.density} />,
   play: pinnedColumnsPlay(false),
   parameters: {
@@ -779,6 +828,7 @@ export const PinnedColumns: Story = {
 };
 
 export const PinnedColumnsRoundedContent: Story = {
+  argTypes: { layout: { control: false, table: { disable: true } }, minWidth: { control: false, table: { disable: true } }, pinning: { control: false, table: { disable: true } }, showCaption: { control: false, table: { disable: true } } },
   render: (args) => <PinnedTableExample density={args.density} roundedHeader />,
   play: pinnedColumnsPlay(true),
   parameters: {
@@ -791,6 +841,8 @@ export const PinnedColumnsRoundedContent: Story = {
 };
 
 export const EmptyRows: Story = {
+  argTypes: { minWidth: { control: false, table: { disable: true } }, pinning: { control: false, table: { disable: true } }, showCaption: { control: false, table: { disable: true } } },
+  play: async ({ canvas }) => { await expect(canvas.getByRole("cell", { name: "조건에 맞는 샘플 행이 없습니다." })).toHaveAttribute("colspan", "2"); await expect(canvas.getAllByRole("columnheader")).toHaveLength(2); },
   render: (args) => (
     <Table density={args.density} layout={args.layout}>
       <TableHeader>

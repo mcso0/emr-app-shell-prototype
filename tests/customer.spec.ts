@@ -814,7 +814,12 @@ test("customer patient table keeps animal identity pinned while data columns scr
     await Promise.all([
       pageHeading.boundingBox(),
       searchInput.boundingBox(),
-      animalHeaderLabel.boundingBox(),
+      animalHeaderLabel.evaluate((element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        const rect = range.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      }),
       animalNameText.boundingBox(),
       footerTotal.boundingBox(),
     ]);
@@ -825,8 +830,10 @@ test("customer patient table keeps animal identity pinned while data columns scr
   expect(animalNameBox).not.toBeNull();
   expect(footerTotalBox).not.toBeNull();
   expect(Math.abs(searchBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(headerLabelBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
-  expect(Math.abs(animalNameBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+  // The requested 10px cell inset moves table text 6px beyond the existing
+  // 48px workspace title/search axis (44px selection column + 10px).
+  expect(Math.abs(headerLabelBox!.x - headingBox!.x - 6)).toBeLessThanOrEqual(1);
+  expect(Math.abs(animalNameBox!.x - headerLabelBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(footerTotalBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
 
   await scrollContainer.evaluate((container) => {
@@ -894,11 +901,11 @@ test("customer patient table keeps animal identity pinned while data columns scr
     expect(
       surfaceBox!.x - (edgeBox!.x + edgeBox!.width),
       `${label} inset`,
-    ).toBeGreaterThanOrEqual(9);
+    ).toBeGreaterThanOrEqual(label === "header" ? 9 : 19);
     expect(
       surfaceBox!.x - (edgeBox!.x + edgeBox!.width),
       `${label} inset`,
-    ).toBeLessThanOrEqual(11);
+    ).toBeLessThanOrEqual(label === "header" ? 11 : 21);
     expect(surfaceBox!.x).toBeGreaterThanOrEqual(cellBox!.x - 1);
     expect(surfaceBox!.y).toBeGreaterThanOrEqual(cellBox!.y - 1);
     expect(surfaceBox!.x + surfaceBox!.width).toBeLessThanOrEqual(
@@ -946,7 +953,12 @@ test("customer patient table keeps animal identity pinned while data columns scr
 
   const [patientCodeHeaderLabelBox, patientCodeBodySurfaceBox] =
     await Promise.all([
-      patientCodeHeaderLabel.boundingBox(),
+      patientCodeHeaderLabel.evaluate((element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        const rect = range.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      }),
       firstPatientCodeSurface.boundingBox(),
     ]);
   expect(patientCodeHeaderLabelBox).not.toBeNull();
@@ -976,8 +988,16 @@ test("customer patient table keeps animal identity pinned while data columns scr
     ["subsequent body", contentHookStyles[2]],
   ] as const) {
     expect(styles.marginInlineStart, `${label} content margin`).toBe("10px");
-    expect(styles.paddingInlineStart, `${label} content padding`).toBe("0px");
+    expect(styles.paddingInlineStart, `${label} content padding`).toBe(label === "header" ? "0px" : "10px");
   }
+
+  // Keep the 10px outer boundary gap separate from the 8px button padding
+  // and 2px label inset. Rich body badges retain their own inner padding.
+  await expect(patientCodeHeaderSurface).toHaveCSS("padding-left", "8px");
+  await expect(patientCodeHeaderSurface).toHaveCSS("padding-right", "8px");
+  await expect(patientCodeHeaderLabel).toHaveCSS("padding-left", "2px");
+  await expect(firstPatientCodeSurface).toHaveCSS("padding-left", "6px");
+  await expect(firstPatientCodeSurface).toHaveCSS("padding-right", "6px");
 
   const edgeStyles = await Promise.all(
     [pinnedHeaderEdge, firstPinnedBodyEdge].map((edge) =>
@@ -1277,22 +1297,25 @@ test("customer tables keep fixed identity widths when the viewport grows and the
     const selectionHeader = table.locator('th[data-column-id="select"]');
     const identityHeader = table.locator('th[data-column-id="name"]');
     const identityCell = table.locator('tbody tr:first-child td[data-column-id="name"]');
-    const heading = section.getByRole("heading", { name: list.title, exact: true });
-    const headerText = identityHeader.locator('[data-emr-table-identity-text="true"]');
-    const bodyText = identityCell.locator('[data-emr-cell-text-mode]');
 
     for (const width of [1900, 1000]) {
       await page.setViewportSize({ width, height: 1024 });
       await expect(selectionHeader).toHaveCSS("width", "44px");
       await expect(identityHeader).toHaveCSS("width", "184px");
       await expect(identityCell).toHaveCSS("width", "184px");
-      const [headingBox, headerBox, bodyBox] = await Promise.all([
-        heading.boundingBox(),
-        headerText.boundingBox(),
-        bodyText.boundingBox(),
-      ]);
-      expect(Math.abs(headerBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
-      expect(Math.abs(bodyBox!.x - headingBox!.x)).toBeLessThanOrEqual(1);
+      // Measure one frame after the sidebar/viewport transition settles.
+      await expect.poll(() => section.evaluate((element) => {
+        const heading = element.querySelector("h1")!;
+        const header = element.querySelector('th[data-column-id="name"] [data-emr-table-identity-text="true"]')!;
+        const body = element.querySelector('tbody tr:first-child td[data-column-id="name"] [data-emr-cell-text-mode]')!;
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(header);
+        const textLeft = range.getBoundingClientRect().left;
+        return Math.max(
+          Math.abs(textLeft - heading.getBoundingClientRect().left - 6),
+          Math.abs(body.getBoundingClientRect().left - textLeft),
+        );
+      })).toBeLessThanOrEqual(1);
     }
 
     await page.setViewportSize({ width: 1900, height: 1024 });

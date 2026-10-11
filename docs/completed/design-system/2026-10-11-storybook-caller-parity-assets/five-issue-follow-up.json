@@ -1,0 +1,57 @@
+{
+  "scope": "Five locally approved product fixes; no commit, push, PR, merge, deployment or live-data action.",
+  "sourceFiles": {
+    "docs/engineering/current-status.md": "81a475b6751d6b466d2964d16ef4566d81ad435b4c2e95337b4446a3b66db62c",
+    "docs/work/design-system/DESIGN-SYSTEM-PR-109-origin-main-storybook-full-audit.md": "aa13d6dd52aae270c7c9d0e54eb2b6211495d2b3a4bea2fad56ad47f7f670f9f",
+    "docs/work/design-system/DESIGN-SYSTEM-PR-109-storybook-alignment-orchestration-plan.md": "32eea6ea1b86d933cfc1555b1fb70c9de2e2d0b41cfe37d30c61892ccce8e5c4",
+    "docs/work/index.md": "2e644fac3966ef87aa949d6b026067ed9983a0fd4294bbab1e932beb42a1b9d3",
+    "src/components/emr/order-group-section.stories.tsx": "b6bd861ab9ac516b8935aa1301e558a823786b61c9676e4166f2269aa308ea32",
+    "src/features/chart/components/chart-soap-live-block-editor.stories.tsx": "a5ba30979273779c5f089fea4bce6979e96d9ccc6e605e5eb08cbd5e855c7ce6",
+    "src/features/chart/components/chart-soap-live-block-editor.tsx": "e8b7f6b491bd7d94b7d69ab2d03bca73190fa6d9fb5f1e2d6061a456f1729431",
+    "src/features/dispensing/components/order-work-table.tsx": "f12b31fffb9d575a70bddd33c9ebc44152f5746ed31ca6fbabda4088def027bb",
+    "src/features/dispensing/module.tsx": "6a97915b8f04a3516294c024ff313171669e07bc85d4d434c50a9248131cfd35",
+    "src/features/hospital-admin/schedule/components/schedule-shift-editor-sheet.tsx": "2e610945a7f88d905033ab62fbe91e59b08e17eec172717d0b472ed286445f38",
+    "src/features/hospital-admin/schedule/schedule-v2-screen.stories.tsx": "d599d6bd742e877bfbf9eaa9060760933013640d8a1c0f939d1fc9a80e339a56",
+    "src/features/hospital-admin/schedule/schedule-v2-screen.tsx": "9ca6c0e3f47bc55e2df6496a205533707efbf600dcf27942119f1abf4a7ec487",
+    "src/features/inpatient/inpatient-workspace.stories.tsx": "982031d8fce45b21ba603775fdd1d58bcb5ab089eecbc15307bf8acfe3ef2ad0",
+    "src/features/inpatient/module.tsx": "e007d6609160df3df1fb492cc55589abd767a66c700b1d1630f3d6c0d7406b10",
+    "src/shell/global-command-palette.tsx": "8e90536d64bad178dca49d233fbe7ba2664045974f28d41adc081e9cabab9720",
+    "src/shell/nav-rail.tsx": "76faecc2cd35f40ab8dab1d9c92346c389d2c158704cf9efcdc5ea87602cd079",
+    "src/shell/top-menu.tsx": "0b4e17a5ab945dcc5e29f88d7568fad0f604a4a1314b8bd09a62f2898dbd34f2",
+    "src/shell/workspace-tabs-bar.tsx": "2ec303581af13420c3a83ff4e05500e94eb6f2315fc56d9747841a33fd9e03c8",
+    "src/stories/app-shell-caller-parity.stories.tsx": "6d6885030be68c1ca5e788ba9c633a47a9d00fc821488381ed73caf50ff89de3"
+  },
+  "verification": {
+    "focusedCases": 53,
+    "native": {
+      "expected": 701,
+      "passed": 701,
+      "missing": [],
+      "unknown": [],
+      "a11yScanner": false,
+      "rerunIncluded": true
+    },
+    "existingLocalContracts": 8,
+    "typecheck": "pass",
+    "changedFileLint": "15 files, zero errors/warnings",
+    "repositoryLint": "6 pre-existing errors in immutable report CJS generator;5 unrelated script warnings",
+    "staticStorybookBuild": "pass",
+    "allPriorStoryIdsRetained": 699,
+    "newStoryIds": [
+      "features-hospital-admin-schedule-screen--failed-save-preserves-draft-and-retry",
+      "features-hospital-admin-schedule-screen--unsaved-close-guard"
+    ]
+  },
+  "preservation": {
+    "primaryHashedFiles": 4683,
+    "primaryHashDrift": [],
+    "candidateUnrelatedHashDrift": [],
+    "headsUnchanged": true,
+    "limitation": "Three existing non-ASCII paths were not captured by the original hash snapshot because git quoted their names; no claim of before/after hash proof for these paths."
+  },
+  "limits": [
+    "Synthetic local UI and server-core tests; no live workspace proof.",
+    "Initial CLI and native test failures remain in evidence; targeted reruns passed without changing those unrelated tests.",
+    "Existing420px dense order-group header crowding is not repaired; new preparation suffixes are hidden visually below sm to preserve control width."
+  ]
+}

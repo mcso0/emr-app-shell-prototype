@@ -1,0 +1,122 @@
+[
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrdialogshell--confirm",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrpopovershell--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrrowactionmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-emr-emrtabledensityselector--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-dialog--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-dropdownmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-popover--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "design-system-ui-sheet--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--toolbar-roving-keyboard",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--formatting-and-history",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-customer-patient-guardian-profile-side-panel--today-patient-states",
+    "outcome": "pass"
+  },
+  {
+    "mode": "static",
+    "id": "features-staff-profile-side-panel-v2-content--work-status-ready-and-navigation",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrdialogshell--confirm",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrpopovershell--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrrowactionmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-emr-emrtabledensityselector--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-dialog--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-dropdownmenu--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-popover--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "design-system-ui-sheet--default",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--toolbar-roving-keyboard",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "features-chart-soap-live-blocknote-figma-prototype--formatting-and-history",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "features-customer-patient-guardian-profile-side-panel--today-patient-states",
+    "outcome": "pass"
+  },
+  {
+    "mode": "dev",
+    "id": "features-staff-profile-side-panel-v2-content--work-status-ready-and-navigation",
+    "outcome": "pass"
+  }
+]

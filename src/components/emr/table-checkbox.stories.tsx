@@ -1,8 +1,46 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState, type ComponentProps } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { EmrTableHeaderCell, EmrTableSelectionCell, EmrTableSelectionHeaderCell } from "./table-primitives";
 
 import { EmrTableCheckbox } from "./table-checkbox";
+
+function CheckboxExample({ header = false, ...args }: ComponentProps<typeof EmrTableCheckbox> & { header?: boolean }) {
+  const [checked, setChecked] = useState(Boolean(args.checked));
+  const [mixed, setMixed] = useState(Boolean(args.indeterminate));
+  const control = <span className="inline-flex size-6 items-center justify-center" data-row-interactive="true">
+    <EmrTableCheckbox {...args} checked={checked} indeterminate={mixed} onCheckedChange={(next) => { setChecked(next); setMixed(false); }} />
+  </span>;
+  return <div className="max-w-md">
+    <Table density="standard" layout="fill">
+      <TableHeader><TableRow>{header ? <EmrTableSelectionHeaderCell>{control}</EmrTableSelectionHeaderCell> : <EmrTableSelectionHeaderCell>선택</EmrTableSelectionHeaderCell>}<EmrTableHeaderCell>합성 항목</EmrTableHeaderCell></TableRow></TableHeader>
+      <TableBody><TableRow data-state={checked ? "selected" : undefined}><EmrTableSelectionCell>{header ? "—" : control}</EmrTableSelectionCell><TableCell>현재 표시한 행</TableCell></TableRow></TableBody>
+    </Table>
+    <output aria-label="선택 상태">{mixed ? "일부 선택" : checked ? "선택됨" : "선택 안 됨"}</output>
+  </div>;
+}
+
+async function verifyCheckbox(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement), checkbox = canvas.getByRole("checkbox");
+  const before = checkbox.getAttribute("aria-checked");
+  checkbox.focus();
+  if (checkbox.hasAttribute("disabled") || checkbox.getAttribute("aria-disabled") === "true") {
+    await expect(checkbox).toHaveAttribute("aria-disabled", "true");
+    await expect(checkbox).toHaveAttribute("tabindex", "-1");
+    await userEvent.keyboard(" ");
+    await expect(checkbox).toHaveAttribute("aria-checked", before!);
+    await userEvent.click(checkbox);
+    await expect(checkbox).toHaveAttribute("aria-checked", before!);
+    await expect(canvas.getByLabelText("선택 상태")).toHaveTextContent("선택됨");
+    return;
+  }
+  await userEvent.keyboard(" ");
+  const next = before === "true" ? "false" : "true";
+  await waitFor(() => expect(checkbox).toHaveAttribute("aria-checked", next));
+  await expect(canvas.getByLabelText("선택 상태")).toHaveTextContent(next === "true" ? "선택됨" : "선택 안 됨");
+}
 
 const meta = {
   title: "Design System/EMR/EmrTableCheckbox",
@@ -41,6 +79,7 @@ const meta = {
     checkedTone: "neutral",
     disabled: false,
   },
+  render: (args) => <CheckboxExample key={`${args.checked}:${args.indeterminate}`} {...args} />,
 } satisfies Meta<typeof EmrTableCheckbox>;
 
 export default meta;
@@ -48,12 +87,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RowSelection: Story = {
-  render: (args) => (
-    <Field orientation="horizontal">
-      <EmrTableCheckbox id="sample-table-checkbox-row" {...args} />
-      <FieldLabel htmlFor="sample-table-checkbox-row">샘플 행 선택</FieldLabel>
-    </Field>
-  ),
+  play: async ({ canvasElement }) => verifyCheckbox(canvasElement),
   parameters: {
     docs: {
       description: {
@@ -69,12 +103,8 @@ export const HeaderSelection: Story = {
     checked: true,
     "aria-label": "샘플 전체 행 선택",
   },
-  render: (args) => (
-    <Field orientation="horizontal">
-      <EmrTableCheckbox id="sample-table-checkbox-header" {...args} />
-      <FieldLabel htmlFor="sample-table-checkbox-header">전체 선택 예시</FieldLabel>
-    </Field>
-  ),
+  render: (args) => <CheckboxExample key={`${args.checked}:${args.indeterminate}`} {...args} header />,
+  play: async ({ canvasElement }) => verifyCheckbox(canvasElement),
   parameters: {
     docs: {
       description: {
@@ -90,17 +120,8 @@ export const HeaderIndeterminate: Story = {
     indeterminate: true,
     "aria-label": "샘플 일부 행 선택",
   },
-  render: (args) => (
-    <Field orientation="horizontal">
-      <EmrTableCheckbox
-        id="sample-table-checkbox-indeterminate"
-        {...args}
-      />
-      <FieldLabel htmlFor="sample-table-checkbox-indeterminate">
-        일부 행 선택 예시
-      </FieldLabel>
-    </Field>
-  ),
+  render: (args) => <CheckboxExample key={`${args.checked}:${args.indeterminate}`} {...args} header />,
+  play: async ({ canvasElement }) => verifyCheckbox(canvasElement),
   parameters: {
     docs: {
       description: {
@@ -116,12 +137,7 @@ export const Disabled: Story = {
     checked: true,
     disabled: true,
   },
-  render: (args) => (
-    <Field orientation="horizontal">
-      <EmrTableCheckbox id="sample-table-checkbox-disabled" {...args} />
-      <FieldLabel htmlFor="sample-table-checkbox-disabled">잠긴 샘플 행</FieldLabel>
-    </Field>
-  ),
+  play: async ({ canvasElement }) => verifyCheckbox(canvasElement),
   parameters: {
     docs: {
       description: {
@@ -138,14 +154,7 @@ export const BrandChecked: Story = {
     checkedTone: "brand",
     "aria-label": "샘플 주진단",
   },
-  render: (args) => (
-    <Field orientation="horizontal">
-      <EmrTableCheckbox id="sample-table-checkbox-brand" {...args} />
-      <FieldLabel htmlFor="sample-table-checkbox-brand">
-        주진단 선택 예시
-      </FieldLabel>
-    </Field>
-  ),
+  play: async ({ canvasElement }) => verifyCheckbox(canvasElement),
   parameters: {
     docs: {
       description: {

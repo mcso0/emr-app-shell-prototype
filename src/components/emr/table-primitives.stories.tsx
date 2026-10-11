@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useEffect, useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import {
   Table,
@@ -23,49 +25,80 @@ function TablePrimitivesExample({
   sortDirection,
   textMode,
 }: TablePrimitivesArgs) {
+  const [activeFilter, setActiveFilter] = useState(filterActive);
+  const [activeMenu, setActiveMenu] = useState(menuActive);
+  const [direction, setDirection] = useState(sortDirection);
+  const [width, setWidth] = useState(240);
+  const [drag, setDrag] = useState<{ x: number; width: number } | null>(null);
+  useEffect(() => {
+    if (!drag) return;
+    const move = (event: MouseEvent | TouchEvent) => {
+      const x = "touches" in event ? event.touches[0]?.clientX : event.clientX;
+      if (x === undefined) return;
+      if (event.cancelable) event.preventDefault();
+      setWidth(Math.max(120, drag.width + x - drag.x));
+    };
+    const stop = () => setDrag(null);
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", stop);
+    document.addEventListener("touchmove", move, { passive: false });
+    document.addEventListener("touchend", stop);
+    return () => { document.removeEventListener("mousemove", move); document.removeEventListener("mouseup", stop); document.removeEventListener("touchmove", move); document.removeEventListener("touchend", stop); };
+  }, [drag]);
+  const rows = [
+    { id: "a", text: "긴 합성 텍스트가 들어오는 테이블 셀 예시입니다. 실제 환자, 보호자, 병원, 결제, 신원 정보는 포함하지 않습니다.", value: "샘플 값" },
+    { id: "b", text: "추가 합성 텍스트", value: "추가 값" },
+  ].filter(row => !activeFilter || row.id === "a").sort((a, b) => direction === "desc" ? b.id.localeCompare(a.id) : a.id.localeCompare(b.id));
   return (
-    <Table density="standard" layout="fill">
+    <div><Table density="standard" layout="fill">
       <TableHeader>
         <TableRow>
           <EmrTableHeaderCell
             data-testid="sortable-header"
             interaction="sortable-filterable"
-            sortDirection={sortDirection}
-            filterActive={filterActive}
-            onSort={() => undefined}
-            onFilter={() => undefined}
+            sortDirection={direction}
+            filterActive={activeFilter}
+            onSort={() => setDirection(value => value === "asc" ? "desc" : "asc")}
+            onFilter={() => setActiveFilter(value => !value)}
           >
             샘플 컬럼
           </EmrTableHeaderCell>
           <EmrTableHeaderCell
             interaction="menu"
-            menuActive={menuActive}
-            onMenu={() => undefined}
+            menuActive={activeMenu}
+            onMenu={() => setActiveMenu(value => !value)}
           >
             메뉴 컬럼
           </EmrTableHeaderCell>
           <EmrTableHeaderCell
             data-testid="plain-resizable-header"
             resize="data-column"
-            onResizeMouseDown={() => undefined}
+            style={{ width }}
+            onResizeMouseDown={event => { event.preventDefault(); setDrag({ x: event.clientX, width }); }}
+            onResizeTouchStart={event => { const touch = event.touches[0]; if (touch) setDrag({ x: touch.clientX, width }); }}
+            onResizeDoubleClick={() => setWidth(240)}
+            onResizeKeyDown={event => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return; event.preventDefault(); setWidth(value => Math.max(120, value + (event.key === "ArrowRight" ? 8 : -8))); }}
           >
             기본 텍스트 컬럼
           </EmrTableHeaderCell>
         </TableRow>
       </TableHeader>
       <TableBody>
-        <TableRow>
+        {rows.map(row => <TableRow key={row.id}>
           <TableCell>
             <EmrTableCellText mode={textMode}>
-              긴 합성 텍스트가 들어오는 테이블 셀 예시입니다. 실제 환자, 보호자, 병원, 결제, 신원 정보는 포함하지 않습니다.
+              {row.text}
             </EmrTableCellText>
           </TableCell>
           <TableCell>
-            <EmrTableCellText mode="one-line">샘플 값</EmrTableCellText>
+            <EmrTableCellText mode="one-line">{row.value}</EmrTableCellText>
           </TableCell>
-        </TableRow>
+          <TableCell>
+            <EmrTableCellText mode="one-line">샘플 기본 값</EmrTableCellText>
+          </TableCell>
+        </TableRow>)}
       </TableBody>
-    </Table>
+    </Table><output aria-label="컬럼 상태">표시 {rows.length}건 · 메뉴 {activeMenu ? "열림" : "닫힘"} · 너비 {width}px</output></div>
   );
 }
 
@@ -75,6 +108,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "420px" },
       description: {
         component:
           "Use EMR table primitives for shared header interaction affordances and controlled cell text wrapping/truncation. 사용할 때: a data grid needs consistent sort, filter, menu, resize, or text-mode behavior. 쓰지 말아야 할 때: non-table layouts or feature-specific cell logic that belongs in the table owner.",
@@ -107,15 +141,48 @@ const meta = {
     sortDirection: "asc",
     textMode: "two-line-if-long",
   },
-  render: (args) => <TablePrimitivesExample {...args} />,
+  render: (args) => <TablePrimitivesExample key={`${args.filterActive}:${args.menuActive}:${args.sortDirection}`} {...args} />,
 } satisfies Meta<TablePrimitivesArgs>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+async function verifyInteractions(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  const header = canvas.getByTestId("sortable-header");
+  const beforeSort = header.getAttribute("aria-sort");
+  const sort = canvas.getByRole("button", { name: "샘플 컬럼 정렬" });
+  sort.focus(); await userEvent.keyboard("{Enter}");
+  await expect(header).toHaveAttribute("aria-sort", beforeSort === "ascending" ? "descending" : "ascending");
+  const filter = canvas.getByRole("button", { name: "샘플 컬럼 필터" });
+  const beforeFilter = filter.getAttribute("aria-pressed");
+  await userEvent.click(filter);
+  await expect(filter).toHaveAttribute("aria-pressed", beforeFilter === "true" ? "false" : "true");
+  await expect(canvasElement.querySelectorAll("tbody tr")).toHaveLength(beforeFilter === "true" ? 2 : 1);
+  const menu = canvas.getByRole("button", { name: "메뉴 컬럼 컬럼 메뉴" });
+  const beforeMenu = menu.getAttribute("aria-pressed");
+  await userEvent.click(menu);
+  await expect(canvas.getByLabelText("컬럼 상태")).toHaveTextContent(beforeMenu === "true" ? "메뉴 닫힘" : "메뉴 열림");
+  const grip = canvas.getByRole("button", { name: "기본 텍스트 컬럼 컬럼 너비 조절" });
+  grip.focus(); await userEvent.keyboard("{ArrowRight}");
+  await waitFor(() => expect(canvas.getByLabelText("컬럼 상태")).toHaveTextContent("너비 248px"));
+  await expect(canvas.getByTestId("plain-resizable-header")).toHaveStyle({ width: "248px" });
+}
+
 export const HeaderAndCellText: Story = {
   play: async ({ canvasElement }) => {
+    const headerCells = canvasElement.querySelectorAll("thead th");
+    const bodyRows = canvasElement.querySelectorAll("tbody tr");
+    if (
+      headerCells.length !== 3 ||
+      bodyRows.length !== 1 ||
+      Array.from(bodyRows).some(
+        (row) => row.querySelectorAll("td").length !== headerCells.length,
+      )
+    ) {
+      throw new Error("Table primitive example must align all three header and body columns.");
+    }
     const sortableLabel = canvasElement.querySelector(
       '[data-testid="sortable-header"] [data-emr-table-content="true"] > button',
     ) as HTMLButtonElement | null;
@@ -176,6 +243,7 @@ export const HeaderAndCellText: Story = {
         "Column resize handle must stay vertically centered in the table header.",
       );
     }
+    await verifyInteractions(canvasElement);
   },
   parameters: {
     docs: {
@@ -188,6 +256,7 @@ export const HeaderAndCellText: Story = {
 };
 
 export const Multiline: Story = {
+  play: async ({ canvasElement }) => verifyInteractions(canvasElement),
   args: {
     filterActive: false,
     menuActive: true,

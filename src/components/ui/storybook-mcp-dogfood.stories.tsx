@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent } from "storybook/test";
 
 import { StorybookMcpDogfoodSearch } from "./storybook-mcp-dogfood-search";
 
@@ -35,6 +36,7 @@ const meta = {
     helperText: "Storybook MCP 문서를 조회한 뒤 허용된 props만 사용해 구성한 합성 예시입니다.",
     initialQuery: "초코",
   },
+  render: (args) => <StorybookMcpDogfoodSearch key={args.initialQuery} {...args} />,
 } satisfies Meta<typeof StorybookMcpDogfoodSearch>;
 
 export default meta;
@@ -50,33 +52,25 @@ export const SearchFormRecipe: Story = {
       },
     },
   },
-  play: async ({ canvasElement }) => {
-    const input = canvasElement.querySelector<HTMLInputElement>('input[type="search"]');
-    const button = Array.from(canvasElement.querySelectorAll("button")).find(
-      (candidate) => candidate.textContent?.trim() === "검색"
-    );
-    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
-
-    if (!input || !button) {
-      throw new Error("Expected the dogfood recipe to render a search input and submit button.");
-    }
-
-    valueSetter?.call(input, "");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    valueSetter?.call(input, "예약");
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-
-    button.click();
-
-    await new Promise((resolve) => window.setTimeout(resolve, 0));
-
-    if (!canvasElement.textContent?.includes("검색어: 예약")) {
-      throw new Error("Expected the dogfood recipe to submit the typed search query.");
-    }
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole("searchbox", { name: "보호자 또는 환자 검색" });
+    await expect(input).toHaveAccessibleDescription("Storybook MCP 문서를 조회한 뒤 허용된 props만 사용해 구성한 합성 예시입니다.");
+    await userEvent.clear(input); await userEvent.type(input, "  예약  ");
+    await userEvent.click(canvas.getByRole("button", { name: "검색" }));
+    await expect(canvas.getByText("검색어: 예약")).toBeVisible();
+    await userEvent.clear(input); await userEvent.type(input, "합성 검색{Enter}");
+    await expect(canvas.getByText("검색어: 합성 검색")).toBeVisible();
   },
 };
 
 export const DisabledRecipe: Story = {
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole("searchbox", { name: "보호자 또는 환자 검색" });
+    const button = canvas.getByRole("button", { name: "검색" });
+    await expect(input).toBeDisabled(); await expect(button).toBeDisabled();
+    button.focus(); await expect(button).not.toHaveFocus(); await userEvent.keyboard("{Enter}");
+    await expect(canvas.getByText("검색어: 잠금 상태")).toBeVisible();
+  },
   args: {
     disabled: true,
     helperText: "비활성 상태는 시각적 affordance이며 권한 경계가 아닙니다.",

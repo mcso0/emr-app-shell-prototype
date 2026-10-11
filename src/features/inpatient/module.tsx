@@ -356,18 +356,22 @@ function InpatientWardSection({
         enableResizing: false,
         header: "차트",
         meta: { label: "차트", resize: "none" },
-        cell: ({ row }) => (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className="bg-card"
-            data-row-interactive="true"
-            disabled={!row.original.chartAvailable}
-            onClick={(event) => event.stopPropagation()}
-          >
-            차트
-          </Button>
+        cell: () => (
+          <span data-row-interactive="true">
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className="bg-card"
+              data-row-interactive="true"
+              disabled
+              title="차트 연결 준비 중"
+              aria-label="차트 (준비 중)"
+              onClick={(event) => event.stopPropagation()}
+            >
+              차트
+            </Button>
+          </span>
         ),
       },
       {
@@ -491,20 +495,25 @@ function InpatientWardSection({
         header: "퇴실",
         meta: { label: "퇴실", resize: "none" },
         cell: ({ row }) => (
-          <Button
-            type="button"
-            variant={
-              row.original.status === "discharge_ready" ? "default" : "outline"
-            }
-            size="xs"
-            className={
-              row.original.status === "discharge_ready" ? undefined : "bg-card"
-            }
-            data-row-interactive="true"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {row.original.status === "discharge_ready" ? "퇴실" : "대기"}
-          </Button>
+          <span data-row-interactive="true">
+            <Button
+              type="button"
+              variant={
+                row.original.status === "discharge_ready" ? "default" : "outline"
+              }
+              size="xs"
+              className={
+                row.original.status === "discharge_ready" ? undefined : "bg-card"
+              }
+              data-row-interactive="true"
+              disabled
+              title="퇴실 처리 준비 중"
+              aria-label={`${row.original.status === "discharge_ready" ? "퇴실" : "대기"} (준비 중)`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              {row.original.status === "discharge_ready" ? "퇴실" : "대기"}
+            </Button>
+          </span>
         ),
       },
     ],
@@ -630,15 +639,15 @@ export function InpatientContent({ workspaceId }: ShellComponentProps) {
               }
               actions={
                 <>
-                  <Button size="sm">
+                  <Button size="sm" disabled aria-label="입실 추가 (준비 중)" title="입실 추가 준비 중">
                     <CdsActionsPlusIcon
                       data-icon="inline-start"
                       className="size-3"
                     />
-                    입실 추가
+                    입실 추가<span className="hidden sm:inline"> (준비 중)</span>
                   </Button>
-                  <Button variant="outline" size="sm" className="bg-card">
-                    입원실 관리
+                  <Button variant="outline" size="sm" className="bg-card" disabled aria-label="입원실 관리 (준비 중)" title="입원실 관리 준비 중">
+                    입원실 관리<span className="hidden sm:inline"> (준비 중)</span>
                   </Button>
                 </>
               }

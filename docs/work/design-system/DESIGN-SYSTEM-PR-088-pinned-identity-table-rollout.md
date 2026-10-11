@@ -244,3 +244,21 @@ production build, docs references (1,104 files), and diff check passed. Browser
 inspection confirmed a transparent, zero-radius span at a 10px inset in the
 default story and an 8px-radius button at a 10px inset in the rounded story.
 Runtime components and CSS were unchanged in this follow-up.
+
+
+## 2026-10-11 Customer review: data-table text axis and header padding
+
+- 승욱 approved a local shared data-table correction after visual review of the synthetic customer table, then clarified the required spacing using selected Figma nodes. Commit, push, and deployment remain excluded. Existing integration WIP is preserved.
+- The first implementation used a 4px identity inset and combined the scrolling boundary gap with button padding. User review rejected that spacing. The final target comes from fixed column `27878:57638` and scroll header/body `27878:57717` / `27878:57725` in the CLAiR design file.
+- `EmrDataTable` marks identity body/loading cells so scoped CSS shares a minimum 10px text inset without double-insetting existing identity wrappers. Sort buttons have 8px leading/trailing padding and 2px label padding. The first scrolling header/body retains a separate 10px outer gap and 10px inner text inset. At scroll origin, plain text is 20px after the fixed boundary. Rich content retains its own inner padding.
+- Existing title/search/footer spacing is unchanged. Customer identity text now starts at 54px (44px selection column + 10px), while the existing workspace title/search/footer remain at 48px. No sorting, resizing, pinning, column width, or scroll-controller logic changed. Low-level `Table` styling is unchanged.
+- Customer Storybook geometry checks cover 1440px and 720px, actual text bounds, 8px/2px button/label padding, the separate 10px gap, and button containment. Existing search, sort, selection, row-open, and recovery assertions remain. Shared table tests measure header text instead of padded label boxes; app tests preserve rich badge inner padding and existing scroll/pinning assertions.
+- Verification is recorded below after the final Figma correction. Evidence: `/private/tmp/clair-table-alignment-20261011/`. 승욱 accepted the corrected customer table on 2026-10-11 ("고객 테이블은 이대로 하고 다음 검토할 화면 보여줘"). This records local visual acceptance only; delivery remains outside scope. Earlier Home representative screens were accepted by the user; the date text / 390px shell follow-up is separate and not part of this change.
+
+Final verification after the Figma correction:
+
+- Storybook: 492/492 passed (`a11y: false`), including the 1440px/720px customer text and boundary checks, loading, pinning, resizing, and low-level Table stories.
+- Actual local mock app: all four focused customer regressions passed across the initial run and the final fixed-width rerun. The fixed-width test now reads all geometry in one frame and polls until the existing sidebar transition settles. Pointer/keyboard resizing, fixed widths, hidden grow-column fallback, selection alignment, sorting, and filtering remain covered.
+- Browser measurements: identity column at 44px, button at 44px, header/body text at 54px. Scroll column at 264px, button at 274px, header/body text at 284px. Button padding is 8px and label padding is 2px on each side.
+- TypeScript, scoped ESLint, docs references, and diff checks passed. A SHA-256 comparison of 4,750 pre-change files found changes only in the seven approved implementation/test/doc files. No commit, push, or deployment was performed.
+- Evidence: `figma-storybook-final.json`, `figma-app-tests.log`, `figma-app-widths-final.log`, `figma-static.log`, `figma-docs.log`, `figma-preservation.json`, and `customer-figma-final.png` in the evidence directory above.

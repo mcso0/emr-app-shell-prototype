@@ -22,6 +22,7 @@ type SpecimenProps = {
 function Specimen({ kind, state, longContent }: SpecimenProps) {
   const [open, setOpen] = useState(true);
   const [tab, setTab] = useState("profile");
+  const [effectiveState, setEffectiveState] = useState(state);
   const label = { patient: "환자", guardian: "보호자", user: "유저" }[kind];
   return (
     <div className="flex items-start gap-4">
@@ -31,7 +32,7 @@ function Specimen({ kind, state, longContent }: SpecimenProps) {
           aria-label={`${label} 프로필 예시`}
           className="h-[650px] w-[380px] rounded-xl border"
           closeLabel="프로필 닫기"
-          loading={state === "loading"}
+          loading={effectiveState === "loading"}
           onClose={() => setOpen(false)}
           onTabChange={setTab}
           tabs={[
@@ -61,7 +62,7 @@ function Specimen({ kind, state, longContent }: SpecimenProps) {
         >
           <EmrProfileTabPanel value={tab}>
             <EmrProfilePanelBody className="p-4">
-              {state === "ready" ? (
+              {effectiveState === "ready" ? (
                 <div className="grid gap-4">
                   <label className="grid gap-2">
                     예시 편집기
@@ -78,15 +79,15 @@ function Specimen({ kind, state, longContent }: SpecimenProps) {
                 </div>
               ) : (
                 <EmrProfilePanelState
-                  state={state}
+                  state={effectiveState}
                   label={
-                    state === "loading"
+                    effectiveState === "loading"
                       ? "프로필을 불러오는 중입니다"
-                      : state === "denied"
+                      : effectiveState === "denied"
                         ? "프로필 조회 권한이 없습니다"
                         : "프로필을 불러오지 못했어요"
                   }
-                  onRetry={() => undefined}
+                  onRetry={() => setEffectiveState("ready")}
                 />
               )}
             </EmrProfilePanelBody>
@@ -102,8 +103,10 @@ const meta = {
   component: Specimen,
   tags: ["autodocs"],
   args: { kind: "patient", state: "ready" },
+  render: (args) => <Specimen key={`${args.kind}:${args.state}:${args.longContent}`} {...args} />,
   parameters: {
     docs: {
+      story: { inline: false, height: "740px" },
       description: {
         component:
           "역할: 프로필의 공통 틀·탭·상태 표시. 소유자: 공통 EMR UI. 환자·보호자 프로필과 직원 프로필이 사용합니다. 기능이 데이터·권한·편집·이동을 담당합니다. 환자·보호자 내용은 Features/Customer/Patient Guardian Profile Side Panel에서 확인합니다. 이 예제는 합성 데이터이며, 전체 v1 사용자 승인은 아직 기록되지 않았습니다. 기준: docs/design/system/component-ownership-rules.md.",
@@ -173,6 +176,9 @@ export const Error: Story = {
     const canvas = within(canvasElement);
     expect(canvas.getByRole("alert")).toBeVisible();
     expect(canvas.getByRole("button", { name: "다시 시도" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "다시 시도" }));
+    await waitFor(() => expect(canvas.getByRole("textbox")).toBeVisible());
+    expect(canvas.queryByRole("alert")).not.toBeInTheDocument();
   },
 };
 export const Denied: Story = { args: { state: "denied" } };

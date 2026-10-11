@@ -90,7 +90,7 @@ function installFixtures(failStatusOnce = false, failRead = false) {
 const meta = {
   title: "Features/Auth/Personal Settings",
   component: PersonalSettingsForm,
-  parameters: { layout: "fullscreen", nextjs: { appDirectory: true } },
+  parameters: { docs: { story: { inline: false, height: "900px" }, description: { component: "개인 정보와 알림 설정의 입력, 변경사항, 저장 안내를 확인합니다. 실제 PersonalSettingsForm은 session, workspaceId, workspaceName, returnHref를 받습니다. syntheticSession과 installFixtures는 예제 데이터 및 응답 설정입니다. 기능이 실제 인증과 저장을 담당하며 이 예제는 합성 API 응답으로 동작합니다." } }, layout: "fullscreen", nextjs: { appDirectory: true } },
   tags: ["autodocs"],
   args: {
     session: syntheticSession,
@@ -104,6 +104,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ProfileSave: Story = {
+  parameters: { docs: { description: { story: "이름을 바꾸고 합성 저장을 완료하면 변경사항 표시가 사라지는지 확인합니다." } } },
   play: async ({ canvas }) => {
     const name = await canvas.findByLabelText("이름");
     await expect(name).toHaveValue("김예시");
@@ -122,6 +123,7 @@ export const ProfileSave: Story = {
   },
 };
 export const DirtyNavigationAndNotificationSave: Story = {
+  parameters: { docs: { description: { story: "저장하지 않은 변경사항의 이동 확인과 알림 설정 저장을 확인합니다." } } },
   play: async ({ canvas, canvasElement }) => {
     const name = await canvas.findByLabelText("이름");
     await userEvent.type(name, " 변경");
@@ -152,6 +154,7 @@ export const DirtyNavigationAndNotificationSave: Story = {
   },
 };
 export const PartialSaveRetry: Story = {
+  parameters: { docs: { description: { story: "일부 합성 저장 요청이 실패했을 때 실패한 부분을 다시 시도하는지 확인합니다." } } },
   beforeEach: () => installFixtures(true),
   play: async ({ canvas }) => {
     const name = await canvas.findByLabelText("이름");
@@ -181,6 +184,7 @@ export const PartialSaveRetry: Story = {
   },
 };
 export const AvatarStagesUntilSave: Story = {
+  parameters: { docs: { description: { story: "선택한 사진이 저장 전 초안으로 남는지 확인합니다. 실제 사진 업로드는 검증하지 않습니다." } } },
   play: async ({ canvas, canvasElement }) => {
     await canvas.findByLabelText("이름");
     const body = within(canvasElement.ownerDocument.body);
@@ -205,6 +209,7 @@ export const AvatarStagesUntilSave: Story = {
   },
 };
 export const PasswordValidationAndClear: Story = {
+  parameters: { docs: { description: { story: "비밀번호 입력 검증과 닫기 후 민감 입력 초기화를 확인합니다." } } },
   play: async ({ canvas, canvasElement }) => {
     await canvas.findByLabelText("이름");
     await userEvent.click(canvas.getByRole("button", { name: "계정·보안" }));
@@ -240,6 +245,7 @@ export const PasswordValidationAndClear: Story = {
   },
 };
 export const ReadFailure: Story = {
+  parameters: { docs: { description: { story: "개인 정보를 읽지 못했을 때의 오류 표시를 확인합니다." } } },
   beforeEach: () => installFixtures(false, true),
   play: async ({ canvas }) => {
     await expect(await canvas.findByRole("alert")).toHaveTextContent(

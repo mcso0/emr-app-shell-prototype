@@ -12,6 +12,7 @@ const records = [
   { id: "later", date: "2026-05-01T00:00:00Z", label: "김도윤 · 초진" },
 ];
 
+/** Fixed history-controls scenario. It owns its state and accepts no props. */
 function HistoryControlsExample() {
   const search = useHistorySearch();
   const searchTrigger = useRef<HTMLButtonElement>(null);
@@ -19,10 +20,12 @@ function HistoryControlsExample() {
   const [dates, setDates] = useState(emptyHistoryDateRange);
   const [draftDates, setDraftDates] = useState(emptyHistoryDateRange);
   const [open, setOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
   const rows = records.filter((record) => matchesHistoryDate(record.date, dates) && matchesHistoryQuery(search.searchQuery, [record.label])).sort((a, b) => compareHistoryDates(a.date, b.date, direction));
+  if (!panelOpen) return <button type="button" onClick={() => setPanelOpen(true)}>이력 다시 열기</button>;
   return <div className="h-[560px] w-[320px] max-w-full">
     <EmrContentAsidePanel>
-      <EmrContentAsideHeader label="진료 이력" count={rows.length} onCollapse={() => {}} search={search.open ? <EmrHistorySearch search={search} label="진료 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTrigger.current?.focus()); }} /> : null} actions={<>
+      <EmrContentAsideHeader label="진료 이력" count={rows.length} onCollapse={() => setPanelOpen(false)} search={search.open ? <EmrHistorySearch search={search} label="진료 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTrigger.current?.focus()); }} /> : null} actions={<>
         <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel="진료일" />
         <EmrHistoryFilterPopover open={open} trigger={<EmrListHeaderIconButton ariaLabel="필터" aria-pressed={Boolean(dates.start)} className="relative [&>span]:overflow-visible"><CdsActionsListFilterIcon />{dates.start ? <span data-slot="history-filter-indicator" aria-hidden="true" className="pointer-events-none absolute right-[var(--clair-spacing-1)] top-[var(--clair-spacing-1)] size-[var(--clair-spacing-6)] rounded-full bg-[var(--clair-color-atomic-sky-500)]" /> : null}</EmrListHeaderIconButton>} tooltip={`필터 · ${dates.start ? `${dates.start}–${dates.end}` : "적용한 조건 없음"}`} title="진료 이력 필터" dateLabel="진료일" dates={draftDates} onDatesChange={setDraftDates} onOpen={() => { setDraftDates(dates); setOpen(true); }} onCancel={() => setOpen(false)} onReset={() => setDraftDates(emptyHistoryDateRange)} onApply={() => { setDates(draftDates); setOpen(false); }} />
         {!search.open ? <EmrListHeaderIconButton ref={searchTrigger} ariaLabel="검색" onClick={() => search.setOpen(true)}><CdsActionsSearchIcon /></EmrListHeaderIconButton> : null}
@@ -33,7 +36,22 @@ function HistoryControlsExample() {
   </div>;
 }
 
-const meta = { title: "Design System/EMR/History Controls", component: HistoryControlsExample, parameters: { layout: "centered" } } satisfies Meta<typeof HistoryControlsExample>;
+const meta = {
+  title: "Design System/EMR/History Controls",
+  component: HistoryControlsExample,
+  render: () => <HistoryControlsExample />,
+  tags: ["autodocs"],
+  parameters: {
+    layout: "centered",
+    docs: {
+      story: { inline: false, height: "620px" },
+      description: {
+        component:
+          "공통 EMR UI가 이력 정렬·검색·날짜 필터의 표시와 접근성을 제공합니다. 기능이 조회 데이터와 적용 조건을 소유합니다. HistoryControlsExample은 합성 기록과 로컬 상태로 세 컴포넌트를 조합한 Storybook 전용 예시이며, 실제 API와 서버 조회 흐름이 아닙니다.",
+      },
+    },
+  },
+} satisfies Meta<typeof HistoryControlsExample>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
@@ -142,8 +160,7 @@ export const PendingSearchCancellation: Story = {
     await expect(canvas.getByRole("searchbox")).toHaveValue("");
     await expect(canvas.getByRole("searchbox")).toHaveFocus();
     await userEvent.click(cancel);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    await expect(canvas.getByRole("status")).toHaveTextContent("결과 2건");
+    await waitFor(() => expect(canvas.getByRole("status")).toHaveTextContent("결과 2건"));
     await userEvent.click(canvas.getByRole("button", { name: "검색" }));
     await expect(canvas.getByRole("searchbox")).toHaveValue("");
     await expect(canvas.getByRole("button", { name: "검색 닫기" })).toBeEnabled();

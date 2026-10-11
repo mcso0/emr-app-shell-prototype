@@ -1,0 +1,21 @@
+{
+  "componentGroups": 130,
+  "sourceFixtureGroups": 130,
+  "indexedStories": 699,
+  "compiledExamples": 699,
+  "baselineStoriesRetained": 0,
+  "propsRegressionGroups": 79,
+  "localComponentGroups": 76,
+  "checkedProps": 531,
+  "zeroArgumentComponents": 10,
+  "structuralFailures": 0,
+  "compilerErrors": 0,
+  "examplesWithCompilerErrors": 0,
+  "retainedComponentDocgenErrors": [],
+  "retainedStoryErrors": [],
+  "sharedPrefixBytes": 894033,
+  "assembledExampleBytes": 6294579,
+  "findings": [],
+  "diagnostics": [],
+  "boundary": "Type/source/identity verification only. CSF examples require this project's Storybook preview, mocks, CSS and shims. play is intentionally omitted; no browser execution is claimed."
+}

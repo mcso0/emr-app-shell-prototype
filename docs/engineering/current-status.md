@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Updated: 2026-09-29
+Updated: 2026-10-11
 
 Lab result sheet phase 2 and attachment fixes were merged in PRs #848, #851,
 and #853 on 2026-09-29. PR #853 deployed to Ready Production at
@@ -52,6 +52,11 @@ The MVP direction is to keep the connected outpatient workflow visible while rep
 * Cheongdam seed workspace (`workspace-clair-cheongdam`) used as the default synthetic operating proof, with legacy Sales Demo paths treated as cleanup candidates rather than preservation requirements
 
 ## Current Product State
+
+- The [2026-10-12 local accessibility audit](../completed/design-system/2026-10-12-storybook-accessibility-audit.md) scans705 initial Storybook states and5 additional states with axe. Search roles, input/button names, nested controls, contrast and target-size findings remain. Standalone-page context and manual checks are separated; this is not accessibility completion or a production claim. The chart vital confirmation test now waits for visible content and passes70 checks across10 fresh runs.
+
+- The [2026-10-11 local Storybook follow-up](../work/design-system/DESIGN-SYSTEM-PR-109-origin-main-storybook-full-audit.md#approved-five-issue-follow-up--2026-10-11) repairs schedule close guards, dispensing column labels, SOAP disclosure keys and global-search result filtering. Unconnected support/help, dispensing and inpatient actions are marked `준비 중` and disabled. This candidate is local; no release or remote workflow completion is recorded.
+- The [final-review follow-up](../work/design-system/DESIGN-SYSTEM-PR-109-origin-main-storybook-full-audit.md#final-review-regression-follow-up--2026-10-11) locks schedule drafts during pending mutations, prevents disabled inpatient controls from activating their row, and fixes long Home date truncation. The mobile Home test now respects the existing modal-panel contract. Added synthetic delayed-response and physical-click regressions; no release or remote change.
 
 - Outpatient screens connect Home, reception/appointments, customer management, chart, lab/imaging, dispensing/treatment, and billing. Persistence and remote verification differ by module; do not infer full live readiness from screen availability.
 - Hospital administration includes workspace/member/settings foundations with separately recorded local, remote, and production boundaries. Inpatient remains session-only.

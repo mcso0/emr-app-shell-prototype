@@ -21,6 +21,7 @@
 .filterTrigger > span { padding-inline: var(--clair-spacing-2); }
 .workspaceBody { display: flex; flex: 1; min-height: 0; gap: 16px; padding: 8px 16px 0 48px; }
 .board { padding-left: var(--clair-spacing-48); display: grid; height: 100%; min-height: 256px; align-items: start; gap: 16px; }
+.board.emptyBoard { display: flex; min-height: 0; align-items: center; justify-content: center; padding-left: 0; }
 .column, .listGroup, .hiddenWork { border: 1px solid var(--emr-border-default); border-radius: 12px; background: var(--emr-surface-panel); }
 .column { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
 .collapsedColumn { height: fit-content; }
@@ -100,6 +101,7 @@
 @media (prefers-reduced-motion: reduce) { .groupActions { transition: none; } }
 
 .scrollFrame { position: relative; flex: 1; min-width: 0; min-height: 0; }
+.emptyListScrollFrame { container-type: inline-size; }
 .scrollFade { position: absolute; top: 0; right: 0; bottom: 0; width: var(--clair-spacing-32); pointer-events: none; background: linear-gradient(to right, transparent, var(--emr-surface-workspace)); opacity: 0; }
 .scrollFade[data-visible="true"] { opacity: 1; }
 
@@ -112,11 +114,11 @@
 .hospitalTitle { overflow: visible; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.024em; color: var(--clair-color-atomic-neutral-900); }
 .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) { flex-wrap: wrap; }
 .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:first-child { flex-shrink: 0; }
-.hospitalTitle .dateControl { width: 290px; height: 40px; gap: 4px; border: 0; background: transparent; padding: 0; }
+.hospitalTitle .dateControl { width: max-content; min-width: 290px; height: 40px; gap: 4px; border: 0; background: transparent; padding: 0; }
 .hospitalTitle .dateControl > button { min-height: 40px; height: 40px; border-radius: 8px; }
 .hospitalTitle .dateControl > button:first-child, .hospitalTitle .dateControl > button:last-child { width: 32px; }
-.hospitalTitle .dateControl > button[aria-haspopup] { width: 218px; min-width: 218px; flex: 0 0 218px; gap: 10px; padding: 4px 10px 4px 12px; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.552px; color: inherit; }
-.hospitalTitle .dateControl > button[aria-haspopup] > span:nth-child(2) { flex: 1; min-width: 0; overflow: visible; text-overflow: clip; white-space: nowrap; transform: translateY(calc(-1 * var(--clair-spacing-2))); }
+.hospitalTitle .dateControl > button[aria-haspopup] { width: auto; min-width: 218px; flex: 0 0 auto; gap: 10px; padding: 4px 10px 4px 12px; font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.552px; color: inherit; }
+.hospitalTitle .dateControl > button[aria-haspopup] > span:nth-child(2) { flex: 0 0 auto; min-width: 0; overflow: visible; text-overflow: clip; white-space: nowrap; transform: translateY(calc(-1 * var(--clair-spacing-2))); }
 .hospitalTitle .dateControl button:hover { background: var(--clair-color-atomic-black-alpha-4); }
 .hospitalTitle .dateControl button:active { background: var(--clair-color-atomic-black-alpha-6); }
 .hospitalTitle .dateControl button:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: 2px; }
@@ -151,7 +153,8 @@
 .hospitalTableHeader, .hospitalRow { display: grid; grid-template-columns: 80px 80px 80px minmax(562px, 1fr) 80px 128px 88px 88px 80px; column-gap: 16px; align-items: center; }
 .hospitalTableHeader { min-height: 40px; padding: 0 8px; border-bottom: 1px solid var(--clair-color-atomic-neutral-100); color: var(--emr-text-tertiary); font-size: 12px; line-height: 16px; font-weight: 500; }
 .hospitalTableRows { display: flex; flex-direction: column; gap: 16px; padding-top: 12px; }
-.emptyHospitalTableRows { display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; gap: 0; padding: 0; }
+/* Follow the visible viewport while the wider column headers remain scrollable. */
+.emptyHospitalTableRows { position: sticky; left: 0; width: 100cqw; display: flex; flex: 1; min-height: 0; align-items: center; justify-content: center; gap: 0; padding: 0; }
 .hospitalRow { position: relative; min-height: 36px; padding: var(--clair-spacing-6) var(--clair-spacing-8); border-radius: 8px; color: var(--emr-text-primary); cursor: pointer; }
 .hospitalRow:not(:last-child)::after { content: ""; position: absolute; bottom: -8px; left: 0; right: 0; height: 1px; background: var(--clair-color-atomic-neutral-100); }
 .hospitalRow:hover, .hospitalRow:focus-within { background: var(--clair-color-atomic-black-alpha-6); }
@@ -186,7 +189,7 @@
   .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) { flex-wrap: wrap; }
   .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:first-child { width: 100%; }
   .pageHeader > [data-slot="emr-page-header"]:has(.hospitalTitle) > div:last-child { width: 100%; justify-content: flex-start; }
-  .hospitalTitle .dateControl { width: auto; }
+  .hospitalTitle .dateControl { width: auto; min-width: 0; }
   .hospitalTitle .dateControl > button[aria-haspopup] { width: auto; min-width: 196px; flex: 1 1 auto; gap: 6px; padding: 0 12px; font-size: 20px; letter-spacing: -0.024em; }
   .hospitalTitle .dateControl [data-slot="badge"] { display: none; }
   .workspaceBody:has(.board) { padding-left: 16px; }

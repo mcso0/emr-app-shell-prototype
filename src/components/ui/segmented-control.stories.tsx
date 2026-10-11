@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import {
   SegmentedControl,
@@ -38,6 +38,18 @@ function ControlledSegmentedControl(args: SegmentedControlArgs) {
   );
 }
 
+// Private chart history toolbar: the source owns its history projection; this section owns only mode.
+function ChartHistoryDateModeCaller() {
+  const [value, setValue] = useState<"visit" | "created">("visit");
+  return <div className="grid justify-items-start gap-3">
+    <div className="flex shrink-0 items-center px-1 py-2" data-testid="chart-history-date-mode-toolbar">
+      <SegmentedControl aria-label="차트 이력 표시 기준" items={[{ value: "visit", label: "진료일 기준" }, { value: "created", label: "작성일 기준" }]}
+        size="sm" value={value} variant="tabs" onValueChange={setValue} />
+    </div>
+    <output aria-label="합성 차트 이력 표시 기준">{value === "visit" ? "진료일" : "작성일"}</output>
+  </div>;
+}
+
 const meta = {
   title: "Design System/UI/SegmentedControl",
   component: SegmentedControl,
@@ -54,7 +66,7 @@ const meta = {
     value: {
       control: "select",
       options: ["all", "waiting", "active", "done"],
-      description: "Currently selected item value. Keep one selected value at all times.",
+      description: "Initial selected value in this local controlled fixture. Changing the Control restarts it; the runtime caller owns value and onValueChange.",
     },
     items: {
       control: "object",
@@ -89,7 +101,7 @@ const meta = {
     value: "waiting",
     variant: "pill",
   },
-  render: (args) => <ControlledSegmentedControl {...args} />,
+  render: (args) => <ControlledSegmentedControl key={args.value} {...args} />,
 } satisfies Meta<typeof SegmentedControl>;
 
 export default meta;
@@ -97,17 +109,19 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Default segmented control for a small filter set. Use it when changing the view does not navigate away.",
-      },
-    },
+  render: () => <ChartHistoryDateModeCaller />,
+  parameters: { controls: { disable: true }, docs: { description: { story: "차트 이력의 실제 비공개 toolbar 구성입니다. 진료일/작성일 값·이름·sm·tabs·부모 여백을 그대로 사용합니다. 선택은 로컬 결과로 확인하며 실제 차트 이력 조회·정렬·날짜 필터는 전체 모듈이 소유합니다." } } },
+  play: async ({ canvas }) => {
+    const group = within(canvas.getByRole("group", { name: "차트 이력 표시 기준" }));
+    const created = group.getByRole("button", { name: "작성일 기준" });
+    await userEvent.click(created); await waitFor(() => { expect(created).toHaveAttribute("aria-pressed", "true"); expect(canvas.getByLabelText("합성 차트 이력 표시 기준")).toHaveTextContent("작성일"); });
+    const visit = group.getByRole("button", { name: "진료일 기준" }); visit.focus(); await userEvent.keyboard(" ");
+    await waitFor(() => expect(visit).toHaveAttribute("aria-pressed", "true")); await expect(created).toHaveAttribute("aria-pressed", "false");
   },
 };
 
 export const WithCounts: Story = {
+  play: async ({ canvas }) => { const waiting = canvas.getByRole("button", { name: "대기 12" }); await userEvent.click(waiting); await waitFor(() => expect(waiting).toHaveAttribute("aria-pressed", "true")); await expect(canvas.getByRole("button", { name: "진행 4" })).toHaveAttribute("aria-pressed", "false"); },
   args: {
     value: "active",
   },
@@ -122,6 +136,8 @@ export const WithCounts: Story = {
 };
 
 export const TabsVariant: Story = {
+  play: async ({ canvas }) => { const button = canvas.getByRole("button", { name: "넓은 밀도" }); await userEvent.click(button); await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "true")); },
+  argTypes: { value: { options: ["compact", "standard", "comfortable"] } },
   args: {
     "aria-label": "표 밀도",
     items: densityItems,
@@ -130,7 +146,7 @@ export const TabsVariant: Story = {
     value: "standard",
     variant: "tabs",
   },
-  render: (args) => <ControlledSegmentedControl {...args} />,
+  render: (args) => <ControlledSegmentedControl key={args.value} {...args} />,
   parameters: {
     docs: {
       description: {
@@ -142,6 +158,7 @@ export const TabsVariant: Story = {
 };
 
 export const TabSizes: Story = {
+  play: async ({ canvas }) => { for (const label of ["xs 탭 그룹", "sm 탭 그룹", "md 탭 그룹"]) { const group = within(canvas.getByRole("group", { name: label })); const target = group.getByRole("button", { name: "넓은 밀도" }); await userEvent.click(target); await waitFor(() => expect(target).toHaveAttribute("aria-pressed", "true")); } },
   render: () => (
     <div className="grid gap-3">
       <ControlledSegmentedControl
@@ -171,6 +188,7 @@ export const TabSizes: Story = {
     </div>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
@@ -181,6 +199,7 @@ export const TabSizes: Story = {
 };
 
 export const CdsV2MediumTabs: Story = {
+  argTypes: { value: { options: ["day", "week", "month"] } },
   args: {
     "aria-label": "접수 캘린더 보기",
     items: [
@@ -193,7 +212,7 @@ export const CdsV2MediumTabs: Story = {
     value: "day",
     variant: "tabs",
   },
-  render: (args) => <ControlledSegmentedControl {...args} />,
+  render: (args) => <ControlledSegmentedControl key={args.value} {...args} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const group = canvas.getByRole("group", { name: "접수 캘린더 보기" });
@@ -215,6 +234,8 @@ export const CdsV2MediumTabs: Story = {
 };
 
 export const ShortLabelsNeedAriaLabels: Story = {
+  play: async ({ canvas }) => { const target = canvas.getByRole("button", { name: "좁은 밀도" }); await expect(target).toHaveTextContent("C"); await userEvent.click(target); await waitFor(() => expect(target).toHaveAttribute("aria-pressed", "true")); },
+  argTypes: { value: { options: ["compact", "standard", "comfortable"] } },
   args: {
     "aria-label": "표 밀도",
     items: [
@@ -227,7 +248,7 @@ export const ShortLabelsNeedAriaLabels: Story = {
     value: "standard",
     variant: "tabs",
   },
-  render: (args) => <ControlledSegmentedControl {...args} />,
+  render: (args) => <ControlledSegmentedControl key={args.value} {...args} />,
   parameters: {
     docs: {
       description: {

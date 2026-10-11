@@ -1,9 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import {
   StorybookEmptyInfoFeedbackPatterns,
   type StorybookEmptyInfoFeedbackPatternsProps,
 } from "./storybook-empty-info-feedback-patterns";
+
+function FeedbackExample(args: StorybookEmptyInfoFeedbackPatternsProps) {
+  const [receipt, setReceipt] = useState({ count: 0, label: "" });
+  return <div onClickCapture={event => {
+    const button = event.target instanceof Element ? event.target.closest("button") : null;
+    if (button && event.currentTarget.contains(button)) setReceipt(value => ({ count: value.count + 1, label: button.textContent?.trim() || "샘플 작업" }));
+  }}>
+    <StorybookEmptyInfoFeedbackPatterns {...args} />
+    <output aria-label="합성 안내 작업" className="mt-2 block">{receipt.count ? `실행 ${receipt.count}: ${receipt.label}` : ""}</output>
+  </div>;
+}
 
 const meta = {
   title: "Design System/EMR/Empty Info Feedback Patterns",
@@ -11,9 +24,10 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "400px" },
       description: {
         component:
-          "Storybook-only examples for the empty/info/alert boundary from the empty-info-state contract. 사용할 때: missing content, passive guidance, and persistent recovery feedback need clear separation. 쓰지 말아야 할 때: extracting a shared runtime EmrEmptyState or EmrInfoBox before repeated screen families prove the same structure.",
+          "Storybook-only examples; this helper has no frozen-main app caller or onAction API. The outer story owner captures native activation from its actual helper buttons and displays a local receipt. It preserves the exported helper markup and never performs reset, guide navigation or API retry outside this fixture. Empty/info/alert remain separate authored patterns.",
       },
     },
   },
@@ -42,7 +56,15 @@ const meta = {
     pattern: "empty",
     title: "조건에 맞는 샘플 업무가 없습니다",
   },
-  render: (args) => <StorybookEmptyInfoFeedbackPatterns {...args} />,
+  render: (args) => <FeedbackExample key={args.pattern} {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement), button = canvas.getByRole("button");
+    const label = button.textContent!.trim() || "샘플 작업";
+    button.focus(); await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(canvas.getByLabelText("합성 안내 작업")).toHaveTextContent(`실행 1: ${label}`));
+    await userEvent.click(button);
+    await expect(canvas.getByLabelText("합성 안내 작업")).toHaveTextContent(`실행 2: ${label}`);
+  },
 } satisfies Meta<StorybookEmptyInfoFeedbackPatternsProps>;
 
 export default meta;

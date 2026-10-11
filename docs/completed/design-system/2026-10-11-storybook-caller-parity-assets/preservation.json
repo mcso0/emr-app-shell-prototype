@@ -1,0 +1,30 @@
+{
+  "checkedRuntimeFiles": 981,
+  "actualDifferencesFromFrozenMain": [
+    "src/app/globals.css",
+    "src/components/emr/emr-data-table.tsx",
+    "src/features/home/components/home-kanban-workspace.tsx",
+    "src/features/home/components/home-workspace-layout.module.css"
+  ],
+  "acceptedPreWave2Overlays": [
+    "src/app/globals.css",
+    "src/components/emr/emr-data-table.tsx",
+    "src/features/home/components/home-kanban-workspace.tsx",
+    "src/features/home/components/home-workspace-layout.module.css"
+  ],
+  "unexpectedRuntimeDifferences": [],
+  "head": "66c1b4c8cba72d342657839425d627c4cbc7bc1e",
+  "originMain": "66c1b4c8cba72d342657839425d627c4cbc7bc1e",
+  "remoteMainVerifiedAt": "2026-10-11T13:22:35.282674+00:00",
+  "primaryPreRebootProof": "Parent observed all 29 primary and 86 previous-audit snapshot hashes unchanged before reboot; original per-file snapshots were lost. This statement is historical, not a fresh byte comparison.",
+  "postRebootPrimarySnapshot": "primary-post-reboot-snapshot.json",
+  "postRebootPrimary": {
+    "capturedFiles": 35,
+    "changedPaths": [
+      "tests/chart.spec.ts"
+    ],
+    "headUnchanged": true,
+    "statusUnchanged": false,
+    "boundary": "Parent made no changes in primary checkout. Concurrent user chats may modify it independently."
+  }
+}

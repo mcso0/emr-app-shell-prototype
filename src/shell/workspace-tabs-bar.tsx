@@ -355,7 +355,7 @@ export function WorkspaceTabsBar({
             </span>
           ) : null}
         </Button>
-        <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말">
+        <Button variant="ghost" size="icon" className={cn(topIconButtonClassName, "max-sm:hidden")} aria-label="도움말 (준비 중)" title="도움말 준비 중" disabled>
           <HelpIcon className="size-4" />
         </Button>
         <AuthProfileMenu

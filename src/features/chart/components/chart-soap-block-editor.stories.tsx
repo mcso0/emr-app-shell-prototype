@@ -11,7 +11,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "실제 @blocknote/shadcn 기본 UI에 CLAiR 토큰과 SOAP 템플릿 명령만 추가한 인터랙티브 시안입니다. 네트워크나 임상 데이터 저장은 수행하지 않습니다.",
+          "BlockNote 기본 UI와 CLAiR SOAP 명령을 비교하는 초기 시안입니다. ChartSoapBlockEditor는 예제 편집기이며 운영 편집기와 구분해 주세요. 기본 샘플, 문서 JSON, 초기화 동작은 로컬 상태만 사용합니다. 실제 임상 데이터나 저장 권한은 검증하지 않습니다.",
       },
     },
   },
@@ -29,6 +29,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RepresentativeReview: Story = {
+  parameters: { docs: { description: { story: "문서 JSON을 열고 빈 문서로 초기화한 뒤 합성 샘플을 복원하는 동작을 확인합니다." } } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 

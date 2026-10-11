@@ -182,7 +182,7 @@ export function NavRail({ activeModuleId, navigationSearch = "", workspaceId, on
         <RailActionItem
           icon={CdsGnbHeadphonesGnbIcon}
           iconClassName="h-[17.5px] w-[18.5px]"
-          label="고객센터"
+          label="고객센터 (준비 중)"
           transition={railLayoutTransition}
         />
       </div>
@@ -345,7 +345,9 @@ function RailActionItem({
           render={
             <button
               type="button"
-              className={RAIL_ITEM_CLASS_NAME}
+              className={cn(RAIL_ITEM_CLASS_NAME, "cursor-not-allowed opacity-50")}
+              disabled
+              title={label}
               aria-label={label}
             >
               <IconFrame>
