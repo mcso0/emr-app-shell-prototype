@@ -479,6 +479,7 @@ function PatientContextInfoSection({
         open={previewOpen}
         onOpenChange={(open, eventDetails) => {
           if (eventDetails.reason === "trigger-press") {
+            eventDetails.cancel();
             setPreviewOpen(false);
             interaction.onActivate();
             return;

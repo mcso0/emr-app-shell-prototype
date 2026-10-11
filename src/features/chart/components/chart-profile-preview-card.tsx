@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export type ChartProfilePreviewItem = {
@@ -11,13 +11,13 @@ export type ChartProfilePreviewItem = {
 };
 
 export function ChartProfilePreviewCard({
-  badge,
+  onOpenProfile,
   items,
   kind,
   notes = [],
   title,
 }: {
-  badge: string;
+  onOpenProfile: () => void;
   items: ChartProfilePreviewItem[];
   kind: "patient" | "guardian";
   notes?: string[];
@@ -32,12 +32,15 @@ export function ChartProfilePreviewCard({
         <strong className="min-w-0 truncate text-sm font-semibold text-foreground">
           {title}
         </strong>
-        <Badge
-          variant="secondary"
-          className="h-[22px] shrink-0 rounded-md px-2 text-xs font-medium"
+        <Button
+          type="button"
+          variant="outline"
+          size="xs"
+          className="shrink-0"
+          onClick={onOpenProfile}
         >
-          {badge}
-        </Badge>
+          프로필 보기
+        </Button>
       </div>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs leading-5">
         {items.map((item) => (
@@ -55,15 +58,12 @@ export function ChartProfilePreviewCard({
         ))}
       </dl>
       {notes.length ? (
-        <div className="grid gap-1 rounded-md bg-[var(--emr-status-warning-bg)] px-2.5 py-2 text-xs leading-5 text-[var(--emr-status-warning-text)]">
+        <div className="grid gap-1 rounded-md bg-[var(--emr-surface-muted)] px-2.5 py-2 text-xs leading-5 text-[var(--emr-text-secondary)]">
           {notes.map((note, index) => (
             <p key={`${note}-${index}`}>{note}</p>
           ))}
         </div>
       ) : null}
-      <p className="border-t border-[var(--emr-border-subtle)] pt-2 text-[11px] leading-4 text-[var(--emr-text-tertiary)]">
-        클릭하면 전체 프로필을 열어요.
-      </p>
     </div>
   );
 }

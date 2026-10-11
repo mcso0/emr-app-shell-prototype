@@ -3921,7 +3921,8 @@ test("live patient chart history keeps loading, error, and empty states distinct
   await expect(page.getByTestId("chart-history-loading-state")).toHaveCount(0);
 });
 
-test("active chart context bar previews actual profiles and saves current encounter vitals", async ({
+for (const profileActivation of ["identity", "preview", "identity-repeat"] as const) {
+test(`active chart context bar previews actual profiles (${profileActivation})${profileActivation === "identity" ? " and saves current encounter vitals" : ""}`, async ({
   page,
 }) => {
   const baseRecord = createLiveChartQueueRecord({
@@ -4089,20 +4090,30 @@ test("active chart context bar previews actual profiles and saves current encoun
     "[data-slot='chart-patient-profile-preview']",
   );
   await expect(patientPreview).toBeVisible();
-  await expect(patientPreview).toContainText(record.patient.patientNo);
+  await expect(patientPreview).not.toContainText(record.patient.patientNo);
   await expect(patientPreview).toContainText("Pomeranian");
   await expect(patientPreview).toContainText("중성화·수컷");
   await expect(patientPreview).toContainText("닭고기 알레르기");
 
   await patientSection.focus();
   await expect(patientPreview).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(patientPreview).toHaveCount(0);
-  await patientSection.click();
+  if (profileActivation !== "preview") {
+    await page.keyboard.press("Escape");
+    await expect(patientPreview).toHaveCount(0);
+    await patientSection.click();
+  } else {
+    await patientPreview.getByRole("button", { name: "프로필 보기" }).click();
+  }
   const profilePanel = page.getByTestId("profile-side-panel");
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "patient");
   await expect(profilePanel).toContainText("초코");
   await expect(page).toHaveURL(/drawer=patient/);
+  await profilePanel.getByRole("button", { name: "상세 닫기" }).click();
+
+  await expect(profilePanel).toBeHidden();
+  await page.mouse.move(0, 0);
+  await patientSection.hover();
+  await expect(patientPreview).toBeVisible();
   await page.keyboard.press("Escape");
 
   const guardianSection = page.getByRole("button", {
@@ -4114,10 +4125,22 @@ test("active chart context bar previews actual profiles and saves current encoun
   );
   await expect(guardianPreview).toContainText("010-4911-0004");
   await expect(guardianPreview).toContainText("guardian@example.test");
-  await guardianSection.click();
+  if (profileActivation !== "preview") {
+    await guardianSection.click();
+  } else {
+    await guardianPreview.getByRole("button", { name: "프로필 보기" }).click();
+  }
   await expect(profilePanel).toHaveAttribute("data-profile-kind", "guardian");
   await expect(page).toHaveURL(/drawer=guardian/);
+  await profilePanel.getByRole("button", { name: "상세 닫기" }).click();
+
+  await expect(profilePanel).toBeHidden();
+  await page.mouse.move(0, 0);
+  await guardianSection.hover();
+  await expect(guardianPreview).toBeVisible();
   await page.keyboard.press("Escape");
+
+  if (profileActivation !== "identity") return;
 
   const vitalSection = page.locator("[data-slot='patient-context-vitals']");
   await vitalSection.hover();
@@ -4135,6 +4158,8 @@ test("active chart context bar previews actual profiles and saves current encoun
   expect(writes).toHaveLength(1);
   expect(writes[0]?.weightKg).toBe(12.34);
 });
+
+}
 
 test("chart context bar keeps missing guardians non-interactive and explains unavailable vital writes", async ({
   page,
