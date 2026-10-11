@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { installShellNotificationApi } from "./support/shell-notification-api";
+
+test.beforeEach(async ({ page }, info) => {
+  if (info.title.startsWith("global notification")) {
+    await installShellNotificationApi(page);
+  }
+});
 
 const fullDemoQuery =
   "scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&labResultId=lab-result-kong-cbc&imagingStudyId=imaging-kong-abdomen&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed";
@@ -673,7 +680,11 @@ test("global notification drawer fits narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
-  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const bell = page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ });
+  await expect(bell).toBeVisible();
+  // Mobile navigation is modal; dismiss it before opening a separate drawer.
+  await page.keyboard.press("Escape");
+  await bell.click();
 
   const drawer = page.getByRole("dialog", { name: "알림" });
   await expect(drawer).toBeVisible();
@@ -869,7 +880,13 @@ test("workspace switcher lists active memberships and changes workspace without 
   const search = popover.getByRole("combobox", { name: "워크스페이스 검색" });
   await expect(search).toBeVisible();
   await search.fill("한빛");
+  // Wait for the first clinical route response from Next's local dev server.
+  const workspaceNavigation = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/w/workspace-hanbit/treatment" && response.ok();
+  });
   await popover.getByTestId("workspace-switcher-option-workspace-hanbit").click();
+  await workspaceNavigation;
 
   await expect(page).toHaveURL(/\/w\/workspace-hanbit\/treatment\?/);
   const targetUrl = new URL(page.url());
@@ -985,7 +1002,9 @@ test("workspace switcher popover stays inside a narrow viewport", async ({ page 
     });
   });
 
-  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  // An open compact side panel is a modal sheet; test the accessible rail state.
+  await page.goto("/w/clair-demo/reception?modulePanel=closed");
+  await expect(page.getByTestId("module-side-panel-host")).toHaveAttribute("data-panel-mode", "hidden");
   await page.getByTestId("workspace-switcher").click();
 
   const popover = page.getByTestId("workspace-switcher-popover");
@@ -1029,7 +1048,8 @@ test("workspace switcher sends a non-admin target membership to workspace home",
 
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.goto("/w/clair-demo/reception?modulePanel=closed");
+  await expect(page.getByTestId("module-side-panel-host")).toHaveAttribute("data-panel-mode", "hidden");
 
   const navigationColumn = page.getByTestId("shell-navigation-column");
   const workspaceArea = page.getByTestId("shell-workspace-area");
@@ -1041,7 +1061,7 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   await expect(navigationColumn).toBeVisible();
   await expect(workspaceSwitcher).toBeVisible();
   await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
-  await expect(getNavRail(page).getByRole("link", { name: "원내 현황" })).toBeVisible();
+  await expect(getNavRail(page).getByRole("link", { name: "홈 화면", exact: true })).toBeVisible();
   await expect(page.getByTestId("module-side-panel-title")).toBeHidden();
   await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
 
