@@ -2064,10 +2064,10 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
   const searchButton = getNavRail(page).getByRole("button", { name: "전역 통합 검색 열기" });
   const searchIcon = searchButton.locator("svg");
   const customerCenterButton = getNavRail(page).getByRole("button", { name: "고객센터" });
-  await expect(navRail).toHaveCSS("width", "48px");
+  await expect(navRail).toHaveCSS("width", "52px");
   await expect(navRail).toHaveCSS("background-color", await resolveCssColor(page, "var(--emr-navrail-bg)"));
   await expect(navRail).toHaveCSS("border-radius", "12px");
-  await expect(navRail).toHaveCSS("padding-left", "8px");
+  await expect(navRail).toHaveCSS("padding-left", "10px");
   await expect(searchButton).toHaveCSS("width", "32px");
   await expect(searchButton).toHaveCSS("height", "32px");
   await expect(searchButton).toHaveCSS("color", await resolveCssColor(page, "var(--emr-navrail-icon)"));
@@ -2117,7 +2117,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       }),
     )
     .toEqual({
-      contentGap: "8px",
+      contentGap: "10px",
       contentWidth: 32,
       divider: {
         wrapperHeight: 1,
@@ -2125,7 +2125,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
         lineWidth: 24,
         padding: "0px 6px",
       },
-      gaps: [8],
+      gaps: [10],
     });
   const newTabButton = page.getByRole("button", { name: "새 업무 탭" });
   await newTabButton.hover();
@@ -2207,7 +2207,7 @@ test("workspace tab chrome follows the 10px shell rhythm", async ({ page }) => {
       historyGap: "4px",
       historyRightDelta: 0,
       leadingShift: 0,
-      navigationWidth: 346,
+      navigationWidth: 350,
       tablistLeftDelta: 0,
       topbarGap: 10,
       state: "open",
