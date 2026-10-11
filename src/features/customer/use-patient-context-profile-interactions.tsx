@@ -15,12 +15,6 @@ function textField(value: Record<string, unknown> | undefined, key: string) {
   return typeof field === "string" && field.trim() ? field : undefined;
 }
 
-function patientStatusLabel(status: unknown) {
-  if (status === "deceased") return "사망";
-  if (status === "inactive") return "비활성";
-  return "진료 가능";
-}
-
 export function usePatientContextProfileInteractions({
   allowLocalProfiles = false,
   guardian,
@@ -83,11 +77,10 @@ export function usePatientContextProfileInteractions({
           onActivate: () => openProfile("patient", patientProfileId),
           preview: (
             <ChartProfilePreviewCard
-              badge={patientStatusLabel(liveProfile?.status ?? patient?.status)}
+              onOpenProfile={() => openProfile("patient", patientProfileId)}
               kind="patient"
               title={patientName}
               items={[
-                { label: "환자번호", value: textField(liveProfile, "patientNo") ?? patient?.patientNo },
                 { label: "품종", value: textField(liveProfile, "breed") ?? patient?.breed },
                 { label: "나이", value: textField(liveProfile, "estimatedAgeText") ?? (patient ? getPatientDisplayAge(patient) : undefined) },
                 { label: "성별", value: liveProfile
@@ -104,7 +97,7 @@ export function usePatientContextProfileInteractions({
           onActivate: () => openProfile("guardian", guardianProfileId),
           preview: (
             <ChartProfilePreviewCard
-              badge="주보호자"
+              onOpenProfile={() => openProfile("guardian", guardianProfileId)}
               kind="guardian"
               title={guardianName}
               items={[

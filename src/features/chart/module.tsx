@@ -2067,11 +2067,10 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
             onActivate: openPatientProfile,
             preview: (
               <ChartProfilePreviewCard
-                badge={getPatientStatusLabel(bundle.patient.status)}
+                onOpenProfile={openPatientProfile}
                 kind="patient"
                 title={bundle.patient.name}
                 items={[
-                  { label: "환자번호", value: bundle.patient.patientNo },
                   {
                     label: "축종·품종",
                     value: `${getSpeciesLabel(bundle.patient)} · ${bundle.patient.breed ?? "품종 미입력"}`,
@@ -2099,7 +2098,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
                   onActivate: openGuardianProfile,
                   preview: (
                     <ChartProfilePreviewCard
-                      badge="주보호자"
+                      onOpenProfile={openGuardianProfile}
                       kind="guardian"
                       title={bundle.primaryGuardian.name}
                       items={[
@@ -2175,12 +2174,6 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
       />
     </>
   );
-}
-
-function getPatientStatusLabel(status: "active" | "inactive" | "deceased") {
-  if (status === "active") return "진료 가능";
-  if (status === "deceased") return "사망";
-  return "비활성";
 }
 
 export function ChartContentAside({ workspaceId }: ShellComponentProps) {
