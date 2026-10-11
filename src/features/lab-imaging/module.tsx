@@ -134,7 +134,6 @@ import { readChartLiveEncounterHandoff } from "@/features/chart/live-encounter-h
 import type { EmrTableDensity } from "@/components/emr/table-density";
 import {
   getPatientDisplayAge,
-  getPatientSexLabel,
   getSpeciesLabel,
 } from "@/features/reception/data";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
@@ -587,10 +586,10 @@ function getLivePatientFromWorkItem(workItem: FulfillmentWorkItem): Patient {
   const handoffPatient = readChartLiveEncounterHandoff(
     workItem.encounterId,
   )?.patient;
-  if (handoffPatient) return handoffPatient;
+  if (handoffPatient?.workspaceId === workItem.workspaceId && handoffPatient.id === workItem.patientId) return handoffPatient;
 
   const bridgedPatient = getStagingBridgeChartBundle(workItem)?.patient;
-  if (bridgedPatient) return bridgedPatient;
+  if (getAuthRuntimeMode().authProvider === "mock" && isLegacySalesDemoWorkspace(workItem.workspaceId) && bridgedPatient) return bridgedPatient;
 
   const now =
     workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
@@ -623,14 +622,15 @@ function getLivePatientFromWorkItem(workItem: FulfillmentWorkItem): Patient {
 function getLiveGuardianFromWorkItem(
   workItem: FulfillmentWorkItem,
 ): Guardian | undefined {
-  const handoffGuardian = readChartLiveEncounterHandoff(
+  const handoff = readChartLiveEncounterHandoff(
     workItem.encounterId,
-  )?.primaryGuardian;
-  if (handoffGuardian) return handoffGuardian;
+  );
+  const handoffGuardian = handoff?.primaryGuardian;
+  if (handoff?.patient.id === workItem.patientId && handoffGuardian?.workspaceId === workItem.workspaceId) return handoffGuardian;
 
   const bridgedGuardian =
     getStagingBridgeChartBundle(workItem)?.primaryGuardian;
-  if (bridgedGuardian) return bridgedGuardian;
+  if (getAuthRuntimeMode().authProvider === "mock" && isLegacySalesDemoWorkspace(workItem.workspaceId) && bridgedGuardian) return bridgedGuardian;
 
   const guardianName =
     workItem.guardianName ??
@@ -2885,8 +2885,11 @@ export function LabSlotAvailabilityProvider({
 export function LabHeader({ workspaceId }: ShellComponentProps) {
   const { detail } = useContext(LabCurrentDetailContext) ?? { detail: null };
   const profileInteractions = usePatientContextProfileInteractions({
-    allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
+    allowLocalProfiles: getAuthRuntimeMode().authProvider === "mock" && isLegacySalesDemoWorkspace(workspaceId),
+    encounter: detail?.encounter,
+    encounterId: detail?.encounter.id,
     guardian: detail?.primaryGuardian,
+    includeMemoSummaries: true,
     patient: detail?.patient,
     workspaceId,
   });
@@ -2919,56 +2922,12 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
       <EmrPatientContextBar
         key={detail.encounter.id}
         guardianInteraction={profileInteractions.guardianInteraction}
-        guardianItems={[
-          {
-            label: "보호자",
-            value: detail.primaryGuardian?.name ?? "보호자 미지정",
-          },
-        ]}
+        guardianItems={profileInteractions.guardianItems}
         patientInteraction={profileInteractions.patientInteraction}
-        patientItems={[
-          { label: "환자", value: detail.patient.name },
-          {
-            label: "품종",
-            value: detail.patient.breed ?? getSpeciesLabel(detail.patient),
-          },
-          { label: "나이", value: getPatientDisplayAge(detail.patient) },
-          { label: "성별", value: getPatientSexLabel(detail.patient) },
-        ]}
+        patientItems={profileInteractions.patientItems}
         vitalAction={vitalAction}
         vitalItems={latestVitals.items}
-        memoActions={[
-          {
-            label: "방문목적",
-            summary:
-              detail.encounter.visitPurpose ??
-              detail.encounter.chiefComplaint ??
-              "방문 목적 기록 없음",
-          },
-          {
-            label: "보호자메모",
-            locked: true,
-            summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
-            unavailableReason:
-              "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-          },
-          {
-            label: "환자메모",
-            summary:
-              [
-                detail.patient.allergyNote,
-                detail.patient.specialNote,
-                detail.patient.handlingCautionNote,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "환자 특이 메모 없음",
-          },
-          {
-            label: "수납메모",
-            disabled: true,
-            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-          },
-        ]}
+        memoActions={profileInteractions.memoActions}
         trailingItems={[
           { label: "검사", value: detail.result.resultName },
           {
@@ -3943,8 +3902,11 @@ export function ImagingHeader({
 }: ShellComponentProps) {
   const { detail } = useCurrentImagingDetail(workspaceId);
   const profileInteractions = usePatientContextProfileInteractions({
-    allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
+    allowLocalProfiles: getAuthRuntimeMode().authProvider === "mock" && isLegacySalesDemoWorkspace(workspaceId),
+    encounter: detail?.encounter,
+    encounterId: detail?.encounter.id,
     guardian: detail?.primaryGuardian,
+    includeMemoSummaries: true,
     patient: detail?.patient,
     workspaceId,
   });
@@ -3977,56 +3939,12 @@ export function ImagingHeader({
       <EmrPatientContextBar
         key={detail.encounter.id}
         guardianInteraction={profileInteractions.guardianInteraction}
-        guardianItems={[
-          {
-            label: "보호자",
-            value: detail.primaryGuardian?.name ?? "보호자 미지정",
-          },
-        ]}
+        guardianItems={profileInteractions.guardianItems}
         patientInteraction={profileInteractions.patientInteraction}
-        patientItems={[
-          { label: "환자", value: detail.patient.name },
-          {
-            label: "품종",
-            value: detail.patient.breed ?? getSpeciesLabel(detail.patient),
-          },
-          { label: "나이", value: getPatientDisplayAge(detail.patient) },
-          { label: "성별", value: getPatientSexLabel(detail.patient) },
-        ]}
+        patientItems={profileInteractions.patientItems}
         vitalAction={vitalAction}
         vitalItems={latestVitals.items}
-        memoActions={[
-          {
-            label: "방문목적",
-            summary:
-              detail.encounter.visitPurpose ??
-              detail.encounter.chiefComplaint ??
-              "방문 목적 기록 없음",
-          },
-          {
-            label: "보호자메모",
-            locked: true,
-            summary: detail.primaryGuardian?.memo ?? "보호자 메모 없음",
-            unavailableReason:
-              "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-          },
-          {
-            label: "환자메모",
-            summary:
-              [
-                detail.patient.allergyNote,
-                detail.patient.specialNote,
-                detail.patient.handlingCautionNote,
-              ]
-                .filter(Boolean)
-                .join(" · ") || "환자 특이 메모 없음",
-          },
-          {
-            label: "수납메모",
-            disabled: true,
-            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-          },
-        ]}
+        memoActions={profileInteractions.memoActions}
         trailingItems={[
           {
             label: "영상",

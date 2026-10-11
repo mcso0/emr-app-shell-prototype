@@ -67,6 +67,8 @@ export function useCustomerProfileOverview({
   subjectType: CustomerProfileSubjectType;
   workspaceId: string;
 }): CustomerProfileOverviewState {
+  const scopeKey = JSON.stringify([workspaceId, subjectType, subjectId]);
+  const [overviewScope, setOverviewScope] = useState<string | null>(null);
   const [overview, setOverview] = useState<CustomerProfileOverview | null>(null);
   const [overviewStatus, setOverviewStatus] = useState<CustomerProfileOverviewState["overviewStatus"]>(
     enabled ? "loading" : "idle",
@@ -90,6 +92,7 @@ export function useCustomerProfileOverview({
     sectionControllers.current = {};
     const controller = new AbortController();
     overviewController.current = controller;
+    setOverviewScope(scopeKey);
     setOverview(null);
     setErrorStatus(undefined);
     setOverviewStatus("loading");
@@ -107,21 +110,37 @@ export function useCustomerProfileOverview({
         const payload = (await response.json().catch(() => null)) as
           | { ok?: boolean; overview?: CustomerProfileOverview; status?: number }
           | null;
-        if (requestVersion.current !== version) return;
+        if (requestVersion.current !== version || controller.signal.aborted) return;
         if (!response.ok || !payload?.ok || !payload.overview) {
           setErrorStatus(response.status);
           setOverviewStatus(response.status === 401 || response.status === 403 ? "denied" : response.status === 404 ? "not_found" : "error");
+          return;
+        }
+        if (
+          payload.overview.subjectId !== subjectId ||
+          payload.overview.subjectType !== subjectType ||
+          payload.overview.profile.id !== subjectId ||
+          (payload.overview.profile.workspaceId !== undefined &&
+            payload.overview.profile.workspaceId !== workspaceId)
+        ) {
+          setErrorStatus(500);
+          setOverviewStatus("error");
+          return;
+        }
+        if (payload.overview.access.information?.allowed !== true) {
+          setErrorStatus(403);
+          setOverviewStatus("denied");
           return;
         }
         setOverview(payload.overview);
         setOverviewStatus("ready");
       })
       .catch((error: unknown) => {
-        if (requestVersion.current !== version || isAbortError(error)) return;
+        if (requestVersion.current !== version || controller.signal.aborted || isAbortError(error)) return;
         setErrorStatus(500);
         setOverviewStatus("error");
       });
-  }, [enabled, subjectId, subjectType, workspaceId]);
+  }, [enabled, scopeKey, subjectId, subjectType, workspaceId]);
 
   useEffect(() => {
     if (!enabled) {
@@ -143,7 +162,7 @@ export function useCustomerProfileOverview({
       filter: CustomerProfileSectionFilter = {},
       options: { append?: boolean; force?: boolean } = {},
     ) => {
-      if (!enabled || !overview || !overview.access[section].allowed) {
+      if (!enabled || overviewScope !== scopeKey || !overview || !overview.access[section].allowed) {
         setSectionStates((current) => ({
           ...current,
           [section]: { ...emptySectionState("denied"), filterKey: serializeFilter(filter) },
@@ -226,20 +245,24 @@ export function useCustomerProfileOverview({
           }));
         });
     },
-    [enabled, overview, sectionStates, subjectId, subjectType, workspaceId],
+    [enabled, overview, overviewScope, scopeKey, sectionStates, subjectId, subjectType, workspaceId],
   );
 
   return useMemo(
     () => ({
-      access: enabled ? overview?.access ?? null : null,
-      errorStatus,
-      overview: enabled ? overview : null,
-      overviewStatus: enabled ? overviewStatus : "idle",
+      access: enabled && overviewScope === scopeKey ? overview?.access ?? null : null,
+      errorStatus: overviewScope === scopeKey ? errorStatus : undefined,
+      overview: enabled && overviewScope === scopeKey ? overview : null,
+      overviewStatus: enabled ? overviewScope === scopeKey ? overviewStatus : "loading" : "idle",
       reloadOverview: loadOverview,
       loadSection,
-      sectionStates,
+      sectionStates: enabled && overviewScope === scopeKey ? sectionStates : {
+        history: emptySectionState("idle"),
+        reservations: emptySectionState("idle"),
+        billing: emptySectionState("idle"),
+      },
     }),
-    [enabled, errorStatus, loadOverview, loadSection, overview, overviewStatus, sectionStates],
+    [enabled, errorStatus, loadOverview, loadSection, overview, overviewScope, overviewStatus, scopeKey, sectionStates],
   );
 }
 
