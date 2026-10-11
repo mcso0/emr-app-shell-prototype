@@ -109,7 +109,7 @@ import {
   technicianUsers,
   type OrderTableGroup,
 } from "@/features/dispensing/data";
-import { mockStaffUsers } from "@/mocks/emr-domain";
+import { getMockPatientBundle, mockPatients, mockStaffUsers } from "@/mocks/emr-domain";
 import type {
   Order,
   OrderQueueItem,
@@ -1152,7 +1152,7 @@ export function DispensingHeader({
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
-  const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowLegacyFixtureFallback = !isLiveAuthRuntime() && isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
     [fulfillmentQueue.workItems, workspaceId],
@@ -1167,7 +1167,22 @@ export function DispensingHeader({
     fulfillmentQueue.workItems,
   );
   const selectedEncounterId = selectedWorkItem?.encounterId;
+  const localPatient = allowLegacyFixtureFallback
+    ? mockPatients.find((item) => item.workspaceId === workspaceId && (
+        selectedWorkItem?.patientId
+          ? item.id === selectedWorkItem.patientId
+          : !selectedWorkItem && item.name === selectedQueueItem?.patientName
+      ))
+    : undefined;
+  const localProfile = localPatient ? getMockPatientBundle(localPatient.id) : undefined;
+  const localEncounter = localProfile?.encounters.find((item) => item.id === (selectedEncounterId ?? searchParams.get("encounterId")));
   const profileInteractions = usePatientContextProfileInteractions({
+    allowLocalProfiles: allowLegacyFixtureFallback,
+    encounter: localEncounter,
+    encounterId: selectedEncounterId,
+    guardian: localProfile?.primaryGuardian,
+    includeMemoSummaries: true,
+    patient: localPatient,
     patientId: selectedWorkItem?.patientId,
     workspaceId,
   });
@@ -1217,56 +1232,12 @@ export function DispensingHeader({
       <EmrPatientContextBar
         key={selectedEncounterId ?? selectedQueueItem.id}
         guardianInteraction={profileInteractions.guardianInteraction}
-        guardianItems={[
-          {
-            label: "보호자",
-            value: selectedQueueItem?.guardianName ?? patient.guardian,
-          },
-        ]}
+        guardianItems={profileInteractions.guardianItems}
         patientInteraction={profileInteractions.patientInteraction}
-        patientItems={[
-          {
-            label: "환자",
-            value: selectedQueueItem?.patientName ?? patient.name,
-          },
-          {
-            label: "품종",
-            value: selectedQueueItem?.patientBreed ?? patient.breed,
-          },
-          {
-            label: "나이",
-            value: selectedQueueItem?.patientAge ?? patient.age,
-          },
-          {
-            label: "성별",
-            value: selectedQueueItem?.patientSex ?? patient.sex,
-          },
-        ]}
+        patientItems={profileInteractions.patientItems}
         vitalAction={vitalAction}
         vitalItems={latestVitals.items}
-        memoActions={[
-          {
-            label: "방문목적",
-            summary: selectedQueueItem?.receptionType ?? "방문 목적 기록 없음",
-          },
-          {
-            label: "보호자메모",
-            locked: true,
-            unavailableReason:
-              "보호자 프로필 메모는 고객 정보 화면에서 관리합니다.",
-          },
-          {
-            label: "환자메모",
-            disabled: true,
-            unavailableReason:
-              "환자 상세 메모는 현재 조제/처치 큐 스냅샷에서 제공하지 않습니다.",
-          },
-          {
-            label: "수납메모",
-            disabled: true,
-            unavailableReason: "수납 메모는 수납 화면에서 관리합니다.",
-          },
-        ]}
+        memoActions={profileInteractions.memoActions}
       />
     </EmrMainContentHeader>
     {vitalDialog}

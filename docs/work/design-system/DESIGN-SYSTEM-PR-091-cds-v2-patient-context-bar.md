@@ -10,7 +10,7 @@ source_docs:
   - "docs/design/system/DESIGN.md"
   - "docs/work/design-system/DESIGN-SYSTEM-PR-038-cds-v2-app-shell-scope.md"
   - "docs/work/design-system/DESIGN-SYSTEM-PR-048-patient-info-bar-memo-action-ux.md"
-updated: "2026-08-15"
+updated: "2026-10-12"
 ---
 
 # CDS.V2 Patient Context Bar
@@ -69,3 +69,104 @@ The shared component now exposes optional patient/guardian preview activation an
 ## 2026-09-27 Local Follow-up
 
 Lab, imaging, and dispensing now opt into the existing profile preview, profile drawer, and vital dialog contracts. Live profile actions appear only after the selected work item resolves to a real patient ID and the workspace-scoped profile read succeeds. Billing keeps its guardian-centered summary layout and adds the same preview and drawer behavior to each identified guardian/patient badge. Vital actions continue through the existing permissioned latest-vital read and guarded chart vital writer; completed work is disabled in the context bar. This follow-up is implemented locally and has not been delivered to the production deployment.
+
+## 2026-10-11 Chart-baseline Alignment Follow-up
+
+Status: local implementation complete; final verification recorded below.
+Local implementation was accepted on 2026-10-12. Release preparation is now
+authorized; exact-candidate Production approval remains the final merge gate.
+
+### Approved Scope
+
+승욱 approved local implementation after the read-only cross-screen audit and
+scope proposal. The parent orchestrates GPT-6.1 workers at `max` reasoning.
+
+- Align dispensing/treatment, lab, and imaging patient and guardian identity
+  composition with chart: name, breed, sex/neuter, age; guardian relationship
+  and contact. Preserve workload-specific trailing information.
+- Resolve false `미상` values through existing workspace-scoped authorized
+  profile reads, including direct entry and reload without chart handoff state.
+- Correct visit-purpose and memo composition through existing read contracts;
+  distinguish missing values, pending reads, failures, and denied access.
+- Align billing geometry, typography, identity presentation, hover, and overflow
+  controls with chart. Preserve guardian-first ordering, individually interactive
+  multiple patients, masking, financial summaries, and existing billing data.
+- Preserve existing profile navigation, vital permissions/writes, work selection,
+  queue state, and financial actions. Keep shared visual components data-agnostic.
+
+The user explicitly excluded billing data remediation. No remote writes,
+database/migration/RLS changes, production delivery, or main merge are authorized
+by this local implementation request. Use synthetic fixtures and mocked existing
+API responses for local verification. Do not replace real read failures with
+legacy demo profiles or modify immutable order snapshots to fix header display.
+
+### Implementation And Verification Plan
+
+1. Reuse the existing profile read for the visible identity and preview, and
+   protect patient/workspace changes from stale responses.
+2. Apply the chart identity/memo contract to clinical callers.
+3. Reuse shared context-bar presentation for guardian-centered billing without
+   changing billing calculations or source data.
+4. Verify direct entry, reload, delayed selection changes, denied/missing reads,
+   long content, profile activation, vital controls, and billing multi-patient
+   behavior. Run focused regressions, lint, typecheck, and documentation checks.
+
+Work is isolated in `codex/patient-context-alignment` from `710b810a`, preserving
+the existing checkout's configuration and documentation WIP.
+
+
+### Local Result And Verification (2026-10-12)
+
+Clinical headers and their previews now share one authorized patient overview.
+Guardian memo and visit purpose use the existing guardian overview and chart
+preconsultation reads. Pending, denied, failed, missing-subject, and empty-field
+states remain distinct. Scope checks reject mismatched responses and suppress
+previous-patient or previous-workspace content during selection changes.
+
+Billing uses the shared bar with guardian-first order and independently
+interactive patient sections. Its source values, masking, totals, selection, and
+financial actions remain unchanged. The information track observes content
+resizing so fixed overflow controls update after asynchronous content changes.
+
+- Full `npm run lint`: passed, with five existing unused-variable warnings in
+  unrelated WP10 scripts and zero errors.
+- `npx tsc --noEmit --pretty false`, `npm run docs:check`,
+  `npm run security:secrets`, and `git diff --check`: passed.
+- Clinical identity/memo/direct-entry/reload/scope/failure browser regressions:
+  17/17 passed.
+- Profile projection, preconsultation, and vital server regressions: 22/22 passed.
+- Existing lab/imaging profile browser regressions: 2/2 passed after correcting
+  obsolete preview assertions to the existing breed/age/sex contract.
+- Current chart/dispensing vital-history launch, exact measurement update, header
+  refresh, permission denial, and completed-work guards: 5/5 passed.
+- Shared-bar Storybook interaction checks: 4/4 passed.
+- Billing geometry/overflow/masking/summary browser regression: 1/1 passed.
+- Selected existing chart/billing regressions: 6/7 passed. The remaining legacy
+  chart test expects the superseded `오늘 바이탈 수정` dialog; the unchanged baseline
+  already uses `바이탈 이력` and the history endpoint.
+- The existing broad dispensing app-shell test retains obsolete instruction
+  header expectations (32px versus baseline 36px; then an absent RX title).
+  Its patient-bar assertions passed. Product behavior was not changed to satisfy
+  those unrelated assertions, and the app-shell test remains unchanged.
+
+Verification uses local synthetic fixtures and mocked API responses. This is not
+production data verification or authenticated production smoke. Existing legacy
+test failures above prevent claiming a completely green repository-wide suite.
+
+
+### Release Request (2026-10-12)
+
+승욱 requested committing and pushing only this follow-up, opening a PR to
+`main`, merging, and verifying deployment. Prepare the exact candidate and
+required Release Check/Preview evidence under the release runbook before the
+final Production approval gate. No database, migration, permission-policy,
+financial-data, or external-provider changes are included.
+
+The initial comparison target is `710b810aa1101a8efb7a03dc64642dd8c3580ff6`.
+The current Ready Production deployment and rollback candidate is
+`dpl_85zaRvdLxWYPGKR2TcZ1m7QYdZWq`, sourced from that commit. Reconfirm both before
+merge. Post-merge smoke covers `/login` and read-only navigation to chart,
+dispensing/treatment, lab, imaging, and billing. Authenticated screen inspection
+uses only available synthetic/demo context; if authentication is unavailable,
+report the redirect boundary without claiming authenticated smoke. Do not submit
+clinical, billing, or profile mutations in Production.

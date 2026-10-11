@@ -1096,7 +1096,11 @@ for (const queueType of ["lab", "imaging"] as const) {
     const patientButton = page.getByRole("button", { name: "초코 환자 프로필 열기" });
     await expect(patientButton).toBeVisible();
     await patientButton.hover();
-    await expect(page.locator("[data-slot='chart-patient-profile-preview']")).toContainText("P-CONTEXT");
+    const patientPreview = page.locator("[data-slot='chart-patient-profile-preview']");
+    await expect(patientPreview).toBeVisible();
+    await expect(patientPreview).toContainText("포메라니안");
+    await expect(patientPreview).toContainText("3세");
+    await expect(patientPreview).toContainText("수컷");
     await patientButton.click();
     await expect(page.getByTestId("profile-side-panel")).toHaveAttribute("data-profile-kind", "patient");
     await expect(page.getByTestId("profile-side-panel")).toContainText("초코");

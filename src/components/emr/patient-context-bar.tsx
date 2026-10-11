@@ -53,6 +53,7 @@ type PatientContextDatum = {
   label: ReactNode;
   value: ReactNode;
   measurementTooltip?: string;
+  tone?: "neutral" | "warning";
 };
 
 type PatientContextMemoAction = {
@@ -79,6 +80,8 @@ export type ContextBarVitalAction = {
 
 type PatientContextBarProps = {
   className?: string;
+  identityOrder?: "patient-first" | "guardian-first";
+  informationAriaLabel?: string;
   historyButton?: {
     controls?: string;
     expanded?: boolean;
@@ -92,6 +95,8 @@ type PatientContextBarProps = {
   guardianItems?: PatientContextDatum[];
   patientInteraction?: ContextBarProfileInteraction;
   patientItems: PatientContextDatum[];
+  /** Feature-owned wrappers may supply multiple independently interactive patients. */
+  patientSections?: ReactNode;
   rightPanelBadgeCount?: number;
   rightPanelDisabled?: boolean;
   rightPanelToggleIcon?: ReactNode;
@@ -130,6 +135,8 @@ function getScrollState(element: HTMLDivElement | null): ScrollState {
 
 export function EmrPatientContextBar({
   className,
+  identityOrder = "patient-first",
+  informationAriaLabel = "환자 컨텍스트 정보",
   historyButton,
   memoActions = [],
   onToggleRightPanel,
@@ -138,6 +145,7 @@ export function EmrPatientContextBar({
   guardianItems = [],
   patientInteraction,
   patientItems,
+  patientSections,
   rightPanelBadgeCount,
   rightPanelDisabled = false,
   rightPanelToggleIcon,
@@ -149,6 +157,7 @@ export function EmrPatientContextBar({
   vitalItems = [],
 }: PatientContextBarProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const informationTrackRef = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] = useState<ScrollState>(() => ({
     canScrollLeft: false,
     canScrollRight: false,
@@ -168,6 +177,26 @@ export function EmrPatientContextBar({
     });
   }, []);
   const shouldShowRightPanelToggle = Boolean(onToggleRightPanel);
+  const patientSection = patientSections ?? (
+    <EmrPatientContextPatientSection
+      interaction={patientInteraction}
+      items={patientItems}
+    />
+  );
+  const guardianSection = guardianItems.length ? (
+    <PatientContextInfoSection
+      dataSlot="patient-context-guardian"
+      hoverAction={
+        guardianIndicatorVisible && guardianInteraction ? (
+          <CdsNavigationChevronRightIcon />
+        ) : undefined
+      }
+      iconSrc={getAssetSrc(companionIcon)}
+      interaction={guardianInteraction}
+    >
+      <PatientContextInlineSummary items={guardianItems} />
+    </PatientContextInfoSection>
+  ) : null;
 
   useEffect(() => {
     const element = scrollRef.current;
@@ -179,6 +208,9 @@ export function EmrPatientContextBar({
 
     const resizeObserver = new ResizeObserver(updateScrollState);
     resizeObserver.observe(element);
+    if (informationTrackRef.current) {
+      resizeObserver.observe(informationTrackRef.current);
+    }
 
     return () => {
       element.removeEventListener("scroll", updateScrollState);
@@ -218,69 +250,52 @@ export function EmrPatientContextBar({
         <div className="relative min-w-0 flex-1">
           <div
             ref={scrollRef}
-            className="flex min-w-0 items-center gap-[var(--emr-context-bar-section-gap)] overflow-x-auto overflow-y-hidden pr-[var(--clair-spacing-32)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            aria-label="환자 컨텍스트 정보"
+            className="min-w-0 overflow-x-auto overflow-y-hidden pr-[var(--clair-spacing-32)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            aria-label={informationAriaLabel}
           >
-            <PatientContextInfoSection
-              dataSlot="patient-context-patient"
-              hoverAction={patientInteraction ? <CdsNavigationChevronRightIcon /> : undefined}
-              iconSrc={getAssetSrc(animalDogIcon)}
-              interaction={patientInteraction}
+            <div
+              ref={informationTrackRef}
+              data-slot="patient-context-information-track"
+              className="flex w-max items-center gap-[var(--emr-context-bar-section-gap)]"
             >
-              <PatientContextInlineSummary items={patientItems} />
-            </PatientContextInfoSection>
+              {identityOrder === "guardian-first" ? guardianSection : patientSection}
+              {guardianSection ? <PatientContextDivider /> : null}
+              {identityOrder === "guardian-first" ? patientSection : guardianSection}
 
-            {guardianItems.length ? (
-              <>
-                <PatientContextDivider />
-                <PatientContextInfoSection
-                  dataSlot="patient-context-guardian"
-                  hoverAction={
-                    guardianIndicatorVisible && guardianInteraction ? (
-                      <CdsNavigationChevronRightIcon />
-                    ) : undefined
-                  }
-                  iconSrc={getAssetSrc(companionIcon)}
-                  interaction={guardianInteraction}
-                >
-                  <PatientContextInlineSummary items={guardianItems} />
-                </PatientContextInfoSection>
-              </>
-            ) : null}
+              {vitalItems.length ? (
+                <>
+                  <PatientContextDivider />
+                  <PatientContextInfoSection
+                    dataSlot="patient-context-vitals"
+                    hoverAction={vitalAction ? <CdsActionsPlusIcon /> : undefined}
+                    iconSrc={getAssetSrc(vitalHeartPulseIcon)}
+                    vitalAction={vitalAction}
+                  >
+                    <PatientContextDatumGroup items={vitalItems} />
+                  </PatientContextInfoSection>
+                </>
+              ) : null}
 
-            {vitalItems.length ? (
-              <>
-                <PatientContextDivider />
-                <PatientContextInfoSection
-                  dataSlot="patient-context-vitals"
-                  hoverAction={vitalAction ? <CdsActionsPlusIcon /> : undefined}
-                  iconSrc={getAssetSrc(vitalHeartPulseIcon)}
-                  vitalAction={vitalAction}
-                >
-                  <PatientContextDatumGroup items={vitalItems} />
-                </PatientContextInfoSection>
-              </>
-            ) : null}
+              {memoActions.length ? (
+                <>
+                  <PatientContextDivider />
+                  <PatientContextMemoActions
+                    actions={memoActions}
+                    open={memoPopoverOpen}
+                    onOpenChange={setMemoPopoverOpen}
+                  />
+                </>
+              ) : null}
 
-            {memoActions.length ? (
-              <>
-                <PatientContextDivider />
-                <PatientContextMemoActions
-                  actions={memoActions}
-                  open={memoPopoverOpen}
-                  onOpenChange={setMemoPopoverOpen}
-                />
-              </>
-            ) : null}
-
-            {trailingItems.length ? (
-              <>
-                <PatientContextDivider />
-                <div className="flex shrink-0 items-center">
-                  <PatientContextDatumGroup items={trailingItems} />
-                </div>
-              </>
-            ) : null}
+              {trailingItems.length ? (
+                <>
+                  <PatientContextDivider />
+                  <div className="flex shrink-0 items-center">
+                    <PatientContextDatumGroup items={trailingItems} />
+                  </div>
+                </>
+              ) : null}
+            </div>
           </div>
           <div
             className={cn(
@@ -339,6 +354,25 @@ export function EmrPatientContextBar({
         </div>
       </div>
     </div>
+  );
+}
+
+export function EmrPatientContextPatientSection({
+  interaction,
+  items,
+}: {
+  interaction?: ContextBarProfileInteraction;
+  items: PatientContextDatum[];
+}) {
+  return (
+    <PatientContextInfoSection
+      dataSlot="patient-context-patient"
+      hoverAction={interaction ? <CdsNavigationChevronRightIcon /> : undefined}
+      iconSrc={getAssetSrc(animalDogIcon)}
+      interaction={interaction}
+    >
+      <PatientContextInlineSummary items={items} />
+    </PatientContextInfoSection>
   );
 }
 
@@ -413,6 +447,7 @@ function PatientContextDatumGroup({ items }: { items: PatientContextDatum[] }) {
           label={item.label}
           value={item.value}
           measurementTooltip={item.measurementTooltip}
+          tone={item.tone}
         />
       ))}
     </div>
@@ -613,14 +648,23 @@ function PatientContextInlineSummary({
   );
 }
 
-function PatientContextDatumBadge({ label, value, measurementTooltip }: PatientContextDatum) {
+function PatientContextDatumBadge({ label, value, measurementTooltip, tone }: PatientContextDatum) {
   const badge = (
     <Badge
       variant="secondary"
-      className="emr-text-metadata h-[var(--emr-context-bar-chip-height)] shrink-0 gap-[var(--clair-spacing-2)] rounded-[var(--emr-context-bar-chip-radius)] border-transparent bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] py-[3px] font-medium"
+      className={cn(
+        "emr-text-metadata h-[var(--emr-context-bar-chip-height)] shrink-0 gap-[var(--clair-spacing-2)] rounded-[var(--emr-context-bar-chip-radius)] border-transparent bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] py-[3px] font-medium",
+        tone === "warning" && "bg-[var(--emr-status-warning-bg)]",
+      )}
     >
-      <span className="text-[var(--emr-context-bar-chip-label)]">{label}</span>
-      <span className="text-[var(--emr-context-bar-chip-value)]">{value}</span>
+      <span className={cn(
+        "text-[var(--emr-context-bar-chip-label)]",
+        tone === "warning" && "text-[var(--emr-status-warning-text)]",
+      )}>{label}</span>
+      <span className={cn(
+        "text-[var(--emr-context-bar-chip-value)]",
+        tone === "warning" && "text-[var(--emr-status-warning-text)]",
+      )}>{value}</span>
     </Badge>
   );
   if (!measurementTooltip) return badge;

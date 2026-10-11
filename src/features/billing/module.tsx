@@ -16,9 +16,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table";
-import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
-import guardianPersonIcon from "@/assets/figma/illustrations/interface-user-single-male-streamline-plump.svg";
 import {
   CdsActionsRefreshCcwIcon,
   CdsActionsSearchIcon,
@@ -40,6 +38,10 @@ import { EmrInlineAlert } from "@/components/emr/inline-alert";
 import { EmrHistoryFilterPopover, EmrHistorySearch, EmrHistorySortButton, useHistorySearch } from "@/components/emr/history-controls";
 import { compareHistoryDates, emptyHistoryDateRange, matchesHistoryDate, matchesHistoryQuery, type HistoryDateRange, type HistorySortDirection } from "@/lib/history-controls";
 import { EmrMainContentHeader } from "@/components/emr/main-content-header";
+import {
+  EmrPatientContextBar,
+  EmrPatientContextPatientSection,
+} from "@/components/emr/patient-context-bar";
 import {
   EmrRightPanel,
   EmrRightPanelBody,
@@ -74,7 +76,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SegmentedControl } from "@/components/ui/segmented-control";
@@ -100,7 +101,6 @@ import {
 } from "@/features/billing/billing-protected-snapshot";
 import { useAuthClient, type AuthSession } from "@/features/auth/auth-client";
 import { usePatientContextProfileInteractions } from "@/features/customer/use-patient-context-profile-interactions";
-import type { ContextBarProfileInteraction } from "@/components/emr/patient-context-bar";
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import type { BillingQueueItem } from "./billing-queue";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
@@ -148,7 +148,6 @@ import type {
   Encounter,
   ServiceItemType,
 } from "@/types/emr-domain";
-import animalDogIcon from "../../../icons/Illustration/animal-dog.svg";
 
 const billingQueueGroups: Array<{
   colorToken: string;
@@ -200,8 +199,6 @@ const formatShortDateTime = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 16).replace("T", " ").replaceAll("-", ".") : "-";
 const formatShortDate = (dateTime?: string) =>
   dateTime ? dateTime.slice(2, 10).replaceAll("-", ".") : "-";
-const getAssetSrc = (asset: string | { src?: string }) =>
-  typeof asset === "string" ? asset : (asset.src ?? "");
 const getBillingPaymentMethodLabel = (method: PaymentMethod) =>
   paymentMethodItems.find((item) => item.value === method)?.label ?? method;
 const billingCandidateInvoiceLineIdPrefix = "invoice-line-billcand-";
@@ -2092,96 +2089,7 @@ function getBillingHeaderStatusLabel(status: InvoiceStatus) {
   return getInvoiceStatusLabel(status);
 }
 
-function BillingGuardianContextBadge({
-  label,
-  tone = "neutral",
-  value,
-}: {
-  label: ReactNode;
-  tone?: "neutral" | "warning";
-  value: ReactNode;
-}) {
-  return (
-    <Badge
-      variant="secondary"
-      className={cn(
-        "emr-text-dense-label h-[22px] shrink-0 gap-1 rounded-[var(--clair-radius-atomic-6)] border-transparent bg-[var(--emr-status-neutral-bg)] px-2 py-0.5 font-medium",
-        tone === "warning" &&
-          "bg-[var(--emr-status-warning-bg)] text-[var(--emr-status-warning-text)]",
-      )}
-    >
-      <span
-        className={cn(
-          "text-[var(--emr-text-tertiary)]",
-          tone === "warning" && "text-[var(--emr-status-warning-text)]",
-        )}
-      >
-        {label}
-      </span>
-      <span
-        className={cn(
-          "max-w-[220px] truncate text-[var(--emr-text-secondary)]",
-          tone === "warning" && "text-[var(--emr-status-warning-text)]",
-        )}
-      >
-        {value}
-      </span>
-    </Badge>
-  );
-}
-
-function BillingGuardianContextDivider() {
-  return (
-    <div className="h-[18px] w-px shrink-0 bg-border" aria-hidden="true" />
-  );
-}
-
-function BillingContextProfileBadge({
-  interaction,
-  label,
-  value,
-}: {
-  interaction?: ContextBarProfileInteraction;
-  label: string;
-  value: string;
-}) {
-  const [open, setOpen] = useState(false);
-  if (!interaction) return <BillingGuardianContextBadge label={label} value={value} />;
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(nextOpen, details) => {
-        if (details.reason === "trigger-press") {
-          setOpen(false);
-          interaction.onActivate();
-          return;
-        }
-        setOpen(nextOpen);
-      }}
-    >
-      <PopoverTrigger
-        openOnHover
-        delay={250}
-        closeDelay={150}
-        render={
-          <button
-            type="button"
-            className="rounded-[var(--clair-radius-atomic-6)] text-left hover:ring-1 hover:ring-[var(--emr-border-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={interaction.ariaLabel}
-          />
-        }
-      >
-        <BillingGuardianContextBadge label={label} value={value} />
-      </PopoverTrigger>
-      <PopoverContent align="start" side="bottom" sideOffset={8} className="w-[320px] gap-0 p-3">
-        {interaction.preview}
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function BillingPatientContextBadge({
+function BillingPatientContextSection({
   guardian,
   patient,
   workspaceId,
@@ -2197,10 +2105,9 @@ function BillingPatientContextBadge({
     workspaceId,
   });
   return (
-    <BillingContextProfileBadge
+    <EmrPatientContextPatientSection
       interaction={patientInteraction}
-      label="환자"
-      value={patient.name}
+      items={[{ label: "환자", value: patient.name }]}
     />
   );
 }
@@ -2224,95 +2131,46 @@ function BillingGuardianContextBar({ detail }: { detail: BillingDetail }) {
     (summary.unpaid.count > 0 ? "미납 주의" : "메모 없음");
 
   return (
-    <div className="flex h-full items-center gap-3 border-b border-[var(--emr-border-default)] bg-[var(--emr-surface-workspace)] px-4">
-      <div className="relative min-w-0 flex-1">
-        <div
-          className="flex min-w-0 items-center gap-3 overflow-x-auto overflow-y-hidden pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          aria-label="보호자 수납 컨텍스트 정보"
-        >
-          <div className="flex shrink-0 items-center gap-1.5">
-            <BillingGuardianContextIcon
-              src={getAssetSrc(guardianPersonIcon)}
-              alt=""
-            />
-            <BillingContextProfileBadge
-              interaction={guardianInteraction}
-              label="보호자"
-              value={guardianName}
-            />
-            <BillingGuardianContextBadge label="관계" value="주 보호자" />
-            <BillingGuardianContextBadge
-              label="연락처"
-              value={getMaskedGuardianContact(detail)}
-            />
-          </div>
-          <BillingGuardianContextDivider />
-          <div className="flex shrink-0 items-center gap-1.5">
-            <BillingGuardianContextIcon
-              src={getAssetSrc(animalDogIcon)}
-              alt=""
-            />
-            {patients.length ? patients.map((patient) => (
-              <BillingPatientContextBadge
-                key={patient.id}
-                guardian={detail.guardian}
-                patient={patient}
-                workspaceId={workspaceId}
-              />
-            )) : <BillingGuardianContextBadge label="환자" value="환자 미상" />}
-            <BillingGuardianContextBadge
-              label="최근 수납"
-              value={
-                summary.recentPaymentAt
-                  ? formatShortDateTime(summary.recentPaymentAt)
-                  : "기록 없음"
-              }
-            />
-          </div>
-          <BillingGuardianContextDivider />
-          <div className="flex shrink-0 items-center gap-1.5">
-            <BillingGuardianContextBadge
-              label="수납대기"
-              value={`${summary.waiting.count}건 · ${formatAmount(summary.waiting.amount)}`}
-            />
-            <BillingGuardianContextBadge
-              label="미납"
-              value={`${summary.unpaid.count}건 · ${formatAmount(summary.unpaid.amount)}`}
-              tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
-            />
-            <BillingGuardianContextBadge
-              label="보호자 메모"
-              value={guardianMemoLabel}
-              tone={summary.unpaid.count > 0 ? "warning" : "neutral"}
-            />
-          </div>
-        </div>
-        <div
-          className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-r from-transparent to-[var(--emr-surface-workspace)]"
-          aria-hidden="true"
+    <EmrPatientContextBar
+      identityOrder="guardian-first"
+      informationAriaLabel="보호자 수납 컨텍스트 정보"
+      guardianInteraction={guardianInteraction}
+      guardianItems={[
+        { label: "보호자", value: guardianName },
+        { label: "관계", value: "주 보호자" },
+        { label: "연락처", value: getMaskedGuardianContact(detail) },
+      ]}
+      patientItems={[{ label: "환자", value: "환자 미상" }]}
+      patientSections={patients.length ? patients.map((patient) => (
+        <BillingPatientContextSection
+          key={patient.id}
+          guardian={detail.guardian}
+          patient={patient}
+          workspaceId={workspaceId}
         />
-      </div>
-    </div>
-  );
-}
-
-function BillingGuardianContextIcon({
-  alt,
-  src,
-}: {
-  alt: string;
-  src: string;
-}) {
-  return (
-    <Image
-      src={src}
-      alt={alt}
-      width={20}
-      height={20}
-      unoptimized
-      aria-hidden={alt ? undefined : true}
-      className="size-5 shrink-0 object-contain"
-      draggable={false}
+      )) : undefined}
+      trailingItems={[
+        {
+          label: "최근 수납",
+          value: summary.recentPaymentAt
+            ? formatShortDateTime(summary.recentPaymentAt)
+            : "기록 없음",
+        },
+        {
+          label: "수납대기",
+          value: `${summary.waiting.count}건 · ${formatAmount(summary.waiting.amount)}`,
+        },
+        {
+          label: "미납",
+          value: `${summary.unpaid.count}건 · ${formatAmount(summary.unpaid.amount)}`,
+          tone: summary.unpaid.count > 0 ? "warning" : "neutral",
+        },
+        {
+          label: "보호자 메모",
+          value: <span className="block max-w-[220px] truncate">{guardianMemoLabel}</span>,
+          tone: summary.unpaid.count > 0 ? "warning" : "neutral",
+        },
+      ]}
     />
   );
 }
