@@ -510,7 +510,10 @@ const labResultTabItems = [
 ];
 
 const fulfillmentQueueCache = new Map<string, FulfillmentQueueSnapshot>();
-const fulfillmentQueueRequestIds = new Map<string, number>();
+const fulfillmentQueueRequests = new Map<string, {
+  controller: AbortController;
+  promise: Promise<FulfillmentQueueSnapshot | null>;
+}>();
 const fulfillmentQueueListeners = new Map<
   string,
   Set<(snapshot: FulfillmentQueueSnapshot) => void>
@@ -703,16 +706,18 @@ function getLiveOrderFromWorkItem(workItem: FulfillmentWorkItem): QueueOrder {
 function useFulfillmentQueue(
   queueType: FulfillmentQueueType,
   selectedDate?: string,
+  options?: { enabled?: boolean; workItemId?: string },
 ) {
   const panelPresentation = useModuleSidePanel();
-  const enabled = panelPresentation?.visible !== false;
+  const enabled = panelPresentation?.visible !== false && options?.enabled !== false;
+  const workItemId = options?.workItemId;
   const workspaceId = useWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
-  const cacheKey = getFulfillmentQueueCacheKey(
+  const cacheKey = `${getFulfillmentQueueCacheKey(
     workspaceId,
     queueType,
     effectiveDate,
-  );
+  )}:${workItemId ?? ""}`;
   const requestSeq = useRef(0);
   const [queueState, setQueueState] = useState<{
     cacheKey: string;
@@ -722,51 +727,61 @@ function useFulfillmentQueue(
   const snapshot = queueState.cacheKey === cacheKey ? queueState.snapshot : emptyFulfillmentQueueSnapshot;
   const status = queueState.cacheKey === cacheKey ? queueState.status : "loading";
 
-  const loadQueueSnapshot = useCallback(async (): Promise<FulfillmentQueueSnapshot> => {
+  const loadQueueSnapshot = useCallback((): Promise<FulfillmentQueueSnapshot | null> => {
+    const pending = fulfillmentQueueRequests.get(cacheKey);
+    if (pending && !pending.controller.signal.aborted) return pending.promise;
+    const controller = new AbortController();
     const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
-    try {
-      const response = await fetch(
-        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
-        { headers: { "x-clair-demo-session-user-id": "user-tech" } },
-      );
-      if (response.status === 401 || response.status === 403) {
-        return { ...emptyFulfillmentQueueSnapshot, status: "permission_denied" };
+    const promise = (async (): Promise<FulfillmentQueueSnapshot | null> => {
+      try {
+        const response = await fetch(
+          `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=${queueType}${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}${workItemId ? `&workItemId=${encodeURIComponent(workItemId)}` : ""}`,
+          { headers: { "x-clair-demo-session-user-id": "user-tech" }, signal: controller.signal },
+        );
+        if (response.status === 401 || response.status === 403) {
+          return { ...emptyFulfillmentQueueSnapshot, status: "permission_denied" };
+        }
+        const body = await response.json() as { ok?: boolean; denialReason?: string; summary?: FulfillmentWorkItemReadSummary; workItems?: FulfillmentWorkItem[] };
+        if (!response.ok || !body.ok || !Array.isArray(body.workItems)) {
+          const denied = response.status === 401 || response.status === 403 || body.denialReason === "unauthenticated" || body.denialReason === "permission_missing";
+          return { ...(denied ? emptyFulfillmentQueueSnapshot : previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: denied ? "permission_denied" : "error" };
+        }
+        return { summary: body.summary, workItems: body.workItems, status: "ready" };
+      } catch {
+        if (controller.signal.aborted) return null;
+        return { ...(previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: "error" };
       }
-      const body = await response.json() as { ok?: boolean; denialReason?: string; summary?: FulfillmentWorkItemReadSummary; workItems?: FulfillmentWorkItem[] };
-      if (!response.ok || !body.ok || !Array.isArray(body.workItems)) {
-        const denied = response.status === 401 || response.status === 403 || body.denialReason === "unauthenticated" || body.denialReason === "permission_missing";
-        return { ...(denied ? emptyFulfillmentQueueSnapshot : previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: denied ? "permission_denied" : "error" };
-      }
-      return { summary: body.summary, workItems: body.workItems, status: "ready" };
-    } catch {
-      return { ...(previousSnapshot ?? emptyFulfillmentQueueSnapshot), status: "error" };
-    }
-  }, [cacheKey, effectiveDate, queueType, workspaceId]);
+    })().then((nextSnapshot) => {
+      if (controller.signal.aborted) return null;
+      if (nextSnapshot) setCachedFulfillmentQueue(cacheKey, nextSnapshot);
+      return nextSnapshot;
+    }).finally(() => {
+      if (fulfillmentQueueRequests.get(cacheKey)?.controller === controller) fulfillmentQueueRequests.delete(cacheKey);
+    });
+    fulfillmentQueueRequests.set(cacheKey, { controller, promise });
+    return promise;
+  }, [cacheKey, effectiveDate, queueType, workItemId, workspaceId]);
 
   const load = useCallback(async () => {
+    if (!fulfillmentQueueListeners.get(cacheKey)?.size) return;
     const seq = ++requestSeq.current;
-    const requestId = (fulfillmentQueueRequestIds.get(cacheKey) ?? 0) + 1;
-    fulfillmentQueueRequestIds.set(cacheKey, requestId);
     const nextSnapshot = await loadQueueSnapshot();
-    if (fulfillmentQueueRequestIds.get(cacheKey) !== requestId) return;
-    setCachedFulfillmentQueue(cacheKey, nextSnapshot);
+    if (!nextSnapshot) return;
     if (seq === requestSeq.current) {
       setQueueState({ cacheKey, snapshot: nextSnapshot, status: nextSnapshot.status ?? "ready" });
     }
   }, [cacheKey, loadQueueSnapshot]);
 
   const refresh = useCallback(() => {
+    // Explicit retries and post-mutation/realtime reads must not reuse a pre-mutation read.
+    fulfillmentQueueRequests.get(cacheKey)?.controller.abort();
+    fulfillmentQueueRequests.delete(cacheKey);
     setQueueState(current => ({ cacheKey, snapshot: current.cacheKey === cacheKey ? current.snapshot : emptyFulfillmentQueueSnapshot, status: "loading" }));
     return load();
   }, [cacheKey, load]);
 
   useEffect(() => {
     if (!enabled) return;
-    void load();
-    return () => { requestSeq.current += 1; };
-  }, [enabled, load]);
-
-  useEffect(() => {
     const listener = (nextSnapshot: FulfillmentQueueSnapshot) =>
       setQueueState({ cacheKey, snapshot: nextSnapshot, status: nextSnapshot.status ?? "ready" });
     const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
@@ -774,9 +789,20 @@ function useFulfillmentQueue(
     fulfillmentQueueListeners.set(cacheKey, listeners);
     return () => {
       listeners.delete(listener);
-      if (listeners.size === 0) fulfillmentQueueListeners.delete(cacheKey);
+      if (listeners.size === 0) {
+        fulfillmentQueueListeners.delete(cacheKey);
+        fulfillmentQueueRequests.get(cacheKey)?.controller.abort();
+        fulfillmentQueueRequests.delete(cacheKey);
+        fulfillmentQueueCache.delete(cacheKey);
+      }
     };
-  }, [cacheKey]);
+  }, [cacheKey, enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    void load();
+    return () => { requestSeq.current += 1; };
+  }, [enabled, load]);
 
   const updateStatus = useCallback(
     async (workItemId: string, transitions: FulfillmentTransitionCommand[]) => {
@@ -2815,7 +2841,14 @@ function useCurrentLabDetail(workspaceId: string) {
   const selectedLabResultId = useLabImagingStore(
     (state) => state.selectedLabResultId,
   );
-  const fulfillmentQueue = useFulfillmentQueue("lab");
+  const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
+  const queue = useFulfillmentQueue("lab", selectedDate);
+  const resultId = searchParams.get("labResultId") ?? getDemoScenarioFromParams(searchParams)?.labResultId ?? selectedLabResultId;
+  const workItemId = resultId?.startsWith("live-lab-") ? resultId.slice("live-lab-".length) : undefined;
+  // A shared link can select a result outside the current date. Read that item only.
+  const needsSelectedItem = Boolean(workItemId && queue.status === "ready" && !queue.workItems.some((item) => item.id === workItemId));
+  const selectedItem = useFulfillmentQueue("lab", undefined, { workItemId, enabled: needsSelectedItem });
+  const fulfillmentQueue = needsSelectedItem ? selectedItem : queue;
 
   return {
     ...getLabDetailFromSearchParams(
@@ -2850,7 +2883,7 @@ export function LabSlotAvailabilityProvider({
 }
 
 export function LabHeader({ workspaceId }: ShellComponentProps) {
-  const { detail } = useCurrentLabDetail(workspaceId);
+  const { detail } = useContext(LabCurrentDetailContext) ?? { detail: null };
   const profileInteractions = usePatientContextProfileInteractions({
     allowLocalProfiles: isLegacySalesDemoWorkspace(workspaceId),
     guardian: detail?.primaryGuardian,
@@ -2952,7 +2985,7 @@ export function LabHeader({ workspaceId }: ShellComponentProps) {
 
 export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: ShellComponentProps) {
   const searchParams = useSearchParams();
-  const { detail } = useCurrentLabDetail(workspaceId);
+  const { detail } = useContext(LabCurrentDetailContext) ?? { detail: null };
   const setContentAsideOpen = useLayoutStore(
     (state) => state.setContentAsideOpen,
   );

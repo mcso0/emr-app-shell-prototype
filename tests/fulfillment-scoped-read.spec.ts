@@ -76,3 +76,19 @@ test("origin projection remains nullable and does not replace immutable snapshot
   expect(result.workItems.map(item => [item.originChartId, item.originChartCreatedAt])).toEqual([[null,null], ["99300000-0000-4000-8000-000000000055", "2026-10-02T01:00:00Z"], [null,null]]);
   expect(result.workItems.map(item => item.sourceSnapshot)).toEqual(data.map(item => item.sourceSnapshot));
 });
+
+test("selected item filter reaches the RPC through the permission-checked reader", async () => {
+  const calls: Record<string, unknown>[] = [];
+  const gateway = createSupabaseFulfillmentWorkItemGateway({ async rpc(_name, args) {
+    calls.push(args); return { data: [row(workItemId, "2026-09-01T00:00Z", null)], error: null };
+  } });
+  const result = await readFulfillmentWorkItems({ actorUserId: "user-tech", workspaceId: "clair-demo", filters: { queueType: "lab", workItemId }, gateway });
+  expect(result.ok).toBe(true);
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({ p_work_item_id: workItemId, p_date: undefined, p_workspace_id: "clair-demo" });
+  for (const invalid of ["", "not-an-id"]) {
+    const denied = await readFulfillmentWorkItems({ actorUserId: "user-tech", workspaceId: "clair-demo", filters: { queueType: "lab", workItemId: invalid }, gateway });
+    expect(denied).toMatchObject({ ok: false, status: 400, fieldErrors: { workItemId: "invalid_work_item_id" } });
+  }
+  expect(calls).toHaveLength(1);
+});

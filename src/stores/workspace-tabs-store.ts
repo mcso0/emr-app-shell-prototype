@@ -51,7 +51,13 @@ type WorkspaceTabsStore = {
 
 const STORAGE_PREFIX = "clair-workspace-tabs:v1";
 const SERVER_SAVE_DEBOUNCE_MS = 500;
-let serverSaveTimer: number | null = null;
+type WorkspaceTabSave = {
+  payload: PersistedWorkspaceTabs;
+  timer: number | null;
+  inFlight: boolean;
+  pending: boolean;
+};
+const serverSaves = new Map<string, WorkspaceTabSave>();
 let tabsMutationVersion = 0;
 
 function getStorageKey(workspaceId: string) {
@@ -162,7 +168,7 @@ function normalizeTabs(tabs: WorkspaceTab[]) {
   }));
 }
 
-function persist(workspaceId: string | null, tabs: WorkspaceTab[], activeTabId: string | null) {
+function persist(workspaceId: string | null, tabs: WorkspaceTab[], activeTabId: string | null, saveToServer = true) {
   if (!workspaceId || !activeTabId || typeof window === "undefined") return;
 
   tabsMutationVersion += 1;
@@ -173,16 +179,32 @@ function persist(workspaceId: string | null, tabs: WorkspaceTab[], activeTabId: 
     // Persistence is a best-effort shell enhancement; storage failures should not break navigation.
   }
 
-  scheduleServerPersist(workspaceId, tabs, activeTabId);
+  if (saveToServer) scheduleServerPersist(workspaceId, tabs, activeTabId);
 }
 
 function scheduleServerPersist(workspaceId: string, tabs: WorkspaceTab[], activeTabId: string) {
   if (typeof window === "undefined") return;
-  if (serverSaveTimer) window.clearTimeout(serverSaveTimer);
-
-  serverSaveTimer = window.setTimeout(() => {
-    void saveServerTabs(workspaceId, tabs, activeTabId);
+  const save = serverSaves.get(workspaceId) ?? { payload: { workspaceId, tabs, activeTabId }, timer: null, inFlight: false, pending: false };
+  save.payload = { workspaceId, tabs, activeTabId };
+  save.pending = true;
+  if (save.timer !== null) window.clearTimeout(save.timer);
+  save.timer = window.setTimeout(() => {
+    save.timer = null;
+    void flushServerTabs(workspaceId, save);
   }, SERVER_SAVE_DEBOUNCE_MS);
+  serverSaves.set(workspaceId, save);
+}
+
+async function flushServerTabs(workspaceId: string, save: WorkspaceTabSave) {
+  if (save.inFlight || !save.pending) return;
+  save.inFlight = true;
+  save.pending = false;
+  const { tabs, activeTabId } = save.payload;
+  await saveServerTabs(workspaceId, tabs, activeTabId);
+  save.inFlight = false;
+  if (save.timer !== null) return;
+  if (save.pending) void flushServerTabs(workspaceId, save);
+  else serverSaves.delete(workspaceId);
 }
 
 async function readServerTabs(workspaceId: string): Promise<PersistedWorkspaceTabs | null> {
@@ -209,13 +231,15 @@ async function readServerTabs(workspaceId: string): Promise<PersistedWorkspaceTa
 
 async function saveServerTabs(workspaceId: string, tabs: WorkspaceTab[], activeTabId: string) {
   try {
-    await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/app-shell/workspace-tabs`, {
+    const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/app-shell/workspace-tabs`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ tabs, activeTabId }),
     });
+    if (!response.ok) throw new Error("workspace_tabs_save_failed");
   } catch {
     // Server restore is best-effort; sessionStorage remains the immediate fallback.
+    console.warn("Workspace tabs could not be saved. The browser session copy is retained.");
   }
 }
 
@@ -289,8 +313,11 @@ function updateActiveTab(
 ): WorkspaceTabsStore {
   const activeTabId = state.activeTabId;
   if (!activeTabId) return state;
-
-  const tabs = state.tabs.map((tab) => (tab.id === activeTabId ? updater(tab) : tab));
+  const activeTab = state.tabs.find((tab) => tab.id === activeTabId);
+  if (!activeTab) return state;
+  const updatedTab = updater(activeTab);
+  if (updatedTab === activeTab) return state;
+  const tabs = state.tabs.map((tab) => (tab.id === activeTabId ? updatedTab : tab));
   persist(state.workspaceId, tabs, activeTabId);
 
   return { ...state, tabs };
@@ -313,23 +340,27 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
         hydrated: true,
       });
       get().syncActiveRoute(route, moduleId);
+      // The current browser session may contain a save that failed or is still pending.
+      return;
     } else {
       const tab = createWorkspaceTab({ route, moduleId, closable: false, workspaceId });
       set({ workspaceId, tabs: [tab], activeTabId: tab.id, hydrated: true });
-      persist(workspaceId, [tab], tab.id);
+      // Do not overwrite an existing server session while its restore is pending.
+      persist(workspaceId, [tab], tab.id, false);
     }
 
     const restoreVersion = tabsMutationVersion;
     const serverPersisted = await readServerTabs(workspaceId);
-    if (!serverPersisted || get().workspaceId !== workspaceId || tabsMutationVersion !== restoreVersion) return;
+    if (get().workspaceId !== workspaceId || tabsMutationVersion !== restoreVersion) return;
 
-    set({
+    if (serverPersisted) set({
       workspaceId,
       tabs: serverPersisted.tabs,
       activeTabId: serverPersisted.activeTabId,
       hydrated: true,
     });
     get().syncActiveRoute(route, moduleId);
+    persist(workspaceId, get().tabs, get().activeTabId);
   },
 
   pushRoute: (route, moduleId) => {
@@ -357,6 +388,7 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
   },
 
   activateTab: (tabId) => {
+    if (get().activeTabId === tabId) return null;
     const tab = get().tabs.find((item) => item.id === tabId);
     if (!tab) return null;
     set({ activeTabId: tabId });
@@ -448,6 +480,7 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     set((state) =>
       updateActiveTab(state, (tab) => {
         if (!state.workspaceId) return tab;
+        if (tab.history[tab.historyIndex] === route && tab.moduleId === moduleId) return tab;
         const metadata = getRouteMetadata(route, moduleId, state.workspaceId);
         const nextHistory = [...tab.history];
 

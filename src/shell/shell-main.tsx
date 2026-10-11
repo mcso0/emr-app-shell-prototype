@@ -21,6 +21,7 @@ type ShellMainProps = {
   topBar: ReactNode;
   userSessionId: string | null;
   workspaceId: string;
+  workspaceTabRevision?: number;
   onNavigateModule: (href: string, moduleId: string) => void;
   onSelectWorkspace: (workspace: WorkspaceListOption) => void;
 };
@@ -42,6 +43,7 @@ export function ShellMain({
   topBar,
   userSessionId,
   workspaceId,
+  workspaceTabRevision = 0,
   onNavigateModule,
   onSelectWorkspace,
 }: ShellMainProps) {
@@ -57,10 +59,14 @@ export function ShellMain({
   const [preview, setPreview] = useState<{ moduleId: string; route: string } | null>(null);
   const [cachedSearch, setCachedSearch] = useState<Record<string, string>>(() =>
     modulePanelOpen && moduleDefinition.sidePanel ? { [moduleDefinition.id]: search } : {});
-  const [observedRoute, setObservedRoute] = useState({ routeKey, search, modulePanelOpen, activeDrawer });
-  if (observedRoute.routeKey !== routeKey || observedRoute.search !== search || observedRoute.modulePanelOpen !== modulePanelOpen || observedRoute.activeDrawer !== activeDrawer) {
+  const [observedRoute, setObservedRoute] = useState({ routeKey, search, modulePanelOpen, activeDrawer, workspaceTabRevision });
+  if (observedRoute.workspaceTabRevision !== workspaceTabRevision) {
+    setPreview(null);
+    setObservedRoute({ routeKey, search, modulePanelOpen, activeDrawer, workspaceTabRevision });
+    setCachedSearch(modulePanelOpen && moduleDefinition.sidePanel ? { [moduleDefinition.id]: search } : {});
+  } else if (observedRoute.routeKey !== routeKey || observedRoute.search !== search || observedRoute.modulePanelOpen !== modulePanelOpen || observedRoute.activeDrawer !== activeDrawer) {
     if (observedRoute.routeKey !== routeKey || observedRoute.modulePanelOpen !== modulePanelOpen || observedRoute.activeDrawer !== activeDrawer) setPreview(null);
-    setObservedRoute({ routeKey, search, modulePanelOpen, activeDrawer });
+    setObservedRoute({ routeKey, search, modulePanelOpen, activeDrawer, workspaceTabRevision });
     setCachedSearch((cache) => moduleDefinition.sidePanel && (modulePanelOpen || cache[moduleDefinition.id] !== undefined) && cache[moduleDefinition.id] !== search ? { ...cache, [moduleDefinition.id]: search } : cache);
   }
   const previewBaseSearch = useRef<Record<string, string>>({});
@@ -393,7 +399,7 @@ export function ShellMain({
                   const SidePanel = definition.sidePanel!;
                   const shown = visible && definition.id === shownModuleId;
                   return (
-                    <ModuleSidePanelContext.Provider key={definition.id} value={{ moduleId: definition.id, ownerId: `module-side-panel-${definition.id}`, isCurrentModule: definition.id === moduleDefinition.id, visible: shown, floating: shown && floating, pathname: `/w/${workspaceId}/${definition.id}`, search: cachedSearch[definition.id] ?? navigationSearch, onToggle: () => togglePanel(definition.id), onDateChange: href => changePanelDate(href, definition.id), onNavigate: navigateFromPanel }}>
+                    <ModuleSidePanelContext.Provider key={`${workspaceTabRevision}:${definition.id}`} value={{ moduleId: definition.id, ownerId: `module-side-panel-${definition.id}`, isCurrentModule: definition.id === moduleDefinition.id, visible: shown, floating: shown && floating, pathname: `/w/${workspaceId}/${definition.id}`, search: cachedSearch[definition.id] ?? navigationSearch, onToggle: () => togglePanel(definition.id), onDateChange: href => changePanelDate(href, definition.id), onNavigate: navigateFromPanel }}>
                       <motion.div id={`module-side-panel-${definition.id}`} data-side-panel-module={definition.id} hidden={!shown} inert={!shown} aria-hidden={!shown} initial={false} animate={{ opacity: shown ? 1 : 0, x: shown ? 0 : -12 }} transition={modulePanelTransition} className="h-full min-h-0">
                         <SidePanel workspaceId={workspaceId} moduleId={definition.id} moduleLabel={definition.label} hasContentAside={Boolean(definition.contentAside)} hasRightPanel={Boolean(definition.rightPanel)} onNavigateWorkspaceSurface={navigateFromPanel} />
                       </motion.div>
@@ -409,7 +415,7 @@ export function ShellMain({
         {topBar}
         <section data-testid="shell-workspace-area" className="min-h-0 min-w-0 flex-1">
           <div data-testid="workspace-frame" className="h-full min-h-0 min-w-0 [&>main]:h-full">
-            <WorkspaceFrame moduleDefinition={moduleDefinition} workspaceId={workspaceId} onNavigateWorkspaceSurface={onNavigateModule} />
+            <WorkspaceFrame key={workspaceTabRevision} moduleDefinition={moduleDefinition} workspaceId={workspaceId} onNavigateWorkspaceSurface={onNavigateModule} />
           </div>
         </section>
       </section>
