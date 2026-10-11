@@ -24,6 +24,7 @@
   min-height: 0;
   flex: 0 1 auto;
   overflow-y: auto;
+  overscroll-behavior: none;
   scrollbar-color: var(--clair-color-atomic-neutral-300) transparent;
   scrollbar-width: thin;
 }

@@ -31,7 +31,7 @@
 .dividedHeader::after, .hiddenWork > header::after { content: ""; position: absolute; bottom: 0; left: 16px; right: 16px; height: 1px; background: var(--emr-border-default); }
 .groupActions { display: flex; gap: 4px; }
 .groupActions svg { width: 14px; height: 14px; }
-.columnBody { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px 16px; }
+.columnBody { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: none; padding: 8px 16px 16px; }
 .columnBody > section + section { margin-top: 12px; }
 .statusHeader { display: flex; width: 100%; height: 32px; align-items: center; gap: 4px; margin-bottom: 4px; color: var(--emr-text-secondary); font-size: 12px; line-height: 16px; font-weight: 500; cursor: pointer; }
 .statusHeader > svg:last-child { width: 12px; height: 12px; margin-left: auto; }
@@ -197,7 +197,7 @@
 
 /* Approved single-row toolbar; only Home adapts shared controls. */
 .tabFrame { position: relative; flex: 1 1 0; min-width: 0; }
-.tabViewport { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: var(--clair-spacing-2); user-select: none; }
+.tabViewport { overflow-x: auto; overscroll-behavior: none; scrollbar-width: none; padding-block: var(--clair-spacing-2); user-select: none; }
 .tabViewport::-webkit-scrollbar { display: none; }
 .tabViewport[data-overflow="true"], .tabViewport[data-overflow="true"] button { cursor: grab; }
 .tabViewport[data-dragging="true"], .tabViewport[data-dragging="true"] button { cursor: grabbing; }
@@ -223,6 +223,6 @@
 }
 /* At very small widths, keep a usable tab and pan the actions without wrapping. */
 @container home-toolbar (width < 600px) {
-  .toolbarActions { flex-shrink: 1; min-width: 0; max-width: calc(100% - 116px); overflow-x: auto; justify-content: flex-start; scrollbar-width: thin; }
+  .toolbarActions { flex-shrink: 1; min-width: 0; max-width: calc(100% - 116px); overflow-x: auto; overscroll-behavior: none; justify-content: flex-start; scrollbar-width: thin; }
   .toolbarActions > * { flex-shrink: 0; }
 }

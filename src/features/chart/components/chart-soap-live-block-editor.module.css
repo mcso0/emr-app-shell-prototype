@@ -40,6 +40,7 @@
   min-height: 0;
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -372,6 +373,7 @@
   width: calc(100% - 36px);
   flex: 1;
   overflow-x: auto;
+  overscroll-behavior: none;
   overflow-y: hidden;
   scrollbar-width: none;
 }
@@ -493,6 +495,7 @@
   max-width: min(320px, calc(100vw - 16px));
   max-height: 280px;
   overflow-y: auto;
+  overscroll-behavior: none;
   border: 1px solid var(--emr-border-default);
   border-radius: var(--emr-radius-control);
   background: var(--emr-surface-floating);

@@ -65,7 +65,7 @@
 .scrollArea {
   scrollbar-width: none;
   -ms-overflow-style: none;
-  overscroll-behavior: contain;
+  overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
 }
 

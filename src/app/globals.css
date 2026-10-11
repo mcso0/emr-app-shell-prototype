@@ -88,6 +88,19 @@
     @apply border-border outline-ring/50;
   }
 
+  /* Scope to scroll viewports: clipping-only children must still pass wheel input. */
+  html,
+  textarea,
+  [data-slot="scroll-area-viewport"],
+  .overflow-auto,
+  .overflow-scroll,
+  .overflow-x-auto,
+  .overflow-x-scroll,
+  .overflow-y-auto,
+  .overflow-y-scroll {
+    overscroll-behavior: none !important;
+  }
+
   html {
     @apply font-sans;
   }
@@ -788,6 +801,7 @@
     align-items: center;
     gap: 8px;
     overflow-x: auto;
+    overscroll-behavior: none;
     padding: 6px 8px;
     border: 1px solid var(--emr-border-default);
     border-radius: 14px;

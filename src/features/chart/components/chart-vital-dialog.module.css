@@ -55,7 +55,7 @@
 .record:hover, .selected { background: var(--clair-color-atomic-black-alpha-6); }
 .recordTime { display: flex; gap: 3px; align-items: center; width: 100%; height: 16px; min-width: 0; padding-inline: 2px; overflow: hidden; font-size: 12px; font-weight: 500; line-height: 16px; letter-spacing: .3px; white-space: nowrap; }
 .author { max-width: 100%; min-width: 0; gap: 2px; padding: 2px 5px 2px 4px; border-color: var(--clair-color-atomic-black-alpha-8); border-radius: 6px; background: var(--emr-surface-panel); color: var(--clair-color-atomic-neutral-600); font-size: 12px; line-height: 16px; letter-spacing: .3px; text-overflow: ellipsis; }
-.editor { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; padding: 10px 16px; background: var(--emr-surface-panel); }
+.editor { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: none; padding: 10px 16px; background: var(--emr-surface-panel); }
 .editorHeader { display: flex; gap: 6px; align-items: center; height: 32px; white-space: nowrap; }
 .editorTitle { color: var(--clair-color-atomic-neutral-700); font-size: 14px; font-weight: 600; line-height: 20px; letter-spacing: .196px; }
 .timestamp { max-width: 176px; gap: 2px; padding: 3px 8px 3px 6px; border-radius: 6px; background: var(--clair-color-atomic-black-alpha-4); color: var(--clair-color-atomic-neutral-600); font-size: 12px; line-height: 16px; letter-spacing: .3px; }
