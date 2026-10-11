@@ -58,6 +58,7 @@ Panel resizing is out of scope for v1, but the min/default values are named so r
 - A module that does not provide `ContentAside` or `RightPanel` simply does not render that slot.
 - Opening a shared URL can override local persisted state.
 - User-entered form values, scroll position, table sort/filter, and panel widths are not shared in the URL in v1.
+- `workspace-tab-warning-preference.ts` owns the existing workspace-scoped v1 localStorage opt-out for duplicate work-surface warnings. `AppShell` retains the decision to write it only after a successful editor flush and a still-current duplicate navigation request.
 
 ### Global Notification Ownership
 

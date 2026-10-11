@@ -32,6 +32,10 @@ import { ShellMain } from "@/shell/shell-main";
 import { useShellNotifications } from "@/shell/use-shell-notifications";
 import { useShellNotificationNavigation } from "@/shell/use-shell-notification-navigation";
 import {
+  readDuplicateWarningPreference,
+  writeDuplicateWarningPreference,
+} from "@/shell/workspace-tab-warning-preference";
+import {
   buildWorkspaceHomeRoute,
   buildWorkspaceSwitchRoute,
 } from "@/shell/workspace-surface-route";
@@ -71,8 +75,6 @@ const crossModuleQueryKeys = [
   "context",
   "right",
 ] as const;
-
-const duplicateWarningPreferencePrefix = "clair-workspace-tabs-duplicate-warning-hidden:v1";
 
 function getCrossModuleNavigationSearch(
   search: string,
@@ -740,18 +742,4 @@ function findDuplicateWorkspaceTab({
   if (identity.surfaceType === "module") return null;
 
   return tabs.find((tab) => tab.id !== activeTabId && tab.dedupeKey === identity.dedupeKey) ?? null;
-}
-
-function getDuplicateWarningPreferenceKey(workspaceId: string) {
-  return `${duplicateWarningPreferencePrefix}:${workspaceId}`;
-}
-
-function readDuplicateWarningPreference(workspaceId: string) {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(getDuplicateWarningPreferenceKey(workspaceId)) === "true";
-}
-
-function writeDuplicateWarningPreference(workspaceId: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(getDuplicateWarningPreferenceKey(workspaceId), "true");
 }
