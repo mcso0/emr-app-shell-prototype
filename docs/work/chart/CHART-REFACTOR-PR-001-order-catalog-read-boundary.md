@@ -13,7 +13,7 @@ source_docs:
   - "docs/design/system/ui-debt-inventory.md"
   - "docs/work/chart/CHART-PR-035-plan-order-quick-add-design.md"
 dependencies: []
-updated: "2026-10-11"
+updated: "2026-10-12"
 ---
 
 # Chart Order Catalog Read Ownership
@@ -29,8 +29,10 @@ without mounting the whole screen. No shared cache framework is introduced.
 ## Authorized scope
 
 - Continue the user's project refactoring instruction in one separate PR.
-- Initial baseline: main `710b810`; integrate main `247d21d` (PR #960) before
-  publication. Keep PR #959 fixed at `f0937b4`.
+- Initial baseline: main `710b810`; first integrate `247d21d` (PR #960), then
+  resume from archived `8d29a47` on main `3f814f4` (PR #961). The latter adds
+  only upstream tab-repair SQL and closeout documentation; no SQL is executed.
+  Keep PR #959 fixed at `f0937b4`.
 - Move catalog HTTP loading, success cache and pending-request ownership only.
 - Preserve URL, actor headers, no-store, TTL, force refresh and error metadata.
 - Keep actor/workspace keys, sequence guards, UI state, saves and confirmations
@@ -65,6 +67,18 @@ UI state, actor/workspace cache keys and response sequence guards stay in Chart.
   existing PRD markdown tracing warning.
 - Browser checks used an owned localhost, synthetic/mock APIs, no env files,
   a Node network guard and a loopback-only browser proxy. No hosted app smoke.
+
+The save fixture also waits for initial JS downloads before its one-hour clock
+jump. An otherwise successful Lottie chunk was still downloading at that jump,
+which falsely expired its loader timeout. Held API reads/saves remain pending,
+and all traffic, page-error and clinical assertions are preserved.
+
+Execution access recovered on 2026-10-12. The interrupted lint, secrets, docs
+and UX copy logs contain completed results; the checkpoint patch did not apply.
+The source, tests, dependency manifests and catalog config match archived
+`8d29a47` exactly after rebasing. Preserve the existing 50 focused passes rather
+than repeat unchanged browser cases. Final quality gates are verified again on
+the publication candidate; its exact SHA and CI/Preview metadata belong in the PR.
 
 The final candidate's CI/Preview metadata is recorded in the linked Draft PR;
 it does not establish production or real-data acceptance.
