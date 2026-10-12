@@ -1892,10 +1892,10 @@ test("workspace tabs create an initial tab and keep the final tab open", async (
 
   await expect(workspaceTabs).toBeVisible();
   await expectActiveWorkspaceTab(page, "조제/처치");
-  await expect(workspaceTabs.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
   await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
 
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home\?modulePanel=open/);
   await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
@@ -1914,6 +1914,8 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await clearWorkspaceTabs(page);
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
   await expectActiveWorkspaceTab(page, "진료/차트");
+  // Chart initialization normalizes chartId before the save guard can navigate.
+  await expect.poll(() => new URL(page.url()).searchParams.get("chartId")).toMatch(/^soap-/);
 
   await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
@@ -1958,7 +1960,7 @@ test("workspace tabs restore open tabs after reload", async ({ page }) => {
 
   const workspaceTabs = getWorkspaceTablist(page);
 
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
   await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expectActiveWorkspaceTab(page, "검사");
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
@@ -1978,6 +1980,7 @@ test("workspace tabs warn only before opening the same concrete work surface in 
   await clearWorkspaceTabs(page);
   await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
   await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
+  await expectUrlSearchParams(page, { chartId: "soap-kong-260501" });
 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
@@ -2002,8 +2005,12 @@ test("workspace tabs warn only before opening the same concrete work surface in 
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
 
   await chartTabs.nth(0).click();
+  await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501", chartId: "soap-kong-260501" });
   await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home\?modulePanel=open/);
+  await expectActiveWorkspaceTab(page, "원내 현황");
   await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
   await page.getByTestId("order-queue-item-encounter-kong-260501").click();
   const duplicateDialog = page.getByRole("dialog", { name: "같은 업무가 이미 열려 있습니다" });
   await expect(duplicateDialog).toBeVisible();
@@ -2221,7 +2228,7 @@ test("workspace tab close button uses the Figma tiny ghost hover state", async (
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
   const workspaceTabs = getWorkspaceTablist(page);
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
 
   const hoverColor = await resolveCssColor(page, "var(--emr-topbar-tab-hover-bg)");
   const closeHoverColor = await resolveCssColor(page, "var(--clair-color-atomic-black-alpha-4)");
@@ -2231,8 +2238,9 @@ test("workspace tab close button uses the Figma tiny ghost hover state", async (
   const tabButton = tabContainer.getByRole("tab").first();
 
   await expect(tabButton).toHaveCSS("padding-right", "0px");
-  await expect(tabContainer).toHaveCSS("min-width", "148px");
+  await expect(tabContainer).toHaveCSS("min-width", "80px");
   await expect(tabContainer).toHaveCSS("max-width", "148px");
+  await expect(tabContainer).toHaveCSS("width", "148px");
   await expect(closeButton).toHaveCSS("width", "18px");
   await expect(closeButton).toHaveCSS("height", "18px");
   await expect(closeButton.locator("svg")).toHaveCSS("width", "14px");
@@ -2255,7 +2263,7 @@ test("workspace tab icons and labels use Figma neutral colors by tab state", asy
   const defaultIconColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-500)");
   const activeColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-800)");
 
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
   const inactiveTab = workspaceTabs.getByRole("tab").first();
   const activeTab = workspaceTabs.getByRole("tab").nth(1);
 

@@ -135,6 +135,7 @@ export function WorkspaceControlsCaller() {
     <div style={{ width: 1280 }}>
       <WorkspaceTabsBar activeTabId={shellTab.id} canGoBack={back} canGoForward={forward} tabs={[shellTab]} isRefreshing={refreshing} refreshLabel="합성 업무 새로고침" notificationBadgeCount={badge} notificationDrawerOpen={drawerOpen}
         onActivateTab={id => setReceipt(`activate:${id}`)} onCloseTab={id => setReceipt(`close:${id}`)} onNewTab={() => setReceipt("new-tab")}
+        onReorderTabs={ids => setReceipt(`reorder:${ids.join(",")}`)}
         onBack={() => { setBack(false); setForward(true); setReceipt("back"); }}
         onForward={() => { setBack(true); setForward(false); setReceipt("forward"); }}
         onRefresh={() => { setRefreshing(true); setReceipt("refresh"); }}
@@ -247,6 +248,10 @@ export function ChromeTabsCaller() {
   const [receipt, setReceipt] = useState("초기 탭");
   return <div className="grid gap-3 p-4">
     <WorkspaceChromeTabs activeTabId={activeId} tabs={tabs}
+      onReorderTabs={ids => {
+        setTabs(current => ids.map(id => current.find(tab => tab.id === id)!));
+        setReceipt(`reorder:${ids.join(",")}`);
+      }}
       onActivateTab={id => { setActiveId(id); setReceipt(`activate:${id}`); }}
       onCloseTab={id => {
         const remaining = tabs.filter(tab => tab.id !== id);

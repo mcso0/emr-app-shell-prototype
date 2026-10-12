@@ -41,6 +41,7 @@ type WorkspaceTabsBarProps = {
   onCloseTab: (tabId: string) => void;
   onForward: () => void;
   onNewTab: () => void;
+  onReorderTabs: (orderedTabIds: string[]) => void;
   onOpenNotifications: () => void;
   onRefresh?: () => void;
 };
@@ -195,6 +196,7 @@ export function WorkspaceTabsBar({
   onCloseTab,
   onForward,
   onNewTab,
+  onReorderTabs,
   onOpenNotifications,
   onRefresh,
 }: WorkspaceTabsBarProps) {
@@ -328,6 +330,7 @@ export function WorkspaceTabsBar({
           onActivateTab={onActivateTab}
           onCloseTab={onCloseTab}
           onNewTab={onNewTab}
+          onReorderTabs={onReorderTabs}
         />
       </div>
 
