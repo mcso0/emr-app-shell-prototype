@@ -41,11 +41,11 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   if (rateLimited) return rateLimited;
   const entry = await resolveLabResultEntry(context.client, workspaceId, resultId);
   if (!entry) return unavailable();
-  const removed = await context.trusted!.from("lab_result_attachments")
-    .update({ deleted_at: new Date().toISOString(), deleted_by_user_id: context.actorUserId })
-    .eq("workspace_id", workspaceId).eq("lab_result_entry_id", entry.id).eq("id", attachmentId)
-    .not("ready_at", "is", null).is("deleted_at", null).select("storage_path").maybeSingle();
-  if (removed.error || !removed.data) return unavailable();
+  const removed = await context.client.rpc("clair_mutate_lab_attachment", {
+    p_workspace_id: workspaceId, p_result_id: resultId, p_attachment_id: attachmentId,
+    p_action: "delete", p_actor_user_id: context.actorUserId,
+  });
+  if (removed.error || !removed.data) return Response.json({ ok: false, error: "attachment_delete_failed" }, { status: removed.error?.code === "42501" ? 403 : 409 });
   // Tombstone commits first: every subsequent read checks it. Storage cleanup
   // is retried by the bounded reconciliation job when the remove call fails.
   const cleanup = await context.trusted!.storage.from(LAB_RESULT_ATTACHMENT_BUCKET).remove([removed.data.storage_path]);

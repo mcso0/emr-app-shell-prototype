@@ -1,5 +1,8 @@
 "use client";
 
+import { useBillingAssignment } from "./use-billing-assignment";
+import { FulfillmentWorkLifecycleAction } from "@/features/fulfillment/components/work-lifecycle-action";
+
 import { OrderQueueSortMenu, OrderQueueFilterMenu, type OrderQueueSortKey, type OrderQueueDetailFilter } from "@/components/emr/order-queue-side-panel";
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
@@ -106,10 +109,6 @@ import { usePatientContextProfileInteractions } from "@/features/customer/use-pa
 import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import type { BillingQueueItem } from "./billing-queue";
 import { useSelectedOperatingDate } from "@/features/work-queue/use-selected-operating-date";
-import {
-  createPersonalProfileSession,
-  getDefaultSessionPersonalProfile,
-} from "@/features/auth/personal-profile-session";
 import {
   useBillingStore,
   type BillingFilter,
@@ -461,13 +460,6 @@ const getBillingFlowLabel = (lines: InvoiceLine[]) => {
 
 function getDemoActorHeader(session: AuthSession | null) {
   return getDemoActorHeaders(session);
-}
-
-function getBillingAssignmentActorName(session: AuthSession | null) {
-  if (!session) return "정하린";
-
-  return getDefaultSessionPersonalProfile(createPersonalProfileSession(session))
-    .displayName;
 }
 
 async function loadBillingInvoiceCandidates({
@@ -2312,24 +2304,14 @@ function BillingTitleCard({
   hasRightPanel: boolean;
 }) {
   const documentLayout = useWorkspaceDocumentLayout();
-  const { session: authSession } = useAuthClient();
   const {
     contentAsideOpen,
     rightPanelOpen,
     setContentAsideOpen,
     setRightPanelOpen,
   } = useLayoutStore();
-  const assignmentActorName = useMemo(
-    () => getBillingAssignmentActorName(authSession),
-    [authSession],
-  );
-  const assignInvoice = useBillingStore((state) => state.assignInvoice);
-  const clearInvoiceAssignee = useBillingStore(
-    (state) => state.clearInvoiceAssignee,
-  );
-  const assigneeName = useBillingStore(
-    (state) => state.invoiceAssignees[detail.invoice.id],
-  );
+  const ownership = useBillingAssignment(detail.invoice.workspaceId, detail.invoice.id);
+  const assigneeName = ownership.data?.assignedToDisplayName;
 
   const titleBar = (
     <EmrInstructionTitleBar
@@ -2380,22 +2362,13 @@ function BillingTitleCard({
           >
             수납 요약
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={assigneeName ? "outline" : "default"}
-            className="shadow-[var(--clair-shadow-xs)]"
-            onClick={() => {
-              if (assigneeName) {
-                clearInvoiceAssignee(detail.invoice.id);
-                return;
-              }
-
-              assignInvoice(detail.invoice.id, assignmentActorName);
-            }}
-          >
-            {assigneeName ? "담당 취소" : "담당하기"}
-          </Button>
+          <FulfillmentWorkLifecycleAction activityLabel="수납" completeLabel="수납 완료" status="requested"
+            assignedToUserId={ownership.data?.assignedToUserId} assignedToDisplayName={assigneeName}
+            canManage={ownership.data?.canManage ?? false}
+            loadEligibleAssignees={() => Promise.resolve(ownership.data?.assignees ?? [])}
+            onTransition={(action, options) => ["claim", "assign", "unassign"].includes(action)
+              ? ownership.transition(action as "claim" | "assign" | "unassign", options?.assignedToUserId) : Promise.resolve(false)}
+            assignmentOnly />
         </div>
       }
     />
@@ -2595,7 +2568,7 @@ function SelectedCheckoutWorkspace({
   checkoutSession,
   checkoutState,
   groups,
-  invoiceAssignees,
+  editableInvoiceId,
   persistenceState,
   onRetryCheckout,
   onTransitionStatus,
@@ -2604,7 +2577,7 @@ function SelectedCheckoutWorkspace({
   checkoutSession?: GuardianCheckoutSessionSnapshot;
   checkoutState: BillingApiRequestState;
   groups: BillingCheckoutGroup[];
-  invoiceAssignees: Record<string, string | undefined>;
+  editableInvoiceId?: string;
   onRetryCheckout: () => void;
   onTransitionStatus: (
     invoiceId: string,
@@ -2680,9 +2653,7 @@ function SelectedCheckoutWorkspace({
             const isSummaryExcluded = isCheckoutSummaryExcludedInvoice(
               group.invoice,
             );
-            const hasBillingAssignee = Boolean(
-              invoiceAssignees[group.invoice.id],
-            );
+            const hasBillingAssignee = group.invoice.id === editableInvoiceId;
             const transitionTargets = getBillingCheckoutTransitionTargets(
               group.invoice,
             );
@@ -3284,18 +3255,15 @@ export function BillingContent({
     () => getDemoActorHeader(authSession),
     [authSession],
   );
-  const invoiceAssignees = useBillingStore((state) => state.invoiceAssignees);
   const storedInvoiceLines = useBillingStore((state) => state.invoiceLines);
   const storedInvoices = useBillingStore((state) => state.invoices);
   const storedPayments = useBillingStore((state) => state.payments);
+  const editOwnership = useBillingAssignment(detail?.invoice.workspaceId, detail?.invoice.id);
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );
   const selectInvoice = useBillingStore((state) => state.selectInvoice);
   const setFilter = useBillingStore((state) => state.setFilter);
-  const transitionInvoiceStatus = useBillingStore(
-    (state) => state.transitionInvoiceStatus,
-  );
   const updateInvoiceLineQuantity = useBillingStore(
     (state) => state.updateInvoiceLineQuantity,
   );
@@ -3389,7 +3357,7 @@ export function BillingContent({
       ? billingApiEmptyState
       : checkoutState;
   useEffect(() => {
-    if (!checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
+    if (!editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
       return;
     }
 
@@ -3425,6 +3393,7 @@ export function BillingContent({
     checkoutInvoiceIds,
     checkoutAmountsKey,
     checkoutReloadKey,
+    editOwnership.canExecute,
     checkoutWorkspaceId,
   ]);
   useEffect(() => {
@@ -3540,7 +3509,7 @@ export function BillingContent({
       (effectiveDetail?.invoice.id === invoiceId
         ? effectiveDetail.invoice
         : undefined);
-    if (!targetInvoice || !invoiceAssignees[invoiceId]) return;
+    if (!targetInvoice || !editOwnership.canExecute || invoiceId !== detail?.invoice.id) return;
 
     setLinePersistenceState("saving");
     const result = await transitionGuardianCheckoutInvoiceStatus({
@@ -3553,7 +3522,6 @@ export function BillingContent({
     });
 
     if (!result.ok) {
-      if (legacySalesDemo) transitionInvoiceStatus(invoiceId, target);
       setLinePersistenceState("error");
       return;
     }
@@ -3577,7 +3545,7 @@ export function BillingContent({
             }
             checkoutState={effectiveCheckoutState}
             groups={checkoutGroups}
-            invoiceAssignees={invoiceAssignees}
+            editableInvoiceId={editOwnership.canExecute ? detail?.invoice.id : undefined}
             persistenceState={linePersistenceState}
             onRetryCheckout={retryCheckout}
             onTransitionStatus={handleTransitionInvoiceStatus}
@@ -3625,12 +3593,15 @@ function SummaryLine({
 function PaymentMethodControl({
   paymentMethod,
   onPaymentMethodChange,
+  disabled = false,
 }: {
+  disabled?: boolean;
   onPaymentMethodChange: (paymentMethod: PaymentMethod) => void;
   paymentMethod: PaymentMethod;
 }) {
   return (
     <SegmentedControl
+      disabled={disabled}
       aria-label="결제 수단 선택"
       value={paymentMethod}
       items={paymentMethodItems}
@@ -3742,6 +3713,9 @@ export function BillingRightPanel() {
       ? [createCheckoutGroupFromBillingDetail(effectiveDetail)]
       : [];
   }, [effectiveDetail, selectedCheckoutGroups]);
+  const ownershipTargets = summaryGroups.filter(group => !isCheckoutSummaryExcludedInvoice(group.invoice));
+  const ownershipInvoice = ownershipTargets.length === 1 ? ownershipTargets[0].invoice : undefined;
+  const ownership = useBillingAssignment(ownershipInvoice?.workspaceId, ownershipInvoice?.id);
   const checkoutInvoiceIdsKey = JSON.stringify(summaryGroups.map((group) => group.invoice.id));
   const checkoutInvoiceIds = useMemo<string[]>(
     () => JSON.parse(checkoutInvoiceIdsKey),
@@ -3754,7 +3728,7 @@ export function BillingRightPanel() {
     summaryGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
   useEffect(() => {
-    if (!checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
+    if (!ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
 
     const resolvedWorkspaceId = checkoutWorkspaceId;
     let cancelled = false;
@@ -3781,6 +3755,7 @@ export function BillingRightPanel() {
     checkoutInvoiceIds,
     checkoutAmountsKey,
     checkoutWorkspaceId,
+    ownership.canExecute,
     paymentMemo,
     paymentMethod,
   ]);
@@ -3836,9 +3811,9 @@ export function BillingRightPanel() {
       ? summaryGroups[0].invoice.invoiceNo
       : `${summaryGroups.length}건 선택`;
   const financialActionDisabled =
-    !actionDetail || payableSummaryGroups.length !== 1 || !actionAssigneeName;
+    !actionDetail || payableSummaryGroups.length !== 1 || !ownership.canExecute;
   const handleIssueInvoice = async () => {
-    if (!actionDetail || !actionAssigneeName) return false;
+    if (!actionDetail || !ownership.canExecute) return false;
     setConfirmationState("saving");
     const result = await saveBillingInvoiceLines({
       actorHeaders,
@@ -3865,7 +3840,7 @@ export function BillingRightPanel() {
   const handlePaymentMethodChange = async (
     nextPaymentMethod: PaymentMethod,
   ) => {
-    if (!actionDetail) return false;
+    if (!actionDetail || !ownership.canExecute) return false;
     setPaymentMethod(nextPaymentMethod);
     setPaymentState("saving");
     const result = await saveBillingPaymentStatus({
@@ -3888,7 +3863,7 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkUnpaid = async () => {
-    if (!actionDetail || !actionAssigneeName) return false;
+    if (!actionDetail || !ownership.canExecute) return false;
     const normalizedUnpaidReason = unpaidReason.trim();
     if (!normalizedUnpaidReason) return false;
 
@@ -3925,7 +3900,7 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkPaid = async () => {
-    if (!actionDetail || !actionAssigneeName) return false;
+    if (!actionDetail || !ownership.canExecute) return false;
     setPaymentState("saving");
     const transitionResult = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
@@ -4086,6 +4061,7 @@ export function BillingRightPanel() {
               <div className="mt-2">
                 <PaymentMethodControl
                   paymentMethod={paymentMethod}
+                  disabled={!ownership.canExecute}
                   onPaymentMethodChange={handlePaymentMethodChange}
                 />
               </div>
@@ -4117,6 +4093,7 @@ export function BillingRightPanel() {
               <div className="mt-5 emr-text-dense font-semibold">수납 메모</div>
               <div className="mt-2">
                 <Input
+                  disabled={!ownership.canExecute}
                   aria-label="수납 메모"
                   placeholder="수납 이력에 남길 메모"
                   value={paymentMemo}

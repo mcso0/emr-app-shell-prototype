@@ -65,7 +65,7 @@ export function LabResultRowDetail({ result, row, staffInstruction, finding, onF
         </div>
         <div className="p-2.5">
           <Textarea id={`lab-finding-${row.id}`} className="h-[76px] min-h-[76px] max-h-[76px] resize-none overflow-y-auto bg-card p-[7px] !text-[12px] !leading-4 !tracking-[0.3px] font-medium shadow-[var(--clair-shadow-xs)]" maxLength={4096}
-            disabled={phase2 !== null && !phase2.canEdit}
+            disabled={!phase2?.canEdit}
             value={finding} onChange={event => onFindingChange(event.target.value)}
             placeholder="항목별 검사 소견을 입력하세요. 자동으로 저장됩니다." />
         </div>
@@ -544,6 +544,7 @@ function uploadProgressLabel(task: UploadTask) {
 
 export function LabOverallFinding({ result, phase2, readStatus, refresh }: { result: LabResult; phase2: LabResultPhase2Data | null; readStatus?: AttachmentCollectionStatus; refresh: () => void }) {
   const autosave = useLabAutosave<string>(`${result.workspaceId}:${result.id}:overall`, async (finding, _requestId, expectedRevision) => {
+    if (!phase2?.canEdit) return { ok: false, reason: "permission_denied", message: "현재 담당자만 수정할 수 있습니다.", retryable: false };
     const endpoint = `/api/workspaces/${encodeURIComponent(result.workspaceId)}/lab-imaging/result-phase2`;
     const response = await fetch(endpoint, {
       method: "PUT", headers: { "Content-Type": "application/json" },

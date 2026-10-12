@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckIcon, ChevronDownIcon } from "@/components/icons";
+import { useAuthClient } from "@/features/auth/auth-client";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   ButtonGroup,
@@ -47,8 +49,12 @@ export type FulfillmentTransitionOptions = {
 };
 
 export function FulfillmentWorkLifecycleAction({
+  completeRequiresRecord = false,
+  assignmentOnly = false,
   activityLabel,
   assignedToUserId,
+  assignedToDisplayName,
+  canManage,
   busy = false,
   completeLabel,
   loadEligibleAssignees,
@@ -57,8 +63,12 @@ export function FulfillmentWorkLifecycleAction({
   startPhase,
   status,
 }: {
+  completeRequiresRecord?: boolean;
+  assignmentOnly?: boolean;
   activityLabel: string;
   assignedToUserId?: string | null;
+  assignedToDisplayName?: string | null;
+  canManage?: boolean;
   busy?: boolean;
   completeLabel: string;
   loadEligibleAssignees: () => Promise<FulfillmentEligibleAssignee[]>;
@@ -70,23 +80,35 @@ export function FulfillmentWorkLifecycleAction({
   startPhase?: string;
   status: FulfillmentWorkItemStatus;
 }) {
+  const { session } = useAuthClient();
+  const actorId = session && "userId" in session ? session.userId : "user-tech";
+  const ownsWork = canManage ?? (Boolean(assignedToUserId) && assignedToUserId === actorId);
   const [dialogMode, setDialogMode] = useState<LifecycleDialogMode | null>(null);
   const [assignees, setAssignees] = useState<FulfillmentEligibleAssignee[]>([]);
   const [assigneesLoading, setAssigneesLoading] = useState(false);
   const [selectedAssigneeId, setSelectedAssigneeId] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const disabled = ["completed", "returned", "cancelled"].includes(status) || busy || submitting || (assignedToUserId ? !ownsWork : canManage === false);
+  useEffect(() => {
+    queueMicrotask(() => { setDialogMode(null); setAssignees([]); });
+  }, [assignedToUserId]);
 
   const runTransition = async (
     action: FulfillmentWorkItemAction,
     options?: FulfillmentTransitionOptions,
   ) => {
-    if (busy || submitting) return false;
+    if (disabled) return false;
     setSubmitting(true);
-    const succeeded = await onTransition(action, options);
-    setSubmitting(false);
-    if (!succeeded) toast.error("업무 상태를 변경하지 못했어요. 최신 상태를 확인해 주세요.");
-    return succeeded;
+    try {
+      const succeeded = await onTransition(action, options);
+      if (succeeded && !(action === "complete" && completeRequiresRecord)) toast.success(action === "claim" ? "담당자로 지정됐어요." : action === "unassign" ? "담당을 취소했어요." : ["assign", "handoff"].includes(action) ? "담당자를 변경했어요." : "업무 상태를 변경했어요.");
+      else if (!succeeded) toast.error("업무 상태를 변경하지 못했어요. 최신 상태를 확인해 주세요.");
+      return succeeded;
+    } catch {
+      toast.error("연결을 확인하고 다시 시도해 주세요.");
+      return false;
+    } finally { setSubmitting(false); }
   };
   const openAssigneeDialog = async (mode: "assign" | "handoff") => {
     setDialogMode(mode);
@@ -131,9 +153,9 @@ export function FulfillmentWorkLifecycleAction({
         render={
           <ButtonGroupIconButton
             aria-label={`${activityLabel} 상태 액션 열기`}
-            disabled={busy || submitting}
+            disabled={disabled}
             size={size}
-            variant="outline"
+            variant={status === "requested" ? "default" : "outline"}
           />
         }
       >
@@ -168,7 +190,7 @@ export function FulfillmentWorkLifecycleAction({
   } else if (status === "requested" && !assignedToUserId) {
     trigger = (
       <Button
-        disabled={busy || submitting}
+        disabled={disabled}
         onClick={() => void runTransition("claim")}
         size={size}
         type="button"
@@ -176,11 +198,13 @@ export function FulfillmentWorkLifecycleAction({
         담당하기
       </Button>
     );
+  } else if (assignmentOnly) {
+    trigger = <Button type="button" variant="outline" size={size} disabled={disabled} onClick={() => void runTransition("unassign")}>담당 취소</Button>;
   } else if (status === "requested") {
     trigger = (
       <ButtonGroup aria-label={`${activityLabel} 요청 상태 액션`}>
         <ButtonGroupPrimaryButton
-          disabled={busy || submitting}
+          disabled={disabled}
           onClick={() =>
             void runTransition("start", {
               ...(startPhase ? { detailedPhase: startPhase } : {}),
@@ -249,12 +273,29 @@ export function FulfillmentWorkLifecycleAction({
   const assigneeMode = dialogMode === "assign" || dialogMode === "handoff";
   const reasonRequired = dialogMode === "handoff" || dialogMode === "return";
   const submitDisabled =
+    disabled ||
     submitting ||
     (assigneeMode && !selectedAssigneeId) ||
     (reasonRequired && !reason.trim());
 
   return (
     <>
+      {assignedToUserId ? <DropdownMenu>
+        <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" disabled={disabled} aria-label={`담당자 ${assignedToDisplayName ?? "지정됨"} 변경`} />} onClick={() => {
+          setAssignees([]);
+          setAssigneesLoading(true);
+          void loadEligibleAssignees().then(setAssignees).catch(() => toast.error("담당자 목록을 불러오지 못했어요.")).finally(() => setAssigneesLoading(false));
+        }}>
+          <Avatar size="sm" title={assignedToDisplayName ?? "담당자"}><AvatarFallback>{(assignedToDisplayName ?? "담당").slice(0, 2)}</AvatarFallback></Avatar>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {assigneesLoading ? <DropdownMenuItem disabled>담당자 불러오는 중</DropdownMenuItem> : assignees.map(person => <DropdownMenuItem key={person.userId} disabled={person.userId === assignedToUserId} onClick={() => {
+            if (status === "requested") void runTransition("assign", { assignedToUserId: person.userId });
+            else { setSelectedAssigneeId(person.userId); setReason(""); setDialogMode("handoff"); }
+          }}>{person.displayName}{person.userId === assignedToUserId ? " · 현재 담당" : ""}</DropdownMenuItem>)}
+          {!assigneesLoading && !assignees.length ? <DropdownMenuItem disabled>변경 가능한 담당자가 없습니다.</DropdownMenuItem> : null}
+        </DropdownMenuContent>
+      </DropdownMenu> : null}
       {trigger}
       <Dialog open={dialogMode !== null} onOpenChange={(open) => !open && closeDialog()}>
         <DialogContent>
@@ -274,17 +315,17 @@ export function FulfillmentWorkLifecycleAction({
           </DialogHeader>
           {assigneeMode ? (
             <Select
-              disabled={assigneesLoading || submitting}
+              disabled={disabled || assigneesLoading || submitting}
               value={selectedAssigneeId}
               onValueChange={(value) => setSelectedAssigneeId(value ?? "")}
             >
               <SelectTrigger aria-label="인계할 담당자">
                 <SelectValue
                   placeholder={assigneesLoading ? "담당자 불러오는 중" : "담당자 선택"}
-                />
+                >{selectedAssigneeId ? assignees.find(person => person.userId === selectedAssigneeId)?.displayName ?? "담당자 정보 확인 중" : undefined}</SelectValue>
               </SelectTrigger>
               <SelectContent>
-                {assignees.map((assignee) => (
+                {assignees.filter(assignee => assignee.userId !== assignedToUserId).map((assignee) => (
                   <SelectItem key={assignee.userId} value={assignee.userId}>
                     {assignee.displayName}
                     {assignee.title ? ` · ${assignee.title}` : ""}
@@ -296,6 +337,7 @@ export function FulfillmentWorkLifecycleAction({
           {reasonRequired ? (
             <Textarea
               aria-label={dialogMode === "return" ? "반려 사유" : "인계 사유"}
+              disabled={disabled}
               maxLength={500}
               placeholder={
                 dialogMode === "return"

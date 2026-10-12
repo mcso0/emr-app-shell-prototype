@@ -74,6 +74,8 @@ for (const screen of screens) {
         requestCycle: 1,
         rowRevision: 1,
         assignedToUserId: "user-tech",
+        assignedToDisplayName: "합성 현재 담당자",
+        canManage: true,
         requestedByUserId: "user-vet",
         patientName: "합성 환자",
         guardianName: "합성 보호자",
@@ -124,42 +126,28 @@ for (const screen of screens) {
           : `${screen.module}-queue-item-live-${screen.module}-${workItemId}`;
         await page.getByTestId(queueItemTestId).click();
 
-        const openDialog = async () => {
-          await page.getByRole("button", { name: `${screen.activity} 상태 액션 열기`, exact: true }).click();
-          await page.getByRole("menuitem", { name: action, exact: true }).click();
+        const openCandidates = async () => {
+          await page.getByRole("button", { name: "담당자 합성 현재 담당자 변경", exact: true }).click();
         };
-        await openDialog();
-        const dialog = page.getByRole("dialog", { name: `${screen.activity} ${action}`, exact: true });
-        const assigneeSelect = dialog.getByRole("combobox", { name: "인계할 담당자" });
-        await expect(dialog).toBeVisible();
-        await expect(assigneeSelect).toBeDisabled();
-        await expect(assigneeSelect).toContainText("담당자 불러오는 중");
+        await openCandidates();
+        await expect(page.getByRole("menuitem", { name: "담당자 불러오는 중", exact: true })).toBeDisabled();
         await expect.poll(() => reads.length).toBe(1);
         releaseCandidates?.();
-
-        await expect(assigneeSelect).toBeEnabled();
-        await assigneeSelect.click();
-        await expect(page.getByRole("option", { name: "합성 현재 담당자" })).toHaveCount(0);
-        await page.getByRole("option", { name: "합성 다음 담당자 · 합성 직책", exact: true }).click();
+        await expect(page.getByRole("menuitem", { name: "합성 현재 담당자 · 현재 담당", exact: true })).toBeDisabled();
+        await expect(page.getByRole("menuitem", { name: "합성 다음 담당자", exact: true })).toBeEnabled();
         if (status === "in_progress") {
+          await page.getByRole("menuitem", { name: "합성 다음 담당자", exact: true }).click();
+          const dialog = page.getByRole("dialog", { name: `${screen.activity} ${action}`, exact: true });
+          await expect(dialog.getByRole("combobox", { name: "인계할 담당자" })).toContainText("합성 다음 담당자");
           await dialog.getByRole("textbox", { name: "인계 사유", exact: true }).fill("합성 테스트 인계");
+          await expect(dialog.getByRole("button", { name: "저장", exact: true })).toBeEnabled();
+          await dialog.getByRole("button", { name: "취소", exact: true }).click();
+        } else {
+          await page.keyboard.press("Escape");
         }
-        await expect(dialog.getByRole("button", { name: "저장", exact: true })).toBeEnabled();
-        await dialog.getByRole("button", { name: "취소", exact: true }).click();
-
-        await openDialog();
+        await openCandidates();
         await expect(page.getByText("담당자 목록을 불러오지 못했어요.", { exact: true })).toBeVisible();
-        await expect(assigneeSelect).toBeEnabled();
-        await expect(assigneeSelect).toContainText("담당자 선택");
-        await expect(dialog.getByRole("button", { name: "저장", exact: true })).toBeDisabled();
-        await assigneeSelect.click();
-        await expect(page.getByRole("option")).toHaveCount(0);
-
-        expect(reads).toEqual([1, 2].map(() => ({
-          pathname: `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/assignees`,
-          method: "GET",
-          actor: "user-tech",
-        })));
+        await expect(page.getByRole("menuitem", { name: "변경 가능한 담당자가 없습니다.", exact: true })).toBeDisabled();
         expect(mutations).toEqual([]);
       } finally {
         releaseCandidates?.();

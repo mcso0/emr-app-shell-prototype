@@ -23,12 +23,13 @@ const displayValue = (value: unknown) => value === null || value === undefined ?
 
 type ExecutionResultDialogProps = {
   workspaceId: string; workItemId: string; taskId?: string; open: boolean;
+  ownershipAllowed?: boolean; ownershipKey?: string; authorityStatus?: string;
   onOpenChange: (open: boolean) => void; onSaved: () => Promise<void>;
 };
 export function ExecutionResultDialog(props: ExecutionResultDialogProps) {
   return props.open ? <ExecutionResultDialogContent key={`${props.workspaceId}:${props.workItemId}:${props.taskId ?? "current"}`} {...props} /> : null;
 }
-function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, onOpenChange, onSaved }: ExecutionResultDialogProps) {
+function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, onOpenChange, onSaved }: ExecutionResultDialogProps) {
   const [context, setContext] = useState<ExecutionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -63,7 +64,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
       finally { if (scope.current === generation) setLoading(false); }
     })();
     return () => { scope.current = generation + 1; abort.abort(); };
-  }, [endpoint, refreshKey, taskId, workItemId, workspaceId]);
+  }, [endpoint, refreshKey, taskId, workItemId, workspaceId, ownershipKey]);
 
   const fields = context ? getExecutionResultFields(context) : [];
   const payload: ExecutionResultPayload = {};
@@ -76,7 +77,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     if (!value) continue;
     payload[field.key] = ["number", "signed_number"].includes(field.type) ? Number(value) : field.type === "lines" ? value.split("\n").map(x => x.trim()).filter(Boolean) : value;
   }
-  const canWrite = context?.canRecord && context.isCurrentAttempt &&
+  const canWrite = ownershipAllowed !== false && (!authorityStatus || authorityStatus === context?.status) && context?.canRecord && context.isCurrentAttempt &&
     (context.status === "in_progress" && context.results.length === 0 || context.status === "completed" && amending);
   const valid = context && parseExecutionPayload(context.clinicalOrderType, payload, context.planSnapshot) && performedAt &&
     Number.isFinite(new Date(performedAt).getTime()) && (!amending || amendmentReason.trim());
@@ -147,14 +148,14 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
                 {record.amendmentReason ? <div><dt>정정 사유</dt><dd>{record.amendmentReason}</dd></div> : null}
               </dl>
             </details>)}
-            {context.canRecord && context.isCurrentAttempt && context.status === "completed" && !amending ? <Button variant="outline" onClick={() => {
+            {ownershipAllowed !== false && context.canRecord && context.isCurrentAttempt && context.status === "completed" && !amending ? <Button variant="outline" onClick={() => {
               const latest = context.results.at(-1)!;
               setDraft(Object.fromEntries(Object.entries(latest.payload).map(([key, value]) => [key, Array.isArray(value) ? value.join("\n") : String(value)])));
               setDeviceParameters(((latest.payload.deviceParameters ?? []) as ExecutionMeasurement[]).map(item => ({ ...item, value: String(item.value) })));
               setPerformedAt(localTimeInput(latest.performedAt)); setVarianceReason(latest.varianceReason ?? ""); setAmendmentReason(""); setAmending(true); setNotice(null);
             }}>기록 정정</Button> : null}
           </section> : null}
-          {!context.canRecord ? <p className="text-sm text-muted-foreground">조회 전용입니다. 수행기록을 변경할 수 없습니다.</p> : null}
+          {ownershipAllowed === false || !context.canRecord ? <p className="text-sm text-muted-foreground">조회 전용입니다. 수행기록을 변경할 수 없습니다.</p> : null}
           {context.status === "requested" ? <p className="text-sm">먼저 업무를 시작한 뒤 실제 수행값을 기록해 주세요.</p> : null}
           {canWrite ? <fieldset disabled={saving} className="space-y-3">
             <legend className="mb-3 font-semibold">{amending ? "기록 정정 · 기존 실제값에서 수정" : "실제 수행값 · 직접 입력"}</legend>
@@ -202,10 +203,10 @@ export function FulfillmentExecutionActions({ workspaceId, workItemId, onSaved, 
   return <>
     <Button variant="outline" size={lifecycle.size ?? "sm"} onClick={() => setOpen(true)}>수행기록·이력</Button>
     {children}
-    <FulfillmentWorkLifecycleAction {...lifecycle} onTransition={async (action, options) => {
+    <FulfillmentWorkLifecycleAction {...lifecycle} completeRequiresRecord onTransition={async (action, options) => {
       if (action === "complete") { setOpen(true); return true; }
       return lifecycle.onTransition(action, options);
     }} />
-    <ExecutionResultDialog key={`${workspaceId}:${workItemId}`} workspaceId={workspaceId} workItemId={workItemId} open={open} onOpenChange={setOpen} onSaved={onSaved} />
+    <ExecutionResultDialog key={`${workspaceId}:${workItemId}`} workspaceId={workspaceId} workItemId={workItemId} open={open} ownershipAllowed={lifecycle.canManage} ownershipKey={`${lifecycle.assignedToUserId}:${lifecycle.canManage}:${lifecycle.status}`} authorityStatus={lifecycle.status} onOpenChange={setOpen} onSaved={onSaved} />
   </>;
 }

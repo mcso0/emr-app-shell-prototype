@@ -10,7 +10,7 @@ export type ExecutionRpcClient = {
 type ExecutionResponse = { ok: true; status: 200; context: ExecutionContext }
   | { ok: false; status: number; error: string };
 const knownErrors = new Set([
-  "actor_mismatch", "workspace_membership_missing", "permission_missing", "work_item_unavailable",
+  "current_assignee_required", "actor_mismatch", "workspace_membership_missing", "permission_missing", "work_item_unavailable",
   "queue_projection_task_mismatch", "invalid_execution_command", "invalid_performed_at", "reason_too_long",
   "invalid_execution_payload", "idempotency_conflict", "revision_conflict", "plan_revision_conflict",
   "result_revision_conflict", "invalid_transition", "amendment_reason_required", "variance_reason_required",
@@ -19,7 +19,7 @@ const knownErrors = new Set([
 ]);
 function failure(message?: string): ExecutionResponse {
   const error = knownErrors.has(message ?? "") ? message! : "execution_request_failed";
-  return { ok: false, status: ["actor_mismatch", "workspace_membership_missing", "permission_missing"].includes(error) ? 403
+  return { ok: false, status: ["current_assignee_required", "actor_mismatch", "workspace_membership_missing", "permission_missing"].includes(error) ? 403
     : error === "execution_request_failed" ? 500 : 409, error };
 }
 

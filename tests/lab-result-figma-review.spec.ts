@@ -8,7 +8,7 @@ const rowId = "figma-review-row";
 const resultId = "figma-review-result";
 const instruction = "합성 검수용 직원 전달사항입니다.";
 
-async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0, customAttachments?: LabResultAttachment[]) {
+async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0, customAttachments?: LabResultAttachment[], setupBeforeNavigate?: () => Promise<void>) {
   await page.addInitScript(({ key, workspaceId }) => {
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검수 공간", representativeName: "합성 관리자",
@@ -47,6 +47,7 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
     await route.fulfill({ headers: { "Content-Type": item.mimeType, "Cache-Control": "private, no-store" },
       body: item.mimeType === "application/pdf" ? thumbnailPdf() : item.mimeType.startsWith("image/") ? thumbnailPng : "Synthetic attachment text" });
   });
+  await setupBeforeNavigate?.();
   await page.goto(`/w/${workspaceId}/lab?date=2026-09-29&labResultId=live-lab-${workItem.id}&modulePanel=closed&aside=closed&right=closed`);
   const row = page.getByTestId(`lab-result-row-${rowId}`);
   await expect(row).toBeVisible();
@@ -1262,4 +1263,55 @@ test("viewer: a transient metadata failure preserves the last confirmed preview 
   await viewer.getByRole("button", { name: "목록 다시 불러오기", exact: true }).click();
   await expect(viewer.getByText("첨부 목록을 갱신하지 못했습니다. 마지막으로 확인한 미리보기입니다.")).toHaveCount(0);
   await expect(viewer.getByRole("button", { name: "삭제", exact: true })).toBeVisible();
+});
+
+test("lab ownership opens input on claim, locks on cancel and transfers on avatar reassignment", async ({ page }) => {
+  let owner: string | null = null;
+  let revision = 1;
+  let currentActor = "user-tech";
+  const setup = async () => {
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items**`, async route => {
+    if (route.request().url().includes("/assignees")) return route.fulfill({ json: { ok: true, assignees: [{ userId: "user-tech", displayName: "합성 A" }, { userId: "user-admin", displayName: "합성 B" }] } });
+    if (route.request().method() === "PATCH") {
+      const body = route.request().postDataJSON();
+      if (body.action === "claim") owner = currentActor;
+      else if (body.action === "unassign") owner = null;
+      else if (body.action === "assign") owner = body.assignedToUserId;
+      revision++;
+    }
+    return route.fulfill({ json: { ok: true, workItems: [{ id: "review-work", workspaceId, orderId: "review-order", encounterId: "review-encounter",
+      queueType: "lab", status: "requested", requestCycle: 1, rowRevision: revision,
+      assignedToUserId: owner, assignedToDisplayName: owner === "user-tech" ? "합성 A" : owner ? "합성 B" : null,
+      canManage: !owner || owner === currentActor, sourceSnapshot: { orderDisplayName: "합성 검사", patientName: "합성 환자", detail: { species: "dog" } } }] } });
+  });
+  await page.route(`**/api/workspaces/${workspaceId}/lab-imaging/result-phase2**`, route => route.fulfill({ json: {
+    ok: true, data: { resultId, orderId: "review-order", overallFinding: "", overallRevision: 0, canEdit: Boolean(owner && owner === currentActor), events: [], attachments: [] },
+  } }));
+  };
+  await openReview(page, 0, false, 1, 0, undefined, setup);
+  const value = page.getByTestId(`lab-result-row-${rowId}`).getByRole("textbox");
+  await expect(value).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "검사결과 종합소견" })).toBeDisabled();
+  await page.getByRole("button", { name: "담당하기", exact: true }).click();
+  await expect(page.getByText("담당자로 지정됐어요.", { exact: true })).toBeVisible();
+  await expect(value).toBeEnabled();
+  await expect(page.getByRole("button", { name: "검사 시작", exact: true })).toBeVisible();
+  await page.mouse.move(20, 20);
+  await expect.poll(async () => page.getByRole("group", { name: "검사 요청 상태 액션" }).evaluate(element => { const buttons = [...element.querySelectorAll("button")]; return getComputedStyle(buttons[0]).backgroundColor === getComputedStyle(buttons[1]).backgroundColor; })).toBe(true);
+  const splitStyle = await page.getByRole("group", { name: "검사 요청 상태 액션" }).evaluate(element => [...element.querySelectorAll("button")].map(button => ({ height: button.getBoundingClientRect().height, color: getComputedStyle(button).backgroundColor })));
+  expect(splitStyle[0].height).toBe(splitStyle[1].height);
+  expect(splitStyle[0].color).toBe(splitStyle[1].color);
+  await page.getByRole("button", { name: "검사 상태 액션 열기" }).click();
+  await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
+  await expect(value).toBeDisabled();
+  await page.getByRole("button", { name: "담당하기", exact: true }).click();
+  await page.getByRole("button", { name: "담당자 합성 A 변경" }).click();
+  await page.getByRole("menuitem", { name: "합성 B", exact: true }).click();
+  await expect(value).toBeDisabled();
+  await expect(page.getByRole("button", { name: "검사 시작", exact: true })).toBeDisabled();
+  currentActor = "user-admin";
+  await page.reload();
+  await expect(value).toBeEnabled();
+  await expect(page.getByRole("button", { name: "담당자 합성 B 변경" })).toBeEnabled();
+  await page.screenshot({ path: "output/playwright/current-assignee-lab.png", fullPage: false });
 });
