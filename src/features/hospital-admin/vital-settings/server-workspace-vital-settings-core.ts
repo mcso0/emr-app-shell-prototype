@@ -50,7 +50,15 @@ export async function readWorkspaceVitalSettings(input: {
     workspaceId: input.workspaceId,
     requiredPermission: "hospital_settings:view",
   });
-  if (!readPermission.allowed) return denied(readPermission.denialReason);
+  // Clinical callers need the input configuration, without administration access.
+  const patientReadPermission = resolveWorkspacePermission(permissionAdapter, {
+    sessionUserId: input.actorUserId,
+    workspaceId: input.workspaceId,
+    requiredPermission: "patient:view",
+  });
+  if (!readPermission.allowed && !patientReadPermission.allowed) {
+    return denied(readPermission.denialReason);
+  }
 
   const result = await (input.gateway ?? createMockWorkspaceVitalSettingsGateway()).get(input.workspaceId);
   if (!result.ok) return { ok: false, status: 500, error: result.error };
