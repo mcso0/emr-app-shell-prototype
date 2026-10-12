@@ -794,109 +794,115 @@ test("order action readback restores a non-billable set parent with a null store
   });
 });
 
-test("order action Supabase gateway sends confirmation through one idempotent atomic RPC", async () => {
-  const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
-  const etag = `"${"d".repeat(64)}"`;
-  const actorUserId = "00000000-0000-4000-8000-000000000002";
-  const persistedEncounterId = "00000000-0000-4000-8000-000000000003";
-  const persistedOrderId = "00000000-0000-4000-8000-000000000301";
-  const idempotencyKey = "chart-confirm-atomic-gateway-0001";
-  const gateway = createSupabaseChartOrderActionGateway({
-    async rpc(functionName: string, args: Record<string, unknown>) {
-      calls.push({ functionName, args });
-      return {
-        data: {
-          billingSummary: createMockChartOrderBillingSummaryFromMutationRows({
-            encounterId: persistedEncounterId,
-            etag: '"billing-confirmed"',
-            rows: [
+for (const chartId of [undefined, "00000000-0000-4000-8000-000000000701"]) {
+  test(`order action Supabase gateway sends ${chartId ? "chart-scoped " : ""}confirmation through one idempotent atomic RPC`, async () => {
+    const calls: Array<{ functionName: string; args: Record<string, unknown> }> = [];
+    const etag = `"${"d".repeat(64)}"`;
+    const actorUserId = "00000000-0000-4000-8000-000000000002";
+    const persistedEncounterId = "00000000-0000-4000-8000-000000000003";
+    const persistedOrderId = "00000000-0000-4000-8000-000000000301";
+    const idempotencyKey = "chart-confirm-atomic-gateway-0001";
+    const gateway = createSupabaseChartOrderActionGateway({
+      async rpc(functionName: string, args: Record<string, unknown>) {
+        calls.push({ functionName, args });
+        return {
+          data: {
+            billingSummary: createMockChartOrderBillingSummaryFromMutationRows({
+              encounterId: persistedEncounterId,
+              etag: '"billing-confirmed"',
+              rows: [
+                {
+                  billingCandidateStatus: "candidate_created",
+                  billingReflectionEnabled: true,
+                  lineTotalSnapshot: 30_000,
+                  orderConfirmationStatus: "confirmed",
+                  orderId: persistedOrderId,
+                  rowType: "individual",
+                  status: "confirmed",
+                },
+              ],
+              workspaceId,
+            }),
+            commandId: "00000000-0000-4000-8000-000000000401",
+            etag,
+            confirmedRows: [],
+            billingCandidates: [
               {
-                billingCandidateStatus: "candidate_created",
-                billingReflectionEnabled: true,
-                lineTotalSnapshot: 30_000,
-                orderConfirmationStatus: "confirmed",
+                billingCandidateId: `billcand-${persistedOrderId}`,
+                billingName: "원자적 확정 검사",
                 orderId: persistedOrderId,
-                rowType: "individual",
-                status: "confirmed",
+                taskId: "00000000-0000-4000-8000-000000000501",
+                status: "candidate_created",
+                quantity: 2,
+                unitPrice: 15000,
+                amount: 30000,
+                currency: "KRW",
+                createdAt: "2026-08-25T12:00:00.000Z",
               },
             ],
-            workspaceId,
-          }),
-          commandId: "00000000-0000-4000-8000-000000000401",
-          etag,
-          confirmedRows: [],
-          billingCandidates: [
-            {
-              billingCandidateId: `billcand-${persistedOrderId}`,
-              billingName: "원자적 확정 검사",
-              orderId: persistedOrderId,
-              taskId: "00000000-0000-4000-8000-000000000501",
-              status: "candidate_created",
-              quantity: 2,
-              unitPrice: 15000,
-              amount: 30000,
-              currency: "KRW",
-              createdAt: "2026-08-25T12:00:00.000Z",
-            },
-          ],
-          queueProjectionIds: [
-            "00000000-0000-4000-8000-000000000601",
-          ],
-          tasks: [
-            {
-              taskId: "00000000-0000-4000-8000-000000000501",
-              orderId: persistedOrderId,
-              taskRole: "execution",
-              status: "pending",
-            },
-          ],
-        },
-        error: null,
-      };
-    },
-  });
-
-  const result = await gateway.saveOrderAction({
-    action: "confirm",
-    actorUserId,
-    workspaceId,
-    encounterId: persistedEncounterId,
-    expectedEtag: etag,
-    idempotencyKey,
-    orderIds: [persistedOrderId],
-  });
-
-  expect(calls).toEqual([
-    {
-      functionName: "clair_confirm_chart_order_candidates_with_actual",
-      args: {
-        p_workspace_id: workspaceId,
-        p_actor_user_id: actorUserId,
-        p_encounter_id: persistedEncounterId,
-        p_selected_root_order_ids: [persistedOrderId],
-        p_expected_draft_etag: etag,
-        p_idempotency_key: idempotencyKey,
-        p_actual_records: {},
+            queueProjectionIds: [
+              "00000000-0000-4000-8000-000000000601",
+            ],
+            tasks: [
+              {
+                taskId: "00000000-0000-4000-8000-000000000501",
+                orderId: persistedOrderId,
+                taskRole: "execution",
+                status: "pending",
+              },
+            ],
+          },
+          error: null,
+        };
       },
-    },
-  ]);
-  expect(result).toMatchObject({
-    ok: true,
-    serverAtomic: true,
-    confirmationCommandId: "00000000-0000-4000-8000-000000000401",
-    queueProjectionIds: ["00000000-0000-4000-8000-000000000601"],
-    billingCandidates: [
+    });
+
+    const result = await gateway.saveOrderAction({
+      action: "confirm",
+      chartId,
+      actorUserId,
+      workspaceId,
+      encounterId: persistedEncounterId,
+      expectedEtag: etag,
+      idempotencyKey,
+      orderIds: [persistedOrderId],
+    });
+
+    expect(calls).toEqual([
       {
-        billingCandidateId: `billcand-${persistedOrderId}`,
-        description: "원자적 확정 검사",
-        lineTotal: 30000,
-        orderId: persistedOrderId,
-        quantity: 2,
-        unitPrice: 15000,
+        functionName: chartId
+          ? "clair_confirm_chart_order_candidates_with_actual_for_chart"
+          : "clair_confirm_chart_order_candidates_with_actual",
+        args: {
+          ...(chartId ? { p_chart_id: chartId } : {}),
+          p_workspace_id: workspaceId,
+          p_actor_user_id: actorUserId,
+          p_encounter_id: persistedEncounterId,
+          p_selected_root_order_ids: [persistedOrderId],
+          p_expected_draft_etag: etag,
+          p_idempotency_key: idempotencyKey,
+          p_actual_records: {},
+        },
       },
-    ],
+    ]);
+    expect(result).toMatchObject({
+      ok: true,
+      serverAtomic: true,
+      confirmationCommandId: "00000000-0000-4000-8000-000000000401",
+      queueProjectionIds: ["00000000-0000-4000-8000-000000000601"],
+      billingCandidates: [
+        {
+          billingCandidateId: `billcand-${persistedOrderId}`,
+          description: "원자적 확정 검사",
+          lineTotal: 30000,
+          orderId: persistedOrderId,
+          quantity: 2,
+          unitPrice: 15000,
+        },
+      ],
+    });
   });
-});
+}
 
 test("order action route wires only server-owned action, billing, and fulfillment gateways", () => {
   expect(routeSource).toContain("createSupabaseChartOrderActionGateway");
