@@ -121,12 +121,12 @@ test("history preserves group state across inline and drawer presentation and re
 test("width changes retain instruction vertical scroll and contained table scrolling", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 600 });
   await openInstruction(page);
-  const scroll = page.locator('[data-slot="instruction-result-scroll-area"] [data-slot="scroll-area-viewport"]');
+  const scroll = page.locator('[data-slot="instruction-result-scroll-area"] > [data-slot="scroll-area-viewport"]');
   await scroll.evaluate((element) => { element.scrollTop = 100; });
   const scrollTop = await scroll.evaluate((element) => element.scrollTop);
   expect(scrollTop).toBeGreaterThan(0);
   const table = page.getByRole("table", { name: "조제/처치 section-0 오더 테이블", exact: true });
-  const tableScroll = table.locator('xpath=ancestor::*[@data-slot="table-container"]');
+  const tableScroll = table.locator('xpath=ancestor::*[@data-emr-pinned-table-scroll-owner="true"]');
   await tableScroll.evaluate((element) => { element.scrollLeft = 100; });
   expect(await tableScroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await page.getByRole("button", { name: "넓게 보기" }).click();
@@ -196,3 +196,30 @@ test("treatment instructions share the width and history contract", async ({ pag
   await expect(page.locator("#dispensing-content-aside")).toContainText("처치 이력");
   await expect(page.getByRole("button", { name: "우측 패널 펼치기" })).toHaveCount(0);
 });
+
+for (const type of ["dispensing", "treatment"] as const) {
+  test(`${type} keeps identity fixed and reveals the scrollbar on hover`, async ({ page }) => {
+    await openInstruction(page, type);
+    const table = page.getByRole("table", { name: "조제/처치 section-0 오더 테이블", exact: true });
+    await expect(table.getByRole("columnheader", { name: "상태", exact: true })).toHaveCount(0);
+    const owner = table.locator('xpath=ancestor::*[@data-emr-pinned-table-scroll-owner="true"]');
+    const viewport = owner.locator("..");
+    const bar = viewport.locator('[data-emr-pinned-table-scrollbar="horizontal"]');
+    const identity = table.locator('tbody > tr[data-emr-data-table-row="true"]').first().locator('[data-column-id="name"]');
+    const selection = table.locator('tbody > tr[data-emr-data-table-row="true"]').first().locator('[data-column-id="select"]');
+    const dose = table.locator('tbody > tr[data-emr-data-table-row="true"]').first().locator('[data-column-id="dose"]');
+    const before = await Promise.all([identity.boundingBox(), selection.boundingBox(), dose.boundingBox()]);
+    await page.mouse.move(0, 0);
+    await expect(bar).toHaveCSS("opacity", "0");
+    await identity.hover();
+    await expect(bar).toHaveCSS("opacity", "1");
+    await owner.evaluate((element) => { element.scrollLeft = 160; });
+    await expect.poll(() => owner.evaluate((element) => element.scrollLeft)).toBe(160);
+    const after = await Promise.all([identity.boundingBox(), selection.boundingBox(), dose.boundingBox()]);
+    expect(after[0]!.x).toBeCloseTo(before[0]!.x, 0);
+    expect(after[1]!.x).toBeCloseTo(before[1]!.x, 0);
+    expect(after[2]!.x).toBeCloseTo(before[2]!.x - 160, 0);
+    expect((await bar.boundingBox())!.x).toBeCloseTo(after[0]!.x + after[0]!.width, 0);
+    await page.screenshot({ path: test.info().outputPath(`${type}-pinned-table.png`) });
+  });
+}
