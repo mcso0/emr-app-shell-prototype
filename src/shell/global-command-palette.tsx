@@ -533,6 +533,9 @@ export function GlobalCommandPalette({
               placeholder="동물명, 보호자명, 구성원명, 전화번호, 차트번호 검색"
               className="h-12 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 md:text-[15px]"
             />
+            <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+              {flattenedItems[activeIndex] ? `활성 실행 항목: ${flattenedItems[activeIndex].title}` : ""}
+            </span>
             <kbd className="rounded border border-border bg-muted px-1.5 py-1 text-[11px] font-medium leading-none text-muted-foreground">
               Esc
             </kbd>
@@ -547,7 +550,7 @@ export function GlobalCommandPalette({
               onValueChange={handleFilterChange}
             />
           </div>
-          <div className="min-h-0 overflow-y-auto px-2 py-2" role="listbox" aria-label="통합 검색 결과">
+          <div className="min-h-0 overflow-y-auto px-2 py-2" role="region" aria-label="통합 검색 결과">
             {searchState.status === "loading" ? (
               <div className="mx-2 mb-1 rounded-[8px] border border-[var(--emr-border-subtle)] bg-muted/50 px-3 py-2 text-[12px] text-muted-foreground">
                 검색 중
@@ -633,15 +636,15 @@ function CommandSectionView({
       <div className="px-2 pb-1 pt-2 text-[11px] font-semibold text-muted-foreground">
         {section.title}
       </div>
-      <div className="space-y-0.5">
+      <ul className="space-y-0.5" aria-label={section.title}>
         {section.items.map((item) => {
           const itemIndex = flattenedItems.findIndex((flattenedItem) => flattenedItem.id === item.id);
           const Icon = item.icon;
           const active = itemIndex === activeIndex;
 
           return (
+            <li key={item.id}>
             <button
-              key={item.id}
               id={`command-result-${item.id}`}
               type="button"
               className={cn(
@@ -667,9 +670,10 @@ function CommandSectionView({
                 <span className="truncate">{item.badge}</span>
               </span>
             </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </section>
   );
 }
