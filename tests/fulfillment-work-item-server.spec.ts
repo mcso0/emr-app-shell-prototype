@@ -25,6 +25,25 @@ import {
 import type { GlobalNotification } from "../src/features/notifications/mock-notifications";
 import type { NotificationPersistenceGateway } from "../src/features/notifications/server-notification-persistence";
 
+import { mockEncounters, mockGuardians, mockInvoiceLines, mockInvoices, mockOrders, mockPatients } from "../src/mocks/emr-domain";
+
+function createUnassignedWorkItemDataset(encounterSuffix = "") {
+  return {
+    encounters: mockEncounters.map(encounter => ({ ...encounter, id: encounter.id + encounterSuffix })),
+    guardians: mockGuardians, patients: mockPatients,
+    invoices: mockInvoices.map(invoice => ({ ...invoice, id: invoice.id + encounterSuffix, encounterId: invoice.encounterId + encounterSuffix })),
+    invoiceLines: mockInvoiceLines.map(line => ({ ...line, id: line.id + encounterSuffix, invoiceId: line.invoiceId + encounterSuffix })),
+    orders: mockOrders.map(order => ({
+      ...order, encounterId: order.encounterId + encounterSuffix,
+      currentAssigneeUserId: undefined, status: "requested" as const, workStatus: "pending" as const,
+    })),
+  };
+}
+
+function createUnassignedWorkItemGateway(now?: () => string) {
+  return createMockFulfillmentWorkItemGateway(createUnassignedWorkItemDataset(), now);
+}
+
 const workspaceId = "clair-demo";
 const encounterId = "encounter-coco-260501";
 const orderId = "order-coco-maropitant";
@@ -100,7 +119,7 @@ test("lifecycle migration repairs legacy started metadata before validating the 
 });
 
 test("fulfillment history is scoped by workspace permission and preserves actor/reason transitions", async () => {
-  const gateway = createMockFulfillmentWorkItemGateway();
+  const gateway = createUnassignedWorkItemGateway();
   const listed = await gateway.listWorkItems({
     queueType: "dispensing",
     workspaceId,
@@ -108,10 +127,19 @@ test("fulfillment history is scoped by workspace permission and preserves actor/
   expect(listed.ok).toBe(true);
   if (!listed.ok) return;
   const workItem = listed.workItems.find(
-    (item) => item.status !== "completed" && item.status !== "cancelled",
+    (item) => item.status === "requested",
   );
   expect(workItem).toBeDefined();
   if (!workItem) return;
+
+  const claimed = await gateway.updateWorkItem({
+    action: "claim", actorUserId: "user-tech", workItemId: workItem.id, workspaceId,
+    commandId: "00000000-0000-4000-8000-000000000050",
+    expectedRevision: workItem.rowRevision,
+  });
+  expect(claimed.ok).toBe(true);
+  if (!claimed.ok) return;
+  const claimedItem = claimed.workItems.find(item => item.id === workItem.id)!;
 
   const action =
     workItem.status === "requested"
@@ -125,7 +153,7 @@ test("fulfillment history is scoped by workspace permission and preserves actor/
     action,
     actorUserId: "user-tech",
     commandId: "00000000-0000-4000-8000-000000000051",
-    expectedRevision: workItem.rowRevision,
+    expectedRevision: claimedItem.rowRevision,
     reason: "history contract verification",
     workItemId: workItem.id,
     workspaceId,
@@ -407,18 +435,16 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
         headers: { "x-clair-demo-session-user-id": "user-tech" },
       },
     );
-    expect(invalidCompletion.status()).toBe(409);
+    expect(invalidCompletion.status()).toBe(403);
     await expectJson(invalidCompletion, {
       ok: false,
-      denialReason: "invalid_transition",
+      denialReason: "permission_missing",
     });
 
     const assigned = await request.patch(
       `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
       {
-        data: transitionInput("assign", currentWorkItem.rowRevision, {
-          assignedToUserId: "user-tech",
-        }),
+        data: transitionInput("claim", currentWorkItem.rowRevision),
         headers: { "x-clair-demo-session-user-id": "user-tech" },
       },
     );
@@ -427,6 +453,16 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
       workItems: typeof syncedBody.workItems;
     };
     currentWorkItem = assignedBody.workItems.find((item) => item.id === workItemId)!;
+
+    const notStartedCompletion = await request.patch(
+      `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+      {
+        data: transitionInput("complete", currentWorkItem.rowRevision),
+        headers: { "x-clair-demo-session-user-id": "user-tech" },
+      },
+    );
+    expect(notStartedCompletion.status()).toBe(409);
+    await expectJson(notStartedCompletion, { ok: false, denialReason: "invalid_transition" });
 
     const started = await request.patch(
       `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
@@ -458,6 +494,16 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   }
 
   expect(currentWorkItem.status).toBe("in_progress");
+
+  const otherOwnerCompletion = await request.patch(
+    `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
+    {
+      data: transitionInput("complete", currentWorkItem.rowRevision),
+      headers: { "x-clair-demo-session-user-id": "user-admin" },
+    },
+  );
+  expect(otherOwnerCompletion.status()).toBe(403);
+  await expectJson(otherOwnerCompletion, { ok: false, denialReason: "permission_missing" });
 
   const completed = await request.patch(
     `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}`,
@@ -625,9 +671,7 @@ test("phase-1 treatment fulfillment intentionally shares dispensing permissions"
   const accepted = await updateFulfillmentWorkItem({
     actorUserId: "user-dispensing-only",
     gateway,
-    input: transitionInput("assign", 1, {
-      assignedToUserId: "user-dispensing-only",
-    }),
+    input: transitionInput("claim", 1),
     permissionAdapter,
     workItemId: `fulfill-${treatmentOrderId}`,
     workspaceId,
@@ -989,7 +1033,7 @@ test("fulfillment core blocks terminal-state transitions", async () => {
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
+    input: transitionInput("claim", 1),
     gateway,
   });
   await updateFulfillmentWorkItem({
@@ -1043,7 +1087,7 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
+    input: transitionInput("claim", 1),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1123,7 +1167,7 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
+    input: transitionInput("claim", 1),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1222,7 +1266,7 @@ test("fulfillment completion persists billing-ready notification through the DB 
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
+    input: transitionInput("claim", 1),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1292,7 +1336,7 @@ test("fulfillment completion keeps source mutation successful when DB notificati
     actorUserId: "user-tech",
     workspaceId,
     workItemId,
-    input: transitionInput("assign", 1, { assignedToUserId: "user-tech" }),
+    input: transitionInput("claim", 1),
     gateway,
     lifecycleGateway,
     invoiceCandidateGateway,
@@ -1341,7 +1385,7 @@ test("fulfillment completion keeps source mutation successful when DB notificati
 
 test("fulfillment completion holds lab and imaging billing until vet review", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
-  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const gateway = createUnassignedWorkItemGateway(timestamp);
   const lifecycleGateway = createMockChartOrderLifecycleGateway(
     undefined,
     timestamp,
@@ -1355,10 +1399,19 @@ test("fulfillment completion holds lab and imaging billing until vet review", as
   const auditGateway = createMockLiveAuditAppendGateway();
   const labOrderId = "order-kong-cbc";
 
+  for (const [action, revision] of [["claim", 1], ["start", 2]] as const) {
+    const prepared = await updateFulfillmentWorkItem({
+      actorUserId: "user-tech", gateway, workspaceId,
+      workItemId: `fulfill-${labOrderId}`,
+      input: transitionInput(action, revision),
+    });
+    expect(prepared, JSON.stringify(prepared)).toMatchObject({ ok: true, status: 200 });
+  }
+
   const completed = await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     gateway,
-    input: transitionInput("complete", 1),
+    input: transitionInput("complete", 3),
     invoiceCandidateGateway,
     lifecycleGateway,
     workItemId: `fulfill-${labOrderId}`,
@@ -1464,9 +1517,10 @@ test("fulfillment completion holds lab and imaging billing until vet review", as
 
 test("vet-reviewed billing sync persists billing-ready notification through the DB gateway", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
-  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const dataset = createUnassignedWorkItemDataset("-notification");
+  const gateway = createMockFulfillmentWorkItemGateway(dataset, timestamp);
   const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
-    undefined,
+    dataset,
     timestamp,
   );
   const auditGateway = createMockLiveAuditAppendGateway();
@@ -1477,13 +1531,23 @@ test("vet-reviewed billing sync persists billing-ready notification through the 
     createRecordingNotificationPersistenceGateway(persistedEvents);
   const labOrderId = "order-kong-cbc";
 
+  for (const [action, revision] of [["claim", 1], ["start", 2]] as const) {
+    const prepared = await updateFulfillmentWorkItem({
+      actorUserId: "user-tech", gateway, workspaceId,
+      lifecycleGateway: createMockChartOrderLifecycleGateway(dataset, timestamp),
+      workItemId: `fulfill-${labOrderId}`,
+      input: transitionInput(action, revision),
+    });
+    expect(prepared, JSON.stringify(prepared)).toMatchObject({ ok: true, status: 200 });
+  }
+
   await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     gateway,
-    input: transitionInput("complete", 1),
+    input: transitionInput("complete", 3),
     invoiceCandidateGateway,
     lifecycleGateway: createMockChartOrderLifecycleGateway(
-      undefined,
+      dataset,
       timestamp,
     ),
     workItemId: `fulfill-${labOrderId}`,
@@ -1498,7 +1562,7 @@ test("vet-reviewed billing sync persists billing-ready notification through the 
     emitBillingReadyNotifications: true,
     gateway,
     input: {
-      encounterId: "encounter-kong-260501",
+      encounterId: "encounter-kong-260501-notification",
       orderIds: [labOrderId],
     },
     invoiceCandidateGateway,
@@ -1515,13 +1579,13 @@ test("vet-reviewed billing sync persists billing-ready notification through the 
     expect.objectContaining({
       actorUserId: "user-vet",
       badgeCount: false,
-      dedupeKey: `encounter-kong-260501-${labOrderId}-billing_waiting_ready`,
+      dedupeKey: `encounter-kong-260501-notification-${labOrderId}-billing_waiting_ready`,
       eventKey: "billing_waiting_ready",
       eventScopeId: null,
       source: expect.objectContaining({
         entity_id: `billcand-${labOrderId}`,
         kind: "billing_candidate",
-        route: `/w/${workspaceId}/billing?modulePanel=open&encounterId=encounter-kong-260501`,
+        route: `/w/${workspaceId}/billing?modulePanel=open&encounterId=encounter-kong-260501-notification`,
       }),
       workspaceId,
     }),
@@ -1552,21 +1616,32 @@ test("vet-reviewed billing sync preserves candidate owner denial as 403", async 
 
 test("vet-reviewed billing sync keeps audit and candidate success when DB notification persistence rejects", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
-  const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
+  const dataset = createUnassignedWorkItemDataset("-notification-failure");
+  const gateway = createMockFulfillmentWorkItemGateway(dataset, timestamp);
   const invoiceCandidateGateway = createMockInvoiceCandidateSyncGateway(
-    undefined,
+    dataset,
     timestamp,
   );
   const auditGateway = createMockLiveAuditAppendGateway();
   const labOrderId = "order-kong-cbc";
 
+  for (const [action, revision] of [["claim", 1], ["start", 2]] as const) {
+    const prepared = await updateFulfillmentWorkItem({
+      actorUserId: "user-tech", gateway, workspaceId,
+      lifecycleGateway: createMockChartOrderLifecycleGateway(dataset, timestamp),
+      workItemId: `fulfill-${labOrderId}`,
+      input: transitionInput(action, revision),
+    });
+    expect(prepared, JSON.stringify(prepared)).toMatchObject({ ok: true, status: 200 });
+  }
+
   await updateFulfillmentWorkItem({
     actorUserId: "user-tech",
     gateway,
-    input: transitionInput("complete", 1),
+    input: transitionInput("complete", 3),
     invoiceCandidateGateway,
     lifecycleGateway: createMockChartOrderLifecycleGateway(
-      undefined,
+      dataset,
       timestamp,
     ),
     workItemId: `fulfill-${labOrderId}`,
@@ -1581,7 +1656,7 @@ test("vet-reviewed billing sync keeps audit and candidate success when DB notifi
     emitBillingReadyNotifications: true,
     gateway,
     input: {
-      encounterId: "encounter-kong-260501",
+      encounterId: "encounter-kong-260501-notification-failure",
       orderIds: [labOrderId],
     },
     invoiceCandidateGateway,
