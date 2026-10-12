@@ -181,3 +181,77 @@ export const PatientFirstCompatibility: Story = {
     await expect(identities[1]).toHaveAttribute("data-slot", "patient-context-guardian");
   },
 };
+
+
+function LoadingContextExample(args: ContextArgs) {
+  const [identityReady, setIdentityReady] = useState(false);
+  const [memoReady, setMemoReady] = useState(false);
+  return (
+    <div style={{ width: 1000, maxWidth: "100%" }}>
+      <EmrMainContentHeader heightMode="fixed">
+        <EmrPatientContextBar
+          identityOrder={args.scenario === "billing" ? "guardian-first" : "patient-first"}
+          patientItems={[
+            { label: "환자", value: "합성 환자" },
+            { label: "품종", value: "푸들" },
+            { label: "성별", value: "중성화·수컷" },
+            { label: "나이", value: "4세" },
+          ].map((item) => ({ ...item, loading: !identityReady }))}
+          guardianItems={[
+            { label: "보호자", value: "합성 보호자" },
+            { label: "연락처", value: "010-****-0000" },
+          ].map((item) => ({ ...item, loading: !identityReady }))}
+          patientInteraction={{ ariaLabel: "합성 환자 프로필 열기", preview: <p>환자 미리보기</p>, onActivate: args.onFirstPatientActivate }}
+          guardianInteraction={{ ariaLabel: "합성 보호자 프로필 열기", preview: <p>보호자 미리보기</p>, onActivate: args.onGuardianActivate }}
+          vitalItems={[{ label: "체중", value: "5 kg", loading: !identityReady }]}
+          memoActions={[{ label: "환자메모", summary: "합성 메모", loading: !memoReady }]}
+        />
+      </EmrMainContentHeader>
+      <button onClick={() => setIdentityReady(true)}>환자 정보 도착</button>
+      <button onClick={() => setMemoReady(true)}>메모 도착</button>
+    </div>
+  );
+}
+
+export const LoadingToReady: Story = {
+  args: { scenario: "patient-first" },
+  render: (args) => <LoadingContextExample {...args} />,
+  play: async ({ canvas, canvasElement, args }) => {
+    const bar = canvasElement.querySelector('[data-slot="patient-context-bar"]')!;
+    const height = bar.getBoundingClientRect().height;
+    await expect(bar.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(8);
+    await expect(canvas.queryByRole("button", { name: "합성 환자 프로필 열기" })).not.toBeInTheDocument();
+    await expect(canvas.queryByText("합성 환자", { exact: true })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "환자메모 메모 보기" })).toBeDisabled();
+    await userEvent.click(canvas.getByRole("button", { name: "환자 정보 도착" }));
+    await expect(canvas.getByText("합성 환자", { exact: true })).toBeVisible();
+    await expect(bar.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(1);
+    await expect(canvas.getByRole("button", { name: "환자메모 메모 보기" })).toBeDisabled();
+    await userEvent.click(canvas.getByRole("button", { name: "메모 도착" }));
+    await expect(bar.querySelector('[data-slot="skeleton"]')).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "환자메모 메모 보기" })).toBeEnabled();
+    await expect(bar.getBoundingClientRect().height).toBe(height);
+    const patient = canvas.getByRole("button", { name: "합성 환자 프로필 열기" });
+    patient.focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(args.onFirstPatientActivate).toHaveBeenCalledOnce();
+  },
+};
+
+export const LoadingSkeleton: Story = {
+  args: { scenario: "patient-first" },
+  render: (args) => <LoadingContextExample {...args} />,
+  play: async ({ canvasElement }) => {
+    const skeletons = canvasElement.querySelectorAll('[data-slot="skeleton"]');
+    await expect(skeletons).toHaveLength(8);
+    for (const skeleton of skeletons) {
+      await expect(skeleton).toHaveAttribute("aria-hidden", "true");
+      await expect(skeleton).toHaveClass("motion-reduce:animate-none");
+    }
+  },
+};
+
+export const GuardianFirstLoading: Story = {
+  ...LoadingToReady,
+  args: { scenario: "billing" },
+};

@@ -170,3 +170,52 @@ dispensing/treatment, lab, imaging, and billing. Authenticated screen inspection
 uses only available synthetic/demo context; if authentication is unavailable,
 report the redirect boundary without claiming authenticated smoke. Do not submit
 clinical, billing, or profile mutations in Production.
+
+
+### Shared Loading Skeleton Follow-up (2026-10-12)
+
+승욱 requested replacing loading copy in the shared patient information bar with
+skeleton UI. This follow-up is local implementation only; it has no release
+approval yet and does not include the billing permission/checkout limitation.
+
+- The shared datum and memo contracts accept an explicit `loading` flag. Use the
+  existing Skeleton styling, suppress pending profile actions and memo actions,
+  retain screen-reader loading text and `aria-busy`, and honor reduced motion.
+- Clinical profile/memo reads and initial latest-vital reads supply loading state.
+  Already-resolved values remain visible during other sections' reads. Missing,
+  denied, and failed reads retain their existing messages. Chart and billing
+  identities already provided by their selected records are not hidden merely
+  because a separate profile preview is loading.
+- No fetch, permission, mutation, source-data, or global Skeleton behavior changes.
+- Focused clinical/vital browser regressions: 22/22 passed. Story, typecheck, lint,
+  and visual verification results are recorded at local completion below.
+
+
+Local completion evidence:
+
+- Clinical profile/data and vital compatibility browser regressions: 22/22 passed.
+- Shared-bar Storybook browser tests: 7/7 passed, including patient-first and
+  guardian-first pending/partial/ready transitions, stable bar height, suppressed
+  pending interactions, restored keyboard activation, and reduced-motion classes.
+- Focused ESLint, TypeScript `--noEmit`, docs link validation (1064 references),
+  and `git diff --check` passed.
+- The isolated-worktree Storybook preview runs on local port 6127. The connected
+  Storybook MCP instance serves another checkout and could not resolve these new
+  stories. Manual visual inspection remains unverified because the app browser
+  connection was unavailable; CLI browser test results above are independent.
+- Local implementation is ready for human review. No commit, push, Production
+  merge, or deployment was performed for this skeleton follow-up.
+
+
+Skeleton release preparation (2026-10-12): 승욱 authorized committing and pushing
+only this follow-up, creating its PR, and completing pre-production checks before
+requesting final merge approval. This supersedes the local-only delivery state
+above; it does not authorize merging to `main` yet. Compare against
+`247d21dde86547c4c2ac3c7941af49b29df09a42`. Current Production and proposed rollback
+candidate: `dpl_AETpMAkDNkwyJt2CTPwmgyMudBBP`; reconfirm before approval.
+Post-merge smoke will cover `/login` and read-only patient bars in chart,
+dispensing/treatment, lab, imaging, and billing using available synthetic context.
+Do not perform clinical saves, checkout/payment actions, permission changes, or
+remote DB mutations. Report any authentication or permission boundary explicitly.
+Stop if the candidate changes, a required check fails, Preview is not Ready, or
+Production approval is missing. Record exact-candidate results in the PR packet.
