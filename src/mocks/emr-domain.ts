@@ -1746,7 +1746,7 @@ export const mockOrders: EmrOrder[] = [
     serviceItemId: "svc-imaging-abdomen",
     orderType: "imaging",
     displayName: "복부 초음파",
-    status: "in_progress",
+    status: "requested",
     workStatus: "pending",
     priority: "normal",
     requestedByUserId: "user-vet-suji",
