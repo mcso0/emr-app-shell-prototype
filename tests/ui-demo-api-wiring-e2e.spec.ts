@@ -4,6 +4,8 @@ import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-versio
 
 const workspaceId = "clair-demo";
 const kongEncounterId = "encounter-kong-260501";
+const kongChartId = "soap-kong-260501";
+const uiFixtureDate = "2026-05-21";
 const apiHeaders = { "x-clair-demo-session-user-id": "user-vet" };
 const frontDeskHeaders = { "x-clair-demo-session-user-id": "user-front-desk" };
 const technicianHeaders = { "x-clair-demo-session-user-id": "user-tech" };
@@ -74,21 +76,22 @@ test("reception and chart screens render API-backed queue/profile responses", as
   const calls: string[] = [];
   await mockReceptionApi(page, calls);
 
-  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.goto(`/w/clair-demo/reception?date=${uiFixtureDate}&modulePanel=open`);
 
   await expect(page.getByTestId(`patient-card-${uiApiPatient.id}`)).toContainText(
     "API Kong Synthetic",
   );
+  // Current queue/calendar DTOs embed profiles; the legacy local branch does not fetch a second lookup.
+  await expect(page.getByTestId(`patient-card-${uiApiPatient.id}`)).toContainText(uiApiGuardian.name);
   expect(calls).toEqual(
     expect.arrayContaining([
-      "reception-profile-lookup",
       "reception-calendar",
       "reception-queue",
     ]),
   );
 
   await mockChartApi(page, calls);
-  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+  await page.goto(`/w/clair-demo/treatment?date=${uiFixtureDate}&modulePanel=open&aside=closed`);
 
   await expect(
     page.getByTestId(`order-queue-item-${uiApiEncounter.id}`),
@@ -127,6 +130,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     {
       data: {
         action: "confirm",
+        chartId: kongChartId,
         encounterId: kongEncounterId,
         expectedEtag,
         idempotencyKey: "ui-demo-outpatient-confirm-0001",
@@ -141,7 +145,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     enforcedBy: "chart-order-action-persistence",
   });
 
-  const labWorkItem = await readWorkItem(request, "lab", "order-kong-cbc");
+  const labWorkItem = await claimSyntheticWorkItem(request, await readWorkItem(request, "lab", "order-kong-cbc"));
   const labCatalog = await request.get(
     `/api/workspaces/${workspaceId}/lab-imaging/result-sheet-catalog?serviceItemId=19429000-0000-4000-8000-000000000001&orderDisplayName=DEN-194%20CBC%20kong-vomit`,
     { headers: technicianHeaders },
@@ -173,7 +177,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
         ],
         workItemId: labWorkItem.id,
       },
-      headers: technicianHeaders,
+      headers: { "x-clair-demo-session-user-id": labWorkItem.assignedToUserId },
     },
   );
   expect(savedLabResult.status()).toBe(200);
@@ -201,6 +205,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     labWorkItem.id,
     labWorkItem.status,
     labWorkItem.rowRevision,
+    labWorkItem.assignedToUserId,
   );
   const imagingWorkItem = await readWorkItem(
     request,
@@ -212,6 +217,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     imagingWorkItem.id,
     imagingWorkItem.status,
     imagingWorkItem.rowRevision,
+    imagingWorkItem.assignedToUserId,
   );
   const treatmentWorkItem = await readWorkItem(
     request,
@@ -223,6 +229,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     treatmentWorkItem.id,
     treatmentWorkItem.status,
     treatmentWorkItem.rowRevision,
+    treatmentWorkItem.assignedToUserId,
   );
   const dispensingWorkItem = await readWorkItem(
     request,
@@ -234,6 +241,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     dispensingWorkItem.id,
     dispensingWorkItem.status,
     dispensingWorkItem.rowRevision,
+    dispensingWorkItem.assignedToUserId,
   );
 
   const reviewed = await request.patch(
@@ -252,6 +260,7 @@ test("synthetic outpatient route boundary reaches fulfillment and billing checko
     enforcedBy: "fulfillment-vet-review-billing-gate",
   });
 
+  await claimSyntheticInvoice(request, "invoice-kong-260501", "user-front-desk");
   const checkout = await request.post(
     `/api/workspaces/${workspaceId}/billing/guardian-checkout`,
     {
@@ -369,14 +378,15 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
   await mockDownstreamDemoApis(page, calls);
 
   await test.step("front desk sees an API-backed reception queue patient", async () => {
-    await page.goto("/w/clair-demo/reception?modulePanel=open");
+    await page.goto(`/w/clair-demo/reception?date=${uiFixtureDate}&modulePanel=open`);
     await expect(page.getByTestId(`patient-card-${uiApiPatient.id}`)).toContainText(
       "API Kong Synthetic",
     );
+    await expect(page.getByTestId(`patient-card-${uiApiPatient.id}`)).toContainText(uiApiGuardian.name);
   });
 
   await test.step("vet sees the same API-backed encounter in the chart queue", async () => {
-    await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+    await page.goto(`/w/clair-demo/treatment?date=${uiFixtureDate}&modulePanel=open&aside=closed`);
     await expect(
       page.getByTestId(`order-queue-item-${uiApiEncounter.id}`),
     ).toContainText("API Kong Synthetic");
@@ -431,7 +441,6 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
 
   expect(calls).toEqual(
     expect.arrayContaining([
-      "reception-profile-lookup",
       "reception-calendar",
       "reception-queue",
       "chart-live-queue",
@@ -450,6 +459,7 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
 
 test("billing screen prefers API invoice, payment, and checkout snapshots over mock state", async ({
   page,
+  request,
 }) => {
   const calls: string[] = [];
   const apiInvoice = {
@@ -580,6 +590,7 @@ test("billing screen prefers API invoice, payment, and checkout snapshots over m
     });
   });
 
+  await claimSyntheticInvoice(request, apiInvoice.id, "user-admin");
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
 
   await expect(page.getByTestId("billing-instruction-info")).toContainText(
@@ -723,7 +734,17 @@ test("billing screen exposes API read failure and recovers through retry", async
 
 test("billing screen separates permission denial from retryable API failure", async ({
   page,
+  request,
 }) => {
+  let allowInvoiceRead = false;
+  let checkoutAttempts = 0;
+  const invoice = {
+    id: "invoice-coco-260501", workspaceId, encounterId: "encounter-coco-260501",
+    guardianId: "guardian-lee-jieun", invoiceNo: "API-INV-PERMISSION-260501",
+    status: "issued", subtotalAmount: 43210, discountAmount: 0, taxAmount: 0,
+    totalAmount: 43210, paymentState: "none", selectedPaymentMethod: "card",
+    issuedAt: "2026-05-01T10:50:00+09:00", createdAt: "2026-05-01T10:40:00+09:00",
+  };
   await page.route("**/api/workspaces/clair-demo/billing/invoice-candidates?*", async (route) => {
     await route.fulfill({
       contentType: "application/json",
@@ -732,6 +753,12 @@ test("billing screen separates permission denial from retryable API failure", as
     });
   });
   await page.route("**/api/workspaces/clair-demo/billing/invoice-lines?*", async (route) => {
+    if (allowInvoiceRead) return route.fulfill({ json: {
+      ok: true, status: 200, invoice, enforcedBy: "billing-invoice-line-persistence",
+      lines: [{ id: "invoice-line-permission-boundary", invoiceId: invoice.id,
+        orderId: "order-coco-cbc", serviceItemId: "svc-lab-cbc", description: "Permission boundary line",
+        quantity: 1, unitPrice: 43210, lineTotal: 43210 }],
+    } });
     await route.fulfill({
       contentType: "application/json",
       json: { ok: false, status: 403, denialReason: "permission_missing" },
@@ -739,6 +766,9 @@ test("billing screen separates permission denial from retryable API failure", as
     });
   });
   await page.route("**/api/workspaces/clair-demo/billing/payment-status?*", async (route) => {
+    if (allowInvoiceRead) return route.fulfill({ json: {
+      ok: true, status: 200, invoice, payments: [], enforcedBy: "billing-payment-status-persistence",
+    } });
     await route.fulfill({
       contentType: "application/json",
       json: { ok: false, status: 403, denialReason: "permission_missing" },
@@ -753,6 +783,7 @@ test("billing screen separates permission denial from retryable API failure", as
     });
   });
   await page.route("**/api/workspaces/clair-demo/billing/guardian-checkout", async (route) => {
+    checkoutAttempts += 1;
     await route.fulfill({
       contentType: "application/json",
       json: { ok: false, status: 403, denialReason: "permission_missing" },
@@ -760,18 +791,25 @@ test("billing screen separates permission denial from retryable API failure", as
     });
   });
 
+  await clearSyntheticInvoiceAssignment(request, invoice.id, "user-admin");
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
 
   await expect(page.getByTestId("billing-api-state")).toContainText(
     "수납 API 권한이 없습니다.",
   );
   await expect(page.getByTestId("billing-api-state-retry-button")).toHaveCount(0);
+  expect(checkoutAttempts).toBe(0);
+  allowInvoiceRead = true;
+  await claimSyntheticInvoice(request, invoice.id, "user-admin");
+  await page.reload();
+  await expect(page.getByTestId("billing-api-state")).toHaveCount(0);
   await expect(page.getByTestId("billing-checkout-state")).toContainText(
     "Checkout 권한이 없습니다.",
   );
+  await expect.poll(() => checkoutAttempts).toBeGreaterThan(0);
 });
 
-test("billing checkout session failure exposes a retry path", async ({ page }) => {
+test("billing checkout session failure exposes a retry path", async ({ page, request }) => {
   let allowCheckoutSuccess = false;
   const invoice = {
     id: "invoice-coco-260501",
@@ -871,6 +909,7 @@ test("billing checkout session failure exposes a retry path", async ({ page }) =
     });
   });
 
+  await claimSyntheticInvoice(request, invoice.id, "user-admin");
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
 
   await expect(page.getByTestId("billing-checkout-state")).toContainText(
@@ -1003,22 +1042,26 @@ async function mockReceptionApi(page: Page, calls: string[]) {
         ok: true,
         status: 200,
         workspaceId,
-        date: "2026-05-01",
-        records: [{ encounter: uiApiEncounter, queueEntry: uiApiQueueEntry }],
+        date: uiFixtureDate,
+        records: [{ encounter: uiApiEncounter, queueEntry: uiApiQueueEntry,
+          patient: uiApiPatient, primaryGuardian: uiApiGuardian }],
         enforcedBy: "reception-calendar-read",
       },
       status: 200,
     });
   });
 
-  await page.route("**/api/workspaces/clair-demo/reception/queue", async (route) => {
+  await page.route((url) => url.pathname === "/api/workspaces/clair-demo/reception/queue", async (route) => {
+    expect(route.request().method()).toBe("GET");
     calls.push("reception-queue");
     await route.fulfill({
       contentType: "application/json",
       json: {
         ok: true,
         status: 200,
-        queue: [{ encounter: uiApiEncounter, queueEntry: uiApiQueueEntry }],
+        queue: [{ kind: "encounter_queue", encounter: uiApiEncounter, queueEntry: uiApiQueueEntry,
+          patient: uiApiPatient, primaryGuardian: uiApiGuardian }],
+        summary: { workspaceId, date: uiFixtureDate, appointmentCount: 0, receptionCount: 1, totalCount: 1 },
         enforcedBy: "reception-queue-read",
       },
       status: 200,
@@ -1027,7 +1070,8 @@ async function mockReceptionApi(page: Page, calls: string[]) {
 }
 
 async function mockChartApi(page: Page, calls: string[]) {
-  await page.route("**/api/workspaces/clair-demo/chart/live-queue", async (route) => {
+  await page.route((url) => url.pathname === "/api/workspaces/clair-demo/chart/live-queue", async (route) => {
+    expect(route.request().method()).toBe("GET");
     calls.push("chart-live-queue");
     await route.fulfill({
       contentType: "application/json",
@@ -1125,6 +1169,7 @@ async function readWorkItem(
       orderId: string;
       rowRevision: number;
       status: string;
+      assignedToUserId: string | null;
     }>;
   };
   const item = body.workItems.find((workItem) => workItem.orderId === orderId);
@@ -1137,7 +1182,16 @@ async function advanceWorkItemToCompleted(
   workItemId: string,
   initialStatus: string,
   initialRevision = 1,
+  assignedToUserId: string | null = null,
 ) {
+  if (initialStatus === "requested" && !assignedToUserId) {
+    const claimed = await claimSyntheticWorkItem(request, {
+      id: workItemId, rowRevision: initialRevision, status: initialStatus, assignedToUserId,
+    });
+    initialStatus = claimed.status;
+    initialRevision = claimed.rowRevision;
+    assignedToUserId = claimed.assignedToUserId;
+  }
   const actions =
     initialStatus === "requested"
       ? ["start", "complete"]
@@ -1158,7 +1212,7 @@ async function advanceWorkItemToCompleted(
           commandId: `00000000-0000-4000-8000-${String(fulfillmentCommandSequence).padStart(12, "0")}`,
           expectedRevision,
         },
-        headers: technicianHeaders,
+        headers: { "x-clair-demo-session-user-id": assignedToUserId ?? "user-tech" },
       },
     );
     expect(response.status()).toBe(200);
@@ -1172,12 +1226,64 @@ async function advanceWorkItemToCompleted(
   }
 }
 
+async function claimSyntheticWorkItem(request: APIRequestContext, item: { id: string; rowRevision: number; status: string; assignedToUserId: string | null }) {
+  if (item.assignedToUserId) return { ...item, assignedToUserId: item.assignedToUserId };
+  fulfillmentCommandSequence += 1;
+  const response = await request.patch(`/api/workspaces/${workspaceId}/fulfillment/work-items/${item.id}`, {
+    headers: technicianHeaders, data: { action: "claim", expectedRevision: item.rowRevision,
+      commandId: `00000000-0000-4000-8000-${String(fulfillmentCommandSequence).padStart(12, "0")}` },
+  });
+  expect(response.status()).toBe(200);
+  const body = await response.json() as { workItems: Array<{ id: string; status: string; rowRevision: number; assignedToUserId: string }> };
+  const claimed = body.workItems.find((row) => row.id === item.id);
+  expect(claimed).toMatchObject({ id: item.id, assignedToUserId: "user-tech", status: item.status, rowRevision: item.rowRevision + 1 });
+  return claimed!;
+}
+
 async function expectJson(
   response: { json(): Promise<unknown> },
   expected: Record<string, unknown>,
 ) {
   const body = await response.json();
   expect(body).toMatchObject(expected);
+}
+
+async function claimSyntheticInvoice(request: APIRequestContext, invoiceId: string, actorUserId: string) {
+  const url = `/api/workspaces/${workspaceId}/billing/assignment`;
+  const headers = { "x-clair-demo-session-user-id": actorUserId };
+  const before = await request.get(`${url}?invoiceId=${encodeURIComponent(invoiceId)}`, { headers });
+  expect(before.status()).toBe(200);
+  const body = await before.json() as { assignment: { assignedToUserId: string | null; revision: number } };
+  if (body.assignment.assignedToUserId !== actorUserId) {
+    expect(body.assignment.assignedToUserId).toBeNull();
+    const claimed = await request.patch(url, { headers, data: {
+      invoiceId, action: "claim", expectedRevision: body.assignment.revision,
+    } });
+    expect(claimed.status()).toBe(200);
+  }
+  const readback = await request.get(`${url}?invoiceId=${encodeURIComponent(invoiceId)}`, { headers });
+  expect(readback.status()).toBe(200);
+  await expectJson(readback, { ok: true, assignment: {
+    assignedToUserId: actorUserId, canManage: true,
+  } });
+}
+
+async function clearSyntheticInvoiceAssignment(request: APIRequestContext, invoiceId: string, actorUserId: string) {
+  const url = `/api/workspaces/${workspaceId}/billing/assignment`;
+  const headers = { "x-clair-demo-session-user-id": actorUserId };
+  const before = await request.get(`${url}?invoiceId=${encodeURIComponent(invoiceId)}`, { headers });
+  expect(before.status()).toBe(200);
+  const body = await before.json() as { assignment: { assignedToUserId: string | null; revision: number } };
+  if (body.assignment.assignedToUserId !== null) {
+    expect(body.assignment.assignedToUserId).toBe(actorUserId);
+    const cleared = await request.patch(url, { headers, data: {
+      invoiceId, action: "unassign", expectedRevision: body.assignment.revision,
+    } });
+    expect(cleared.status()).toBe(200);
+  }
+  const readback = await request.get(`${url}?invoiceId=${encodeURIComponent(invoiceId)}`, { headers });
+  expect(readback.status()).toBe(200);
+  await expectJson(readback, { ok: true, assignment: { assignedToUserId: null } });
 }
 
 async function mockDownstreamDemoApis(page: Page, calls: string[]) {
