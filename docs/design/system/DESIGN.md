@@ -195,7 +195,9 @@ CLAiR screens favor operational density:
   Visual alignment must not change billing data or calculations.
 - pending patient-context values use shared skeletons rather than visible loading
   sentences. Keep resolved values, explicit failure/denial/missing states,
-  accessible busy descriptions, and reduced-motion behavior.
+  accessible busy descriptions, and reduced-motion behavior. Chart shows the same
+  skeleton while its first selected-record read is pending; keep loaded context
+  visible during refresh and never add an artificial loading delay.
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at

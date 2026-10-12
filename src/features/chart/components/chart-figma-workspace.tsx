@@ -24,6 +24,7 @@ export const chartWorkspacePanelClassName =
   "group/chart-panel flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] shadow-xs";
 
 type ChartPatientVitalItem = {
+  loading?: boolean;
   label: string;
   value: string;
 };
@@ -35,6 +36,7 @@ type ChartPatientMemoItem = {
 };
 
 type ChartPatientContextBarProps = {
+  loading?: boolean;
   doctorName: string;
   guardianInteraction?: ContextBarProfileInteraction;
   guardianName: string;
@@ -48,6 +50,7 @@ type ChartPatientContextBarProps = {
 };
 
 export function ChartPatientContextBar({
+  loading = false,
   doctorName,
   guardianInteraction,
   guardianName,
@@ -68,18 +71,18 @@ export function ChartPatientContextBar({
         guardianIndicatorVisible={Boolean(guardianInteraction)}
         guardianInteraction={guardianInteraction}
         guardianItems={[
-          { label: "보호자", value: guardianName },
-          { label: "연락처", value: guardianPhone },
+          { label: "보호자", value: guardianName, loading },
+          { label: "연락처", value: guardianPhone, loading },
         ]}
         patientInteraction={patientInteraction}
         patientItems={[
-          { label: "환자", value: patientName },
-          { label: "환자 정보", value: patientMeta },
+          { label: "환자", value: patientName, loading },
+          { label: "환자 정보", value: patientMeta, loading },
         ]}
-        vitalAction={vitalAction}
-        vitalItems={vitalItems}
-        memoActions={memoItems}
-        trailingItems={[{ label: "주치의", value: doctorName }]}
+        vitalAction={loading ? undefined : vitalAction}
+        vitalItems={loading ? vitalItems.map((item) => ({ ...item, loading: true })) : vitalItems}
+        memoActions={loading ? memoItems.map((item) => ({ ...item, loading: true })) : memoItems}
+        trailingItems={[{ label: "주치의", value: doctorName, loading }]}
       />
     </div>
   );

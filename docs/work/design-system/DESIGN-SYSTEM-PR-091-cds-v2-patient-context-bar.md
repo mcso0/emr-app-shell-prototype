@@ -219,3 +219,46 @@ Do not perform clinical saves, checkout/payment actions, permission changes, or
 remote DB mutations. Report any authentication or permission boundary explicitly.
 Stop if the candidate changes, a required check fails, Preview is not Ready, or
 Production approval is missing. Record exact-candidate results in the PR packet.
+
+
+### Chart Initial Loading Follow-up (2026-10-12)
+
+승욱 authorized local implementation so the chart patient context bar uses the
+shared skeleton while its first data read is pending, keeps already-loaded data
+visible, and introduces no artificial delay. No new release was authorized.
+
+The previous chart header rendered an empty fixed header before a selected
+bundle existed. It now renders the existing ChartPatientContextBar with explicit
+loading state only while no bundle is available and its scoped queue is idle or
+loading. Ready empty/error states do not retain a skeleton. Existing bundles
+continue to render their identity immediately during same-scope refresh. The
+wrapper passes pending identity/memo/vital/doctor fields into the existing shared
+skeleton styling and suppresses pending profile/vital actions. No data-fetch,
+permission, mutation, queue selection, or clinical record contract changes.
+
+Verification: focused chart/dispensing browser tests 7/7 passed, including held
+initial queue reads, immediate resolved identity, unchanged bar height, preserved
+identity during refresh, empty-read skeleton removal, and existing vital guards.
+Shared-bar Storybook tests 16/16 passed, including the new ChartInitialLoading
+composition and existing ready chart/billing cases. Focused ESLint, TypeScript
+`--noEmit`, docs checks (1068 references), and diff checks passed. Manual local
+Storybook inspection confirmed the chart skeleton composition. Project-scoped
+Storybook MCP is not available in this session; the actual source, owned stories,
+CLI browser tests, and isolated local preview were used. Local implementation
+is ready for human review; no commit, push, merge, or new deployment was performed.
+
+
+Chart skeleton release preparation (2026-10-12): 승욱 authorized committing and
+pushing only the chart initial-loading follow-up, opening its PR, and completing
+pre-production verification before requesting final merge approval. Compare target:
+`7feef5b5df9edd3f4a74c728b974c940c3bc32e1`. Current Production/rollback candidate:
+`dpl_4om9MYjzxbPbA8KDZEuJhiyfrLsi`; reconfirm before approval. This supersedes the
+local-only delivery state above and does not authorize a main merge yet.
+
+Post-merge smoke: `/login` and read-only chart patient context with available
+synthetic data, including immediate resolved identity and existing vital/memo
+controls. Delayed first-read and same-scope refresh behavior are verified by
+local synthetic browser regressions. No artificial Production delay, clinical
+save, completion, payment, permission, or DB mutation is included. Stop if the
+candidate changes, required checks fail, Preview is not Ready, or approval is
+missing. Record the exact candidate, final checks, and rollback in the PR packet.

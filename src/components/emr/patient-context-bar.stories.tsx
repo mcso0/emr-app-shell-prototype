@@ -98,7 +98,7 @@ const disabledReasons = {
 
 // All variants follow ChartPatientHeader in chart/module.tsx. Only synthetic
 // data and local activation receipts replace the app's data and navigation.
-function ChartContextExample({ vitalState, narrow, guardianMissing, longPatientName, emptyMemos }: ContextArgs) {
+function ChartContextExample({ vitalState, narrow, guardianMissing, longPatientName, emptyMemos, loading = false }: ContextArgs & { loading?: boolean }) {
   const [lastAction, setLastAction] = useState("없음");
   const patientNotes = emptyMemos ? [] : ["합성 환자 주의사항"];
   const patientName = longPatientName ? "합성 긴 환자 이름으로 가로 스크롤 확인" : "합성 환자";
@@ -106,6 +106,7 @@ function ChartContextExample({ vitalState, narrow, guardianMissing, longPatientN
     <div className="grid min-w-0 grid-cols-1 gap-3" style={{ width: narrow ? 420 : "100%", maxWidth: "100%" }}>
       <EmrMainContentHeader heightMode="fixed">
         <ChartPatientContextBar
+          loading={loading}
           patientName={patientName}
           patientMeta="말티즈 · 중성화 수컷 · 3세"
           patientInteraction={{
@@ -521,4 +522,17 @@ export const LoadingSkeleton: Story = {
 export const GuardianFirstLoading: Story = {
   ...LoadingToReady,
   args: { scenario: "billing" },
+};
+
+
+export const ChartInitialLoading: Story = {
+  render: (args) => <ChartContextExample {...args} loading />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvasElement.querySelector('[data-slot="chart-patient-context-bar"]')).toBeInTheDocument();
+    await expect(canvasElement.querySelector('[data-slot="patient-context-patient"] [data-slot="skeleton"]')).toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: /환자 프로필 열기/ })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "오늘 바이탈 수정" })).not.toBeInTheDocument();
+    await expect(canvas.getByRole("button", { name: "환자메모 메모 보기" })).toBeDisabled();
+  },
 };
