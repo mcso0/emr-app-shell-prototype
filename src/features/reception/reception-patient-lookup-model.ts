@@ -64,4 +64,3 @@ export const mapLookupItemToReceptionPatientSummary = (
     item.searchText ??
     getReceptionPatientSearchText(item.patient, item.primaryGuardian),
 });
-

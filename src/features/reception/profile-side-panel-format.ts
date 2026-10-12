@@ -54,4 +54,3 @@ export const getProfileSexLabel = (patient: Patient) =>
 
 export const getProfileMemo = (patient: Patient) =>
   patient.specialNote ?? patient.allergyNote ?? patient.handlingCautionNote ?? "환자 메모 미입력";
-

@@ -291,4 +291,3 @@ export function getLiveTabAccess(state: CustomerProfileOverviewState): Record<"i
     billing: { allowed: false, disabledReason: reason, requiredPermission: "billing:view" },
   };
 }
-
