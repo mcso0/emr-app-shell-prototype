@@ -211,6 +211,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | APP-SHELL-PR-003 | human_review | app-shell | P1 | Existing-sidebar hover preview deployed; date/control/error follow-up and floating-only pin implementation approved | `docs/work/app-shell/APP-SHELL-PR-003-sidebar-hover-preview.md` |
 | WORKSPACE-TABS-PR-001       | human_review | app-shell            | P0       | Workspace Tabs v1 shipping closeout | `docs/work/app-shell/WORKSPACE-TABS-PR-001-workspace-tabs-v1-shipping-closeout.md`       |
 | WORKSPACE-TABS-PR-002       | human_review | app-shell            | P0       | Workspace tab work-surface independence | `docs/work/app-shell/WORKSPACE-TABS-PR-002-workspace-surface-independence.md`          |
+| WORKSPACE-TABS-PR-003 | human_review | app-shell | P1 | Approved existing dnd-kit tab reorder; preserve select/close/persistence | `docs/work/app-shell/WORKSPACE-TABS-PR-003-drag-reorder.md` |
 | AUTH-PR-001                 | human_review | auth                 | P0       | PR 1                 | `docs/work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md`                                 |
 | AUTH-PR-002                 | human_review | auth                 | P0       | PR 2                 | `docs/work/auth/AUTH-PR-002-workspace-membership-data-security-plan.md`                                |
 | AUTH-PR-003                 | human_review | auth                 | P0       | PR 3                 | `docs/work/auth/AUTH-PR-003-next-security-patch.md`                                                    |
