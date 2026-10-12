@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 type EntrySession = {
   scrollTop: number;
@@ -77,37 +78,52 @@ export function useChartOrderQuickAddLayout({
     let dockTop = 0;
     let naturalTop = 0;
     let frame = 0;
-    const updatePosition = () => {
+    const updatePosition = (resizeNotification = false) => {
       if (!category || !name) return;
       const bounds = surface.getBoundingClientRect();
       const categoryBounds = category.getBoundingClientRect();
       const viewportBottom = owner.getBoundingClientRect().top - bounds.top + owner.clientHeight;
       const left = Math.max(12, categoryBounds.left - bounds.left + 12);
       const right = Math.min(bounds.width, name.getBoundingClientRect().right - bounds.left) - 12;
-      composer.style.left = `${left}px`;
-      composer.style.width = open ? `${Math.max(0, right - left)}px` : "max-content";
-      composer.style.maxWidth = `${Math.max(0, bounds.width - left - 12)}px`;
+      const applyWidth = () => {
+        composer.style.left = `${left}px`;
+        composer.style.width = open ? `${Math.max(0, right - left)}px` : "max-content";
+        composer.style.maxWidth = `${Math.max(0, bounds.width - left - 12)}px`;
+      };
+      if (open) applyWidth();
       const height = composer.offsetHeight;
       const headerBottom = categoryBounds.bottom - bounds.top;
       const rows = body?.querySelectorAll<HTMLElement>('tr[data-testid^="chart-order-row-"]');
       const first = rows?.[0];
       const last = rows?.[rows.length - 1];
-      const rowHeight = first && last ? last.getBoundingClientRect().bottom - first.getBoundingClientRect().top : 0;
+      const lastBounds = last?.getBoundingClientRect();
+      const rowHeight = first && lastBounds ? lastBounds.bottom - first.getBoundingClientRect().top : 0;
       const needed = height + 20;
       const overflowing = rowHeight > 0 && headerBottom + rowHeight + needed > viewportBottom;
-      setClearance((previous) => previous === (overflowing ? needed : 0) ? previous : overflowing ? needed : 0);
+      const nextClearance = overflowing ? needed : 0;
       dockTop = Math.max(headerBottom, viewportBottom - height - 12);
-      naturalTop = last ? last.getBoundingClientRect().bottom - bounds.top + 8 : dockTop;
+      naturalTop = lastBounds ? lastBounds.bottom - bounds.top + 8 : dockTop;
       const top = Math.max(headerBottom, Math.min(dockTop,
         open && session?.lockedTop != null ? session.lockedTop : naturalTop));
+      if (!open) applyWidth();
       composer.style.top = `${top}px`;
       if (dock) {
         dock.hidden = !(open && overflowing);
         dock.style.top = `${Math.max(headerBottom, top - 8)}px`;
         dock.style.bottom = `${Math.max(0, bounds.height - viewportBottom)}px`;
       }
+      if (nextClearance !== clearance) {
+        if (resizeNotification) {
+          // The browser callback must also commit the trailing row before paint.
+          flushSync(() => setClearance(nextClearance));
+        } else {
+          setClearance(nextClearance);
+        }
+      }
     };
-    updatePosition();
+    // ResizeObserver supplies the idle position before paint without forcing
+    // layout in the click handler. Opening still measures before revealing/focus.
+    if (open) updatePosition();
     // Run after the conditional trailing row has acquired its measured height.
     if (open && revealPendingRef.current) {
       frame = requestAnimationFrame(() => {
@@ -119,13 +135,14 @@ export function useChartOrderQuickAddLayout({
         composer.querySelector<HTMLInputElement>('[role="combobox"]')?.focus({ preventScroll: true });
       });
     }
-    const observer = new ResizeObserver(updatePosition);
+    const observer = new ResizeObserver(() => updatePosition(true));
     [surface, composer, owner, category, name, body].forEach((node) => { if (node) observer.observe(node); });
-    surface.addEventListener("scroll", updatePosition, true);
+    const updateAfterScroll = () => updatePosition();
+    surface.addEventListener("scroll", updateAfterScroll, true);
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
-      surface.removeEventListener("scroll", updatePosition, true);
+      surface.removeEventListener("scroll", updateAfterScroll, true);
     };
   }, [visible, open, sessionActive, orderIds, sorted, layoutKey, clearance]);
 
