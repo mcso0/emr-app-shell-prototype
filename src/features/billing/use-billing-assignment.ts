@@ -22,7 +22,11 @@ export function useBillingAssignment(workspaceId: string | undefined, invoiceId:
       if (seq !== requestSequence.current) return;
       const data = response.ok && body.ok ? parseBillingAssignment(body.assignment) : null;
       setState({ key, data });
-      useBillingStore.getState().assignInvoice(invoiceId, data?.assignedToDisplayName ?? "");
+      if (data?.assignedToUserId && data.assignedToDisplayName) {
+        useBillingStore.getState().assignInvoice(invoiceId, data.assignedToDisplayName);
+      } else {
+        useBillingStore.getState().clearInvoiceAssignee(invoiceId);
+      }
     } catch { if (seq === requestSequence.current) setState({ key, data: null }); }
   }, [endpoint, invoiceId, key, session, workspaceId]);
   useEffect(() => {

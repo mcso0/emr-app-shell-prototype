@@ -3358,8 +3358,9 @@ export function BillingContent({
   const checkoutWorkspaceId =
     checkoutGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
-  const effectiveCheckoutState =
-    !checkoutWorkspaceId || checkoutInvoiceIds.length === 0
+  const effectiveCheckoutState = !editOwnership.canExecute
+    ? billingApiIdleState
+    : !checkoutWorkspaceId || checkoutInvoiceIds.length === 0
       ? billingApiEmptyState
       : checkoutState;
   useEffect(() => {
@@ -3548,7 +3549,7 @@ export function BillingContent({
           <BillingApiStateNotice apiState={apiState} />
           <SelectedCheckoutWorkspace
             checkoutSession={
-              checkoutInvoiceIds.length ? checkoutSession : undefined
+              editOwnership.canExecute && checkoutInvoiceIds.length ? checkoutSession : undefined
             }
             checkoutState={effectiveCheckoutState}
             groups={checkoutGroups}
