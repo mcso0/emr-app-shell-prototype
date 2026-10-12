@@ -41,6 +41,7 @@ export type BillingPaymentStatusPayload = {
 
 export type BillingPaymentStatusGatewayResult =
   | ({ ok: true } & BillingPaymentStatusPayload)
+  | { ok: false; status: 403; denialReason: "permission_missing" }
   | { ok: false; status: 409; denialReason: "billing_review_required" | "invoice_unavailable" }
   | { ok: false; status: 500; error: "db_read_failed" | "db_write_failed" };
 
@@ -124,7 +125,7 @@ export async function readBillingPaymentStatus({
 
   const result = await gateway.getPaymentStatus({ invoiceId: normalizedInvoiceId, workspaceId });
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 409 || result.status === 403) return result;
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -176,7 +177,7 @@ export async function saveBillingPaymentStatus({
     workspaceId,
   });
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 409 || result.status === 403) return result;
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
@@ -453,6 +454,7 @@ function mapPaymentStatusError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed"
 ): BillingPaymentStatusGatewayResult {
+  if (message?.includes("current_assignee_required") || message?.includes("permission_missing") || message?.includes("actor_mismatch")) return { ok: false, status: 403, denialReason: "permission_missing" };
   if (message?.includes("billing_review_required")) return { ok: false, status: 409, denialReason: "billing_review_required" };
   if (message?.includes("invoice_unavailable")) return { ok: false, status: 409, denialReason: "invoice_unavailable" };
   return { ok: false, status: 500, error: fallback };

@@ -1,0 +1,85 @@
+-- Isolated synthetic schema; actual stored functions are loaded by the runner.
+create schema if not exists private;
+create schema if not exists auth;
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+do $$ begin create role authenticated; exception when duplicate_object then null; end $$;
+do $$ begin create role anon; exception when duplicate_object then null; end $$;
+do $$ begin create role service_role; exception when duplicate_object then null; end $$;
+create or replace function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('test.actor',true),'')::uuid$$;
+create or replace function auth.role() returns text language sql stable as $$select coalesce(nullif(current_setting('test.role',true),''),'authenticated')$$;
+create function private.clair_is_active_workspace_member(text) returns boolean language sql stable as $$ select $1='workspace-a' and auth.uid() is not null $$;
+create function private.clair_user_has_workspace_permission(text,uuid,text) returns boolean language sql stable as $$select $1='workspace-a' and $2 in ('00000000-0000-4000-8000-000000000001'::uuid,'00000000-0000-4000-8000-000000000002'::uuid)$$;
+create function private.clair_current_user_has_workspace_permission(text,text) returns boolean language sql stable as $$select private.clair_user_has_workspace_permission($1,auth.uid(),$2)$$;
+create function private.clair_queue_permission_for_destination(text,text) returns text language sql immutable as $$select $1||':'||$2$$;
+create schema if not exists realtime;
+create table realtime.messages(extension text);
+create function realtime.topic() returns text language sql as $$select 'workspace:workspace-a:queue'::text$$;
+create function realtime.send(jsonb,text,text,boolean) returns void language plpgsql as $$begin return; end$$;
+create table public.users(id uuid primary key,display_name text,status text);
+create table public.user_memberships(workspace_id text,user_id uuid,status text);
+create table public.orders(id uuid primary key,workspace_id text,encounter_id uuid,status text,display_name text,requested_at timestamptz);
+create table public.invoices(id uuid primary key,workspace_id text,encounter_id uuid,status text,billing_review_required boolean default false);
+create table public.order_fulfillment_work_items(id uuid primary key,workspace_id text,order_id uuid,encounter_id uuid,assigned_to_user_id uuid,status text,request_cycle integer,created_at timestamptz,destination_module text,queue_type text);
+create table public.order_tasks(id uuid primary key,status text);
+create table public.order_task_events(id uuid);
+create table public.order_execution_result_versions(id uuid);
+create table public.order_billing_review_resolutions(id uuid);
+create table public.lab_result_entries(id uuid primary key,workspace_id text,result_id text,order_id uuid,result_status text,result_definition_origin text);
+create table public.lab_result_overall_findings(workspace_id text,lab_result_entry_id uuid,finding text,revision integer);
+create table public.lab_result_attachments(id uuid primary key,workspace_id text,lab_result_entry_id uuid,uploaded_by_user_id uuid,ready_at timestamptz,abandoned_at timestamptz,deleted_at timestamptz,deleted_by_user_id uuid,storage_path text);
+create table public.invoice_lines(id uuid primary key,workspace_id text,invoice_id uuid);
+alter table public.invoices add column created_at timestamptz default now();
+alter table public.orders add column invoice_line_id uuid;
+create table public.order_catalog_items(id uuid);
+create table public.lab_atomic_retest_requests(id uuid,workspace_id text,request_id uuid,actor_user_id uuid,request_sha256 text,outcome jsonb);
+create table public.lab_result_entry_rows(id uuid);
+-- BASELINE
+-- MIGRATION
+-- Reapply confirms all exact patch anchors are idempotent.
+-- MIGRATION
+begin;
+insert into public.users values ('00000000-0000-4000-8000-000000000001','합성 A','active'),('00000000-0000-4000-8000-000000000002','합성 B','active'),('00000000-0000-4000-8000-000000000003','비활성','inactive');
+insert into public.user_memberships select 'workspace-a',id,status from public.users;
+insert into public.orders values ('10000000-0000-4000-8000-000000000001','workspace-a','20000000-0000-4000-8000-000000000001','confirmed','합성 검사',now());
+insert into public.invoices(id,workspace_id,encounter_id,status) values ('30000000-0000-4000-8000-000000000001','workspace-a','20000000-0000-4000-8000-000000000001','issued');
+insert into public.order_fulfillment_work_items values ('40000000-0000-4000-8000-000000000001','workspace-a','10000000-0000-4000-8000-000000000001','20000000-0000-4000-8000-000000000001',null,'requested',1,now(),'lab','lab');
+insert into public.lab_result_entries values ('50000000-0000-4000-8000-000000000001','workspace-a','synthetic-result','10000000-0000-4000-8000-000000000001','received','canonical');
+insert into public.lab_result_attachments values ('60000000-0000-4000-8000-000000000001','workspace-a','50000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001',null,null,null,null,'synthetic-only');
+select set_config('test.actor','00000000-0000-4000-8000-000000000001',false);
+do $$ begin
+ begin perform private.clair_assert_work_owner('workspace-a','10000000-0000-4000-8000-000000000001',auth.uid(),true); raise exception 'unassigned accepted'; exception when insufficient_privilege then null; end;
+ update public.order_fulfillment_work_items set assigned_to_user_id=auth.uid();
+ perform private.clair_assert_work_owner('workspace-a','10000000-0000-4000-8000-000000000001',auth.uid(),true);
+ perform public.clair_change_billing_assignment('workspace-a','30000000-0000-4000-8000-000000000001','claim',0);
+ perform private.clair_assert_invoice_owner('workspace-a','30000000-0000-4000-8000-000000000001',auth.uid());
+ begin perform public.clair_change_billing_assignment('workspace-a','30000000-0000-4000-8000-000000000001','claim',1); raise exception 'overwrite accepted'; exception when insufficient_privilege then null; end;
+ begin perform public.clair_change_billing_assignment('workspace-a','30000000-0000-4000-8000-000000000001','assign',1,'00000000-0000-4000-8000-000000000003'); raise exception 'inactive accepted'; exception when insufficient_privilege then null; end;
+ perform public.clair_change_billing_assignment('workspace-a','30000000-0000-4000-8000-000000000001','assign',1,'00000000-0000-4000-8000-000000000002');
+ begin perform private.clair_assert_invoice_owner('workspace-a','30000000-0000-4000-8000-000000000001',auth.uid()); raise exception 'old invoice owner accepted'; exception when insufficient_privilege then null; end;
+ update invoices set status='draft';
+ begin perform private.clair_assert_billing_sync_owner('workspace-a',auth.uid(),'20000000-0000-4000-8000-000000000001',array['10000000-0000-4000-8000-000000000001'::uuid]); raise exception 'old sync owner accepted'; exception when insufficient_privilege then null; end;
+ begin perform public.clair_sync_billing_invoice_candidates('workspace-a',auth.uid(),'20000000-0000-4000-8000-000000000001',array['10000000-0000-4000-8000-000000000001'::uuid]); raise exception 'public sync bypass'; exception when insufficient_privilege then null; end;
+ begin perform public.clair_sync_billing_invoice_candidates_from_chart('workspace-a',auth.uid(),'20000000-0000-4000-8000-000000000001',array['10000000-0000-4000-8000-000000000001'::uuid]); raise exception 'chart sync bypass'; exception when insufficient_privilege then null; end;
+ update invoices set status='issued';
+ update public.order_fulfillment_work_items set assigned_to_user_id='00000000-0000-4000-8000-000000000002';
+ begin perform private.clair_assert_work_owner('workspace-a','10000000-0000-4000-8000-000000000001',auth.uid(),true); raise exception 'old lab owner accepted'; exception when insufficient_privilege then null; end;
+ begin perform public.clair_mutate_lab_attachment('workspace-a','synthetic-result','60000000-0000-4000-8000-000000000001','finalize',auth.uid()); raise exception 'session finalize accepted'; exception when insufficient_privilege then null; end;
+ perform set_config('test.role','service_role',true);
+ begin perform public.clair_mutate_lab_attachment('workspace-a','synthetic-result','60000000-0000-4000-8000-000000000001','finalize',auth.uid()); raise exception 'old uploader finalized'; exception when insufficient_privilege then null; end;
+ perform set_config('test.role','authenticated',true);
+ -- Cancellation cleanup may finish after handoff, without publishing a result.
+ perform public.clair_mutate_lab_attachment('workspace-a','synthetic-result','60000000-0000-4000-8000-000000000001','discard',auth.uid());
+ perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
+ perform private.clair_assert_invoice_owner('workspace-a','30000000-0000-4000-8000-000000000001',auth.uid());
+ perform private.clair_assert_work_owner('workspace-a','10000000-0000-4000-8000-000000000001',auth.uid(),true);
+ update public.order_fulfillment_work_items set status='paused';
+ begin perform private.clair_assert_work_owner('workspace-a','10000000-0000-4000-8000-000000000001',auth.uid(),true); raise exception 'paused lab accepted'; exception when raise_exception then if sqlerrm <> 'lab_result_read_only' then raise; end if; end;
+ perform public.clair_change_billing_assignment('workspace-a','30000000-0000-4000-8000-000000000001','unassign',2);
+ if (select count(*) from public.billing_assignment_events)<>3 then raise exception 'audit missing'; end if;
+ if (select status from public.invoices limit 1)<>'issued' then raise exception 'billing flow altered'; end if;
+ if has_function_privilege('authenticated','public.clair_save_lab_result_entry_legacy_base(text,uuid,text,uuid,uuid,uuid,jsonb)','EXECUTE') then raise exception 'legacy bypass'; end if;
+ if has_table_privilege('authenticated','public.lab_result_attachments','INSERT') then raise exception 'direct attachment bypass'; end if;
+ raise notice 'PASS current_assignee_boundary';
+end $$;
+rollback;

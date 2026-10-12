@@ -16,17 +16,18 @@ const errors: Record<string, string> = {
   lab_retest_atomic_order_required: "독립된 하위 검사 오더에서만 재검을 요청할 수 있습니다.",
   lab_retest_catalog_billing_unavailable: "현재 카탈로그에서 청구 가능한 가격 설정을 확인할 수 없습니다.",
   lab_result_profile_binding_required: "병원 프로필 설정이 변경됐습니다. 새로 열어서 다시 선택해 주세요.",
+  current_assignee_required: "현재 담당자만 재검을 요청할 수 있습니다.",
   permission_missing: "재검 오더를 요청할 권한이 없습니다.", encounter_unavailable: "이 진료에서 새 오더를 만들 수 없습니다.",
 };
-export function AtomicLabRetestAction({ result, row }: { result: LabResult; row: LabResultRow }) {
+export function AtomicLabRetestAction({ result, row, disabled = false }: { result: LabResult; row: LabResultRow; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   if (result.resultDefinitionOrigin !== "canonical" || !result.orderId || !result.entryWriteRevision) return null;
   return <>
-    <Button variant="outline" size="xs" onClick={() => setOpen(true)} aria-label={`${row.analyteName}만 재검 요청`}>이 항목 재검</Button>
-    {open ? <AtomicRetestDialog key={`${result.workspaceId}:${result.id}:${row.id}`} result={result} row={row} onClose={() => setOpen(false)} /> : null}
+    <Button variant="outline" size="xs" disabled={disabled} onClick={() => setOpen(true)} aria-label={`${row.analyteName}만 재검 요청`}>이 항목 재검</Button>
+    {open ? <AtomicRetestDialog key={`${result.workspaceId}:${result.id}:${row.id}`} result={result} row={row} disabled={disabled} onClose={() => setOpen(false)} /> : null}
   </>;
 }
-function AtomicRetestDialog({ result, row, onClose }: { result: LabResult; row: LabResultRow; onClose: () => void }) {
+function AtomicRetestDialog({ result, row, disabled, onClose }: { result: LabResult; row: LabResultRow; disabled: boolean; onClose: () => void }) {
   const [config, setConfig] = useState<LabProfileConfiguration | null>(null);
   const [error, setError] = useState<string | null>(null); const [saving, setSaving] = useState(false);
   const [reason, setReason] = useState(""); const [specimen, setSpecimen] = useState(""); const [reference, setReference] = useState("");
@@ -45,7 +46,7 @@ function AtomicRetestDialog({ result, row, onClose }: { result: LabResult; row: 
     return () => { alive.current = false; abort.abort(); };
   }, [result.workspaceId, result.orderId]);
   const selected = config?.bindings.find(b => `${b.profile_version_id}:${b.device_id}` === binding);
-  const valid = config?.canRetest === true && reason.trim() && specimen && reference.trim() && billing && selected && !saving && !created;
+  const valid = !disabled && config?.canRetest === true && reason.trim() && specimen && reference.trim() && billing && selected && !saving && !created;
   const submit = async () => {
     if (!valid || !selected) return;
     const input = { resultId: result.id, rowId: row.id, expectedEntryWriteRevision: result.entryWriteRevision, reason: reason.trim(),
@@ -75,15 +76,15 @@ function AtomicRetestDialog({ result, row, onClose }: { result: LabResult; row: 
         {!config && !error ? <p role="status">병원 프로필 확인 중</p> : null}
         {config && !config.canRetest ? <p role="status">조회 전용 · 재검 요청 권한 없음</p> : null}
         {created ? <p role="status">새 재검 초안을 만들었습니다. 기존 결과는 유지됩니다. <Link className="underline" href={`/w/${encodeURIComponent(result.workspaceId)}/chart?encounterId=${encodeURIComponent(result.encounterId)}`}>차트에서 확인·확정</Link></p> : null}
-        <Textarea aria-label="재검 사유" placeholder="재검 사유" value={reason} maxLength={2000} disabled={saving || !!created} onChange={event => setReason(event.target.value)} />
-        <select aria-label="재검 검체 결정" className="h-9 rounded-md border bg-background px-2" value={specimen} disabled={saving || !!created} onChange={event => setSpecimen(event.target.value)}>
+        <Textarea aria-label="재검 사유" placeholder="재검 사유" value={reason} maxLength={2000} disabled={disabled || saving || !!created} onChange={event => setReason(event.target.value)} />
+        <select aria-label="재검 검체 결정" className="h-9 rounded-md border bg-background px-2" value={specimen} disabled={disabled || saving || !!created} onChange={event => setSpecimen(event.target.value)}>
           <option value="">검체 결정 선택</option><option value="new_specimen">새 검체 필요</option><option value="reuse_specimen">기존 검체 재사용</option>
         </select>
-        <Input aria-label="재검 검체 참조" placeholder="새 검체 계획 또는 재사용 검체 식별자" value={reference} maxLength={200} disabled={saving || !!created} onChange={event => setReference(event.target.value)} />
-        <select aria-label="재검 청구 정책" className="h-9 rounded-md border bg-background px-2" value={billing} disabled={saving || !!created} onChange={event => setBilling(event.target.value)}>
+        <Input aria-label="재검 검체 참조" placeholder="새 검체 계획 또는 재사용 검체 식별자" value={reference} maxLength={200} disabled={disabled || saving || !!created} onChange={event => setReference(event.target.value)} />
+        <select aria-label="재검 청구 정책" className="h-9 rounded-md border bg-background px-2" value={billing} disabled={disabled || saving || !!created} onChange={event => setBilling(event.target.value)}>
           <option value="">청구 방식 선택</option><option value="no_charge">이번 재검 청구하지 않음</option><option value="catalog_price">현재 병원 카탈로그 가격으로 청구</option>
         </select>
-        <select aria-label="재검 프로필" className="h-9 rounded-md border bg-background px-2" value={binding} disabled={saving || !!created} onChange={event => setBinding(event.target.value)}>
+        <select aria-label="재검 프로필" className="h-9 rounded-md border bg-background px-2" value={binding} disabled={disabled || saving || !!created} onChange={event => setBinding(event.target.value)}>
           <option value="">병원에 연결된 프로필 직접 선택</option>
           {config?.bindings.filter(b => config.devices.some(d => d.id === b.device_id && d.active)).map(b => <option key={`${b.profile_version_id}:${b.device_id}`} value={`${b.profile_version_id}:${b.device_id}`}>
             {config.profiles.find(p => p.id === b.profile_version_id)?.name} · {config.devices.find(d => d.id === b.device_id)?.name}

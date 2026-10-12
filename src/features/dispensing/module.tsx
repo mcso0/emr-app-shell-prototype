@@ -126,6 +126,8 @@ type FulfillmentTransitionCommand =
   | FulfillmentWorkItemAction
   | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
 type FulfillmentWorkItem = {
+  assignedToDisplayName?: string | null;
+  canManage?: boolean;
   assignedToUserId?: string | null;
   completedAt?: string | null;
   createdAt?: string;
@@ -672,7 +674,7 @@ function getFulfillmentAssigneeName(workItem: { assignedToUserId?: string | null
     workItem.assignedToUserId === "user-tech-hayun"
   )
     return "송하윤";
-  return undefined;
+  return "assignedToDisplayName" in workItem ? workItem.assignedToDisplayName as string | undefined : undefined;
 }
 
 function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
@@ -1685,6 +1687,7 @@ export function DispensingContent({
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
+  useQueueRealtimeRefresh({ workspaceId, scopeKey: "dispensing-owner-detail", onQueueChange: fulfillmentQueue.refresh });
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
@@ -2127,6 +2130,8 @@ function DispensingContentBody({
                     assignedToUserId={
                       selectedFulfillmentWorkItem.assignedToUserId
                     }
+                    assignedToDisplayName={selectedFulfillmentWorkItem.assignedToDisplayName}
+                    canManage={selectedFulfillmentWorkItem.canManage}
                     busy={mutationState === "saving"}
                     completeLabel={completeLabel}
                     loadEligibleAssignees={loadSelectedEligibleAssignees}
@@ -2306,6 +2311,7 @@ function DispensingContentBody({
               >
                 <OrderWorkTable
                   completionDisabled={Boolean(selectedFulfillmentWorkItem)}
+                  assignmentDisabled={Boolean(selectedFulfillmentWorkItem)}
                   density={tableDensity}
                   onDensityChange={setTableDensity}
                   rows={group.rows}

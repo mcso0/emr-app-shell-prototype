@@ -406,6 +406,8 @@ type FulfillmentTransitionCommand =
   | FulfillmentWorkItemAction
   | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
 type FulfillmentWorkItem = {
+  assignedToDisplayName?: string | null;
+  canManage?: boolean;
   assignedToUserId?: string | null;
   completedAt?: string | null;
   createdAt?: string;
@@ -1128,9 +1130,7 @@ function applyFulfillmentToLabItems(
         ...item.result,
         status: mapFulfillmentToLabStatus(workItem.status, item.result.status),
       },
-      technicianName:
-        getStaffName(workItem.assignedToUserId ?? undefined) ??
-        item.technicianName,
+      technicianName: workItem.assignedToUserId ? workItem.assignedToDisplayName ?? getStaffName(workItem.assignedToUserId) ?? "확인 불가" : undefined,
     };
   });
 
@@ -1165,9 +1165,7 @@ function applyFulfillmentToImagingItems(
           item.study.status,
         ),
       },
-      radiologistName:
-        getStaffName(workItem.assignedToUserId ?? undefined) ??
-        item.radiologistName,
+      radiologistName: workItem.assignedToUserId ? workItem.assignedToDisplayName ?? getStaffName(workItem.assignedToUserId) ?? "확인 불가" : undefined,
     };
   });
 
@@ -1192,6 +1190,7 @@ function createLiveLabItems(workItems: FulfillmentWorkItem[]): LabWorkItem[] {
         order,
         patient,
         primaryGuardian,
+        technicianName: workItem.assignedToDisplayName ?? undefined,
         result: {
           id: `live-lab-${workItem.id}`,
           workspaceId: workItem.workspaceId,
@@ -1229,6 +1228,7 @@ function createLiveImagingItems(
         order,
         patient,
         primaryGuardian,
+        radiologistName: workItem.assignedToDisplayName ?? undefined,
         study: {
           id: `live-imaging-${workItem.id}`,
           workspaceId: workItem.workspaceId,
@@ -2356,6 +2356,7 @@ function LabResultTableLinkButton({ date, resultId, search, workspaceId }: {
 type LabResultTableContext = {
   assigneeName: string;
   canEdit: boolean;
+  canRequestRetest: boolean;
   persistedResult: LabResult;
   expandedRowId: string | null;
   onExpandedRowChange: (rowId: string | null) => void;
@@ -2443,14 +2444,14 @@ function LabResultDataTable({
           textMode: "two-line-if-long",
         },
         cell: ({ row, table }) => {
-          const { persistedResult } = table.options.meta as LabResultTableContext;
+          const { persistedResult, canRequestRetest } = table.options.meta as LabResultTableContext;
           const savedRow = persistedResult.rows.find((saved) => saved.id === row.original.id);
           return (
             <div className="flex min-w-0 items-center gap-2">
               <span className="min-w-0 truncate font-medium">{row.original.analyteName}</span>
               {persistedResult.resultDefinitionOrigin === "canonical" && savedRow &&
               (savedRow.value?.trim() || savedRow.resultPresence === "instrument_no_result") ? (
-                <AtomicLabRetestAction result={persistedResult} row={savedRow} />
+                <AtomicLabRetestAction result={persistedResult} row={savedRow} disabled={!canRequestRetest} />
               ) : null}
             </div>
           );
@@ -2569,7 +2570,7 @@ function LabResultDataTable({
   const table = useReactTable({
     columns,
     // Stable cell renderers retain input focus during autosave.
-    meta: { assigneeName, canEdit: phase2 === null || phase2.canEdit, persistedResult, expandedRowId, onExpandedRowChange, onValueChange, onMetadataChange } satisfies LabResultTableContext,
+    meta: { assigneeName, canEdit: phase2?.canEdit === true, canRequestRetest: phase2?.canRequestRetest ?? phase2?.canEdit === true, persistedResult, expandedRowId, onExpandedRowChange, onValueChange, onMetadataChange } satisfies LabResultTableContext,
     data: rows,
     enableColumnResizing: false,
     enableSorting: false,
@@ -3377,6 +3378,7 @@ export function LabContent({
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useFulfillmentQueue("lab", selectedDate);
+  useQueueRealtimeRefresh({ workspaceId, scopeKey: "lab-owner-detail", onQueueChange: fulfillmentQueue.refresh });
   const { detail, queryLabResultId } = getLabDetailFromSearchParams(
     searchParams,
     selectedLabResultId,
@@ -3411,7 +3413,7 @@ export function LabContent({
       },
     };
   }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
-  const phase2 = useLabResultPhase2(workspaceId, effectiveDetail?.result.id, !allowDemoContent && Boolean(persistedResult.result));
+  const phase2 = useLabResultPhase2(workspaceId, effectiveDetail?.result.id, !allowDemoContent && Boolean(persistedResult.result), fulfillmentWorkItem?.rowRevision);
   const refreshPhase2 = phase2.refresh;
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
     workspaceId: string;
@@ -3424,6 +3426,7 @@ export function LabContent({
       : effectiveDetail?.result.entryWriteRevision;
   const saveResultRows = useCallback(
     async (rows: LabResultRow[], requestId: string, expectedRevision: number) => {
+      if (!phase2.data?.canEdit) return { ok: false, reason: "permission_denied", message: "현재 담당자만 수정할 수 있습니다.", retryable: false } satisfies LabResultSaveOutcome;
       if (!effectiveDetail) {
         return Promise.resolve({
           message: "선택된 검사 결과가 없습니다.",
@@ -3460,6 +3463,7 @@ export function LabContent({
       reloadPersistedResult,
       allowDemoContent,
       refreshPhase2,
+      phase2.data?.canEdit,
     ],
   );
   const initialAssignment = {
@@ -3708,6 +3712,8 @@ export function LabContent({
                   <FulfillmentWorkLifecycleAction
                     activityLabel="검사"
                     assignedToUserId={fulfillmentWorkItem.assignedToUserId}
+                    assignedToDisplayName={fulfillmentWorkItem.assignedToDisplayName}
+                    canManage={fulfillmentWorkItem.canManage}
                     completeLabel="검사완료"
                     loadEligibleAssignees={loadEligibleAssignees}
                     onTransition={transitionFulfillment}
@@ -3784,7 +3790,7 @@ export function LabContent({
                   {allowDemoContent
                     ? assignment.assigneeName
                     : fulfillmentWorkItem?.assignedToUserId
-                      ? "담당자 지정됨"
+                      ? fulfillmentWorkItem.assignedToDisplayName ?? "담당자 지정됨"
                       : "미지정"}
                 </span>,
               ],
@@ -3822,13 +3828,16 @@ export function LabContent({
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
+          {phase2.status === "ready" && !phase2.data?.canEdit ? <div role="status" className="rounded-lg border border-border bg-card px-4 py-3 emr-text-dense text-muted-foreground">
+            {!fulfillmentWorkItem?.assignedToUserId ? "담당하기 후 결과·소견·첨부자료를 입력할 수 있습니다." : "현재 담당자만 결과·소견·첨부자료를 수정할 수 있습니다."}
+          </div> : null}
           <LabResultInputSection
             key={`${workspaceId}:${displayDetail.result.id}:rows`}
             routeResultId={detail?.result.id ?? selectedLabResultId ?? displayDetail.result.id}
             assigneeName={
               allowDemoContent
                 ? assignment.assigneeName
-              : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"
+              : fulfillmentWorkItem?.assignedToUserId ? fulfillmentWorkItem.assignedToDisplayName ?? "담당자 지정됨" : "미지정"
             }
             search={routeSearch}
             staffInstruction={displayDetail.order?.instruction}
@@ -4285,6 +4294,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
   );
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useFulfillmentQueue("imaging", selectedDate);
+  useQueueRealtimeRefresh({ workspaceId, scopeKey: "imaging-owner-detail", onQueueChange: fulfillmentQueue.refresh });
   const { detail, queryImagingStudyId } = getImagingDetailFromSearchParams(
     searchParams,
     selectedImagingStudyId,
@@ -4494,6 +4504,8 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                     onSaved={fulfillmentQueue.refresh}
                     activityLabel="판독"
                     assignedToUserId={fulfillmentWorkItem.assignedToUserId}
+                    assignedToDisplayName={fulfillmentWorkItem.assignedToDisplayName}
+                    canManage={fulfillmentWorkItem.canManage}
                     completeLabel="판독완료"
                     loadEligibleAssignees={loadEligibleAssignees}
                     onTransition={transitionFulfillment}
@@ -4572,7 +4584,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                   {allowDemoContent
                     ? assignment.assigneeName
                     : fulfillmentWorkItem?.assignedToUserId
-                      ? "담당자 지정됨"
+                      ? fulfillmentWorkItem.assignedToDisplayName ?? "담당자 지정됨"
                       : "미지정"}
                 </span>,
               ],
@@ -4608,7 +4620,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
                 getSnapshotString(fulfillmentWorkItem?.sourceSnapshot, "requestingVetName", "정보 없음")}
             assigneeName={allowDemoContent
               ? assignment.assigneeName
-              : fulfillmentWorkItem?.assignedToUserId ? "담당자 지정됨" : "미지정"}
+              : fulfillmentWorkItem?.assignedToUserId ? fulfillmentWorkItem.assignedToDisplayName ?? "담당자 지정됨" : "미지정"}
           />
           <ImagingReadingSections
             study={detail.study}
