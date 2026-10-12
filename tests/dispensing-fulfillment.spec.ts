@@ -843,6 +843,9 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await page.goto(
     `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/dispensing?modulePanel=open`,
   );
+  // This case verifies per-order cards; patient view places identity in the group header.
+  await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+  await expect(page.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "false");
 
   const liveQueueItem = page.getByTestId(
     `order-queue-item-live-fulfillment-${liveWorkItem.id}`,
@@ -1278,6 +1281,8 @@ test("dispensing projects frozen set display and confirmed product-unit billing 
   );
 
   await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
+  await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+  await expect(page.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "false");
   const queueItem = page.getByTestId(
     `order-queue-item-live-fulfillment-${workItem.id}`,
   );
