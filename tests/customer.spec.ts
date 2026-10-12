@@ -1471,7 +1471,12 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   ] = await Promise.all([
     guardianHeading.boundingBox(),
     guardianSearch.boundingBox(),
-    guardianHeaderLabel.boundingBox(),
+    guardianHeaderLabel.evaluate((element) => {
+      const range = element.ownerDocument.createRange();
+      range.selectNodeContents(element);
+      const rect = range.getBoundingClientRect();
+      return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+    }),
     guardianNameText.boundingBox(),
     footerTotal.boundingBox(),
   ]);
@@ -1484,10 +1489,10 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
     Math.abs(guardianSearchBox!.x - guardianHeadingBox!.x),
   ).toBeLessThanOrEqual(1);
   expect(
-    Math.abs(guardianHeaderLabelBox!.x - guardianHeadingBox!.x),
+    Math.abs(guardianHeaderLabelBox!.x - guardianHeadingBox!.x - 6),
   ).toBeLessThanOrEqual(1);
   expect(
-    Math.abs(guardianNameBox!.x - guardianHeadingBox!.x),
+    Math.abs(guardianNameBox!.x - guardianHeaderLabelBox!.x),
   ).toBeLessThanOrEqual(1);
   expect(
     Math.abs(footerTotalBox!.x - guardianHeadingBox!.x),
@@ -1625,7 +1630,7 @@ test("guardian list matches the Figma geometry, surfaces, controls, and responsi
   expect(sortButtonGeometry.height).toBe(24);
   expect(sortButtonGeometry.iconHeight).toBeCloseTo(7.75, 1);
   expect(sortButtonGeometry.iconWidth).toBeCloseTo(6.75, 1);
-  expect(sortButtonGeometry.padding).toEqual(["4px", "0px", "4px", "0px"]);
+  expect(sortButtonGeometry.padding).toEqual(["4px", "8px", "4px", "8px"]);
   await expect(sortableHeader).toBeEnabled();
   await expect(plannedSortHeader).toHaveAttribute(
     "data-emr-header-interaction",
@@ -2277,7 +2282,12 @@ test("customer archive table pins identity and restores through the existing tar
     await Promise.all([
       heading.boundingBox(),
       search.boundingBox(),
-      headerText.boundingBox(),
+      headerText.evaluate((element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        const rect = range.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      }),
       rowText.boundingBox(),
       footerTotal.boundingBox(),
     ]);
@@ -2326,7 +2336,7 @@ test("customer archive table pins identity and restores through the existing tar
   expect(archiveBoundaryStyles).toEqual({
     pinnedColumnWidth: "220px",
     dimmerBackground: "rgba(0, 0, 0, 0.04)",
-    dimmerOpacity: "1",
+    dimmerOpacity: "0",
     dimmerWidth: "6px",
     dividerWidth: "1px",
   });

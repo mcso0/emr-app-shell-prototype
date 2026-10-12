@@ -29,7 +29,7 @@ function ChartMemoExample() {
           patientInteraction={{
             ariaLabel: `${patientName} 환자 프로필 열기`,
             onActivate: () => setLastAction("환자 프로필"),
-            preview: <ChartProfilePreviewCard badge="정상" kind="patient" title={patientName} items={[
+            preview: <ChartProfilePreviewCard onOpenProfile={() => setLastAction("환자 프로필")} kind="patient" title={patientName} items={[
               { label: "환자번호", value: "SYN-001" },
               { label: "축종·품종", value: "개 · 말티즈" },
               { label: "나이", value: "3세" },
@@ -41,7 +41,7 @@ function ChartMemoExample() {
           guardianInteraction={guardianMissing ? undefined : {
             ariaLabel: "합성 보호자 보호자 프로필 열기",
             onActivate: () => setLastAction("보호자 프로필"),
-            preview: <ChartProfilePreviewCard badge="주보호자" kind="guardian" title="합성 보호자" items={[
+            preview: <ChartProfilePreviewCard onOpenProfile={() => setLastAction("보호자 프로필")} kind="guardian" title="합성 보호자" items={[
               { label: "대표 연락처", value: "010-0000-0000" },
               { label: "이메일", value: "synthetic@example.invalid" },
               { label: "환자 관계", value: `${patientName}의 주보호자` },

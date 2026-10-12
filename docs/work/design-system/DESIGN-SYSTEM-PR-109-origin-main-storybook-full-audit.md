@@ -24,6 +24,14 @@ Reconcile the candidate with current origin/main and rerun release gates. Produc
 
 - [Local closeout summary](../../completed/design-system/2026-10-12-storybook-closeout.html)
 
+Release reconciliation keeps the latest main profile-preview API, billing stories and tab-store behavior. Story-only callers now provide `onOpenProfile`, billing examples hide unrelated chart controls, and the save-drain story creates then closes a tab to produce a genuine save generation. Customer geometry assertions use actual text bounds and the approved 8px header-button padding / transparent pinned boundary.
+
+- Reconciled catalog: 711 static index entries and 711 MCP manifest stories; zero missing or unexpected IDs. Latest full Storybook run: 706/711 passed; the five failures pass in bounded follow-ups, including all 26 updated profile/popover/shell cases. Across the full run and follow-ups, all 711 distinct file/story pairs have passing evidence. This is not a single clean full-suite run.
+- App regression run: Home and inpatient 36/36 passed. Both change-related customer geometry tests pass after expectation alignment. Existing app-shell and panel-collapse failures are compared with unmodified main and remain separately reported.
+- Final local typecheck, full lint (zero warnings), secret scan and static Storybook build pass. The production build passed after the latest-main runtime merge; subsequent changes only affect stories, tests and this record. The exact pushed candidate must also pass the complete remote Release Check.
+- The previous accessibility report covers 705 initial states plus five intermediate states before main reconciliation. Six upstream stories are additional catalog entries; no claim of a new 711-story accessibility sweep or accessibility remediation is made.
+
+
 ## Chart stability and accessibility audit — 2026-10-12
 
 승욱 authorized fixing the first-run chart test failure, running the missing automatic accessibility checks, and reporting findings while preserving prior changes. No commit, push or deployment.

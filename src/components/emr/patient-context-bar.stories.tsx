@@ -111,7 +111,7 @@ function ChartContextExample({ vitalState, narrow, guardianMissing, longPatientN
           patientInteraction={{
             ariaLabel: `${patientName} 환자 프로필 열기`,
             onActivate: () => setLastAction("환자 프로필"),
-            preview: <ChartProfilePreviewCard badge="정상" kind="patient" title={patientName} items={[
+            preview: <ChartProfilePreviewCard onOpenProfile={() => setLastAction("환자 프로필")} kind="patient" title={patientName} items={[
               { label: "환자번호", value: "SYN-001" },
               { label: "축종·품종", value: "개 · 말티즈" },
               { label: "나이", value: "3세" },
@@ -123,7 +123,7 @@ function ChartContextExample({ vitalState, narrow, guardianMissing, longPatientN
           guardianInteraction={guardianMissing ? undefined : {
             ariaLabel: "합성 보호자 보호자 프로필 열기",
             onActivate: () => setLastAction("보호자 프로필"),
-            preview: <ChartProfilePreviewCard badge="주보호자" kind="guardian" title="합성 보호자" items={[
+            preview: <ChartProfilePreviewCard onOpenProfile={() => setLastAction("보호자 프로필")} kind="guardian" title="합성 보호자" items={[
               { label: "대표 연락처", value: "010-0000-0000" },
               { label: "이메일", value: "synthetic@example.invalid" },
               { label: "환자 관계", value: `${patientName}의 주보호자` },
@@ -353,7 +353,16 @@ export const PatientOnly: Story = {
   },
 };
 
+const billingArgTypes = {
+  vitalState: { control: false, table: { disable: true } },
+  guardianMissing: { control: false, table: { disable: true } },
+  longPatientName: { control: false, table: { disable: true } },
+  emptyMemos: { control: false, table: { disable: true } },
+  narrow: { control: "boolean", description: "수납 컨텍스트를 최대 420px 폭으로 표시합니다." },
+} satisfies Story["argTypes"];
+
 export const BillingGuardianFirst: Story = {
+  argTypes: billingArgTypes,
   render: (args) => <PatientContextExample {...args} />,
   play: async ({ canvas, canvasElement, args }) => {
     const identities = canvasElement.querySelectorAll('[data-slot="patient-context-guardian"], [data-slot="patient-context-patient"]');
@@ -380,6 +389,7 @@ export const BillingGuardianFirst: Story = {
 };
 
 export const BillingNarrowOverflow: Story = {
+  argTypes: billingArgTypes,
   render: (args) => <PatientContextExample {...args} />,
   args: { narrow: true },
   play: async ({ canvas, canvasElement }) => {
@@ -402,6 +412,7 @@ export const BillingNarrowOverflow: Story = {
 };
 
 export const ContentGrowthUpdatesOverflow: Story = {
+  argTypes: billingArgTypes,
   render: (args) => <PatientContextExample {...args} />,
   args: { scenario: "content-growth" },
   play: async ({ canvas }) => {
@@ -420,6 +431,7 @@ export const ContentGrowthUpdatesOverflow: Story = {
 };
 
 export const PatientFirstCompatibility: Story = {
+  argTypes: billingArgTypes,
   render: (args) => <PatientContextExample {...args} />,
   args: { scenario: "patient-first" },
   play: async ({ canvasElement }) => {

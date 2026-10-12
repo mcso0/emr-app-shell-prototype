@@ -178,7 +178,7 @@ export function prepareAppRootStory() {
   const previousLease = appRootFixtureLease;
   const lease: AppRootFixtureLease = { generation: 0 };
   appRootFixtureLease = lease;
-  // Every source persist operation in this story also sets a fresh tabs state, including reactivation of the active tab.
+  // Count actual store changes; reselecting the active tab is now a no-op.
   const unsubscribe = useWorkspaceTabsStore.subscribe(() => { lease.generation += 1; });
   const previousRequests = appRootRequests.slice();
   appRootRequests.splice(0);

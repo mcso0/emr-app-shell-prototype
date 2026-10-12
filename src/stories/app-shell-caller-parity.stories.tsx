@@ -392,13 +392,21 @@ export const AppRootComposition: Story = {
 export const AppRootSaveDrain: Story = {
   args: { scenario: "app-root" },
   beforeEach: prepareAppRootStory,
-  parameters: { nextjs: { appDirectory: true, navigation: { pathname: `/w/${syntheticShellWorkspaceId}/inpatient` } }, docs: { story: { height: "820px" }, description: { story: "Storybook 정리 검사입니다. 실제 AppShell의 첫 로컬 탭 저장이 끝난 뒤 같은 활성 탭을 다시 선택합니다. 원본이 다시 예약한 저장을 기다리기 위해 실제 앱을 먼저 해제합니다. 이전의 같은 payload를 새 저장 완료로 세지 않는지 확인합니다. 실행 후 앱이 해제된 상태를 표시하며 제품 화면 상태를 뜻하지 않습니다." } } },
+  parameters: { nextjs: { appDirectory: true, navigation: { pathname: `/w/${syntheticShellWorkspaceId}/inpatient` } }, docs: { story: { height: "820px" }, description: { story: "Storybook 정리 검사입니다. 현재 활성 탭을 다시 선택하면 상태가 바뀌지 않는지 확인합니다. 새 탭을 만들고 닫아 원래 payload로 돌아온 뒤 앱을 해제합니다. 이전의 같은 payload를 새 저장 완료로 세지 않고 마지막 저장 세대를 기다립니다. 실행 후 해제 상태는 제품 화면 상태를 뜻하지 않습니다." } } },
   play: async ({ canvas }) => {
     await canvas.findByTestId("workspace-tabs-bar");
     await waitFor(() => expect(appRootRequests.some(request => request.saveGeneration === getAppRootSaveGeneration() && request.method === "PUT")).toBe(true));
     const savedGeneration = getAppRootSaveGeneration();
     const savedPayload = appRootRequests.findLast(request => request.method === "PUT")?.payload;
     await userEvent.click(within(canvas.getByTestId("workspace-tabs-bar")).getByRole("tab", { name: "입원" }));
+    await expect(getAppRootSaveGeneration()).toBe(savedGeneration);
+    await userEvent.click(canvas.getByRole("button", { name: "새 업무 탭" }));
+    await waitFor(() => expect(within(canvas.getByTestId("workspace-tabs-bar")).getAllByRole("tab")).toHaveLength(2));
+    const close = canvas.getByRole("button", { name: "원내 현황 탭 닫기" });
+    close.focus();
+    await expect(close).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(within(canvas.getByTestId("workspace-tabs-bar")).getAllByRole("tab")).toHaveLength(1));
     await waitFor(() => expect(getAppRootSaveGeneration()).toBeGreaterThan(savedGeneration));
     const pendingGeneration = getAppRootSaveGeneration();
     unmountAppRootFixture();
