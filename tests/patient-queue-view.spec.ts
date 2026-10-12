@@ -77,8 +77,8 @@ for (const queueModule of ["lab", "imaging", "dispensing"]) {
     const toggle = page.getByTestId("patient-queue-view-toggle");
     await expect(toggle).toBeEnabled();
     await toggle.hover();
-    await expect(page.getByRole("tooltip")).toContainText("환자별로 그룹핑");
-    await toggle.click();
+    await expect(page.getByRole("tooltip")).toContainText("오더별 보기로 전환");
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
     const groups = page.locator('section[data-testid^="patient-queue-group-"]');
     await expect(groups).toHaveCount(3);
     await expect(groups.first()).toContainText("긴급 1");
@@ -125,7 +125,7 @@ for (const [dispensingStatus, treatmentStatus] of [[500,401],[500,403],[403,500]
       await route.fulfill({ status, json: status === 200 ? { ok: true, workItems: q === "treatment" ? [] : fixture(q) } : { ok: false, denialReason: status === 401 ? "unauthenticated" : status === 403 ? "permission_missing" : "read_failed" } });
     });
     await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-03&modulePanel=open&aside=closed`);
-    await page.getByTestId("patient-queue-view-toggle").click();
+    await expect(page.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator('section[data-testid^="patient-queue-group-"]')).toHaveCount(3);
     failure = true;
     await page.getByRole("button", { name: "다음 날짜", exact: true }).click();
@@ -138,3 +138,48 @@ for (const [dispensingStatus, treatmentStatus] of [[500,401],[500,403],[403,500]
     await expect(types).toContainText("전체0조제0처치0");
   });
 }
+
+
+test("queue choices persist independently through reload and a new browser session", async ({ page, browser }) => {
+  await grantCheongdamWorkspaceAccess(page);
+  const mockQueues = async (target: Page) => {
+    await target.route("**/api/**", route => {
+      const url = new URL(route.request().url());
+      const q = url.searchParams.get("queueType");
+      return route.fulfill({ json: url.pathname.endsWith("/fulfillment/work-items")
+        ? { ok: true, workItems: fixture(q!) }
+        : { ok: true, items: [], workItems: [], rows: [], receipts: [], attachments: [] } });
+    });
+  };
+  await mockQueues(page);
+  const visit = async (target: Page, queueModule: string) => {
+    await target.goto(`/w/${workspaceId}/${queueModule}?date=2026-10-03&modulePanel=open&aside=closed&right=closed`);
+    const toggle = target.getByTestId("patient-queue-view-toggle");
+    await expect(toggle).toBeEnabled();
+    return toggle;
+  };
+  for (const queueModule of ["lab", "imaging", "dispensing"]) {
+    const toggle = await visit(page, queueModule);
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await page.reload();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    if (queueModule === "imaging") {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    }
+  }
+  // A new browser context restores persisted storage without retaining React state.
+  const context = await browser.newContext({ baseURL: new URL(page.url()).origin, storageState: await page.context().storageState() });
+  const reopened = await context.newPage();
+  await mockQueues(reopened);
+  try {
+    for (const queueModule of ["lab", "imaging", "dispensing"]) {
+      const toggle = await visit(reopened, queueModule);
+      await expect(toggle).toHaveAttribute("aria-pressed", queueModule === "imaging" ? "true" : "false");
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-pressed", queueModule === "imaging" ? "false" : "true");
+    }
+  } finally { await context.close(); }
+});
