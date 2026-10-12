@@ -1,3 +1,5 @@
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import { createSupabaseWorkspacePermissionGateway, type SupabaseWorkspacePermissionClient } from "@/features/auth/supabase-workspace-permission-gateway";
 import { mockBillingOwnerAllowed } from "@/features/billing/server-assignment";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
@@ -46,8 +48,13 @@ export async function GET(request: Request, { params }: RouteContext) {
   const gateway = client
     ? createSupabaseGuardianCheckoutGateway(client as unknown as SupabaseGuardianCheckoutRpcClient)
     : createMockGuardianCheckoutGateway();
-  const permissionAdapter =
-    identity.source === "supabase_session" && !useSupabaseGateway
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(client as unknown as SupabaseWorkspacePermissionClient),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : identity.source === "supabase_session" && !useSupabaseGateway
       ? createSupabaseDemoBillingPermissionAdapter({
           actorUserId: identity.actorUserId,
           workspaceId,
@@ -97,8 +104,13 @@ export async function POST(request: Request, { params }: RouteContext) {
   const gateway = client
     ? createSupabaseGuardianCheckoutGateway(client as unknown as SupabaseGuardianCheckoutRpcClient)
     : createMockGuardianCheckoutGateway();
-  const permissionAdapter =
-    identity.source === "supabase_session" && !useSupabaseGateway
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(client as unknown as SupabaseWorkspacePermissionClient),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : identity.source === "supabase_session" && !useSupabaseGateway
       ? createSupabaseDemoBillingPermissionAdapter({
           actorUserId: identity.actorUserId,
           workspaceId,
@@ -144,8 +156,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   const gateway = client
     ? createSupabaseGuardianCheckoutGateway(client as unknown as SupabaseGuardianCheckoutRpcClient)
     : createMockGuardianCheckoutGateway();
-  const permissionAdapter =
-    identity.source === "supabase_session" && !useSupabaseGateway
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(client as unknown as SupabaseWorkspacePermissionClient),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : identity.source === "supabase_session" && !useSupabaseGateway
       ? createSupabaseDemoBillingPermissionAdapter({
           actorUserId: identity.actorUserId,
           workspaceId,
@@ -212,5 +229,5 @@ async function readTransitionBody(request: Request): Promise<BillingInvoiceTrans
 }
 
 function isUuid(value: string | null | undefined) {
-  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{12}$/i.test(value);
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
