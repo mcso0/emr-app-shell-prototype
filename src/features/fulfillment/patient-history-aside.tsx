@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ClockIcon } from "@/components/icons";
+import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
+import historyLayoutStyles from "@/components/emr/history-aside-layout.module.css";
 import {
   CdsActionsListFilterIcon,
   CdsActionsSearchIcon,
@@ -195,8 +197,8 @@ export function PatientHistoryAside({
   const filterTitle = kind === "lab" ? "검사 이력 필터" : kind === "imaging" ? "영상 이력 필터" : "조제/처치 이력 필터";
 
   return (
-    <EmrContentAsidePanel id={id} className={styles.panel}>
-      <EmrContentAsideHeader className={styles.header} count={visibleEntries.length} label={label} onCollapse={onCollapse}
+    <EmrContentAsidePanel id={id} className={historyLayoutStyles.panel}>
+      <EmrContentAsideHeader className={historyLayoutStyles.header} count={visibleEntries.length} label={label} onCollapse={onCollapse}
         search={search.open ? <EmrHistorySearch search={search} label={searchLabel} onQueryChange={() => setCollapsedGroups(new Set())} onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
         actions={<>
           <EmrHistorySortButton direction={direction} onChange={setDirection} dateLabel="이력 기록일" />
@@ -211,13 +213,13 @@ export function PatientHistoryAside({
       <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       {status === "ready" ? <p role="status" aria-live="polite" className="sr-only">결과 {visibleEntries.length} / 전체 {entries.length}건</p> : null}
       {showCategories ? <div className={styles.tabs}><SegmentedControl aria-label="조제/처치 이력 종류" items={[{ label: "전체", value: "all" }, { label: "조제", value: "dispensing" }, { label: "처치", value: "treatment" }]} size="sm" value={category} variant="tabs" onValueChange={(value) => { setCategory(value); setCollapsedGroups(new Set()); }} /></div> : null}
-      <ScrollArea className={styles.scrollArea} viewportClassName="scroll-fade-y scroll-fade-8">
-        <div className={styles.groups}>
+      <ScrollArea className={historyLayoutStyles.scrollArea}>
+        <div className={historyLayoutStyles.groups}>
           {status === "loading" ? <p className={styles.message}>이력을 불러오는 중입니다.</p> : null}
           {status === "permission_denied" ? <EmrInlineAlert severity="warning" title="이력을 볼 권한이 없습니다." /> : null}
           {status === "error" ? <EmrInlineAlert severity="warning" title="이력을 불러오지 못했습니다." /> : null}
           {status === "ready" && !groups.size ? <EmrEmptyState surface="queue" size="sm" density="compact" kind={!entries.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"} title={!entries.length ? "기록된 이력이 없습니다" : search.searchQuery.trim() ? "검색 결과가 없습니다" : "조건에 맞는 이력이 없습니다"} description={!entries.length ? "환자의 이력이 등록되면 표시됩니다." : "검색어와 필터 조건을 확인해 주세요."} primaryAction={entries.length && activeCount ? <Button size="sm" variant="outline" onClick={resetFilters}>필터 해제</Button> : undefined} testId={`${id}-empty-state`} /> : null}
-          {status === "ready" ? [...groups].map(([date, items]) => <EmrContentHistoryGroup key={date} collapsed={collapsedGroups.has(date)} count={items.length} dataTestId={`${id}-group-${date}`} label={date === "날짜 미상" ? date : formatShortOperatingDate(date)} onToggle={() => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(date)) next.delete(date); else next.add(date); return next; })}>
+          {status === "ready" ? [...groups].map(([date, items]) => <EmrContentHistoryGroup key={date} collapsed={collapsedGroups.has(date)} count={items.length} dataTestId={`${id}-group-${date}`} icon={<CdsFilesCalendarIcon aria-hidden="true" className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]" />} label={date === "날짜 미상" ? date : formatShortOperatingDate(date)} onToggle={() => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(date)) next.delete(date); else next.add(date); return next; })}>
             {items.map((entry) => <HistoryCard key={entry.id} entry={entry} />)}
           </EmrContentHistoryGroup>) : null}
         </div>

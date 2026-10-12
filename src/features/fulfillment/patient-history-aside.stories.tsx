@@ -2,6 +2,9 @@ import { useState, type ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { Button } from "@/components/ui/button";
+import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
+import { EmrContentHistoryGroup } from "@/components/emr/content-history-list";
+import historyLayoutStyles from "@/components/emr/history-aside-layout.module.css";
 import { PatientHistoryAside, type PatientHistoryEntry } from "./patient-history-aside";
 
 const entries: PatientHistoryEntry[] = [
@@ -89,3 +92,28 @@ export const Loading: Story = { args: { status: "loading" }, play: async ({ canv
 export const PermissionDenied: Story = { args: { status: "permission_denied" }, play: async ({ canvas }) => { await expect(canvas.getByText("이력을 볼 권한이 없습니다.")).toBeVisible(); } };
 export const ReadError: Story = { args: { status: "error" }, play: async ({ canvas }) => { await expect(canvas.getByText("이력을 불러오지 못했습니다.")).toBeVisible(); } };
 export const Empty: Story = { args: { entries: [] }, play: async ({ canvas }) => { await waitFor(() => expect(canvas.getByText("기록된 이력이 없습니다")).toBeVisible()); } };
+
+
+export const LongHistory: Story = {
+  args: {
+    entries: Array.from({ length: 24 }, (_, index) => ({
+      id: `synthetic-history-${index}`,
+      timestamp: `2026-10-${index < 12 ? "12" : "11"}T05:00:00Z`,
+      title: `합성 검사 기록 ${index + 1}`,
+      status: "요청",
+    })),
+  },
+};
+
+// Billing keeps a static group title; this specimen covers presentation only.
+export const BillingStaticTitle: Story = {
+  render: () => <div className={`${historyLayoutStyles.panel} p-4`}>
+    <EmrContentHistoryGroup count={1} label="26.10.12" icon={<CdsFilesCalendarIcon aria-hidden="true" className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]" />}>
+      <div>합성 수납 기록</div>
+    </EmrContentHistoryGroup>
+  </div>,
+  play: async ({ canvas }) => {
+    await expect(canvas.queryByRole("button")).toBeNull();
+    await expect(canvas.getByText("합성 수납 기록")).toBeVisible();
+  },
+};
