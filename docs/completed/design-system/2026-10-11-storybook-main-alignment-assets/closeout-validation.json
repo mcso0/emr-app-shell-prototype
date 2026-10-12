@@ -1,0 +1,58 @@
+{
+  "candidate_sha256": "bada754465b94d4bb461d85c66bb337b87c68557949ba6f47ac5ca4387914241",
+  "baseline_sha": "66c1b4c8cba72d342657839425d627c4cbc7bc1e",
+  "checked_at": "2026-10-11T06:26:07.432818+00:00",
+  "storybook_suite": {
+    "passed": 489,
+    "a11y": false,
+    "evidence": "full-tests-final.json"
+  },
+  "known_12": {
+    "dev_passed": 12,
+    "static_passed": 12,
+    "evidence": "known12-final-candidate.json"
+  },
+  "typescript": "passed",
+  "full_lint": {
+    "errors": 0,
+    "preexisting_warnings": 5
+  },
+  "final_affected_lint": "passed",
+  "build_storybook": "passed",
+  "storybook_smoke": "passed",
+  "docs_check": {
+    "status": "passed",
+    "checked_markdown_files": 1067
+  },
+  "git_diff_check": "passed",
+  "report_links": {
+    "local_references": 20,
+    "missing": 0
+  },
+  "report_browser": {
+    "rendered": true,
+    "initial_files": 231,
+    "initial_elements": 1703,
+    "search_HomeNavigationSidePanel_files": 1,
+    "filter_no_story_files": 94,
+    "reset_files": 231
+  },
+  "preservation": "preservation-final.json",
+  "source_scope_limit": "All source rows classified; all app states, internal branch execution, live data workflows and full visual parity remain unverified.",
+  "review": "review-verdict.json",
+  "retained_servers": [
+    {
+      "port": 6006,
+      "pid": 75385,
+      "host": "127.0.0.1",
+      "purpose": "development Storybook review"
+    },
+    {
+      "port": 6018,
+      "pid": 71533,
+      "host": "127.0.0.1",
+      "purpose": "static Storybook and report review"
+    }
+  ],
+  "temporary_smoke_port_6020": "closed after successful smoke"
+}

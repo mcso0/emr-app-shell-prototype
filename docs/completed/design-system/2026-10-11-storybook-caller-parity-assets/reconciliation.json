@@ -1,0 +1,21 @@
+{
+  "stories": 699,
+  "lanes": {
+    "A": 161,
+    "B": 236,
+    "C": 285,
+    "parent": 17
+  },
+  "sourceRows": 233,
+  "requiredRuntimeUiFiles": 231,
+  "missingRuntimeUiFiles": [],
+  "auxiliaryRows": [
+    "src/components/ui/sonner.module.css",
+    "src/lib/prd-viewer/registry.ts"
+  ],
+  "pendingSourceClassifications": [],
+  "missingStoryIds": [],
+  "duplicateStoryIds": [],
+  "baseline502Retained": 502,
+  "classificationBoundary": "Actual mounted caller, bounded API example, implementation dependency, route/provider/registry/icon wrapper, or unused/legacy branch; import reachability alone is not rendering proof."
+}

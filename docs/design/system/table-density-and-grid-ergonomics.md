@@ -281,6 +281,19 @@ Acceptance rules:
   starts 10px after the boundary. Preserve nested body badge/button padding
   and the hook's trailing padding; do not apply the nested header-child
   normalization to body children.
+- In `EmrDataTable`, preserve the 10px outer gap after the left pinned
+  boundary. Sort buttons use 8px padding on each side, with another 2px
+  inside the label span. At scroll origin, the first scrolling header text
+  and plain body text start 20px after the boundary: 10px outer + 10px inner.
+  Rich body content starts on that same axis and keeps its own inner padding.
+  The low-level `Table` surface contract remains unchanged.
+- Data-table identity labels and plain accessor cells share the workspace
+  identity inset, with a 10px minimum cell inset. Existing identity wrappers
+  retain avatar/icon positioning; plain cells and loading placeholders
+  receive the inset once. Workspace title/search/footer insets are unchanged.
+- These values follow the selected Figma fixed column and scroll containers
+  (`27878:57638`, `27878:57717`, `27878:57725`). Check actual text bounds,
+  not just label-span bounds; the label itself has 2px padding.
 - `EmrDataTable` columns with `cellPadding: "none"` retain their
   `emr-data-table-cell-content--no-boundary-inset` opt-out for full-bleed or
   centered presentation. Boundary normalization must exclude those hooks

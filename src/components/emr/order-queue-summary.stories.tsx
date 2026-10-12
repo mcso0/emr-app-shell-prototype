@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
-import type { OrderQueueItem, OrderQueueStatusDefinition } from "@/types/emr";
+import { getOrderQueueItems, getOrderQueueStatuses } from "@/features/order-queue/data";
 
 import { OrderQueueSelectionSummary } from "./order-queue-summary";
 
@@ -8,26 +8,8 @@ type OrderQueueSelectionSummaryStoryArgs = {
   empty: boolean;
 };
 
-const statuses: OrderQueueStatusDefinition[] = [
-  { id: "requested", label: "요청", colorToken: "--emr-status-info-text", sortOrder: 1 },
-  { id: "in_progress", label: "진행", colorToken: "--emr-status-warning-text", sortOrder: 2 },
-  { id: "completed", label: "완료", colorToken: "--emr-status-success-text", sortOrder: 3 },
-];
-
-const item: OrderQueueItem = {
-  id: "sample-order-1",
-  assigneeName: "샘플 담당",
-  guardianName: "샘플 보호자",
-  instructionId: "sample-instruction-1",
-  orderName: "합성 오더 항목",
-  orderType: "처치",
-  orderTypeCategory: "treatment",
-  patientName: "샘플 환자",
-  receptionType: "접수",
-  requesterName: "샘플 요청자",
-  statusId: "in_progress",
-  time: "10:30",
-};
+const statuses = getOrderQueueStatuses("dispensing");
+const item = getOrderQueueItems("dispensing")[1];
 
 function OrderQueueSelectionSummaryExample({ empty }: OrderQueueSelectionSummaryStoryArgs) {
   return (
@@ -46,7 +28,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use OrderQueueSelectionSummary to summarize the currently selected synthetic order queue item next to a queue/detail surface. 사용할 때: a selected queue item needs compact identity, order, requester, assignee, and status context. 쓰지 말아야 할 때: no item is selected, table rows need inline cells, or real patient/guardian data would be exposed.",
+          "Frozen main has no non-story caller for this exported API. Both stories use actual synthetic order queue/status factories. Use OrderQueueSelectionSummary to summarize the currently selected synthetic order queue item next to a queue/detail surface. 사용할 때: a selected queue item needs compact identity, order, requester, assignee, and status context. 쓰지 말아야 할 때: no item is selected, table rows need inline cells, or real patient/guardian data would be exposed.",
       },
     },
   },

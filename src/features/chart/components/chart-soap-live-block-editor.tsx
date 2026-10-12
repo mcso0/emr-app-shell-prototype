@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from "react";
 import { ko } from "@blocknote/core/locales";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
@@ -230,8 +230,18 @@ export function ChartSoapLiveBlockEditor({
     onFiles(event.clipboardData.files);
   };
 
+  const onToggleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement) || !target.matches(".bn-toggle-button")) return;
+    // Keep disclosure keys out of the editor's document-editing keymap.
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat) target.click();
+  };
+
   return (
-    <div className={styles.editorBoundary} data-soap-editor-boundary data-read-only={disabled ? "true" : "false"} onDropCapture={onFileDrop} onPasteCapture={onFilePaste}>
+    <div className={styles.editorBoundary} data-soap-editor-boundary data-read-only={disabled ? "true" : "false"} onKeyDownCapture={onToggleKeyDown} onDropCapture={onFileDrop} onPasteCapture={onFilePaste}>
       {!disabled ? <ChartSoapToolbar
         allowSoapTemplateCommands={allowSoapTemplateCommands}
         editor={editor}

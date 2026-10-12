@@ -1,5 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { useState } from "react";
+import { EmrProfileIdentity, EmrProfilePanel, EmrProfilePanelBody, EmrProfileTabPanel } from "@/components/emr/profile-panel";
+import { Button } from "./button";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { Badge } from "./badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs";
@@ -51,15 +54,35 @@ function TabsExample({ defaultValue, orientation, variant }: TabsStoryArgs) {
   );
 }
 
+function ProfileTabsCaller() {
+  const [open, setOpen] = useState(true);
+  const [value, setValue] = useState("profile");
+  return <div className="grid w-full max-w-md gap-3">
+    <Button onClick={() => setOpen((current) => !current)}>{open ? "합성 프로필 닫기" : "합성 프로필 열기"}</Button>
+    {open ? (
+      <EmrProfilePanel className="h-[440px]" aria-label="합성 직원 운영 프로필" closeLabel="직원 운영 프로필 닫기" onClose={() => setOpen(false)}
+        value={value} onTabChange={setValue} tabsLabel="직원 프로필 탭"
+        tabs={[{ value: "profile", label: "프로필" }, { value: "work", label: "업무현황" }, { value: "schedule", label: "일정" }]}
+        identity={<EmrProfileIdentity avatar={<span className="flex size-full items-center justify-center rounded-lg bg-muted" aria-hidden="true">합</span>} name="합성 직원" detail="합성 접수 직원" />}>
+        {[["profile", "합성 프로필 내용"], ["work", "합성 배정 업무 내용"], ["schedule", "합성 일정 내용"]].map(([key, text]) => (
+          <EmrProfileTabPanel key={key} value={key}><EmrProfilePanelBody className="p-4">{text}</EmrProfilePanelBody></EmrProfileTabPanel>
+        ))}
+      </EmrProfilePanel>
+    ) : null}
+    <output aria-label="합성 프로필 탭 선택">{value} · {open ? "열림" : "닫힘"}</output>
+  </div>;
+}
+
 const meta = {
   title: "Design System/UI/Tabs",
   component: TabsExample,
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "260px" },
       description: {
         component:
-          "Use Tabs to switch between related panels at the same hierarchy level. 사용할 때: content groups are peers and the user can choose one without leaving context. 쓰지 말아야 할 때: primary app navigation, binary filters, or steps that must be completed in order.",
+          "Controls는 TabsExample 조합 설정입니다. defaultValue는 마운트 시 초기값이고 variant는 TabsList에 전달합니다. 호출자는 패널 내용과 상태를 소유합니다. Use Tabs to switch between related panels at the same hierarchy level. 사용할 때: content groups are peers and the user can choose one without leaving context. 쓰지 말아야 할 때: primary app navigation, binary filters, or steps that must be completed in order.",
       },
     },
   },
@@ -72,7 +95,7 @@ const meta = {
     orientation: {
       control: "radio",
       options: ["horizontal", "vertical"],
-      description: "Tab layout direction.",
+      description: "Requested layout direction. Current main does not forward orientation to Base UI; vertical keyboard behavior is not supported by this wrapper yet.",
     },
     variant: {
       control: "radio",
@@ -85,7 +108,7 @@ const meta = {
     orientation: "horizontal",
     variant: "default",
   },
-  render: (args) => <TabsExample {...args} />,
+  render: (args) => <TabsExample key={args.defaultValue} {...args} />,
 } satisfies Meta<TabsStoryArgs>;
 
 export default meta;
@@ -93,37 +116,30 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 async function activateDetailsTab(canvasElement: HTMLElement) {
-  const button = Array.from(canvasElement.querySelectorAll("button")).find(
-    (candidate) => candidate.textContent?.includes("상세")
-  );
-
-  if (!button) {
-    throw new Error("Expected the details tab trigger.");
-  }
-
-  button.click();
-  await new Promise((resolve) => window.setTimeout(resolve, 0));
-
-  if (!canvasElement.textContent?.includes("샘플 상세")) {
-    throw new Error("Expected the details tab panel to appear.");
-  }
+  const canvas = within(canvasElement);
+  await userEvent.click(canvas.getByRole("tab", { name: "상세" }));
+  await waitFor(() => expect(canvas.getByRole("tabpanel")).toHaveTextContent("샘플 상세"));
 }
-
 export const Default: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: 같은 화면 안에서 관련 패널을 빠르게 전환할 때. 쓰지 말아야 할 때: segmented filter처럼 결과 목록을 좁히는 목적.",
-      },
-    },
-  },
-  play: async ({ canvasElement }) => {
-    await activateDetailsTab(canvasElement);
+  render: () => <ProfileTabsCaller />,
+  parameters: { controls: { disable: true }, docs: { story: { height: "580px" }, description: { story: "실제 EmrProfilePanel·EmrProfileTabPanel·본문을 사용합니다. 직원 운영 프로필의 프로필/업무현황/일정 탭 구성과 원본 focus·ArrowRight·Escape·닫기 동작을 유지합니다. identity와 패널 내용만 합성입니다. 직원 조회·업무 읽기는 실행하지 않습니다." } } },
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole("tab", { name: "업무현황" }));
+    await waitFor(() => expect(canvas.getByRole("tabpanel")).toHaveTextContent("합성 배정 업무 내용"));
+    await userEvent.keyboard("{ArrowRight}");
+    await waitFor(() => { expect(canvas.getByRole("tab", { name: "일정" })).toHaveFocus(); expect(canvas.getByRole("tabpanel")).toHaveTextContent("합성 일정 내용"); });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(canvas.getByRole("button", { name: "합성 프로필 열기" })).toBeVisible());
+    const opener = canvas.getByRole("button", { name: "합성 프로필 열기" });
+    await userEvent.click(opener);
+    await waitFor(() => expect(canvas.getByRole("button", { name: "직원 운영 프로필 닫기" })).toHaveFocus());
+    await userEvent.click(canvas.getByRole("button", { name: "직원 운영 프로필 닫기" }));
+    await waitFor(() => expect(canvas.getByRole("button", { name: "합성 프로필 열기" })).toHaveFocus());
   },
 };
 
 export const LineVariant: Story = {
+  play: async ({ canvasElement }) => activateDetailsTab(canvasElement),
   args: {
     variant: "line",
   },
@@ -138,6 +154,8 @@ export const LineVariant: Story = {
 };
 
 export const Vertical: Story = {
+  play: async ({ canvas }) => { await expect(canvas.getByRole("tablist")).not.toHaveAttribute("aria-orientation"); const summary = canvas.getByRole("tab", { name: "요약" }); await userEvent.click(summary); await userEvent.keyboard("{ArrowDown}"); await expect(summary).toHaveFocus(); await userEvent.keyboard("{ArrowRight}"); await expect(canvas.getByRole("tab", { name: "상세" })).toHaveFocus(); await userEvent.keyboard("{Enter}"); await waitFor(() => expect(canvas.getByRole("tabpanel")).toHaveTextContent("샘플 상세")); },
+  tags: ["depends_on_unmerged_product_change"],
   args: {
     orientation: "vertical",
   },
@@ -145,7 +163,7 @@ export const Vertical: Story = {
     docs: {
       description: {
         story:
-          "사용할 때: 왼쪽 목록과 오른쪽 내용처럼 공간이 충분한 layout. 쓰지 말아야 할 때: 좁은 mobile width에서 탭 label이 눌리는 경우.",
+          "현재 main의 수직 요청 예제입니다. Tabs가 orientation을 Base UI Root에 전달하지 않으므로 수직 키보드 탐색을 보장하지 않습니다. 수직 동작 검증은 미병합 제품 수정에 의존합니다. 이 스토리는 기존 ID를 유지하며 현재 상태를 보여줍니다.",
       },
     },
   },
@@ -163,14 +181,15 @@ export const DisabledPlaceholders: Story = {
           tab3
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="profile">프로필 내용</TabsContent>
+      <TabsContent value="profile">프로필 내용 · tab2와 tab3는 이 API 예제에 패널이 없어 비활성입니다.</TabsContent>
     </Tabs>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
-          "아직 콘텐츠가 정의되지 않은 탭은 표시하되 disabled로 유지한다. 화살표 키 탐색에서도 비활성 탭은 선택되지 않는다.",
+          "순수 Tabs API의 비활성 placeholder 예제입니다. 실제 직원 프로필의 업무현황·일정 탭은 구현되어 있으므로 이 placeholder를 실제 직원 상태로 해석하지 마세요. 화살표 키 탐색은 비활성 탭을 건너뜁니다.",
       },
     },
   },

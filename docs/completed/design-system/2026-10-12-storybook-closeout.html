@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Storybook 작업 마무리 · CLAiR</title>
+<style>
+:root{color-scheme:light;--ink:#172c2b;--muted:#506462;--line:#dce5e2;--green:#17624e;--soft:#edf5f0;--amber:#785016}*{box-sizing:border-box}body{margin:0;background:#f5f6f2;color:var(--ink);font:16px/1.75 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}main{max-width:1000px;margin:0 auto;padding:64px 32px 40px}.eyebrow{font-size:12px;letter-spacing:.14em;font-weight:700;color:var(--green)}h1{font-size:clamp(30px,5vw,46px);line-height:1.25;letter-spacing:-.04em;margin:15px 0 20px}h2{font-size:21px;margin:0 0 18px;letter-spacing:-.025em}p{margin:0 0 12px}.lead{font-size:18px;max-width:740px}.muted{color:var(--muted)}.tags{display:flex;flex-wrap:wrap;gap:8px;margin:23px 0 32px}.tag{border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:13px;background:white}.tag.good{background:var(--soft);color:var(--green);border-color:#c5dacc}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:36px}.stat{padding:20px 22px;background:white;border:1px solid var(--line);border-radius:14px}.stat strong{display:block;font-size:30px;line-height:1.3;letter-spacing:-.03em}.stat span{display:block;font-size:13px;color:var(--muted);margin-top:6px}section{background:white;border:1px solid var(--line);border-radius:16px;padding:28px;margin:18px 0}ul{margin:0;padding-left:21px}li+li{margin-top:9px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:14px 12px}th{font-size:12px;color:var(--muted);background:#f7f9f7}th:first-child,td:first-child{padding-left:0;width:28%}tr:last-child td{border-bottom:0}.pass{color:var(--green);font-weight:700}.note{font-size:13px;color:var(--muted);margin-top:15px}.remaining{border-top:4px solid #bb9557}.priority{color:var(--amber);font-weight:700}.end{background:var(--soft);border-left:3px solid var(--green);padding:18px 22px;margin-top:24px}.end p{margin:0}footer{font-size:12px;color:var(--muted);margin-top:26px}code{font-size:.92em} @media(max-width:600px){main{padding:30px 18px}.stats{gap:8px}.stat{padding:14px 10px}.stat strong{font-size:24px}.stat span{font-size:12px}section{padding:22px 18px}th,td{padding:11px 6px}th:first-child,td:first-child{width:31%}}@media print{body{background:white}main{padding:16px;max-width:none}section,.stats,.end{break-inside:avoid}section{padding:18px}footer{margin-top:15px}}
+</style>
+</head>
+<body><main>
+<header>
+<div class="eyebrow">CLAiR · LOCAL WORK CLOSEOUT · 2026.10.12</div>
+<h1>Storybook 작업 마무리</h1>
+<p class="lead">합의한 Storybook 정렬, 승인한 후속 수정, 테스트 안정화와 접근성 진단을 완료했다. 새로 발견한 문제는 별도로 남기고 작업 범위를 닫는다.</p>
+<div class="tags"><span class="tag good">로컬 구현·검증 완료</span><span class="tag">기존 작업 보존</span><span class="tag">커밋·푸시·배포 없음</span></div>
+</header>
+<div class="stats" aria-label="핵심 검증 수치">
+<div class="stat"><strong>705</strong><span>최종 Storybook 예제</span></div>
+<div class="stat"><strong>70 / 70</strong><span>차트 반복 검증 통과 · 재시도 0</span></div>
+<div class="stat"><strong>705 + 5</strong><span>접근성 검사 상태 · 통과 수 아님</span></div>
+</div>
+<section aria-labelledby="changes"><h2 id="changes">01 · 변경 사항</h2>
+<ul>
+<li><strong>Storybook 정렬:</strong> origin/main 기준 실제 컴포넌트와 화면 조합에 맞춰 예제·합성 데이터·문서·상호작용 테스트를 보완했다. UI 소스 231개를 분류하고 MCP 예제와 타입 정보도 검증했다.</li>
+<li><strong>승인한 동작 수정:</strong> 근무표 저장·닫기 및 저장 중 편집, 비활성 입원 버튼의 행 클릭 전파, 홈의 긴 날짜 표시를 수정했다. 조제 표 머리글, 미연결 버튼의 준비 중 표시, SOAP 키보드 토글, 통합 검색 필터 동작도 반영했다.</li>
+<li><strong>테스트·검사 정비:</strong> 홈 모바일 테스트를 기존 모달 동작에 맞췄다. 검색 응답 순서 역전과 닫기 후 응답 검증을 추가했다. 차트 확인창은 열림 애니메이션 이후 같은 가시성 조건을 검사하도록 수정했다. 승인된 스크립트 lint 오류·경고도 정리했다.</li>
+<li><strong>유지보수 규칙:</strong> AGENTS.md에 UI 변경 시 관련 Storybook 수정·검증을 함께 수행하도록 추가했다. 무관한 문제는 별도 기록하고, 별도 승인 없이 작업 범위를 넓히지 않는다.</li>
+</ul></section>
+<section aria-labelledby="checks"><h2 id="checks">02 · 검증 결과</h2>
+<table><thead><tr><th scope="col">검증</th><th scope="col">기록된 결과와 범위</th></tr></thead><tbody>
+<tr><td>Storybook 전체</td><td>705개 실행에서 704개 통과, 차트 가시성 테스트 1개 실패. 이후 원인을 수정하고 아래 반복 검증을 통과했다. <strong>수정 후 전체 705개를 다시 실행한 결과는 아니다.</strong></td></tr>
+<tr><td>차트 안정화</td><td><span class="pass">70/70 통과.</span> 관련 예제 7개를 새 프로세스로 10회 실행했다. 재시도 옵션 없이 저장 대상·버전·기존 기록 보존 검증을 유지했다.</td></tr>
+<tr><td>회귀 테스트</td><td><span class="pass">관련 예제 31개, 홈·입원 앱 테스트 36개 통과 확인.</span> 각각 초기 실행과 실패 항목의 수정 후 재검증을 합한 결과다. 최종 검색 정리 변경 후 앱 셸 예제 12개도 통과했다.</td></tr>
+<tr><td>정적 검사·빌드</td><td><span class="pass">타입 검사·Storybook 정적 빌드·문서·diff 검사 통과.</span> 후속 수정 단계에서 전체 lint 오류·경고 0개. 이후 차트 테스트 변경 파일 lint도 통과했다. AGENTS.md 변경 시 문서 1,108개 검사와 diff 검사를 통과했다.</td></tr>
+<tr><td>자동 접근성</td><td>axe-core로 <strong>초기 상태 705개 + 추가 상태 5개</strong>를 검사했다. 최종 검사 대상은 모두 정상 렌더했다. <strong>문제가 남아 있으므로 접근성 통과 판정은 아니다.</strong></td></tr>
+</tbody></table>
+<p class="note">로컬 합성 데이터 기준이다. 모든 화면 상태·화면 폭·스크린리더·실데이터·운영 환경을 검증한 결과는 아니다. 각 검사는 해당 변경 단계의 결과이며, 이번 마무리에서는 재실행하지 않았다.</p>
+</section>
+<section class="remaining" aria-labelledby="open"><h2 id="open">03 · 별도로 남겨둔 문제</h2>
+<ul>
+<li><span class="priority">우선 검토 · 검색과 이름 누락</span><br>통합 검색 결과의 ARIA 역할·선택 상태 관계, SOAP 입력·일부 아이콘 버튼·첨부 파일 입력의 접근 가능한 이름 누락. <strong>수정은 시작하지 않았다.</strong></li>
+<li><span class="priority">추가 접근성 개선</span><br>클릭 요소 중첩, 텍스트 대비, 좁은 클릭 영역, 일부 목록·제목·표 구조와 포커스 동작을 별도로 검토해야 한다.</li>
+<li><span class="priority">정적 미리보기 안정성</span><br>정적 빌드는 통과했지만 정적 미리보기 검사 시 동적 모듈 로딩 실패가 있었다. 최종 접근성 결과는 개발 Canvas에서 확보했다. 로딩 실패의 원인 해결은 남아 있다.</li>
+<li><span class="priority">좁은 화면 조제 표</span><br>420px에서 기존 그룹 머리글이 조밀하게 보이는 문제를 별도로 남겼다.</li>
+</ul>
+<p class="note">초기 상태 629개에서 자동 검사 지적이 나왔다. 단독 예제의 페이지 맥락 규칙(main·h1·region) 3개를 제외하면 242개에 검토 항목이 남는다. 같은 공용 컴포넌트가 반복되므로 242개의 독립된 버그를 뜻하지 않는다. 판정이 확정되지 않은 항목도 수동 확인 대상으로 남겼다.</p>
+</section>
+<div class="end"><p><strong>여기서 작업을 마무리한다.</strong> Storybook 결과는 별도 로컬 작업 폴더에 있고, 유지보수 규칙은 기본 작업 폴더의 AGENTS.md에 반영했다. main 반영과 배포는 하지 않았다. 남은 문제의 수정은 별도 작업으로 다룬다.</p></div>
+<footer>근거: DESIGN-SYSTEM-PR-109 작업 기록 · 후속 수정/차트 안정화 검증 기록 · 2026-10-12 접근성 보고서 · AGENTS.md 변경 검사. 이 문서는 기존 검증 결과를 요약한 로컬 보고서다.</footer>
+</main></body></html>

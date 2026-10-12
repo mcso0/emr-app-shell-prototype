@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent } from "storybook/test";
+import { CustomerHeaderCallerExample } from "./caller-parity.stories.fixture";
 
 import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
 
@@ -44,10 +46,19 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  render: () => <CustomerHeaderCallerExample />,
+  play: async ({ canvas, canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-slot="badge"]')).toHaveTextContent("3");
+    await userEvent.type(canvas.getByRole("textbox", { name: "고객관리 검색" }), "합성 검색");
+    await expect(canvas.getByLabelText("합성 고객 검색어")).toHaveTextContent("합성 검색");
+    await userEvent.click(canvas.getByRole("button", { name: "고객관리 검색어 초기화" }));
+    await expect(canvas.getByLabelText("합성 고객 검색어")).toHaveTextContent("검색어 없음");
+  },
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
-        story: "Default Badge shows a short generic label. Use it when the label is not a domain status.",
+        story: "고객관리의 실제 CustomerListHeader 카운터 Badge입니다. 크기·색·제목과 검색/초기화 버튼을 원본 컴포넌트가 렌더합니다. 숫자와 검색 콜백만 합성입니다.",
       },
     },
   },
@@ -55,6 +66,7 @@ export const Default: Story = {
 
 export const Variants: Story = {
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
@@ -76,6 +88,7 @@ export const Variants: Story = {
 
 export const Sizes: Story = {
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
@@ -106,6 +119,7 @@ export const Sizes: Story = {
 
 export const WithIcon: Story = {
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story: "Use a CDS icon only when it adds scan value. Decorative icons should remain aria-hidden.",
@@ -128,6 +142,7 @@ export const WithIcon: Story = {
 
 export const DoNotUseForDomainStatus: Story = {
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:

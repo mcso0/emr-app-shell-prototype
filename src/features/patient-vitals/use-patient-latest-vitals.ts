@@ -56,7 +56,10 @@ export function usePatientLatestVitalItems({
           ? formatLatestSummaryItems(result.summary, result.vital, vitalSettings)
           : fallbackItems
             ? orderFallbackVitalItems(fallbackItems, vitalSettings)
-            : formatPatientVitalDisplayItemsForSettings(undefined, vitalSettings),
+            : formatPatientVitalDisplayItemsForSettings(undefined, vitalSettings).map((item) => ({
+                ...item,
+                loading: result.status === "loading",
+              })),
       refresh,
       replaceVital,
       status: result.status,

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "design-system-emr-emrtaskqueuecard--docs",
+    "rendered": true,
+    "error": null,
+    "facts": {
+      "classes": "sb-show-main sb-main-fullscreen",
+      "nodes": 531,
+      "text": "EmrTaskQueueCard\n\nEmrTaskQueueCard는 EmrSidePanelCard와 공통 identity·badge·menu를 조합한 업무 카드입니다. 필수 API는 item과 selected이며 onSelect, patientView는 선택 사항입니다. item에는 환자·보호자, 접수 유형, 업무명, 요청자·시각, 메뉴 label이 필요합니다. eventKind는 request/reRequest/cancel이며 eventText가 기본 요청 문구를 대체합니다. 담당자가 없으면 미지정으로 표시합니다. 이 Storyboo"
+    }
+  },
+  {
+    "id": "design-system-ui-checkbox--docs",
+    "rendered": true,
+    "error": null,
+    "facts": {
+      "classes": "sb-show-main sb-main-fullscreen",
+      "nodes": 369,
+      "text": "Checkbox\n\nUse Checkbox for independent binary selections, row selection, and consent-like acknowledgements in EMR forms. 사용할 때: each checked state can stand alone. 쓰지 말아야 할 때: mutually exclusive choices, immediate mode toggles, or permission enforcement.\n\n샘플 항목 선택\nShow code\nCopy code\nName\tDescriptio"
+    }
+  }
+]

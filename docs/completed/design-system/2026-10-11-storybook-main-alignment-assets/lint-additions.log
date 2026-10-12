@@ -1,0 +1,16 @@
+
+> emr-app-shell-prototype@0.1.0 lint
+> eslint
+
+[BABEL] Note: The code generator has deoptimised the styling of /Users/iseung-ug/.codex/worktrees/storybook-main-alignment/emr-app-shell-prototype/src/features/chart/module.tsx as it exceeds the max of 500KB.
+
+/Users/iseung-ug/.codex/worktrees/storybook-main-alignment/emr-app-shell-prototype/scripts/check-wp10-ready-defaults.ts
+  16:11  warning  'planOrderAuthority' is assigned a value but never used           @typescript-eslint/no-unused-vars
+  16:31  warning  'manualQuantityReason' is assigned a value but never used         @typescript-eslint/no-unused-vars
+  16:53  warning  'autoDispenseQuantityEnabled' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/Users/iseung-ug/.codex/worktrees/storybook-main-alignment/emr-app-shell-prototype/scripts/generate-wp10-ready-orders-candidate.mjs
+  21:11  warning  'revision' is assigned a value but never used          @typescript-eslint/no-unused-vars
+  21:21  warning  'labOrderProfiles' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 5 problems (0 errors, 5 warnings)

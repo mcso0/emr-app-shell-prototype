@@ -1,164 +1,75 @@
+import { useId } from "react";
 import type { ComponentProps } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent } from "storybook/test";
 
-import { Input } from "./input";
 import { Switch } from "./switch";
 import { Textarea } from "./textarea";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSet,
-} from "./field";
+import { Field, FieldContent, FieldDescription, FieldError, FieldLabel } from "./field";
+import { RegistrationNameCallerExample } from "./caller-parity.stories.fixture";
 
-type FieldArgs = ComponentProps<typeof Field> & {
-  invalid: boolean;
-};
-
+type FieldArgs = ComponentProps<typeof Field> & { invalid: boolean };
 const meta = {
-  title: "Design System/UI/Field",
-  component: Field,
-  tags: ["autodocs"],
-  parameters: {
-    docs: {
-      description: {
-        component:
-          "Use Field primitives to bind labels, descriptions, controls, and validation copy in EMR forms. 사용할 때: a form control needs consistent spacing and accessible context. 쓰지 말아야 할 때: free-floating layout boxes, table cells, or security enforcement.",
-      },
-    },
-  },
-  argTypes: {
-    orientation: {
-      control: "radio",
-      options: ["vertical", "horizontal", "responsive"],
-      description: "Field layout direction. Use vertical for most forms and horizontal for compact toggles.",
-    },
-    invalid: {
-      control: "boolean",
-      description: "Sets invalid text color on the field group. Pair with FieldError and control aria-invalid.",
-    },
-  },
-  args: {
-    invalid: false,
-    orientation: "vertical",
-  },
+  title: "Design System/UI/Field", component: Field, tags: ["autodocs"],
+  parameters: { docs: { description: { component: "등록 행은 실제 EmrRegistrationFieldRow와 EmrRegistrationSection을 재사용합니다. 나머지는 Field의 레이아웃·오류·입력 연결 API 예제입니다. 필드의 값과 검증, 저장은 호출자가 소유합니다." } } },
+  argTypes: { orientation: { control: "radio", options: ["vertical", "horizontal", "responsive"] }, invalid: { control: "boolean", description: "Field의 data-invalid와 입력의 aria-invalid, 오류 문구를 함께 바꿉니다." } },
+  args: { invalid: false, orientation: "vertical" },
 } satisfies Meta<FieldArgs>;
-
 export default meta;
-
 type Story = StoryObj<FieldArgs>;
 
 export const TextInputField: Story = {
-  render: ({ invalid, ...args }) => (
-    <Field {...args} data-invalid={invalid}>
-      <FieldLabel htmlFor="sample-field-summary">상담 요약</FieldLabel>
-      <Input
-        id="sample-field-summary"
-        placeholder="샘플 상담 요약"
-      />
-      <FieldDescription>
-        실제 환자, 보호자, 병원, 결제, 신원 정보 없이 합성 예시만 사용합니다.
-      </FieldDescription>
-    </Field>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: label, input, help text가 한 묶음으로 움직여야 할 때. 쓰지 말아야 할 때: label 없이 placeholder만으로 의미를 전달할 때.",
-      },
-    },
+  render: () => <RegistrationNameCallerExample />,
+  parameters: { controls: { disable: true }, docs: { description: { story: "실제 등록 행의 필수 이름 필드입니다. 표시·라벨·입력 연결은 원본 컴포넌트를 재사용하며 초안만 로컬에서 바꿉니다." } } },
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole("textbox", { name: "보호자명" });
+    await userEvent.clear(input); await userEvent.type(input, "합성 보호자 수정");
+    await expect(canvas.getByLabelText("합성 보호자명 초안")).toHaveTextContent("합성 보호자 수정");
   },
 };
-
+function ErrorField({ invalid, ...args }: FieldArgs) {
+  const id = useId();
+  return <Field {...args} data-invalid={invalid}>
+    <FieldLabel htmlFor={id}>필수 메모</FieldLabel>
+    <Textarea id={id} aria-invalid={invalid} aria-describedby={invalid ? `${id}-error` : undefined} placeholder="샘플 메모" rows={3} />
+    {invalid ? <FieldError id={`${id}-error`}>샘플 메모를 한 줄 이상 입력하세요.</FieldError> : null}
+  </Field>;
+}
 export const WithError: Story = {
-  args: {
-    invalid: true,
-  },
-  render: ({ invalid, ...args }) => (
-    <Field {...args} data-invalid={invalid}>
-      <FieldLabel htmlFor="sample-field-required-note">필수 메모</FieldLabel>
-      <Textarea
-        id="sample-field-required-note"
-        aria-invalid
-        placeholder="샘플 메모"
-        rows={3}
-      />
-      <FieldError>샘플 메모를 한 줄 이상 입력하세요.</FieldError>
-    </Field>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: control의 invalid 상태와 오류 문구를 함께 보여줄 때. 쓰지 말아야 할 때: 서버/API 검증 없이 클라이언트 표시만으로 저장을 허용할 때.",
-      },
-    },
+  args: { invalid: true }, render: (args) => <ErrorField {...args} />,
+  parameters: { docs: { description: { story: "오류 API 조합입니다. invalid Control은 입력과 연결된 오류 문구를 함께 바꿉니다. 입력은 편집할 수 있으며 검증값은 Control에서 설정합니다." } } },
+  play: async ({ canvas }) => {
+    const input = canvas.getByRole("textbox", { name: "필수 메모" });
+    await expect(input).toHaveAttribute("aria-invalid", "true");
+    await expect(input).toHaveAccessibleDescription("샘플 메모를 한 줄 이상 입력하세요.");
+    await userEvent.type(input, "합성 메모"); await expect(input).toHaveValue("합성 메모");
   },
 };
-
+function ToggleField({ invalid, ...args }: FieldArgs) {
+  const id = useId();
+  return <Field {...args} className="max-w-md rounded-[var(--clair-radius-md)] border border-border bg-card p-3" data-invalid={invalid}>
+    <Switch id={id} aria-invalid={invalid} />
+    <FieldContent><FieldLabel htmlFor={id}>운영 알림 받기</FieldLabel><FieldDescription>독립 설정 입력의 Field API 예제입니다.</FieldDescription></FieldContent>
+  </Field>;
+}
 export const HorizontalToggle: Story = {
-  args: {
-    orientation: "horizontal",
-  },
-  render: ({ invalid, ...args }) => (
-    <Field
-      {...args}
-      className="max-w-md rounded-[var(--clair-radius-md)] border border-border bg-card p-3"
-      data-invalid={invalid}
-    >
-      <Switch id="sample-field-notification" />
-      <FieldContent>
-        <FieldLabel htmlFor="sample-field-notification">운영 알림 받기</FieldLabel>
-        <FieldDescription>
-          샘플 워크스페이스의 업무 변경 알림만 표현합니다.
-        </FieldDescription>
-      </FieldContent>
-    </Field>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: switch나 checkbox 옆에 제목과 설명이 붙는 compact setting. 쓰지 말아야 할 때: 긴 본문 입력이나 복잡한 form section.",
-      },
-    },
+  args: { orientation: "horizontal" }, render: (args) => <ToggleField {...args} />,
+  parameters: { docs: { description: { story: "FieldContent와 가로 Field 레이아웃 API입니다. 값은 예제 내부에서 바뀝니다." } } },
+  play: async ({ canvas }) => {
+    const control = canvas.getByRole("switch", { name: "운영 알림 받기" });
+    await expect(control).not.toBeChecked(); await userEvent.click(control); await expect(control).toBeChecked();
+    control.focus(); await userEvent.keyboard(" "); await expect(control).not.toBeChecked();
   },
 };
-
 export const FieldSetGroup: Story = {
-  render: () => (
-    <FieldSet>
-      <FieldLegend>샘플 연락 기본값</FieldLegend>
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="sample-contact-channel">연락 채널</FieldLabel>
-          <Input
-            id="sample-contact-channel"
-            defaultValue="앱 알림"
-          />
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="sample-contact-note">내부 메모</FieldLabel>
-          <Textarea
-            id="sample-contact-note"
-            defaultValue="합성 데이터로만 작성된 샘플 메모입니다."
-            rows={3}
-          />
-        </Field>
-      </FieldGroup>
-    </FieldSet>
-  ),
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: 관련 form controls를 fieldset/legend로 묶어야 할 때. 쓰지 말아야 할 때: 서로 독립적인 화면 영역을 시각적으로만 묶으려는 경우.",
-      },
-    },
+  render: () => <RegistrationNameCallerExample error="보호자명을 확인해주세요." />,
+  parameters: { controls: { disable: true }, docs: { description: { story: "실제 보호자 정보 FieldSet·Legend와 오류가 있는 등록 행입니다. 원본처럼 편집은 초안만 바꾸며 기존 오류는 다음 검증 전까지 유지합니다." } } },
+  play: async ({ canvas }) => {
+    await expect(canvas.getByRole("group", { name: "보호자 정보" })).toBeInTheDocument();
+    const input = canvas.getByRole("textbox", { name: "보호자명" });
+    await expect(input).toHaveAccessibleDescription("보호자명을 확인해주세요.");
+    await userEvent.clear(input); await userEvent.type(input, "합성 초안");
+    await expect(canvas.getByRole("alert")).toHaveTextContent("보호자명을 확인해주세요.");
+    await expect(canvas.getByLabelText("합성 보호자명 초안")).toHaveTextContent("합성 초안");
   },
 };

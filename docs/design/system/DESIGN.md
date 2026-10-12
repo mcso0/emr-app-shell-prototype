@@ -185,6 +185,19 @@ CLAiR screens favor operational density:
 - persistent nav rail and top menu
 - module side panels for queues and grouped navigation
 - patient context bars near clinical work
+- chart is the visual and identity-composition baseline for dispensing/treatment,
+  lab, and imaging patient context bars: patient name, breed, sex/neuter, age;
+  then guardian relationship and contact. Work-specific trailing metadata may
+  differ. Reuse the shared bar rather than duplicating screen-local geometry.
+- billing keeps guardian-first ordering, multiple patient identities, masked
+  contact, and billing summaries, but follows the same context-bar surface,
+  spacing, icon treatment, typography, profile interaction, and overflow controls.
+  Visual alignment must not change billing data or calculations.
+- pending patient-context values use shared skeletons rather than visible loading
+  sentences. Keep resolved values, explicit failure/denial/missing states,
+  accessible busy descriptions, and reduced-motion behavior. Chart shows the same
+  skeleton while its first selected-record read is pending; keep loaded context
+  visible during refresh and never add an artificial loading delay.
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at

@@ -1,5 +1,24 @@
 import { expect, test } from "@playwright/test";
 
+test("disabled chart and discharge controls do not select an admission or open its drawer", async ({ page }) => {
+  await page.goto("/w/clair-demo/inpatient?modulePanel=closed");
+  const row = page.getByTestId("inpatient-row-adm-dubu-203");
+  await expect(row).not.toHaveAttribute("data-selected", "true");
+  for (const name of ["차트 (준비 중)", "퇴실 (준비 중)"]) {
+    const button = row.getByRole("button", { name, exact: true });
+    await expect(button).toBeDisabled();
+    await button.scrollIntoViewIfNeeded();
+    const bounds = (await button.boundingBox())!;
+    // Locator.click deliberately rejects disabled controls. Hit-test the real surface.
+    await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await expect(row).not.toHaveAttribute("data-selected", "true");
+    await expect(page.getByText("입원 상세", { exact: true })).toHaveCount(0);
+  }
+  await row.getByText("203호", { exact: true }).click();
+  await expect(row).toHaveAttribute("data-selected", "true");
+  await expect(page.getByText("입원 상세", { exact: true })).toBeVisible();
+});
+
 test("inpatient workspace renders ward table and opens admission detail drawer", async ({ page }) => {
   await page.goto("/w/clair-demo/inpatient?modulePanel=open&right=open");
 

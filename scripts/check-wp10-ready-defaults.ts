@@ -13,7 +13,10 @@ let atomicChecks = 0;
 for (const row of proposal.payload.records) {
   if (row.recordType !== "order" || !activeKeys.has(row.masterKey) || compositeKeys.has(row.masterKey)) continue;
   const preset = row.detail.executionPreset;
-  const { planOrderAuthority, manualQuantityReason, autoDispenseQuantityEnabled, ...defaults } = preset.defaultDetailInputs;
+  const defaults = { ...preset.defaultDetailInputs };
+  delete defaults.planOrderAuthority;
+  delete defaults.manualQuantityReason;
+  delete defaults.autoDispenseQuantityEnabled;
   for (const workspaceId of resources.workspaceAllowlist) {
     const inputs = { ...defaults };
     // A test-only encounter authority stands in for the resolver's real input.

@@ -114,3 +114,13 @@ Screens
 - Hidden module panels retain local filter state within a tab but pause their operating-date timer and fulfillment queue subscription. The last queue consumer cancels its pending read and releases its cache. Queue reads are shared only within the same workspace, date, queue type, and optional selected item.
 - A selected lab result outside the current date uses the permission-checked exact `workItemId` lookup. It does not trigger an unbounded historical queue read.
 - Browser session tab state is the immediate restore source. Server saves are debounced and serialized per workspace; server restore cannot overwrite newer local navigation. Tab metadata persistence does not replace clinical draft persistence.
+
+## Workspace Tab Order
+
+- Existing dnd-kit owns mouse drag sorting in the desktop workspace tab strip. Tab labels/icons initiate dragging after a movement threshold; close and new-tab controls do not.
+- Reordering changes only the ordered tab array. It does not activate a tab, navigate, flush clinical editors, rebuild tab objects, or reset active content. Existing selection, close fallback, history and persistence behavior remains.
+- The store accepts only a complete permutation of current IDs in the current workspace. Same order, duplicate, missing, foreign or stale IDs cause no mutation or save.
+- Valid drops use the guarded store action and existing session persistence. Escape, pointer cancellation, window blur and drops outside the strip cancel the pending move.
+- The user-approved scope excludes a tab organizer, button-based reorder and undo. Keyboard focus navigation and tab selection remain; this version does not provide keyboard or touch reordering. Workspace/session remount clears transient drag state.
+- Tabs share available width and shrink equally from the existing 148px preferred/maximum width to a component-local 80px minimum. Titles truncate; icons and close buttons retain their sizes. Horizontal overflow starts only when the minimum widths cannot fit and belongs to the tab strip. The new-tab control stays outside the tablist and does not scroll. Newly active or restored tabs scroll into view without taking focus; reordering alone does not move that viewport. Existing small-screen hiding remains.
+- See [WORKSPACE-TABS-PR-003](../../work/app-shell/WORKSPACE-TABS-PR-003-drag-reorder.md) for local verification and delivery status.

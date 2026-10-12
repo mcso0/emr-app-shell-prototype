@@ -1,0 +1,21 @@
+{
+  "method": "Actual original MarkdownRenderer export plus original private helpers/Next Link/Mermaid server fallback; Node esbuild bundle, ReactDOM.renderToStaticMarkup",
+  "executedAfterReboot": true,
+  "nodeVersion": "v23.11.0",
+  "sourcePath": "docs/product/synthetic-reference.md",
+  "syntheticMarkdown": "# 합성 문서\n\n본문 **합성 강조**와 `local-code`입니다.\n\n## 반복 제목\n\n첫 번째 절입니다.\n\n## 반복 제목\n\n두 번째 절입니다.\n\n- 합성 항목 A\n- 합성 항목 B\n\n| 항목 | 상태 |\n| --- | --- |\n| 합성 표 | 준비 |\n\n[합성 내부 경로](/docs?doc=synthetic-reference)\n\n```text\nsynthetic code <safe>\n```\n\n```mermaid\ngraph TD\n A[합성 입력] --> B[합성 출력]\n```",
+  "sourceHashes": {
+    "src/lib/prd-viewer/markdown-renderer.tsx": "cdd72fbe06234392f94b20aede83b80621a920a77a9e37981d8c71271a42eaf6",
+    "src/lib/prd-viewer/doc-reader.ts": "95faa929c0624b14c189b6d32b496d739cc0ea57421933128d84b64aa6aebf52",
+    "src/lib/prd-viewer/registry.ts": "04089af301d751abf1588254fc32a41c8d935f8a21f5afa6f9601455f45bcec4",
+    "src/lib/prd-viewer/mermaid-diagram.tsx": "83c82197c08c153787c5bfb2bb371e6cef5d1623a53c7122095b8fdae577e334"
+  },
+  "htmlBytes": 2384,
+  "htmlSha256": "20d8bad8ade5784a3a7daea97d38fcb54f919e2a6f6bdf07a442b8922b300de4",
+  "currentEmbeddedHtmlSha256": "20d8bad8ade5784a3a7daea97d38fcb54f919e2a6f6bdf07a442b8922b300de4",
+  "exactCurrentFixtureMatch": true,
+  "historicalHtmlSha256": "20d8bad8ade5784a3a7daea97d38fcb54f919e2a6f6bdf07a442b8922b300de4",
+  "privateDocumentReads": 0,
+  "liveMermaidClientEffectExecuted": false,
+  "reactHydration": false
+}

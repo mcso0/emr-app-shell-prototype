@@ -350,6 +350,7 @@ export function OrderWorkTable({
         size: 360,
         minSize: 220,
         meta: {
+          label: "오더명",
           headerInteraction: "sortable-filterable",
           resize: "data-column",
           textMode: "two-line-if-long",
@@ -378,7 +379,7 @@ export function OrderWorkTable({
         header: "상태",
         size: 80,
         minSize: 76,
-        meta: { headerInteraction: "filterable", resize: "data-column" },
+        meta: { label: "상태", headerInteraction: "filterable", resize: "data-column" },
         cell: ({ row }) => (
           <EmrStatusBadge
             label={row.original.status}
@@ -392,6 +393,7 @@ export function OrderWorkTable({
         size: 104,
         minSize: 80,
         meta: {
+          label: "1회 용량",
           align: "right",
           headerInteraction: "sortable",
           resize: "data-column",
@@ -410,7 +412,7 @@ export function OrderWorkTable({
         header: "투여 빈도",
         size: 96,
         minSize: 80,
-        meta: { headerInteraction: "static", resize: "data-column" },
+        meta: { label: "투여 빈도", headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="frequency"
@@ -425,6 +427,7 @@ export function OrderWorkTable({
         size: 80,
         minSize: 64,
         meta: {
+          label: "일수",
           align: "right",
           headerInteraction: "sortable",
           resize: "data-column",
@@ -443,7 +446,7 @@ export function OrderWorkTable({
         header: "복용",
         size: 72,
         minSize: 64,
-        meta: { headerInteraction: "static", resize: "data-column" },
+        meta: { label: "복용", headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="doseTiming"
@@ -458,6 +461,7 @@ export function OrderWorkTable({
         size: 96,
         minSize: 72,
         meta: {
+          label: "회분",
           align: "right",
           headerInteraction: "sortable",
           resize: "data-column",
@@ -477,6 +481,7 @@ export function OrderWorkTable({
         size: 128,
         minSize: 88,
         meta: {
+          label: "청구 수량",
           align: "right",
           headerInteraction: "sortable",
           resize: "data-column",
@@ -495,7 +500,7 @@ export function OrderWorkTable({
         header: "단위",
         size: 56,
         minSize: 52,
-        meta: { headerInteraction: "static", resize: "data-column" },
+        meta: { label: "단위", headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="unit"
@@ -510,6 +515,7 @@ export function OrderWorkTable({
         size: 100,
         minSize: 72,
         meta: {
+          label: "처방 총량",
           align: "right",
           headerInteraction: "sortable",
           resize: "data-column",
@@ -528,7 +534,7 @@ export function OrderWorkTable({
         header: "제형",
         size: 56,
         minSize: 52,
-        meta: { headerInteraction: "static", resize: "data-column" },
+        meta: { label: "제형", headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="dosageForm"
@@ -542,7 +548,7 @@ export function OrderWorkTable({
         header: "보관",
         size: 100,
         minSize: 76,
-        meta: { headerInteraction: "static", resize: "data-column" },
+        meta: { label: "보관", headerInteraction: "static", resize: "data-column" },
         cell: ({ row }) => (
           <OrderValue
             field="storage"
@@ -557,6 +563,7 @@ export function OrderWorkTable({
         size: 100,
         minSize: 84,
         meta: {
+          label: "복약지도",
           headerInteraction: "static",
           resize: "data-column",
           textMode: "two-line-if-long",
@@ -575,7 +582,7 @@ export function OrderWorkTable({
         size: 72,
         minSize: 64,
         enableResizing: false,
-        meta: { align: "center", headerInteraction: "static", resize: "none" },
+        meta: { label: "담당", align: "center", headerInteraction: "static", resize: "none" },
         cell: ({ row }) => (
           <AssigneeCell
             order={row.original}
@@ -592,7 +599,7 @@ export function OrderWorkTable({
         size: 100,
         minSize: 88,
         enableResizing: false,
-        meta: { headerInteraction: "static", resize: "none" },
+        meta: { label: "작업여부", headerInteraction: "static", resize: "none" },
         cell: ({ row }) => (
           <WorkStatusButton
             disabled={completionDisabled}

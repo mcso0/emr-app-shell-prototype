@@ -1,3 +1,4 @@
+import { expect, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import {
@@ -35,7 +36,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const Image: Story = {};
+export const Image: Story = { play: async ({ canvasElement }) => { const avatar = within(canvasElement).getByTestId("animal-patient-avatar"); await waitFor(() => { const img = avatar.querySelector("img"); expect(img).not.toBeNull(); expect(img?.naturalWidth).toBeGreaterThan(0); }); } };
 
 export const Fallback: Story = {
   args: { src: null },
@@ -50,6 +51,7 @@ export const Error: Story = {
 };
 
 export const SizeScale: Story = {
+  parameters: { controls: { disable: true }, docs: { description: { story: "Fixed fallback size comparison; all inherited arguments are intentionally disabled. Actual chart caller size/override is in ChartIdentity." } } },
   render: () => (
     <div className="flex items-end gap-4">
       <AnimalPatientAvatar alt="테이블 동물 환자 프로필" size="table" />
@@ -58,4 +60,10 @@ export const SizeScale: Story = {
       <AnimalPatientAvatar alt="대형 동물 환자 프로필" size="lg" />
     </div>
   ),
+};
+
+export const ChartIdentity: Story = {
+  parameters: { controls: { disable: true }, docs: { description: { story: "Actual private PatientIdentity avatar props and wrapper from chart/preconsultation-context-panel. The surrounding chart data header is covered by feature stories; this bounded composition preserves md, responsive 72px override and missing-image fallback." } } },
+  render: () => <div className="flex min-w-0 items-center gap-4 sm:gap-6"><AnimalPatientAvatar alt="합성 환자 동물 환자 프로필" size="md" className="sm:!size-[72px] sm:!border-[var(--emr-border-strong)] sm:[&_svg]:!size-9" /><span className="text-lg font-semibold">합성 환자</span></div>,
+  play: async ({ canvasElement }) => { await expect(within(canvasElement).getByRole("img", { name: "합성 환자 동물 환자 프로필 · 이미지 미등록" })).toBeVisible(); },
 };

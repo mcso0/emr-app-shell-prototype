@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import type { ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import {
   CdsActionsFilterIcon,
@@ -32,6 +33,25 @@ type EmrEmptyStateStoryArgs = {
   title: string;
 };
 
+
+const EmptyActionContext = createContext<((label: string) => void) | null>(null);
+function EmptyActionScope({ children }: { children: ReactNode }) {
+  const [receipt, setReceipt] = useState({ label: "", count: 0 });
+  return <EmptyActionContext.Provider value={label => setReceipt(value => ({ label, count: value.count + 1 }))}>
+    {children}<output aria-label="빈 상태 작업 결과" className="mt-2 block text-sm">{receipt.count ? `실행 ${receipt.count}: ${receipt.label}` : ""}</output>
+  </EmptyActionContext.Provider>;
+}
+async function verifyEmptyActions(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  let count = 0;
+  for (const button of canvas.getAllByRole("button")) {
+    const label = button.textContent!.trim();
+    button.focus(); await userEvent.keyboard("{Enter}");
+    count += 1;
+    await waitFor(() => expect(canvas.getByLabelText("빈 상태 작업 결과")).toHaveTextContent(`실행 ${count}: ${label}`));
+  }
+}
+
 function EmptyStatePrimaryButton({
   children,
   size,
@@ -40,10 +60,12 @@ function EmptyStatePrimaryButton({
   size?: EmrEmptyStateSize;
 }) {
   const buttonSize = size ?? "sm";
+  const record = useContext(EmptyActionContext);
 
   return (
     <Button
       type="button"
+      onClick={event => { if (!record) throw new Error("Missing empty-state local action scope"); record(event.currentTarget.textContent?.trim() ?? "작업"); }}
       size={buttonSize === "xl" ? "default" : buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
       className="bg-[var(--clair-color-atomic-neutral-900)] text-[var(--clair-color-atomic-common-100)] shadow-[var(--clair-shadow-xs)] hover:bg-[var(--clair-color-atomic-neutral-900)] hover:text-[var(--clair-color-atomic-common-100)]"
@@ -61,10 +83,12 @@ function EmptyStateSecondaryButton({
   size?: EmrEmptyStateSize;
 }) {
   const buttonSize = size ?? "sm";
+  const record = useContext(EmptyActionContext);
 
   return (
     <Button
       type="button"
+      onClick={event => { if (!record) throw new Error("Missing empty-state local action scope"); record(event.currentTarget.textContent?.trim() ?? "작업"); }}
       variant="outline"
       size={buttonSize === "xl" ? "default" : buttonSize === "lg" ? "sm" : "xs"}
       roundness="round"
@@ -131,8 +155,10 @@ const meta = {
   title: "Design System/EMR/EmrEmptyState",
   component: EmptyStateStoryExample,
   tags: ["autodocs"],
+  decorators: [(Story) => <EmptyActionScope><Story /></EmptyActionScope>],
   parameters: {
     docs: {
+      story: { inline: false, height: "420px" },
       description: {
         component:
           "Use EmrEmptyState for shared EMR empty states after the caller has decided the state kind, surface, and CTA owner. 사용할 때: queue, content, drawer, table, widget empty surfaces share the same layout contract, or a whole-content read failure prevents the normal body from rendering. 쓰지 말아야 할 때: loading, partial degraded read/write, save failure, stale-data warning, permission blockers needing recovery alert, or feature logic that belongs in the screen.",
@@ -406,7 +432,9 @@ export const FigmaSizeContract: Story = {
     }
   },
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "1100px" },
       description: {
         story:
           "Figma `xl`/`lg`/`md`/`sm` visual contract. `xl` is reserved for full workspace empty states, and `md` is the implementation tier for the requested `mg` usage.",
@@ -504,9 +532,12 @@ export const FigmaActionContract: Story = {
     if (!twoActionButtons[1] || getComputedStyle(twoActionButtons[1]).backgroundColor !== primaryColor) {
       throw new Error("Expected the dark primary action to render second.");
     }
+    await verifyEmptyActions(canvasElement);
   },
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "1000px" },
       description: {
         story:
           "Figma `Default`, `1 action`, and `2 action` variants. One action is outline; two actions are outline then primary.",
@@ -516,6 +547,7 @@ export const FigmaActionContract: Story = {
 };
 
 export const OneAction: Story = {
+  play: async ({ canvasElement }) => verifyEmptyActions(canvasElement),
   args: {
     description: "검색어를 지우면 전체 대기열이 다시 보입니다.",
     kind: "no-search-results",
@@ -543,6 +575,7 @@ export const OneAction: Story = {
 };
 
 export const TwoActions: Story = {
+  play: async ({ canvasElement }) => verifyEmptyActions(canvasElement),
   args: {
     description: "새 요청을 만들거나 날짜를 바꿔 확인합니다.",
     kind: "no-scope-result",
@@ -570,6 +603,7 @@ export const TwoActions: Story = {
 };
 
 export const ContentPrimaryDecision: Story = {
+  play: async ({ canvasElement }) => verifyEmptyActions(canvasElement),
   parameters: {
     docs: {
       description: {
@@ -599,7 +633,9 @@ export const QueueSupporting: Story = {
     </div>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "420px" },
       description: {
         story:
           "사용할 때: 좁은 queue surface에서 현재 목록이 비었음을 짧게 알려줄 때. 쓰지 말아야 할 때: 접수 생성이나 workflow 이동 CTA를 queue가 소유해야 한다고 해석될 때.",
@@ -609,6 +645,7 @@ export const QueueSupporting: Story = {
 };
 
 export const QueueSearchRecovery: Story = {
+  play: async ({ canvasElement }) => verifyEmptyActions(canvasElement),
   args: {
     description: "검색어를 지우면 전체 대기열이 다시 보입니다.",
     kind: "no-search-results",
@@ -650,6 +687,7 @@ export const DrawerSupporting: Story = {
 };
 
 export const TableFilterRecovery: Story = {
+  play: async ({ canvasElement }) => verifyEmptyActions(canvasElement),
   args: {
     description: "조건을 초기화하면 숨겨진 행이 다시 보입니다.",
     kind: "no-filter-results",
@@ -772,9 +810,12 @@ export const ReadErrorRecovery: Story = {
     if (buttons[1]?.textContent !== "다시 시도") {
       throw new Error("Expected the primary retry action second.");
     }
+    await verifyEmptyActions(canvasElement);
   },
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "460px" },
       description: {
         story:
           "사용할 때: 접수 호출 전 본문 전체를 구성하는 조회가 실패해 정상 콘텐츠를 표시할 수 없고, 본문이 재시도와 안전한 이탈 액션을 소유할 때. 부분 실패, 저장 실패, stale data 경고에는 EmrInlineAlert를 유지합니다.",
@@ -871,6 +912,7 @@ const stateExamples: Array<
 ];
 
 export const StateKindSet: Story = {
+  play: async ({ canvasElement }) => verifyEmptyActions(canvasElement),
   render: () => (
     <div className="grid max-w-5xl gap-3 md:grid-cols-2">
       {stateExamples.map((example) => (
@@ -892,7 +934,9 @@ export const StateKindSet: Story = {
     </div>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "1120px" },
       description: {
         story:
           "사용할 때: 7개 kind의 icon, copy, action 차이를 한 번에 검토할 때. 쓰지 말아야 할 때: 한 화면에 이 모든 state를 동시에 노출하는 실제 workflow로 해석할 때.",

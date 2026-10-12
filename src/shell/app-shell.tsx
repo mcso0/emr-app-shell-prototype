@@ -158,6 +158,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     goForward,
     initialize,
     pushRoute,
+    reorderTabs,
     syncActiveRoute,
     tabs,
   } = useWorkspaceTabsStore();
@@ -627,6 +628,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
             onCloseTab={handleCloseTab}
             onForward={handleTabForward}
             onNewTab={handleNewTab}
+            onReorderTabs={(orderedTabIds) => reorderTabs(workspaceId, orderedTabIds)}
             onOpenNotifications={() => setNotificationDrawerOpen(true)}
             onRefresh={moduleRefreshAction?.onRefresh}
           />

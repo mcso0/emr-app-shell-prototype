@@ -43,14 +43,25 @@ function ViewerExample(args: ExampleArgs) {
 const meta = {
   title: "Features/Lab/Attachment Viewer",
   component: ViewerExample,
-  parameters: { layout: "fullscreen", docs: { description: { component: "Accepted dark viewer using synthetic local bytes. Header callbacks are mocked here; deletion confirmation and protected-route outcomes are covered at the actual result-sheet entry point." } } },
+  parameters: { layout: "fullscreen", docs: { story: { inline: false, height: "820px" }, description: { component: "검사결과에 첨부한 이미지, PDF, CSV, 텍스트의 읽기 전용 미리보기를 확인합니다. ViewerExample과 initialFile은 예제 설정입니다. 실제 LabAttachmentViewer는 item, items, url, scopeLabel과 이동, 닫기, 다운로드 등의 콜백을 받습니다. 이 예제는 로컬 합성 파일과 콜백을 사용합니다. 실제 파일 접근 권한과 삭제 확인은 결과지 기능에서 검증해 주세요." } } },
   args: { initialFile: "image", canDelete: true, onDownload: fn(), onDelete: fn(), onRevalidate: fn() },
   render: args => <ViewerExample key={`${args.initialFile}:${args.canDelete}`} {...args} />,
 } satisfies Meta<typeof ViewerExample>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+async function waitForPdfPage(element: HTMLElement, page: number) {
+  const dialog = within(element);
+  // Document's worker load and Page's canvas render finish separately.
+  await waitFor(() => {
+    expect(dialog.queryByText("PDF를 표시할 수 없습니다.", { exact: true })).not.toBeInTheDocument();
+    expect(dialog.getByLabelText("현재 PDF 페이지")).toHaveTextContent(`${page} / 2`);
+    expect(element.querySelector(`[data-page-number="${page}"] canvas`)).toBeVisible();
+  }, { timeout: 10000 });
+}
+
 export const Image: Story = {
+  parameters: { docs: { description: { story: "이미지 배율을 바꾸고 파일 사이를 이동한 뒤 배율이 유지되는지 확인합니다." } } },
   play: async () => {
     const body = within(document.body);
     const dialog = await body.findByRole("dialog", { name: "밝은 이미지.png" });
@@ -58,22 +69,25 @@ export const Image: Story = {
     await userEvent.click(within(dialog).getByRole("button", { name: "1:1" }));
     await waitFor(() => expect(within(dialog).getByLabelText("이미지 배율")).toHaveTextContent("100%"));
     await userEvent.click(within(dialog).getByRole("button", { name: "다음 파일" }));
-    await within(dialog).findByLabelText("현재 PDF 페이지");
+    await waitForPdfPage(dialog, 1);
     await userEvent.click(within(dialog).getByRole("button", { name: "이전 파일" }));
     await waitFor(() => expect(within(dialog).getByLabelText("이미지 배율")).toHaveTextContent("100%"));
   },
 };
 export const Pdf: Story = {
+  parameters: { docs: { description: { story: "합성 두 페이지 PDF가 준비되면 다음 페이지로 이동하는지 확인합니다." } } },
   args: { initialFile: "pdf" },
   play: async () => {
     const body = within(document.body);
-    const dialog = within(await body.findByRole("dialog", { name: "두 페이지 문서.pdf" }));
-    await waitFor(() => expect(dialog.getByLabelText("현재 PDF 페이지")).toHaveTextContent("1 / 2"));
+    const element = await body.findByRole("dialog", { name: "두 페이지 문서.pdf" });
+    const dialog = within(element);
+    await waitForPdfPage(element, 1);
     await userEvent.click(dialog.getByRole("button", { name: "다음" }));
-    await expect(dialog.getByLabelText("현재 PDF 페이지")).toHaveTextContent("2 / 2");
+    await waitForPdfPage(element, 2);
   },
 };
 export const Csv: Story = {
+  parameters: { docs: { description: { story: "CSV의 선행 0, 수식처럼 보이는 값, 태그 문자열을 실행하지 않고 원문으로 표시하는지 확인합니다." } } },
   args: { initialFile: "csv" },
   play: async () => {
     const body = within(document.body);
@@ -84,6 +98,7 @@ export const Csv: Story = {
   },
 };
 export const Text: Story = {
+  parameters: { docs: { description: { story: "텍스트 원문을 표시하고 찾기 결과 수를 확인합니다." } } },
   args: { initialFile: "txt" },
   play: async () => {
     const body = within(document.body);
@@ -94,6 +109,7 @@ export const Text: Story = {
   },
 };
 export const ReadOnly: Story = {
+  parameters: { docs: { description: { story: "삭제 권한이 없는 예제에서 삭제 버튼을 숨기는지 확인합니다." } } },
   args: { canDelete: false },
   play: async () => {
     const body = within(document.body);
@@ -102,10 +118,11 @@ export const ReadOnly: Story = {
   },
 };
 export const CorruptPdf: Story = {
+  parameters: { docs: { description: { story: "손상된 합성 PDF를 읽을 수 없을 때 오류 안내와 다시 읽기 버튼을 표시하는지 확인합니다." } } },
   args: { initialFile: "corrupt" },
   play: async () => {
     const body = within(document.body);
-    await expect(await body.findByText("PDF를 표시할 수 없습니다.", { exact: true })).toBeVisible();
+    await expect(await body.findByText("PDF를 표시할 수 없습니다.", { exact: true }, { timeout: 5000 })).toBeVisible();
     await expect(await body.findByRole("button", { name: "다시 읽기" })).toBeVisible();
   },
 };

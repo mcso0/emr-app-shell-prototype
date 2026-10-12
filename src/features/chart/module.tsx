@@ -1948,7 +1948,7 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   const [vitalDialogEncounterId, setVitalDialogEncounterId] = useState<
     string | null
   >(null);
-  const { queueScopeMatches, records: liveQueueRecords } =
+  const { queueScopeMatches, records: liveQueueRecords, status: liveQueueStatus } =
     useScopedChartLiveQueue(workspaceId);
   const allowMockFallback =
     isLegacySalesDemoWorkspace(workspaceId) &&
@@ -2014,7 +2014,28 @@ export function ChartHeader({ workspaceId }: ShellComponentProps) {
   });
 
   if (!bundle) {
-    return <EmrMainContentHeader aria-hidden="true" heightMode="fixed" />;
+    const initialLoading = liveQueueStatus === "idle" || liveQueueStatus === "loading";
+    return (
+      <EmrMainContentHeader heightMode="fixed" aria-hidden={!initialLoading || undefined}>
+        {initialLoading ? (
+          <ChartPatientContextBar
+            loading
+            patientName=""
+            patientMeta=""
+            guardianName=""
+            guardianPhone=""
+            doctorName=""
+            vitalItems={latestVitals.items}
+            memoItems={[
+              { label: "방문목적", summary: "" },
+              { label: "보호자메모", summary: "" },
+              { label: "환자메모", summary: "" },
+              { label: "수납메모", summary: "", disabled: true },
+            ]}
+          />
+        ) : null}
+      </EmrMainContentHeader>
+    );
   }
 
   if (chartStartLocked) return null;

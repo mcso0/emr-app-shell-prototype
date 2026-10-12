@@ -18,7 +18,9 @@ const retiredKeys = retired.map(row => row.master_key).sort();
 const selectableKeys = payload.records.filter(row => row.recordType === "order").map(row => row.masterKey).sort();
 if (current.size !== 575 || retiredKeys.length !== 51 || selectableKeys.length !== 524) throw Error("wp10_source_identity_mismatch");
 for (const row of retired) {
-  const { revision, labOrderProfiles, ...record } = row.snapshot;
+  const record = { ...row.snapshot };
+  delete record.revision;
+  delete record.labOrderProfiles;
   const preset = retiredPresets.get(row.master_key);
   if (!preset) throw Error("wp10_retired_preset_missing");
   record.detail.executionPreset = {

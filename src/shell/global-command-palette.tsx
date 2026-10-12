@@ -207,6 +207,7 @@ function buildCommandSections(
       vet: action.moduleId === "treatment" ? [...action.keywords, action.title, action.subtitle] : [],
     },
   }));
+  // The API already applies query, role filters, and workspace permissions.
   const resultItems = searchResults.map(buildSearchResultItem);
   const patientGuardianItems = resultItems.filter(
     (item) => item.kind === "patient" || item.kind === "guardian",
@@ -220,17 +221,17 @@ function buildCommandSections(
     {
       id: "people",
       title: "환자/보호자",
-      items: limitItems(patientGuardianItems, normalizedQuery ? 6 : 4),
+      items: patientGuardianItems.slice(0, normalizedQuery ? MAX_ITEMS_PER_SECTION : 4),
     },
     {
       id: "staff",
       title: "병원 구성원",
-      items: limitItems(staffItems, 6),
+      items: staffItems.slice(0, MAX_ITEMS_PER_SECTION),
     },
     {
       id: "today",
       title: normalizedQuery ? "예약/접수" : "오늘 업무",
-      items: limitItems(receptionItems, 6),
+      items: receptionItems.slice(0, MAX_ITEMS_PER_SECTION),
     },
   ];
 
@@ -385,22 +386,15 @@ export function GlobalCommandPalette({
       setSearchState({ status: "idle", results: [] });
       return;
     }
-    setSearchState((current) => ({
-      status: "loading",
-      results: current.results,
-      sourceState: current.sourceState,
-    }));
+    setSearchState({ status: "loading", results: [] });
   };
 
   const handleFilterChange = (nextFilter: CommandFilter) => {
+    if (nextFilter === activeFilter) return;
     setActiveFilter(nextFilter);
     setActiveIndex(0);
     if (queryCanSearch) {
-      setSearchState((current) => ({
-        status: "loading",
-        results: current.results,
-        sourceState: current.sourceState,
-      }));
+      setSearchState({ status: "loading", results: [] });
     }
   };
 

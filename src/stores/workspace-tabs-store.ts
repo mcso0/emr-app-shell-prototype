@@ -42,6 +42,7 @@ type WorkspaceTabsStore = {
   initialize: (input: { workspaceId: string; route: string; moduleId: string }) => Promise<void>;
   pushRoute: (route: string, moduleId: string) => void;
   activateTab: (tabId: string) => string | null;
+  reorderTabs: (workspaceId: string, orderedTabIds: string[]) => void;
   closeTab: (tabId: string) => string | null;
   createTab: (input: { workspaceId: string; route: string; moduleId: string }) => string;
   goBack: () => string | null;
@@ -394,6 +395,24 @@ export const useWorkspaceTabsStore = create<WorkspaceTabsStore>()((set, get) => 
     set({ activeTabId: tabId });
     persist(get().workspaceId, get().tabs, tabId);
     return tab.history[tab.historyIndex] ?? null;
+  },
+
+  reorderTabs: (workspaceId, orderedTabIds) => {
+    set((state) => {
+      if (!state.hydrated || !state.workspaceId || state.workspaceId !== workspaceId || !state.activeTabId) return state;
+      if (orderedTabIds.length !== state.tabs.length || new Set(orderedTabIds).size !== state.tabs.length) return state;
+
+      const tabsById = new Map(state.tabs.map((tab) => [tab.id, tab]));
+      if (!tabsById.has(state.activeTabId)) return state;
+      for (const tabId of orderedTabIds) {
+        if (!tabsById.has(tabId)) return state;
+      }
+      if (state.tabs.every((tab, index) => tab.id === orderedTabIds[index])) return state;
+
+      const tabs = orderedTabIds.map((tabId) => tabsById.get(tabId)!);
+      persist(workspaceId, tabs, state.activeTabId);
+      return { tabs };
+    });
   },
 
   closeTab: (tabId) => {

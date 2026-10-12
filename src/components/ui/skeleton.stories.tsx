@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent } from "storybook/test";
+import { CustomerHeaderCallerExample } from "./caller-parity.stories.fixture";
 
 import { Skeleton } from "./skeleton";
 
@@ -41,7 +43,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use Skeleton for local loading placeholders that preserve layout while content is being fetched or prepared. 사용할 때: the user should see stable shape before real content appears. 쓰지 말아야 할 때: empty states, errors, permission blockers, or long-running jobs that need explanatory copy.",
+          "Controls의 lines·showAvatar·width는 SkeletonExample 조합 설정이며 Skeleton props가 아닙니다. Skeleton은 표시를, 호출자는 로딩 상태·크기·접근성 설명을 소유합니다. Use Skeleton for local loading placeholders that preserve layout while content is being fetched or prepared. 사용할 때: the user should see stable shape before real content appears. 쓰지 말아야 할 때: empty states, errors, permission blockers, or long-running jobs that need explanatory copy.",
       },
     },
   },
@@ -73,11 +75,20 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  render: () => <CustomerHeaderCallerExample loading />,
+  play: async ({ canvas }) => {
+    await expect(canvas.getByTestId("customer-page-header-count-skeleton")).toHaveAccessibleName("환자 수 불러오는 중");
+    await userEvent.type(canvas.getByRole("textbox", { name: "고객관리 검색" }), "합성 검색");
+    await expect(canvas.getByLabelText("합성 고객 검색어")).toHaveTextContent("합성 검색");
+    await userEvent.click(canvas.getByRole("button", { name: "고객관리 검색어 초기화" }));
+    await expect(canvas.getByLabelText("합성 고객 검색어")).toHaveTextContent("검색어 없음");
+  },
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
-          "사용할 때: 데이터가 곧 들어올 화면의 구조를 유지할 때. 쓰지 말아야 할 때: 실제로 항목이 없는 empty state를 loading처럼 보이게 할 때.",
+          "실제 고객 목록 Header의 카운트 로딩입니다. Badge 안의 Skeleton과 접근 가능한 이름, 검색/초기화 입력을 원본이 렌더합니다. 실제 데이터 조회는 하지 않습니다.",
       },
     },
   },
@@ -117,6 +128,7 @@ export const RowList: Story = {
     </div>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
