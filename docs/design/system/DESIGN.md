@@ -193,6 +193,9 @@ CLAiR screens favor operational density:
   contact, and billing summaries, but follows the same context-bar surface,
   spacing, icon treatment, typography, profile interaction, and overflow controls.
   Visual alignment must not change billing data or calculations.
+- pending patient-context values use shared skeletons rather than visible loading
+  sentences. Keep resolved values, explicit failure/denial/missing states,
+  accessible busy descriptions, and reduced-motion behavior.
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at
