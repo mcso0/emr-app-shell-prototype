@@ -3,7 +3,9 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import type { OrderQueueItem, OrderQueueStatusDefinition } from "@/types/emr";
+import { formatKoreanOperatingDateLabel } from "@/lib/emr-domain/demo-date";
 
+import { ActualQueueCaller, prepareInstructionCaller, instructionCallerParameters } from "./instruction-caller.stories.fixture";
 import { EmrOrderQueueSidePanel } from "./order-queue-side-panel";
 
 type EmrOrderQueueSidePanelStoryArgs = {
@@ -68,15 +70,22 @@ function EmrOrderQueueSidePanelExample({
   title,
   typeFilterVisible,
 }: EmrOrderQueueSidePanelStoryArgs) {
+  const [selectedId, setSelectedId] = useState("sample-1");
+  const [date, setDate] = useState("2026-04-29");
+  const [open, setOpen] = useState(true);
   return (
     <div className="h-[520px] w-[288px]">
-      <EmrOrderQueueSidePanel
+      {open ? <EmrOrderQueueSidePanel
         items={queueItems}
-        selectedItemId="sample-1"
+        onSelectItem={setSelectedId}
+        selectedDate={date} todayDate="2026-04-29" onDateChange={setDate}
+        onCollapse={() => setOpen(false)}
+        selectedItemId={selectedId}
         statuses={queueStatuses}
         title={title}
         typeFilterVisible={typeFilterVisible}
-      />
+      /> : <button type="button" onClick={() => setOpen(true)}>대기열 다시 열기</button>}
+      <output aria-label="선택 업무">{selectedId}</output>
     </div>
   );
 }
@@ -87,6 +96,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "680px" },
       description: {
         component:
           "Use EmrOrderQueueSidePanel for synthetic EMR order queues with date navigation, optional segmented type filters, sort/filter/display menus, status groups, and task cards. 사용할 때: dispensing/treatment-like modules need the shared queue shell. 쓰지 말아야 할 때: feature workflows without stable fixtures, real patient/guardian data, or server-side queue mutation behavior.",
@@ -115,21 +125,40 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "사용할 때: EMR order queue shell의 filter/group/card 조합을 검토할 때. 쓰지 말아야 할 때: 실제 오더 mutation, 담당 배정, provider 연동 동작을 검증할 때.",
-      },
-    },
+  beforeEach: prepareInstructionCaller,
+  parameters: { nextjs: { ...instructionCallerParameters.nextjs, navigation: { ...instructionCallerParameters.nextjs.navigation, query: { date: "2026-04-29" } } }, controls: { disable: true }, docs: { description: { story: "Actual exported DispensingSidePanel. Source owns date selection, patient grouping, filters, task mapping and local layout selection. Legacy demo rows are synthetic; all API responses stay in the restored caller fixture." } } },
+  render: () => <ActualQueueCaller />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement), card = await canvas.findByTestId("order-queue-item-dispensing-queue-0");
+    await waitFor(() => expect(card).toBeVisible()); card.focus(); await userEvent.keyboard("{Enter}");
+    await expect(card).toHaveAttribute("aria-pressed", "true");
+    await expect(canvas.getByLabelText("선택 업무")).toHaveTextContent("dispensing-queue-0");
+    await userEvent.click(canvas.getByRole("button", { name: "대기열 검색 열기" }));
+    const search = canvas.getByRole("searchbox", { name: "조제/처치 업무 검색" });
+    await userEvent.type(search, "존재하지않는합성업무");
+    await waitFor(() => expect(canvas.queryByTestId("order-queue-item-dispensing-queue-0")).not.toBeInTheDocument());
+    await userEvent.clear(search); await waitFor(() => expect(canvas.getByTestId("order-queue-item-dispensing-queue-0")).toBeVisible());
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: /날짜 선택$/ }));
+    const nextDay = await body.findByRole("button", { name: `${formatKoreanOperatingDateLabel("2026-04-30")} 선택` });
+    await waitFor(() => expect(nextDay).toBeVisible());
+    await waitFor(() => expect(nextDay.getBoundingClientRect().width).toBe(28));
+    nextDay.focus(); await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(canvas.getByRole("button", { name: /날짜 선택$/ })).toHaveTextContent("26.04.30"));
+    await expect(canvas.getByLabelText("선택 업무")).toHaveTextContent("");
+    await userEvent.click(canvas.getByRole("button", { name: /날짜 선택$/ }));
+    await waitFor(() => expect(body.getByRole("button", { name: `${formatKoreanOperatingDateLabel("2026-04-30")} 선택됨` })).toHaveAttribute("aria-pressed", "true"));
+    await userEvent.keyboard("{Escape}");
   },
 };
 
 function ReadFailureExample({ denied = false }: { denied?: boolean }) {
   const [failed, setFailed] = useState(true);
-  return <div className="h-[520px] w-[288px]"><EmrOrderQueueSidePanel title="합성 대기열" items={queueItems} statuses={queueStatuses} readStatus={failed ? denied ? "permission_denied" : "error" : undefined} onRetry={() => setFailed(false)} /></div>;
+  const [selected, setSelected] = useState("sample-1");
+  return <div className="h-[520px] w-[288px]"><EmrOrderQueueSidePanel title="합성 대기열" items={queueItems} statuses={queueStatuses} selectedItemId={selected} onSelectItem={setSelected} readStatus={failed ? denied ? "permission_denied" : "error" : undefined} onRetry={() => setFailed(false)} /></div>;
 }
 export const ReadFailureRetry: Story = {
+  parameters: { controls: { disable: true }, docs: { description: { story: "Explicit read-state API branch with synthetic rows and local retry/selection. Actual default caller is in Default." } } },
   render: () => <ReadFailureExample />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -140,6 +169,7 @@ export const ReadFailureRetry: Story = {
   },
 };
 export const PermissionDenied: Story = {
+  parameters: { controls: { disable: true }, docs: { description: { story: "Explicit read-state API branch with synthetic rows and local retry/selection. Actual default caller is in Default." } } },
   render: () => <ReadFailureExample denied />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

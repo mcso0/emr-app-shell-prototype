@@ -1,6 +1,6 @@
 ---
 status: "active"
-updated: "2026-10-10"
+updated: "2026-10-11"
 source_docs:
   - "docs/design/system/DESIGN.md"
   - "docs/design/system/component-ownership-rules.md"
@@ -88,15 +88,16 @@ Use browser verification when a story should appear in the local Storybook sideb
 
 Default to rendering-only stories unless the story documents meaningful behavior such as text entry, filtering, disclosure, keyboard interaction, or disabled-state behavior.
 
-When a `play` function is useful, use DOM APIs directly for now:
+When a `play` function documents behavior:
 
-- query inside `canvasElement`
-- use native setters such as `HTMLInputElement.prototype.value` when changing controlled inputs
-- dispatch native `input`, `change`, `click`, or keyboard events with `bubbles: true`
-- wait for the next microtask or frame with `window.setTimeout` or `requestAnimationFrame` only when the component needs it
-- throw a plain `Error` with a clear message when the expected UI state is missing
+- Prefer role/label queries and `storybook/test` `userEvent` for realistic text entry, pointer and keyboard input.
+- Existing scoped DOM plays may remain when they verify an observable outcome. A native setter followed only by reading the same value does not prove that an input accepts user interaction.
+- Wait for the required visible state with a bounded condition; do not use a fixed zero-delay sleep as proof that a portal has opened.
+- Query portals through their trigger relationship where available. Record missing runtime accessibility relationships separately; do not invent them in a story.
+- Preserve and restore exact fetch, clock, clipboard and store state. Dismiss only toasts created by that example.
+- Keep source behavior and intended product improvements separate. A story that documents a current limitation must state it explicitly and retain the observed outcome and callback assertions.
 
-Do not import `storybook/test` helpers in new `play` functions until a dedicated follow-up verifies that the current Storybook MCP runner and addon-vitest setup can initialize those helpers consistently. The local Storybook 10.4.4 / addon-vitest 10.4.4 runner previously hit a `storybook/test` helper initialization issue under MCP `run-story-tests`; DOM API play functions have passed focused MCP validation.
+The 2026-10-11 alignment candidate verified `storybook/test` initialization, real Input/Textarea typing, Home interactions and the complete 489-story MCP run with installed Storybook 10.4.6/addon-vitest 10.4.6. This supersedes the earlier temporary blanket restriction on test helpers. It does not require bulk conversion of working native DOM plays.
 
 For MCP story-test calls, pass focused story IDs through the documented `stories` array shape:
 
@@ -133,3 +134,13 @@ Agents should query Storybook documentation before using design-system component
 When dogfooding the MCP workflow, keep the output as a small recipe story that names which documented primitives were composed and explicitly states that it is not a production workflow surface.
 
 If the MCP `run-story-tests` tool reports a missing Playwright browser, install the matching local Playwright browser cache before treating the test tool as verified.
+
+## Source-faithful MCP examples
+
+`.storybook/catalog-source-manifests.preset.ts` resolves the exact `meta.component` binding for local scenario components and known failed upstream extractions. A successful upstream title match can still point to a different imported component. Do not use that match as proof of a local scenario's Props.
+
+MCP examples contain the source imports, types, fixtures, args, render functions and cleanup hooks. Each snippet exports exactly one indexed story. They are project-only initial-state CSF examples: the configured preview mocks, CSS and Next.js shims are required. The examples omit `play`; they do not reproduce post-interaction states or provide standalone production components.
+
+Run `scripts/check-catalog-mcp-docs.mjs` against the served components manifest and index. It compiles every assembled example, compares source tokens and independently checks local scenario Props plus the original recovery regressions. A baseline manifest verifies old story IDs remain present. Preserve unknown extraction errors; do not convert missing metadata into an empty Props table without proving a zero-argument signature.
+
+Storybook-only Supabase and Kakao mocks prevent live clients and external address-search scripts. Synthetic feature examples must also bound any story-specific HTTP requests and restore their fixture state. They do not validate production auth, RLS, writes or full application workflows.

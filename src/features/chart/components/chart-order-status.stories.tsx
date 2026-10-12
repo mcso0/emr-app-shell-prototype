@@ -4,6 +4,7 @@ import { ChartOrderConfirmationBadge, ChartOrderWorkStatus } from "./chart-order
 import type { ChartOrderPresentationRow } from "../chart-order-table-presentation";
 
 const meta = {
+  parameters: { docs: { description: { component: "차트 오더의 확정 상태와 수행 상태를 구분해 표시합니다. ChartOrderConfirmationBadge는 state와 onOpenDetail을 받고, ChartOrderWorkStatus는 row를 받습니다. rows와 합성 콜백은 예제 설정입니다. 실제 확정, 취소와 업무 상태 판단은 차트 기능이 담당합니다." } } },
   title: "Features/Chart/Order status",
   component: ChartOrderConfirmationBadge,
   tags: ["autodocs"],
@@ -13,6 +14,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ConfirmationStates: Story = {
+  parameters: { docs: { description: { story: "미확정, 미입력, 확정 배지를 비교하고 미입력 버튼의 상세 열기 콜백을 확인합니다." } } },
   render: args => <div className="flex gap-4 p-6">
     <ChartOrderConfirmationBadge {...args} state="ready" />
     <ChartOrderConfirmationBadge {...args} state="invalid" />
@@ -82,6 +84,7 @@ const rows: ChartOrderPresentationRow[] = [
   { order: { id: "cancelled-no-task", status: "cancelled" } },
 ];
 export const WorkStates: Story = {
+  parameters: { docs: { description: { story: "합성 오더의 완료, 취소, 확정 전 상태와 키보드로 읽는 도움말을 확인합니다." } } },
   render: () => <div className="flex gap-8 p-8">{rows.map(row => <ChartOrderWorkStatus key={row.order.id} row={row} />)}</div>,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

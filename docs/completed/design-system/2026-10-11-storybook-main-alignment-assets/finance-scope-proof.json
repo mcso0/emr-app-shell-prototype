@@ -1,0 +1,9 @@
+{
+  "story": "features-chart-order-finance--summary-and-details",
+  "mode": "static",
+  "selected": "확정 오더",
+  "regionText": "총 오더 합계\n확정 오더\n20,000 원\n\n확정 오더 1건",
+  "expectedAmount": "20,000 원",
+  "verified": true,
+  "boundary": "Synthetic props and local filtering only. No billing or monetary transaction."
+}

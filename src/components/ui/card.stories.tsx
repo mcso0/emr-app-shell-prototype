@@ -1,4 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useEffect, useState } from "react";
+import { expect, userEvent, waitFor } from "storybook/test";
+import { ChartOrderBillingDetailAside, ChartOrderFinanceFooter } from "@/features/chart/components/chart-order-finance-footer";
+import type { ChartOrderBillingSummary } from "@/features/chart/chart-order-billing-summary-contract";
 
 import { Button } from "./button";
 import {
@@ -20,6 +24,28 @@ type CardStoryArgs = {
   title: string;
 };
 
+const summary: ChartOrderBillingSummary = {
+  workspaceId: "synthetic-workspace", encounterId: "synthetic-encounter", currency: "KRW", context: null, etag: "synthetic", generatedAt: "2026-10-11T00:00:00Z", invoiceId: null,
+  amounts: { confirmed: 20000, draft: 10000, estimatedTotal: 30000, gross: 30000, discount: 0, surcharge: 0, tax: 0, outstanding: 0, paid: 0, requestableTotal: 20000 },
+  orderCounts: { total: 2, confirmed: 1, draft: 1, cancelled: 0, recheck: 0, requested: 0, requestable: 1 }, requestableOrderIds: ["synthetic-order"], unfinishedOrders: [],
+};
+function FinanceCardCaller() {
+  const [open, setOpen] = useState(false);
+  const [receipt, setReceipt] = useState("요청 없음");
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close);
+  }, [open]);
+  const props = { canRequestBilling: true, displayState: "authoritative" as const, freshness: "fresh" as const, hasAuthoritativeSummary: true, requesting: false, summary, onRequestBilling: () => setReceipt("합성 청구 이동 요청") };
+  return <div className="relative h-[620px] min-w-[860px] overflow-hidden border">
+    <div className="absolute inset-x-0 bottom-0"><ChartOrderFinanceFooter {...props} confirmationCounts={{ ready: 1, invalid: 0, confirmed: 1 }} drawerOpen={open}
+      saveStatusText="저장됨" accessibilitySummary="선택 오더 0건 · 선택 오더 합계 0원 · 저장됨" onOpenDetails={() => setOpen((value) => !value)} /></div>
+    <ChartOrderBillingDetailAside {...props} open={open} onClose={() => setOpen(false)} onRetry={() => setReceipt("합성 재조회 요청")} />
+    <output className="block p-4" aria-label="합성 카드 요청">{receipt}</output>
+  </div>;
+}
+
 function CardExample({
   description,
   footer,
@@ -27,6 +53,7 @@ function CardExample({
   status,
   title,
 }: CardStoryArgs) {
+  const [viewed, setViewed] = useState(false);
   return (
     <Card size={size} className="max-w-md">
       <CardHeader>
@@ -51,11 +78,12 @@ function CardExample({
       <CardFooter>
         <div className="flex w-full items-center justify-between gap-3">
           <span className="text-sm text-muted-foreground">{footer}</span>
-          <Button type="button" size="sm" variant="outline">
+          <Button type="button" size="sm" variant="outline" onClick={() => setViewed((value) => !value)}>
             샘플 보기
           </Button>
         </div>
       </CardFooter>
+      {viewed ? <p role="status" className="px-4 pb-4">합성 상세를 표시했습니다.</p> : null}
     </Card>
   );
 }
@@ -66,9 +94,10 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "320px" },
       description: {
         component:
-          "Use Card for a bounded, repeated content item such as a compact summary, task tile, or grouped metadata surface. 사용할 때: one item needs a header, body, and optional action. 쓰지 말아야 할 때: page sections, nested cards, or decorative layout wrappers.",
+          "Controls의 title·description·footer·status는 CardExample의 합성 콘텐츠이며 Card props가 아닙니다. size는 Card에 전달합니다. Card는 표시를, 호출자는 데이터와 버튼 동작을 소유합니다. 샘플 보기 버튼은 이동하지 않습니다. Use Card for a bounded, repeated content item such as a compact summary, task tile, or grouped metadata surface. 사용할 때: one item needs a header, body, and optional action. 쓰지 말아야 할 때: page sections, nested cards, or decorative layout wrappers.",
       },
     },
   },
@@ -110,17 +139,34 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  render: () => <FinanceCardCaller />,
+  play: async ({ canvas, canvasElement }) => {
+    const toggle = canvas.getByRole("button", { name: "금액 상세" });
+    await userEvent.click(toggle);
+    await waitFor(() => expect(canvas.getByRole("complementary", { name: "Plan/Order 금액 상세" })).toBeVisible());
+    await expect(canvasElement.querySelectorAll('[data-slot="card"]').length).toBeGreaterThan(0);
+    await expect(canvas.getByTestId("chart-order-amount-detail-total-card")).toHaveTextContent("30,000");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(canvas.queryByRole("complementary", { name: "Plan/Order 금액 상세" })).not.toBeInTheDocument());
+  },
   parameters: {
-    docs: {
+    controls: { disable: true },
+    docs: { story: { height: "700px" },
       description: {
         story:
-          "사용할 때: 반복되는 item summary를 한 덩어리로 스캔해야 할 때. 쓰지 말아야 할 때: 페이지 전체 section을 떠 있는 카드처럼 감쌀 때.",
+          "실제 차트 금액 상세의 Card/Content를 ChartOrderBillingDetailAside를 통해 렌더합니다. 승인된 Features/Chart/Order Finance의 SummaryAndDetails는 유지합니다. 금액만 합성이며 상세 토글·Escape와 로컬 요청 콜백을 제공합니다.",
       },
     },
   },
 };
 
 export const Small: Story = {
+  play: async ({ canvas }) => {
+    await userEvent.click(canvas.getByRole("button", { name: "샘플 보기" }));
+    await expect(canvas.getByRole("status")).toHaveTextContent("합성 상세를 표시했습니다.");
+    await userEvent.click(canvas.getByRole("button", { name: "샘플 보기" }));
+    await expect(canvas.queryByRole("status")).not.toBeInTheDocument();
+  },
   args: {
     description: "밀도 높은 목록에서 쓰는 작은 합성 카드입니다.",
     footer: "좁은 패널 안의 반복 항목 예시입니다.",
@@ -139,6 +185,7 @@ export const Small: Story = {
 };
 
 export const ContentOnly: Story = {
+  argTypes: { description: { control: false, table: { disable: true } }, status: { control: false, table: { disable: true } } },
   args: {
     description: "",
     footer: "footer 없이 content 중심으로 볼 수 있습니다.",

@@ -1,7 +1,9 @@
+import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogTrigger } from "@/components/ui/dialog";
 
 import { EmrDialogShell, type EmrDialogShellVariant } from "./dialog-shell";
 
@@ -20,16 +22,19 @@ function EmrDialogShellExample({
   triggerLabel,
   variant,
 }: EmrDialogShellStoryArgs) {
+  const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
   return (
-    <Dialog>
+    <>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button type="button" variant="outline" />}>
         {triggerLabel}
       </DialogTrigger>
       <EmrDialogShell
         description={description}
         footerMeta="합성 예시입니다. 실제 환자, 보호자, 병원, 결제, 신원 정보는 포함하지 않습니다."
-        primaryAction={<Button type="button">샘플 저장</Button>}
-        secondaryAction={<Button type="button" variant="outline">취소</Button>}
+        primaryAction={<Button type="button" onClick={() => { setSaved(true); setOpen(false); }}>샘플 저장</Button>}
+        secondaryAction={<DialogClose render={<Button type="button" variant="outline" />}>취소</DialogClose>}
         showCloseButton={showCloseButton}
         title={title}
         variant={variant}
@@ -49,6 +54,8 @@ function EmrDialogShellExample({
         </div>
       </EmrDialogShell>
     </Dialog>
+    {saved ? <output role="status">합성 저장 확인됨</output> : null}
+    </>
   );
 }
 
@@ -56,11 +63,12 @@ const meta = {
   title: "Design System/EMR/EmrDialogShell",
   component: EmrDialogShellExample,
   tags: ["autodocs"],
+  play: async ({ canvasElement, args }) => verifyShell(canvasElement, args),
   parameters: {
     docs: {
       description: {
         component:
-          "Use EmrDialogShell for EMR product dialogs that need consistent header, body, footer, close affordance, action order, width, and scroll behavior. 사용할 때: confirmation, compact form, or wide form shells need the shared EMR dialog contract. 쓰지 말아야 할 때: lightweight popovers, one-off tooltip guidance, or feature logic that belongs at the call site.",
+          "All five accepted shell variants keep their exact initial body, width, footer and controls. Primary action is now a local save receipt; Cancel, Escape and native keyboard opening are tested. This API specimen does not represent a feature form or persistence. Use EmrDialogShell for EMR product dialogs that need consistent header, body, footer, close affordance, action order, width, and scroll behavior. 사용할 때: confirmation, compact form, or wide form shells need the shared EMR dialog contract. 쓰지 말아야 할 때: lightweight popovers, one-off tooltip guidance, or feature logic that belongs at the call site.",
       },
     },
   },
@@ -83,7 +91,7 @@ const meta = {
     },
     variant: {
       control: "radio",
-      options: ["confirm", "form", "wide-form"],
+      options: ["confirm", "form", "wide-form", "registration-form", "registration-confirm"],
       description: "Shared EMR dialog shell variant.",
     },
   },
@@ -101,21 +109,23 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-async function openDialogShell(canvasElement: HTMLElement, title: string) {
-  const button = Array.from(canvasElement.querySelectorAll("button")).find(
-    (candidate) => candidate.textContent?.trim() === "다이얼로그 열기"
-  );
-
-  if (!button) {
-    throw new Error("Expected an EMR dialog shell trigger button.");
-  }
-
-  button.click();
-  await new Promise((resolve) => window.setTimeout(resolve, 0));
-
-  if (!canvasElement.ownerDocument.body.textContent?.includes(title)) {
-    throw new Error("Expected the EMR dialog shell title to appear after opening.");
-  }
+async function verifyShell(canvasElement: HTMLElement, args: EmrDialogShellStoryArgs) {
+  const canvas = within(canvasElement); const body = within(canvasElement.ownerDocument.body);
+  const trigger = canvas.getByRole("button", { name: args.triggerLabel });
+  trigger.focus(); await userEvent.keyboard("{Enter}");
+  let dialog = await body.findByRole("dialog", { name: args.title });
+  await waitFor(() => expect(dialog).toBeVisible());
+  await expect(dialog).toHaveAttribute("data-variant", args.variant);
+  await userEvent.click(within(dialog).getByRole("button", { name: "취소" }));
+  await waitFor(() => expect(body.queryByRole("dialog", { name: args.title })).not.toBeInTheDocument());
+  await userEvent.click(trigger); dialog = await body.findByRole("dialog", { name: args.title });
+  await waitFor(() => expect(dialog).toBeVisible());
+  await userEvent.click(within(dialog).getByRole("button", { name: "샘플 저장" }));
+  await expect(canvas.getByRole("status")).toHaveTextContent("합성 저장 확인됨");
+  await waitFor(() => expect(body.queryByRole("dialog", { name: args.title })).not.toBeInTheDocument());
+  trigger.focus(); await userEvent.keyboard(" "); await body.findByRole("dialog", { name: args.title });
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(body.queryByRole("dialog", { name: args.title })).not.toBeInTheDocument());
 }
 
 export const Confirm: Story = {
@@ -127,9 +137,7 @@ export const Confirm: Story = {
       },
     },
   },
-  play: async ({ canvasElement, args }) => {
-    await openDialogShell(canvasElement, args.title);
-  },
+  play: async ({ canvasElement, args }) => verifyShell(canvasElement, args),
 };
 
 export const Form: Story = {
@@ -162,4 +170,14 @@ export const WideForm: Story = {
       },
     },
   },
+};
+
+export const RegistrationForm: Story = {
+  args: { title: "합성 등록 form shell", variant: "registration-form" },
+  parameters: { docs: { description: { story: "등록 화면용 440px shell과 64px footer입니다. 필드, 검증, 저장은 호출 기능이 소유하며 이 예시는 shell만 보여줍니다." } } },
+};
+
+export const RegistrationConfirm: Story = {
+  args: { title: "합성 등록 확인 shell", variant: "registration-confirm" },
+  parameters: { docs: { description: { story: "등록 확인용 고정 높이 shell입니다. 실제 등록이나 저장을 수행하지 않습니다." } } },
 };

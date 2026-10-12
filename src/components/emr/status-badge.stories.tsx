@@ -54,6 +54,7 @@ export const Default: Story = {
   },
 };
 export const SupportedStatuses: Story = {
+  argTypes: { label: { control: false, table: { disable: true } }, marker: { control: false, table: { disable: true } }, testId: { control: false, table: { disable: true } } },
   render: () => (
     <div className="flex flex-wrap items-center gap-2">
       {statusLabels.map((label) => (

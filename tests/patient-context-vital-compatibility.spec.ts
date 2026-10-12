@@ -15,6 +15,8 @@ type ContextSurface = "chart" | "dispensing";
 
 async function prepareContext(page: Page, options: {
   canWrite?: boolean;
+  onQueueRead?: () => Promise<void>;
+  emptyQueue?: boolean;
   workStatus?: "in_progress" | "completed";
 } = {}) {
   const canWrite = options.canWrite ?? true;
@@ -50,11 +52,14 @@ async function prepareContext(page: Page, options: {
     window.sessionStorage.removeItem("clair-emr:chart-live-encounter-handoffs:v1");
   }, [SESSION_WORKSPACES_STORAGE_KEY, workspaceId] as const);
 
-  await page.route(`**/api/workspaces/${workspaceId}/chart/live-queue?*`, route => route.fulfill({ json: {
-    ok: true, status: 200, enforcedBy: "chart-live-queue-read", queue: [{ encounter, patient, primaryGuardian: guardian,
+  await page.route(`**/api/workspaces/${workspaceId}/chart/live-queue?*`, async route => {
+    await options.onQueueRead?.();
+    return route.fulfill({ json: {
+    ok: true, status: 200, enforcedBy: "chart-live-queue-read", queue: options.emptyQueue ? [] : [{ encounter, patient, primaryGuardian: guardian,
       veterinarianName: "합성 수의사", queueEntry: { id: "vital-context-queue", workspaceId, encounterId,
         queueType: "consultation", status: "in_progress", priority: "normal", sortOrder: 1, enteredAt: measuredAt } }],
-  } }));
+  } });
+  });
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => {
     const queueType = new URL(route.request().url()).searchParams.get("queueType");
     return route.fulfill({ json: { ok: true, workItems: queueType === "dispensing" ? [{
@@ -163,4 +168,42 @@ test("completed dispensing context keeps vital launch disabled despite write per
   await action.click({ force: true });
   await expect(page.getByRole("dialog", { name: "바이탈 이력", exact: true })).toHaveCount(0);
   expect(reads.historyReads).toHaveLength(0);
+});
+
+
+test("chart shows the shared skeleton only before its first queue data arrives and retains loaded identity during refresh", async ({ page }) => {
+  let releaseQueue = () => {};
+  let queueReads = 0;
+  await prepareContext(page, { onQueueRead: () => {
+    queueReads += 1;
+    return new Promise<void>(resolve => { releaseQueue = resolve; });
+  } });
+  await page.goto(`/w/${workspaceId}/treatment?date=${getCurrentOperatingDate()}&encounterId=${encounterId}&modulePanel=closed&aside=closed&right=closed`);
+  const bar = page.locator('[data-slot="patient-context-bar"]');
+  await expect.poll(() => queueReads).toBe(1);
+  await expect(bar.locator('[data-slot="patient-context-patient"] [data-slot="skeleton"]')).toHaveCount(2);
+  await expect(bar.locator('[aria-busy="true"]').first()).toBeVisible();
+  await expect(bar.getByRole("button", { name: /환자 프로필 열기/ })).toHaveCount(0);
+  const initialHeight = await bar.evaluate(element => element.getBoundingClientRect().height);
+  releaseQueue();
+  await expect(bar.getByRole("button", { name: "합성 바이탈 환자 환자 프로필 열기", exact: true })).toBeVisible();
+  await expect(bar.locator('[data-slot="patient-context-patient"] [data-slot="skeleton"]')).toHaveCount(0);
+  await expect.poll(() => bar.evaluate(element => element.getBoundingClientRect().height)).toBe(initialHeight);
+
+  await page.getByRole("button", { name: "진료 대기열 새로고침", exact: true }).click();
+  await expect.poll(() => queueReads).toBe(2);
+  await expect(bar.locator('[data-slot="patient-context-patient"]')).toContainText("합성 바이탈 환자");
+  await expect(bar.locator('[data-slot="patient-context-patient"] [data-slot="skeleton"]')).toHaveCount(0);
+  releaseQueue();
+});
+
+test("chart clears the initial skeleton when a completed queue read has no selected record", async ({ page }) => {
+  let releaseQueue: (() => void) | undefined;
+  await prepareContext(page, { emptyQueue: true, onQueueRead: () => new Promise<void>(resolve => { releaseQueue = resolve; }) });
+  await page.goto(`/w/${workspaceId}/treatment?date=${getCurrentOperatingDate()}&encounterId=${encounterId}&modulePanel=closed&aside=closed&right=closed`);
+  const bar = page.locator('[data-slot="patient-context-bar"]');
+  await expect(bar.locator('[data-slot="skeleton"]').first()).toBeVisible();
+  await expect.poll(() => Boolean(releaseQueue)).toBe(true);
+  releaseQueue?.();
+  await expect(bar).toHaveCount(0);
 });

@@ -45,23 +45,26 @@ export function ScheduleShiftEditorSheet({
 }) {
   const [draft, setDraft] = useState(() => makeDraft(target, staff));
   const [saving, setSaving] = useState(false);
+  const busy = saving || deleting;
 
   const save = async () => {
-    if (!isValidDraft(draft)) return;
+    if (busy || !isValidDraft(draft)) return;
     setSaving(true);
     try {
       await onSave(draft);
       onDirtyChange(false);
       onOpenChange(false);
+    } catch {
+      // The caller reports the save error. Keep the draft and dirty guard for retry.
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Sheet open={target !== null} onOpenChange={onOpenChange}>
+    <Sheet open={target !== null} onOpenChange={(open) => { if (!busy) onOpenChange(open); }}>
       {target ? (
-        <SheetContent className="w-full sm:max-w-md">
+        <SheetContent className="w-full sm:max-w-md" showCloseButton={!busy}>
           <SheetHeader>
             <SheetTitle>{target.mode === "create" ? "근무 추가" : "근무 수정"}</SheetTitle>
             <SheetDescription>변경 내용은 서버 검증과 저장이 완료된 뒤 근무표에 반영됩니다.</SheetDescription>
@@ -73,7 +76,7 @@ export function ScheduleShiftEditorSheet({
                 <FieldContent>
                   <Select
                     value={draft.kind}
-                    disabled={target.mode !== "create"}
+                    disabled={busy || target.mode !== "create"}
                     onValueChange={(value) => {
                       const kind = value === "off" || value === "leave" ? value : "work";
                       onDirtyChange(true);
@@ -96,6 +99,7 @@ export function ScheduleShiftEditorSheet({
                 <FieldContent>
                   <Select
                     value={draft.staffProfileId ?? "unassigned"}
+                    disabled={busy}
                     onValueChange={(value) => {
                       onDirtyChange(true);
                       setDraft((current) => ({ ...current, staffProfileId: value === "unassigned" ? null : value ?? null }));
@@ -122,6 +126,7 @@ export function ScheduleShiftEditorSheet({
                 <FieldContent>
                   <Input
                     id="schedule-v2-entry-date"
+                    disabled={busy}
                     type="date"
                     value={draft.date}
                     onChange={(event) => {
@@ -137,6 +142,7 @@ export function ScheduleShiftEditorSheet({
                   <FieldContent>
                     <Input
                       id="schedule-v2-work-label"
+                      disabled={busy}
                       value={draft.workLabel}
                       placeholder="예: 진료"
                       onChange={(event) => {
@@ -154,6 +160,7 @@ export function ScheduleShiftEditorSheet({
                     <FieldContent>
                       <Input
                         id="schedule-v2-start"
+                        disabled={busy}
                         type="time"
                         value={formatScheduleMinutes(draft.startMinutes)}
                         onChange={(event) => {
@@ -168,6 +175,7 @@ export function ScheduleShiftEditorSheet({
                     <FieldContent>
                       <Input
                         id="schedule-v2-end"
+                        disabled={busy}
                         type="time"
                         value={formatScheduleMinutes(draft.endMinutes)}
                         onChange={(event) => {
@@ -187,10 +195,10 @@ export function ScheduleShiftEditorSheet({
                 {deleting ? "삭제 중" : "삭제"}
               </Button>
             ) : null}
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               취소
             </Button>
-            <Button type="button" onClick={() => void save()} disabled={saving || !isValidDraft(draft)}>
+            <Button type="button" onClick={() => void save()} disabled={busy || !isValidDraft(draft)}>
               {saving ? "저장 중" : "저장"}
             </Button>
           </SheetFooter>

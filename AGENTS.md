@@ -22,6 +22,8 @@
 
 - Use `docs/_meta/coding-discipline.md` for non-trivial implementation; preserve focused checks for security, data integrity, accessibility, and release boundaries.
 - Complete the requested behavior, relevant verification, and fixes for failures caused by the change. Update owning docs only when behavior, contracts, status, or durable decisions changed.
+- When changing UI, update related Storybook stories, fixtures, and tests as needed in the same change, and verify the affected stories against actual app usage.
+- Record unrelated findings separately in the existing work item or final report. Do not expand the task scope or fix them without separate authorization.
 - Use `docs/_meta/intake-rules.md` for documentation/work-structure or durable-guidance changes, and `docs/_meta/result-review-rules.md` for completion and report depth.
 - `Human Review` records pending human acceptance after authorized implementation and verification; it does not cancel remaining work already authorized in the same objective.
 

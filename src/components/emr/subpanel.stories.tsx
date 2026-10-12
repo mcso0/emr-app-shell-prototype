@@ -8,6 +8,7 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { Badge } from "@/components/ui/badge";
+import { addDaysToIsoDate } from "@/lib/emr-domain/demo-date";
 
 import {
   EmrDateNavigator,
@@ -27,20 +28,29 @@ type EmrSubpanelStoryArgs = {
 
 function EmrSubpanelExample({ collapsed, title }: EmrSubpanelStoryArgs) {
   const [groupCollapsed, setGroupCollapsed] = useState(collapsed);
+  const [date, setDate] = useState("2026-06-15");
+  const [selected, setSelected] = useState("A");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [filterSelected, setFilterSelected] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(true);
+  const visible = ["A", "B"].filter(id => (!filterSelected || id === selected) && `샘플 항목 ${id}`.includes(query));
+  if (!panelOpen) return <button type="button" onClick={() => setPanelOpen(true)}>패널 다시 열기</button>;
 
   return (
     <div className="h-[420px]">
       <EmrSubpanel>
-        <EmrSubpanelTitle title={title} />
-        <EmrDateNavigator dateLabel="26.06.15 (월)" todayLabel="오늘" />
+        <EmrSubpanelTitle title={title} onCollapse={() => setPanelOpen(false)} />
+        <EmrDateNavigator dateLabel="26.06.15 (월)" selectedDate={date} todayDate="2026-06-15" todayLabel={date === "2026-06-15" ? "오늘" : undefined} onDateChange={setDate} onPrevious={() => setDate(value => addDaysToIsoDate(value, -1))} onNext={() => setDate(value => addDaysToIsoDate(value, 1))} />
         <EmrListHeader
-          count={3}
+          count={visible.length}
+          search={{ active: searchOpen, query, resultCount: visible.length, inputLabel: "샘플 목록 검색", onQueryChange: setQuery, onClose: () => { setSearchOpen(false); setQuery(""); } }}
           headerActions={
             <>
-              <EmrListHeaderIconButton ariaLabel="샘플 검색">
+              <EmrListHeaderIconButton ariaLabel="샘플 검색" onClick={() => setSearchOpen(true)}>
                 <CdsActionsSearchIcon className="size-4" aria-hidden="true" />
               </EmrListHeaderIconButton>
-              <EmrListHeaderIconButton ariaLabel="샘플 필터">
+              <EmrListHeaderIconButton ariaLabel="샘플 필터" aria-pressed={filterSelected} onClick={() => setFilterSelected(value => !value)}>
                 <CdsActionsFilterIcon className="size-4" aria-hidden="true" />
               </EmrListHeaderIconButton>
             </>
@@ -50,27 +60,29 @@ function EmrSubpanelExample({ collapsed, title }: EmrSubpanelStoryArgs) {
         <EmrSubpanelBody>
           <EmrListGroup
             collapsed={groupCollapsed}
-            count={2}
+            count={visible.length}
             label="진행"
             onToggle={() => setGroupCollapsed((current) => !current)}
           >
-            <EmrListItem
-              selected
+            {visible.includes("A") ? <EmrListItem
+              selected={selected === "A"} onSelect={() => setSelected("A")}
               itemBadge={<Badge variant="secondary">요청</Badge>}
               meta="합성 메타 · 10:30"
               subtitle="샘플 설명 A"
               title="샘플 항목 A"
               variant="outline"
-            />
-            <EmrListItem
+            /> : null}
+            {visible.includes("B") ? <EmrListItem
+              selected={selected === "B"} onSelect={() => setSelected("B")}
               footer={<><span>요청자 샘플</span><span>담당 미정</span></>}
               subtitle="샘플 설명 B"
               title="샘플 항목 B"
               variant="outline"
-            />
+            /> : null}
           </EmrListGroup>
         </EmrSubpanelBody>
       </EmrSubpanel>
+      <output aria-label="샘플 패널 상태">{date} · 선택 {selected} · 표시 {visible.length}건</output>
     </div>
   );
 }
@@ -81,6 +93,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "520px" },
       description: {
         component:
           "Use EmrSubpanel for fixed-width EMR side panels with shared title, date navigation, list header, list groups, and list items. 사용할 때: module queue/list navigation needs consistent panel chrome. 쓰지 말아야 할 때: freeform page sections, modal dialogs, or feature workflows without stable fixture data.",
@@ -101,7 +114,27 @@ const meta = {
     collapsed: false,
     title: "샘플 패널",
   },
-  render: (args) => <EmrSubpanelExample {...args} />,
+  render: (args) => <EmrSubpanelExample key={String(args.collapsed)} {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    if (args.collapsed) await userEvent.click(canvas.getByRole("button", { name: /진행/ }));
+    const row = canvas.getByRole("button", { name: /샘플 항목 B/ });
+    row.focus(); await userEvent.keyboard(" ");
+    await expect(row).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(canvas.getByRole("button", { name: "다음 날짜" }));
+    await expect(canvas.getByLabelText("샘플 패널 상태")).toHaveTextContent("2026-06-16");
+    await userEvent.click(canvas.getByRole("button", { name: "샘플 필터" }));
+    await waitFor(() => expect(canvas.queryByRole("button", { name: /샘플 항목 A/ })).not.toBeInTheDocument());
+    await userEvent.click(canvas.getByRole("button", { name: "샘플 필터" }));
+    await userEvent.click(canvas.getByRole("button", { name: "샘플 검색" }));
+    await userEvent.type(canvas.getByRole("searchbox", { name: "샘플 목록 검색" }), "없는 항목");
+    await expect(canvas.getByLabelText("샘플 패널 상태")).toHaveTextContent("표시 0건");
+    await userEvent.click(canvas.getByRole("button", { name: "검색 닫기" }));
+    await userEvent.click(canvas.getByRole("button", { name: "사이드 패널 접기" }));
+    await expect(canvas.getByRole("button", { name: "패널 다시 열기" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "패널 다시 열기" }));
+    await expect(canvas.getByRole("button", { name: /샘플 항목 B/ })).toBeVisible();
+  },
 } satisfies Meta<EmrSubpanelStoryArgs>;
 
 export default meta;
@@ -140,6 +173,7 @@ function FloatingPinExample() {
   </ModuleSidePanelContext.Provider>;
 }
 export const FloatingPin: Story = {
+  parameters: { controls: { disable: true } },
   render: () => <FloatingPinExample />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

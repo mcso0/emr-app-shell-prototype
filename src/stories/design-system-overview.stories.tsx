@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
+/** Static Storybook ownership guide. This documentation page accepts no props. */
 function Overview() {
   return <main className="mx-auto max-w-5xl space-y-6 p-6 text-foreground">
     <h1 className="emr-text-dialog-title font-semibold">CLAiR EMR · UI 역할과 검토 상태</h1>
@@ -21,8 +22,8 @@ function Overview() {
     <section className="space-y-2 rounded-lg border border-border p-4" aria-label="검토 상태 읽는 법">
       <h2 className="emr-text-panel-title font-semibold">사용 중·검증 통과·사용자 승인은 서로 다릅니다</h2>
       <p className="emr-text-body">제품 사용: 실제 화면에서 가져다 쓰는지 확인합니다. 자동 검증: 실행한 검사와 통과 범위를 기록합니다. 사용자 승인: 승욱이 확인한 모양과 동작의 범위만 기록합니다.</p>
-      <p className="emr-text-body">전체 v1 사용자 승인 여부와 이번 변경의 검증 결과는 별개입니다. 이번 PR은 기존 제품 UI의 역할 설명·프로필 분류·대기열 정보 분리를 담습니다. 이전 v1 기반과 조립 예제 작업은 포함하지 않습니다.</p>
-      <p className="emr-text-metadata text-muted-foreground">항목별 상태: component-ownership-rules.md · 이번 실행 결과: CLINICAL-FULFILLMENT-PR-011 작업 기록. 환자 대기열은 업무 규칙용 정보와 카드 표시용 정보를 분리했습니다. 추가 구조 변경은 보류합니다.</p>
+      <p className="emr-text-body">전체 v1 사용자 승인 여부와 각 변경의 검증 결과는 별개입니다. Storybook 예제 통과는 실제 화면의 데이터 연결, 권한, 저장 검증을 대신하지 않습니다. 검토한 범위와 확인하지 못한 범위를 작업 기록에서 확인해 주세요.</p>
+      <p className="emr-text-metadata text-muted-foreground">항목별 책임과 상태는 component-ownership-rules.md에서 확인해 주세요. 실행한 검사와 남은 제한은 docs/work/index.md에 연결된 해당 작업 기록을 기준으로 읽어 주세요.</p>
     </section>
   </main>;
 }
@@ -32,8 +33,10 @@ const meta = {
   component: Overview,
   tags: ["autodocs"],
   args: {},
-  parameters: { docs: { description: { component: "Independent UI responsibility and review map. Owner: docs/design/system/component-ownership-rules.md. Product usage, automated checks and human acceptance are separate. No production data or workflow operations." } } },
+  parameters: { docs: { description: { component: "공통 UI, 기능 UI, 앱 셸의 책임과 검토 상태를 안내합니다. 실제 사용, 자동 검사, 사용자 승인을 구분해 주세요. Overview는 Storybook 안내 화면이며 제품 컴포넌트 API가 아닙니다. 기준은 docs/design/system/component-ownership-rules.md입니다." } } },
 } satisfies Meta<typeof Overview>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const Structure: Story = {};
+export const Structure: Story = {
+  parameters: { docs: { description: { story: "UI 소유 범위와 기존 검토 기록을 읽는 방법을 확인합니다. 이 설명만으로 전체 UI가 검증되거나 승인되었다고 판단하지 마세요." } } },
+};

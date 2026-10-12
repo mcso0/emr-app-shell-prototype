@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { installShellNotificationApi } from "./support/shell-notification-api";
+
+test.beforeEach(async ({ page }, info) => {
+  if (info.title.startsWith("global notification")) {
+    await installShellNotificationApi(page);
+  }
+});
 
 const fullDemoQuery =
   "scenario=kong-vomit&patientId=patient-kong&encounterId=encounter-kong-260501&labResultId=lab-result-kong-cbc&imagingStudyId=imaging-kong-abdomen&invoiceId=invoice-kong-260501&modulePanel=open&aside=closed";
@@ -673,7 +680,11 @@ test("global notification drawer fits narrow viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/w/clair-demo/reception?modulePanel=open");
 
-  await page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ }).click();
+  const bell = page.getByRole("button", { name: /알림 센터 열기, 중요 알림 7개/ });
+  await expect(bell).toBeVisible();
+  // Mobile navigation is modal; dismiss it before opening a separate drawer.
+  await page.keyboard.press("Escape");
+  await bell.click();
 
   const drawer = page.getByRole("dialog", { name: "알림" });
   await expect(drawer).toBeVisible();
@@ -869,7 +880,13 @@ test("workspace switcher lists active memberships and changes workspace without 
   const search = popover.getByRole("combobox", { name: "워크스페이스 검색" });
   await expect(search).toBeVisible();
   await search.fill("한빛");
+  // Wait for the first clinical route response from Next's local dev server.
+  const workspaceNavigation = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === "/w/workspace-hanbit/treatment" && response.ok();
+  });
   await popover.getByTestId("workspace-switcher-option-workspace-hanbit").click();
+  await workspaceNavigation;
 
   await expect(page).toHaveURL(/\/w\/workspace-hanbit\/treatment\?/);
   const targetUrl = new URL(page.url());
@@ -985,7 +1002,9 @@ test("workspace switcher popover stays inside a narrow viewport", async ({ page 
     });
   });
 
-  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  // An open compact side panel is a modal sheet; test the accessible rail state.
+  await page.goto("/w/clair-demo/reception?modulePanel=closed");
+  await expect(page.getByTestId("module-side-panel-host")).toHaveAttribute("data-panel-mode", "hidden");
   await page.getByTestId("workspace-switcher").click();
 
   const popover = page.getByTestId("workspace-switcher-popover");
@@ -1029,7 +1048,8 @@ test("workspace switcher sends a non-admin target membership to workspace home",
 
 test("app shell keeps compact workspace switcher and nav rail visible on narrow viewports", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/w/clair-demo/reception?modulePanel=open");
+  await page.goto("/w/clair-demo/reception?modulePanel=closed");
+  await expect(page.getByTestId("module-side-panel-host")).toHaveAttribute("data-panel-mode", "hidden");
 
   const navigationColumn = page.getByTestId("shell-navigation-column");
   const workspaceArea = page.getByTestId("shell-workspace-area");
@@ -1041,7 +1061,7 @@ test("app shell keeps compact workspace switcher and nav rail visible on narrow 
   await expect(navigationColumn).toBeVisible();
   await expect(workspaceSwitcher).toBeVisible();
   await expect(workspaceSwitcher.getByText("VIP 동물의료센터 청담점")).toBeHidden();
-  await expect(getNavRail(page).getByRole("link", { name: "원내 현황" })).toBeVisible();
+  await expect(getNavRail(page).getByRole("link", { name: "홈 화면", exact: true })).toBeVisible();
   await expect(page.getByTestId("module-side-panel-title")).toBeHidden();
   await expectHorizontalGap(page, "shell-navigation-column", "shell-workspace-area", 10);
 
@@ -1272,7 +1292,7 @@ test("dispensing table column grips resize with a minimum width", async ({ page 
   await page.goto("/w/clair-demo/dispensing");
   await page.getByTestId("order-queue-item-dispensing-queue-0").click();
 
-  const grip = page.getByRole("button", { name: "status 컬럼 너비 조절" }).first();
+  const grip = page.getByRole("button", { name: "상태 컬럼 너비 조절" }).first();
   const header = page.locator('th[data-column-id="status"]').first();
   const before = await header.boundingBox();
   const gripBox = await grip.boundingBox();
@@ -1892,10 +1912,10 @@ test("workspace tabs create an initial tab and keep the final tab open", async (
 
   await expect(workspaceTabs).toBeVisible();
   await expectActiveWorkspaceTab(page, "조제/처치");
-  await expect(workspaceTabs.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "새 업무 탭" })).toBeVisible();
   await expect(workspaceTabs.getByRole("button", { name: "조제/처치 탭 닫기" })).toHaveCount(0);
 
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home\?modulePanel=open/);
   await expect(page.getByText("새 탭이 생성되었습니다.")).toBeVisible();
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
@@ -1914,6 +1934,8 @@ test("workspace tabs keep navigation history per active tab", async ({ page }) =
   await clearWorkspaceTabs(page);
   await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
   await expectActiveWorkspaceTab(page, "진료/차트");
+  // Chart initialization normalizes chartId before the save guard can navigate.
+  await expect.poll(() => new URL(page.url()).searchParams.get("chartId")).toMatch(/^soap-/);
 
   await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/lab/);
@@ -1958,7 +1980,7 @@ test("workspace tabs restore open tabs after reload", async ({ page }) => {
 
   const workspaceTabs = getWorkspaceTablist(page);
 
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
   await getNavRail(page).getByRole("link", { name: "임상병리검사" }).click();
   await expectActiveWorkspaceTab(page, "검사");
   await expect(workspaceTabs.getByRole("tab")).toHaveCount(2);
@@ -1978,6 +2000,7 @@ test("workspace tabs warn only before opening the same concrete work surface in 
   await clearWorkspaceTabs(page);
   await page.goto(`/w/clair-demo/treatment?${fullDemoQuery}`);
   await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501" });
+  await expectUrlSearchParams(page, { chartId: "soap-kong-260501" });
 
   await page.getByRole("button", { name: "새 업무 탭" }).click();
   await expect(page).toHaveURL(/\/w\/clair-demo\/home/);
@@ -2002,8 +2025,12 @@ test("workspace tabs warn only before opening the same concrete work surface in 
   await expectUrlSearchParams(page, { encounterId: "encounter-coco-260501" });
 
   await chartTabs.nth(0).click();
+  await expectUrlSearchParams(page, { encounterId: "encounter-kong-260501", chartId: "soap-kong-260501" });
   await page.getByRole("button", { name: "새 업무 탭" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/home\?modulePanel=open/);
+  await expectActiveWorkspaceTab(page, "원내 현황");
   await getNavRail(page).getByRole("link", { name: "진료/차트" }).click();
+  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
   await page.getByTestId("order-queue-item-encounter-kong-260501").click();
   const duplicateDialog = page.getByRole("dialog", { name: "같은 업무가 이미 열려 있습니다" });
   await expect(duplicateDialog).toBeVisible();
@@ -2221,7 +2248,7 @@ test("workspace tab close button uses the Figma tiny ghost hover state", async (
   await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
 
   const workspaceTabs = getWorkspaceTablist(page);
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
 
   const hoverColor = await resolveCssColor(page, "var(--emr-topbar-tab-hover-bg)");
   const closeHoverColor = await resolveCssColor(page, "var(--clair-color-atomic-black-alpha-4)");
@@ -2231,8 +2258,9 @@ test("workspace tab close button uses the Figma tiny ghost hover state", async (
   const tabButton = tabContainer.getByRole("tab").first();
 
   await expect(tabButton).toHaveCSS("padding-right", "0px");
-  await expect(tabContainer).toHaveCSS("min-width", "148px");
+  await expect(tabContainer).toHaveCSS("min-width", "80px");
   await expect(tabContainer).toHaveCSS("max-width", "148px");
+  await expect(tabContainer).toHaveCSS("width", "148px");
   await expect(closeButton).toHaveCSS("width", "18px");
   await expect(closeButton).toHaveCSS("height", "18px");
   await expect(closeButton.locator("svg")).toHaveCSS("width", "14px");
@@ -2255,7 +2283,7 @@ test("workspace tab icons and labels use Figma neutral colors by tab state", asy
   const defaultIconColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-500)");
   const activeColor = await resolveCssColor(page, "var(--clair-color-atomic-neutral-800)");
 
-  await workspaceTabs.getByRole("button", { name: "새 업무 탭" }).click();
+  await page.getByRole("button", { name: "새 업무 탭" }).click();
   const inactiveTab = workspaceTabs.getByRole("tab").first();
   const activeTab = workspaceTabs.getByRole("tab").nth(1);
 

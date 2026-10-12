@@ -22,6 +22,11 @@ export function experimental_manifests(manifests: Manifests): Manifests {
     .replace(declaration, "function EmrDataTableApiExample")
     .trim();
   const stories = component.stories.map((story) => {
+    // The actual caller has its own fixture and render. The subsequent source
+    // manifest preset preserves that CSF instead of applying the API wrapper.
+    if ((story as typeof story & { id?: string }).id === `${componentId}--customer-caller`) {
+      return story;
+    }
     const snippet = story.snippet;
     if (!snippet || !snippet.includes("<EmrDataTableStory")) {
       throw new Error(`EmrDataTable demo render is missing for ${story.name}.`);
@@ -43,7 +48,7 @@ export function experimental_manifests(manifests: Manifests): Manifests {
           name: "EmrDataTable",
           import: imports,
           description:
-            "EmrDataTable은 table, aria-label, viewportMode가 필요한 공통 테이블입니다. 예시의 EmrDataTableApiExample과 useEmrDataTableStoryProps는 합성 데이터·컨트롤을 제공하는 Storybook 전용 코드입니다. pinned, rowCount 등은 예시 설정이며 실제 EmrDataTable props가 아닙니다.",
+            "EmrDataTable은 table, aria-label, viewportMode가 필요한 공통 테이블입니다. CustomerCaller는 실제 고객 호출부와 전용 합성 fixture를 사용합니다. 나머지 예시의 EmrDataTableApiExample과 useEmrDataTableStoryProps는 합성 데이터·컨트롤을 제공하는 Storybook 전용 코드입니다. pinned, rowCount 등은 예시 설정이며 실제 EmrDataTable props가 아닙니다.",
           stories,
         },
       },

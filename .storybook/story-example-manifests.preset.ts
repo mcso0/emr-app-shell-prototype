@@ -18,10 +18,11 @@ const examples = [
     id: "design-system-emr-emrtablefilterbuilder",
     name: "EmrTableFilterBuilder",
     source: "../src/components/emr/table-filter-builder.stories.tsx",
-    firstDeclaration: "type SampleRow",
+    firstDeclaration: "type TableFilterBuilderArgs",
     imports: [
       ["./table-filter-builder", "@/components/emr/table-filter-builder"],
       ["./table-filter-builder-model", "@/components/emr/table-filter-builder-model"],
+      ["./table-filter.stories.fixture", "@/components/emr/table-filter.stories.fixture"],
     ],
   },
   {

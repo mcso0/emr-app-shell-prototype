@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,8 +22,9 @@ function EmrRightPanelExample({
   footerSize,
   longBody = false,
 }: EmrRightPanelStoryArgs) {
+  const [receipt, setReceipt] = useState("없음");
   return (
-    <div className="h-[480px] w-[380px] overflow-hidden rounded-lg border border-border">
+    <div><div className="h-[480px] w-[380px] overflow-hidden rounded-lg border border-border">
       <EmrRightPanel
         header={
           <EmrRightPanelHeader className="border-b">
@@ -45,30 +48,30 @@ function EmrRightPanelExample({
             size="compact"
             className="grid grid-cols-2 gap-2 p-3"
           >
-            <Button size="sm" variant="outline">
+            <Button size="sm" variant="outline" onClick={() => setReceipt("취소")}>
               취소
             </Button>
-            <Button size="sm">저장</Button>
+            <Button size="sm" onClick={() => setReceipt("저장")}>저장</Button>
           </EmrRightPanelFooter>
         ) : footerSize === "single" ? (
           <EmrRightPanelFooter
             size="single"
             className="flex items-center justify-end gap-2 p-4"
           >
-            <Button variant="ghost">취소</Button>
-            <Button>저장</Button>
+            <Button variant="ghost" onClick={() => setReceipt("취소")}>취소</Button>
+            <Button onClick={() => setReceipt("저장")}>저장</Button>
           </EmrRightPanelFooter>
         ) : footerSize === "stacked" ? (
           <EmrRightPanelFooter size="stacked" className="grid gap-2 p-4">
-            <Button className="w-full">수납 진행</Button>
+            <Button className="w-full" onClick={() => setReceipt("수납 진행")}>수납 진행</Button>
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="secondary">수납 완료</Button>
-              <Button variant="outline">미납 처리</Button>
+              <Button variant="secondary" onClick={() => setReceipt("수납 완료")}>수납 완료</Button>
+              <Button variant="outline" onClick={() => setReceipt("미납 처리")}>미납 처리</Button>
             </div>
           </EmrRightPanelFooter>
         ) : null}
       </EmrRightPanel>
-    </div>
+    </div><output aria-label="패널 액션">{receipt}</output></div>
   );
 }
 
@@ -76,9 +79,24 @@ const meta = {
   title: "Design System/EMR/EmrRightPanel",
   component: EmrRightPanelExample,
   render: (args) => <EmrRightPanelExample {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    for (const name of args.footerSize === "stacked" ? ["수납 진행", "수납 완료", "미납 처리"] : args.footerSize ? ["취소", "저장"] : []) {
+      const button = canvas.getByRole("button", { name });
+      button.focus(); await userEvent.keyboard("{Enter}");
+      await waitFor(() => expect(canvas.getByLabelText("패널 액션")).toHaveTextContent(name));
+    }
+    if (args.longBody) {
+      const viewport = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]')!;
+      await expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+      viewport.scrollTop = viewport.scrollHeight;
+      await expect(viewport.scrollTop).toBeGreaterThan(0);
+    }
+  },
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "560px" },
       description: {
         component:
           "Use EmrRightPanel for the workspace right-panel interior. It requires a shared header and one fluid body; use a footer only when the workflow has persistent actions. Do not use it for overlay drawers, content asides, or profile-specific panels.",

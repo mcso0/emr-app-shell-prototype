@@ -76,7 +76,7 @@ function DeliveryExample({ muted = false }: { muted?: boolean }) {
 const meta = {
   title: "Features/Notifications/Personal Delivery",
   component: DeliveryExample,
-  parameters: { layout: "fullscreen" },
+  parameters: { docs: { story: { inline: false, height: "480px" }, description: { component: "개인 알림의 표시, 닫기, 보관 동작을 확인합니다. DeliveryExample과 muted는 예제 설정입니다. 실제 LiveNotificationDelivery는 workspaceId, userId, notifications, ready, currentRoute와 콜백을 받습니다. 예제는 합성 알림과 알림 설정 응답을 사용하며 실제 전달과 보관 권한은 기능이 담당합니다." } }, layout: "fullscreen" },
   args: { muted: false },
   beforeEach: ({ args }) => {
     const original = globalThis.fetch;
@@ -104,6 +104,7 @@ async function frames() {
   );
 }
 export const NewNotification: Story = {
+  parameters: { docs: { description: { story: "일반 알림을 추가하고 닫은 뒤 알림함 기록이 남는지 확인합니다." } } },
   play: async ({ canvas }) => {
     await frames();
     await userEvent.click(
@@ -133,6 +134,7 @@ export const NewNotification: Story = {
   },
 };
 export const MutedUrgentStillVisible: Story = {
+  parameters: { docs: { description: { story: "화면 알림을 끈 상태에서 일반 알림은 숨기고 긴급 알림은 표시하는지 확인합니다." } } },
   args: { muted: true },
   play: async ({ canvas }) => {
     await frames();
@@ -152,6 +154,7 @@ export const MutedUrgentStillVisible: Story = {
 };
 
 export const ArchiveWaitingAlert: Story = {
+  parameters: { docs: { description: { story: "장기 대기 알림의 보관 요청을 합성 콜백으로 처리하고 화면에서 제거하는지 확인합니다." } } },
   play: async ({ canvas }) => {
     await frames();
     await userEvent.click(
@@ -171,6 +174,7 @@ export const ArchiveWaitingAlert: Story = {
 };
 
 export const ArchiveWaitingAlertFailure: Story = {
+  parameters: { docs: { description: { story: "합성 보관 요청이 실패했을 때 알림과 다시 시도할 수 있는 동작이 남는지 확인합니다." } } },
   play: async ({ canvas }) => {
     archived.mockResolvedValueOnce(false);
     await frames();

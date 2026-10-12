@@ -173,7 +173,7 @@ export function usePatientContextProfileInteractions({
   };
 
   return {
-    patientItems: profileStatus !== "ready" ? [
+    patientItems: profileStatus === "loading" ? ["환자", "품종", "성별", "나이"].map((label) => ({ label, value: "", loading: true })) : profileStatus !== "ready" ? [
       { label: "환자", value: unavailableText(profileStatus, "환자 정보") },
     ] : [
       { label: "환자", value: patientName },
@@ -181,7 +181,7 @@ export function usePatientContextProfileInteractions({
       { label: "성별", value: patientSex },
       { label: "나이", value: patientAge },
     ],
-    guardianItems: profileStatus !== "ready" ? [
+    guardianItems: profileStatus === "loading" ? ["보호자", "연락처"].map((label) => ({ label, value: "", loading: true })) : profileStatus !== "ready" ? [
       { label: "보호자", value: unavailableText(profileStatus, "보호자 정보") },
     ] : [
       { label: "보호자", value: `${guardianName}${guardianProfileId ? "(주보호자)" : ""}` },
@@ -190,12 +190,14 @@ export function usePatientContextProfileInteractions({
     memoActions: [
       {
         label: "방문목적",
+        loading: encounterStatus === "loading",
         disabled: encounterStatus !== "ready",
         summary: currentEncounter?.visitPurpose?.trim() || currentEncounter?.chiefComplaint?.trim() || (encounterStatus === "ready" ? "방문 목적 기록 없음" : unavailableText(encounterStatus, "방문 목적")),
         unavailableReason: encounterStatus !== "ready" ? unavailableText(encounterStatus, "방문 목적") : undefined,
       },
       {
         label: "보호자메모",
+        loading: profileStatus === "loading" || guardianMemoStatus === "loading",
         disabled: guardianMemoStatus !== "ready",
         summary: textField(guardianMemoProfile, "memo") ?? (guardianMemoStatus === "ready" ? "보호자 메모 없음" : profileStatus === "ready" && !guardianProfileId ? "보호자 미지정" : unavailableText(liveGuardianId || localGuardian ? guardianMemoStatus : profileStatus, "보호자 메모")),
         unavailableReason: guardianMemoStatus !== "ready"
@@ -204,6 +206,7 @@ export function usePatientContextProfileInteractions({
       },
       {
         label: "환자메모",
+        loading: profileStatus === "loading",
         disabled: profileStatus !== "ready",
         summary: patientNotes.join(" · ") || (profileStatus === "ready" ? "환자 특이 메모 없음" : unavailableText(profileStatus, "환자 메모")),
         unavailableReason: profileStatus !== "ready" ? unavailableText(profileStatus, "환자 메모") : undefined,

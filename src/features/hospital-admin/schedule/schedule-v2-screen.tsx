@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
@@ -46,7 +46,9 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   const [state, setState] = useState<"loading" | "ready" | "empty" | "error" | "read-only">("loading");
   const [error, setError] = useState<HospitalScheduleRevisionRequestError | null>(null);
   const [editor, setEditor] = useState<ScheduleEntryEditorTarget>(null);
-  const [editorDirty, setEditorDirty] = useState(false);
+  // The sheet clears dirty state and requests close in the same save continuation.
+  const editorDirtyRef = useRef(false);
+  const setEditorDirty = (dirty: boolean) => { editorDirtyRef.current = dirty; };
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [fixedWeekOpen, setFixedWeekOpen] = useState(false);
@@ -92,7 +94,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
   }, [load, requestedWeekStart]);
 
   const requestWeekChange = (weekStart: string) => {
-    if (editorDirty) {
+    if (editorDirtyRef.current) {
       setPendingNavigation(weekStart);
       return;
     }
@@ -396,7 +398,7 @@ export function HospitalScheduleV2Screen({ workspaceId }: { workspaceId: string 
         }}
         onDirtyChange={setEditorDirty}
         onOpenChange={(open) => {
-          if (!open && editorDirty) {
+          if (!open && editorDirtyRef.current) {
             setPendingNavigation("__close_editor__");
             return;
           }

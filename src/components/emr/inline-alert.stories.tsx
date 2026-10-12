@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState, type ComponentProps } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import {
   CdsActionsRefreshCcwIcon,
@@ -14,6 +16,7 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "400px" },
       description: {
         component:
           "Use EmrInlineAlert for persistent workflow feedback such as read failures, degraded live/demo boundaries, permission blockers, preflight warnings, and in-context success. Do not use it for transient toast-only feedback or field-level validation.",
@@ -128,7 +131,9 @@ export const Severities: Story = {
     </div>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "700px" },
       description: {
         story:
           "Severity changes role, icon, and token tone. Copy and available actions must still explain the state without relying on color alone.",
@@ -137,84 +142,84 @@ export const Severities: Story = {
   },
 };
 
-const recoveryActions = (
-  <>
-    <Button
-      size="sm"
-      variant="outline"
-    >
-      <CdsActionsRefreshCcwIcon data-icon="inline-start" />
-      다시 시도
-    </Button>
-    <Button
-      size="sm"
-      variant="outline"
-    >
-      <CdsActionsRefreshCcwIcon data-icon="inline-start" />
-      상세 보기
-    </Button>
-  </>
-);
+function RecoveryActions({ onAction }: { onAction: (label: string) => void }) {
+  return <><Button size="sm" variant="outline" onClick={() => onAction("다시 시도")}><CdsActionsRefreshCcwIcon data-icon="inline-start" />다시 시도</Button><Button size="sm" variant="outline" onClick={() => onAction("상세 보기")}><CdsActionsRefreshCcwIcon data-icon="inline-start" />상세 보기</Button></>;
+}
+function DismissButton({ onDismiss }: { onDismiss: () => void }) {
+  return <Button aria-label="안내 닫기" size="icon-sm" variant="ghost" onClick={onDismiss}><CdsActionsXIcon /></Button>;
+}
 
-const dismissAction = (
-  <Button
-    aria-label="안내 닫기"
-    size="icon-sm"
-    variant="ghost"
-  >
-    <CdsActionsXIcon />
-  </Button>
-);
-
-export const FigmaLayouts: Story = {
-  render: () => (
+function FigmaLayoutsExample() {
+  const [hidden, setHidden] = useState<Set<number>>(new Set());
+  const [receipt, setReceipt] = useState("없음");
+  return (
     <div className="grid w-[697px] max-w-full gap-3">
-      <EmrInlineAlert
-        dismissAction={dismissAction}
+      {!hidden.has(0) ? <EmrInlineAlert
+        dismissAction={<DismissButton onDismiss={() => setHidden(value => new Set([...value, 0]))} />}
         layout="default"
         severity="neutral"
         title="진료 정보를 확인해 주세요"
       >
         접수 전에 보호자 연락처와 방문 시간을 확인할 수 있습니다.
-      </EmrInlineAlert>
-      <EmrInlineAlert
-        dismissAction={dismissAction}
+      </EmrInlineAlert> : null}
+      {!hidden.has(1) ? <EmrInlineAlert
+        dismissAction={<DismissButton onDismiss={() => setHidden(value => new Set([...value, 1]))} />}
         layout="default"
         severity="neutral"
         title="진료 정보를 확인해 주세요"
-      />
-      <EmrInlineAlert
-        action={recoveryActions}
+      /> : null}
+      {!hidden.has(2) ? <EmrInlineAlert
+        action={<RecoveryActions onAction={setReceipt} />}
         layout="actions"
         severity="neutral"
         title="검사 대기열을 불러오지 못했습니다"
       >
         마지막으로 확인한 검사 목록을 표시하고 있습니다.
-      </EmrInlineAlert>
-      <EmrInlineAlert
-        action={recoveryActions}
+      </EmrInlineAlert> : null}
+      {!hidden.has(3) ? <EmrInlineAlert
+        action={<RecoveryActions onAction={setReceipt} />}
         layout="actions"
         severity="neutral"
         title="검사 대기열을 불러오지 못했습니다"
-      />
-      <EmrInlineAlert
-        action={recoveryActions}
+      /> : null}
+      {!hidden.has(4) ? <EmrInlineAlert
+        action={<RecoveryActions onAction={setReceipt} />}
         layout="icon-box"
         severity="neutral"
         title="검사 결과를 확인해 주세요"
       >
         결과 검토가 필요한 항목이 2건 있습니다.
-      </EmrInlineAlert>
-      <EmrInlineAlert
-        dismissAction={dismissAction}
+      </EmrInlineAlert> : null}
+      {!hidden.has(5) ? <EmrInlineAlert
+        dismissAction={<DismissButton onDismiss={() => setHidden(value => new Set([...value, 5]))} />}
         layout="icon-box"
         severity="neutral"
         title="검사 결과를 확인해 주세요"
-      />
+      /> : null}
+    <output aria-label="레이아웃 작업 결과">{receipt}</output>
+      <Button variant="outline" onClick={() => setHidden(new Set())}>안내 복원</Button>
     </div>
-  ),
+  );
+}
+
+export const FigmaLayouts: Story = {
+  render: () => <FigmaLayoutsExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("status")).toHaveLength(7);
+    await userEvent.click(canvas.getAllByRole("button", { name: "다시 시도" })[0]);
+    await expect(canvas.getByLabelText("레이아웃 작업 결과")).toHaveTextContent("다시 시도");
+    await userEvent.click(canvas.getAllByRole("button", { name: "상세 보기" })[0]);
+    await expect(canvas.getByLabelText("레이아웃 작업 결과")).toHaveTextContent("상세 보기");
+    await userEvent.click(canvas.getAllByRole("button", { name: "안내 닫기" })[0]);
+    await waitFor(() => expect(canvas.getAllByRole("status")).toHaveLength(6));
+    await userEvent.click(canvas.getByRole("button", { name: "안내 복원" }));
+    await expect(canvas.getAllByRole("status")).toHaveLength(7);
+  },
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "820px" },
       description: {
         story:
           "Figma reference matrix for default, actions, and icon-box layouts at the authored 697px width, including title-only and title-with-body cases.",
@@ -244,7 +249,9 @@ export const SeverityIconBoxes: Story = {
     </div>
   ),
   parameters: {
+    controls: { disable: true },
     docs: {
+      story: { inline: false, height: "700px" },
       description: {
         story:
           "Verifies the icon-box treatment across neutral, info, success, warning, and error semantic states.",
@@ -253,24 +260,17 @@ export const SeverityIconBoxes: Story = {
   },
 };
 
+function RecoveryExample(args: ComponentProps<typeof EmrInlineAlert>) {
+  const [receipt, setReceipt] = useState("없음");
+  return <div><EmrInlineAlert {...args} action={<Button size="sm" onClick={() => setReceipt("다시 시도")}>다시 시도</Button>} secondaryAction={<Button size="sm" variant="outline" onClick={() => setReceipt("로컬 데모로 보기")}>로컬 데모로 보기</Button>} /><output aria-label="복구 작업 결과">{receipt}</output></div>;
+}
 export const WithRecoveryActions: Story = {
-  render: () => (
-    <EmrInlineAlert
-      severity="warning"
-      title="검사 대기열 동기화가 지연되고 있습니다"
-      action={<Button size="sm">다시 시도</Button>}
-      secondaryAction={
-        <Button
-          size="sm"
-          variant="outline"
-        >
-          로컬 데모로 보기
-        </Button>
-      }
-    >
-      현재 화면은 마지막 로컬 데모 상태를 표시합니다.
-    </EmrInlineAlert>
-  ),
+  args: { severity: "warning", title: "검사 대기열 동기화가 지연되고 있습니다", children: "현재 화면은 마지막 로컬 데모 상태를 표시합니다." },
+  render: args => <RecoveryExample {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const name of ["다시 시도", "로컬 데모로 보기"]) { const button = canvas.getByRole("button", { name }); button.focus(); await userEvent.keyboard("{Enter}"); await expect(canvas.getByLabelText("복구 작업 결과")).toHaveTextContent(name); }
+  },
   parameters: {
     docs: {
       description: {

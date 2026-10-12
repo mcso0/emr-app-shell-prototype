@@ -2267,13 +2267,13 @@ function DispensingContentBody({
                 }
                 actions={
                   <>
-                    <Button variant="outline" size="xs" className="bg-card">
-                      수정이력조회
+                    <Button variant="outline" size="xs" className="bg-card" disabled aria-label="수정이력조회 (준비 중)" title="수정이력조회 준비 중">
+                      수정이력조회<span className="hidden sm:inline"> (준비 중)</span>
                       <MenuIcon data-icon="inline-end" />
                     </Button>
                     <div className="h-[18px] w-px bg-[var(--emr-border-subtle)]" />
-                    <Button variant="outline" size="xs" className="bg-card">
-                      필터 1
+                    <Button variant="outline" size="xs" className="bg-card" disabled aria-label="필터 1 (준비 중)" title="필터 준비 중">
+                      필터 1<span className="hidden sm:inline"> (준비 중)</span>
                     </Button>
                     <EmrTableDensitySelector
                       value={tableDensity}
