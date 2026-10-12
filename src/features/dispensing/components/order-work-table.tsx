@@ -24,6 +24,7 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table";
 import { EmrTableCellText } from "@/components/emr/table-primitives";
 import { cn } from "@/lib/utils";
+import orderScrollStyles from "@/features/chart/chart-order-scroll.module.css";
 import { useLayoutStore } from "@/stores/layout-store";
 import type { Order, OrderDiffField, TechnicianUser } from "@/types/emr";
 import type { EmrTableDensity } from "@/components/emr/table-density";
@@ -371,20 +372,14 @@ export function OrderWorkTable({
             >
               {row.original.name}
             </EmrTableCellText>
+            {row.original.status === "취소" || row.original.status === "재요청" ? (
+              <EmrStatusBadge
+                className="shrink-0"
+                label={row.original.status}
+                testId={`order-status-badge-${row.original.id}`}
+              />
+            ) : null}
           </div>
-        ),
-      },
-      {
-        accessorKey: "status",
-        header: "상태",
-        size: 80,
-        minSize: 76,
-        meta: { label: "상태", headerInteraction: "filterable", resize: "data-column" },
-        cell: ({ row }) => (
-          <EmrStatusBadge
-            label={row.original.status}
-            testId={`order-status-badge-${row.original.id}`}
-          />
         ),
       },
       {
@@ -624,6 +619,7 @@ export function OrderWorkTable({
     state: {
       rowSelection,
       columnSizing,
+      columnPinning: { left: ["select", "name"], right: [] },
     },
     onRowSelectionChange: setRowSelection,
     onColumnSizingChange: setColumnSizing,
@@ -631,7 +627,7 @@ export function OrderWorkTable({
   const selectedRows = table.getSelectedRowModel().rows;
 
   return (
-    <div className="relative">
+    <div className={cn("relative", orderScrollStyles.scrollbarRevealRoot)}>
       {showDensitySelector ? (
         <div className="mb-2 flex justify-end">
           <EmrTableDensitySelector value={density} onValueChange={setDensity} />
@@ -667,12 +663,13 @@ export function OrderWorkTable({
               key={`${row.id}-warning`}
             >
               <TableCell
-                className="emr-table-warning-cell"
+                className="emr-table-warning-cell !px-0"
                 colSpan={row.getVisibleCells().length}
               >
                 <div
-                  className="emr-text-body flex min-h-6 items-start gap-2 font-medium text-[var(--emr-status-warning-text)]"
+                  className="emr-text-body sticky left-0 flex min-h-6 w-[var(--emr-table-left-pinned-column-width)] max-w-full items-start gap-2 font-medium text-[var(--emr-status-warning-text)]"
                   data-emr-cell-content="auto"
+                  style={{ paddingInline: `var(--emr-table-cell-padding-x-${density})` }}
                 >
                   <WarningIcon className="mt-0.5 size-4 shrink-0" />
                   <EmrTableCellText

@@ -68,3 +68,41 @@ Adopt the fulfillment work item route in the dispensing and treatment workspace 
 ## Handoff Notes
 
 Start `DEN-240` next. It should connect fulfillment completion to order lifecycle and billing candidate sync now that lab, imaging, dispensing, and treatment screens can all speak to the shared fulfillment route.
+
+## 2026-10-12 Local Operator Table Follow-up
+
+User authorized the shared dispensing/treatment table UI update only:
+remove the 상태 column, retain 취소/재요청 badges beside 오더명,
+pin selection and order name, and reveal scrollbars on hover. Existing
+assignment/completion restrictions are preserved. The original checkout
+in-progress assignmentDisabled change is excluded from this release. No data, lifecycle, API, or deployment change.
+
+- Reused shared column pinning and the chart scrollbar reveal style; keyboard
+  focus and touch behavior follow the chart. The scrollbar begins after the
+  fixed identity columns. Warning text stays visible during horizontal scroll.
+- Explicit Korean column metadata preserves labels with the current shared renderer.
+- Added four Storybook cases: dispensing, treatment, completion-restricted actions,
+  and empty rows. All four passed, including exception badges, fixed geometry,
+  warning continuity, selection/completion callback, and disabled completion actions.
+- Typecheck, focused ESLint, and diff checks passed. Local browser checks proved
+  both variants have idle opacity 0, hover opacity 1, and unchanged identity
+  position after scrolling 250px. Screenshots are under output/playwright/.
+- Initial app checks on the original checkout port 3000 stopped at real login.
+  The release worktree uses an isolated mock server on port 3197. Updated both
+  horizontal and outer vertical scroll-owner selectors for the nested viewport.
+  Release-candidate checks and deployment evidence follow below. No remote data
+  mutation is part of this release.
+
+Release isolation on 2026-10-12: clean origin/main base
+`e0c7e776186fb37323adc273f862431774fc53b4`, branch
+`codex/dispensing-table-pinned-hover`. Only the table, its new stories,
+layout regression coverage, and this evidence are included. Local release
+checks passed: all 10 dispensing/treatment layout tests, all 4 Storybook
+cases, secret/docs/UX copy/lint/type checks, production build, and diff check.
+The existing documentation-viewer Turbopack tracing warning remains unrelated.
+Exact remote Release Check and Ready Preview precede the Production gate.
+Post-release smoke: authenticated synthetic Cheongdam dispensing and treatment
+instruction tables on /dispensing, checking status removal, identity pinning,
+hover/focus visibility, and read-only navigation without execution mutations.
+Rollback baseline: Ready Production `dpl_Bxk9pQECrqfS26uotKSqLv9tXPsX`, source
+`e0c7e776186fb37323adc273f862431774fc53b4`.
