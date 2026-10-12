@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { sourceFunction, draftOwnedExpression } from "./fixtures/chart-order-source-owners";
 import { readFileSync } from "node:fs";
 import { Script } from "node:vm";
 import ts from "typescript";
@@ -12,13 +13,9 @@ import { classifyChartOrderSaveFailure } from "../src/features/chart/chart-order
 
 // Execute the caller's current callbacks, following the repo's AST/VM convention.
 // This fake effect lifecycle is explicit; it does not mount React or prove browser ordering.
-const source = readFileSync("src/features/chart/module.tsx", "utf8");
-const file = ts.createSourceFile("module.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const orderArea = file.statements.find((node): node is ts.FunctionDeclaration =>
-  ts.isFunctionDeclaration(node) && node.name?.text === "OrderArea");
-if (!orderArea?.body) throw new Error("OrderArea source not found");
-const statements = orderArea.body.statements;
+const { file, statements } = sourceFunction("src/features/chart/module.tsx", "OrderArea");
 function variable(name: string) {
+  if (name === "commitDraftRows" || name === "markDraftTouched") return draftOwnedExpression(name);
   const declaration = statements.flatMap(statement => ts.isVariableStatement(statement)
     ? [...statement.declarationList.declarations] : []).find(node => node.name.getText(file) === name);
   if (!declaration?.initializer) throw new Error(`Missing OrderArea callback: ${name}`);

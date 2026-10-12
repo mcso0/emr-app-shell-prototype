@@ -3,7 +3,6 @@
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { getFreshChartOrderCatalog, loadCachedChartOrderCatalog } from "./chart-order-catalog-client";
-import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
 import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
 import { isChartOrderDraftRowInRootIds, prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
 import historyStyles from "./chart-history.module.css";
@@ -290,10 +289,10 @@ import {
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
 import { reconcileChartOrderConfirmationRows } from "@/features/chart/chart-order-confirmation-readback";
-import {
-  getChartOrderDraftInFlightSave,
-  registerChartOrderDraftSaveOperation,
-} from "@/features/chart/chart-order-draft-save-operation";
+import { createChartOrderDraftSaveExecutor } from "@/features/chart/chart-order-draft-save-executor";
+import { getChartOrderDraftStatusText } from "@/features/chart/chart-order-draft-presentation";
+import { useChartOrderDraftSession, chartOrderContinuousSaveDelayMs } from "@/features/chart/use-chart-order-draft-session";
+import type { ChartOrderDraftRow, ChartOrderDraftRouteResponse } from "@/features/chart/chart-order-draft-types";
 import { chartOrderExpectedEtagHeader } from "@/features/chart/order-version-contract";
 import {
   chartLifecycleError,
@@ -485,20 +484,6 @@ type ChartDiagnosisRouteResponse =
       version?: string;
       assessments?: Diagnosis[];
       chart?: SoapNote;
-    }
-  | {
-      ok: false;
-      status: number;
-      denialReason?: string;
-      error?: string;
-    };
-type ChartOrderDraftRouteResponse =
-  | {
-      ok: true;
-      status: number;
-      billingSummary?: ChartOrderBillingSummary;
-      etag?: string;
-      rows?: ChartOrderRuntimeRow[];
     }
   | {
       ok: false;
@@ -708,8 +693,6 @@ const CHART_ORDER_MIN_PX = 220;
 const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
-const chartOrderDiscreteSaveDelayMs = 150;
-const chartOrderContinuousSaveDelayMs = 700;
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const emptyChartQueueItems: OrderQueueItem[] = [];
@@ -5656,34 +5639,6 @@ function AssessmentPanel({
     </section>
   );
 }
-
-type ChartOrderTableRow = {
-  groupTitle: string;
-  order: EmrOrder;
-};
-
-type ChartOrderDraftRow = ChartOrderTableRow & {
-  billingCandidateId?: string | null;
-  billingCandidateStatus?:
-    | "candidate_created"
-    | "billing_review_required"
-    | "invoice_linked"
-    | "cancelled";
-  billingName: string;
-  committedBillingName: string;
-  committedQuantityInput: string;
-  catalogSearchRow?: ChartOrderCatalogSearchRow;
-  detailInputs: Record<string, unknown>;
-  detailSchemaVersion: number;
-  executionTask?: ChartOrderExecutionTask;
-  priority: ClinicalOrderPriority;
-  runtimeRow?: ChartOrderRuntimeRow;
-  setChildIncluded?: boolean;
-  setSelectionIntent?: ChartOrderSetSelectionIntent;
-  setPreview?: ChartOrderSetPreview;
-  quantityInput: string;
-  unitPrice?: number | null;
-};
 
 type ChartOrderSelectionCohort = "draft" | "confirmed";
 
@@ -11755,22 +11710,36 @@ const OrderArea = memo(function OrderArea({
     () => orderFallbackRows.filter(inOrderScope),
     [inOrderScope, orderFallbackRows],
   );
-  const [committedRows, setCommittedRows] =
-    useState<ChartOrderDraftRow[]>(initialDraftRows);
-  const [draftRows, setDraftRowsState] =
-    useState<ChartOrderDraftRow[]>(initialDraftRows);
-  const draftRowsRef = useRef(draftRows);
-  const setDraftRows = useCallback(
-    (nextRows: SetStateAction<ChartOrderDraftRow[]>) => {
-      setDraftRowsState((currentRows) => {
-        const resolvedRows =
-          typeof nextRows === "function" ? nextRows(currentRows) : nextRows;
-        draftRowsRef.current = resolvedRows;
-        return resolvedRows;
-      });
-    },
-    [],
-  );
+  const orderDraftSession = useChartOrderDraftSession(initialDraftRows);
+  const {
+    committedRows,
+    setCommittedRows,
+    draftRows,
+    draftRowsRef,
+    setDraftRows,
+    orderDraftSaveState,
+    orderNoticeVersion,
+    setOrderDraftSaveState,
+    orderDraftEtag,
+    orderDraftEtagRef,
+    setOrderDraftEtag,
+    orderDraftReloadKey,
+    setOrderDraftReloadKey,
+    draftTouchedRef,
+    draftEditVersionRef,
+    draftSaveDelayMsRef,
+    orderDraftFailedAutoSaveVersionRef,
+    orderDraftConflictRef,
+    orderDraftSaveInFlightRef,
+    orderDraftSavePromiseRef,
+    autoSaveDraftRef,
+    inFlightDraftOrderIdsRef,
+    pendingAddedOrderIdsRef,
+    pendingRemovedRootOrderIdsRef,
+    pendingRemovedRootOrderIds,
+    setPendingRemovedRootOrderIds,
+    markDraftTouched,
+  } = orderDraftSession;
   const [selectedOrderIds, setSelectedOrderIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -11894,42 +11863,6 @@ const OrderArea = memo(function OrderArea({
   } | null>(null);
   const [orderSortState, setOrderSortState] =
     useState<ChartOrderSortState>(null);
-  const [orderDraftSaveState, setOrderDraftSaveStateValue] = useState<
-    "idle" | "loading" | "saving" | "saved" | "error" | "conflict"
-  >("idle");
-  const [orderNoticeVersion, setOrderNoticeVersion] = useState(0);
-  const setOrderDraftSaveState = useCallback((state: typeof orderDraftSaveState) => {
-    setOrderDraftSaveStateValue(state);
-    if (state === "error" || state === "conflict") setOrderNoticeVersion((version) => version + 1);
-  }, []);
-  const [orderDraftEtag, setOrderDraftEtag] = useState<string | undefined>();
-  const orderDraftEtagRef = useRef(orderDraftEtag);
-  const [orderDraftReloadKey, setOrderDraftReloadKey] = useState(0);
-  const draftTouchedRef = useRef(false);
-  const draftEditVersionRef = useRef(0);
-  const draftSaveDelayMsRef = useRef(chartOrderContinuousSaveDelayMs);
-  const orderDraftFailedAutoSaveVersionRef = useRef<number | null>(null);
-  const orderDraftConflictRef = useRef(false);
-  const orderDraftSaveInFlightRef = useRef(false);
-  const orderDraftSavePromiseRef = useRef<Promise<boolean> | null>(null);
-  const autoSaveDraftRef = useRef<() => Promise<boolean>>(async () => false);
-  const inFlightDraftOrderIdsRef = useRef<Set<string>>(new Set());
-  const pendingAddedOrderIdsRef = useRef<Set<string>>(new Set());
-  const pendingRemovedRootOrderIdsRef = useRef<Set<string>>(new Set());
-  const [pendingRemovedRootOrderIds, setPendingRemovedRootOrderIds] = useState<
-    Set<string>
-  >(() => new Set());
-  const markDraftTouched = (
-    saveTiming: "continuous" | "discrete" = "continuous",
-  ) => {
-    draftTouchedRef.current = true;
-    draftEditVersionRef.current += 1;
-    draftSaveDelayMsRef.current =
-      saveTiming === "discrete"
-        ? chartOrderDiscreteSaveDelayMs
-        : chartOrderContinuousSaveDelayMs;
-    orderDraftFailedAutoSaveVersionRef.current = null;
-  };
   const pendingConfirmationRef = useRef<{
     actualRecords: ChartActualRecords;
     expectedEtag: string;
@@ -12937,6 +12870,18 @@ const OrderArea = memo(function OrderArea({
     applyPersistedOrderDrafts,
     applyPersistedOrderActions,
     setOrderDraftSaveState,
+    draftEditVersionRef,
+    draftSaveDelayMsRef,
+    draftTouchedRef,
+    inFlightDraftOrderIdsRef,
+    orderDraftConflictRef,
+    orderDraftEtagRef,
+    orderDraftFailedAutoSaveVersionRef,
+    pendingAddedOrderIdsRef,
+    pendingRemovedRootOrderIdsRef,
+    setCommittedRows,
+    setOrderDraftEtag,
+    setPendingRemovedRootOrderIds,
   ]);
   const acceptAuthoritativeBillingSummary = useCallback(
     (summary: ChartOrderBillingSummary) => {
@@ -13017,7 +12962,12 @@ const OrderArea = memo(function OrderArea({
       unsubscribe();
       billingSummaryRequestSequenceRef.current += 1;
     };
-  }, [refreshBillingSummary]);
+  }, [
+    refreshBillingSummary,
+    draftTouchedRef,
+    orderDraftSaveInFlightRef,
+    orderDraftSavePromiseRef,
+  ]);
   const savePrebillingOverride = async (
     orderId: string,
     override: ChartOrderPrebillingOverridePatch,
@@ -13103,209 +13053,35 @@ const OrderArea = memo(function OrderArea({
       ),
     );
   };
-  const commitDraftRows = ({ silent = false } = {}): Promise<boolean> => {
-    const inFlightSave = getChartOrderDraftInFlightSave(
-      orderDraftSavePromiseRef,
-      orderDraftSaveInFlightRef,
-    );
-    if (inFlightSave) return inFlightSave;
-    if (
-      writeDisabled || draftWriteDisabled || orderDraftReadError ||
-      orderDraftSaveState === "loading" ||
-      orderDraftSaveState === "saving" ||
-      orderDraftSaveState === "conflict"
-    )
-      return Promise.resolve(false);
-
-    const operation = (async () => {
-      orderDraftSaveInFlightRef.current = true;
-      while (draftTouchedRef.current) {
-        const attemptedDraftEditVersion = draftEditVersionRef.current;
-        const attemptedRemovedRootOrderIds = new Set(
-          pendingRemovedRootOrderIdsRef.current,
-        );
-        const attemptedAddedOrderIds = new Set(pendingAddedOrderIdsRef.current);
-        const isAttemptedRemovalRow = (row: ChartOrderDraftRow) =>
-          isChartOrderDraftRowInRootIds(row, attemptedRemovedRootOrderIds);
-        const persistenceSourceRows = draftRowsRef.current.filter(
-          (row) => !isAttemptedRemovalRow(row),
-        );
-        const preparedDraft = prepareChartOrderDraftRowsForPersistence(
-          persistenceSourceRows,
-          createChartOrderDraftId,
-        );
-        if (preparedDraft.orderIdMap.size > 0) {
-          const preparedById = new Map(
-            preparedDraft.rows.map((row) => [row.order.id, row]),
-          );
-          setDraftRows((currentRows) =>
-            currentRows.map((row) => {
-              if (isAttemptedRemovalRow(row)) return row;
-              const preparedId =
-                preparedDraft.orderIdMap.get(row.order.id) ?? row.order.id;
-              return preparedById.get(preparedId) ?? row;
-            }),
-          );
-          setSelectedOrderIds((current) =>
-            remapChartOrderIdSet(current, preparedDraft.orderIdMap),
-          );
-        }
-
-        const expectedEtag = orderDraftEtagRef.current;
-        if (!expectedEtag) {
-          setOrderDraftSaveState("error");
-          if (!silent) toast.error("오더 버전을 먼저 불러와 주세요.");
-          return false;
-        }
-
-        draftTouchedRef.current = false;
-        setOrderDraftSaveState("saving");
-        inFlightDraftOrderIdsRef.current = new Set(
-          preparedDraft.rows.map((row) => row.order.id),
-        );
-        const result = await saveChartOrderDraftRoute({
-          chartId: mutationChartId,
-          actorHeaders,
-          encounterId: bundle.encounter.id,
-          expectedEtag,
-          primaryVeterinarianId: bundle.encounter.primaryVeterinarianId,
-          removedOrderIds: Array.from(attemptedRemovedRootOrderIds),
-          rows: preparedDraft.rows,
-          workspaceId: bundle.encounter.workspaceId,
-        });
-        inFlightDraftOrderIdsRef.current.clear();
-
-        if (!result.ok) {
-          const failedInFlightAddRemovals = new Set(
-            Array.from(attemptedAddedOrderIds).filter((orderId) =>
-              pendingRemovedRootOrderIdsRef.current.has(orderId),
-            ),
-          );
-          failedInFlightAddRemovals.forEach((orderId) =>
-            pendingRemovedRootOrderIdsRef.current.delete(orderId),
-          );
-          if (failedInFlightAddRemovals.size > 0) {
-            setPendingRemovedRootOrderIds(
-              new Set(pendingRemovedRootOrderIdsRef.current),
-            );
-            setDraftRows((currentRows) =>
-              currentRows.filter(
-                (row) => !isChartOrderDraftRowInRootIds(row, failedInFlightAddRemovals),
-              ),
-            );
-          }
-          const { conflict } = classifyChartOrderSaveFailure(result);
-          if (conflict) void refreshBillingSummary();
-          orderDraftConflictRef.current = conflict;
-          setOrderDraftSaveState(conflict ? "conflict" : "error");
-          draftTouchedRef.current = true;
-          orderDraftFailedAutoSaveVersionRef.current =
-            attemptedDraftEditVersion;
-          if (
-            !silent ||
-            conflict ||
-            attemptedRemovedRootOrderIds.size > 0 ||
-            attemptedAddedOrderIds.size > 0
-          ) {
-            toast.error(
-              conflict
-                ? "다른 기기에서 오더가 변경됐어요. 현재 편집값을 유지한 채 충돌을 해결해 주세요."
-                : result.denialReason === "permission_missing"
-                  ? "오더 수정 권한이 없어 저장하지 못했어요."
-                  : getChartOrderPersistenceErrorMessage(
-                      result.denialReason ?? result.error,
-                    ),
-            );
-          }
-          return false;
-        }
-
-        if (
-          !result.billingSummary ||
-          !acceptAuthoritativeBillingSummary(result.billingSummary)
-        ) {
-          draftTouchedRef.current = true;
-          setOrderDraftSaveState("error");
-          orderDraftFailedAutoSaveVersionRef.current =
-            attemptedDraftEditVersion;
-          toast.error("저장 응답의 금액 범위를 확인하지 못했어요.");
-          return false;
-        }
-
-        const nextCommittedRows = applyPersistedOrderDrafts(
-          preparedDraft.rows,
-          result.rows ?? [],
-          bundle.encounter.workspaceId,
-          { preserveMissingRows: true },
-        );
-        setCommittedRows(nextCommittedRows);
-        attemptedRemovedRootOrderIds.forEach((orderId) =>
-          pendingRemovedRootOrderIdsRef.current.delete(orderId),
-        );
-        setPendingRemovedRootOrderIds(
-          new Set(pendingRemovedRootOrderIdsRef.current),
-        );
-        attemptedAddedOrderIds.forEach((orderId) =>
-          pendingAddedOrderIdsRef.current.delete(orderId),
-        );
-        if (!draftTouchedRef.current) {
-          setDraftRows(nextCommittedRows);
-        } else {
-          const committedById = new Map(
-            nextCommittedRows.map((row) => [row.order.id, row]),
-          );
-          setDraftRows((currentRows) =>
-            mergeChartOrderDraftRowsAfterSave(
-              currentRows,
-              committedById,
-              isAttemptedRemovalRow,
-            ),
-          );
-        }
-        if (result.etag) {
-          orderDraftEtagRef.current = result.etag;
-          setOrderDraftEtag(result.etag);
-        }
-        orderDraftFailedAutoSaveVersionRef.current = null;
-        orderDraftConflictRef.current = false;
-        draftSaveDelayMsRef.current = chartOrderContinuousSaveDelayMs;
-        if (attemptedRemovedRootOrderIds.size > 0) {
-          toast.success(
-            attemptedRemovedRootOrderIds.size === 1
-              ? "오더를 삭제했어요."
-              : `${attemptedRemovedRootOrderIds.size}개 오더를 삭제했어요.`,
-          );
-        }
-        const acknowledgedAdditionCount = Array.from(
-          attemptedAddedOrderIds,
-        ).filter(
-          (orderId) => !pendingRemovedRootOrderIdsRef.current.has(orderId),
-        ).length;
-        if (acknowledgedAdditionCount > 0) {
-          toast.success(
-            `${acknowledgedAdditionCount}개 Order 후보를 추가하고 저장했어요.`,
-          );
-        }
-      }
-
-      setOrderDraftSaveState("saved");
-      if (!silent) toast.success("Order 업데이트를 저장했어요.");
-      return true;
-    })();
-
-    return registerChartOrderDraftSaveOperation(
-      operation,
-      orderDraftSavePromiseRef,
-      orderDraftSaveInFlightRef,
-    );
-  };
+  const commitDraftRows = (options?: { silent?: boolean }): Promise<boolean> =>
+    createChartOrderDraftSaveExecutor({
+    session: orderDraftSession,
+    writeDisabled,
+    draftWriteDisabled,
+    orderDraftReadError,
+    mutationChartId,
+    actorHeaders,
+    bundle,
+    saveChartOrderDraftRoute,
+    createChartOrderDraftId,
+    setSelectedOrderIds,
+    applyPersistedOrderDrafts,
+    acceptAuthoritativeBillingSummary,
+    refreshBillingSummary,
+    getChartOrderPersistenceErrorMessage,
+    toast,
+  })(options);
   useEffect(() => {
     autoSaveDraftRef.current = () => commitDraftRows({ silent: true });
   });
   const orderSwitchBlockedRef = useRef(false);
   useLayoutEffect(() => {
     orderSwitchBlockedRef.current = Boolean(orderMutationDraft?.saving) || orderDraftSaveState === "saving" && !orderDraftSavePromiseRef.current;
-  }, [orderMutationDraft?.saving, orderDraftSaveState]);
+  }, [
+    orderMutationDraft?.saving,
+    orderDraftSaveState,
+    orderDraftSavePromiseRef,
+  ]);
   useEffect(() => {
     const flush = async () => {
       if (orderSwitchBlockedRef.current || prebillingSavingOrderIdsRef.current.size || actualDispenseSavingOrderIdsRef.current.size || intendedAssigneeSavingOrderIdsRef.current.size) {
@@ -13325,7 +13101,12 @@ const OrderArea = memo(function OrderArea({
       if (useChartStore.getState().flushOrderEdits === flush) useChartStore.setState({ flushOrderEdits: undefined });
       window.removeEventListener("beforeunload", beforeUnload);
     };
-  }, []);
+  }, [
+    autoSaveDraftRef,
+    draftTouchedRef,
+    orderDraftSaveInFlightRef,
+    orderDraftSavePromiseRef,
+  ]);
   const loadIntendedAssignees = async (orderId: string) => {
     const row = draftRowsRef.current.find(
       (candidate) => candidate.order.id === orderId,
@@ -13635,6 +13416,12 @@ const OrderArea = memo(function OrderArea({
     orderDraftEtag,
     orderDraftSaveState,
     writeDisabled,
+    autoSaveDraftRef,
+    draftEditVersionRef,
+    draftSaveDelayMsRef,
+    draftTouchedRef,
+    orderDraftFailedAutoSaveVersionRef,
+    orderDraftSaveInFlightRef,
   ]);
   const recoverPersistedConfirmation = async (orderIds: string[]) => {
     const readback = await loadChartOrderActions({
@@ -14501,17 +14288,10 @@ const OrderArea = memo(function OrderArea({
     void refreshOrderExecution();
     toast.success(`${chartOrderMutationLabels[draft.action]}을 기록했어요.`);
   };
-  const draftStatusText = orderLoading
-    ? "오더 정보를 불러오는 중"
-    : orderDraftSaveState === "saving"
-      ? "저장 중"
-      : orderDraftSaveState === "error"
-        ? orderDraftReadError ? "조회 실패" : "저장 실패"
-        : orderDraftSaveState === "conflict"
-          ? "충돌 해결 필요"
-          : hasDraftChanges
-            ? `변경 대기 ${changedDraftOrderCount}건${draftSaveInvalidOrderIds.size ? ` · 입력 확인 필요 ${draftSaveInvalidOrderIds.size}건` : ""}`
-            : "저장됨";
+  const draftStatusText = getChartOrderDraftStatusText({
+    orderLoading, orderDraftSaveState, orderDraftReadError, hasDraftChanges,
+    changedDraftOrderCount, invalidDraftOrderCount: draftSaveInvalidOrderIds.size,
+  });
   const hasAuthoritativeBillingSummary = orderDraftSaveState !== "loading";
   const billingAmountDisplayState: ChartOrderBillingAmountDisplayState =
     hasDraftChanges && draftSaveInvalidOrderIds.size > 0
