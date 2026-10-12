@@ -96,7 +96,53 @@ export const CurrentOwnerInputs: Story = {
     await waitFor(() => expect(quantity()).toBeDisabled()); await expect(reason()).toBeDisabled();
     billingFixture.setAssignee(null);
     await waitFor(() => expect(quantity()).toBeDisabled()); await expect(reason()).toBeDisabled();
+    await waitFor(() => expect(canvas.getByTestId(`billing-queue-item-${billingInvoiceId}`)).toHaveTextContent("미지정"));
     await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true);
+    await expect(billingFixture.unhandled).toEqual([]);
+  },
+};
+
+export const CheckoutOwnershipFeedback: Story = {
+  args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
+  play: async ({ canvas }) => {
+    await canvas.findByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    billingFixture.setPreparationDenied(true);
+    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await canvas.findByText("Checkout 권한이 없습니다.");
+    // A real error must remain visible to the current owner.
+    await expect(quantity()).toBeEnabled();
+    billingFixture.setAssignee("synthetic-other-user");
+    await waitFor(() => expect(quantity()).toBeDisabled());
+    await waitFor(() => expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument());
+    await expect(canvas.getByTestId(`billing-queue-item-${billingInvoiceId}`)).toHaveTextContent("다른 합성 담당자");
+    billingFixture.setAssignee("synthetic-billing-user");
+    await canvas.findByText("Checkout 권한이 없습니다.");
+    billingFixture.setAssignee(null);
+    await waitFor(() => expect(quantity()).toBeDisabled());
+    await waitFor(() => expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument());
+    await expect(canvas.getByTestId(`billing-queue-item-${billingInvoiceId}`)).toHaveTextContent("미지정");
+    await expect(canvas.getByTestId("billing-checkout-total")).toHaveTextContent("3,000");
+    await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true);
+    await expect(billingFixture.unhandled).toEqual([]);
+  },
+};
+
+export const LateCheckoutDenialAfterTransfer: Story = {
+  args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
+  play: async ({ canvas }) => {
+    await canvas.findByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    billingFixture.setPreparationDenied(true);
+    billingFixture.holdPreparations();
+    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await waitFor(() => expect(billingFixture.requests.some(request => request.method === "POST" && request.path.endsWith("/guardian-checkout"))).toBe(true));
+    billingFixture.setAssignee("synthetic-other-user");
+    await waitFor(() => expect(quantity()).toBeDisabled());
+    billingFixture.releasePreparations();
+    await waitFor(() => expect(billingFixture.writesSettled()).toBe(true));
+    await expect(canvas.queryByText("Checkout 권한이 없습니다.")).not.toBeInTheDocument();
+    await expect(canvas.getByTestId("billing-checkout-total")).toHaveTextContent("3,000");
     await expect(billingFixture.unhandled).toEqual([]);
   },
 };

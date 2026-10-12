@@ -30,6 +30,8 @@ function createFixture(scenario: BillingScenario) {
   const requests: Array<{ method: string; path: string; body?: unknown }> = [], unhandled: string[] = [];
   let assignedToUserId: string | null = null, assignmentRevision = 1;
   const assignment = () => ({ assignedToUserId, assignedToDisplayName: assignedToUserId === "synthetic-billing-user" ? "합성 접수" : assignedToUserId ? "다른 합성 담당자" : null, canManage: !assignedToUserId || assignedToUserId === "synthetic-billing-user", revision: assignmentRevision, assignees: [{ userId: "synthetic-billing-user", displayName: "합성 접수" }, { userId: "synthetic-other-user", displayName: "다른 합성 담당자" }] });
+  let preparationDenied = false, preparationGate: Promise<void> | undefined, releasePreparations: (() => void) | undefined;
+  const pendingWriteBodies = new Set<symbol>();
   let healthy = scenario !== "error", unmount: (() => void) | undefined;
   let holdTransition = false, releaseTransition: (() => void) | undefined;
   let cleanup: (() => Promise<void>) | undefined;
@@ -39,12 +41,11 @@ function createFixture(scenario: BillingScenario) {
     useMockAuthStore.setState({ hydrated: true, session: { id: "synthetic-billing-user", role: "front_desk", roleLabel: "합성 접수", storageMode: "session", issuedAt: now } });
     useBillingStore.setState({ invoices: [], invoiceLines: [], payments: [], selectedInvoiceId: scenario === "detail" ? invoice.id : "", selectedInvoiceIds: [], combinedInvoiceIds: [], invoiceAssignees: {} });
     useLayoutStore.setState({ contentAsideOpen: false, rightPanelOpen: true, activeDrawer: null });
-    const pendingWriteBodies = new Set<symbol>();
-    const trackedWrite = (response: Response, hold = false) => {
+    const trackedWrite = (response: Response, hold = false, preparation = false) => {
       const ticket = Symbol("synthetic billing write");
       pendingWriteBodies.add(ticket);
       const read = response.json.bind(response);
-      const gate = hold ? new Promise<void>(resolve => { releaseTransition = resolve; }) : Promise.resolve();
+      const gate = preparation ? preparationGate ?? Promise.resolve() : hold ? new Promise<void>(resolve => { releaseTransition = resolve; }) : Promise.resolve();
       response.json = async () => {
         try { await gate; return await read(); }
         finally {
@@ -86,6 +87,7 @@ function createFixture(scenario: BillingScenario) {
       if (method === "POST" && url.pathname === `${base}/billing/guardian-checkout`) {
         const command = body as { invoiceIds?: string[]; paymentMethod?: string; paymentMemo?: string };
         if (command.invoiceIds?.length !== 1 || command.invoiceIds[0] !== invoice.id || !["card", "cash", "transfer", "other"].includes(command.paymentMethod ?? "")) throw new Error("Unexpected synthetic checkout preparation");
+        if (preparationDenied) return trackedWrite(Response.json({ ok: false, status: 403, denialReason: "permission_missing" }, { status: 403 }), false, true);
         return trackedWrite(Response.json({ ok: true, status: 200, ...checkout, checkoutSession: { ...checkout.checkoutSession, paymentMethod: command.paymentMethod as PaymentMethod, paymentMemo: command.paymentMemo }, enforcedBy: "guardian-checkout-session" }));
       }
       // Financial edits are rejected locally; the fixture never invents payment success.
@@ -103,6 +105,7 @@ function createFixture(scenario: BillingScenario) {
       // their cancelled/sequence guards and removes shared queue listeners first.
       unmount?.();
       releaseTransition?.();
+      releasePreparations?.();
       await waitFor(() => expect(pendingWriteBodies.size).toBe(0));
       if (globalThis.fetch === intercept) globalThis.fetch = previousFetch;
       useMockAuthStore.setState(auth, true); useBillingStore.setState(billing, true); useLayoutStore.setState(layout, true);
@@ -110,7 +113,12 @@ function createFixture(scenario: BillingScenario) {
     })();
     return cleanup;
   };
-  return { invoice, rows, lines, requests, unhandled, setAssignee: (id: string | null) => { assignedToUserId = id; assignmentRevision += 1; window.dispatchEvent(new Event("clair-billing-assignment")); }, install, recover: () => { healthy = true; }, setUnmount: (callback: () => void) => { unmount = callback; }, holdNextTransition: () => { holdTransition = true; }, finish: () => cleanup?.(), isRestored: () => restored };
+  return { invoice, rows, lines, requests, unhandled,
+    setPreparationDenied: (denied: boolean) => { preparationDenied = denied; },
+    holdPreparations: () => { preparationGate = new Promise<void>(resolve => { releasePreparations = resolve; }); },
+    releasePreparations: () => { releasePreparations?.(); preparationGate = undefined; },
+    writesSettled: () => pendingWriteBodies.size === 0,
+    setAssignee: (id: string | null) => { assignedToUserId = id; assignmentRevision += 1; window.dispatchEvent(new Event("clair-billing-assignment")); }, install, recover: () => { healthy = true; }, setUnmount: (callback: () => void) => { unmount = callback; }, holdNextTransition: () => { holdTransition = true; }, finish: () => cleanup?.(), isRestored: () => restored };
 }
 export let billingFixture: ReturnType<typeof createFixture>;
 export function prepareBillingFixture(scenario: BillingScenario) { billingFixture = createFixture(scenario); return billingFixture.install(); }
