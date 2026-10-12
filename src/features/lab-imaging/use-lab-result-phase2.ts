@@ -30,6 +30,7 @@ export type LabResultPhase2Data = {
   overallFinding: string;
   overallRevision: number;
   canEdit: boolean;
+  canRequestRetest?: boolean;
   events: LabResultHistoryEvent[];
   attachments: LabResultAttachment[];
 };
@@ -47,8 +48,8 @@ function parsePhase2(value: unknown, resultId: string): LabResultPhase2Data | nu
   return data as LabResultPhase2Data;
 }
 
-export function useLabResultPhase2(workspaceId: string, resultId: string | undefined, enabled: boolean) {
-  const key = `${workspaceId}:${resultId ?? ""}`;
+export function useLabResultPhase2(workspaceId: string, resultId: string | undefined, enabled: boolean, workRevision?: number) {
+  const key = `${workspaceId}:${resultId ?? ""}:${workRevision ?? ""}`;
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<{ key: string; status: "loading" | "ready" | "error" | "permission_denied"; data: LabResultPhase2Data | null }>({ key: "", status: "loading", data: null });
   const refresh = useCallback(() => setReload(value => value + 1), []);

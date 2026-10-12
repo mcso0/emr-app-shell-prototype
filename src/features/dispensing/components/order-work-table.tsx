@@ -36,6 +36,7 @@ type OrderWorkTableProps = {
   sectionId: string;
   showDensitySelector?: boolean;
   completionDisabled?: boolean;
+  assignmentDisabled?: boolean;
   technicians: TechnicianUser[];
   onCompleteRows: (rowIds: string[]) => void;
   onAssignOrder: (rowId: string, technicianId: string) => void;
@@ -136,12 +137,14 @@ function AssigneeCell({
   order,
   technicians,
   onAssign,
+  assignmentDisabled = false,
 }: {
   order: Order;
   technicians: TechnicianUser[];
   onAssign: (technicianId: string) => void;
+  assignmentDisabled?: boolean;
 }) {
-  const disabled =
+  const disabled = assignmentDisabled ||
     order.status === "완료" ||
     order.status === "취소" ||
     order.workStatus === "완료";
@@ -275,6 +278,7 @@ function RowCheckbox({ row }: { row: Row<Order> }) {
 
 export function OrderWorkTable({
   completionDisabled = false,
+  assignmentDisabled = false,
   density: densityProp,
   onDensityChange,
   rows,
@@ -580,6 +584,7 @@ export function OrderWorkTable({
         meta: { label: "담당", align: "center", headerInteraction: "static", resize: "none" },
         cell: ({ row }) => (
           <AssigneeCell
+            assignmentDisabled={assignmentDisabled}
             order={row.original}
             technicians={technicians}
             onAssign={(technicianId) =>
@@ -604,7 +609,7 @@ export function OrderWorkTable({
         ),
       },
     ],
-    [completeRows, completionDisabled, onAssignOrder, technicians],
+    [assignmentDisabled, completeRows, completionDisabled, onAssignOrder, technicians],
   );
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({

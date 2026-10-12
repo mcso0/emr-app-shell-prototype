@@ -31,6 +31,8 @@ exact Production approval remain; see WP09 and the PR711 approval packet.
 
 This is the current product-status source for scope, mock/live boundaries, and human review. Read the relevant sections when those facts affect the task. It should stay compact. Module and release evidence is preserved in [MVP Status Detail Snapshot](current-status-details.md). Older history remains in [MVP Current Status History](current-status-history.md). Read details only for the active task.
 
+Local current-assignee authority candidate (2026-10-12) now covers lab, imaging, dispensing/treatment and billing. Lab input opens on claim; other clinical modules retain start/record/completion/amendment phases. Only the current assignee may edit/execute, and transfer changes authority. Billing ownership/audit and DB guards are in local migration `20261012054346`; no remote application or delivery is verified. See [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#current-assignee-boundary-follow-up-2026-10-12) for scoped synthetic verification and remaining integration limits.
+
 ## Agent Compact Summary
 
 * Current target: Product MVP.

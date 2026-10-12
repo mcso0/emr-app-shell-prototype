@@ -1,3 +1,4 @@
+import { mockBillingOwnerAllowed } from "@/features/billing/server-assignment";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
   demoSessionUserIdHeader,
@@ -88,6 +89,9 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readPrepareBody(request);
+  if (identity.source !== "supabase_session" && (input.invoiceIds?.some(id => !mockBillingOwnerAllowed(workspaceId, id, identity.actorUserId)))) {
+    return Response.json({ ok: false, denialReason: "permission_missing" }, { status: 403 });
+  }
   const useSupabaseGateway = identity.source === "supabase_session" && input.invoiceIds?.every(isUuid);
   const client = useSupabaseGateway ? await createClient() : null;
   const gateway = client
@@ -132,6 +136,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readTransitionBody(request);
+  if (identity.source !== "supabase_session" && (typeof input.invoiceId === "string" && !mockBillingOwnerAllowed(workspaceId, input.invoiceId, identity.actorUserId))) {
+    return Response.json({ ok: false, denialReason: "permission_missing" }, { status: 403 });
+  }
   const useSupabaseGateway = identity.source === "supabase_session" && isUuid(input.invoiceId);
   const client = useSupabaseGateway ? await createClient() : null;
   const gateway = client

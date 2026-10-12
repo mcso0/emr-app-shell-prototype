@@ -20,8 +20,19 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
   const records = new Map();
   const objects = new Map();
   let actor = "actor-a";
+  let owner = "actor-a";
   const core = load("../src/features/lab-imaging/lab-result-attachment-core.ts", {});
+  const mutate = async (args, service = false) => {
+    const record = records.get(args.p_attachment_id);
+    if (args.p_action !== "discard" && (owner !== args.p_actor_user_id || args.p_action === "finalize" && !service)) return { data: null, error: { code: "42501" } };
+    if (!record || record.deleted_at || args.p_action !== "delete" && record.uploaded_by_user_id !== args.p_actor_user_id) return { data: null, error: { code: "22023" } };
+    if (args.p_action === "finalize") record.ready_at = new Date().toISOString();
+    else if (args.p_action === "delete") record.deleted_at = new Date().toISOString();
+    else record.abandoned_at = new Date().toISOString();
+    return { data: { id: record.id, storage_path: record.storage_path }, error: null };
+  };
   const trusted = {
+    async rpc(name, args) { assert.equal(name, "clair_mutate_lab_attachment"); return mutate(args, true); },
     from(table) {
       assert.equal(table, "lab_result_attachments");
       const filters = [];
@@ -56,6 +67,7 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
     } },
   };
   const client = { async rpc(name, args) {
+    if (name === "clair_mutate_lab_attachment") return mutate(args);
     assert.equal(name, "clair_prepare_lab_result_attachment");
     const path = core.labResultAttachmentPath("workspace-a", "entry-a", args.p_attachment_id, args.p_mime_type);
     records.set(args.p_attachment_id, { id: args.p_attachment_id, workspace_id: "workspace-a",
@@ -91,7 +103,7 @@ function harness({ denied = false, foreign = false, corrupt = false, cleanupFail
     objects.set(body.objectPath, new Blob([bytes], { type: "image/png" }));
     return body.attachmentId;
   };
-  return { prepare, post, file, records, objects, setActor(value) { actor = value; } };
+  return { prepare, post, file, records, objects, setActor(value) { actor = value; }, setOwner(value) { owner = value; } };
 }
 
 for (const rowId of ["row-a", null]) test(`generated ${rowId === null ? "overall" : "item"} prepare UUID completes finalize, preview, download and deletion`, async () => {
@@ -201,3 +213,20 @@ test("permission and result ownership denials stop file actions", async () => {
     assert.equal(h.records.size, 0);
   }
 });
+
+ test("handoff blocks the old uploader from publication and deletion while allowing pending cleanup", async () => {
+  const h = harness();
+  const id = await h.prepare();
+  h.setOwner("actor-b");
+  assert.equal((await h.post("finalize", { attachmentId: id })).status, 403);
+  assert.equal(h.records.get(id).ready_at, null);
+  assert.equal((await h.post("discard", { attachmentId: id })).status, 200);
+  const next = harness();
+  const ready = await next.prepare();
+  assert.equal((await next.post("finalize", { attachmentId: ready })).status, 200);
+  next.setOwner("actor-b");
+  assert.equal((await next.file("DELETE", ready)).status, 403);
+  assert.equal(next.records.get(ready).deleted_at, null);
+  next.setActor("actor-b");
+  assert.equal((await next.file("DELETE", ready)).status, 200);
+ });

@@ -447,7 +447,7 @@ function mapSupabaseLabResultError(message: string | undefined, operation: "read
   if (message?.includes("workspace_membership_missing")) {
     return { ok: false, status: 403, denialReason: "workspace_membership_missing" };
   }
-  if (message?.includes("permission_missing")) {
+  if (message?.includes("permission_missing") || message?.includes("current_assignee_required")) {
     return { ok: false, status: 403, denialReason: "permission_missing" };
   }
   if (message?.includes("actor_mismatch")) {

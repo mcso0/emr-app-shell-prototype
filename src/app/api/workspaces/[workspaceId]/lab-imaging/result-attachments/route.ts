@@ -58,11 +58,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       (downloaded.data.type && downloaded.data.type !== record.mime_type)) {
       return Response.json({ ok: false, error: "invalid_file_content" }, { status: 415 });
     }
-    const ready = await context.trusted!.from("lab_result_attachments")
-      .update({ ready_at: new Date().toISOString() })
-      .eq("workspace_id", workspaceId).eq("lab_result_entry_id", entry.id).eq("id", record.id)
-      .is("ready_at", null).is("abandoned_at", null).is("deleted_at", null).select("id").maybeSingle();
-    if (ready.error || ready.data?.id !== record.id) return Response.json({ ok: false, error: "attachment_finalize_failed" }, { status: 409 });
+    const ready = await context.trusted!.rpc("clair_mutate_lab_attachment", {
+      p_workspace_id: workspaceId, p_result_id: body.resultId, p_attachment_id: record.id,
+      p_action: "finalize", p_actor_user_id: context.actorUserId,
+    });
+    if (ready.error) return Response.json({ ok: false, error: "attachment_finalize_failed" }, { status: ready.error.code === "42501" ? 403 : 409 });
     return Response.json({ ok: true, attachmentId: record.id }, { headers: { "Cache-Control": "private, no-store" } });
   }
   if (body.action === "discard" && typeof body.attachmentId === "string" && uuid.test(body.attachmentId)) {
@@ -73,11 +73,11 @@ export async function POST(request: Request, { params }: RouteContext) {
       return Response.json({ ok: false, error: "attachment_unavailable" }, { status: 404 });
     }
     if (pending.data.abandoned_at) return Response.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
-    const abandoned = await context.trusted!.from("lab_result_attachments")
-      .update({ abandoned_at: new Date().toISOString() })
-      .eq("workspace_id", workspaceId).eq("lab_result_entry_id", entry.id).eq("id", pending.data.id)
-      .is("ready_at", null).is("abandoned_at", null).select("id").maybeSingle();
-    if (abandoned.error || !abandoned.data) return Response.json({ ok: false, error: "discard_conflict" }, { status: 409 });
+    const abandoned = await context.client.rpc("clair_mutate_lab_attachment", {
+      p_workspace_id: workspaceId, p_result_id: body.resultId, p_attachment_id: pending.data.id,
+      p_action: "discard", p_actor_user_id: context.actorUserId,
+    });
+    if (abandoned.error) return Response.json({ ok: false, error: "discard_conflict" }, { status: 409 });
     // Signed upload tokens remain usable for two hours. Keep this metadata
     // until the three-hour reconciliation sweep can remove a late object.
     return Response.json({ ok: true, storageCleanupPending: true }, { headers: { "Cache-Control": "private, no-store" } });

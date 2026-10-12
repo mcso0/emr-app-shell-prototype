@@ -140,6 +140,8 @@ export type FulfillmentOrderSnapshotInput = {
 };
 
 export type FulfillmentWorkItem = {
+  assignedToDisplayName?: string | null;
+  canManage?: boolean;
   assignedAt?: string | null;
   assignedByUserId?: string | null;
   assignedToUserId?: string | null;
@@ -790,6 +792,9 @@ export async function updateFulfillmentWorkItem({
     ),
   });
   if (!permission.allowed) return mapPermissionDenial(permission.denialReason);
+  if (normalized.action === "claim" ? Boolean(workItem.workItem.assignedToUserId) : workItem.workItem.assignedToUserId !== actorUserId) {
+    return mapPermissionDenial("permission_missing");
+  }
 
   const result = await gateway.updateWorkItem({
     action: normalized.action as FulfillmentWorkItemAction,
@@ -2543,6 +2548,7 @@ function applyFulfillmentAction({
   current: FulfillmentWorkItem;
   detailedPhase?: string | null;
 }): Pick<FulfillmentWorkItem, "assignedToUserId" | "detailedPhase" | "status"> | null {
+  if (action === "claim" ? Boolean(current.assignedToUserId) : current.assignedToUserId !== actorUserId) return null;
   if (["completed", "returned", "cancelled"].includes(current.status)) {
     return null;
   }
@@ -2760,6 +2766,7 @@ function mapGatewayError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed",
 ): FulfillmentGatewayResult {
+  if (message?.includes("current_assignee_required") || message?.includes("already_assigned")) return { ok: false, status: 409, denialReason: "invalid_transition" };
   if (message?.includes("treatment_medication_link_required"))
     return { ok: false, status: 409, denialReason: "treatment_medication_link_required" };
   if (message?.includes("treatment_medication_link_invalid"))
@@ -3092,6 +3099,8 @@ function mapWorkItemRow(value: unknown): FulfillmentWorkItem | null {
     return null;
   }
   if (
+    (row.canManage !== undefined && typeof row.canManage !== "boolean") ||
+    (row.assignedToDisplayName !== undefined && row.assignedToDisplayName !== null && typeof row.assignedToDisplayName !== "string") ||
     (row.assignedAt !== undefined && row.assignedAt !== null && typeof row.assignedAt !== "string") ||
     (row.assignedByUserId !== undefined && row.assignedByUserId !== null && typeof row.assignedByUserId !== "string") ||
     (row.assignedToUserId !== undefined && row.assignedToUserId !== null && typeof row.assignedToUserId !== "string") ||

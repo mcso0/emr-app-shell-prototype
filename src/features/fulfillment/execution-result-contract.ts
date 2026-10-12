@@ -164,6 +164,7 @@ export const executionErrorMessage = (code: string) => ({
   treatment_medication_link_required: "수행 전에 처치 계획을 수정해 약품 오더를 연결해 주세요.",
   treatment_medication_link_invalid: "연결 약품 오더가 취소되었거나 확정되지 않았습니다. 같은 진료의 유효한 약품 오더를 확인해 주세요.",
   unauthenticated: "로그인 세션이 필요합니다. 다시 로그인한 뒤 시도해 주세요.",
+  current_assignee_required: "현재 담당자만 수행기록을 저장할 수 있습니다. 담당 상태를 다시 확인해 주세요.",
   permission_missing: "이 업무의 수행기록을 조회하거나 저장할 권한이 없습니다.",
   workspace_membership_missing: "현재 워크스페이스에 접근할 수 없습니다.",
   variance_reason_required: "예정량과 실제량이 다르거나 비교 단위가 없습니다. 차이 사유를 입력해 주세요.",

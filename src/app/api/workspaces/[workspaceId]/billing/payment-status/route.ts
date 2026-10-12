@@ -1,3 +1,4 @@
+import { mockBillingOwnerAllowed } from "@/features/billing/server-assignment";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
   demoSessionUserIdHeader,
@@ -95,6 +96,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (rateLimitResponse) return rateLimitResponse;
 
   const input = await readJsonBody(request);
+  if (identity.source !== "supabase_session" && typeof input.invoiceId === "string" && !mockBillingOwnerAllowed(workspaceId, input.invoiceId, identity.actorUserId)) {
+    return Response.json({ ok: false, denialReason: "permission_missing" }, { status: 403 });
+  }
   const useSupabaseGateway = shouldUseSupabaseBillingPersistenceGateway({
     identitySource: identity.source,
     invoiceId: input.invoiceId,
