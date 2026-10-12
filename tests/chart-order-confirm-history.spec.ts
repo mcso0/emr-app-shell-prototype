@@ -78,6 +78,8 @@ async function applyConfirmation(readback: Record<string, unknown>, withChild = 
     setCommittedRows: () => {}, setDraftRows: (updater: (current: typeof rows) => typeof rows) => { rows = updater(rows); },
     orderDraftEtagRef, setOrderDraftEtag: (value: string) => etagUpdates.push(value),
     pendingConfirmationRef: { get current() { return pending; }, set current(value: unknown) { pending = value; } },
+    confirmationSource: "selection",
+    setConfirmationOrderIds: () => {}, setConfirmationSource: () => {},
     setSelectedOrderIds: () => {}, setOrderActionDialog: () => {}, setOrderDraftSaveState: (value: string) => states.push(value),
     refreshOrderExecution: async () => {}, toast: { success: () => {}, error: (value: string) => errors.push(value) }, onNavigateToDispensing: undefined,
   });

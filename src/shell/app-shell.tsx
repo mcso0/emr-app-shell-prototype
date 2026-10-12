@@ -2,7 +2,6 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,16 +21,6 @@ import { useChartStore } from "@/features/chart/store";
 import { WorkspaceStaffPresenceReporter } from "@/features/staff/workspace-staff-presence";
 import { LiveNotificationDelivery } from "@/features/notifications/live-notification-delivery";
 import { GlobalNotificationDrawer } from "@/features/notifications/global-notification-drawer";
-import {
-  type GlobalNotification,
-} from "@/features/notifications/mock-notifications";
-import {
-  emptyLiveNotificationCounts,
-  fetchLiveNotificationSnapshot,
-  mutateLiveNotification,
-  type LiveNotificationCounts,
-  type LiveNotificationMutationAction,
-} from "@/features/notifications/live-notifications-client";
 import { getModule } from "@/modules/registry";
 import { useLayoutStore } from "@/stores/layout-store";
 import {
@@ -40,6 +29,12 @@ import {
   type WorkspaceTab,
 } from "@/stores/workspace-tabs-store";
 import { ShellMain } from "@/shell/shell-main";
+import { useShellNotifications } from "@/shell/use-shell-notifications";
+import { useShellNotificationNavigation } from "@/shell/use-shell-notification-navigation";
+import {
+  readDuplicateWarningPreference,
+  writeDuplicateWarningPreference,
+} from "@/shell/workspace-tab-warning-preference";
 import {
   buildWorkspaceHomeRoute,
   buildWorkspaceSwitchRoute,
@@ -64,16 +59,11 @@ type PendingDuplicateTabNavigation = {
   existingTab: WorkspaceTab;
 };
 
-type NotificationRequestState = "idle" | "loading" | "ready" | "error" | "permission_denied";
-
 declare global {
   interface Window {
     __clairSetNotificationNavigationDirty?: (dirty: boolean) => void;
   }
 }
-
-const notificationNavigationDirtyConfirmationMessage =
-  "작업 중인 내용이 저장되지 않을 수 있습니다. 이동하시겠습니까?";
 
 const crossModuleQueryKeys = [
   "scenario",
@@ -85,9 +75,6 @@ const crossModuleQueryKeys = [
   "context",
   "right",
 ] as const;
-
-const emptyGlobalNotifications: GlobalNotification[] = [];
-const duplicateWarningPreferencePrefix = "clair-workspace-tabs-duplicate-warning-hidden:v1";
 
 function getCrossModuleNavigationSearch(
   search: string,
@@ -107,15 +94,6 @@ function getCrossModuleNavigationSearch(
   });
 
   return nextParams.toString();
-}
-
-function getNotificationSourceModuleId(route: string) {
-  const pathname = route.split("?")[0];
-  const [, workspacePrefix, , moduleId] = pathname.split("/");
-
-  if (workspacePrefix !== "w") return null;
-
-  return moduleId || null;
 }
 
 export function AppShell({ workspaceId, moduleId }: AppShellProps) {
@@ -145,16 +123,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     discardUnsavedWorkspaceWork: boolean;
   } | null>(null);
   const { completeWorkspaceEntrySplash } = useWorkspaceEntrySplash();
-  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
-  const [notificationFallbackDetailId, setNotificationFallbackDetailId] = useState<string | null>(null);
-  const [notificationSnapshotScope, setNotificationSnapshotScope] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<GlobalNotification[]>(emptyGlobalNotifications);
-  const [notificationCounts, setNotificationCounts] =
-    useState<LiveNotificationCounts>(emptyLiveNotificationCounts);
-  const [notificationRequestState, setNotificationRequestState] =
-    useState<NotificationRequestState>("idle");
-  const [notificationErrorMessage, setNotificationErrorMessage] = useState<string | null>(null);
-  const [notificationReloadKey, setNotificationReloadKey] = useState(0);
   const [duplicateNavigation, setDuplicateNavigation] = useState<PendingDuplicateTabNavigation | null>(null);
   const duplicateNavigationVersionRef = useRef(0);
   const [pendingWorkspaceSwitch, setPendingWorkspaceSwitch] =
@@ -162,6 +130,24 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const [skipDuplicateWarning, setSkipDuplicateWarning] = useState(false);
   const [urlStateVersion, setUrlStateVersion] = useState(0);
   const actorHeaders = useMemo(() => getDemoActorHeaders(authSession), [authSession]);
+  const {
+    notifications,
+    counts: notificationCounts,
+    snapshotScope: notificationSnapshotScope,
+    requestState: notificationRequestState,
+    errorMessage: notificationErrorMessage,
+    retry: handleRetryNotifications,
+    markRead: handleMarkNotificationRead,
+    archive: handleArchiveNotification,
+    restore: handleRestoreNotification,
+    markAllRead: handleMarkAllNotificationsRead,
+  } = useShellNotifications({
+    actorHeaders,
+    authHydrated,
+    sessionId: authSession?.id,
+    sessionRole: authSession?.role,
+    workspaceId,
+  });
   const notificationBadgeCount = notificationCounts.badge;
   const {
     activeTabId,
@@ -201,6 +187,17 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const settingsDirty = useHospitalAdminStore((state) => state.settingsDirty);
   const setSettingsDirty = useHospitalAdminStore((state) => state.setSettingsDirty);
   const moduleRefreshAction = moduleRefreshActions[moduleDefinition.id];
+  const {
+    open: notificationDrawerOpen,
+    setOpen: setNotificationDrawerOpen,
+    fallbackDetailId: notificationFallbackDetailId,
+    closeFallbackDetail: handleCloseNotificationFallbackDetail,
+    openSource: handleOpenNotificationSource,
+  } = useShellNotificationNavigation({
+    notificationNavigationDirty,
+    markRead: handleMarkNotificationRead,
+    onNavigateModule: handleNavigateModule,
+  });
 
   useLayoutEffect(() => {
     const scope = { workspaceId, sessionId: authSession?.id, role: authSession?.role, moduleId: moduleDefinition.id };
@@ -230,55 +227,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   useEffect(() => {
     hydrateAuth();
   }, [hydrateAuth]);
-
-  useEffect(() => {
-    if (!authHydrated) return;
-
-    const controller = new AbortController();
-    let cancelled = false;
-
-    const refresh = coalescePendingRefresh(async () => {
-      if (cancelled) return;
-      setNotificationRequestState((state) => (state === "ready" ? "ready" : "loading"));
-
-      const result = await fetchLiveNotificationSnapshot({
-        actorHeaders,
-        signal: controller.signal,
-        workspaceId,
-      });
-      if (cancelled) return;
-
-      if (result.ok) {
-        setNotificationSnapshotScope(`${workspaceId}:${authSession?.id ?? ""}`);
-        setNotifications(result.notifications);
-        setNotificationCounts(result.counts);
-        setNotificationErrorMessage(null);
-        setNotificationRequestState("ready");
-        return;
-      }
-
-      if (result.aborted) return;
-
-      setNotifications(emptyGlobalNotifications);
-      setNotificationCounts(emptyLiveNotificationCounts);
-      setNotificationErrorMessage(result.error.message);
-      setNotificationRequestState(
-        result.error.status === 401 || result.error.status === 403 ? "permission_denied" : "error"
-      );
-    });
-
-    // Do not start a request from an effect already cleaned up by Strict Mode.
-    void Promise.resolve().then(() => { if (!cancelled) void refresh(); });
-    const unsubscribe = authSession?.role === "supabase"
-      ? subscribeVisibleRefresh({ intervalMs: 30_000, onRefresh: () => { void refresh(); } })
-      : undefined;
-
-    return () => {
-      cancelled = true;
-      unsubscribe?.();
-      controller.abort();
-    };
-  }, [actorHeaders, authHydrated, authSession?.id, authSession?.role, notificationReloadKey, workspaceId]);
 
   useEffect(() => {
     if (tabsInitializedRef.current === workspaceId) return;
@@ -520,106 +468,6 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
     } finally {
       tabNavigationPendingRef.current = false;
     }
-  }
-
-  function handleRetryNotifications() {
-    setNotificationReloadKey((key) => key + 1);
-  }
-
-  async function runNotificationMutation({
-    action,
-    notificationId,
-    silent = false,
-  }: {
-    action: LiveNotificationMutationAction;
-    notificationId?: string;
-    silent?: boolean;
-  }) {
-    const result = await mutateLiveNotification({
-      action,
-      actorHeaders,
-      notificationId,
-      workspaceId,
-    });
-
-    if (!result.ok) {
-      if (!result.aborted && !silent) {
-        toast.error(result.error.message);
-        setNotificationErrorMessage(result.error.message);
-        setNotificationRequestState(
-          result.error.status === 401 || result.error.status === 403 ? "permission_denied" : "error"
-        );
-      }
-
-      return false;
-    }
-
-    setNotificationCounts(result.counts);
-    setNotificationErrorMessage(null);
-    setNotificationRequestState("ready");
-    setNotificationReloadKey((key) => key + 1);
-    return true;
-  }
-
-  async function handleMarkNotificationRead(notificationId: string, options?: { silent?: boolean }) {
-    return runNotificationMutation({
-      action: "read",
-      notificationId,
-      silent: options?.silent,
-    });
-  }
-
-  async function handleArchiveNotification(notificationId: string) {
-    return runNotificationMutation({
-      action: "archive",
-      notificationId,
-    });
-  }
-
-  async function handleRestoreNotification(notificationId: string) {
-    await runNotificationMutation({
-      action: "restore",
-      notificationId,
-    });
-  }
-
-  async function handleMarkAllNotificationsRead() {
-    await runNotificationMutation({
-      action: "read-all",
-    });
-  }
-
-  function handleCloseNotificationFallbackDetail() {
-    setNotificationFallbackDetailId(null);
-  }
-
-  async function handleOpenNotificationSource(notification: GlobalNotification) {
-    if (!notification.source.route) {
-      setNotificationFallbackDetailId(notification.id);
-      setNotificationDrawerOpen(true);
-      await handleMarkNotificationRead(notification.id, { silent: true });
-      return;
-    }
-
-    if (notificationNavigationDirty && !window.confirm(notificationNavigationDirtyConfirmationMessage)) {
-      return;
-    }
-
-    const nextModuleId = getNotificationSourceModuleId(notification.source.route);
-
-    if (!nextModuleId) {
-      setNotificationFallbackDetailId(notification.id);
-      setNotificationDrawerOpen(true);
-      await handleMarkNotificationRead(notification.id, { silent: true });
-      return;
-    }
-
-    const readSucceeded = await handleMarkNotificationRead(notification.id, { silent: true });
-    if (!readSucceeded) return;
-
-    setNotificationFallbackDetailId(null);
-    setNotificationDrawerOpen(false);
-    handleNavigateModule(notification.source.route, nextModuleId);
   }
 
   function handleNavigateModule(href: string, nextModuleId: string) {
@@ -896,18 +744,4 @@ function findDuplicateWorkspaceTab({
   if (identity.surfaceType === "module") return null;
 
   return tabs.find((tab) => tab.id !== activeTabId && tab.dedupeKey === identity.dedupeKey) ?? null;
-}
-
-function getDuplicateWarningPreferenceKey(workspaceId: string) {
-  return `${duplicateWarningPreferencePrefix}:${workspaceId}`;
-}
-
-function readDuplicateWarningPreference(workspaceId: string) {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(getDuplicateWarningPreferenceKey(workspaceId)) === "true";
-}
-
-function writeDuplicateWarningPreference(workspaceId: string) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(getDuplicateWarningPreferenceKey(workspaceId), "true");
 }
