@@ -1272,7 +1272,7 @@ test("dispensing table column grips resize with a minimum width", async ({ page 
   await page.goto("/w/clair-demo/dispensing");
   await page.getByTestId("order-queue-item-dispensing-queue-0").click();
 
-  const grip = page.getByRole("button", { name: "status 컬럼 너비 조절" }).first();
+  const grip = page.getByRole("button", { name: "상태 컬럼 너비 조절" }).first();
   const header = page.locator('th[data-column-id="status"]').first();
   const before = await header.boundingBox();
   const gripBox = await grip.boundingBox();
