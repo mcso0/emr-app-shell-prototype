@@ -31,6 +31,8 @@ for (const [id, name] of [["lab", "임상병리검사"], ["imaging", "영상검�
     const panel = host.locator(`[data-side-panel-module="${id}"]:not([hidden])`);
     const cards = panel.locator(`[data-testid^="${id}-queue-item-live-${id}-"]`);
     const order = () => cards.evaluateAll(nodes => nodes.map(node => node.getAttribute("data-testid")!.split("-").at(-1)));
+    await expect(panel.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "true");
+    await panel.getByRole("button", { name: "오더별 보기", exact: true }).click();
     await expect(cards).toHaveCount(3);
     expect(await order()).toEqual(id === "imaging" ? ["b", "c", "a"] : ["b", "a", "c"]);
     if (id === "lab") await page.screenshot({ path: "/private/tmp/emr-sidebar-floating-pin.png" });
