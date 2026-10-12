@@ -150,9 +150,13 @@ test("pending profile and missing clinical fields differ from lookup failure", a
     sex: null, neutered: null, allergyNote: null, handlingCautionNote: null, specialNote: null }, []) });
   await page.goto(routePath("dispensing"));
   const bar = page.locator("[data-slot='patient-context-bar']");
-  await expect(bar.locator("[data-slot='patient-context-patient']")).toContainText("환자 정보 불러오는 중");
+  const pendingPatient = bar.locator("[data-slot='patient-context-patient']");
+  await expect(pendingPatient.locator("[data-slot='skeleton']")).toHaveCount(4);
+  await expect(pendingPatient.locator('[aria-busy="true"]')).toBeVisible();
+  await expect(pendingPatient).not.toContainText("환자 정보 불러오는 중");
   await expect(bar.getByRole("button", { name: /환자 프로필 열기/ })).toHaveCount(0);
   profileGate.release();
+  await expect(pendingPatient.locator("[data-slot='skeleton']")).toHaveCount(0);
   await expect(bar.locator("[data-slot='patient-context-patient']")).toContainText(/합성 초코.*품종 미입력.*성별 미입력.*나이 미입력/);
   await expect(bar.locator("[data-slot='patient-context-guardian']")).toContainText("보호자 미지정");
   await expect(bar.getByRole("button", { name: /보호자 프로필 열기/ })).toHaveCount(0);
@@ -270,7 +274,10 @@ test("the same patient ID in another workspace cannot expose the previous worksp
   await page.getByRole("option", { name: /합성 병원 2/ }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${secondaryWorkspaceId}/lab`));
   await expect.poll(() => secondaryRead).toBe(true);
-  await expect(bar.locator("[data-slot='patient-context-patient']")).toContainText("환자 정보 불러오는 중");
+  const pendingPatient = bar.locator("[data-slot='patient-context-patient']");
+  await expect(pendingPatient.locator("[data-slot='skeleton']")).toHaveCount(4);
+  await expect(pendingPatient.locator('[aria-busy="true"]')).toBeVisible();
+  await expect(pendingPatient).not.toContainText("환자 정보 불러오는 중");
   await expect(bar).not.toContainText("합성 초코");
   await expect(bar).not.toContainText("합성 주보호자");
   await expect(bar.getByRole("button", { name: /프로필 열기/ })).toHaveCount(0);

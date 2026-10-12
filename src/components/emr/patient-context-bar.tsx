@@ -37,6 +37,7 @@ import {
 } from "@/components/emr/popover-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Popover,
   PopoverContent,
@@ -52,12 +53,14 @@ import { cn } from "@/lib/utils";
 type PatientContextDatum = {
   label: ReactNode;
   value: ReactNode;
+  loading?: boolean;
   measurementTooltip?: string;
   tone?: "neutral" | "warning";
 };
 
 type PatientContextMemoAction = {
   disabled?: boolean;
+  loading?: boolean;
   label: ReactNode;
   locked?: boolean;
   onClick?: () => void;
@@ -187,12 +190,12 @@ export function EmrPatientContextBar({
     <PatientContextInfoSection
       dataSlot="patient-context-guardian"
       hoverAction={
-        guardianIndicatorVisible && guardianInteraction ? (
+        guardianIndicatorVisible && guardianInteraction && !guardianItems.some((item) => item.loading) ? (
           <CdsNavigationChevronRightIcon />
         ) : undefined
       }
       iconSrc={getAssetSrc(companionIcon)}
-      interaction={guardianInteraction}
+      interaction={guardianItems.some((item) => item.loading) ? undefined : guardianInteraction}
     >
       <PatientContextInlineSummary items={guardianItems} />
     </PatientContextInfoSection>
@@ -364,12 +367,13 @@ export function EmrPatientContextPatientSection({
   interaction?: ContextBarProfileInteraction;
   items: PatientContextDatum[];
 }) {
+  const readyInteraction = items.some((item) => item.loading) ? undefined : interaction;
   return (
     <PatientContextInfoSection
       dataSlot="patient-context-patient"
-      hoverAction={interaction ? <CdsNavigationChevronRightIcon /> : undefined}
+      hoverAction={readyInteraction ? <CdsNavigationChevronRightIcon /> : undefined}
       iconSrc={getAssetSrc(animalDogIcon)}
-      interaction={interaction}
+      interaction={readyInteraction}
     >
       <PatientContextInlineSummary items={items} />
     </PatientContextInfoSection>
@@ -447,6 +451,7 @@ function PatientContextDatumGroup({ items }: { items: PatientContextDatum[] }) {
           label={item.label}
           value={item.value}
           measurementTooltip={item.measurementTooltip}
+          loading={item.loading}
           tone={item.tone}
         />
       ))}
@@ -624,7 +629,10 @@ function PatientContextInlineSummary({
   items: PatientContextDatum[];
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-[var(--clair-spacing-2)] pr-[var(--clair-spacing-4)] font-medium whitespace-nowrap">
+    <div
+      className="flex min-w-0 items-center gap-[var(--clair-spacing-2)] pr-[var(--clair-spacing-4)] font-medium whitespace-nowrap"
+      aria-busy={items.some((item) => item.loading) || undefined}
+    >
       {items.map((item, index) => (
         <span
           key={`${String(item.label)}-${String(item.value)}-${index}`}
@@ -640,7 +648,12 @@ function PatientContextInlineSummary({
           ) : null}
           <span className="emr-text-dense text-[var(--emr-text-primary)]">
             <span className="sr-only">{item.label}: </span>
-            <span>{item.value}</span>
+            {item.loading ? (
+              <>
+                <Skeleton aria-hidden="true" className="inline-block h-4 w-16 align-middle motion-reduce:animate-none" />
+                <span className="sr-only">정보를 불러오는 중입니다</span>
+              </>
+            ) : <span>{item.value}</span>}
           </span>
         </span>
       ))}
@@ -648,10 +661,11 @@ function PatientContextInlineSummary({
   );
 }
 
-function PatientContextDatumBadge({ label, value, measurementTooltip, tone }: PatientContextDatum) {
+function PatientContextDatumBadge({ label, value, measurementTooltip, tone, loading }: PatientContextDatum) {
   const badge = (
     <Badge
       variant="secondary"
+      aria-busy={loading || undefined}
       className={cn(
         "emr-text-metadata h-[var(--emr-context-bar-chip-height)] shrink-0 gap-[var(--clair-spacing-2)] rounded-[var(--emr-context-bar-chip-radius)] border-transparent bg-[var(--emr-context-bar-chip-bg)] px-[var(--clair-spacing-8)] py-[3px] font-medium",
         tone === "warning" && "bg-[var(--emr-status-warning-bg)]",
@@ -664,10 +678,15 @@ function PatientContextDatumBadge({ label, value, measurementTooltip, tone }: Pa
       <span className={cn(
         "text-[var(--emr-context-bar-chip-value)]",
         tone === "warning" && "text-[var(--emr-status-warning-text)]",
-      )}>{value}</span>
+      )}>{loading ? (
+        <>
+          <Skeleton aria-hidden="true" className="inline-block h-3 w-10 align-middle motion-reduce:animate-none" />
+          <span className="sr-only">정보를 불러오는 중입니다</span>
+        </>
+      ) : value}</span>
     </Badge>
   );
-  if (!measurementTooltip) return badge;
+  if (loading || !measurementTooltip) return badge;
   return (
     <Tooltip>
       <TooltipTrigger render={badge} tabIndex={0} />
@@ -764,12 +783,18 @@ function PatientContextMemoInlineButton({
       size="xs"
       className="emr-text-metadata h-[var(--emr-context-bar-control-size)] gap-[var(--clair-spacing-4)] rounded-[var(--emr-context-bar-button-radius)] bg-card px-[var(--clair-spacing-8)] text-[var(--emr-context-bar-chip-value)] shadow-[var(--clair-shadow-xs)] disabled:bg-card disabled:text-[var(--emr-text-disabled)] disabled:opacity-50 [&_svg]:size-[var(--emr-context-bar-inline-icon-size)]"
       aria-label={`${String(action.label)} 메모 보기`}
-      disabled={action.disabled}
-      title={title}
+      aria-busy={action.loading || undefined}
+      disabled={action.loading || action.disabled}
+      title={action.loading ? undefined : title}
       onClick={onClick}
     >
       <PatientContextMemoActionIcon index={index} />
-      {action.label}
+      {action.loading ? (
+        <>
+          <Skeleton aria-hidden="true" className="h-3 w-12 motion-reduce:animate-none" />
+          <span className="sr-only">정보를 불러오는 중입니다</span>
+        </>
+      ) : action.label}
     </Button>
   );
 }
@@ -800,7 +825,7 @@ function PatientMemoPopover({
     >
       <EmrPopoverOptionGroup selectionMode="none" closeOnSelect={false}>
         {actions.map((action, index) => {
-          const disabled = action.disabled || action.locked || !action.onClick;
+          const disabled = action.loading || action.disabled || action.locked || !action.onClick;
           const description =
             action.summary ??
             action.unavailableReason ??
@@ -834,8 +859,13 @@ function PatientMemoPopover({
                   ) : null}
                 </span>
               }
-              description={description}
-              meta={meta}
+              description={action.loading ? (
+                <span aria-busy="true">
+                  <Skeleton aria-hidden="true" className="h-4 w-32 motion-reduce:animate-none" />
+                  <span className="sr-only">정보를 불러오는 중입니다</span>
+                </span>
+              ) : description}
+              meta={action.loading ? undefined : meta}
               onSelect={() => {
                 action.onClick?.();
                 onClose();
