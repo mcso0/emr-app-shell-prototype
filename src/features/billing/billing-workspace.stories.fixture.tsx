@@ -28,6 +28,8 @@ function createFixture(scenario: BillingScenario) {
   const snapshot = buildBillingContractInvoiceSnapshot({ invoice, payments: [] });
   const checkout: GuardianCheckoutSessionPayload = { checkoutSession: { id: "synthetic-checkout-preview", status: "prepared", workspaceId: billingWorkspaceId, guardianId: invoice.guardianId, payerSnapshot: { name: "합성 수납 보호자" }, selectedInvoiceIds: [invoice.id], payableAmount: snapshot.payableAmount, excludedAmount: 0, excludedCount: 0, paymentMethod: "card", preparedAt: now }, invoiceSnapshots: [snapshot] };
   const requests: Array<{ method: string; path: string; body?: unknown }> = [], unhandled: string[] = [];
+  let assignedToUserId: string | null = null, assignmentRevision = 1;
+  const assignment = () => ({ assignedToUserId, assignedToDisplayName: assignedToUserId === "synthetic-billing-user" ? "합성 접수" : assignedToUserId ? "다른 합성 담당자" : null, canManage: !assignedToUserId || assignedToUserId === "synthetic-billing-user", revision: assignmentRevision, assignees: [{ userId: "synthetic-billing-user", displayName: "합성 접수" }, { userId: "synthetic-other-user", displayName: "다른 합성 담당자" }] });
   let healthy = scenario !== "error", unmount: (() => void) | undefined;
   let holdTransition = false, releaseTransition: (() => void) | undefined;
   let cleanup: (() => Promise<void>) | undefined;
@@ -60,6 +62,17 @@ function createFixture(scenario: BillingScenario) {
       const body: unknown = init?.body ? JSON.parse(String(init.body)) : undefined;
       requests.push({ method, path: url.pathname + url.search, body });
       const base = `/api/workspaces/${billingWorkspaceId}`;
+      if (url.pathname === `${base}/billing/assignment`) {
+        if (method === "GET") return Response.json({ ok: true, assignment: assignment() });
+        if (method === "PATCH") {
+          if (!assignment().canManage) return Response.json({ ok: false }, { status: 403 });
+          const command = body as { action: string; assignedToUserId?: string; expectedRevision: number };
+          if (command.expectedRevision !== assignmentRevision) return Response.json({ ok: false }, { status: 409 });
+          assignedToUserId = command.action === "unassign" ? null : command.action === "claim" ? "synthetic-billing-user" : command.assignedToUserId ?? null;
+          assignmentRevision += 1;
+          return Response.json({ ok: true, assignment: assignment() });
+        }
+      }
       if (method === "GET" && url.pathname === `${base}/billing/queue`) {
         if (scenario === "denied") return Response.json({ ok: false }, { status: 403 });
         if (!healthy) return Response.json({ ok: false }, { status: 503 });
@@ -97,7 +110,7 @@ function createFixture(scenario: BillingScenario) {
     })();
     return cleanup;
   };
-  return { invoice, rows, lines, requests, unhandled, install, recover: () => { healthy = true; }, setUnmount: (callback: () => void) => { unmount = callback; }, holdNextTransition: () => { holdTransition = true; }, finish: () => cleanup?.(), isRestored: () => restored };
+  return { invoice, rows, lines, requests, unhandled, setAssignee: (id: string | null) => { assignedToUserId = id; assignmentRevision += 1; window.dispatchEvent(new Event("clair-billing-assignment")); }, install, recover: () => { healthy = true; }, setUnmount: (callback: () => void) => { unmount = callback; }, holdNextTransition: () => { holdTransition = true; }, finish: () => cleanup?.(), isRestored: () => restored };
 }
 export let billingFixture: ReturnType<typeof createFixture>;
 export function prepareBillingFixture(scenario: BillingScenario) { billingFixture = createFixture(scenario); return billingFixture.install(); }

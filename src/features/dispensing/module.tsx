@@ -605,7 +605,7 @@ function applyFulfillmentToQueueItems(
 function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
   const timestamp =
-    workItem.updatedAt ?? workItem.createdAt ?? new Date().toISOString();
+    workItem.createdAt ?? new Date().toISOString();
   const time = formatOperatingShortTime(timestamp);
 
   return {

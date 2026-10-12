@@ -2387,10 +2387,12 @@ function BillingTitleCard({
 
 function BillingCheckoutDataTable({
   group,
+  canEdit,
   isSummaryExcluded,
   onUpdateQuantity,
 }: {
   group: BillingCheckoutGroup;
+  canEdit: boolean;
   isSummaryExcluded: boolean;
   onUpdateQuantity: (lineId: string, quantity: number) => void;
 }) {
@@ -2484,6 +2486,7 @@ function BillingCheckoutDataTable({
             </span>
           ) : (
             <Input
+              disabled={!canEdit}
               aria-label={row.original.line.description + " 수량"}
               className="mx-auto h-7 w-14 bg-card text-right tabular-nums"
               data-row-interactive="true"
@@ -2519,7 +2522,7 @@ function BillingCheckoutDataTable({
         ),
       },
     ],
-    [onUpdateQuantity],
+    [canEdit, onUpdateQuantity],
   );
   // TanStack Table owns the checkout line grid; payment actions stay feature-owned.
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -2629,7 +2632,9 @@ function SelectedCheckoutWorkspace({
           <Badge
             variant={persistenceState === "error" ? "destructive" : "secondary"}
           >
-            {persistenceState === "saving"
+            {!editableInvoiceId
+              ? "읽기 전용"
+              : persistenceState === "saving"
               ? "저장 중"
               : persistenceState === "saved"
                 ? "저장됨"
@@ -2724,6 +2729,7 @@ function SelectedCheckoutWorkspace({
                 ) : null}
                 <BillingCheckoutDataTable
                   group={group}
+                  canEdit={hasBillingAssignee && !isSummaryExcluded}
                   isSummaryExcluded={isSummaryExcluded}
                   onUpdateQuantity={onUpdateQuantity}
                 />
@@ -3467,7 +3473,7 @@ export function BillingContent({
     lineId: string,
     quantity: number,
   ) {
-    if (!effectiveDetail) return;
+    if (!effectiveDetail || !editOwnership.canExecute) return;
     const safeQuantity = Math.max(1, Math.round(quantity * 1000) / 1000 || 1);
     const targetLine =
       checkoutTableLines.find((line) => line.id === lineId) ??
@@ -3476,6 +3482,7 @@ export function BillingContent({
       ? checkoutInvoices.find((invoice) => invoice.id === targetLine.invoiceId)
       : effectiveDetail.invoice;
     if (!targetLine || !targetInvoice) return;
+    if (targetInvoice.id !== detail?.invoice.id) return;
     if (targetLine.quantity === safeQuantity) return;
     const editVersion = (invoiceLineEditVersionRef.current.get(lineId) ?? 0) + 1;
     invoiceLineEditVersionRef.current.set(lineId, editVersion);
@@ -4084,6 +4091,7 @@ export function BillingRightPanel() {
               <div className="mt-2">
                 <Input
                   aria-label="할인 또는 할증 사유"
+                  disabled={!ownership.canExecute}
                   placeholder="할인/할증이 있을 때 사유를 입력"
                   value={adjustmentReason}
                   onChange={(event) => setAdjustmentReason(event.target.value)}
