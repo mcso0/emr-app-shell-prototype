@@ -292,8 +292,15 @@ for local equivalence, performance, regressions, and release limits.
 
 ## Patient View Of Execution Queues
 
-Lab, imaging, and combined dispensing/treatment sidebars opt into a local
-오더별/환자별 toggle. Patient groups use the authorized workspace and actual
+Lab, imaging, and combined dispensing/treatment sidebars have an
+오더별/환자별 toggle. With no saved choice, the existing highlighted toggle
+(`aria-pressed=true`, button label 오더별 보기, patient-grouped display) is the
+default. Save the last explicit toggle choice independently per authenticated
+actor, workspace, and queue in browser localStorage. Restore both on and off
+choices on reload and return visits in the same browser; there is no device
+sync. Wait for actor identity before enabling the toggle. Invalid stored values
+use the default; unavailable storage preserves switching for the current visit.
+Patient groups use the authorized workspace and actual
 patient ID within the selected server operating day, across encounters and
 SOAP charts. Missing patient identities stay task-specific. Names are display
 labels only. Type/status/search counts retain their existing task semantics.

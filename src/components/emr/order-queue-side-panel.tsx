@@ -6,6 +6,7 @@ import {
   CdsActionsSearchIcon,
 } from "@/components/cds-icons/actions-and-controls";
 import { CdsUtilitiesSortIcon } from "@/components/cds-icons/utilities-and-misc";
+import { useQueueViewPreference } from "@/features/work-queue/use-queue-view-preference";
 import { PatientQueueContent, PatientQueueToggle, PatientQueueSortOptions, type PatientQueueDisplayRow } from "@/components/emr/patient-queue";
 import type { PatientQueueSort } from "@/features/work-queue/patient-queue";
 import type { EmrRowActionMenuItem } from "@/components/emr/row-action-menu";
@@ -236,7 +237,7 @@ export function EmrOrderQueueSidePanel({
   const [filter, setFilter] = useState<string>("all");
   const [searchActive, setSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [patientView, setPatientView] = useState(false);
+  const [patientView, setPatientView, viewPreferenceReady] = useQueueViewPreference(patientGrouping?.workspaceId, "dispensing");
   const [patientSort, setPatientSort] = useState<PatientQueueSort>("priority");
   const [sortKey, setSortKey] = useState<OrderQueueSortKey>("request");
   const resolvedStatuses = useMemo(() => getResolvedStatuses(statuses, items), [items, statuses]);
@@ -323,7 +324,7 @@ export function EmrOrderQueueSidePanel({
   const typeFilterControl = typeFilterVisible ? (
     <SegmentedControl
       aria-label={filterAriaLabel}
-      className="shrink-0"
+      className={typeFilterPlacement === "list-header" ? "shrink-0 min-w-max" : "shrink-0"}
       disabled={queueControlsDisabled}
       items={typeFilterPlacement === "list-header" ? countedFilterItems : filterItems}
       value={filter}
@@ -410,6 +411,7 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrListHeader
+        className={typeFilterPlacement === "list-header" ? "flex-wrap gap-x-0 gap-y-1 [&>div:first-child]:min-w-max [&>div:last-child]:ml-auto" : undefined}
         label={typeFilterPlacement === "list-header" ? typeFilterControl : listLabel}
         count={typeFilterPlacement === "list-header" ? undefined : visibleItems.length}
         topDividerVisible
@@ -425,7 +427,7 @@ export function EmrOrderQueueSidePanel({
         }}
         headerActions={
           <>
-            {patientGrouping ? <PatientQueueToggle active={patientView} disabled={queueControlsDisabled || !patientGrouping.readable} onChange={() => {
+            {patientGrouping ? <PatientQueueToggle active={patientView} disabled={!viewPreferenceReady || queueControlsDisabled || !patientGrouping.readable} onChange={() => {
               if (patientView && selectedItemId) { const selected = items.find(item => item.id === selectedItemId); if (selected) setCollapsedStatusIds(current => { const next = new Set(current); next.delete(selected.statusId); return next; }); }
               setPatientView(current => !current);
             }} /> : null}

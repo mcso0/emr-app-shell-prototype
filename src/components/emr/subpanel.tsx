@@ -496,7 +496,7 @@ export function EmrListHeader({
                 </Badge>
               ) : null}
             </div>
-            {headerActions ? <div className="flex shrink-0 items-start gap-1">{headerActions}</div> : null}
+            {headerActions ? <div className="flex shrink-0 items-start gap-0.5">{headerActions}</div> : null}
           </>
         )}
       </div>

@@ -425,7 +425,7 @@ test("the existing patient grouping view survives floating-to-pin", async ({ pag
   await hover(page, "임상병리검사", "lab");
   const toggle = shown(page, "lab").getByTestId("patient-queue-view-toggle");
   await expect(toggle).toBeEnabled();
-  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
   const group = shown(page, "lab").locator('section[data-testid^="patient-queue-group-"]');
   await expect(group.first()).toBeVisible();
   const count = await group.count();

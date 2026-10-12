@@ -276,3 +276,27 @@ Isolated candidate verification (base `a2ad386c`, Node24.19.0):
 
 PR creation does not authorize merging to main. Automatic Preview verification
 and exact remote head are reported in the PR/task delivery result.
+
+
+## Approved follow-up — 2026-10-12
+
+승욱 requested the highlighted 오더별 보기 toggle as the initial state for lab,
+imaging, and combined dispensing/treatment, with independent last choices
+restored after reload and return visits. Existing switching remains unchanged.
+
+- Added one shared browser preference hook keyed by authenticated actor,
+  workspace, and queue. Both boolean choices persist; absent/invalid values
+  default to on. No queue data, remote write, or account settings API changes.
+- Preserved selected-task IDs, status expansion on switching, filters, sorting,
+  and floating-to-docked continuity. Existing Grouped Storybook example already
+  starts with the approved highlighted state and verifies both transitions.
+- Local synthetic Chromium checks: 12 passed, including all three queues,
+  independent choices, reload, restored-storage fresh browser context,
+  exact selection/hidden detail, denial, sorting/filtering, and panel pinning.
+  Existing Storybook checks: 2 passed. Typecheck and focused lint passed.
+- Same-browser persistence only; clearing browser storage resets the choice.
+  Cross-device synchronization is not included.
+- 승욱 requested commit/push/main delivery for only this follow-up. The internal
+  browser acceptance remains unverified because login credentials were unavailable;
+  승욱 will review the deployed result. Prepare the exact release candidate and
+  required checks without including other WIP.

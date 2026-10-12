@@ -55,6 +55,7 @@ import {
   EmrSubpanelBody,
   EmrSubpanelTitle,
 } from "@/components/emr/subpanel";
+import { useQueueViewPreference } from "@/features/work-queue/use-queue-view-preference";
 import { PatientQueueContent, PatientQueueToggle, PatientQueueSortMenu, PatientQueueFilterMenu, type PatientQueueDisplayRow } from "@/components/emr/patient-queue";
 import { comparePatientQueueRows, matchesPatientQueueFilter, type PatientQueueSort, type PatientQueueOrderSort } from "@/features/work-queue/patient-queue";
 import { EmrOrderGroupSection } from "@/components/emr/order-group-section";
@@ -1636,7 +1637,7 @@ export function LabSidePanel({
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<
     Set<LabResult["status"]>
   >(() => new Set());
-  const [patientView, setPatientView] = useState(false);
+  const [patientView, setPatientView, viewPreferenceReady] = useQueueViewPreference(workspaceId, "lab");
   const [patientSort, setPatientSort] = useState<PatientQueueSort>("priority");
   const [patientOrderSort, setPatientOrderSort] = useState<PatientQueueOrderSort>("request");
   const [orderSortSelected, setOrderSortSelected] = useState(false);
@@ -1813,7 +1814,7 @@ export function LabSidePanel({
         }}
         headerActions={
           <>
-            <PatientQueueToggle active={patientView} disabled={queueControlsDisabled || fulfillmentQueue.status === "permission_denied"} onChange={() => {
+            <PatientQueueToggle active={patientView} disabled={!viewPreferenceReady || queueControlsDisabled || fulfillmentQueue.status === "permission_denied"} onChange={() => {
               if (patientView && effectiveSelectedLabResultId) { const selected = items.find(item => item.result.id === effectiveSelectedLabResultId); if (selected) setCollapsedStatusIds(current => { const next = new Set(current); next.delete(selected.result.status); return next; }); }
               setPatientView(current => !current);
             }} />
@@ -1890,7 +1891,7 @@ export function ImagingSidePanel({
   const [collapsedStatusIds, setCollapsedStatusIds] = useState<
     Set<ImagingStudyStatus>
   >(() => new Set());
-  const [patientView, setPatientView] = useState(false);
+  const [patientView, setPatientView, viewPreferenceReady] = useQueueViewPreference(workspaceId, "imaging");
   const [patientSort, setPatientSort] = useState<PatientQueueSort>("priority");
   const [patientOrderSort, setPatientOrderSort] = useState<PatientQueueOrderSort>("request");
   const [orderSortSelected, setOrderSortSelected] = useState(false);
@@ -2067,7 +2068,7 @@ export function ImagingSidePanel({
         }}
         headerActions={
           <>
-            <PatientQueueToggle active={patientView} disabled={queueControlsDisabled || fulfillmentQueue.status === "permission_denied"} onChange={() => {
+            <PatientQueueToggle active={patientView} disabled={!viewPreferenceReady || queueControlsDisabled || fulfillmentQueue.status === "permission_denied"} onChange={() => {
               if (patientView && effectiveSelectedImagingStudyId) { const selected = items.find(item => item.study.id === effectiveSelectedImagingStudyId); if (selected) setCollapsedStatusIds(current => { const next = new Set(current); next.delete(selected.study.status); return next; }); }
               setPatientView(current => !current);
             }} />
