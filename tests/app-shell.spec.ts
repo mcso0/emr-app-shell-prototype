@@ -231,7 +231,8 @@ test("global command palette searches and opens patient context", async ({ page 
   await patientResult.click();
 
   await expect(page).toHaveURL(/drawer=reception-patient%3Apatient-kong/);
-  await expect(page.getByText("환자 정보")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "환자 정보", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "환자 정보", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("global command palette opens patient guardian registration from any workspace module", async ({
