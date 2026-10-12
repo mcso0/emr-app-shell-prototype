@@ -1528,6 +1528,28 @@ test("vet-reviewed billing sync persists billing-ready notification through the 
   ]);
 });
 
+test("vet-reviewed billing sync preserves candidate owner denial as 403", async () => {
+  const seedGateway = createMockFulfillmentWorkItemGateway();
+  const labOrderId = "order-kong-cbc";
+  const gateway = {
+    async listWorkItems(input: Parameters<typeof seedGateway.listWorkItems>[0]) {
+      const result = await seedGateway.listWorkItems(input);
+      if (!result.ok) return result;
+      return { ...result, workItems: result.workItems.map(item => ({ ...item, status: "completed" as const })) };
+    },
+  };
+  const result = await syncVetReviewedBillingCandidates({
+    actorUserId: "user-vet", gateway, workspaceId,
+    input: { encounterId: "encounter-kong-260501", orderIds: [labOrderId] },
+    invoiceCandidateGateway: {
+      async syncInvoiceCandidates() {
+        return { ok: false, status: 403, denialReason: "permission_missing" };
+      },
+    },
+  });
+  expect(result).toEqual({ ok: false, status: 403, denialReason: "permission_missing" });
+});
+
 test("vet-reviewed billing sync keeps audit and candidate success when DB notification persistence rejects", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
   const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);

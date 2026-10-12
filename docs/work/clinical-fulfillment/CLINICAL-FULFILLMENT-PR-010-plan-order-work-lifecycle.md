@@ -365,3 +365,11 @@ PR974 merged at `9c78d47b320f1dfcf45c692e8dd28bf88078acab`; the reviewed DB cand
 The scoped follow-up connects these three billing routes to the existing session-bound DB permission loader and repairs the checkout UUID predicate. It changes no canonical roles, RLS or data. Route-handler regressions exercise valid live UUID GET/write requests, propagate denied membership, reject anonymous requests and fail if real sessions use mock persistence/authorization. Continue the authorized scoped release through a separate checked PR; do not claim billing smoke before it passes.
 
 Live execution-context inspection also found SQL equality returned JSON null for an unassigned work item, causing the strict API parser to return 502. Additive migration `20261012065017_assignee_execution_context_boolean.sql` returns false explicitly without changing ownership or lifecycle rules. Existing applied migration history remains unchanged. Recheck the new exact head and apply only this reviewed follow-up before the app follow-up.
+
+### Invoice candidate owner-denial HTTP follow-up (2026-10-12)
+
+User authorized the narrow correction, commit/push/PR/main merge/Production delivery, and synthetic permission smoke while preserving existing WIP. Hosted DB still rejects nonowners with `current_assignee_required`; the gateway now maps that condition to HTTP403/permission_missing and billing core/vet-review propagation preserves403. Generic DB failures remain500. No DB migration or policy change.
+
+Focused candidate-sync tests pass17/17, including direct/chart/fulfillment denial propagation and generic failure fallback. Existing Production reproduces500 for the previously created synthetic fixture; post-delivery smoke must return403 for the same authenticated nonowner request, with invoice/payment unchanged. Rollback baseline: PR975 merge `0752d353efbef5385b660dfb83336fe2a0783937`, Ready Production `dpl_7ajhyD7nvDYf2qT19McqoJhAAuC1`.
+
+Local verification: secrets/docs/full lint/typecheck/build passed. Candidate sync17/17 and focused vet-review denial1/1 passed. Three historical vet-review completion tests fail identically with the origin/main fulfillment core: their setup attempts completion without the current assignment/start flow. Kept those unrelated fixtures unchanged; this correction does not weaken lifecycle guards.
