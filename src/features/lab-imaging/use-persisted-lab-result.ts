@@ -18,7 +18,7 @@ export function usePersistedLabResult(workspaceId: string, workItemId: string | 
       setState(previous => ({ key, status: "loading", payload: previous.key === key ? previous.payload : undefined }));
       try {
         const reply = await loadPersistedLabResult({ workspaceId, workItemId, orderId, encounterId }, controller.signal);
-        if (!reply) return;
+        if (!reply || controller.signal.aborted) return;
         const { status, payload } = reply;
         setState(previous => ({ key, status, payload: status === "error" && previous.key === key
           ? previous.payload : status === "permission_denied" ? undefined : payload }));

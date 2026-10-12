@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { Script } from "node:vm";
+import ts from "typescript";
+import type { PersistedLabResultState } from "../src/features/lab-imaging/persisted-lab-result-state";
 import type { LabResult } from "../src/types/emr-domain";
 import { loadPersistedLabResult } from "../src/features/lab-imaging/persisted-lab-result-client";
 import { getPersistedLabResultView } from "../src/features/lab-imaging/persisted-lab-result-state";
@@ -62,4 +66,43 @@ test("corrupt persisted rows do not become a successful result", () => {
   expect(view("ready", { ...payload(), rows: [] })).toEqual({ status: "error", result: null });
   const saved = payload();
   expect(view("ready", { ...saved, rows: [saved.rows[0], saved.rows[0]] })).toEqual({ status: "error", result: null });
+});
+
+test("a cancelled effect preserves the next owner after its read settles but before the consumer resumes", async () => {
+  // Execute the actual effect with explicit synthetic lifecycle/state ports.
+  // This exercises callback ordering; it does not claim a React/browser mount.
+  const file = ts.createSourceFile("hook.ts", readFileSync("src/features/lab-imaging/use-persisted-lab-result.ts", "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const effects: ts.Expression[] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && node.expression.getText(file) === "useEffect") effects.push(node.arguments[0]);
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  expect(effects).toHaveLength(1);
+  const compiled = ts.transpileModule(`export const effect = ${effects[0].getText(file)};`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+  }).outputText;
+  let resolve!: (reply: { status: "ready"; payload: unknown }) => void;
+  const pending = new Promise<{ status: "ready"; payload: unknown }>(done => { resolve = done; });
+  const nextOwner: PersistedLabResultState = { key: "synthetic-owner-B", status: "ready", payload: { synthetic: "B" } };
+  let state: PersistedLabResultState = { key, status: "loading" };
+  let requestSignal: AbortSignal | undefined;
+  const exports = {} as { effect: () => () => void };
+  new Script(compiled).runInNewContext({
+    exports, AbortController, enabled: true, ...scope, key,
+    loadPersistedLabResult: (requested: typeof scope, signal: AbortSignal) => {
+      expect(requested).toEqual(scope);
+      requestSignal = signal;
+      return pending;
+    },
+    setState: (update: (previous: PersistedLabResultState) => PersistedLabResultState) => { state = update(state); },
+  });
+  const cleanup = exports.effect();
+  state = nextOwner;
+  resolve({ status: "ready", payload: payload() });
+  cleanup();
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(requestSignal?.aborted).toBe(true);
+  expect(state).toBe(nextOwner);
 });
