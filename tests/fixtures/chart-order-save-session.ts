@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page, type Request } from "@playwright/test";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../../src/features/auth/workspace-session";
 import { createMockChartOrderBillingSummaryFromMutationRows } from "../../src/features/chart/chart-order-billing-summary-contract";
 import type { ChartLiveQueueRecord } from "../../src/features/chart/chart-live-queue";
@@ -118,6 +118,7 @@ export async function installChartSaveSession(page: Page, { holdOldReads = false
   const scopedReadDenials: Array<{ workspaceId: string; encounterId: string; status: 404 }> = [];
   const unexpected: string[] = [];
   const pageErrors: string[] = [];
+  const pendingScriptRequests = new Set<Request>();
   let activeSaves = 0;
   let maximumActiveSaves = 0;
   const activeSavesByOwner = new Map<string, number>();
@@ -126,6 +127,11 @@ export async function installChartSaveSession(page: Page, { holdOldReads = false
   let heldOldReadCount = 0;
   const summary = (id: string, key: PatientKey, rows = scopeFor(id).state[key].rows, etag = scopeFor(id).state[key].etag) => createMockChartOrderBillingSummaryFromMutationRows({ encounterId: patientsForWorkspace(id)[key].encounterId, etag, generatedAt: timestamp, rows, workspaceId: id });
   page.on("pageerror", error => pageErrors.push(error.message));
+  page.on("request", request => {
+    if (request.resourceType() === "script") pendingScriptRequests.add(request);
+  });
+  page.on("requestfinished", request => pendingScriptRequests.delete(request));
+  page.on("requestfailed", request => pendingScriptRequests.delete(request));
 
   await page.addInitScript(({ storageKey, workspaceId, workspaceIds, workspaceNames, timestamp }) => {
     const sessionId = "playwright-default-session";
@@ -252,6 +258,9 @@ export async function installChartSaveSession(page: Page, { holdOldReads = false
     },
     pauseReadyClock: async () => {
       await expect(page.getByTestId("chart-order-save-status")).toHaveText("저장됨");
+      // The one-hour jump must not expire a still-downloading webpack chunk.
+      // Leave intentionally held API reads/saves pending for the regression.
+      await expect.poll(() => pendingScriptRequests.size).toBe(0);
       await page.clock.pauseAt(new Date("2026-10-05T01:00:00.000Z"));
     },
     assertNoUnexpectedTraffic: () => { expect(unexpected).toEqual([]); expect(pageErrors).toEqual([]); },

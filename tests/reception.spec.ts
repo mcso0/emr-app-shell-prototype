@@ -9131,7 +9131,7 @@ test("reception blocks invalid calendar draft selections", async ({ page }) => {
   const draftDrawer = page.getByTestId("walk-in-reception-dialog").last();
   await expect(draftDrawer).toBeVisible();
   await expect(draftDrawer.getByLabel("접수시간")).toHaveValue("오후 12:15");
-  await draftDrawer.getByRole("button", { name: "취소" }).click();
+  await page.getByTestId("reception-calendar-drawer").getByRole("button", { name: "취소", exact: true }).click();
   await expect(
     page.locator('[data-testid^="calendar-draft-card-"]'),
   ).toHaveCount(0);
@@ -9369,7 +9369,7 @@ test("reception creates a draft task from a dragged calendar range", async ({
   await draftDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await draftDrawer.getByLabel("방문목적").fill("현장 접수");
-  await draftDrawer.getByRole("button", { name: "생성" }).click();
+  await page.getByTestId("reception-calendar-drawer").getByRole("button", { name: "생성", exact: true }).click();
   await expect.poll(() => walkInCreate.count).toBe(1);
   expect(walkInCreate.latestBody).toMatchObject({
     durationMinutes: 150,
@@ -9651,9 +9651,8 @@ test("reception creates a future dragged calendar range as a reservation", async
     );
   }, dragEndPoint);
 
-  const reservationDrawer = page
-    .getByTestId("reception-right-panel")
-    .getByTestId("reservation-create-drawer");
+  const calendarDrawer = page.getByTestId("reception-calendar-drawer");
+  const reservationDrawer = calendarDrawer.getByTestId("reservation-create-drawer");
   await expect(reservationDrawer).toBeVisible();
   await expect(
     reservationDrawer.getByText("바이탈", { exact: true }),
@@ -9673,7 +9672,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   await expect(reservationDrawer.getByLabel("담당의")).toContainText("이수지");
   await expect(reservationDrawer.getByLabel("환자 검색")).toHaveValue("");
   await expect(
-    reservationDrawer.getByRole("button", { name: "생성" }),
+    calendarDrawer.getByRole("button", { name: "생성", exact: true }),
   ).toBeDisabled();
 
   await reservationDrawer.getByLabel("환자 검색").waitFor({ state: "visible" });
@@ -9681,7 +9680,7 @@ test("reception creates a future dragged calendar range as a reservation", async
   await reservationDrawer.getByLabel("환자 검색").fill("나비");
   await page.getByRole("option", { name: /나비.*오세아/ }).click();
   await reservationDrawer.getByLabel("예약 메모").fill("미래 드래그 예약 생성");
-  await reservationDrawer.getByRole("button", { name: "생성" }).click();
+  await calendarDrawer.getByRole("button", { name: "생성", exact: true }).click();
 
   await expect.poll(() => appointmentCreateCount).toBe(1);
   expect(walkInCreateCount).toBe(0);

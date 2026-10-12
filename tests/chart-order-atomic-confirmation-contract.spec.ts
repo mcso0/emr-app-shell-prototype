@@ -81,8 +81,11 @@ test("Phase 4 fixture proves partial set expansion, projections, retry, and roll
 });
 
 test("chart confirmation sends a stable idempotency key to the atomic RPC", () => {
-  expect(core).toContain('"clair_confirm_chart_order_candidates"');
+  expect(core).toContain('"clair_confirm_chart_order_candidates_with_actual"');
+  expect(core).toContain('"clair_confirm_chart_order_candidates_with_actual_for_chart"');
+  expect(core).not.toContain('"clair_confirm_chart_order_candidates"');
   expect(core).toContain("p_idempotency_key: idempotencyKey ?? \"\"");
+  expect(core).toContain("p_actual_records: actualRecords ?? {}");
   expect(core).toContain("if (!result.serverAtomic || !result.billingSummary)");
   expect(chartModule).toContain("pendingConfirmationRef");
   expect(chartModule).toContain("createChartOrderConfirmationIdempotencyKey");

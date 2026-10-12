@@ -1488,6 +1488,8 @@ export function createDemoFulfillmentPermissionAdapter() {
       { id: "user-front-desk", status: "active", displayName: "최유나" },
       { id: "user-vet", status: "active", displayName: "이수지" },
       { id: "user-tech", status: "active", displayName: "송하윤" },
+      // Existing seeded work items are assigned to this named demo technician.
+      { id: "user-tech-hayun", status: "active", displayName: "송하윤" },
     ],
     memberships: [
       {
@@ -1522,6 +1524,13 @@ export function createDemoFulfillmentPermissionAdapter() {
         id: "membership-tech",
         workspaceId: "clair-demo",
         userId: "user-tech",
+        roles: ["technician"],
+        status: "active",
+      },
+      {
+        id: "membership-tech-hayun",
+        workspaceId: "clair-demo",
+        userId: "user-tech-hayun",
         roles: ["technician"],
         status: "active",
       },

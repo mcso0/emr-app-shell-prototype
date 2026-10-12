@@ -3,6 +3,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 import type { ExecutionContext, ExecutionResultVersion } from "../src/features/fulfillment/execution-result-contract";
+import type { PatientVitalMeasurement } from "../src/features/patient-vitals/patient-vital-types";
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 
 test("copied treatment link reopens the exact instruction when an encounter has multiple work items", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
@@ -843,6 +845,9 @@ test("Cheongdam dispensing renders standalone live fulfillment rows without fixt
   await page.goto(
     `/w/${PREPARED_EMPTY_CLINIC_WORKSPACE_ID}/dispensing?modulePanel=open`,
   );
+  // This case verifies per-order cards; patient view places identity in the group header.
+  await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+  await expect(page.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "false");
 
   const liveQueueItem = page.getByTestId(
     `order-queue-item-live-fulfillment-${liveWorkItem.id}`,
@@ -1278,6 +1283,8 @@ test("dispensing projects frozen set display and confirmed product-unit billing 
   );
 
   await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
+  await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+  await expect(page.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "false");
   const queueItem = page.getByTestId(
     `order-queue-item-live-fulfillment-${workItem.id}`,
   );
@@ -1432,19 +1439,33 @@ test("dispensing context opens the selected live profile and vital editor", asyn
       access: { information: { allowed: true, requiredPermission: "patient:view" } },
     } } });
   });
+  let vital: PatientVitalMeasurement | null = null;
+  await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, (route) =>
+    route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) }),
+  );
   await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/latest?*`, async (route) => {
-    await route.fulfill({ json: { ok: true, status: 200, canWriteVitals: true, vital: null } });
+    expect(new URL(route.request().url()).searchParams.get("encounterId")).toBe(encounterId);
+    await route.fulfill({ json: { ok: true, status: 200, canWriteVitals: true, vital } });
   });
-  const writes: Array<Record<string, unknown>> = [];
-  await page.route(`**/api/workspaces/${workspaceId}/chart/encounter-vitals`, async (route) => {
-    const body = route.request().postDataJSON() as { encounterId: string; vitals: Record<string, unknown> };
-    writes.push(body.vitals);
-    await route.fulfill({ json: { ok: true, vital: {
+  const writes: Array<{ encounterId: string; measurementId: string; measuredAt: string; vitals: Record<string, unknown> }> = [];
+  await page.route((url) => url.pathname === `/api/workspaces/${workspaceId}/patient-vitals/history`, async (route) => {
+    const request = route.request();
+    if (request.method() === "GET") {
+      expect(new URL(request.url()).searchParams.get("encounterId")).toBe(encounterId);
+      return route.fulfill({ json: { ok: true, measurements: vital ? [vital] : [], nextCursor: null,
+        canWriteVitals: true, patient: { species: "dog" } } });
+    }
+    expect(request.method()).toBe("POST");
+    const body = request.postDataJSON() as (typeof writes)[number];
+    expect(body.encounterId).toBe(encounterId);
+    writes.push(body);
+    vital = {
       id: "97090000-0000-4000-8000-000000000015",
       patientId, encounterId: body.encounterId,
-      measuredAt: "2026-09-07T10:00:00+09:00",
+      measuredAt: body.measuredAt,
       ...Object.fromEntries(Object.entries(body.vitals).filter(([, value]) => value !== null)),
-    } } });
+    };
+    await route.fulfill({ json: { ok: true, vital } });
   });
 
   await page.goto(`/w/${workspaceId}/dispensing?date=2026-09-07&modulePanel=open&aside=closed&right=closed`);
@@ -1456,14 +1477,19 @@ test("dispensing context opens the selected live profile and vital editor", asyn
   await expect(page.getByRole("button", { name: "최보호 보호자 프로필 열기" })).toBeVisible();
   await page.locator("[data-slot='patient-context-vitals']").hover();
   await page.getByRole("button", { name: "오늘 바이탈 입력" }).click();
-  const dialog = page.getByRole("dialog", { name: "오늘 바이탈 입력" });
+  const dialog = page.getByRole("dialog", { name: "바이탈 이력", exact: true });
   await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "바이탈", exact: true }).click();
   await dialog.getByLabel("체중").fill("4.2");
-  await dialog.getByRole("button", { name: "저장" }).click();
-  await expect(dialog).toHaveCount(0);
+  expect(writes).toHaveLength(0);
+  await dialog.getByRole("button", { name: "저장", exact: true }).click();
+  await expect.poll(() => writes.length).toBe(1);
   await expect(page.locator("[data-slot='patient-context-vitals']")).toContainText("4.20 kg");
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "바이탈 이력 닫기", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
   expect(writes).toHaveLength(1);
-  expect(writes[0]?.weightKg).toBe(4.2);
+  expect(writes[0]).toMatchObject({ encounterId, measurementId: expect.stringMatching(/^[0-9a-f-]{36}$/), vitals: { weightKg: 4.2 } });
 });
 
 for (const queueType of ["dispensing", "treatment"] as const) {

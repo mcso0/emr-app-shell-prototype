@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { reconcileChartOrderConfirmationRows } from "../src/features/chart/chart-order-confirmation-readback";
 
 const source = readFileSync("src/features/chart/module.tsx", "utf8");
 const ast = ts.createSourceFile("chart.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -70,6 +71,7 @@ async function applyConfirmation(readback: Record<string, unknown>, withChild = 
   const etagUpdates: string[] = [];
   let readCount = 0;
   const apply = runInNewContext(extract("applyConfirmedResult"), {
+    reconcileChartOrderConfirmationRows,
     bundle: { encounter: { id: order.encounterId, workspaceId: order.workspaceId } }, actorHeaders: undefined,
     acceptAuthoritativeBillingSummary: () => true, refreshBillingSummary: async () => true,
     loadChartOrderActions: async () => { readCount += 1; return readback; },
@@ -78,6 +80,8 @@ async function applyConfirmation(readback: Record<string, unknown>, withChild = 
     setCommittedRows: () => {}, setDraftRows: (updater: (current: typeof rows) => typeof rows) => { rows = updater(rows); },
     orderDraftEtagRef, setOrderDraftEtag: (value: string) => etagUpdates.push(value),
     pendingConfirmationRef: { get current() { return pending; }, set current(value: unknown) { pending = value; } },
+    confirmationSource: "selection",
+    setConfirmationOrderIds: () => {}, setConfirmationSource: () => {},
     setSelectedOrderIds: () => {}, setOrderActionDialog: () => {}, setOrderDraftSaveState: (value: string) => states.push(value),
     refreshOrderExecution: async () => {}, toast: { success: () => {}, error: (value: string) => errors.push(value) }, onNavigateToDispensing: undefined,
   });

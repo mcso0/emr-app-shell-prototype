@@ -2,6 +2,7 @@
 
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
+import { getFreshChartOrderCatalog, loadCachedChartOrderCatalog } from "./chart-order-catalog-client";
 import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-draft-response-merge";
 import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
 import { isChartOrderDraftRowInRootIds, prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
@@ -288,6 +289,7 @@ import {
   replaceSoapDocumentScope,
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
+import { reconcileChartOrderConfirmationRows } from "@/features/chart/chart-order-confirmation-readback";
 import {
   getChartOrderDraftInFlightSave,
   registerChartOrderDraftSaveOperation,
@@ -699,18 +701,6 @@ type ChartBillingCandidateRouteResponse =
       denialReason?: string;
       error?: string;
     };
-type ChartOrderCatalogRouteResponse =
-  | {
-      ok: true;
-      status?: number;
-      rows: ChartOrderCatalogSearchRow[];
-    }
-  | {
-      ok: false;
-      status?: number;
-      denialReason?: string;
-      error?: string;
-    };
 
 const CHART_TOP_DEFAULT_PERCENT = 50;
 const CHART_TOP_MIN_PX = 180;
@@ -720,7 +710,6 @@ const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
 const chartOrderDiscreteSaveDelayMs = 150;
 const chartOrderContinuousSaveDelayMs = 700;
-const chartOrderCatalogFreshMs = 60_000;
 const legacySalesDemoDefaultEncounterId = "encounter-coco-260501";
 
 const emptyChartQueueItems: OrderQueueItem[] = [];
@@ -3561,85 +3550,6 @@ async function loadChartLiveQueue({
   } catch {
     return { ok: false, status: 500, error: "db_read_failed" };
   }
-}
-
-async function loadChartOrderCatalog({
-  actorHeaders,
-  workspaceId,
-}: {
-  actorHeaders?: Record<string, string>;
-  workspaceId: string;
-}): Promise<ChartOrderCatalogRouteResponse> {
-  try {
-    const response = await fetch(
-      `/api/workspaces/${encodeURIComponent(workspaceId)}/hospital-admin/order-catalog?mode=chart-search`,
-      {
-        cache: "no-store",
-        headers: actorHeaders,
-      },
-    );
-    const body = (await response.json()) as ChartOrderCatalogRouteResponse;
-
-    if (!response.ok || !body.ok) {
-      if (!body.ok) return { ...body, status: response.status };
-      return { ok: false, status: response.status, error: "db_read_failed" };
-    }
-
-    return body;
-  } catch {
-    return { ok: false, status: 500, error: "db_read_failed" };
-  }
-}
-
-const chartOrderCatalogCache = new Map<
-  string,
-  { loadedAt: number; rows: ChartOrderCatalogSearchRow[] }
->();
-const chartOrderCatalogRequests = new Map<
-  string,
-  Promise<ChartOrderCatalogRouteResponse>
->();
-
-function getFreshChartOrderCatalog(cacheKey: string) {
-  const cached = chartOrderCatalogCache.get(cacheKey);
-  if (!cached) return null;
-  if (Date.now() - cached.loadedAt < chartOrderCatalogFreshMs) return cached.rows;
-  chartOrderCatalogCache.delete(cacheKey);
-  return null;
-}
-
-function loadCachedChartOrderCatalog({
-  actorHeaders,
-  cacheKey,
-  force = false,
-  workspaceId,
-}: {
-  actorHeaders?: Record<string, string>;
-  cacheKey: string;
-  force?: boolean;
-  workspaceId: string;
-}): Promise<ChartOrderCatalogRouteResponse> {
-  const cached = force ? null : getFreshChartOrderCatalog(cacheKey);
-  if (cached) return Promise.resolve({ ok: true, rows: cached });
-
-  const inFlight = chartOrderCatalogRequests.get(cacheKey);
-  if (inFlight) return inFlight;
-
-  const request = loadChartOrderCatalog({ actorHeaders, workspaceId })
-    .then((result) => {
-      if (result.ok) {
-        chartOrderCatalogCache.set(cacheKey, {
-          loadedAt: Date.now(),
-          rows: result.rows,
-        });
-      } else {
-        chartOrderCatalogCache.delete(cacheKey);
-      }
-      return result;
-    })
-    .finally(() => chartOrderCatalogRequests.delete(cacheKey));
-  chartOrderCatalogRequests.set(cacheKey, request);
-  return request;
 }
 
 async function loadChartOrderSetPreview({
@@ -13802,19 +13712,13 @@ const OrderArea = memo(function OrderArea({
         workspaceId: bundle.encounter.workspaceId,
       });
       if (readback.ok) {
-        const freshById = new Map(
-          (readback.rows ?? [])
-            .filter((row) =>
-              row.workspaceId === bundle.encounter.workspaceId &&
-              row.encounterId === bundle.encounter.id &&
-              (row.orderConfirmationStatus === "confirmed" ||
-                row.orderConfirmationStatus === "billed") &&
-              (confirmedRootOrderIds.includes(row.orderId) ||
-                Boolean(row.parentOrderId && confirmedRootOrderIds.includes(row.parentOrderId))),
-            )
-            .map((row) => [row.orderId, row]),
-        );
-        confirmedRows = confirmedRows.map((row) => freshById.get(row.orderId) ?? row);
+        confirmedRows = reconcileChartOrderConfirmationRows({
+          commandRows: confirmedRows,
+          readbackRows: readback.rows ?? [],
+          confirmedRootOrderIds,
+          encounterId: bundle.encounter.id,
+          workspaceId: bundle.encounter.workspaceId,
+        });
       }
       const applyResult = (currentRows: ChartOrderDraftRow[]) =>
         applyBillingCandidatesToOrderRows(
