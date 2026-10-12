@@ -1465,3 +1465,43 @@ test("dispensing context opens the selected live profile and vital editor", asyn
   expect(writes).toHaveLength(1);
   expect(writes[0]?.weightKg).toBe(4.2);
 });
+
+for (const queueType of ["dispensing", "treatment"] as const) {
+  test(`${queueType} keeps request time after claim and cancellation`, async ({ page }) => {
+    await grantCheongdamWorkspaceAccess(page);
+    const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
+    const id = "97090000-0000-4000-8000-000000000991";
+    const encounterId = "97090000-0000-4000-8000-000000000992";
+    let assignedToUserId: string | null = null;
+    let rowRevision = 1;
+    let updatedAt = "2026-09-07T02:45:00.000Z";
+    const workItem = () => ({ id, workspaceId, encounterId, orderId: id, queueType,
+      status: "requested", requestCycle: 1, rowRevision, assignedToUserId,
+      assignedToDisplayName: assignedToUserId ? "합성 담당" : null, canManage: true,
+      createdAt: "2026-09-07T01:30:00.000Z", updatedAt,
+      sourceSnapshot: { orderDisplayName: "합성 요청 시각 검증", patientName: "합성 환자" },
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => {
+      const type = new URL(route.request().url()).searchParams.get("queueType");
+      return route.fulfill({ json: { ok: true, workItems: type === queueType ? [workItem()] : [] } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}`, route => {
+      const command = route.request().postDataJSON();
+      assignedToUserId = command.action === "unassign" ? null : "playwright-default-session";
+      rowRevision += 1; updatedAt = "2026-09-07T03:45:00.000Z";
+      return route.fulfill({ json: { ok: true, workItems: [workItem()] } });
+    });
+    await page.goto(`/w/${workspaceId}/dispensing?date=2026-09-07&encounterId=${encounterId}&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed`);
+    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
+    await expect(card).toContainText("10:30");
+    await page.getByRole("button", { name: "담당하기", exact: true }).click();
+    const label = queueType === "treatment" ? "처치" : "조제";
+    await expect(page.getByRole("button", { name: `${label} 시작`, exact: true })).toBeEnabled();
+    await expect(card).toContainText("10:30");
+    await page.getByRole("button", { name: `${label} 상태 액션 열기`, exact: true }).click();
+    await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
+    await expect(page.getByRole("button", { name: "담당하기", exact: true })).toBeEnabled();
+    await expect(card).toContainText("10:30");
+    await expect(card).not.toContainText("12:45");
+  });
+}

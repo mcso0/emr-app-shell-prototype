@@ -30,10 +30,11 @@ export const InvoiceTableAndSummary: Story = {
     await expect(within(table).getByText("합성 청구 항목 1")).toBeVisible();
     for (const name of ["항목", "출처 / 진행", "단가", "수량", "청구금액"]) await expect(within(table).getByRole("columnheader", { name })).toBeVisible();
     await expect(within(table).getByRole("spinbutton", { name: "합성 청구 항목 1 수량" })).toHaveValue(1);
+    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
     await waitFor(() => expect(billingFixture.requests.some(request => request.method === "POST" && request.path.endsWith("/guardian-checkout"))).toBe(true));
     await waitFor(() => expect(canvas.queryByText("Checkout session을 준비하는 중입니다.")).not.toBeInTheDocument());
     await expect(canvas.getByTestId("billing-checkout-total")).toHaveTextContent("3,000");
-    await expect(billingFixture.requests.some(request => request.method === "PATCH")).toBe(false); await expect(billingFixture.unhandled).toEqual([]);
+    await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true); await expect(billingFixture.unhandled).toEqual([]);
   },
 };
 export const EmptyWorkspace: Story = { args: { scenario: "empty" }, play: async ({ canvas }) => {
@@ -67,14 +68,35 @@ export const FinancialDenialCleanup: Story = {
     const dialog = within(await body.findByRole("dialog", { name: "수납 완료 전 확인" }));
     billingFixture.holdNextTransition();
     await userEvent.click(dialog.getByRole("button", { name: "수납 완료 저장" }));
-    await waitFor(() => expect(billingFixture.requests.filter(request => request.method === "PATCH")).toHaveLength(1));
+    await waitFor(() => expect(billingFixture.requests.filter(request => request.method === "PATCH" && !request.path.endsWith("/assignment"))).toHaveLength(1));
     await billingFixture.finish();
-    await expect(billingFixture.requests.filter(request => request.method === "PATCH").map(request => request.path)).toEqual([
+    await expect(billingFixture.requests.filter(request => request.method === "PATCH" && !request.path.endsWith("/assignment")).map(request => request.path)).toEqual([
       `/api/workspaces/${billingWorkspaceId}/billing/guardian-checkout`,
       `/api/workspaces/${billingWorkspaceId}/billing/payment-status`,
     ]);
     await expect(billingFixture.isRestored()).toBe(true);
     await expect(billingFixture.unhandled).toEqual([]);
     await expect(canvas.queryByRole("table", { name: "청구 항목 테이블" })).not.toBeInTheDocument();
+  },
+};
+
+export const CurrentOwnerInputs: Story = {
+  args: { scenario: "detail" }, parameters: InvoiceTableAndSummary.parameters,
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    const quantity = () => canvas.getByRole("spinbutton", { name: "합성 청구 항목 1 수량" });
+    const body = within(canvasElement.ownerDocument.body);
+    await body.findByRole("textbox", { name: "할인 또는 할증 사유" });
+    const reason = () => body.getByRole("textbox", { name: "할인 또는 할증 사유" });
+    await expect(quantity()).toBeDisabled(); await expect(reason()).toBeDisabled();
+    await expect(canvas.getByText("읽기 전용", { exact: true })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await waitFor(() => expect(quantity()).toBeEnabled()); await expect(reason()).toBeEnabled();
+    billingFixture.setAssignee("synthetic-other-user");
+    await waitFor(() => expect(quantity()).toBeDisabled()); await expect(reason()).toBeDisabled();
+    billingFixture.setAssignee(null);
+    await waitFor(() => expect(quantity()).toBeDisabled()); await expect(reason()).toBeDisabled();
+    await expect(billingFixture.requests.filter(request => request.method === "PATCH").every(request => request.path.endsWith("/assignment"))).toBe(true);
+    await expect(billingFixture.unhandled).toEqual([]);
   },
 };
