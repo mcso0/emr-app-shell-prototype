@@ -192,3 +192,63 @@ export const FilterChoiceCloses: Story = {
     await expect(canvas.getByTestId("order-queue-item-sample-2")).toBeVisible();
   },
 };
+
+function CountedListHeaderExample({ total = 10 }: { total?: number }) {
+  const items = Array.from({ length: total }, (_, index) => ({
+    ...queueItems[index < total * 0.4 ? 1 : 0],
+    id: `counted-${index}`,
+  }));
+  return (
+    <div className="h-[520px] w-[288px]">
+      <EmrOrderQueueSidePanel
+        title="조제/처치"
+        items={items}
+        statuses={queueStatuses}
+        typeFilterPlacement="list-header"
+        patientGrouping={{ workspaceId: "synthetic-counted-queue", readable: true, ready: true }}
+      />
+    </div>
+  );
+}
+
+export const CountedListHeader: Story = {
+  render: () => <CountedListHeaderExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const group = canvas.getByRole("group", { name: "오더 유형 필터" });
+    const buttons = within(group);
+    await expect(buttons.getByRole("button", { name: "전체 10" })).toBeVisible();
+    const bounds = group.getBoundingClientRect();
+    for (const button of buttons.getAllByRole("button")) {
+      const rect = button.getBoundingClientRect();
+      await expect(rect.left).toBeGreaterThanOrEqual(bounds.left);
+      await expect(rect.right).toBeLessThanOrEqual(bounds.right);
+    }
+    const actions = group.parentElement!.parentElement!.nextElementSibling!;
+    await expect(bounds.right).toBeLessThanOrEqual(actions.getBoundingClientRect().left);
+    await userEvent.click(canvas.getByTestId("patient-queue-view-toggle"));
+    await userEvent.click(buttons.getByRole("button", { name: "처치 6" }));
+    await expect(buttons.getByRole("button", { name: "처치 6" })).toHaveAttribute("aria-pressed", "true");
+    await expect(canvasElement.querySelectorAll("[data-patient-queue-item]")).toHaveLength(6);
+    await userEvent.click(buttons.getByRole("button", { name: "조제 4" }));
+    await expect(canvasElement.querySelectorAll("[data-patient-queue-item]")).toHaveLength(4);
+    await userEvent.click(buttons.getByRole("button", { name: "전체 10" }));
+    await expect(canvasElement.querySelectorAll("[data-patient-queue-item]")).toHaveLength(10);
+  },
+};
+
+export const CountedListHeaderLargeCounts: Story = {
+  render: () => <CountedListHeaderExample total={300} />,
+  play: async ({ canvasElement }) => {
+    const group = within(canvasElement).getByRole("group", { name: "오더 유형 필터" });
+    const bounds = group.getBoundingClientRect();
+    for (const button of within(group).getAllByRole("button")) {
+      await expect(button.getBoundingClientRect().right).toBeLessThanOrEqual(bounds.right);
+    }
+    const header = group.parentElement!.parentElement!.parentElement!;
+    const actions = header.lastElementChild!.getBoundingClientRect();
+    await expect(bounds.right).toBeLessThanOrEqual(header.getBoundingClientRect().right);
+    await expect(actions.top).toBeGreaterThanOrEqual(bounds.bottom);
+    await expect(actions.right).toBeLessThanOrEqual(header.getBoundingClientRect().right);
+  },
+};

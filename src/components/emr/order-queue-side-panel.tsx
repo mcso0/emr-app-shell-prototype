@@ -323,7 +323,7 @@ export function EmrOrderQueueSidePanel({
   const typeFilterControl = typeFilterVisible ? (
     <SegmentedControl
       aria-label={filterAriaLabel}
-      className="shrink-0"
+      className={typeFilterPlacement === "list-header" ? "shrink-0 min-w-max" : "shrink-0"}
       disabled={queueControlsDisabled}
       items={typeFilterPlacement === "list-header" ? countedFilterItems : filterItems}
       value={filter}
@@ -410,6 +410,7 @@ export function EmrOrderQueueSidePanel({
         }
       />
       <EmrListHeader
+        className={typeFilterPlacement === "list-header" ? "flex-wrap gap-x-0 gap-y-1 [&>div:first-child]:min-w-max [&>div:last-child]:ml-auto" : undefined}
         label={typeFilterPlacement === "list-header" ? typeFilterControl : listLabel}
         count={typeFilterPlacement === "list-header" ? undefined : visibleItems.length}
         topDividerVisible
