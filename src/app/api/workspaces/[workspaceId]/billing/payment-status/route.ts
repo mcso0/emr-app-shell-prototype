@@ -1,3 +1,5 @@
+import { loadWorkspacePermissionAdapterFromDb } from "@/features/auth/db-workspace-permission-adapter";
+import { createSupabaseWorkspacePermissionGateway, type SupabaseWorkspacePermissionClient } from "@/features/auth/supabase-workspace-permission-gateway";
 import { mockBillingOwnerAllowed } from "@/features/billing/server-assignment";
 import { readServerSession } from "@/features/auth/server-session-reader";
 import {
@@ -57,8 +59,13 @@ export async function GET(request: Request, { params }: RouteContext) {
         client as unknown as SupabaseBillingPaymentStatusRpcClient
       )
     : createMockBillingPaymentStatusGateway(undefined, undefined, demoStoreNamespace);
-  const permissionAdapter =
-    identity.source === "supabase_session" && !useSupabaseGateway
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(client as unknown as SupabaseWorkspacePermissionClient),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : identity.source === "supabase_session" && !useSupabaseGateway
       ? createSupabaseDemoBillingPermissionAdapter({
           actorUserId: identity.actorUserId,
           workspaceId,
@@ -110,8 +117,13 @@ export async function PATCH(request: Request, { params }: RouteContext) {
         client as unknown as SupabaseBillingPaymentStatusRpcClient
       )
     : createMockBillingPaymentStatusGateway(undefined, undefined, demoStoreNamespace);
-  const permissionAdapter =
-    identity.source === "supabase_session" && !useSupabaseGateway
+  const permissionAdapter = client
+    ? await loadWorkspacePermissionAdapterFromDb({
+        gateway: createSupabaseWorkspacePermissionGateway(client as unknown as SupabaseWorkspacePermissionClient),
+        workspaceId,
+        sessionUserId: identity.actorUserId,
+      })
+    : identity.source === "supabase_session" && !useSupabaseGateway
       ? createSupabaseDemoBillingPermissionAdapter({
           actorUserId: identity.actorUserId,
           workspaceId,
