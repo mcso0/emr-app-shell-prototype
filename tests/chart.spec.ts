@@ -10668,6 +10668,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
 }) => {
   const orderId = "order-ambiguous-draft-readback";
   const displayName = "Ambiguous draft readback medicine";
+  const originChartId = "soap-kong-260501";
   const firstEtag = `"${"7".repeat(64)}"`;
   const savedEtag = `"${"8".repeat(64)}"`;
   const detailInputs = {
@@ -10682,6 +10683,7 @@ test("chart confirmation continues after an ambiguous draft response only when r
   let currentEtag = firstEtag;
   let currentRow = {
     orderId,
+    originChartId,
     workspaceId: "clair-demo",
     encounterId: kongEncounterId,
     rowType: "individual",
