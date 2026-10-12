@@ -793,7 +793,11 @@ export function EmrSubpanelBody({
 
   return (
     <ScrollArea
-      className={cn("min-h-0 flex-1", className)}
+      className={cn(
+        "min-h-0 flex-1",
+        density === "queue" && "[&>[data-slot=scroll-area-scrollbar][data-orientation=vertical]]:![inset-inline-end:4px]",
+        className,
+      )}
       viewportClassName={viewportClassName}
     >
       <div className={cn(insetClassName, "emr-density-stack-md flex min-h-full flex-col", contentClassName)}>

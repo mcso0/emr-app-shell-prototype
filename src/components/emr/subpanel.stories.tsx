@@ -166,6 +166,43 @@ export const CollapsedGroup: Story = {
   },
 };
 
+export const ScrollableQueue: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: "Shared module queues keep their 16px content inset and place the vertical scrollbar 4px from the right edge.",
+      },
+    },
+  },
+  render: () => (
+    <div className="h-[420px]">
+      <EmrSubpanel>
+        <EmrSubpanelTitle title="합성 대기열" />
+        <EmrDateNavigator dateLabel="26.10.12 (월)" />
+        <EmrListHeader label="합성 대기열" count={12} />
+        <EmrSubpanelBody density="queue">
+          {Array.from({ length: 12 }, (_, index) => (
+            <EmrListItem key={index} title={`합성 항목 ${index + 1}`} subtitle="대기중" variant="outline" />
+          ))}
+        </EmrSubpanelBody>
+      </EmrSubpanel>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const viewport = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]')!;
+    const scrollbar = canvasElement.querySelector<HTMLElement>('[data-slot="scroll-area-scrollbar"]')!;
+    const content = viewport.firstElementChild!;
+    await waitFor(() => {
+      expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+      expect(scrollbar.parentElement!.getBoundingClientRect().right - scrollbar.getBoundingClientRect().right).toBe(4);
+    });
+    await expect(getComputedStyle(content).paddingLeft).toBe("16px");
+    await expect(getComputedStyle(content).paddingRight).toBe("16px");
+    viewport.scrollTop = 80;
+    await waitFor(() => expect(viewport.scrollTop).toBe(80));
+  },
+};
+
 function FloatingPinExample() {
   const [floating, setFloating] = useState(true);
   return <ModuleSidePanelContext.Provider value={{ moduleId: "synthetic", ownerId: "synthetic-owner", isCurrentModule: true, visible: true, floating, pathname: "/synthetic", search: "", onToggle: () => setFloating(value => !value), onDateChange: () => undefined, onNavigate: () => undefined }}>
