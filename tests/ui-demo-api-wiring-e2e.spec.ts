@@ -1,6 +1,7 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 import { chartOrderExpectedEtagHeader } from "../src/features/chart/order-version-contract";
+import { prepareLabApiFixture, claimLabFixture } from "./fixtures/modern-lab-api";
 
 const workspaceId = "clair-demo";
 const kongEncounterId = "encounter-kong-260501";
@@ -10,16 +11,6 @@ const apiHeaders = { "x-clair-demo-session-user-id": "user-vet" };
 const frontDeskHeaders = { "x-clair-demo-session-user-id": "user-front-desk" };
 const technicianHeaders = { "x-clair-demo-session-user-id": "user-tech" };
 let fulfillmentCommandSequence = 800;
-const uiApiWbcCatalogItem = {
-  categoryId: "den194-labcat-hematology",
-  categoryName: "Hematology",
-  id: "den194-labitem-cbc-wbc",
-  resultInputType: "number",
-  resultUnit: "10^3/uL",
-  sortOrder: 10,
-  testItemName: "WBC",
-};
-
 const uiApiPatient = {
   id: "patient-ui-api-kong",
   workspaceId,
@@ -334,11 +325,13 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
 }) => {
   const calls: string[] = [];
   await mockDownstreamDemoApis(page, calls);
+  const labFixture = await prepareLabApiFixture(page, calls);
 
-  await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed");
+  await page.goto(labFixture.href);
   const liveLabQueueItem = page.getByTestId("lab-queue-item-live-lab-ui-api-lab-cbc");
   await expect(liveLabQueueItem).toContainText("API Lab Kong");
   await liveLabQueueItem.click();
+  await claimLabFixture(page);
   await expect(
     page.getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc"),
   ).toBeVisible();
@@ -347,6 +340,7 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
     .fill("21.4");
   await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
 
+  await claimSyntheticInvoice(page.request, "invoice-coco-260501", "user-admin");
   await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
   await expect(page.getByTestId("billing-queue-item-invoice-coco-260501")).toBeVisible();
   await expect.poll(() => calls).toContain("billing-checkout-post");
@@ -361,7 +355,7 @@ test("fulfillment, lab result sheet, billing, and audit screens consume API boun
   expect(calls).toEqual(
     expect.arrayContaining([
       "fulfillment-lab",
-      "lab-result-sheet-catalog",
+      "lab-result-definition-read",
       "lab-result-entry",
       "billing-checkout-post",
       "audit-events",
@@ -376,6 +370,7 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
   await mockReceptionApi(page, calls);
   await mockChartApi(page, calls);
   await mockDownstreamDemoApis(page, calls);
+  const labFixture = await prepareLabApiFixture(page, calls);
 
   await test.step("front desk sees an API-backed reception queue patient", async () => {
     await page.goto(`/w/clair-demo/reception?date=${uiFixtureDate}&modulePanel=open`);
@@ -393,10 +388,11 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
   });
 
   await test.step("technician enters and saves a lab result through the result API", async () => {
-    await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed");
+    await page.goto(labFixture.href);
     const liveLabQueueItem = page.getByTestId("lab-queue-item-live-lab-ui-api-lab-cbc");
     await expect(liveLabQueueItem).toContainText("API Lab Kong");
     await liveLabQueueItem.click();
+    await claimLabFixture(page);
     await page
       .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
       .fill("21.4");
@@ -405,6 +401,8 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
 
   await test.step("technician sees the selected dispensing order in the instruction table", async () => {
     await page.goto("/w/clair-demo/dispensing?modulePanel=open&aside=closed");
+    await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+    await expect(page.getByTestId("patient-queue-view-toggle")).toHaveAttribute("aria-pressed", "false");
     const liveDispensingQueueItem = page.getByTestId(
       "order-queue-item-live-fulfillment-ui-api-dispensing-maropitant",
     );
@@ -418,7 +416,8 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
   });
 
   await test.step("front desk sees API billing and checkout state", async () => {
-    await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
+    await claimSyntheticInvoice(page.request, "invoice-coco-260501", "user-admin");
+  await page.goto("/w/clair-demo/billing?modulePanel=open&aside=open");
     await expect(page.getByTestId("billing-instruction-info")).toContainText(
       "API-INV-VISIBLE-260501",
     );
@@ -447,7 +446,7 @@ test("visible day-in-clinic demo links reception, chart, fulfillment, lab, billi
       "fulfillment-lab",
       "fulfillment-dispensing",
       "fulfillment-treatment",
-      "lab-result-sheet-catalog",
+      "lab-result-definition-read",
       "lab-result-entry",
       "billing-invoice-lines-get",
       "billing-payment-status-get",
@@ -924,58 +923,9 @@ test("billing checkout session failure exposes a retry path", async ({ page, req
 });
 
 test("lab result UI exposes catalog retry and save retry states", async ({ page }) => {
-  let catalogAttempts = 0;
-  let saveAttempts = 0;
-  await mockLabFulfillmentApi(page);
-
-  await page.route("**/api/workspaces/clair-demo/lab-imaging/result-sheet-catalog?*", async (route) => {
-    catalogAttempts += 1;
-    if (catalogAttempts === 1) {
-      await route.fulfill({
-        contentType: "application/json",
-        json: { ok: false, status: 500, error: "forced_catalog_failure" },
-        status: 500,
-      });
-      return;
-    }
-
-    await route.fulfill({
-      contentType: "application/json",
-      json: {
-        ok: true,
-        status: 200,
-        catalogItemId: "den194-catalog-cbc",
-        enforcedBy: "lab-result-sheet-catalog-read",
-        items: [uiApiWbcCatalogItem],
-      },
-      status: 200,
-    });
-  });
-
-  await page.route("**/api/workspaces/clair-demo/lab-imaging/result-entries", async (route) => {
-    saveAttempts += 1;
-    if (saveAttempts === 1) {
-      await route.fulfill({
-        contentType: "application/json",
-        json: { ok: false, status: 500, error: "forced_save_failure" },
-        status: 500,
-      });
-      return;
-    }
-
-    await route.fulfill({
-      contentType: "application/json",
-      json: {
-        ok: true,
-        status: 200,
-        savedResult: await route.request().postDataJSON(),
-        enforcedBy: "lab-result-entry-server-boundary",
-      },
-      status: 200,
-    });
-  });
-
-  await page.goto("/w/clair-demo/lab?modulePanel=open&aside=closed");
+  // Current frozen result-definition reads supply catalog rows in supported workspaces.
+  const fixture = await prepareLabApiFixture(page, [], { failReadOnce: true, failSaveOnce: true });
+  await page.goto(fixture.href);
   await page.getByTestId("lab-queue-item-live-lab-ui-api-lab-cbc").click();
 
   await expect(page.getByTestId("lab-result-catalog-status")).toContainText(
@@ -986,12 +936,16 @@ test("lab result UI exposes catalog retry and save retry states", async ({ page 
     page.getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc"),
   ).toBeVisible();
 
+  await claimLabFixture(page);
   await page
     .getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")
     .fill("21.4");
   await expect(page.getByTestId("lab-result-save-status")).toContainText("저장 실패");
   await page.getByTestId("lab-result-save-retry-button").click();
   await expect(page.getByTestId("lab-result-save-status")).toContainText("저장됨");
+  expect(fixture.writes).toHaveLength(2);
+  expect(fixture.writes[1]).toEqual(fixture.writes[0]);
+  await expect(page.getByTestId("lab-result-input-live-lab-ui-api-lab-cbc-den194-labitem-cbc-wbc")).toHaveValue("21.4");
 });
 
 test("lab result UI separates catalog permission denial from empty data", async ({ page }) => {
