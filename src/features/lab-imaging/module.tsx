@@ -35,7 +35,6 @@ import {
   EmrInstructionOutputMenu,
   EmrInstructionTitleBar,
 } from "@/components/emr/instruction-header-stack";
-import { EmrInstructionFilterTabs } from "@/components/emr/instruction-filter-tabs";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import {
   EmrRightPanel,
@@ -401,7 +400,6 @@ const labStatusGroupColorToken: Record<LabResult["status"], string> = {
   reviewed: "--emr-status-success-text",
 };
 
-type LabResultTab = "all" | "cbc" | "chemistry";
 type ImagingReadingStatus = "requested" | "reading" | "completed";
 type FulfillmentQueueType = "lab" | "imaging";
 type FulfillmentTransitionCommand =
@@ -502,12 +500,6 @@ function getInitialImagingReadingStatus(
   if (status === "reading") return "reading";
   return "requested";
 }
-
-const labResultTabItems = [
-  { value: "all" as const, label: "전체" },
-  { value: "cbc" as const, label: "CBC" },
-  { value: "chemistry" as const, label: "혈청화학" },
-];
 
 const fulfillmentQueueCache = new Map<string, FulfillmentQueueSnapshot>();
 const fulfillmentQueueRequests = new Map<string, {
@@ -2642,7 +2634,11 @@ function NormalRangeCell({ row }: { row: LabResultRow }) {
       "bg-[var(--emr-status-neutral-text)] fill-[var(--emr-status-neutral-text)]",
   };
 
-  if (!range || !row.value?.trim() || row.judgment === "not_judged") {
+  if (!range) {
+    return <span className="text-muted-foreground">{row.referenceRange ?? "참고범위 없음"}</span>;
+  }
+
+  if (!row.value?.trim() || row.judgment === "not_judged") {
     return <span className="text-muted-foreground">{row.referenceRange ?? "참고범위 없음"} · 미판정</span>;
   }
 
@@ -3466,7 +3462,6 @@ export function LabContent({
       refreshPhase2,
     ],
   );
-  const [resultTab, setResultTab] = useState<LabResultTab>("all");
   const initialAssignment = {
     assigneeName: detail?.technicianName ?? "미지정",
     resultId: detail?.result.id ?? "",
@@ -3815,21 +3810,13 @@ export function LabContent({
           </div>
         }
         filters={
-          <EmrInstructionFilterTabs
-            aria-label="검사 결과 필터"
-            value={resultTab}
-            items={labResultTabItems.map((item) => ({
-              ...item,
-              count:
-                item.value === "all"
-                  ? displayDetail.result.rows.length
-                  : item.value === "cbc"
-                    ? displayDetail.result.rows.length
-                    : 0,
-              disabled: item.value === "chemistry",
-            }))}
-            onValueChange={setResultTab}
-          />
+          <div
+            role="group"
+            aria-label="검사 결과 개수"
+            className="flex min-h-8 items-center border-b border-[var(--emr-border-default)] pb-2 emr-text-dense font-medium"
+          >
+            전체 {displayDetail.result.rows.length}
+          </div>
         }
       />
 

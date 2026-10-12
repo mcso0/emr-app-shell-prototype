@@ -5,7 +5,7 @@ import { evaluateLabProfileValue, type LabProfileRule } from "./result-profile-c
 import { parsePersistedLabResult } from "./persisted-result-contract";
 import { parseLabProfileConfiguration } from "./server-result-profile-core";
 
-export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error";
+export type LabWorkspaceScenario = "ready" | "readonly" | "queue-error" | "queue-denied" | "empty" | "entries-error" | "row-save-error" | "numeric-no-interval";
 const workItemId = "97000000-0000-4000-8000-000000000001";
 const pendingWorkItemId = "97000000-0000-4000-8000-000000000002";
 const numeric: LabProfileRule = { testMasterKey: "synthetic-numeric", code: "SYN-N", resultValueKind: "numeric", unit: "synthetic-unit", decimalScale: 1, supported: true, numericMin: 0, numericMax: 100, referenceInterval: { low: 1, high: 5, lowInclusive: true, highInclusive: true }, displayRange: { low: 0, high: 20 }, codes: [], referenceStatus: "synthetic_functional_fixture", provenance: {}, allowedQualifiers: ["exact", "less_than", "greater_than"] };
@@ -82,7 +82,7 @@ export function createLabWorkspaceFixture(scenario: LabWorkspaceScenario) {
   instance.result.resultName = "합성 기능 확인 프로필";
   instance.result.entryWriteRevision = 3;
   const initialRows: LabResultRow[] = [
-    { ...instance.result.rows[0], analyteName: "합성 수치", resultValueKind: "numeric", interpretationRule: numeric, value: "2", unit: "synthetic-unit", decimalScale: 1, referenceRange: "1 - 5", resultPresence: "value", qualifier: "exact" },
+    { ...instance.result.rows[0], analyteName: "합성 수치", resultValueKind: "numeric", interpretationRule: scenario === "numeric-no-interval" ? { ...numeric, referenceInterval: null } : numeric, value: "2", unit: "synthetic-unit", decimalScale: 1, referenceRange: scenario === "numeric-no-interval" ? undefined : "1 - 5", resultPresence: "value", qualifier: "exact" },
     { id: "97000000-0000-4000-8001-000000000002", analyteName: "합성 선택", resultValueKind: "coded", interpretationRule: coded, value: "synthetic-clear", resultPresence: "value", qualifier: "exact", judgment: "normal" },
     { id: "97000000-0000-4000-8001-000000000003", analyteName: "합성 관찰", resultValueKind: "text", interpretationRule: text, value: "합성 관찰 내용", resultPresence: "value", qualifier: "exact", judgment: "not_judged" },
   ];

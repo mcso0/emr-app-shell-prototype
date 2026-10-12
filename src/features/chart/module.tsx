@@ -7,6 +7,7 @@ import { mergeChartOrderDraftRowsAfterSave } from "@/features/chart/chart-order-
 import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
 import { isChartOrderDraftRowInRootIds, prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
 import historyStyles from "./chart-history.module.css";
+import historyLayoutStyles from "@/components/emr/history-aside-layout.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
 import orderScrollStyles from "./chart-order-scroll.module.css";
 
@@ -47,6 +48,7 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
+  memo,
   useCallback,
   useEffect,
   useId,
@@ -2430,11 +2432,11 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
   if (!bundle) return null;
 
   return (
-    <EmrContentAsidePanel id="chart-content-aside" className={historyStyles.panel}>
+    <EmrContentAsidePanel id="chart-content-aside" className={historyLayoutStyles.panel}>
       <EmrContentAsideHeader
         count={visibleHistoryRows.length}
         label="차트 이력"
-        className={historyStyles.header}
+        className={historyLayoutStyles.header}
         search={search.open ? <EmrHistorySearch search={search} onQueryChange={() => setCollapsedHistoryGroups(new Set())} label="차트 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
         collapseAriaLabel="차트 이력 목록 접기"
         onCollapse={() => setContentAsideOpen(false)}
@@ -2471,14 +2473,10 @@ function ChartHistoryAside({ workspaceId, bundle }: { workspaceId: string; bundl
         />
       </div>
       <ScrollArea
-        className="min-h-0 flex-1"
+        className={historyLayoutStyles.scrollArea}
         data-testid="chart-history-list-scroll-area"
-        style={{
-          marginInline: "calc(var(--emr-content-aside-padding-x) * -1)",
-          width: "calc(100% + (var(--emr-content-aside-padding-x) * 2))",
-        }}
       >
-        <div className="flex flex-col gap-2 px-[var(--emr-content-aside-padding-x)] pt-2 pb-3">
+        <div className={historyLayoutStyles.groups}>
           {liveHistoryScopeMatches && chartHistoryStatus === "loading" ? (
             <div
               className="flex items-center gap-2 px-2 py-3 emr-text-metadata text-[var(--emr-text-secondary)]"
@@ -4509,13 +4507,16 @@ function SoapPanel({
     diagnosisSystemTabs.some((tab) => tab.id === activeSoapId)
       ? activeSoapId
       : SOAP_DEFAULT_SCOPE_KEY;
-  const soapTabItems = [
-    { value: SOAP_DEFAULT_SCOPE_KEY, label: "기본 S/O" },
-    ...diagnosisSystemTabs.map((tab) => ({
-      value: tab.id,
-      label: tab.label,
-    })),
-  ];
+  const soapTabItems = useMemo(
+    () => [
+      { value: SOAP_DEFAULT_SCOPE_KEY, label: "기본 S/O" },
+      ...diagnosisSystemTabs.map((tab) => ({
+        value: tab.id,
+        label: tab.label,
+      })),
+    ],
+    [diagnosisSystemTabs],
+  );
   const activeSystemTab = diagnosisSystemTabs.find(
     (tab) => tab.id === resolvedActiveSoapId,
   );
@@ -11685,7 +11686,7 @@ type ChartOrderSetPreviewItemState = {
 const applyEncounterOrderDrafts = applyPersistedOrderDrafts;
 const applyEncounterOrderActions = applyPersistedOrderActions;
 
-function OrderArea({
+const OrderArea = memo(function OrderArea({
   actorKey,
   actorHeaders,
   bundle,
@@ -15304,7 +15305,7 @@ function OrderArea({
       </div>
     </section>
   );
-}
+});
 
 function ChartPreflightLine({
   emphasis = false,
@@ -15674,11 +15675,17 @@ export function ChartContent({
   } = useAuthClient();
   const chartWorkspaceRef = useRef<HTMLDivElement | null>(null);
   const resizingPointerIdRef = useRef<number | null>(null);
-  const activeBundle = getSelectedBundle(
-    queueScopeMatches || allowMockFallback ? selectedEncounterId : "",
-    liveQueueRecords,
-    { allowMockFallback },
+  const scopedEncounterId =
+    queueScopeMatches || allowMockFallback ? selectedEncounterId : "";
+  const liveQueueBundle = useMemo(
+    () => getLiveQueueBundle(scopedEncounterId, liveQueueRecords),
+    [liveQueueRecords, scopedEncounterId],
   );
+  // Keep queue-backed props stable for order-count-only updates. The handoff
+  // fallback still resolves on each render because it is stored outside React.
+  const activeBundle =
+    liveQueueBundle ??
+    getSelectedBundle(scopedEncounterId, liveQueueRecords, { allowMockFallback });
   const chartHistoryScopeMatches = Boolean(
     activeBundle &&
     chartHistoryScope?.workspaceId === workspaceId &&
@@ -15688,11 +15695,14 @@ export function ChartContent({
     () => (chartHistoryScopeMatches ? chartHistoryRecords : []),
     [chartHistoryRecords, chartHistoryScopeMatches],
   );
-  const bundle = getDisplayedChartBundle({
-    activeBundle,
-    historyRecords: scopedChartHistoryRecords,
-    historyViewEncounterId,
-  });
+  const bundle = useMemo(
+    () => getDisplayedChartBundle({
+      activeBundle,
+      historyRecords: scopedChartHistoryRecords,
+      historyViewEncounterId,
+    }),
+    [activeBundle, historyViewEncounterId, scopedChartHistoryRecords],
+  );
   const isHistoricalView = Boolean(
     bundle && activeBundle && bundle.encounter.id !== activeBundle.encounter.id,
   );
@@ -16789,6 +16799,25 @@ export function ChartContent({
     };
   }, [isChartResizing]);
 
+  const navigateToBilling = useCallback(
+    (invoiceId?: string, orderIds?: string[]) => {
+      if (!activeEncounterId) return;
+      const href = buildWorkspaceSurfaceRoute({
+        moduleId: "billing",
+        params: {
+          encounterId: activeEncounterId,
+          ...(invoiceId ? { invoiceId } : {}),
+          ...(orderIds?.length ? { orderIds: orderIds.join(",") } : {}),
+        },
+        removeParams: ["orderId", "taskId", "historyEncounterId"],
+        search: searchParams,
+        workspaceId,
+      });
+      onNavigateWorkspaceSurface?.(href, "billing");
+    },
+    [activeEncounterId, onNavigateWorkspaceSurface, searchParams, workspaceId],
+  );
+
   if (!bundle || !effectiveBundle) {
     const refreshAction = moduleRefreshActions.treatment;
     const queueEmpty =
@@ -16818,20 +16847,6 @@ export function ChartContent({
   }
 
   const currentBundle = effectiveBundle;
-  const navigateToBilling = (invoiceId?: string, orderIds?: string[]) => {
-    const href = buildWorkspaceSurfaceRoute({
-      moduleId: "billing",
-      params: {
-        encounterId: currentBundle.encounter.id,
-        ...(invoiceId ? { invoiceId } : {}),
-        ...(orderIds?.length ? { orderIds: orderIds.join(",") } : {}),
-      },
-      removeParams: ["orderId", "taskId", "historyEncounterId"],
-      search: searchParams,
-      workspaceId,
-    });
-    onNavigateWorkspaceSurface?.(href, "billing");
-  };
   const selectedCallRoom = consultationCallRooms.find(
     (room) => room.id === selectedCallRoomId,
   );

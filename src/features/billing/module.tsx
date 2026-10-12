@@ -26,6 +26,8 @@ import {
   EmrContentAsidePanel,
 } from "@/components/emr/content-aside-panel";
 import { EmrContentHistoryGroup } from "@/components/emr/content-history-list";
+import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
+import historyLayoutStyles from "@/components/emr/history-aside-layout.module.css";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { EmrEmptyState, EmrContentLoadingState } from "@/components/emr/empty-state";
@@ -2977,8 +2979,9 @@ function BillingHistoryAside({ detail }: { detail: BillingDetail }) {
   if (!detail) return null;
 
   return (
-    <EmrContentAsidePanel id="billing-content-aside">
+    <EmrContentAsidePanel id="billing-content-aside" className={historyLayoutStyles.panel}>
       <EmrContentAsideHeader
+        className={historyLayoutStyles.header}
         count={visibleRows.length}
         label="수납이력"
         search={search.open ? <EmrHistorySearch search={search} label="수납 이력 검색" onClose={() => { search.clear(); search.setOpen(false); requestAnimationFrame(() => searchTriggerRef.current?.focus()); }} /> : null}
@@ -2993,53 +2996,56 @@ function BillingHistoryAside({ detail }: { detail: BillingDetail }) {
           </>
         }
       />
-      <div className="h-px w-full shrink-0 bg-[var(--emr-border-subtle)]" />
+      <div className="h-px w-full shrink-0 bg-[var(--emr-border-default)]" />
       <div role="status" aria-live="polite" className="sr-only">결과 {visibleRows.length} / 전체 {ledgerRows.length}건</div>
-      <div className="flex flex-wrap gap-1.5">
-        {billingLedgerDateRangeItems.map((item) => {
-          const trigger = <Button key={item.value} type="button" size="sm" variant={dateRange === item.value ? "secondary" : "outline"} className="h-7 bg-card px-2 emr-text-metadata" aria-pressed={dateRange === item.value} onClick={item.value === "custom" ? undefined : () => setDateRange(item.value)}>{item.label}</Button>;
-          return item.value === "custom" ? <EmrHistoryFilterPopover key={item.value} open={dateDialogOpen} trigger={trigger} title="수납 이력 기간" dateLabel="수납 이력일" dates={draftDates} onDatesChange={setDraftDates} requireDates
-            onOpen={() => { setDraftDates(dateRange === "custom" ? customDates : getBillingLedgerDateBounds(dateRange === "all" ? "3m" : dateRange, todayDate, customDates)); setDateDialogOpen(true); }}
-            onReset={() => setDraftDates(emptyHistoryDateRange)} onCancel={() => setDateDialogOpen(false)} onApply={() => { setCustomDates(draftDates); setDateRange("custom"); setDateDialogOpen(false); }} /> : trigger;
-        })}
+      <div className={historyLayoutStyles.controls}>
+        <div className="flex flex-wrap gap-1.5">
+          {billingLedgerDateRangeItems.map((item) => {
+            const trigger = <Button key={item.value} type="button" size="sm" variant={dateRange === item.value ? "secondary" : "outline"} className="h-7 bg-card px-2 emr-text-metadata" aria-pressed={dateRange === item.value} onClick={item.value === "custom" ? undefined : () => setDateRange(item.value)}>{item.label}</Button>;
+            return item.value === "custom" ? <EmrHistoryFilterPopover key={item.value} open={dateDialogOpen} trigger={trigger} title="수납 이력 기간" dateLabel="수납 이력일" dates={draftDates} onDatesChange={setDraftDates} requireDates
+              onOpen={() => { setDraftDates(dateRange === "custom" ? customDates : getBillingLedgerDateBounds(dateRange === "all" ? "3m" : dateRange, todayDate, customDates)); setDateDialogOpen(true); }}
+              onReset={() => setDraftDates(emptyHistoryDateRange)} onCancel={() => setDateDialogOpen(false)} onApply={() => { setCustomDates(draftDates); setDateRange("custom"); setDateDialogOpen(false); }} /> : trigger;
+          })}
+        </div>
+        {dateRange === "custom" ? <Button size="sm" variant="outline" onClick={() => setDateRange("all")} aria-label="직접 기간 조건 해제" className="max-w-full"><span className="truncate">{customDates.start} ~ {customDates.end} ×</span></Button> : null}
+        <div className="grid grid-cols-5 gap-1.5">
+          {billingLedgerStatusFilterItems.map((group) => (
+            <Button
+              key={group.value}
+              type="button"
+              size="sm"
+              variant={statusFilters.has(group.value) ? "secondary" : "outline"}
+              className="h-7 bg-card px-1.5 emr-text-metadata"
+              aria-pressed={statusFilters.has(group.value)}
+              onClick={() => toggleStatusFilter(group.value)}
+            >
+              {group.label}
+            </Button>
+          ))}
+        </div>
+        {hasCoGuardianContext ? (
+          <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-2 emr-text-metadata">
+            <Checkbox
+              aria-label="타 보호자 청구서 포함"
+              checked={includeCoGuardianInvoices}
+              onClick={(event) => {
+                event.preventDefault();
+                setIncludeCoGuardianInvoices((current) => !current);
+              }}
+            />
+            <span>타 보호자 청구서 포함</span>
+          </label>
+        ) : null}
       </div>
-      {dateRange === "custom" ? <Button size="sm" variant="outline" onClick={() => setDateRange("all")} aria-label="직접 기간 조건 해제" className="max-w-full"><span className="truncate">{customDates.start} ~ {customDates.end} ×</span></Button> : null}
-      <div className="grid grid-cols-5 gap-1.5">
-        {billingLedgerStatusFilterItems.map((group) => (
-          <Button
-            key={group.value}
-            type="button"
-            size="sm"
-            variant={statusFilters.has(group.value) ? "secondary" : "outline"}
-            className="h-7 bg-card px-1.5 emr-text-metadata"
-            aria-pressed={statusFilters.has(group.value)}
-            onClick={() => toggleStatusFilter(group.value)}
-          >
-            {group.label}
-          </Button>
-        ))}
-      </div>
-      {hasCoGuardianContext ? (
-        <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-2 emr-text-metadata">
-          <Checkbox
-            aria-label="타 보호자 청구서 포함"
-            checked={includeCoGuardianInvoices}
-            onClick={(event) => {
-              event.preventDefault();
-              setIncludeCoGuardianInvoices((current) => !current);
-            }}
-          />
-          <span>타 보호자 청구서 포함</span>
-        </label>
-      ) : null}
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="emr-density-stack-sm">
+      <ScrollArea className={historyLayoutStyles.scrollArea}>
+        <div className={historyLayoutStyles.groups}>
           {visibleRowGroups.length ? (
             visibleRowGroups.map((group) => (
               <EmrContentHistoryGroup
                 key={group.dateLabel}
                 count={group.rows.length}
                 dataTestId="billing-guardian-ledger-group"
+                icon={<CdsFilesCalendarIcon aria-hidden="true" className="size-[var(--emr-content-history-group-action-icon-size)] shrink-0 text-[var(--emr-content-history-group-title-icon)]" />}
                 label={group.dateLabel}
               >
                 {group.rows.map((row) => (

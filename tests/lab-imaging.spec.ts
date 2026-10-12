@@ -182,6 +182,9 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await queueLoaded;
 
   const sidePanel = page.locator("aside").first();
+  const patientView = sidePanel.getByTestId("patient-queue-view-toggle");
+  await expect(patientView).toBeEnabled();
+  if (await patientView.getAttribute("aria-pressed") === "true") await patientView.click();
   await expect(sidePanel.getByText("임상병리검사")).toBeVisible();
   await expect(sidePanel.getByRole("group", { name: "임상병리검사 목록 보기" })).toHaveCount(0);
   await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
@@ -210,11 +213,13 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(page.getByText("요청 일시")).toBeVisible();
   await expect(page.getByTestId("lab-result-status-label")).toHaveText("입력");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
-  await expect(page.getByRole("group", { name: "검사 결과 필터" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "검사 결과 개수" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "검사 결과 필터" })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toHaveValue("27");
   await expect(page.getByRole("columnheader", { name: "정상범위" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "담당자" })).toBeVisible();
-  await expect(page.getByRole("table", { name: "임상병리 검사 결과 입력" }).getByRole("columnheader")).toHaveCount(7);
+  await expect(page.getByRole("columnheader", { name: "측정 불가", exact: true })).toBeVisible();
+  await expect(page.getByRole("table", { name: "임상병리 검사 결과 입력" }).getByRole("columnheader")).toHaveCount(8);
   await expect(page.getByRole("button", { name: "수정이력" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "차트에 복사하기" })).toHaveCount(0);
   await expect(page.getByText("■ 혈구 검사")).toHaveCount(0);
@@ -878,7 +883,22 @@ test("all history panels search live during composition without selection notice
       };
     });
     // Surface width includes the inline/drawer border; content fits inside it.
-    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: moduleId === "billing" ? "12px" : "16px", width: 280 });
+    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: "16px", width: 280 });
+    const listLayout = await aside.evaluate((panel) => {
+      const scroll = panel.querySelector<HTMLElement>('[data-slot="scroll-area"]')!;
+      const groups = panel.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]')!.firstElementChild!;
+      const records = panel.querySelector<HTMLElement>('[data-slot="content-history-group-list"]')!;
+      const panelBox = panel.getBoundingClientRect();
+      const scrollBox = scroll.getBoundingClientRect();
+      return {
+        scrollLeft: Math.round(scrollBox.left - panelBox.left),
+        scrollWidth: Math.round(scrollBox.width - panelBox.width),
+        groupPadding: getComputedStyle(groups).padding,
+        groupGap: getComputedStyle(groups).rowGap,
+        recordGap: getComputedStyle(records).rowGap,
+      };
+    });
+    expect(listLayout).toEqual({ scrollLeft: 0, scrollWidth: 0, groupPadding: "8px 16px 12px", groupGap: "8px", recordGap: "6px" });
     if (moduleId === "treatment") {
       await expect(aside.getByTestId("chart-history-date-mode-toolbar")).toHaveCSS("height", "44px");
     }
@@ -928,6 +948,23 @@ test("all history panels search live during composition without selection notice
     verifiedHeaders.push({ screen: moduleId, heights: [beforeSearch[0].height, duringSearch[0].height, afterSearch[0].height] });
     expect((await page.locator('[data-workspace-panel="left"]').boundingBox())!.width).toBe(280);
     await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
+    await page.setViewportSize({ width: 1920, height: 600 });
+    await expect.poll(() => aside.evaluate((panel) => {
+      const panelBox = panel.getBoundingClientRect();
+      const headerBox = panel.firstElementChild!.getBoundingClientRect();
+      const scroll = panel.querySelector<HTMLElement>('[data-slot="scroll-area"]')!;
+      const scrollBox = scroll.getBoundingClientRect();
+      const footer = scroll.nextElementSibling;
+      const footerBox = footer?.getBoundingClientRect();
+      return headerBox.height === 48 && scrollBox.height > 0 &&
+        scrollBox.bottom <= panelBox.bottom + 1 &&
+        (!footerBox || (scrollBox.bottom <= footerBox.top + 1 && footerBox.bottom <= panelBox.bottom + 1));
+    })).toBe(true);
+    if (moduleId === "billing") {
+      await expect(aside.getByRole("button", { name: "직접", exact: true })).toBeVisible();
+      await expect(aside.locator('[data-testid^="billing-ledger-row-"]').first().getByRole("checkbox")).toBeVisible();
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
   }
 
   await expect(page.locator("#dispensing-content-aside").getByRole("group", {
