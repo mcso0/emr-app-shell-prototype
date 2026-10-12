@@ -1,0 +1,6 @@
+{
+  "componentsEqual": true,
+  "indexEqual": true,
+  "ignoredNonSemanticField": "meta.durationMs (manifest generation elapsed time)",
+  "diffEvidence": "manifest-differences.json"
+}

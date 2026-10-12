@@ -43,7 +43,7 @@ const meta = {
     state: {
       control: "radio",
       options: ["to-do", "in-progress", "done", "rework", "stop", "cancel"],
-      description: "Supported side-panel state icon.",
+      description: "Supported side-panel state icon API specimen; actual getEmrSidePanelStatusIconState mapping remains in TaskQueueCard and SidePanelCollapsibleGroup caller compositions.",
     },
   },
   args: {
@@ -68,6 +68,7 @@ export const Default: Story = {
 };
 
 export const SupportedStates: Story = {
+  argTypes: { state: { control: false, table: { disable: true } } },
   render: () => (
     <div className="grid gap-2">
       {(Object.keys(stateLabels) as EmrSidePanelStateIconState[]).map((state) => (

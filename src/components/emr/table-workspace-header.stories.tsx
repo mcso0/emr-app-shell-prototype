@@ -1,87 +1,30 @@
-import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent } from "storybook/test";
+import { expect, within } from "storybook/test";
+import { ActualCustomerTable, customerCallerParameters, prepareCustomerCaller, verifyCustomerHeader } from "./customer-caller.stories.fixture";
 
-import { Button } from "@/components/ui/button";
-
-import { EmrTableWorkspaceHeader } from "./table-workspace-header";
-
-type TableWorkspaceHeaderStoryArgs = {
-  countLoading: boolean;
-  title: string;
-};
-
-function TableWorkspaceHeaderExample({
-  countLoading,
-  title,
-}: TableWorkspaceHeaderStoryArgs) {
-  const [searchValue, setSearchValue] = useState("");
-
-  return (
-    <div className="min-w-[1080px] bg-[var(--emr-surface-workspace)]">
-      <EmrTableWorkspaceHeader
-        count={3}
-        countLoading={countLoading}
-        onSearchChange={setSearchValue}
-        primaryAction={<Button size="sm">+ Order</Button>}
-        searchAriaLabel="오더 검색"
-        searchClearAriaLabel="오더 검색어 초기화"
-        searchPlaceholder="오더 검색"
-        searchValue={searchValue}
-        tableControls={
-          <>
-            <Button size="sm" variant="outline">
-              기본 조건
-            </Button>
-            <Button size="sm" variant="outline">
-              필터
-            </Button>
-          </>
-        }
-        title={title}
-      />
-    </div>
-  );
-}
-
+type HeaderArgs = { countLoading: boolean; title: string };
 const meta = {
   title: "Design System/EMR/EmrTableWorkspaceHeader",
-  component: TableWorkspaceHeaderExample,
+  component: ActualCustomerTable,
   tags: ["autodocs"],
+  beforeEach: prepareCustomerCaller,
   parameters: {
+    ...customerCallerParameters,
     layout: "fullscreen",
-    docs: {
-      description: {
-        component:
-          "Customer와 Order처럼 제목·건수·검색·테이블 제어·주요 액션을 한 영역에서 제공하는 데이터테이블 워크스페이스 헤더입니다. 설명 문구나 카테고리 탭은 이 컴포넌트가 소유하지 않습니다.",
-      },
-    },
+    docs: { story: { inline: false, height: "740px" }, description: { component: "Actual exported CustomerDataTable renders CustomerListHeader→EmrTableWorkspaceHeader. Source owns title/count/search/filter/density/column and registration menus. Synthetic domain rows use actual customer factories. Query/layout/fetch/toasts restore after each isolated story; API requests fail locally and the registered Kakao mock prevents external provider activity. Existing OrderWorkspace ID is retained; its displayed name identifies the actual caller." } },
   },
-  args: {
-    countLoading: false,
-    title: "임상병리 검사",
-  },
-  render: (args) => <TableWorkspaceHeaderExample {...args} />,
-} satisfies Meta<TableWorkspaceHeaderStoryArgs>;
-
+  args: { countLoading: false, title: "동물" },
+  argTypes: { countLoading: { control: "boolean", description: "Initial source read: loading with no rows. Populated background refresh does not show skeletons." }, title: { control: "text" } },
+  render: args => <ActualCustomerTable title={args.title} loading={args.countLoading} />,
+} satisfies Meta<HeaderArgs>;
 export default meta;
-
 type Story = StoryObj<typeof meta>;
-
-export const OrderWorkspace: Story = {
-  play: async ({ canvas }) => {
-    const search = canvas.getByRole("textbox", { name: "오더 검색" });
-    await userEvent.type(search, "CBC");
-    await expect(search).toHaveValue("CBC");
-    await userEvent.click(
-      canvas.getByRole("button", { name: "오더 검색어 초기화" }),
-    );
-    await expect(search).toHaveValue("");
-  },
-};
-
+export const OrderWorkspace: Story = { name: "Customer caller", play: async ({ canvasElement }) => verifyCustomerHeader(canvasElement) };
 export const CountLoading: Story = {
-  args: {
-    countLoading: true,
+  args: { countLoading: true },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByTestId("customer-page-header-count-skeleton")).toBeVisible();
+    await expect(canvasElement.querySelectorAll('[data-emr-data-table-skeleton-row="true"]').length).toBeGreaterThan(0);
+    await expect(within(canvasElement).queryByTestId("header-customer-row-header-patient-a")).not.toBeInTheDocument();
   },
 };

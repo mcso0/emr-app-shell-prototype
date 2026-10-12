@@ -1021,6 +1021,76 @@
     padding-inline-start: 0;
   }
 
+  /* Data-table identity text shares one inset, including plain accessor cells.
+     Existing identity wrappers still own avatar/icon positioning. */
+  [data-emr-data-table="true"] [data-emr-table-identity-cell="true"] {
+    --emr-data-table-identity-inset: max(
+      var(--clair-spacing-10),
+      calc(var(--emr-table-identity-text-inset, 0px) - var(--emr-table-selection-column-width, 0px))
+    );
+  }
+
+  [data-emr-data-table="true"] .emr-table-surface
+    .emr-table-header-cell[data-emr-table-identity-cell="true"]
+    > .emr-table-cell-content {
+    padding-inline-start: 0;
+  }
+
+  [data-emr-data-table="true"] .emr-table-surface
+    .emr-table-header-cell[data-emr-table-identity-cell="true"]
+    > .emr-table-cell-content > :first-child {
+    padding-inline: var(--emr-data-table-identity-inset) var(--clair-spacing-10);
+  }
+
+  [data-emr-data-table="true"]
+    td[data-emr-table-identity-cell="true"]
+    > .emr-data-table-cell-content:not(:has([data-emr-table-identity-content="true"])) {
+    margin-inline-start: var(--emr-data-table-identity-inset);
+  }
+
+  [data-emr-data-table="true"]
+    td[data-emr-table-identity-cell="true"] [data-emr-table-identity-content="true"] {
+    padding-inline-start: var(--emr-data-table-identity-inset);
+  }
+
+  /* Figma header button: 8px button padding plus 2px label padding.
+     Keep the separate 10px outer gap after the left pinned boundary. */
+  [data-emr-data-table="true"] .emr-table-surface
+    .emr-table-header-cell > .emr-table-cell-content
+    > button[data-row-interactive="true"]:first-child,
+  [data-emr-data-table="true"] .emr-table-surface[data-emr-pinning="columns"]
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
+    + [data-slot="table-head"]:not([data-emr-column-pinned])
+    > :first-child[data-emr-table-content="true"] > button[data-row-interactive="true"]:first-child {
+    padding-inline: var(--clair-spacing-8);
+  }
+
+  [data-emr-data-table="true"] .emr-table-surface
+    .emr-table-header-cell > .emr-table-cell-content
+    > button[data-row-interactive="true"]:first-child > span:first-child {
+    padding-inline: var(--clair-spacing-2);
+  }
+
+  [data-emr-data-table="true"] .emr-table-surface
+    .emr-table-header-cell[data-emr-table-identity-cell="true"]
+    > .emr-table-cell-content > button[data-row-interactive="true"]:first-child {
+    padding-inline-start: calc(var(--emr-data-table-identity-inset) - var(--clair-spacing-2));
+  }
+
+  [data-emr-data-table="true"] .emr-table-surface[data-emr-pinning="columns"]
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
+    + [data-slot="table-head"]:not([data-emr-column-pinned])
+    > :first-child[data-emr-table-content="true"] > :first-child:not(button) {
+    padding-inline-start: var(--clair-spacing-10);
+  }
+
+  [data-emr-data-table="true"] .emr-table-surface[data-emr-pinning="columns"]
+    [data-emr-column-pinned="left"][data-emr-pinned-edge="true"]
+    + [data-slot="table-cell"]:not([data-emr-column-pinned])
+    > .emr-data-table-cell-content:not(.emr-data-table-cell-content--no-boundary-inset) {
+    padding-inline-start: var(--clair-spacing-10) !important;
+  }
+
   .emr-table-surface[data-emr-pinning="columns"]
     [data-emr-column-pinned="right"][data-emr-pinned-edge="true"] {
     box-shadow: -1px 0 0 var(--emr-border-default);

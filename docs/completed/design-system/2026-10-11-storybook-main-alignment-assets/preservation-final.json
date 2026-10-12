@@ -1,0 +1,25 @@
+{
+  "primary": {
+    "headEqual": true,
+    "statusEqual": true,
+    "hashedFiles": 29,
+    "changedHashes": []
+  },
+  "previous_audit": {
+    "headEqual": true,
+    "statusEqual": true,
+    "hashedFiles": 86,
+    "changedHashes": []
+  },
+  "candidateRuntime": {
+    "checkedFiles": 981,
+    "different": [],
+    "addedStoryOnlyMocks": [
+      "src/lib/__mocks__/kakao-postcode.ts",
+      "src/lib/supabase/__mocks__/client.ts"
+    ]
+  },
+  "originMain": "66c1b4c8cba72d342657839425d627c4cbc7bc1e",
+  "head": "66c1b4c8cba72d342657839425d627c4cbc7bc1e",
+  "recheckedAt": "2026-10-11T06:25:23.461567+00:00"
+}

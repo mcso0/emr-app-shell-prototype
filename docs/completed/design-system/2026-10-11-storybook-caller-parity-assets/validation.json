@@ -1,0 +1,31 @@
+[
+  {
+    "name": "typecheck-final",
+    "exitCode": 0,
+    "log": "typecheck-final.log",
+    "files": null
+  },
+  {
+    "name": "lint-final",
+    "exitCode": 0,
+    "log": "lint-final.log",
+    "files": 154
+  },
+  {
+    "name": "docs-check",
+    "exitCode": 0,
+    "log": "docs-check.log",
+    "files": null
+  },
+  {
+    "name": "diff-check",
+    "exitCode": 0,
+    "log": "diff-check.log",
+    "files": null
+  },
+  {
+    "name": "catalog-static",
+    "exitCode": 0,
+    "log": "catalog-static.json"
+  }
+]

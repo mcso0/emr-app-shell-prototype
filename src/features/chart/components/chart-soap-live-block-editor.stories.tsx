@@ -1,18 +1,32 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
+import { expect, fireEvent, fn, userEvent, waitFor, within } from "storybook/test";
 
 import { CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsFilesMoreHorizontalIcon } from "@/components/cds-icons/files-and-layout";
-import { CdsNavigationChevronLeftIcon, CdsNavigationMaximize2Icon } from "@/components/cds-icons/navigation";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChartCollapsiblePanel, ChartPanelCollapseButton } from "./chart-collapsible-panel-group";
+import { ChartPanelActionGroup, ChartPanelIconButton } from "./chart-figma-workspace";
+import { ChartLineTabGroup } from "./chart-line-tab-group";
 
-import { createDefaultSoapTemplateBlocks, type ChartSoapBlock, type ChartSoapPartialBlock } from "./chart-soap-block-schema";
+import { createDefaultSoapTemplateBlocks, createSystemSoapTemplateBlocks, type ChartSoapBlock, type ChartSoapPartialBlock } from "./chart-soap-block-schema";
 import { ChartSoapLiveBlockEditor } from "./chart-soap-live-block-editor";
-import { uploadSoapAttachment } from "@/features/chart/soap-attachment-client";
+import type { uploadSoapAttachment } from "@/features/chart/soap-attachment-client";
 import type { SoapAttachment } from "@/features/chart/soap-attachment-core";
 import styles from "./chart-soap-live-block-editor.stories.module.css";
 
 const emptyBlock: ChartSoapPartialBlock[] = [{ type: "paragraph" }];
+const uploadedFixture = fn();
+const toggleStorageBefore = new Map<string, string | null>();
+function captureToggleStorage(blocks: readonly ChartSoapBlock[]) {
+  for (const block of blocks) {
+    const key = `toggle-${block.id}`;
+    if (!toggleStorageBefore.has(key)) toggleStorageBefore.set(key, localStorage.getItem(key));
+    captureToggleStorage(block.children);
+  }
+}
 const selectionBlock: ChartSoapPartialBlock[] = [{ type: "paragraph", content: "보호자 진술과 진료 소견을 직접 기록합니다." }];
 const nestedBlock: ChartSoapPartialBlock[] = [{
   type: "paragraph",
@@ -60,9 +74,24 @@ function LiveEditorHarness({
   const [documentBlocks, setDocumentBlocks] = useState<readonly ChartSoapBlock[]>([]);
   const [notice, setNotice] = useState("로컬 Storybook 상태 · 서버 저장 안 함");
   const [readOnly, setReadOnly] = useState(disabled);
+  const [collapsed, setCollapsed] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetVersion, setResetVersion] = useState(0);
+  const contentId = useId();
+  const [documents, setDocuments] = useState<Record<string, ChartSoapPartialBlock[]>>({});
+  const [stableContent, setStableContent] = useState(initialContent);
   const uploadAttemptsRef = useRef(0);
-  const stableContent = useMemo(() => initialContent, [initialContent]);
+  const recordDocument = useCallback((blocks: readonly ChartSoapBlock[]) => {
+    captureToggleStorage(blocks);
+    setDocuments(current => ({ ...current, [activeTab]: [...blocks] }));
+    setDocumentBlocks(blocks);
+  }, [activeTab]);
+  const selectTab = (tab: string) => {
+    setStableContent(documents[tab] ?? (tab === "기본 S/O" ? initialContent : createSystemSoapTemplateBlocks()));
+    setActiveTab(tab);
+  };
   const mockUpload = useCallback(async ({ file, onProgress, signal }: Parameters<typeof uploadSoapAttachment>[0]) => {
+    uploadedFixture(file.name);
     uploadAttemptsRef.current += 1;
     onProgress?.(42);
     await new Promise<void>((resolve, reject) => {
@@ -87,29 +116,39 @@ function LiveEditorHarness({
       {[320, 420, 566.5, 720].map((option) => <button key={option} type="button" aria-pressed={activeWidth === option} onClick={() => setActiveWidth(option)}>{option}px</button>)}
     </div> : null}
     {toggleReadOnly ? <button type="button" onClick={() => setReadOnly((current) => !current)}>읽기 전용 전환</button> : null}
-    <section className={styles.frame} style={{ width: `${activeWidth}px`, height: `${height}px` }} aria-label={`${activeWidth}px SOAP 에디터 검토 프레임`} data-testid="soap-story-frame">
+    <div style={{ width: `${activeWidth}px`, height: `${height}px`, maxWidth: "100%" }} aria-label={`${activeWidth}px SOAP 에디터 검토 프레임`} data-testid="soap-story-frame">
+    <ChartCollapsiblePanel collapsed={collapsed} contentId={contentId} label="S/O" panelId="soap" onCollapsedChange={setCollapsed}>
+    <section className={`${styles.frame} group/chart-panel`} style={{ width: "100%", height: "100%" }}>
       <header className={styles.header}>
         <h1>Subject/Object</h1>
-        <div className={styles.headerActions} aria-label="패널 작업">
-          <button type="button" aria-label="패널 접기"><CdsNavigationChevronLeftIcon size={14} /></button>
-          <button type="button" aria-label="패널 확대"><CdsNavigationMaximize2Icon size={14} /></button>
-          <button type="button" aria-label="SOAP 탭 추가"><CdsActionsPlusIcon size={16} /></button>
-          <button type="button" aria-label="패널 더보기"><CdsFilesMoreHorizontalIcon size={16} /></button>
-        </div>
+        <ChartPanelActionGroup>
+          <ChartPanelCollapseButton contentId={contentId} label="S/O" panelId="soap" onCollapse={() => setCollapsed(true)} />
+          <ChartPanelIconButton label="패널 확대 준비 중" disabled />
+          <Button size="icon-xs" variant="ghost" aria-label="S/O 추가" title="진단계통 카탈로그 조회 전" disabled><CdsActionsPlusIcon /></Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button size="icon-xs" variant="ghost" aria-label="SOAP 작업"><CdsFilesMoreHorizontalIcon /></Button>} />
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem disabled={readOnly} onClick={() => setResetOpen(true)}>내용 초기화</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled>이미지 · 동영상 연동 준비 중</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </ChartPanelActionGroup>
       </header>
-      <nav className={styles.tabs} aria-label="SOAP 진단계통 탭">
-        <div>{["기본 S/O", "진단계통명A", "진단계통명B"].map((tab) => <button key={tab} type="button" aria-current={activeTab === tab ? "page" : undefined} onClick={() => setActiveTab(tab)}>{tab}</button>)}</div>
-      </nav>
-      <div className={styles.editorSlot}>
+      <div className="relative flex h-[45px] min-h-[45px] shrink-0 items-stretch border-b px-3">
+        <ChartLineTabGroup aria-label="진단계통 탭" items={["기본 S/O", "진단계통명A", "진단계통명B"].map(tab => ({ value: tab, label: tab }))} value={activeTab} onValueChange={selectTab} />
+      </div>
+      <div className={styles.editorSlot} id="chart-soap-editor-panel" role="tabpanel" aria-label={activeTab}>
         <ChartSoapLiveBlockEditor
+          key={`${activeTab}:${resetVersion}`}
           allowSoapTemplateCommands={allowSoapTemplateCommands}
           disabled={readOnly}
           encounterId={withAttachmentScope ? "encounter-example" : undefined}
           initialContent={stableContent}
-          onDocumentChange={setDocumentBlocks}
+          onDocumentChange={recordDocument}
           onNotice={setNotice}
-          onReady={setDocumentBlocks}
-          uploadAttachment={uploadBehavior ? mockUpload : undefined}
+          onReady={recordDocument}
+          uploadAttachment={mockUpload}
           recordInsertionItems={[{ id: "example-prior-assessment", label: "이전 진료 평가", sourceLabel: "예시 · 이전 SOAP Assessment", text: "평가: [원본 확인 후 입력]" }]}
           recordSources={withRecordSource ? [{ id: "example-prior-soap", label: "이전 진료 SOAP", sourceLabel: "예시 날짜 · 이전 SOAP", load: async () => [
             { id: "example-subjective", label: "S · 주관적", sourceLabel: "예시 날짜 · 이전 SOAP", text: "보호자 진술: [원본 확인 후 입력]" },
@@ -119,6 +158,11 @@ function LiveEditorHarness({
         />
       </div>
     </section>
+    </ChartCollapsiblePanel>
+    </div>
+    <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+      <DialogContent><DialogHeader><DialogTitle>S/O 내용 초기화</DialogTitle><DialogDescription>현재 합성 탭의 문서를 비웁니다. 서버 저장은 실행하지 않습니다.</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setResetOpen(false)}>취소</Button><Button disabled={readOnly} onClick={() => { setDocuments(current => ({ ...current, [activeTab]: emptyBlock })); setStableContent(emptyBlock); setResetVersion(version => version + 1); setResetOpen(false); }}>초기화</Button></DialogFooter></DialogContent>
+    </Dialog>
     <div className={styles.localState} role="status" aria-live="polite"><span>{notice}</span><span>{documentBlocks.length}개 최상위 블록</span></div>
     <output data-testid="soap-document-json" className="sr-only">{JSON.stringify(documentBlocks)}</output>
   </main>;
@@ -127,16 +171,22 @@ function LiveEditorHarness({
 const meta = {
   title: "Features/Chart/SOAP/Live BlockNote Figma prototype",
   component: LiveEditorHarness,
+  beforeEach: () => {
+    uploadedFixture.mockClear(); toggleStorageBefore.clear();
+    return () => { for (const [key, value] of toggleStorageBefore) { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } toggleStorageBefore.clear(); };
+  },
+  render: (args) => <LiveEditorHarness key={JSON.stringify(args)} {...args} />,
   args: { width: 566.5, initialContent: emptyBlock },
   parameters: {
     layout: "fullscreen",
-    docs: { description: { component: "운영 ChartSoapLiveBlockEditor와 BlockNote 0.54.0의 실제 도구를 사용하는 SOAP 편집기입니다. Storybook 기록은 서버에 저장되지 않습니다." } },
+    docs: { story: { inline: false, height: "650px" }, description: { component: "운영 ChartSoapLiveBlockEditor와 실제 ChartCollapsiblePanel·ChartPanelActionGroup·ChartLineTabGroup을 합성 문서로 연결합니다. 탭별 로컬 문서, 패널 접기·펼치기와 초기화·취소가 동작합니다. 확대는 실제 main의 준비 중 상태이며 S/O 추가는 진단계통 카탈로그 조회 전 상태로 비활성입니다. 합성 진단계통 탭은 기존 scope 비교용입니다. LiveEditorHarness의 width, height, interactiveWidth, withAttachmentScope, withRecordSource, uploadBehavior, toggleReadOnly는 예제 설정입니다. 서버 저장·카탈로그·완료 차트 정정과 권한은 전체 SoapPanel 호출 기능의 책임입니다. 기록은 서버에 저장되지 않습니다." } },
   },
 } satisfies Meta<typeof LiveEditorHarness>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const RepresentativeReview: Story = {
+  parameters: { docs: { description: { story: "합성 SOAP 문서와 너비 전환 버튼으로 대표 편집 화면을 확인합니다." } } },
   args: { width: 566.5, initialContent: createDefaultSoapTemplateBlocks(), interactiveWidth: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -149,10 +199,36 @@ export const RepresentativeReview: Story = {
     }
     await expect(canvasElement.querySelector(".bn-side-menu")).toBeNull();
     await expect(canvasElement.querySelector(".bn-formatting-toolbar")).toBeNull();
+    const paragraph = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"] .bn-inline-content')!;
+    await userEvent.click(paragraph); await userEvent.type(paragraph, "합성 탭 보존");
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent("합성 탭 보존"));
+    await userEvent.click(canvas.getByRole("tab", { name: "진단계통명A" }));
+    await expect(canvas.getByTestId("soap-document-json")).not.toHaveTextContent("합성 탭 보존");
+    await userEvent.keyboard("{Home}");
+    await waitFor(() => expect(canvas.getByRole("tab", { name: "기본 S/O" })).toHaveFocus());
+    await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent("합성 탭 보존");
+    await userEvent.hover(canvas.getByTestId("soap-story-frame"));
+    await userEvent.click(canvas.getByRole("button", { name: "S/O 패널 접기" }));
+    await waitFor(() => expect(canvas.queryByRole("textbox")).not.toBeInTheDocument());
+    const expand = canvas.getByRole("button", { name: "S/O 패널 펼치기" });
+    expand.focus(); await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(canvas.getByRole("textbox")).toBeVisible());
+    await expect(canvas.getByRole("button", { name: "S/O 추가" })).toBeDisabled();
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(canvas.getByRole("button", { name: "SOAP 작업" }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "내용 초기화" }));
+    await userEvent.click(within(await body.findByRole("dialog")).getByRole("button", { name: "취소" }));
+    await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+    await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent("합성 탭 보존");
+    await userEvent.click(canvas.getByRole("button", { name: "SOAP 작업" }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "내용 초기화" }));
+    await userEvent.click(within(await body.findByRole("dialog")).getByRole("button", { name: "초기화" }));
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).not.toHaveTextContent("합성 탭 보존"));
   },
 };
 
 export const ReferencePanelGeometry476: Story = {
+  parameters: { docs: { description: { story: "476.5px 너비와 373px 높이의 기준 패널에서 편집 영역 배치를 확인합니다." } } },
   args: { width: 476.5, height: 373, initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const frame = within(canvasElement).getByTestId("soap-story-frame");
@@ -183,6 +259,7 @@ export const ReferencePanelGeometry476: Story = {
 };
 
 export const PlaceholderAfterClearing: Story = {
+  parameters: { docs: { description: { story: "기존 내용을 모두 지운 뒤 빈 문서 안내가 다시 표시되는지 확인합니다." } } },
   args: { width: 476.5, height: 373, initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const text = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"] .bn-inline-content');
@@ -203,6 +280,7 @@ export const PlaceholderAfterClearing: Story = {
 };
 
 export const OverflowingDocumentScrollFade: Story = {
+  parameters: { docs: { description: { story: "긴 합성 문서의 스크롤과 가장자리 페이드를 확인합니다." } } },
   args: { width: 566.5, initialContent: overflowingBlocks },
   play: async ({ canvasElement }) => {
     const viewport = canvasElement.querySelector<HTMLElement>(".bn-container");
@@ -219,6 +297,7 @@ export const OverflowingDocumentScrollFade: Story = {
 };
 
 export const ResponsiveNarrow320: Story = {
+  parameters: { docs: { description: { story: "320px 너비에서 도구가 넘칠 때 더보기와 편집 영역을 확인합니다." } } },
   args: { width: 320, initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -274,9 +353,12 @@ export const ResponsiveNarrow320: Story = {
   },
 };
 
-export const ResponsivePanel420: Story = { args: { width: 420, initialContent: selectionBlock } };
-export const ResponsiveWide720: Story = { args: { width: 720, initialContent: selectionBlock } };
+export const ResponsivePanel420: Story = {
+  parameters: { docs: { description: { story: "420px 너비의 편집 화면 배치를 확인합니다." } } }, args: { width: 420, initialContent: selectionBlock } };
+export const ResponsiveWide720: Story = {
+  parameters: { docs: { description: { story: "720px 너비의 편집 화면 배치를 확인합니다." } } }, args: { width: 720, initialContent: selectionBlock } };
 export const ResponsiveAllTools1000: Story = {
+  parameters: { docs: { description: { story: "1000px 너비에서 도구 표시와 배치를 확인합니다." } } },
   args: { width: 1000, initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -288,6 +370,7 @@ export const ResponsiveAllTools1000: Story = {
 };
 
 export const OverflowThresholdDoesNotReserveMore: Story = {
+  parameters: { docs: { description: { story: "도구가 충분히 들어가는 너비에서는 더보기 공간을 불필요하게 남기지 않는지 확인합니다." } } },
   args: { width: 1000, initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const frame = within(canvasElement).getByTestId("soap-story-frame");
@@ -306,6 +389,7 @@ export const OverflowThresholdDoesNotReserveMore: Story = {
 };
 
 export const PartialOverflowToolActivation: Story = {
+  parameters: { docs: { description: { story: "일부 도구가 더보기로 이동한 상태에서도 해당 명령을 실행하는지 확인합니다." } } },
   args: { width: 320, initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -336,12 +420,14 @@ export const PartialOverflowToolActivation: Story = {
 };
 
 export const ToolbarRovingKeyboard: Story = {
+  parameters: { docs: { description: { story: "키보드로 도구 모음의 포커스를 이동하고 명령을 실행하는지 확인합니다." } } },
   args: { width: 1000, initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const toolbar = canvas.getByRole("toolbar", { name: "SOAP 문서 편집 도구" });
     const styleButton = canvas.getByRole("button", { name: "문단 스타일" });
     const bulletButton = canvas.getByRole("button", { name: "글머리 목록" });
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"paragraph"'));
     const initialDocument = canvas.getByTestId("soap-document-json").textContent;
     const tabStops = toolbar.querySelectorAll('button[data-toolbar-control][tabindex="0"]');
     await expect(tabStops).toHaveLength(1);
@@ -359,9 +445,14 @@ export const ToolbarRovingKeyboard: Story = {
 };
 
 export const FormattingAndHistory: Story = {
+  parameters: { docs: { description: { story: "선택한 텍스트의 서식과 실행 취소, 다시 실행 동작을 확인합니다." } } },
   args: { initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent("보호자 진술과 진료 소견을 직접 기록합니다."));
+    const editor = canvas.getByRole("textbox");
+    await userEvent.click(editor);
+    await waitFor(() => expect(editor).toHaveFocus());
     const text = canvasElement.querySelector<HTMLElement>('.bn-block-content[data-content-type="paragraph"] .bn-inline-content');
     if (!text?.firstChild) throw new Error("서식 선택 대상을 찾지 못했습니다.");
     const selection = canvasElement.ownerDocument.getSelection();
@@ -369,20 +460,23 @@ export const FormattingAndHistory: Story = {
     range.selectNodeContents(text);
     selection?.removeAllRanges();
     selection?.addRange(range);
+    canvasElement.ownerDocument.dispatchEvent(new Event("selectionchange"));
+    await waitFor(() => expect(selection?.toString()).toBe("보호자 진술과 진료 소견을 직접 기록합니다."));
     await userEvent.click(canvas.getByRole("button", { name: "굵게" }));
-    await expect(canvas.getByRole("button", { name: "굵게" })).toHaveAttribute("aria-pressed", "true");
-    await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"bold":true');
+    await waitFor(() => expect(canvas.getByRole("button", { name: "굵게" })).toHaveAttribute("aria-pressed", "true"));
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"bold":true'));
     await waitFor(() => expect(canvas.getByRole("textbox")).toHaveFocus());
     await expect(selection?.toString()).toBe("보호자 진술과 진료 소견을 직접 기록합니다.");
     await userEvent.click(canvas.getByRole("button", { name: "실행 취소" }));
     await waitFor(() => expect(canvas.getByTestId("soap-document-json")).not.toHaveTextContent('"bold":true'));
     await userEvent.click(canvas.getByRole("button", { name: "다시 실행" }));
-    await expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"bold":true');
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"bold":true'));
     await waitFor(() => expect(canvas.getByRole("textbox")).toHaveFocus());
   },
 };
 
 export const OverflowFormattingAndLink: Story = {
+  parameters: { docs: { description: { story: "좁은 화면에서 더보기 서식 도구와 링크 입력을 확인합니다." } } },
   args: { width: 320, initialContent: selectionBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -424,6 +518,7 @@ export const OverflowFormattingAndLink: Story = {
 };
 
 export const BlockStylesAndPlainAids: Story = {
+  parameters: { docs: { description: { story: "블록 스타일과 일반 텍스트 작성 도움말을 문서에 적용하는지 확인합니다." } } },
   args: { initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -440,6 +535,7 @@ export const BlockStylesAndPlainAids: Story = {
 };
 
 export const BoundedTableInsertion: Story = {
+  parameters: { docs: { description: { story: "표 삽입 선택 영역과 문서 삽입 동작을 확인합니다." } } },
   args: { initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -462,6 +558,7 @@ export const BoundedTableInsertion: Story = {
 };
 
 export const PriorRecordInsertion: Story = {
+  parameters: { docs: { description: { story: "합성 이전 진료 기록을 현재 문서에 넣는 동작을 확인합니다." } } },
   args: { initialContent: emptyBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -479,6 +576,7 @@ export const PriorRecordInsertion: Story = {
 };
 
 export const PriorSoapFieldSelection: Story = {
+  parameters: { docs: { description: { story: "합성 이전 SOAP의 항목을 골라 문서에 넣는 동작을 확인합니다." } } },
   args: { initialContent: emptyBlock, withRecordSource: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -492,6 +590,7 @@ export const PriorSoapFieldSelection: Story = {
 };
 
 export const AttachmentSelection: Story = {
+  parameters: { docs: { description: { story: "합성 범위에서 첨부 파일 선택 화면을 확인합니다. 실제 파일 저장은 수행하지 않습니다." } } },
   args: { initialContent: emptyBlock, withAttachmentScope: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -503,10 +602,14 @@ export const AttachmentSelection: Story = {
     await userEvent.type(canvas.getByLabelText("설명"), "예시 사진");
     await fireEvent.change(canvas.getByLabelText("촬영/기록 날짜"), { target: { value: "2026-09-22" } });
     await expect(canvas.getByLabelText("설명")).toHaveValue("예시 사진");
+    await userEvent.click(canvas.getByRole("button", { name: "첨부 저장" }));
+    await waitFor(() => expect(canvas.getByTestId("soap-document-json")).toHaveTextContent('"type":"image"'));
+    await expect(uploadedFixture).toHaveBeenCalledWith("example.png");
   },
 };
 
 export const AttachmentUploadSuccess: Story = {
+  parameters: { docs: { description: { story: "합성 업로드 콜백의 진행과 성공 후 첨부 표시를 확인합니다." } } },
   args: { initialContent: emptyBlock, withAttachmentScope: true, uploadBehavior: "success" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -522,6 +625,7 @@ export const AttachmentUploadSuccess: Story = {
 };
 
 export const AttachmentFailureRetry: Story = {
+  parameters: { docs: { description: { story: "합성 업로드가 한 번 실패한 뒤 다시 시도하는 동작을 확인합니다." } } },
   args: { initialContent: emptyBlock, withAttachmentScope: true, uploadBehavior: "fail-once" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -535,6 +639,7 @@ export const AttachmentFailureRetry: Story = {
 };
 
 export const AttachmentCancelAndReadOnly: Story = {
+  parameters: { docs: { description: { story: "진행 중인 합성 업로드를 취소하고 읽기 전용으로 전환하는 동작을 확인합니다." } } },
   args: { initialContent: emptyBlock, withAttachmentScope: true, uploadBehavior: "hang", toggleReadOnly: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -551,6 +656,7 @@ export const AttachmentCancelAndReadOnly: Story = {
 };
 
 export const NestedBlockAndToggleHeading: Story = {
+  parameters: { docs: { description: { story: "중첩 블록과 접을 수 있는 제목의 표시를 확인합니다." } } },
   args: { initialContent: nestedBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -560,15 +666,38 @@ export const NestedBlockAndToggleHeading: Story = {
 };
 
 export const ToggleHeadingCollapseBehavior: Story = {
+  parameters: { docs: { description: { story: "실제 제목 토글의 클릭·Enter·Space가 하위 기록의 표시만 바꾸고 문서 JSON과 포커스를 보존하는지 확인합니다. 합성 toggle 저장 키는 종료 시 복원합니다." } } },
   args: { initialContent: toggleHeadingBlock },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByRole("textbox")).toHaveTextContent("접을 수 있는 기록");
     await expect(canvas.getByRole("textbox")).toHaveTextContent("접었다 펼칠 상세 내용");
+    const toggle = () => canvasElement.querySelector<HTMLButtonElement>(".bn-toggle-button");
+    const child = () => canvas.getByText("접었다 펼칠 상세 내용", { exact: true });
+    const wrapper = () => toggle()?.closest(".bn-toggle-wrapper");
+    if (!toggle()) throw new Error("Actual BlockNote toggle button missing");
+    await expect(wrapper()).toHaveAttribute("data-show-children", "false");
+    await expect(child()).not.toBeVisible();
+    await userEvent.click(toggle()!);
+    await waitFor(() => { expect(wrapper()).toHaveAttribute("data-show-children", "true"); expect(child()).toBeVisible(); });
+    await userEvent.click(toggle()!);
+    await waitFor(() => { expect(wrapper()).toHaveAttribute("data-show-children", "false"); expect(child()).not.toBeVisible(); });
+    const documentBefore = JSON.parse(canvas.getByTestId("soap-document-json").textContent!);
+    const focusedToggle = toggle()!;
+    focusedToggle.focus(); await expect(focusedToggle).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => { expect(wrapper()).toHaveAttribute("data-show-children", "true"); expect(child()).toBeVisible(); });
+    await expect(JSON.parse(canvas.getByTestId("soap-document-json").textContent!)).toEqual(documentBefore);
+    await expect(focusedToggle).toHaveFocus();
+    await userEvent.keyboard(" ");
+    await waitFor(() => { expect(wrapper()).toHaveAttribute("data-show-children", "false"); expect(child()).not.toBeVisible(); });
+    await expect(JSON.parse(canvas.getByTestId("soap-document-json").textContent!)).toEqual(documentBefore);
+    await expect(focusedToggle).toHaveFocus();
   },
 };
 
 export const ReadOnly: Story = {
+  parameters: { docs: { description: { story: "읽기 전용 문서에서 편집 도구와 입력이 제한되는지 확인합니다." } } },
   args: { initialContent: selectionBlock, disabled: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);

@@ -534,6 +534,7 @@ function EmrDataTableSkeletonRows<TData>({
               isSelection && selectionColumnSize === 32 && "!pl-3 !pr-1",
             )}
             data-column-id={column.id}
+            data-emr-table-identity-cell={meta?.identity ? "true" : undefined}
             data-emr-column-size={column.getSize()}
             style={
               isSelection
@@ -837,6 +838,7 @@ function EmrDataTableBodyRow<TData>({
                 isActions && "overflow-visible !pl-2 !pr-5 text-right",
               )}
               data-column-id={cell.column.id}
+              data-emr-table-identity-cell={meta?.identity ? "true" : undefined}
               data-emr-column-size={cell.column.getSize()}
               data-emr-table-action-visibility={
                 isActions ? (meta?.actionVisibility ?? "always") : undefined

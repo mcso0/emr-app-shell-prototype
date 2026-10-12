@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, waitFor } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   getCoreRowModel,
   getSortedRowModel,
@@ -10,7 +10,7 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { CdsContentEdit2Icon } from "@/components/cds-icons/content-and-editor";
 import { CdsMedicalFileSearchIcon } from "@/components/cds-icons/medical-and-domain";
@@ -18,6 +18,7 @@ import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrTableCheckbox } from "@/components/emr/table-checkbox";
 import { Button } from "@/components/ui/button";
 import { EmrRowActionMenu } from "./row-action-menu";
+import { ActualCustomerTable, customerCallerParameters, prepareCustomerCaller, verifyCustomerHeader } from "./customer-caller.stories.fixture";
 import {
   EmrDataTable,
   type EmrDataTableProps,
@@ -131,7 +132,12 @@ export function useEmrDataTableStoryProps({
   showContextualActions,
   sortable,
   viewportMode,
-}: EmrDataTableStoryArgs): EmrDataTableProps<StoryRow> {
+}: EmrDataTableStoryArgs, onStoryAction?: (message: string) => void): EmrDataTableProps<StoryRow> {
+  const [lastAction, setLastAction] = useState("없음");
+  const onAction = useCallback((message: string) => {
+    if (onStoryAction) onStoryAction(message);
+    else setLastAction(message);
+  }, [onStoryAction]);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>(() => {
     const initialSelection: RowSelectionState = {};
@@ -257,10 +263,12 @@ export function useEmrDataTableStoryProps({
                 role: "actions" as const,
               },
               size: 72,
-              cell: () => (
+              cell: ({ row }) => (
                 <button
                   className="rounded-md border px-2 py-1 text-xs"
                   data-row-interactive="true"
+                  disabled={row.original.rowState === "disabled"}
+                  onClick={() => onAction(`${row.original.name}: 보기`)}
                   type="button"
                 >
                   보기
@@ -285,14 +293,14 @@ export function useEmrDataTableStoryProps({
               cell: ({ row }) => (
                 <EmrRowActionMenu
                   ariaLabel={`${row.original.name} 보조 작업`}
-                  items={[{ key: "open", label: "상세 보기" }]}
+                  items={[{ key: "open", label: "상세 보기", disabled: row.original.rowState === "disabled", onSelect: () => onAction(`${row.original.name}: 상세 보기`) }]}
                 />
               ),
             } satisfies ColumnDef<StoryRow, unknown>,
           ]
         : []),
     ],
-    [resizable, rowOverlay, showContextualActions, sortable],
+    [onAction, resizable, rowOverlay, showContextualActions, sortable],
   );
   // TanStack Table is intentionally used as the headless controller in this
   // Storybook contract test.
@@ -329,6 +337,7 @@ export function useEmrDataTableStoryProps({
           className="h-10 px-3 text-xs text-muted-foreground"
         >
           추가 행 슬롯: {visibleColumnCount}개 컬럼
+          {!onStoryAction ? <output className="ml-3" aria-label="테이블 작업 결과">{lastAction}</output> : null}
         </td>
       </tr>
     ),
@@ -345,6 +354,7 @@ export function useEmrDataTableStoryProps({
               className="size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
               data-testid={`story-row-detail-${row.id}`}
               disabled={row.original.rowState === "disabled"}
+              onClick={() => onAction(`${row.original.name}: 상세`)}
             >
               <CdsMedicalFileSearchIcon aria-hidden="true" />
             </EmrIconButton>
@@ -352,6 +362,7 @@ export function useEmrDataTableStoryProps({
               aria-label={`${row.original.name} 수정`}
               className="size-7 border border-[var(--emr-border-default)] bg-[var(--emr-surface-floating)] shadow-[var(--clair-shadow-xs)]"
               disabled={row.original.rowState === "disabled"}
+              onClick={() => onAction(`${row.original.name}: 수정`)}
             >
               <CdsContentEdit2Icon aria-hidden="true" />
             </EmrIconButton>
@@ -359,8 +370,8 @@ export function useEmrDataTableStoryProps({
               ariaLabel={`${row.original.name} 더보기`}
               density="compact"
               items={[
-                { key: "history", label: "이력 보기" },
-                { key: "remove", label: "삭제", variant: "destructive" },
+                { key: "history", label: "이력 보기", disabled: row.original.rowState === "disabled", onSelect: () => onAction(`${row.original.name}: 이력 보기`) },
+                { key: "remove", label: "삭제", variant: "destructive", disabled: row.original.rowState === "disabled", onSelect: () => onAction(`${row.original.name}: 삭제 요청`) },
               ]}
             />
           </>
@@ -377,10 +388,10 @@ export function useEmrDataTableStoryProps({
             같은 상태 cohort
           </span>
         </span>
-        <Button size="sm" variant="outline">
+        <Button size="sm" variant="outline" onClick={() => onAction(`${selected.length}개 선택: 이력 보기`)}>
           이력 보기
         </Button>
-        <Button size="sm">선택 작업</Button>
+        <Button size="sm" onClick={() => onAction(`${selected.length}개 선택: 선택 작업`)}>선택 작업</Button>
         <Button
           size="sm"
           variant="ghost"
@@ -403,12 +414,17 @@ export function useEmrDataTableStoryProps({
 }
 
 function EmrDataTableStory(args: EmrDataTableStoryArgs) {
-  const props = useEmrDataTableStoryProps(args);
+  const [receipt, setReceipt] = useState({ count: 0, message: "없음" });
+  const onAction = useCallback((message: string) => setReceipt(previous => ({ count: previous.count + 1, message })), []);
+  const props = useEmrDataTableStoryProps(args, onAction);
 
   return (
-    <div className="flex h-[420px] min-w-0 flex-col rounded-xl border bg-white p-4">
-      <EmrDataTable {...props} />
-    </div>
+    <>
+      <div className="flex h-[420px] min-w-0 flex-col rounded-xl border bg-white p-4">
+        <EmrDataTable {...props} />
+      </div>
+      <output aria-label="테이블 작업 결과">{receipt.count}회 · {receipt.message}</output>
+    </>
   );
 }
 
@@ -416,13 +432,14 @@ const meta = {
   title: "Design System/EMR/EmrDataTable",
   component: EmrDataTableStory,
   excludeStories: ["useEmrDataTableStoryProps"],
-  render: (args) => <EmrDataTableStory {...args} />,
+  render: (args) => <EmrDataTableStory key={String(args.selectedRows)} {...args} />,
   tags: ["autodocs"],
   parameters: {
     docs: {
+      story: { inline: false, height: "520px" },
       description: {
         component:
-          "TanStack Table v8 instance를 받아 고객관리 스타일로 렌더링하는 공통 데이터 테이블입니다. data, columns, 업무 상태는 feature controller가 소유하며 viewportMode로 bounded fill 또는 natural content 높이를 반드시 선언합니다.",
+          "CustomerCaller는 실제 CustomerDataTable과 고객 행/컬럼 factory를 렌더링합니다. 나머지 예제는 합성 행을 사용하는 공유 테이블 API/geometry 계약입니다. data, columns, 업무 상태는 호출자가 소유합니다. 작업 버튼은 로컬 결과를 기록하며 삭제·원격 업무를 실행하지 않습니다. viewportMode로 fill 또는 content 높이를 선언합니다.",
       },
     },
   },
@@ -573,9 +590,11 @@ async function assertViewportContract(
         'tbody tr:first-child td[data-column-id="name"] .emr-data-table-cell-content',
       );
       if (identityHeaderText && identityBodyContent) {
+        const headerRange = identityHeaderText.ownerDocument.createRange();
+        headerRange.selectNodeContents(identityHeaderText);
         await expect(
           Math.abs(
-            identityHeaderText.getBoundingClientRect().left -
+            headerRange.getBoundingClientRect().left -
               identityBodyContent.getBoundingClientRect().left,
           ),
         ).toBeLessThanOrEqual(1);
@@ -632,14 +651,10 @@ async function assertViewportContract(
       await expect(getComputedStyle(tableContainer).overflowX).toBe("visible");
       await expect(getComputedStyle(pinnedCell).position).toBe("sticky");
 
-      let horizontalScrollbar: HTMLElement | null = null;
-      for (let attempt = 0; attempt < 20; attempt += 1) {
-        horizontalScrollbar = pinnedViewport.querySelector(
-          '[data-emr-pinned-table-scrollbar="horizontal"]',
-        ) as HTMLElement | null;
-        if (horizontalScrollbar) break;
-        await new Promise((resolve) => window.setTimeout(resolve, 25));
-      }
+      await waitFor(() => {
+        expect(pinnedViewport.querySelector('[data-emr-pinned-table-scrollbar="horizontal"]')).not.toBeNull();
+      });
+      const horizontalScrollbar = pinnedViewport.querySelector<HTMLElement>('[data-emr-pinned-table-scrollbar="horizontal"]');
       if (!horizontalScrollbar) {
         throw new Error("Pinned horizontal scrollbar is missing.");
       }
@@ -775,6 +790,10 @@ export const AllColumnsScroll: Story = {
       ),
       "Scrollable",
     );
+    const canvas = within(canvasElement);
+    canvas.getAllByRole("button", { name: "보기" })[0].focus();
+    await userEvent.keyboard("{Enter}");
+    await expect(canvas.getByLabelText("테이블 작업 결과")).toHaveTextContent("1회 · 요검사: 보기");
   },
 };
 
@@ -785,6 +804,8 @@ export const LeftAndRightPinned: Story = {
     if (!storyFrame) {
       throw new Error("Pinned EmrDataTable story frame is missing.");
     }
+    const originalFrameWidth = storyFrame.style.width;
+    try {
     storyFrame.style.width = "720px";
     const viewport = canvasElement.querySelector(
       '[data-emr-pinned-table-viewport="true"]',
@@ -792,14 +813,10 @@ export const LeftAndRightPinned: Story = {
     const scrollOwner = viewport?.querySelector(
       '[data-emr-pinned-table-scroll-owner="true"]',
     ) as HTMLElement | null;
-    let horizontalScrollbar: HTMLElement | null = null;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      horizontalScrollbar = viewport?.querySelector(
-        '[data-emr-pinned-table-scrollbar="horizontal"]',
-      ) as HTMLElement | null;
-      if (horizontalScrollbar) break;
-      await new Promise((resolve) => window.setTimeout(resolve, 25));
-    }
+    await waitFor(() => {
+      expect(viewport?.querySelector('[data-emr-pinned-table-scrollbar="horizontal"]')).not.toBeNull();
+    });
+    const horizontalScrollbar = viewport?.querySelector<HTMLElement>('[data-emr-pinned-table-scrollbar="horizontal"]');
     const tableContainer = viewport?.querySelector(
       '[data-slot="table-container"]',
     ) as HTMLElement | null;
@@ -895,6 +912,9 @@ export const LeftAndRightPinned: Story = {
       expect(getComputedStyle(leftDimmer).opacity).toBe("0");
       expect(getComputedStyle(rightDimmer).opacity).toBe("0");
     });
+    } finally {
+      storyFrame.style.width = originalFrameWidth;
+    }
   },
 };
 
@@ -912,18 +932,61 @@ export const Loading: Story = {
 
 export const Selection: Story = {
   args: { selectable: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const all = canvas.getByRole("checkbox", { name: "샘플 전체 선택" });
+    const first = canvas.getByRole("checkbox", { name: "요검사 선택" });
+    first.focus(); await userEvent.keyboard(" ");
+    await waitFor(() => expect(all).toHaveAttribute("aria-checked", "mixed"));
+    const bar = await canvas.findByRole("toolbar", { name: "선택 행 작업" });
+    await waitFor(() => { expect(bar).toBeVisible(); expect(bar).toHaveTextContent("1개 선택"); });
+    await userEvent.click(within(bar).getByRole("button", { name: "선택 작업" }));
+    await expect(canvas.getByLabelText("테이블 작업 결과")).toHaveTextContent("1개 선택: 선택 작업");
+    await userEvent.click(all);
+    await expect(all).toBeChecked();
+    await waitFor(() => expect(bar).toHaveTextContent("11개 선택"));
+    await userEvent.click(within(bar).getByRole("button", { name: "선택 해제" }));
+    await waitFor(() => expect(canvas.queryByRole("toolbar", { name: "선택 행 작업" })).not.toBeInTheDocument());
+    await expect(first).not.toBeChecked();
+  },
 };
 
 export const ContextualActions: Story = {
   args: { showContextualActions: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
+    canvas.getByRole("button", { name: "요검사 보조 작업" }).focus();
+    await userEvent.keyboard("{Enter}");
+    const item = await body.findByRole("menuitem", { name: "상세 보기" });
+    await waitFor(() => expect(item).toBeVisible());
+    await userEvent.click(item);
+    await expect(canvas.getByLabelText("테이블 작업 결과")).toHaveTextContent("요검사: 상세 보기");
+  },
 };
 
 export const DetailActiveRow: Story = {
   args: { activeDetailRow: true, showContextualActions: true },
+  play: async ({ canvasElement }) => {
+    const row = canvasElement.querySelector('tr[data-detail-active="true"]');
+    await expect(row).toHaveAttribute("aria-current", "true");
+    await expect(row).toHaveTextContent("요검사");
+  },
 };
 
 export const Sorting: Story = {
   args: { sortable: true },
+  play: async ({ canvasElement }) => {
+    const header = canvasElement.querySelector<HTMLElement>('th[data-column-id="name"]');
+    if (!header) throw new Error("Name sort header is missing.");
+    const sort = within(header).getByRole("button");
+    const names = () => Array.from(canvasElement.querySelectorAll('tbody tr[data-emr-data-table-row="true"] td[data-column-id="name"]')).map(cell => cell.textContent);
+    sort.focus(); await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(header).toHaveAttribute("aria-sort", "ascending"));
+    const ascending = names();
+    await userEvent.keyboard("{Enter}");
+    await waitFor(() => expect(header).toHaveAttribute("aria-sort", "descending"));
+    await expect(names()).toEqual([...ascending].reverse());
+  },
 };
 
 export const Resizing: Story = {
@@ -962,7 +1025,8 @@ export const Resizing: Story = {
 
       storyFrame.style.width = "1900px";
       for (const [key, expectedWidth] of [["ArrowRight", 188], ["ArrowLeft", 180]] as const) {
-        pinnedBoundaryGrip.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+        pinnedBoundaryGrip.focus();
+        await userEvent.keyboard(`{${key}}`);
         await waitFor(() => {
           expect(Math.abs(pinnedBoundaryHeader!.getBoundingClientRect().width - expectedWidth)).toBeLessThanOrEqual(1);
           const bodyCell = canvasElement.querySelector(
@@ -979,6 +1043,11 @@ export const Resizing: Story = {
 
 export const AdditionalRows: Story = {
   args: { pinned: true, rowCount: "many" },
+  play: async ({ canvasElement }) => {
+    const extraRow = canvasElement.querySelector('tr[data-emr-data-table-extra-row="true"]');
+    await expect(extraRow).toHaveTextContent(" 추가 행 슬롯: 7개 컬럼".trim());
+    await expect(extraRow?.querySelector("td")).toHaveAttribute("colspan", "7");
+  },
 };
 
 export const ViewportRightRowOverlay: Story = {
@@ -988,6 +1057,8 @@ export const ViewportRightRowOverlay: Story = {
     if (!storyFrame) {
       throw new Error("Row overlay EmrDataTable story frame is missing.");
     }
+    const originalFrameWidth = storyFrame.style.width;
+    try {
     storyFrame.style.width = "720px";
 
     const viewport = canvasElement.querySelector(
@@ -1011,6 +1082,8 @@ export const ViewportRightRowOverlay: Story = {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     await expect(detailAction).toHaveFocus();
     await waitFor(() => expect(getComputedStyle(overlay).opacity).toBe("1"));
+    await userEvent.keyboard("{Enter}");
+    await expect(within(canvasElement).getByLabelText("테이블 작업 결과")).toHaveTextContent("요검사: 상세");
 
     const maximumScroll = scrollOwner.scrollWidth - scrollOwner.clientWidth;
     const positions = [0, maximumScroll / 2, maximumScroll];
@@ -1024,20 +1097,19 @@ export const ViewportRightRowOverlay: Story = {
       ).toBeLessThanOrEqual(2);
     }
 
+    } finally {
+      storyFrame.style.width = originalFrameWidth;
+    }
   },
 };
 
 export const SelectionActionBarViewportPlacement: Story = {
   args: { pinned: true, rowOverlay: true, selectedRows: true },
   play: async ({ canvasElement }) => {
-    let actionBar: HTMLElement | null = null;
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      actionBar = canvasElement.querySelector(
-        '[data-emr-data-table-selection-action-bar="true"]',
-      ) as HTMLElement | null;
-      if (actionBar) break;
-      await new Promise((resolve) => window.setTimeout(resolve, 25));
-    }
+    await waitFor(() => {
+      expect(canvasElement.querySelector('[data-emr-data-table-selection-action-bar="true"]')).not.toBeNull();
+    });
+    const actionBar = canvasElement.querySelector<HTMLElement>('[data-emr-data-table-selection-action-bar="true"]');
     const tableRoot = canvasElement.querySelector(
       '[data-emr-data-table="true"]',
     ) as HTMLElement | null;
@@ -1062,8 +1134,67 @@ export const SelectionActionBarViewportPlacement: Story = {
 
 export const RowStateGradients: Story = {
   args: { rowCount: "many", rowOverlay: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
+    const disabled = canvas.getByRole("button", { name: "추가 샘플 1 상세" });
+    await expect(disabled).toBeDisabled();
+    await expect(canvas.getByRole("button", { name: "추가 샘플 1 수정" })).toBeDisabled();
+    const edit = canvas.getByRole("button", { name: "요검사 수정" });
+    edit.focus();
+    await waitFor(() => expect(getComputedStyle(edit.closest('[data-emr-data-table-row-overlay="true"]')!).opacity).toBe("1"));
+    await userEvent.keyboard("{Enter}");
+    await expect(canvas.getByLabelText("테이블 작업 결과")).toHaveTextContent("요검사: 수정");
+    const disabledRowMenu = canvas.getByRole("button", { name: "추가 샘플 1 더보기" });
+    disabledRowMenu.focus();
+    await waitFor(() => expect(getComputedStyle(disabledRowMenu.closest('[data-emr-data-table-row-overlay="true"]')!).opacity).toBe("1"));
+    await userEvent.keyboard("{Enter}");
+    const history = await body.findByRole("menuitem", { name: "이력 보기" });
+    await waitFor(() => expect(history).toBeVisible());
+    await expect(history).toHaveAttribute("aria-disabled", "true");
+    await expect(body.getByRole("menuitem", { name: "삭제" })).toHaveAttribute("aria-disabled", "true");
+    await userEvent.keyboard("{Escape}");
+  },
 };
 
 export const TouchRowOverlayFallback: Story = {
   args: { rowOverlay: true },
+  parameters: { docs: { description: { story: "실제 공유 테이블의 overlay CSS를 사용합니다. 실제 coarse pointer 브라우저에서는 focus/hover 전에 overlay 상시 표시를 확인하고 터치 펼치기 버튼을 실행합니다. 기존 키보드 메뉴 결과도 함께 검증합니다. media 조건을 합성하거나 제품 CSS를 변경하지 않습니다." } } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    if (coarse) {
+      const overlay = canvasElement.querySelector<HTMLElement>('[data-emr-data-table-row-overlay="true"]');
+      if (!overlay) throw new Error("Touch row overlay is missing.");
+      await waitFor(() => {
+        expect(getComputedStyle(overlay).opacity).toBe("1");
+        expect(getComputedStyle(overlay).pointerEvents).toBe("auto");
+      });
+      const trigger = canvas.getByRole("button", { name: "요검사 행 작업 펼치기" });
+      await expect(trigger).toBeVisible();
+      await userEvent.click(trigger);
+      await waitFor(() => expect(overlay).toHaveAttribute("data-touch-open", "true"));
+    }
+    canvas.getByRole("button", { name: "요검사 더보기" }).focus();
+    await userEvent.keyboard("{Enter}");
+    const history = await body.findByRole("menuitem", { name: "이력 보기" });
+    await waitFor(() => expect(history).toBeVisible());
+    await userEvent.click(history);
+    await expect(canvas.getByLabelText("테이블 작업 결과")).toHaveTextContent("요검사: 이력 보기");
+    if (coarse) {
+      await userEvent.click(canvas.getByRole("button", { name: "요검사 행 작업 접기" }));
+      await waitFor(() => expect(canvasElement.querySelector('[data-emr-data-table-row-overlay="true"]')).not.toHaveAttribute("data-touch-open"));
+    }
+  },
+};
+
+export const CustomerCaller: Story = {
+  beforeEach: prepareCustomerCaller,
+  parameters: { ...customerCallerParameters, controls: { disable: true }, docs: { story: { inline: false, height: "740px" }, description: { story: "Actual CustomerDataTable with actual domain row/column factories. This caller owns filtering, selection and row actions. Other children remain shared API viewport/geometry contracts." } } },
+  render: () => <ActualCustomerTable />,
+  play: async ({ canvasElement }) => {
+    await verifyCustomerHeader(canvasElement);
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByTestId("header-customer-row-header-patient-a"));
+    await expect(canvas.getByLabelText("고객 행 열기")).toHaveTextContent("합성 동물 A");
+  },
 };

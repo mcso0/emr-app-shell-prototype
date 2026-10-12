@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import {
   CdsFilesDocumentAltFillIcon,
@@ -18,6 +19,7 @@ type EmrTextSidePanelStoryArgs = {
 
 function EmrTextSidePanelExample({ open }: EmrTextSidePanelStoryArgs) {
   const [isOpen, setIsOpen] = useState(open);
+  const [receipt, setReceipt] = useState("없음");
 
   return (
     <div className="w-[280px] rounded-lg bg-[var(--emr-surface-sidepanel)] p-3">
@@ -30,6 +32,7 @@ function EmrTextSidePanelExample({ open }: EmrTextSidePanelStoryArgs) {
         <div className="grid gap-1 border-l py-1 pl-3">
           <EmrTextSideNavButton
             active
+            onClick={() => setReceipt("샘플 항목")}
             count={<Badge variant="secondary">3</Badge>}
             icon={<CdsFilesDocumentAltFillIcon className="size-4" aria-hidden="true" />}
           >
@@ -38,6 +41,7 @@ function EmrTextSidePanelExample({ open }: EmrTextSidePanelStoryArgs) {
           <EmrTextSideNavButton disabled>비활성 항목</EmrTextSideNavButton>
         </div>
       </EmrTextSideNavSection>
+      <output aria-label="탐색 결과">{receipt}</output>
     </div>
   );
 }
@@ -50,7 +54,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Use EmrTextSidePanel primitives for text-heavy module navigation inside fixed EMR side panels. 사용할 때: module lists need expandable sections, active rows, counts, and disabled rows. 쓰지 말아야 할 때: primary top navigation, tab content switching, or task queue cards with patient/order metadata.",
+          "Frozen main exports these primitives but has no runtime caller. These two API specimens show disclosure, active row/count and native disabled behavior with local navigation receipts. They do not reproduce a current app navigation screen.",
       },
     },
   },
@@ -63,7 +67,17 @@ const meta = {
   args: {
     open: true,
   },
-  render: (args) => <EmrTextSidePanelExample {...args} />,
+  render: (args) => <EmrTextSidePanelExample key={String(args.open)} {...args} />,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement);
+    const section = canvas.getByRole("button", { name: "샘플 섹션" });
+    if (!args.open) { section.focus(); await userEvent.keyboard("{Enter}"); }
+    await userEvent.click(canvas.getByRole("button", { name: /샘플 항목/ }));
+    await expect(canvas.getByLabelText("탐색 결과")).toHaveTextContent("샘플 항목");
+    await expect(canvas.getByRole("button", { name: "비활성 항목" })).toBeDisabled();
+    await userEvent.click(section);
+    await waitFor(() => expect(canvas.queryByRole("button", { name: /샘플 항목/ })).not.toBeInTheDocument());
+  },
 } satisfies Meta<EmrTextSidePanelStoryArgs>;
 
 export default meta;

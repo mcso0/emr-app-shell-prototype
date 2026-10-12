@@ -52,6 +52,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
     docs: {
+      story: { inline: false, height: "520px" },
       description: {
         component:
           "로그인 성공 후 워크스페이스 셸이 준비될 때까지 표시합니다. 진한 회색 로고의 두 조각이 모인 뒤, 빛이 로고 위 바깥에서 25도 사선으로 내려옵니다. ready가 true이면 어느 단계에서든 180ms로 종료합니다."
@@ -100,10 +101,11 @@ export const InfiniteLoading: Story = {
 export const CompleteWhenReady: Story = {
   render: () => <CompletionPreview />,
   parameters: {
+    controls: { disable: true },
     docs: {
       description: {
         story:
-          "빛이 지나가는 중인 2.2초에 준비 완료를 전달합니다. 현재 프레임에서 바로 fade out하며, 다음 반복을 기다리지 않습니다."
+          "Storybook 전용 완료 타이머가 빛이 지나가는 중인 2.2초에 준비 완료를 전달합니다. 현재 프레임에서 바로 fade out하며, 다음 반복을 기다리지 않습니다."
       }
     }
   },
@@ -119,7 +121,8 @@ export const CompleteWhenReady: Story = {
 export const ReadyDuringAssembly: Story = {
   render: () => <CompletionPreview completeAfter={100} />,
   parameters: {
-    docs: { description: { story: "조립 중 준비가 끝나면 빛이나 안내 문구를 기다리지 않고 종료합니다." } }
+    controls: { disable: true },
+    docs: { description: { story: "Storybook 전용 100ms 완료 타이머로 조립 중 준비가 끝나면 빛이나 안내 문구를 기다리지 않고 종료합니다." } }
   },
   play: async ({ canvas }) => {
     await waitFor(() => expect(canvas.queryByTestId("workspace-entry-loading-screen")).not.toBeInTheDocument(), { timeout: 600 });

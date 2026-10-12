@@ -151,6 +151,44 @@ test("work-type tab and builder filters intersect, with an explicit empty reset"
   await expect(page.getByTestId("home-all-work-tab")).toContainText("4");
 });
 
+test("long home dates fit with and without today badge across responsive breakpoints", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-28T12:00:00+09:00"));
+  await openHome(page, []);
+  const panel = page.getByTestId("module-side-panel-host");
+  await panel.getByRole("button", { name: "홈 패널 접기", exact: true }).click();
+  await expect(panel).toHaveAttribute("data-panel-mode", "hidden");
+  const date = page.getByRole("button", { name: /날짜 선택$/ });
+  await expect(date).toHaveAttribute("aria-label", "26년 11월 28일 날짜 선택");
+  await page.evaluate(() => document.fonts.ready);
+  for (const width of [1440, 1024, 900, 801, 800, 768, 767, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    const checkGeometry = async () => {
+      // Compare one frame; the shell column animates after collapsing the panel.
+      await expect.poll(() => date.evaluate((element) => {
+        const text = element.querySelector<HTMLElement>("span.truncate")!;
+        const badge = element.querySelector<HTMLElement>('[data-slot="badge"]');
+        const textBox = text.getBoundingClientRect();
+        const triggerBox = element.getBoundingClientRect();
+        const badgeVisible = badge && getComputedStyle(badge).display !== "none";
+        return {
+          textFits: text.scrollWidth <= text.clientWidth,
+          insideTrigger: textBox.right <= triggerBox.right,
+          insideViewport: triggerBox.right <= window.innerWidth,
+          noBadgeOverlap: !badgeVisible || textBox.right <= badge.getBoundingClientRect().left,
+        };
+      }), `${width}px date geometry`).toEqual({ textFits: true, insideTrigger: true, insideViewport: true, noBadgeOverlap: true });
+    };
+    await checkGeometry();
+    await page.getByRole("button", { name: "이전 날짜", exact: true }).click();
+    await expect(date).toHaveAttribute("aria-label", "26년 11월 27일 날짜 선택");
+    await expect(date.getByText("오늘", { exact: true })).toHaveCount(0);
+    await checkGeometry();
+    await page.getByRole("button", { name: "다음 날짜", exact: true }).click();
+    await expect(date).toHaveAttribute("aria-label", "26년 11월 28일 날짜 선택");
+    await checkGeometry();
+  }
+});
+
 test("hospital visual states at desktop and narrow widths", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await openHome(page);
@@ -168,7 +206,17 @@ test("hospital visual states at desktop and narrow widths", async ({ page }) => 
     await page.screenshot({ path: `/tmp/home-status-list-${width}.png`, animations: "disabled" });
   }
   await page.setViewportSize({ width: 390, height: 844 });
+  // An open desktop panel becomes a modal sheet on compact screens.
+  const panel = page.getByTestId("module-side-panel-host");
+  await expect(panel).toHaveAttribute("data-panel-mode", "sheet");
+  await expect(panel).toHaveAttribute("role", "dialog");
+  await expect(panel).toHaveAttribute("aria-modal", "true");
+  await expect(page.getByTestId("shell-right-section")).toHaveAttribute("inert", "");
+  await page.keyboard.press("Escape");
+  await expect(panel).toHaveAttribute("data-panel-mode", "hidden");
+  await expect(page.getByTestId("shell-right-section")).not.toHaveAttribute("inert", "");
   await page.screenshot({ path: "/tmp/home-status-list-390.png", animations: "disabled" });
   await page.getByRole("button", { name: "칸반", exact: true }).click();
+  await expect(page.getByRole("button", { name: "칸반", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.screenshot({ path: "/tmp/home-status-board-390.png", animations: "disabled" });
 });

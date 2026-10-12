@@ -1,0 +1,11 @@
+{
+  "finalNativeCount": 699,
+  "indexCount": 699,
+  "missingNativeIds": [],
+  "unknownNativeIds": [],
+  "retainedDurableEarlierBaseline": 489,
+  "missingDurableBaseline": [],
+  "wave2Seeded502": "All502 retained before reboot; reconstruction from lane baseline plus overview to be reconciled separately.",
+  "a11y": false,
+  "scope": "Native Chromium render and authored play assertions; no accessibility scanner/live provider proof."
+}

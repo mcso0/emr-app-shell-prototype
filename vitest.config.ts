@@ -18,6 +18,11 @@ export default defineConfig({
         extends: true,
         optimizeDeps: {
           include: [
+            '@dnd-kit/core',
+            '@dnd-kit/sortable',
+            '@dnd-kit/utilities',
+            'next/dynamic',
+            '@tanstack/react-virtual',
             '@base-ui/react/checkbox',
             '@base-ui/react/dialog',
             '@base-ui/react/menu',
@@ -30,6 +35,11 @@ export default defineConfig({
             '@base-ui/react/tabs',
             '@base-ui/react/tooltip',
             'input-otp',
+            'cmdk',
+            'react-resizable-panels',
+            'sonner',
+            'lucide-react',
+            'react-dom',
           ],
         },
         plugins: [
