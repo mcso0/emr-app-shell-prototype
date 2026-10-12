@@ -878,7 +878,22 @@ test("all history panels search live during composition without selection notice
       };
     });
     // Surface width includes the inline/drawer border; content fits inside it.
-    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: moduleId === "billing" ? "12px" : "16px", width: 280 });
+    expect(metrics).toEqual({ headerHeight: 48, paddingLeft: "16px", width: 280 });
+    const listLayout = await aside.evaluate((panel) => {
+      const scroll = panel.querySelector<HTMLElement>('[data-slot="scroll-area"]')!;
+      const groups = panel.querySelector<HTMLElement>('[data-slot="scroll-area-viewport"]')!.firstElementChild!;
+      const records = panel.querySelector<HTMLElement>('[data-slot="content-history-group-list"]')!;
+      const panelBox = panel.getBoundingClientRect();
+      const scrollBox = scroll.getBoundingClientRect();
+      return {
+        scrollLeft: Math.round(scrollBox.left - panelBox.left),
+        scrollWidth: Math.round(scrollBox.width - panelBox.width),
+        groupPadding: getComputedStyle(groups).padding,
+        groupGap: getComputedStyle(groups).rowGap,
+        recordGap: getComputedStyle(records).rowGap,
+      };
+    });
+    expect(listLayout).toEqual({ scrollLeft: 0, scrollWidth: 0, groupPadding: "8px 16px 12px", groupGap: "8px", recordGap: "6px" });
     if (moduleId === "treatment") {
       await expect(aside.getByTestId("chart-history-date-mode-toolbar")).toHaveCSS("height", "44px");
     }
@@ -928,6 +943,23 @@ test("all history panels search live during composition without selection notice
     verifiedHeaders.push({ screen: moduleId, heights: [beforeSearch[0].height, duringSearch[0].height, afterSearch[0].height] });
     expect((await page.locator('[data-workspace-panel="left"]').boundingBox())!.width).toBe(280);
     await expect(aside.locator("[data-slot='content-history-group-title']").first()).toBeVisible();
+    await page.setViewportSize({ width: 1920, height: 600 });
+    await expect.poll(() => aside.evaluate((panel) => {
+      const panelBox = panel.getBoundingClientRect();
+      const headerBox = panel.firstElementChild!.getBoundingClientRect();
+      const scroll = panel.querySelector<HTMLElement>('[data-slot="scroll-area"]')!;
+      const scrollBox = scroll.getBoundingClientRect();
+      const footer = scroll.nextElementSibling;
+      const footerBox = footer?.getBoundingClientRect();
+      return headerBox.height === 48 && scrollBox.height > 0 &&
+        scrollBox.bottom <= panelBox.bottom + 1 &&
+        (!footerBox || (scrollBox.bottom <= footerBox.top + 1 && footerBox.bottom <= panelBox.bottom + 1));
+    })).toBe(true);
+    if (moduleId === "billing") {
+      await expect(aside.getByRole("button", { name: "직접", exact: true })).toBeVisible();
+      await expect(aside.locator('[data-testid^="billing-ledger-row-"]').first().getByRole("checkbox")).toBeVisible();
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
   }
 
   await expect(page.locator("#dispensing-content-aside").getByRole("group", {

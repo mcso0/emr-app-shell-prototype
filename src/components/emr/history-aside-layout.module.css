@@ -1,0 +1,75 @@
+.panel {
+  --emr-content-aside-padding-x: 16px;
+  --emr-content-aside-header-padding-top: 0px;
+  --emr-content-aside-section-gap: 0px;
+  --emr-content-aside-bg: #fcfcfc;
+  --emr-content-history-timeline-padding-right: 10px;
+}
+
+.header {
+  height: 48px;
+  padding-inline: 4px;
+}
+
+.panel > [data-slot="content-aside-search-header"] + div {
+  margin-top: -1px;
+}
+
+.header > div:first-child,
+.panel [data-slot="content-history-group-title"] > div {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  letter-spacing: 0.196px;
+}
+
+.header > div:first-child {
+  color: var(--clair-color-atomic-neutral-700);
+}
+
+.header [data-slot="badge"] {
+  padding-inline: 6px;
+  background: var(--clair-color-atomic-black-alpha-4);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.panel [data-slot="content-history-group-title"] > div {
+  column-gap: 6px;
+}
+
+.panel [data-slot="content-history-group-title"] > div > svg {
+  margin-right: 2px;
+}
+
+/* Match the chart glyph direction without changing collapse state or motion. */
+.panel [data-slot="content-history-group-title"] > span > svg {
+  rotate: 180deg;
+}
+
+.panel [data-slot="content-history-group-list"] {
+  gap: 6px;
+}
+
+.scrollArea {
+  min-height: 0;
+  flex: 1;
+  margin-inline: calc(var(--emr-content-aside-padding-x) * -1);
+  width: calc(100% + (var(--emr-content-aside-padding-x) * 2));
+}
+
+.groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px var(--emr-content-aside-padding-x) 12px;
+}
+
+/* Screen-specific filters stay above the independently scrolling list. */
+.controls {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 8px;
+  padding-block: 8px;
+}

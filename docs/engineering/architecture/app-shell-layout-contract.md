@@ -27,6 +27,13 @@ WorkspaceFrame
 - If `RightPanel` is open and a drawer opens, the drawer covers the right panel.
 - Mobile rules are excluded from v1.
 
+### History Aside Presentation
+
+- Chart, lab, imaging, dispensing/treatment, and billing use `src/components/emr/history-aside-layout.module.css` with the existing content-aside panel/header and history-group primitives.
+- Shared presentation follows the chart: 16px horizontal inset, no panel-level top padding or section gap, 48px header with 4px horizontal padding, full-width list scroll surface, and group padding `8px 16px 12px` with 8px between groups and 6px between records.
+- The history list uses the standard `ScrollArea` presentation without a viewport fade mask. Chart's separate inline diagnosis History scrollbar styling remains independent.
+- Screen-specific controls and footers stay outside the scrolling list. Preserve each screen's queries, selection, filters, group-collapse policy, tabs, and footer actions; billing group titles remain static.
+
 ## Widths
 
 ```ts
