@@ -7,13 +7,13 @@ status: "implemented"
 area: "chart"
 priority: "P1"
 tags: [chart, design, quick-add, prototype]
-target_pr: "Refinement PR to main — production delivery approved 2026-09-08"
+target_pr: "Performance refinement PR to main — delivery requested 2026-10-12"
 source_docs:
   - "docs/design/screens/chart/planning/plan-order-quick-add/spec.md"
   - "docs/work/chart/CHART-PR-027-order-draft-removal-persistence.md"
   - "docs/work/chart/CHART-PR-032-plan-order-legacy-columns.md"
 dependencies: []
-updated: "2026-09-08"
+updated: "2026-10-12"
 ---
 
 # Plan/Order Quick Add
@@ -263,3 +263,116 @@ browser tests own append/save/retry evidence. No migration or permission changes
 Stop on changed candidate/scope, failed exact Release Check/preflight, non-Ready
 Preview/Production, deployment-source mismatch or failed scoped smoke. Rollback
 reference is the previous Ready deployment; executing rollback requires approval.
+
+## Local interaction performance refinement — 2026-10-12
+
+승욱 authorized a minimal local improvement of the two observed rendering paths
+while preserving existing behavior, after reviewing the scope and plan. This
+permission covers local implementation and synthetic verification. The older
+release approvals above do not authorize delivery of this new refinement.
+
+The production investigation separated the new-two-order click from selecting
+existing orders: processing rose from 33.592ms to 76.882ms, and renderer Commit
+from 19.09ms to 52.455ms on the same deployed bundle. The trace also showed
+order-count-driven parent rendering and synchronous chart geometry reads. The
+original MacBook 240ms warning was not reproduced on the Mac mini.
+
+The retained change stabilizes the queue-backed/displayed chart bundle and billing
+callback, memoizes OrderArea, and retains S/O tab items when the diagnosis tabs
+are unchanged. Actual patient/chart, history, permission, order state and count
+changes remain reactive. Session-storage handoff fallback still resolves each
+render. Count updates remain immediate for completion and return-to-waiting guards.
+No persistence, API, authentication, shared Button/Dialog, dependency, appearance
+or motion changes. A dialog-local will-change experiment was removed because its
+separate comparison did not establish a meaningful benefit.
+
+Verification:
+
+- Seven distinct focused browser scenarios passed on an isolated mock production
+  build: two-order append/preservation/reload/count, catalog reuse, quick/detail
+  focus handoff, historical read-only charts, live queue permission denial,
+  current-chart billing navigation and S/O overflow keyboard navigation.
+- The two-order test additionally checks the completion count before filling the
+  new candidates' required quantity fields, and preserves the existing quantity.
+- TypeScript, scoped ESLint, webpack production build and whitespace checks passed.
+  The original checkout's developer server remains available; an accidentally
+  started build there was stopped, and final builds used a temporary checkout.
+- Five traced local runs per version used the same synthetic catalog and four
+  existing orders plus two additions. Median click processing: 33.902ms before,
+  32.415ms after. Median interaction duration: 87.725ms before, 88.882ms after.
+  Timing distributions overlap. This supports only a small local processing
+  reduction; it does not establish an end-to-end INP improvement or a fix of the
+  production 52.455ms renderer Commit. Production/native remeasurement remains
+  necessary to establish that result. Temporary traces stay outside the repo.
+- Initial legacy tests exposed ambiguous Order-add locators and missing catalog
+  fixtures. The retained preload test targets the current 상세 오더 entry; the
+  new regression uses the existing explicit synthetic catalog helper. Unrelated
+  legacy test/backend behavior was not changed.
+
+Local implementation is ready for review. No new remote order writes, commit,
+push, PR, merge or deployment occurred in this implementation phase. Existing
+unrelated workspace-tab/config/document WIP remains outside this scope.
+
+
+## Display geometry follow-up and delivery scope — 2026-10-12
+
+승욱 requested further investigation and a minimal correction of the remaining
+presentation delay while preserving existing behavior. After the local result,
+승욱 authorized finishing verification, committing and deploying this scope.
+The exact candidate and release checks are prepared under the current release
+gate; earlier historical release approvals are not reused for this candidate.
+
+The retained follow-up changes only the existing quick-entry geometry hook.
+Closed/idle positioning uses the browser's initial ResizeObserver notification
+instead of a duplicate synchronous measurement during the selection click.
+Geometry reads precede idle width writes, and the last row bounds are read once.
+Opening, focus, session locking, sorting and scroll restoration keep their
+existing synchronous path. When a resize crosses the overflow threshold,
+clearance commits before paint so the first resized frame reserves its trailing
+row. This browser-callback update runs only when clearance changes.
+
+No appearance, blur, motion, catalog-reset timing, persistence, API, permission,
+authentication, shared component, dependency or remote-data changes are retained.
+Deferred reset, compositor hints and cell memoization did not establish useful
+benefit and were discarded. Removing blur helped a diagnostic comparison but
+would change appearance, so it was not retained.
+
+Local production-build measurement used the same headless Chromium browser,
+fixed synthetic rows and six alternating before/after samples per condition:
+
+| Condition | Median interaction | Median click processing | Median presentation |
+| --- | --- | --- | --- |
+| 15 existing orders + 2 additions, before | 152.085ms | 54.130ms | 93.457ms |
+| 15 existing orders + 2 additions, after | 139.136ms | 45.376ms | 91.056ms |
+| 4 existing orders + 2 additions, before | 99.601ms | 38.524ms | 59.438ms |
+| 4 existing orders + 2 additions, after | 99.400ms | 24.240ms | 73.117ms |
+
+Dense-case median interaction improved by about 8.5%; distributions overlap.
+The small case mainly moves work out of click processing and does not establish
+a total-latency improvement. These measurements used the original investigation
+baseline, synthetic fixtures and software compositing. They do not establish
+MacBook or deployed Production performance. Raw traces remain outside the repo.
+
+Final local behavior verification passed 12 distinct scenarios: two-order
+preservation/count/save/reload, catalog reuse, quick/detail focus handoff,
+historical read-only view, queue permission denial, current-chart billing,
+S/O keyboard overflow, continuous append/no unchanged resends, pinned-span
+resize/error handling, long-results/horizontal anchor, sparse/dense cancellation
+scroll restoration, and first resized-frame clearance with no observer/flushSync
+errors. Isolated typecheck, scoped lint and webpack production build passed.
+The shared checkout's generated development route types are corrupt; its full
+typecheck is not reported as passed. Delivery uses a clean worktree on current
+origin/main and reruns the release preflight there.
+
+Only this work record, chart module, quick-entry geometry hook and focused chart
+tests belong to delivery. Other checkout WIP remains untouched. No new remote
+order writes, migrations or permissions changes are part of delivery. Production
+smoke covers login and read-only chart/dialog open/cancel; extra saved test orders
+require separately scoped approval.
+
+
+Clean delivery preflight on origin/main `e0c7e776186fb37323adc273f862431774fc53b4`:
+secret scan, docs links, full ESLint, TypeScript and webpack production build
+passed. The same 12 focused browser scenarios passed against this clean
+candidate's production build. Remote exact-candidate Release Check and Preview
+readiness remain the pre-merge release gate.

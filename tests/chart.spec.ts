@@ -9457,7 +9457,7 @@ test("chart order catalog preloads and reopens without another read", async ({ p
   await page.goto(kongScenarioUrl);
   await expect.poll(() => catalogReads).toBe(1);
 
-  const openButton = page.getByRole("button", { name: "Order 추가", exact: true });
+  const openButton = page.getByRole("button", { name: "상세 오더", exact: true });
   await openButton.click();
   const dialog = page.getByRole("dialog", { name: "오더 추가" });
   await expect(dialog.getByText("전체 오더", { exact: true })).toBeVisible();
@@ -11652,4 +11652,106 @@ test.describe("chart checkbox activation boundary", () => {
     ]);
     await expect(page.getByTestId("chart-order-state-error")).toBeVisible();
   });
+});
+
+test("chart detailed catalog adds two orders while preserving existing rows and completion count", async ({ page }) => {
+  const catalog = await routeQuickAddCatalog(page);
+  await page.goto(kongScenarioUrl);
+  await restoreKongOrderDraftDefaults(page);
+  const existingIds = new Set(kongDefaultOrderDraftRows.map((row) => row.workspaceCatalogItemId));
+  const candidates = catalog.filter((row) => row.rowType === "individual" && row.targetSpecies.includes("dog") &&
+    !existingIds.has(row.workspaceCatalogItemId ?? row.sourcePresetId)).slice(0, 2);
+  expect(candidates).toHaveLength(2);
+  await page.getByRole("button", { name: "상세 오더", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "오더 추가", exact: true });
+  await dialog.getByRole("button", { name: "전체 오더 검색 열기" }).click();
+  for (const candidate of candidates) {
+    await dialog.getByRole("combobox", { name: "전체 오더 검색", exact: true }).fill(candidate.displayName);
+    await page.getByTestId(`chart-order-catalog-candidate-${candidate.sourcePresetId}`).click();
+  }
+  await confirmChartOrderCatalogSelection(dialog, 2);
+  await expect(dialog).toBeHidden();
+  for (const row of kongDefaultOrderDraftRows) await expect(page.getByTestId(`chart-order-row-${row.orderId}`)).toBeVisible();
+  await expect(page.getByTestId("chart-order-row-order-kong-maropitant").getByLabel("Maropitant 16mg T 수량 수정", { exact: true })).toHaveValue("1");
+  // Counts must update before the new candidates finish persistence.
+  await page.getByRole("button", { name: "차트 작성 완료", exact: true }).click();
+  const completion = page.getByRole("dialog", { name: "접수 진료 종료", exact: true });
+  await expect(completion.getByText(/\d+건 \/ 6건/)).toBeVisible();
+  await completion.getByRole("button", { name: "계속 작성", exact: true }).click();
+  for (const candidate of candidates) {
+    const quantity = page.getByLabel(`${candidate.displayName} 수량 수정`, { exact: true }).last();
+    await expect(quantity).toBeVisible();
+    await quantity.fill("1");
+    await quantity.press("Tab");
+  }
+  await expect(page.getByTestId("chart-order-save-status")).toContainText("저장됨");
+  await page.reload();
+  for (const candidate of candidates) await expect(page.getByLabel(`${candidate.displayName} 수량 수정`, { exact: true }).last()).toHaveValue("1");
+  await restoreKongOrderDraftDefaults(page);
+});
+
+test("chart detailed additions reserve idle entry clearance before the first resized frame", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => {
+    if (/ResizeObserver loop|flushSync/.test(message.text())) errors.push(message.text());
+  });
+  await page.addInitScript(() => {
+    type Frame = { rows: number; clearance: boolean; top: string };
+    const frameWindow = window as unknown as Window & { __idleEntryFrames: Frame[] };
+    frameWindow.__idleEntryFrames = [];
+    const NativeResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class extends NativeResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        super((entries, observer) => {
+          callback(entries, observer);
+          const composer = entries.find(entry =>
+            entry.target.getAttribute("data-testid") === "chart-order-quick-add")?.target as HTMLElement | undefined;
+          const surface = composer?.closest('[data-slot="chart-order-table-surface"]');
+          if (!composer || !surface) return;
+          frameWindow.__idleEntryFrames.push({
+            rows: surface.querySelectorAll('tr[data-testid^="chart-order-row-"]').length,
+            clearance: Boolean(surface.querySelector('[data-testid="chart-order-quick-add-clearance"]')),
+            top: composer.style.top,
+          });
+        });
+      }
+    };
+  });
+  const catalog = await routeQuickAddCatalog(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(kongScenarioUrl.replace("modulePanel=open", "modulePanel=closed"));
+  await restoreKongOrderDraftDefaults(page);
+  const surface = page.locator('[data-slot="chart-order-table-surface"]');
+  const targetHeight = await surface.evaluate(element => {
+    const owner = element.querySelector<HTMLElement>('[data-emr-pinned-table-scroll-owner="true"]')!;
+    const rows = element.querySelectorAll<HTMLElement>('tr[data-testid^="chart-order-row-"]');
+    const first = rows[0].getBoundingClientRect();
+    const last = rows[rows.length - 1].getBoundingClientRect();
+    const composer = element.querySelector<HTMLElement>('[data-testid="chart-order-quick-add"]')!;
+    const threshold = last.bottom - owner.getBoundingClientRect().top + (last.bottom - first.top) / rows.length + composer.offsetHeight + 20;
+    return Math.round(window.innerHeight + (threshold - owner.clientHeight) * 2);
+  });
+  await page.setViewportSize({ width: 1440, height: targetHeight });
+  await expect(page.getByTestId("chart-order-quick-add-clearance")).toHaveCount(0);
+  const existingIds = new Set(kongDefaultOrderDraftRows.map(row => row.workspaceCatalogItemId));
+  const candidates = catalog.filter(row => row.rowType === "individual" && row.targetSpecies.includes("dog") &&
+    !existingIds.has(row.workspaceCatalogItemId ?? row.sourcePresetId)).slice(0, 2);
+  await page.getByRole("button", { name: "상세 오더", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "오더 추가", exact: true });
+  await dialog.getByRole("button", { name: "전체 오더 검색 열기" }).click();
+  for (const candidate of candidates) {
+    await dialog.getByRole("combobox", { name: "전체 오더 검색", exact: true }).fill(candidate.displayName);
+    await page.getByTestId(`chart-order-catalog-candidate-${candidate.sourcePresetId}`).click();
+  }
+  await confirmChartOrderCatalogSelection(dialog, 2);
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId("chart-order-quick-add-clearance")).toBeAttached();
+  const firstFrame = await page.evaluate(() =>
+    (window as unknown as Window & { __idleEntryFrames: Array<{ rows: number; clearance: boolean; top: string }> })
+      .__idleEntryFrames.find(frame => frame.rows === 6));
+  expect(firstFrame?.clearance).toBe(true);
+  expect(parseFloat(firstFrame?.top ?? "")).toBeGreaterThan(0);
+  expect(errors).toEqual([]);
+  await restoreKongOrderDraftDefaults(page);
 });
