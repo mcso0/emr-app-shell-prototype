@@ -153,3 +153,21 @@ The user subsequently authorized committing/pushing only this lifecycle follow-u
 - Stop for failed/unknown required checks, unexpected candidate changes, non-Ready deployment, or a failed scoped smoke. Rollback promotion or a new corrective release requires a separate decision; the previous Ready deployment is recorded as the rollback candidate.
 
 Release identifiers and final remote evidence are reported after the checked candidate is created. Prior local-only statements above describe the earlier implementation checkpoint, not this subsequent approval.
+
+
+## 2026-10-12 Hosted tab persistence repair
+
+The user explicitly authorized repairing workspace-tab persistence in the same hosted synthetic/demo Supabase used by Production and validating authenticated save/reload from the local app. Scope is the missing user-owned navigation table, its existing self/member RLS contract, explicit authenticated SELECT/INSERT/UPDATE grants, and focused verification. No clinical data mutation, application deployment, main merge, canonical role changes, or credential exposure is authorized or required.
+
+Preflight: the table and original migration version are absent remotely; the existing timestamp trigger and private active-member helper are present. Current local application GET/PUT return 500. The existing migration omits explicit table grants, while current default privileges do not guarantee authenticated SELECT/INSERT/UPDATE. Use an additive forward repair migration and preserve all existing data.
+
+Repair applied to the shared hosted project with `workspace_tabs_session_remote_repair`, recorded locally in `supabase/migrations/20261012040006_workspace_tabs_session_remote_repair.sql`. The existing schema/self-member policies were reused; explicit authenticated SELECT/INSERT/UPDATE and no anon access remove dependence on default privileges. No application code or production deployment changed.
+
+Verified from the authenticated local app: PUT returned 200; DB readback contained reception/home tabs and a valid selected home tab. Reload retained both tabs/selection. A fresh browser tab, without the first tab's sessionStorage, also restored both tabs and the selected surface. The temporary home tab was closed and reception restored. Catalog checks confirmed RLS, self/member SELECT/INSERT/UPDATE policies, authenticated grants, and denied anon reads. A rollback-only non-member authenticated query confirmed no visible rows.
+
+Focused static route/migration contract passed (1 test). The full 4-test server suite could not start its isolated mock server because Next.js allows only one dev server per checkout; it was not run against the live Supabase. Real authenticated save/readback/refresh/fresh-tab checks supply the hosted behavior evidence. Lint/build are not required for this SQL-only repair; application TypeScript is unchanged. Human review remains pending; no commit/push/merge was performed.
+
+
+### Repository delivery authorization
+
+After accepting the repair verification, the user requested committing and pushing only the repair migration and this verification record, creating a PR, and merging it into `origin/main`. Delivery runs exact-candidate Release Check and Ready Preview gates. No additional remote DB apply is needed: the hosted repair is already applied. The previous implementation-only statements above describe the earlier checkpoint. Post-merge smoke checks Production `/login` and the unchanged local authenticated tab persistence path; clinical writes remain excluded.
