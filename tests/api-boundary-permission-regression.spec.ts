@@ -17,10 +17,20 @@ type BoundaryCase = {
 const vetHeaders = { "x-clair-demo-session-user-id": "user-vet" };
 const techHeaders = { "x-clair-demo-session-user-id": "user-tech" };
 const frontDeskHeaders = { "x-clair-demo-session-user-id": "user-front-desk" };
+const adminHeaders = { "x-clair-demo-session-user-id": "user-admin" };
 
 test("lab, billing, and fulfillment API boundaries deny unauthenticated and unauthorized requests", async ({
   request,
 }) => {
+  const assignment = await request.get(
+    `/api/workspaces/${workspaceId}/billing/assignment?invoiceId=invoice-kong-260501`,
+    { headers: adminHeaders },
+  );
+  expect(assignment.status()).toBe(200);
+  await expectJson(assignment, {
+    ok: true,
+    assignment: expect.objectContaining({ assignedToUserId: null }),
+  });
   const cases: BoundaryCase[] = [
     {
       expectedDenial: "unauthenticated",
@@ -97,12 +107,20 @@ test("lab, billing, and fulfillment API boundaries deny unauthenticated and unau
         invoiceIds: ["invoice-kong-260501"],
         paymentMethod: "card",
       },
+      expectedDenial: "permission_missing",
+      expectedStatus: 403,
+      headers: adminHeaders,
+      method: "post",
+      name: "unassigned administrator cannot prepare guardian checkout",
+      path: `/api/workspaces/${workspaceId}/billing/guardian-checkout`,
+    },
+    {
       expectedDenial: "workspace_membership_missing",
       expectedStatus: 403,
-      headers: vetHeaders,
-      method: "post",
-      name: "non-member actor cannot prepare guardian checkout",
-      path: `/api/workspaces/${workspaceId}/billing/guardian-checkout`,
+      headers: adminHeaders,
+      method: "get",
+      name: "guardian billing ledger denies an administrator outside their workspace",
+      path: `/api/workspaces/${otherWorkspaceId}/billing/guardian-checkout?guardianId=guardian-park-minsu`,
     },
   ];
 

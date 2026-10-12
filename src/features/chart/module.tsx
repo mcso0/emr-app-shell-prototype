@@ -289,6 +289,7 @@ import {
   replaceSoapDocumentScope,
 } from "@/features/chart/chart-soap-document";
 import { SoapAutosaveCoordinator } from "@/features/chart/chart-soap-autosave-coordinator";
+import { reconcileChartOrderConfirmationRows } from "@/features/chart/chart-order-confirmation-readback";
 import {
   getChartOrderDraftInFlightSave,
   registerChartOrderDraftSaveOperation,
@@ -13711,19 +13712,13 @@ const OrderArea = memo(function OrderArea({
         workspaceId: bundle.encounter.workspaceId,
       });
       if (readback.ok) {
-        const freshById = new Map(
-          (readback.rows ?? [])
-            .filter((row) =>
-              row.workspaceId === bundle.encounter.workspaceId &&
-              row.encounterId === bundle.encounter.id &&
-              (row.orderConfirmationStatus === "confirmed" ||
-                row.orderConfirmationStatus === "billed") &&
-              (confirmedRootOrderIds.includes(row.orderId) ||
-                Boolean(row.parentOrderId && confirmedRootOrderIds.includes(row.parentOrderId))),
-            )
-            .map((row) => [row.orderId, row]),
-        );
-        confirmedRows = confirmedRows.map((row) => freshById.get(row.orderId) ?? row);
+        confirmedRows = reconcileChartOrderConfirmationRows({
+          commandRows: confirmedRows,
+          readbackRows: readback.rows ?? [],
+          confirmedRootOrderIds,
+          encounterId: bundle.encounter.id,
+          workspaceId: bundle.encounter.workspaceId,
+        });
       }
       const applyResult = (currentRows: ChartOrderDraftRow[]) =>
         applyBillingCandidatesToOrderRows(
