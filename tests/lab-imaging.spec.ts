@@ -182,6 +182,9 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await queueLoaded;
 
   const sidePanel = page.locator("aside").first();
+  const patientView = sidePanel.getByTestId("patient-queue-view-toggle");
+  await expect(patientView).toBeEnabled();
+  if (await patientView.getAttribute("aria-pressed") === "true") await patientView.click();
   await expect(sidePanel.getByText("임상병리검사")).toBeVisible();
   await expect(sidePanel.getByRole("group", { name: "임상병리검사 목록 보기" })).toHaveCount(0);
   await expect(sidePanel.getByRole("button", { name: "26.05.01(금) 날짜 선택" })).toBeVisible();
@@ -210,11 +213,13 @@ test("lab workspace renders result input, equipment receipts, and attachments", 
   await expect(page.getByText("요청 일시")).toBeVisible();
   await expect(page.getByTestId("lab-result-status-label")).toHaveText("입력");
   await expect(page.getByText("CBC 검사").first()).toBeVisible();
-  await expect(page.getByRole("group", { name: "검사 결과 필터" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "검사 결과 개수" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "검사 결과 필터" })).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "HCT 결과값" })).toHaveValue("27");
   await expect(page.getByRole("columnheader", { name: "정상범위" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "담당자" })).toBeVisible();
-  await expect(page.getByRole("table", { name: "임상병리 검사 결과 입력" }).getByRole("columnheader")).toHaveCount(7);
+  await expect(page.getByRole("columnheader", { name: "측정 불가", exact: true })).toBeVisible();
+  await expect(page.getByRole("table", { name: "임상병리 검사 결과 입력" }).getByRole("columnheader")).toHaveCount(8);
   await expect(page.getByRole("button", { name: "수정이력" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "차트에 복사하기" })).toHaveCount(0);
   await expect(page.getByText("■ 혈구 검사")).toHaveCount(0);

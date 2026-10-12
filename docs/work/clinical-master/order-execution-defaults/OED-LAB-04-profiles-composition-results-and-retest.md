@@ -2,7 +2,7 @@
 type: Work Item
 title: Laboratory profiles, composition, results and atomic retest
 status: in_progress
-updated: 2026-10-06
+updated: 2026-10-12
 ---
 
 # Boundary and sequence
@@ -30,6 +30,45 @@ asked as product choices; keep actual selection explicit while implementation
 continues. Do not hide an unanswered choice in an automatic runtime default.
 
 ## Current local integration checkpoint
+
+### Result display corrections, 2026-10-12
+
+승욱 authorized the two presentation fixes identified in the deployed synthetic
+acceptance: conflicting `미판정` copy on coded results and nonfunctional,
+hardcoded CBC/serum filters. Start from freshly fetched `origin/main`
+`09a5618265aedba19cdf312fe0df8890e4e68ed0`, then incorporate the intervening
+queue-view release `e0c7e776186fb37323adc273f862431774fc53b4` in the managed
+`lab-result-display-fixes` worktree; preserve primary WIP.
+
+When no numeric interval is available, display only the existing reference text
+or `참고범위 없음`. The authoritative judgment remains in the 판정 column.
+Numeric plots, unjudged numeric intervals, input warnings, measurement state,
+raw-value persistence and independent-row behavior remain unchanged.
+Replace the fake family tabs with a static total from the displayed result rows.
+Do not infer family from names; canonical family counts/filtering require a
+separately scoped data connection. Imaging and shared tab/header APIs are unchanged.
+
+Actual-workspace Storybook regressions cover the total/all three input types,
+coded normal/abnormal judgments and numeric results without an interval.
+All three fail against the baseline before the runtime fix. Local verification
+passes24 actual-workspace/input-control stories,19 profile contracts and two
+mocked application browser flows, including typed warning save/reload and
+measurement-unavailable restoration. Full lint,typecheck,build,secret scan,docs links
+and UX copy checks pass. Ready Preview and exact Release Check remain pending.
+Queue scenarios explicitly choose the
+individual view when verifying status-group/card selectors; the newly released
+patient-view default and stored preferences are preserved. The existing layout
+test now checks the already-present 측정 불가 column and all eight headers.
+This slice includes no Airtable write,
+master publication/adoption, DB migration, result/profile backfill or Production
+result mutation. The October6 Airtable capacity blocker is separate and has not
+been rechecked or remedied by this UI slice.
+
+Separately observed existing verification defect: `lab-live-display-boundary`
+still extracts the removed `LabResultCommentSection` and fails at suite import
+on unchanged main source. Leave that legacy test harness untouched; the focused
+actual application/Storybook tests above exercise this change. No full catalog
+suite success or authenticated live-data acceptance is claimed here.
 
 ### Publisher order-detail preservation, 2026-10-06
 

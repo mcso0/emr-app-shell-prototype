@@ -148,6 +148,37 @@ export const RowValueAutosave: Story = { play: async ({ canvas }) => {
   await expect(fixture.result.entryWriteRevision).toBe(4); await expect(fixture.result.rows[0]).toMatchObject({ value: "8", judgment: "high" });
   await expect(canvas.getByLabelText("합성 수치 정상범위 1 - 5 결과 8 초과")).toBeVisible();
 } };
+export const ResultCount: Story = { play: async ({ canvas }) => {
+  await ready(canvas);
+  await expect(canvas.getByRole("group", { name: "검사 결과 개수" })).toHaveTextContent("전체 3");
+  await expect(canvas.queryByRole("group", { name: "검사 결과 필터" })).not.toBeInTheDocument();
+  await expect(canvas.queryByRole("button", { name: /^CBC/ })).not.toBeInTheDocument();
+  await expect(canvas.queryByRole("button", { name: /^혈청화학/ })).not.toBeInTheDocument();
+  for (const row of fixture.result.rows) await expect(canvas.getByTestId(`lab-result-row-${row.id}`)).toBeVisible();
+  await expect(fixture.writes).toHaveLength(0);
+} };
+export const CodedReferenceAndJudgment: Story = { play: async ({ canvas }) => {
+  await ready(canvas);
+  const row = within(canvas.getByTestId(`lab-result-row-${fixture.result.rows[1].id}`));
+  await expect(row.getByText("참고범위 없음", { exact: true })).toBeVisible();
+  await expect(row.getByText("정상", { exact: true })).toBeVisible();
+  await expect(row.queryByText(/미판정/)).not.toBeInTheDocument();
+  await userEvent.selectOptions(row.getByRole("combobox", { name: "합성 선택 결과값" }), "code:synthetic-flag");
+  await userEvent.click(canvas.getByRole("button", { name: "합성 입력 완료" }));
+  await waitFor(() => expect(fixture.result.rows[1]).toMatchObject({ value: "synthetic-flag", judgment: "abnormal", resultState: "recorded" }));
+  await expect(row.getByText("이상", { exact: true })).toBeVisible();
+  await expect(row.getByText("참고범위 없음", { exact: true })).toBeVisible();
+  await expect(row.queryByText(/미판정/)).not.toBeInTheDocument();
+  await expect(fixture.result.rows[0]).toMatchObject({ value: "2", judgment: "normal" });
+} };
+export const NumericWithoutReferenceInterval: Story = { args: { scenario: "numeric-no-interval" }, play: async ({ canvas }) => {
+  await ready(canvas);
+  const row = within(canvas.getByTestId(`lab-result-row-${fixture.result.rows[0].id}`));
+  await expect(row.getByText("참고범위 없음", { exact: true })).toBeVisible();
+  await expect(row.getAllByText("미판정", { exact: true })).toHaveLength(1);
+  await expect(fixture.result.rows[0]).toMatchObject({ value: "2", judgment: "not_judged", resultState: "recorded_without_interval" });
+  await expect(row.queryByRole("img", { name: /결과 위치/ })).not.toBeInTheDocument();
+} };
 export const RowSaveFailureAndRetry: Story = { args: { scenario: "row-save-error" }, play: async ({ canvas }) => {
   await setNumeric(canvas, "4"); await waitFor(() => expect(canvas.getByTestId("lab-result-save-status")).toHaveTextContent("저장하지 못했습니다"));
   await expect(canvas.getByRole("textbox", { name: "합성 수치 결과값" })).toHaveValue("4");
@@ -192,6 +223,9 @@ export const AtomicRetestReadOnly: Story = { play: async ({ canvas, canvasElemen
 } };
 export const ResultReadErrorAndRetry: Story = { args: { scenario: "entries-error", view: "content" }, play: async ({ canvas }) => { await waitFor(() => expect(canvas.getByTestId("lab-result-catalog-status")).toHaveTextContent("결과지 항목을 불러오지 못했습니다")); const reads = fixture.entryReads; fixture.recoverEntries(); await userEvent.click(canvas.getByTestId("lab-result-catalog-retry-button")); await ready(canvas); await expect(fixture.entryReads).toBeGreaterThan(reads); } };
 export const QueueSearchAndPatientGroups: Story = { args: { view: "queue" }, play: async ({ canvas }) => {
+  const patientView = canvas.getByTestId("patient-queue-view-toggle");
+  await waitFor(() => expect(patientView).toBeEnabled());
+  if (patientView.getAttribute("aria-pressed") === "true") await userEvent.click(patientView);
   await expect(await canvas.findByText("합성 환자 A")).toBeVisible(); await expect(canvas.getByText("합성 환자 B")).toBeVisible();
   await userEvent.click(canvas.getByRole("button", { name: "검색" })); await userEvent.type(canvas.getByRole("searchbox", { name: "검사 대기열 검색" }), "합성 환자 B");
   await waitFor(() => expect(canvas.queryByText("합성 환자 A")).not.toBeInTheDocument()); await expect(canvas.getByText("합성 환자 B")).toBeVisible();
@@ -207,6 +241,9 @@ export const QueueSearchAndPatientGroups: Story = { args: { view: "queue" }, pla
 } };
 export const QueueSelectionAndPendingResult: Story = { play: async ({ canvas, canvasElement }) => {
   await ready(canvas);
+  const patientView = canvas.getByTestId("patient-queue-view-toggle");
+  await waitFor(() => expect(patientView).toBeEnabled());
+  if (patientView.getAttribute("aria-pressed") === "true") await userEvent.click(patientView);
   const phaseReads = fixture.commands.filter(command => command.method === "GET" && command.path.endsWith("result-phase2")).length;
   const pending = fixture.workItems[1];
   const pendingCard = canvas.getByTestId(`lab-queue-card-live-lab-${pending.id}`);
