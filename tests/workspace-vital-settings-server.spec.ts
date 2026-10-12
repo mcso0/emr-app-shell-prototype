@@ -33,6 +33,24 @@ test("workspace vital settings allow member reads and report manage eligibility"
   }
 });
 
+test("patient readers can load vital configuration but cannot manage it", async () => {
+  const adapter = createMockWorkspacePermissionAdapter({
+    users: [{ id: actorUserId, status: "active" }],
+    memberships: [{ id: "clinical-reader", workspaceId, userId: actorUserId, roles: ["technician"], status: "active",
+      permissionRole: { key: "clinical-reader", label: "Clinical reader", roleType: "custom", permissionIds: ["patient:view"] },
+    }],
+  });
+  const gateway = createMockWorkspaceVitalSettingsGateway();
+  expect(await readWorkspaceVitalSettings({ actorUserId, workspaceId, permissionAdapter: adapter, gateway }))
+    .toMatchObject({ ok: true, status: 200, canManage: false });
+  expect(await replaceWorkspaceVitalSettings({ actorUserId, workspaceId, items: [], permissionAdapter: adapter, gateway }))
+    .toMatchObject({ ok: false, status: 403, denialReason: "permission_missing" });
+  expect(await readWorkspaceVitalSettings({ actorUserId, workspaceId: "other-workspace", permissionAdapter: adapter, gateway }))
+    .toMatchObject({ ok: false, status: 403, denialReason: "workspace_membership_missing" });
+  expect(await readWorkspaceVitalSettings({ actorUserId: null, workspaceId, permissionAdapter: adapter, gateway }))
+    .toMatchObject({ ok: false, status: 401, denialReason: "unauthenticated" });
+});
+
 test("reception-only permission cannot read or change hospital administration settings", async () => {
   const adapter = createMockWorkspacePermissionAdapter({
     users: [{ id: actorUserId, status: "active" }],

@@ -25,7 +25,7 @@ Give each hospital one workspace-wide list of vital fields. Administrators choos
 ## Product Contract
 
 - Scope is one configuration per workspace. It is not user-, role-, room-, or species-specific.
-- Members with `hospital_settings:view` can read the configuration. Only members with `hospital_settings:manage` can save it.
+- Active workspace members with `hospital_settings:view` or `patient:view` can read the vital configuration. Clinical readers receive `canManage: false` unless they also have `hospital_settings:manage`. Only members with `hospital_settings:manage` can save it. Hospital settings navigation and other administration reads keep their existing permissions.
 - Each configured preset has independent `enabled` and `inputRequired` states. Only an enabled preset may be required. All five presets can be disabled or removed.
 - Disabling or removing a preset hides it from new entry and current summary surfaces. Existing measurements remain stored and reappear when the preset is enabled or added again.
 - Product presets are curated centrally. Workspace users cannot create arbitrary field definitions.
