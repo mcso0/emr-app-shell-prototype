@@ -596,6 +596,39 @@ test("invoice candidate Supabase gateway keeps actor, workspace, encounter, and 
   });
 });
 
+for (const surface of ["direct", "chart", "fulfillment"] as const) {
+  test(`invoice candidate ${surface} sync preserves current-assignee denial as 403`, async () => {
+    const calls: string[] = [];
+    const gateway = createSupabaseInvoiceCandidateSyncGateway({
+      async rpc(functionName: string) {
+        calls.push(functionName);
+        return { data: null, error: { message: "current_assignee_required" } };
+      },
+    });
+    const result = await syncInvoiceCandidates({
+      actorUserId: "user-admin",
+      workspaceId,
+      input: { ...validSyncInput, surface },
+      gateway,
+    });
+    expect(result).toEqual({ ok: false, status: 403, denialReason: "permission_missing" });
+    expect(calls).toEqual([surface === "direct"
+      ? "clair_sync_billing_invoice_candidates"
+      : `clair_sync_billing_invoice_candidates_from_${surface}`]);
+  });
+}
+
+test("invoice candidate unexpected database failures remain 500", async () => {
+  const gateway = createSupabaseInvoiceCandidateSyncGateway({
+    async rpc() {
+      return { data: null, error: { message: "connection failure" } };
+    },
+  });
+  expect(await syncInvoiceCandidates({
+    actorUserId: "user-tech", workspaceId, input: validSyncInput, gateway,
+  })).toEqual({ ok: false, status: 500, error: "db_write_failed" });
+});
+
 test("invoice candidate route resolves staging demo encounter aliases before Supabase RPCs", () => {
   expect(routeSource).toContain("resolveServerChartEncounterId");
   expect(routeSource).toContain("SupabaseEncounterIdBridgeClient");

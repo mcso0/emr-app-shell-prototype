@@ -97,6 +97,7 @@ export type BillingInvoiceCandidateLine = {
 
 export type InvoiceCandidateSyncGatewayResult =
   | { ok: true; candidates: BillingInvoiceCandidateLine[] }
+  | { ok: false; status: 403; denialReason: "permission_missing" }
   | {
       ok: false;
       status: 409;
@@ -233,7 +234,7 @@ export async function readInvoiceCandidates({
     workspaceId,
   });
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 403 || result.status === 409) return result;
     return { ok: false, status: 500, error: "db_read_failed" };
   }
 
@@ -295,7 +296,7 @@ export async function syncInvoiceCandidates({
     workspaceId,
   });
   if (!result.ok) {
-    if (result.status === 409) return result;
+    if (result.status === 403 || result.status === 409) return result;
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
@@ -1015,6 +1016,8 @@ function mapSyncError(
   message: string | undefined,
   fallback: "db_read_failed" | "db_write_failed",
 ): InvoiceCandidateSyncGatewayResult {
+  if (message?.includes("current_assignee_required"))
+    return { ok: false, status: 403, denialReason: "permission_missing" };
   if (message?.includes("encounter_unavailable"))
     return { ok: false, status: 409, denialReason: "encounter_unavailable" };
   if (message?.includes("order_unavailable"))

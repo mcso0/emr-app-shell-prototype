@@ -960,7 +960,7 @@ export async function syncVetReviewedBillingCandidates({
     workspaceId,
   });
   if (!billingResult.ok) {
-    if (billingResult.status === 409) return billingResult;
+    if (billingResult.status === 403 || billingResult.status === 409) return billingResult;
     return { ok: false, status: 500, error: "db_write_failed" };
   }
 
