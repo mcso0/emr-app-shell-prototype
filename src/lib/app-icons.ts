@@ -1,6 +1,6 @@
 // Change this revision when replacing the approved app-icon assets so installed
 // web apps can recognize an icon identity update instead of reusing cached URLs.
-export const APP_ICON_REVISION = "20261013";
+export const APP_ICON_REVISION = "20261013-glass-default";
 
 export const APP_ICON_URLS = {
   small: `/pwa-icon-192.png?v=${APP_ICON_REVISION}`,
