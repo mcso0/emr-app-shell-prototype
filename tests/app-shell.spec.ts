@@ -2335,25 +2335,25 @@ test("PWA manifest exposes install shell metadata", async ({ request, page }) =>
   expect(manifest.icons).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        src: "/pwa-icon-192.png?v=20261013",
+        src: "/pwa-icon-192.png?v=20261013-glass-default",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       }),
       expect.objectContaining({
-        src: "/pwa-icon-512.png?v=20261013",
+        src: "/pwa-icon-512.png?v=20261013-glass-default",
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       }),
       expect.objectContaining({
-        src: "/pwa-icon-1024.png?v=20261013",
+        src: "/pwa-icon-1024.png?v=20261013-glass-default",
         sizes: "1024x1024",
         type: "image/png",
         purpose: "any",
       }),
       expect.objectContaining({
-        src: "/pwa-maskable-512.png?v=20261013",
+        src: "/pwa-maskable-512.png?v=20261013-glass-default",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
@@ -2374,6 +2374,6 @@ test("PWA manifest exposes install shell metadata", async ({ request, page }) =>
   await expect(page.getByRole("heading", { name: "CLAiR EMR" })).toBeVisible();
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
     "href",
-    "/apple-touch-icon.png?v=20261013",
+    "/apple-touch-icon.png?v=20261013-glass-default",
   );
 });

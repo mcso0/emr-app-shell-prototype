@@ -132,3 +132,14 @@ clean worktree from `origin/main`; the primary checkout is not edited.
 - The primary checkout's 110 WIP file hashes, branch, and HEAD are unchanged.
 
 Full release preparation and the exact-candidate Production approval remain.
+
+## Approved Default Liquid Glass Follow-up — 2026-10-13
+
+승욱 selected the reviewed Default rendition and authorized application and existing Dock icon replacement while preserving WIP and login data.
+
+- Current generation masters use Apple Icon Composer 27.0 build 129, macOS design generation 27, Default. The original Water caustic background and two SVG logo paths/positions are preserved as separate native layers.
+- The editable source is `logo/icon-composer/CLAiR-default.icon`. `logo/app-icon-source.json` distinguishes native material settings from original Figma reference settings and records current source checksums.
+- The existing asset generator continues to create six assets with exact byte verification. The maskable master remains opaque. Icon URL revision is `20261013-glass-default`.
+- App identity, login, navigation, auth storage and clinical behavior remain unchanged. Glass PNGs are static exports; Chrome-installed web apps cannot use native .icon material animation.
+- Existing installed macOS app icon replacement preserves the app identity plist, signing identifier, original entitlements, hardened-runtime flags/version and launch/library constraints. Its original ad hoc resource signature is renewed; strict signature verification passes. The running app is not quit and Chrome profile/login files are not read or changed.
+- Delivery requires generated-byte checks, focused PWA manifest/icon-route smoke, local/remote release checks, actual Dock appearance and exact-candidate Production approval. Production remains unchanged until that approval.
