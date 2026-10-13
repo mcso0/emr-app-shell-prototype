@@ -260,9 +260,9 @@ test("root starts at login", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "로그인" })).toBeVisible();
   await expect(page.getByPlaceholder("이메일을 입력해주세요")).toBeFocused();
   await expect(page.getByPlaceholder("비밀번호를 입력해주세요")).toBeVisible();
-  await expect(page.getByRole("button", { name: "인증번호로 로그인" })).toBeDisabled();
-  await expect(page.getByText("계정이 필요하신가요?")).toBeVisible();
-  await expect(page.getByText("관리자에게 문의")).toBeVisible();
+  await expect(page.getByRole("button", { name: "OTP 로그인" })).toBeEnabled();
+  await expect(page.getByRole("link", { name: "아이디 찾기" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "비밀번호 찾기" })).toBeVisible();
   await expect(page.getByText("OTP로 로그인 하기")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "MVP 테스트 옵션" })).toBeVisible();
   await expect(page.getByText("현재는 Supabase Auth 연결 전 mock session으로 진입합니다.")).toBeVisible();
@@ -274,65 +274,43 @@ test("login visual tokens keep the approved surface, type, and elevation contrac
 }) => {
   await page.goto("/login?reason=signed_out");
 
-  const loginSection = page.locator("main > div > section");
-  const loginCard = loginSection.locator(":scope > div > div").first();
+  const loginSection = page.getByTestId("auth-entry-scene");
+  const loginCard = page.getByTestId("auth-entry-panel");
 
-  await expect(loginSection).toHaveCSS("background-color", "rgb(249, 249, 249)");
-  await expect(loginCard).toHaveCSS("background-color", "rgb(255, 255, 255)");
-  await expect(loginCard).toHaveCSS("box-shadow", /0px 4px 6px -1px/);
-  await expect(page.getByRole("heading", { name: "CLAiR EMR 로그인" })).toHaveCSS(
+  await expect(loginSection).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(loginCard).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(loginCard).toHaveCSS("box-shadow", "none");
+  await expect(loginCard).toHaveCSS("width", "440px");
+  await expect(loginCard).toHaveCSS("height", "548px");
+  await expect(page.getByRole("heading", { name: "로그인" })).toHaveCSS(
     "font-size",
     "20px"
   );
   await expect(page.getByText("또는", { exact: true })).toHaveCSS("font-size", "12px");
 });
 
-test("login form guides empty submit and shows inline validation after user input", async ({
-  page,
-}) => {
+test("login enables submit only for email format and a nonempty password", async ({ page }) => {
   await page.goto("/login");
-
-  const emailInput = page.getByLabel("이메일");
-  const passwordInput = page.locator("#mock-password");
-  const loginButton = page.getByRole("button", { name: "로그인", exact: true });
-
-  await expect(emailInput).toBeFocused();
-
-  await page.locator("main").click({ position: { x: 12, y: 12 } });
-  await expect(page.getByText("이메일을 입력해 주세요.")).toHaveCount(0);
-  await expect(emailInput).not.toHaveAttribute("aria-invalid", "true");
-
-  await loginButton.click();
-  await expect(emailInput).toBeFocused();
-  await expect(page.getByText("이메일을 입력해 주세요.")).toHaveCount(0);
-  await expect(emailInput).not.toHaveAttribute("aria-invalid", "true");
-  await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
-
-  await emailInput.fill("1");
-  await expect(emailInput).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toBeVisible();
-  await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
-
-  await passwordInput.fill("local-pass-1");
-  await loginButton.click();
-
-  await expect(emailInput).toBeFocused();
-  await expect(emailInput).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toBeVisible();
-  await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
-
-  await emailInput.fill("front@clair.local");
-  await passwordInput.fill("");
-  await loginButton.click();
-
-  await expect(passwordInput).toBeFocused();
-  await expect(passwordInput).toHaveAttribute("aria-invalid", "true");
-  await expect(page.getByText("비밀번호를 입력해 주세요.")).toBeVisible();
-
-  await passwordInput.fill("local-pass-1");
-
-  await expect(page.getByText("올바른 이메일 주소를 입력해 주세요.")).toHaveCount(0);
-  await expect(page.getByText("비밀번호를 입력해 주세요.")).toHaveCount(0);
+  const email = page.getByLabel("이메일");
+  const password = page.locator("#mock-password");
+  const submit = page.getByRole("button", { name: "로그인", exact: true });
+  await expect(email).toBeFocused();
+  await expect(submit).toBeDisabled();
+  await email.fill("wrong");
+  await password.fill("short");
+  await expect(email).toHaveAttribute("aria-invalid", "true");
+  await expect(submit).toBeDisabled();
+  await email.fill("front@clair.local");
+  await expect(submit).toBeEnabled();
+  await password.fill("");
+  await expect(submit).toBeDisabled();
+  await password.fill("x");
+  await expect(submit).toBeEnabled();
+  await email.fill("");
+  await expect(submit).toBeDisabled();
+  await email.fill(" front@clair.local ");
+  await password.fill(" ");
+  await expect(submit).toBeEnabled();
 });
 
 test("login password field toggles text visibility", async ({ page }) => {

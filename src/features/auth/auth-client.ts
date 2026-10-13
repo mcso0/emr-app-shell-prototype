@@ -36,6 +36,7 @@ export type SignInWithPasswordCredentials = {
 export type SignInWithEmailOtpCredentials = {
   email: string;
   redirectTo: string;
+  shouldCreateUser?: boolean;
 };
 
 export type SignUpWithPasswordCredentials = {
@@ -177,7 +178,7 @@ export function useAuthClient(): AuthClient {
 
       return session;
     },
-    signInWithEmailOtp: async ({ email, redirectTo }) => {
+    signInWithEmailOtp: async ({ email, redirectTo, shouldCreateUser = false }) => {
       const supabase = getBrowserSupabaseClient();
 
       if (!supabase) {
@@ -188,7 +189,7 @@ export function useAuthClient(): AuthClient {
         email,
         options: {
           emailRedirectTo: redirectTo,
-          shouldCreateUser: true,
+          shouldCreateUser,
         },
       });
 

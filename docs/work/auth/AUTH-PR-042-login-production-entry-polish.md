@@ -64,7 +64,14 @@ The reference direction is a quiet centered login card on a broad neutral canvas
 ## Closeout
 
 - `docs/completed/design/2026-05-24-den-277-login-production-entry-polish-report.html`
+- `docs/completed/design/2026-10-14-login-figma-application-report.md` (approved local Figma/OTP/recovery follow-up; phone verification pending vendor)
 
 ## Follow-up Notes
 
+- 2026-10-14 approved local follow-up: apply the reviewed Figma/HTML login design; preserve password login, invite OTP/password setup, safe redirects, membership checks, and entry splash. Enable login on a valid email and a nonempty password; connect ordinary email OTP for existing accounts and restyle the existing password recovery flow. No provider policy, remote config, schema/RLS, production, or real email/SMS actions are authorized.
+- Local verification uses synthetic auth responses and isolated browser storage only. The source checkout's unrelated WIP is preserved in a separate managed worktree.
+- Dependency confirmed by 승욱: no phone identity verification vendor is selected. 아이디 찾기 must show an explicit unavailable state; editable contact phone numbers are not identity proof. SMS delivery and account lookup require a separately scoped provider integration. Do not simulate successful verification in the product.
+
 - 2026-07-07: Added a logo-only animated workspace entry loading screen for post-login route transition and protected workspace access checks. No auth provider, session, permission, Supabase, or redirect policy behavior was changed.
+
+- 2026-10-14 evidence: 45 unique relevant tests passed (22 existing auth/invite/recovery, 2 input/redirect, 14 synthetic-provider integration, 7 Storybook). Three stale demo-data/default-route expectations also fail on base `513143f9`; preserve them as unrelated findings. Lint, TypeScript, build, docs, secrets, UX copy and diff checks pass. Built app visual QA confirms 440×548 at x740/y266 with 376px inputs and responsive entry screens. Hosted numeric OTP mail/redirect config and real delivery remain unverified. No main merge or deployment.

@@ -13,7 +13,6 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import loginLogoMark from "../../../logo/logo48*48.svg";
 import { CheckIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,7 +44,10 @@ import {
   createInviteOtpRedirectTo,
   getSafeInviteNextHref,
 } from "@/features/auth/invite-otp-handoff";
-import { DEFAULT_PREPARED_EMPTY_CLINIC_RECEPTION_HREF } from "@/lib/emr-domain/demo-workspaces";
+import { AuthEntryHeading, AuthEntryPanel, AuthEntryScene } from "./auth-entry";
+import { EmailOtpLogin } from "./email-otp-login";
+import { canSubmitPasswordLogin, getEmailAuthError, getSafeLoginNextHref, loginEmailPattern } from "./login-entry-contract";
+import styles from "./auth-entry.module.css";
 import { cn } from "@/lib/utils";
 
 const storageOptions: Array<{
@@ -65,18 +67,14 @@ const storageOptions: Array<{
   },
 ];
 
-const defaultWorkspaceHref = DEFAULT_PREPARED_EMPTY_CLINIC_RECEPTION_HREF;
 const inviteOtpLength = 8;
 const mockInviteOtpToken = "0".repeat(inviteOtpLength);
-const loginFormClassName = "flex w-full flex-col gap-[var(--clair-spacing-24)]";
+const loginFormClassName = styles.form;
 const loginSupportPanelClassName =
   "rounded-[var(--clair-radius-lg)] border border-border bg-[var(--emr-surface-panel)] p-4 shadow-[var(--clair-shadow-sm)]";
 const isProductionRuntime = process.env.NODE_ENV === "production";
-const loginEmailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const loginCredentialErrorMessage = "이메일 또는 비밀번호를 확인해 주세요.";
 const loginEmailNotFoundErrorMessage = "등록된 계정 이메일을 확인해 주세요.";
-const getLoginAssetSrc = (asset: string | { src?: string }) =>
-  typeof asset === "string" ? asset : asset.src ?? "";
 
 type LoginFieldErrors = {
   readonly email?: string | undefined;
@@ -90,11 +88,11 @@ type LoginDialogFormProps = {
 
 function LoginDialogForm({ children, onSubmit }: LoginDialogFormProps) {
   return (
-    <div className="mx-auto w-full max-w-[440px] rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-default)] bg-[var(--clair-color-background-normal)] p-[var(--clair-spacing-32)] shadow-[var(--clair-shadow-md)] sm:min-w-[440px]">
+    <AuthEntryPanel>
       <form onSubmit={onSubmit} noValidate className={loginFormClassName}>
         {children}
       </form>
-    </div>
+    </AuthEntryPanel>
   );
 }
 
@@ -136,15 +134,6 @@ function PasswordEyeOffIcon({ size = 18 }: { readonly size?: number }) {
       />
     </svg>
   );
-}
-
-function getSafeNextHref(value: string | null) {
-  if (!value) return defaultWorkspaceHref;
-  if (!value.startsWith("/")) return defaultWorkspaceHref;
-  if (value.startsWith("//")) return defaultWorkspaceHref;
-  if (value.startsWith("/login")) return defaultWorkspaceHref;
-
-  return value;
 }
 
 function getAuthSessionNotice(reason: string | null) {
@@ -275,7 +264,9 @@ export function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
+  const [emailValue, setEmailValue] = useState(searchParams.get("inviteEmail") ?? "");
   const [passwordValue, setPasswordValue] = useState("");
+  const [capsLock, setCapsLock] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [inviteOtpSent, setInviteOtpSent] = useState(false);
   const [inviteOtpStatus, setInviteOtpStatus] = useState<string | null>(null);
@@ -327,6 +318,7 @@ export function LoginForm() {
   }
 
   function handleDefaultEmailChange(event: ChangeEvent<HTMLInputElement>) {
+    setEmailValue(event.currentTarget.value);
     if (loginError) setLoginError(null);
     if (!isDefaultPasswordLogin) return;
 
@@ -392,6 +384,7 @@ export function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) return;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const email = String(formData.get("email") ?? "").trim();
@@ -464,6 +457,7 @@ export function LoginForm() {
 
             await signInWithEmailOtp({
               email,
+              shouldCreateUser: true,
               redirectTo: createInviteOtpRedirectTo({
                 origin: window.location.origin,
                 next: safeInviteNext,
@@ -505,7 +499,7 @@ export function LoginForm() {
       }
 
       beginWorkspaceEntrySplash();
-      router.replace(getSafeNextHref(searchParams.get("next")));
+      router.replace(getSafeLoginNextHref(searchParams.get("next")));
     } catch (caught) {
       const errorMessage = getCaughtErrorMessage(caught);
 
@@ -536,7 +530,7 @@ export function LoginForm() {
               ? "비밀번호 확인이 일치하지 않습니다."
               : "초대 이메일 인증 또는 비밀번호 설정을 진행할 수 없습니다. 초대 링크와 인증 코드를 확인하세요."
           : usesSupabaseProvider
-          ? "Supabase 로그인 처리 중 문제가 발생했습니다. 계정 정보와 환경 설정을 확인하세요."
+          ? getEmailAuthError(caught)
           : errorMessage === "mock-demo-account-not-found"
             ? loginEmailNotFoundErrorMessage
           : "로그인 처리 중 문제가 발생했습니다. 잠시 후 다시 시도하세요."
@@ -545,40 +539,17 @@ export function LoginForm() {
     }
   }
 
-  return (
-    <main className="min-h-svh bg-[var(--emr-surface-muted)] text-foreground">
-      <div className="flex min-h-svh flex-col">
-        <section className="flex flex-1 items-center justify-center bg-[var(--emr-surface-auth)] px-[var(--clair-spacing-16)] py-[var(--clair-spacing-32)]">
-          <div className="grid w-full max-w-[760px] gap-4">
-            <LoginDialogForm onSubmit={handleSubmit}>
-              <FieldGroup className="gap-[var(--clair-spacing-24)]">
-                <div className="flex flex-col items-center gap-[var(--clair-spacing-16)] text-center">
-                  <span className="flex size-12 items-center justify-center">
-                    <Image
-                      src={getLoginAssetSrc(loginLogoMark)}
-                      alt=""
-                      width={48}
-                      height={48}
-                      unoptimized
-                      aria-hidden="true"
-                      className="size-12 shrink-0 object-contain"
-                      draggable={false}
-                    />
-                  </span>
-                  <div className="flex flex-col gap-2">
-                    <h1 className="emr-text-login-title font-semibold text-[var(--emr-text-primary)]">
-                      {isInviteOtpLogin ? "초대 이메일 인증" : "CLAiR EMR 로그인"}
-                    </h1>
-                    {!isDefaultPasswordLogin ? (
-                      <p className="emr-text-dense text-muted-foreground">
-                        {isInviteOtpLogin
-                          ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다."
-                          : "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요."}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
+  if (isDefaultPasswordLogin && searchParams.get("method") === "otp") {
+    return <EmailOtpLogin initialEmail={emailValue} invalidLink={reason === "otp_link_invalid"} next={searchParams.get("next")} onVerified={() => {
+      beginWorkspaceEntrySplash();
+      router.replace(getSafeLoginNextHref(searchParams.get("next")));
+    }} />;
+  }
 
+  return (
+    <AuthEntryScene>
+            <LoginDialogForm onSubmit={handleSubmit}>
+              <AuthEntryHeading title={isInviteOtpLogin ? "초대 이메일 인증" : "로그인"} description={!isDefaultPasswordLogin ? isInviteOtpLogin ? "초대받은 이메일로 인증 코드를 받아 계정 확인을 이어갑니다." : "초대받은 워크스페이스에 연결하려면 초대 이메일 계정으로 로그인하세요." : undefined} />
                 {authSessionNotice ? (
                   <div
                     role="status"
@@ -597,7 +568,8 @@ export function LoginForm() {
                   </div>
                 ) : null}
 
-                <div className="grid gap-[var(--clair-spacing-24)]">
+              <FieldGroup className={styles.stack}>
+                <div className={styles.fields}>
                   <Field
                     className="gap-2"
                     data-invalid={emailFieldError ? "true" : undefined}
@@ -610,7 +582,7 @@ export function LoginForm() {
                       type="email"
                       name="email"
                       placeholder="이메일을 입력해주세요"
-                      defaultValue={inviteEmail ?? undefined}
+                      value={isInviteOtpLogin && inviteEmail ? inviteEmail : emailValue}
                       autoComplete="email"
                       autoFocus={isDefaultPasswordLogin && !inviteEmail}
                       disabled={isSubmitting}
@@ -740,12 +712,7 @@ export function LoginForm() {
                         <FieldLabel htmlFor="mock-password" className="emr-text-body font-semibold">
                           비밀번호
                         </FieldLabel>
-                        <Link
-                          href="/reset-password"
-                          className="emr-text-body font-medium text-muted-foreground hover:underline focus-visible:underline"
-                        >
-                          비밀번호 찾기
-                        </Link>
+
                       </div>
                       <div className="relative">
                         <Input
@@ -759,10 +726,13 @@ export function LoginForm() {
                           aria-describedby={passwordFieldError ? passwordErrorId : undefined}
                           aria-invalid={passwordFieldError ? true : undefined}
                           onChange={handleDefaultPasswordChange}
+                          onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))}
+                          onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))}
+                          onBlur={() => setCapsLock(false)}
                           className={cn(
                             "h-[var(--clair-control-height-xl)] rounded-[var(--emr-radius-control)] bg-background px-[var(--clair-spacing-16)] emr-text-body",
                             passwordValue
-                              ? "pr-[calc(var(--clair-spacing-16)+var(--clair-control-height-md))]"
+                              ? styles.passwordInput
                               : undefined
                           )}
                         />
@@ -786,6 +756,7 @@ export function LoginForm() {
                           </button>
                         ) : null}
                       </div>
+                      {capsLock ? <p className={styles.caps} role="status">Caps Lock이 켜져 있습니다.</p> : null}
                       {passwordFieldError ? (
                         <FieldError id={passwordErrorId} className="emr-text-body">
                           {passwordFieldError}
@@ -804,8 +775,8 @@ export function LoginForm() {
                 <Button
                   type="submit"
                   size="xl"
-                  className="w-full"
-                  disabled={isSubmitting}
+                  className={styles.primary}
+                  disabled={isSubmitting || (!isInviteOtpLogin && !canSubmitPasswordLogin(emailValue, passwordValue))}
                   onClick={handleLoginButtonClick}
                 >
                   {isInviteOtpLogin
@@ -823,35 +794,26 @@ export function LoginForm() {
 
                 {isDefaultPasswordLogin ? (
                   <>
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-[var(--clair-spacing-16)] text-center emr-text-metadata text-muted-foreground">
-                      <span className="h-px bg-[var(--emr-border-subtle)]" aria-hidden="true" />
-                      <span>또는</span>
-                      <span className="h-px bg-[var(--emr-border-subtle)]" aria-hidden="true" />
-                    </div>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="xl"
-                      disabled
-                      title="인증번호 로그인은 준비 중입니다."
-                      className="w-full disabled:opacity-100"
-                    >
-                      인증번호로 로그인
+                    <div className={styles.divider}><span>또는</span></div>
+                    <Button type="button" variant="outline" size="xl" className={styles.secondary} disabled={isSubmitting}
+                      onClick={() => {
+                        const query = new URLSearchParams();
+                        query.set("method", "otp");
+                        if (searchParams.get("next")) query.set("next", getSafeLoginNextHref(searchParams.get("next")));
+                        router.push(`/login?${query}`);
+                      }}>
+                      <Image src="/auth-entry/otp-lock.svg" width={16} height={16} alt="" unoptimized aria-hidden="true" />
+                      OTP 로그인
                     </Button>
-
-                    <p className="text-center emr-text-body text-muted-foreground">
-                      계정이 필요하신가요?{" "}
-                      <span className="font-medium underline underline-offset-4">
-                        관리자에게 문의
-                      </span>
-                    </p>
                   </>
                 ) : null}
               </FieldGroup>
+              <nav className={styles.footer} aria-label="계정 찾기">
+                <Link href="/find-id">아이디 찾기</Link><span aria-hidden="true" /><Link href="/reset-password">비밀번호 찾기</Link>
+              </nav>
             </LoginDialogForm>
 
-            <aside className="mx-auto w-full max-w-[760px]">
+            {showsInviteSupportPanel || showsMockDevelopmentControls ? <aside className={styles.development}>
               {showsInviteSupportPanel ? (
                 <div className={loginSupportPanelClassName}>
                   <InviteLoginContext inviteEmail={inviteEmail} />
@@ -960,11 +922,8 @@ export function LoginForm() {
                   <SessionStatus hydrated={hydrated} session={session} signOut={signOut} />
                 </div>
               ) : null}
-            </aside>
-          </div>
-        </section>
-      </div>
-    </main>
+            </aside> : null}
+    </AuthEntryScene>
   );
 }
 

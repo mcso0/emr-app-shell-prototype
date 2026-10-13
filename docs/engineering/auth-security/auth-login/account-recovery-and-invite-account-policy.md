@@ -1,6 +1,6 @@
 # Account Recovery And Invite Account Policy
 
-Updated: 2026-05-20
+Updated: 2026-10-14
 Linear: DEN-154
 Initiative: `CLAiR EMR SaaS Launch Foundation`
 
@@ -29,6 +29,18 @@ CLAiR EMR should not implement its own password system.
 Supabase Auth owns identity, password sign-in, password reset email, recovery sessions, session cookies/tokens, email verification, and future MFA. The CLAiR app owns tenant approval, invitation state, app user profile rows, workspace memberships, roles, permission policies, status transitions, duplicate handling, and audit records.
 
 Public self-signup remains excluded from the launch foundation. A user can become usable in the app only through a valid invitation and active workspace membership.
+
+## Local Login Entry Follow-up (2026-10-14)
+
+The approved Figma/HTML entry design is implemented locally under AUTH-PR-042. This is not a production delivery or provider rollout.
+
+- Password login enables submission when the trimmed email has a valid address format and the password is nonempty. Do not trim the password or apply the new-password minimum to existing-account login.
+- Ordinary email OTP explicitly uses `shouldCreateUser: false`. Only the existing invite flow passes `true`, after its pending-invite request guard. OTP verification never activates workspace membership.
+- Ordinary OTP code verification reuses Supabase `verifyOtp({ email, token, type: "email" })`. Its separate PKCE mail-link callback is `/auth/login`; `/auth/confirm` remains invite-only. Both password and ordinary OTP destinations must stay on the local origin and exclude login/auth callback loops.
+- The generic OTP UI accepts 6–8 digits because local Supabase configuration uses 6 while the existing invite UI uses 8. The provider owns actual validity, expiry and attempt limits. The client uses a 60-second resend delay only as a UI throttle. Hosted token length, numeric-code mail template (`{{ .Token }}`) and callback redirect allowlist remain delivery prerequisites; they were not changed or tested with real mail.
+- Password recovery retains `/auth/password-recovery` and server GET/POST checks for the verified actor and a recent recovery AMR claim. Ordinary password/OTP sessions cannot reset passwords through this endpoint. Saving requires matching 8–1024-character passwords; success signs out locally and returns to login.
+- 아이디 찾기 shows phone format validation and a clearly unavailable verification state. 승욱 confirmed that no phone identity vendor is selected. It sends no SMS and performs no account lookup. User-editable contact phone fields must never be used as identity proof.
+- Verification uses loopback synthetic auth fixtures. No real identities, mail/SMS, provider configuration, DB/RLS, signup policy, or production state are changed.
 
 ## Responsibility Split
 
