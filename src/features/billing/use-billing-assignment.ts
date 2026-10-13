@@ -6,7 +6,9 @@ import { getDemoActorHeaders } from "@/features/auth/demo-actor";
 import { parseBillingAssignment, type BillingAssignment } from "./assignment";
 import { useBillingStore } from "./store";
 
-export function useBillingAssignment(workspaceId: string | undefined, invoiceId: string | undefined) {
+export function useBillingAssignment(workspaceId: string | undefined, requestedInvoiceId: string | undefined) {
+  // Candidate-only invoices are display models, not persisted assignment targets.
+  const invoiceId = requestedInvoiceId?.startsWith("invoice-live-") ? undefined : requestedInvoiceId;
   const { session } = useAuthClient();
   const actorKey = session && "userId" in session ? session.userId : session?.id ?? "";
   const key = `${workspaceId}:${invoiceId}:${actorKey}`;
@@ -30,13 +32,14 @@ export function useBillingAssignment(workspaceId: string | undefined, invoiceId:
     } catch { if (seq === requestSequence.current) setState({ key, data: null }); }
   }, [endpoint, invoiceId, key, session, workspaceId]);
   useEffect(() => {
+    if (!workspaceId || !invoiceId) return;
     queueMicrotask(() => { void refresh(); });
     const update = () => { void refresh(); };
     window.addEventListener("clair-billing-assignment", update);
     window.addEventListener("focus", update);
     const timer = window.setInterval(() => { if (document.visibilityState === "visible") update(); }, 10000);
     return () => { requestSequence.current += 1; window.clearInterval(timer); window.removeEventListener("clair-billing-assignment", update); window.removeEventListener("focus", update); };
-  }, [refresh]);
+  }, [invoiceId, refresh, workspaceId]);
   useQueueRealtimeRefresh({ workspaceId: workspaceId ?? "", enabled: Boolean(invoiceId), scopeKey: `billing-owner:${invoiceId}`, onQueueChange: refresh });
   const data = state.key === key ? state.data : null;
   const transition = async (action: "claim" | "assign" | "unassign", assignedToUserId?: string | null) => {
