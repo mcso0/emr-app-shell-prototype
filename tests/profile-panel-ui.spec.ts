@@ -103,7 +103,7 @@ test("profile motion respects reduced motion", async ({ page }) => {
 for (const subject of ["patient:patient-coco", "guardian:guardian-lee-jieun"]) {
   test(`${subject} fits a 360px viewport without clipping the close control`, async ({ page }) => {
     await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto(`/w/clair-demo/customer?modulePanel=open&right=closed&drawer=${subject}`);
+    await page.goto(`/w/clair-demo/customer?modulePanel=closed&right=closed&drawer=${subject}`);
     const panel = page.getByTestId("profile-side-panel");
     await expect(panel).toBeVisible();
     expect((await panel.boundingBox())!.width).toBe(360);

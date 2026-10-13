@@ -21,9 +21,9 @@ type Row = {
   runtimeRow?: { parentOrderId?: string };
   serverRevision: number;
 };
-const source = readFileSync("src/features/chart/module.tsx", "utf8");
+const source = readFileSync("src/features/chart/chart-order-draft-save-executor.ts", "utf8");
 const file = ts.createSourceFile("module.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-// Keep the save attempt deletion predicate owned by the existing UI session.
+// Execute the actual save executor predicate for the mounted editing session.
 let removalPredicate: ts.ArrowFunction | undefined;
 function visit(node: ts.Node) {
   if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === "isAttemptedRemovalRow" && node.initializer && ts.isArrowFunction(node.initializer)) removalPredicate = node.initializer;

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
+import { sourceFunction, draftOwnedExpression } from "./fixtures/chart-order-source-owners";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { classifyChartOrderSaveFailure } from "../src/features/chart/chart-order-save-failure-decision";
@@ -11,14 +11,10 @@ import {
 
 // Execute the caller's real save/flush expressions with synthetic refs and I/O.
 // This characterizes ownership; it does not simulate React or timer scheduling.
-const source = readFileSync("src/features/chart/module.tsx", "utf8");
-const ast = ts.createSourceFile("chart.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const orderArea = ast.statements.find((node): node is ts.FunctionDeclaration =>
-  ts.isFunctionDeclaration(node) && node.name?.text === "OrderArea",
-);
-if (!orderArea) throw new Error("OrderArea source is required for characterization");
+const { file: ast, owner: orderArea } = sourceFunction("src/features/chart/module.tsx", "OrderArea");
 
 function variableExpression(name: string) {
+  if (name === "commitDraftRows" || name === "markDraftTouched") return draftOwnedExpression(name);
   let expression: ts.Expression | undefined;
   const visit = (node: ts.Node) => {
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === name) {

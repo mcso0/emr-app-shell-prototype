@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installChartSaveSession, workspaceId as saveSessionWorkspaceId, workspaceBId as saveSessionWorkspaceBId } from "./fixtures/chart-order-save-session";
 import type { Locator, Page } from "@playwright/test";
 import { installShellNotificationApi } from "./support/shell-notification-api";
 
@@ -231,7 +232,8 @@ test("global command palette searches and opens patient context", async ({ page 
   await patientResult.click();
 
   await expect(page).toHaveURL(/drawer=reception-patient%3Apatient-kong/);
-  await expect(page.getByText("환자 정보")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "환자 정보", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "환자 정보", exact: true })).toHaveAttribute("aria-selected", "true");
 });
 
 test("global command palette opens patient guardian registration from any workspace module", async ({
@@ -935,24 +937,9 @@ test("workspace switcher retries a failed membership list read", async ({ page }
 });
 
 test("workspace switcher confirms before leaving unsaved work", async ({ page }) => {
-  await page.route("**/api/workspaces", async (route) => {
-    if (route.request().method() !== "GET") {
-      await route.fallback();
-      return;
-    }
-
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        workspaces: buildWorkspaceSwitcherFixture().slice(0, 2),
-        enforcedBy: "workspace-membership-reader",
-      }),
-    });
-  });
-
-  await page.goto("/w/clair-demo/treatment?modulePanel=open&aside=closed");
+  const session = await installChartSaveSession(page, { includeSecondWorkspace: true });
+  await session.goto();
+  await session.pauseReadyClock();
   await expect
     .poll(() =>
       page.evaluate(
@@ -966,21 +953,22 @@ test("workspace switcher confirms before leaving unsaved work", async ({ page })
 
   await page.getByTestId("workspace-switcher").click();
   await page
-    .getByTestId("workspace-switcher-option-workspace-hanbit")
+    .getByTestId(`workspace-switcher-option-${saveSessionWorkspaceBId}`)
     .click();
 
   const dialog = page.getByRole("dialog", { name: "워크스페이스를 전환할까요?" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "계속 작성" }).click();
-  await expect(page).toHaveURL(/\/w\/clair-demo\/treatment/);
+  await expect(page).toHaveURL(new RegExp(`/w/${saveSessionWorkspaceId}/treatment`));
 
   await page.getByTestId("workspace-switcher").click();
   await page
-    .getByTestId("workspace-switcher-option-workspace-hanbit")
+    .getByTestId(`workspace-switcher-option-${saveSessionWorkspaceBId}`)
     .click();
   await dialog.getByRole("button", { name: "저장하지 않고 전환" }).click();
 
-  await expect(page).toHaveURL(/\/w\/workspace-hanbit\/treatment\?/);
+  await expect(page).toHaveURL(new RegExp(`/w/${saveSessionWorkspaceBId}/treatment\\?`));
+  session.assertNoUnexpectedTraffic();
 });
 
 test("workspace switcher popover stays inside a narrow viewport", async ({ page }) => {
