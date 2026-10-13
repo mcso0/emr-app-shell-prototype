@@ -1,0 +1,64 @@
+{
+  "features": [
+    "refractivity"
+  ],
+  "fill": {
+    "automatic-gradient": "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "02-symbol-lower.svg",
+          "name": "02-symbol-lower"
+        },
+        {
+          "image-name": "01-symbol-upper.svg",
+          "name": "01-symbol-upper"
+        }
+      ],
+      "refractivity": {
+        "depth": 0,
+        "enabled": true,
+        "strength": 0.5
+      },
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      },
+      "name": "CLAiR glass symbol"
+    },
+    {
+      "name": "Original Water caustic background",
+      "layers": [
+        {
+          "image-name": "00-water-background.png",
+          "name": "00-water-background"
+        }
+      ],
+      "refractivity": {
+        "enabled": false,
+        "depth": 0,
+        "strength": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}
