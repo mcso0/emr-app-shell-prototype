@@ -2335,17 +2335,25 @@ test("PWA manifest exposes install shell metadata", async ({ request, page }) =>
   expect(manifest.icons).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
-        src: "/pwa-icon-192.png",
+        src: "/pwa-icon-192.png?v=20261013",
         sizes: "192x192",
         type: "image/png",
+        purpose: "any",
       }),
       expect.objectContaining({
-        src: "/pwa-icon-512.png",
+        src: "/pwa-icon-512.png?v=20261013",
         sizes: "512x512",
         type: "image/png",
+        purpose: "any",
       }),
       expect.objectContaining({
-        src: "/pwa-maskable-512.png",
+        src: "/pwa-icon-1024.png?v=20261013",
+        sizes: "1024x1024",
+        type: "image/png",
+        purpose: "any",
+      }),
+      expect.objectContaining({
+        src: "/pwa-maskable-512.png?v=20261013",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
@@ -2353,6 +2361,19 @@ test("PWA manifest exposes install shell metadata", async ({ request, page }) =>
     ]),
   );
 
+  for (const icon of manifest.icons) {
+    const asset = await request.get(icon.src);
+    expect(asset.ok(), `${icon.src} should be available at install time`).toBeTruthy();
+    expect(asset.headers()["content-type"]).toContain("image/png");
+    const bytes = await asset.body();
+    expect(bytes.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    expect(`${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`).toBe(icon.sizes);
+  }
+
   await page.goto(manifest.start_url);
   await expect(page.getByRole("heading", { name: "CLAiR EMR" })).toBeVisible();
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
+    "href",
+    "/apple-touch-icon.png?v=20261013",
+  );
 });

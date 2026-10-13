@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { APP_ICON_URLS } from "@/lib/app-icons";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -12,17 +13,25 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#18181B",
     icons: [
       {
-        src: "/pwa-icon-192.png",
+        src: APP_ICON_URLS.small,
         sizes: "192x192",
         type: "image/png",
+        purpose: "any",
       },
       {
-        src: "/pwa-icon-512.png",
+        src: APP_ICON_URLS.large,
         sizes: "512x512",
         type: "image/png",
+        purpose: "any",
       },
       {
-        src: "/pwa-maskable-512.png",
+        src: APP_ICON_URLS.master,
+        sizes: "1024x1024",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: APP_ICON_URLS.maskable,
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

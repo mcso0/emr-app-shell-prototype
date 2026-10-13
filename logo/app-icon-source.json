@@ -1,0 +1,60 @@
+{
+  "nodeId": "28755:75795",
+  "name": "logo",
+  "width": 44,
+  "height": 44,
+  "cornerRadius": 12,
+  "cornerSmoothing": 0.6000000238418579,
+  "shader": {
+    "name": "Water caustic",
+    "version": 2,
+    "isAnimated": false,
+    "usesMouse": false,
+    "params": {
+      "center": {
+        "x": 80,
+        "y": 86.54419708251953
+      },
+      "scale": 5,
+      "playhead": 45.77000045776367,
+      "highlightColor": {
+        "r": 0.5251089334487915,
+        "g": 0.7704693078994751,
+        "b": 1,
+        "a": 1
+      },
+      "waterColor": {
+        "r": 0,
+        "g": 0.46666666865348816,
+        "b": 1,
+        "a": 1
+      },
+      "intensity": 0.4599999785423279
+    }
+  },
+  "symbol": {
+    "nodeId": "28755:75797",
+    "x": 10.800000190734863,
+    "y": 8,
+    "width": 22.399999618530273,
+    "height": 28,
+    "glass": {
+      "type": "GLASS",
+      "visible": true,
+      "radius": 63,
+      "refraction": 0.7099999785423279,
+      "depth": 43,
+      "lightAngle": -45,
+      "lightIntensity": 0.800000011920929,
+      "dispersion": 1,
+      "splay": 0.9300000071525574
+    }
+  },
+  "visibleShadows": false,
+  "visibleStrokes": false,
+  "renderMethod": "Export the unchanged Figma node with its actual shader, glass effect, and continuous corners. Do not approximate the effects.",
+  "revision": "20261013",
+  "masterSha256": "4cc75423aac465c6db9c98e17eef81ef0caf356fa69bc53ad36dc9695b995535",
+  "maskableMethod": "Original WGSL rendered at the 44px reference size with exact Figma params, upscaled to fill the square behind the unchanged approved icon. No alteration to opaque pixels of the approved icon.",
+  "maskableMasterSha256": "bb3cca3cf04cd7eb8e90151aabb537c5040ab7264af2766eee6aba2f16d39e9c"
+}

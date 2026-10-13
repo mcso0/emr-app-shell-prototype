@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WorkspaceEntrySplashProvider } from "@/features/auth/workspace-entry-splash-provider";
+import { APP_ICON_URLS } from "@/lib/app-icons";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,7 +18,11 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   icons: {
-    apple: "/apple-touch-icon.png",
+    apple: {
+      url: APP_ICON_URLS.apple,
+      sizes: "180x180",
+      type: "image/png",
+    },
   },
 };
 
