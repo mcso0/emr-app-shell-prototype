@@ -383,6 +383,15 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
   await expect(page.getByRole("textbox", { name: "할인 또는 할증 사유" })).toBeVisible();
   await expect(page.getByRole("textbox", { name: "수납 메모" })).toBeVisible();
 
+  await expect(page.getByRole("spinbutton", { name: "CBC 검사 수량" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "계좌이체" })).toBeDisabled();
+  await expect(page.getByText("담당하기 후 수납 액션 가능")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "수납 진행", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "담당하기" }).click();
+  await expect(cocoQueueItem).not.toContainText("미지정");
+  await expect(page.getByRole("button", { name: "담당 취소" })).toBeVisible();
   await page.getByRole("spinbutton", { name: "CBC 검사 수량" }).fill("2");
   await expect(page.getByRole("spinbutton", { name: "CBC 검사 수량" })).toHaveValue("2");
 
@@ -391,18 +400,13 @@ test("billing workspace renders waiting invoice, checkout selection, editable li
     "aria-pressed",
     "true",
   );
-  await expect(page.getByText("담당하기 후 수납 액션 가능")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "수납 진행", exact: true }),
-  ).toBeDisabled();
-  await page.getByRole("button", { name: "담당하기" }).click();
-  await expect(cocoQueueItem).not.toContainText("미지정");
-  await expect(page.getByRole("button", { name: "담당 취소" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "수납 진행", exact: true }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "담당 취소" }).click();
   await expect(cocoQueueItem).toContainText("미지정");
+  await expect(page.getByRole("spinbutton", { name: "CBC 검사 수량" })).toHaveValue("2");
+  await expect(page.getByRole("spinbutton", { name: "CBC 검사 수량" })).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "수납 진행", exact: true }),
   ).toBeDisabled();

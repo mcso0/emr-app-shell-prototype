@@ -122,3 +122,10 @@ The local checkpoint and candidate refs stay reachable. For any later approved
 release, preserve the current production source/deployment or a reviewed revert
 of the eventual merge as rollback evidence. Reconfirm live main and exact PR head
 before approval; this work item does not authorize merge or deployment.
+
+The expanded legacy billing workspace case edited quantity/payment method before
+claiming ownership, while the identical main guard disables these inputs when
+unassigned. Its actions now occur after the existing actual claim. All prior
+amount/payment/claim/cancel assertions remain; added checks verify disabled inputs
+before claim and retained read-only quantity after cancellation. No permission or
+payment code changes. The initial failure trace is preserved separately.
