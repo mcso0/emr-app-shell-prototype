@@ -271,7 +271,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | AUDIT-SECURITY-PR-010       | human_review | audit-security       | P0       | Project 05 / DEN-91  | `docs/work/audit-security/AUDIT-SECURITY-PR-010-representative-pilot-rehearsal-defect-triage.md`       |
 | AUDIT-SECURITY-PR-011       | human_review | audit-security       | P0       | Project 05 / DEN-92  | `docs/work/audit-security/AUDIT-SECURITY-PR-011-product-mvp-live-transition-closeout.md`               |
 | AUDIT-SECURITY-PR-012       | human_review | audit-security       | P0       | Project 05 / DEN-93  | `docs/work/audit-security/AUDIT-SECURITY-PR-012-post-mvp-backlog-next-initiative-candidates.md`        |
-| PWA-PR-001                  | done         | pwa                  | P1       | PR 1                 | `docs/work/pwa/PWA-PR-001-installable-app-shell.md`                                                    |
+| PWA-PR-001                  | human_review | pwa                  | P1       | PR 1                 | `docs/work/pwa/PWA-PR-001-installable-app-shell.md`                                                    |
 | RECEPTION-PR-001            | done         | reception            | P0       | PR 1                 | `docs/work/reception/RECEPTION-PR-001-walk-in-checkin.md`                                              |
 | RECEPTION-PR-002            | done         | reception            | P1       | PR 2                 | `docs/work/reception/RECEPTION-PR-002-calendar-visual-ux.md`                                           |
 | RECEPTION-PR-003            | done         | reception            | P1       | PR 3                 | `docs/work/reception/RECEPTION-PR-003-registration-quality-ux.md`                                      |
