@@ -695,12 +695,29 @@ test("billing unpaid processing requires a reason", async ({ page }) => {
 });
 
 test("billing financial confirmation failure shows persistent recovery action", async ({
-  page,
+  page, request,
 }) => {
+  const invoiceId = "invoice-coco-260501";
+  const headers = { "x-clair-demo-session-user-id": "user-admin" };
+  const assignmentUrl = `/api/workspaces/clair-demo/billing/assignment?invoiceId=${invoiceId}`;
+  const before = await request.get(assignmentUrl, { headers });
+  expect(before.ok()).toBe(true);
+  const assignment = (await before.json()).assignment;
+  if (!assignment.assignedToUserId) {
+    const claim = await request.patch("/api/workspaces/clair-demo/billing/assignment", {
+      headers, data: { invoiceId, action: "claim", expectedRevision: assignment.revision },
+    });
+    expect(claim.ok()).toBe(true);
+  }
+  const owned = await request.get(assignmentUrl, { headers });
+  expect((await owned.json()).assignment.assignedToUserId).toBe("user-admin");
+  let failedConfirmations = 0;
   await page.route(
     "**/api/workspaces/clair-demo/billing/invoice-lines",
     async (route) => {
       if (route.request().method() === "PATCH") {
+        expect(route.request().postDataJSON().confirmBilling).toBe(true);
+        failedConfirmations += 1;
         await route.fulfill({
           contentType: "application/json",
           status: 500,
@@ -718,15 +735,16 @@ test("billing financial confirmation failure shows persistent recovery action", 
   );
 
   await page.goto(
-    "/w/clair-demo/billing?modulePanel=open&right=open&aside=closed",
+    `/w/clair-demo/billing?invoiceId=${invoiceId}&modulePanel=open&right=open&aside=closed`,
   );
 
-  await page.getByRole("button", { name: "담당하기" }).click();
+  await expect(page.getByRole("button", { name: "담당 취소" })).toBeVisible();
   await page.getByRole("button", { name: "수납 진행" }).click();
   const issueDialog = page.getByRole("dialog", { name: "수납 진행 전 확인" });
   await expect(issueDialog).toBeVisible();
   await issueDialog.getByRole("button", { name: "수납 진행 저장" }).click();
 
+  await expect.poll(() => failedConfirmations).toBe(1);
   await expect(page.getByTestId("billing-financial-error-alert")).toContainText(
     "수납 진행이 저장되지 않았습니다",
   );

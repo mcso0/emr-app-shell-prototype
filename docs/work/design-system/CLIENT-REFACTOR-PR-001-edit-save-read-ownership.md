@@ -129,3 +129,9 @@ unassigned. Its actions now occur after the existing actual claim. All prior
 amount/payment/claim/cancel assertions remain; added checks verify disabled inputs
 before claim and retained read-only quantity after cancellation. No permission or
 payment code changes. The initial failure trace is preserved separately.
+
+The financial-error fixture lost ownership during default-context preparation and
+never issued its mocked confirmation PATCH. Prepare the same mock actor's owner
+through the existing revision-checked API before opening an explicit invoice
+scope. Assert the actual confirmation request and retain the persistent error
+and retry assertions. This separates initial ownership from backend-error testing.
