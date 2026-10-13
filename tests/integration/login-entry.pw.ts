@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 const provider = "http://127.0.0.1:3224";
 test.beforeEach(async ({ request }) => { await request.post(`${provider}/test/control`, { data: {} }); });
 
-test("OTP requests existing accounts, preserves email and safe destination, verifies six digits", async ({ page, request }) => {
+test("OTP requests existing accounts, preserves email and safe destination, requires and verifies eight digits", async ({ page, request }) => {
   await page.goto("/login?next=%2Ffind-id%3Ffrom%3Dotp");
   await page.getByLabel("이메일", { exact: true }).fill("login@example.test");
   await page.getByRole("button", { name: "OTP 로그인", exact: true }).click();
@@ -17,6 +17,8 @@ test("OTP requests existing accounts, preserves email and safe destination, veri
   await page.getByLabel("인증번호", { exact: true }).fill("12345");
   await expect(page.getByRole("button", { name: "확인하고 로그인" })).toBeDisabled();
   await page.getByLabel("인증번호", { exact: true }).fill("123456");
+  await expect(page.getByRole("button", { name: "확인하고 로그인" })).toBeDisabled();
+  await page.getByLabel("인증번호", { exact: true }).fill("12345678");
   await page.getByRole("button", { name: "확인하고 로그인" }).click();
   await expect(page).toHaveURL(/\/find-id\?from=otp$/);
 });

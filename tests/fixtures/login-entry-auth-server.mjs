@@ -30,7 +30,7 @@ createServer(async (req, res) => {
     if (control.sendError) return send({ message: "Synthetic send failure", error_code: control.sendError }, control.sendError === "over_email_send_rate_limit" ? 429 : 400);
     return send({});
   }
-  if (url.pathname === "/auth/v1/verify") return body.token === "123456" || body.token === "12345678" ? send(session()) : send({ message: "Synthetic invalid code", error_code: "otp_expired" }, 403);
+  if (url.pathname === "/auth/v1/verify") return body.token === "12345678" ? send(session()) : send({ message: "Synthetic invalid code", error_code: "otp_expired" }, 403);
   if (url.pathname === "/auth/v1/recover") return control.recoverError ? send({ message: "Synthetic recovery error", error_code: "over_email_send_rate_limit" }, 429) : send({});
   if (url.pathname === "/auth/v1/user" && req.method === "GET") return req.headers.authorization?.includes("synthetic-signature") ? send(user()) : send({ message: "No session", error_code: "bad_jwt" }, 401);
   if (url.pathname === "/auth/v1/user" && req.method === "PUT") return control.updateError ? send({ message: "Synthetic policy error", error_code: "weak_password" }, 400) : send(user());

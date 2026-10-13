@@ -10,9 +10,9 @@ import { AuthEntryBackLink, AuthEntryHeading, AuthEntryNotice, AuthEntryPanel, A
 import { getEmailAuthError, getSafeLoginNextHref, isLoginEmailValid } from "./login-entry-contract";
 import styles from "./auth-entry.module.css";
 
-// The local provider uses six digits; the existing invite UI uses eight.
-// Accept either length and let Supabase validate expiry, attempts and correctness.
-const isCompleteToken = (value: string) => /^\d{6,8}$/.test(value);
+// Hosted Auth and invite verification use eight digits.
+// Supabase remains the authority for expiry, attempts and correctness.
+const isCompleteToken = (value: string) => /^\d{8}$/.test(value);
 const resendDelaySeconds = 60;
 
 export function EmailOtpLogin({ initialEmail = "", next, invalidLink = false, onVerified }: { initialEmail?: string; next: string | null; invalidLink?: boolean; onVerified: () => void }) {
@@ -87,7 +87,7 @@ export function EmailOtpLogin({ initialEmail = "", next, invalidLink = false, on
             <InputOTP ref={codeInput} id="login-otp" maxLength={8} pattern={REGEXP_ONLY_DIGITS} value={token} onChange={(value) => { setToken(value); setError(""); }} disabled={Boolean(busy)} autoComplete="one-time-code" aria-describedby="otp-help" aria-invalid={Boolean(error)}>
               <InputOTPGroup className={styles.otpGroup}>{Array.from({ length: 8 }, (_, index) => <InputOTPSlot key={index} index={index} />)}</InputOTPGroup>
             </InputOTP>
-            <p id="otp-help" className={styles.hint}>받은 6~8자리 숫자를 입력해 주세요. 인증번호가 만료되면 다시 받아 주세요.</p>
+            <p id="otp-help" className={styles.hint}>받은 8자리 숫자를 입력해 주세요. 인증번호가 만료되면 다시 받아 주세요.</p>
           </div>
           <div className={styles.otpMeta}><span>메일을 받지 못하셨나요?</span><button type="button" className={styles.textButton} disabled={Boolean(busy) || remaining > 0} onClick={() => void send()}>{busy === "send" ? "다시 받는 중" : remaining > 0 ? `다시 받기 (${remaining}초)` : "다시 받기"}</button></div>
         </> : <div className={styles.field}>

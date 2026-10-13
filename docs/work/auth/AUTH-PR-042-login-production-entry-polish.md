@@ -75,3 +75,13 @@ The reference direction is a quiet centered login card on a broad neutral canvas
 - 2026-07-07: Added a logo-only animated workspace entry loading screen for post-login route transition and protected workspace access checks. No auth provider, session, permission, Supabase, or redirect policy behavior was changed.
 
 - 2026-10-14 evidence: 45 unique relevant tests passed (22 existing auth/invite/recovery, 2 input/redirect, 14 synthetic-provider integration, 7 Storybook). Three stale demo-data/default-route expectations also fail on base `513143f9`; preserve them as unrelated findings. Lint, TypeScript, build, docs, secrets, UX copy and diff checks pass. Built app visual QA confirms 440×548 at x740/y266 with 376px inputs and responsive entry screens. Hosted numeric OTP mail/redirect config and real delivery remain unverified. No main merge or deployment.
+
+## Production release preparation (2026-10-14)
+
+승욱 explicitly requested hosted authentication configuration inspection, a PR, origin/main merge and deployment, preserving password/invite authentication and leaving 아이디 찾기 unavailable. This authorizes release preparation; the exact candidate gate remains in release-deployment-ops. No identity records or mail/SMS are in the inspection scope.
+
+- Production and Preview both use Supabase Auth with the same configured project. Hosted email OTP length is 8, expiry is 3600 seconds, SMTP is configured, and both new-user Confirmation and existing-user Magic Link templates contain numeric Token. The recovery template uses provider ConfirmationURL, preserving PKCE recovery.
+- Align ordinary OTP and local email OTP configuration to the observed hosted 8-digit contract. Keep signed recent recovery AMR checks and existing invitation guards.
+- Auth URL issue: Site URL still points to localhost; the canonical Production origin only explicitly allowlists the recovery callback. A two-field URL proposal preserves every existing entry and adds ordinary OTP and invite callback paths and their query forms. Remote configuration changes require target-specific approval.
+
+- Existing hosted email controls are unchanged: minimum send interval 60 seconds and project email rate limit 2/hour. This is a real operating constraint for OTP/invitation/recovery traffic, not proof of production mail delivery. Increasing limits or sending real mail requires separate scope.
