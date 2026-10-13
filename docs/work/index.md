@@ -544,3 +544,4 @@ See `docs/work/inbox.md`.
 | CHART-PR-040 | in_progress | chart | P0 | Approved Figma vital history dialog and per-field latest values | `docs/work/chart/CHART-PR-040-vital-history-dialog.md` |
 | CHART-PR-040 | human_review | chart | P1 | Approved SOAP document toolbar and private attachments | `docs/work/chart/CHART-PR-040-document-editor-toolbar-and-attachments.md` |
 | CHART-PR-041 | in_progress | chart | P1 | Four chart regions reveal scrollbars on hover with a shared thumb color token | `docs/work/chart/CHART-PR-041-chart-scrollbar-hover-reveal.md` |
+| CLIENT-REFACTOR-PR-001 | human_review | design-system | P1 | Chart/reception/profile/Lab edit-save-read ownership and exact-head Draft PR verification | `docs/work/design-system/CLIENT-REFACTOR-PR-001-edit-save-read-ownership.md` |
