@@ -8,6 +8,11 @@ const placeholderPattern =
 
 const rules = [
   {
+    id: "sql_literal_auth_password",
+    message: "SQL password hashing must not use a committed literal",
+    pattern: /\bcrypt\s*\(\s*(?:'(?:[^']|'')*'|\$([A-Za-z_][A-Za-z0-9_]*)?\$[\s\S]*?\$\1\$)\s*,/gi,
+  },
+  {
     id: "openai_api_key",
     message: "OpenAI API key-like value",
     pattern: /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{24,}\b/g,
@@ -137,7 +142,7 @@ function scanText(file, content) {
         line: lineNumberAt(content, match.index),
         rule: rule.id,
         message: rule.message,
-        sample: redact(value),
+        sample: rule.id === "sql_literal_auth_password" ? "<redacted>" : redact(value),
       });
     }
   }
@@ -167,6 +172,15 @@ function redact(value) {
 }
 
 function runSelfTest() {
+  const sqlPasswords = [
+    "cr" + "ypt('unsafe-example', salt)",
+    "CR" + "YPT (\n'escaped''example', salt)",
+    "cr" + "ypt($$unsafe-example$$, salt)",
+    "cr" + "ypt($secret$unsafe-example$secret$, salt)",
+  ];
+  if (sqlPasswords.some((sql) => !scanText("sql-self-test", sql).some((f) => f.rule === "sql_literal_auth_password" && f.sample === "<redacted>"))) {
+    throw new Error("SQL literal password detection/redaction failed");
+  }
   const dangerous = [
     "OPENAI_API_KEY=" + "sk-" + "a".repeat(40),
     "STRIPE_SECRET_KEY=" + "sk_live_" + "b".repeat(30),

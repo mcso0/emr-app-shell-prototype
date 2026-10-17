@@ -1,6 +1,6 @@
 # Workspace Auth Local Validation And Seed
 
-Updated: 2026-05-18
+Updated: 2026-10-17
 Linear: DEN-35
 
 This document defines how to validate the workspace auth migration locally and what seed data later tests may rely on.
@@ -55,6 +55,18 @@ Do not use `--linked`, `db push`, or remote project credentials unless 승욱 ex
 ## Seed Contract
 
 The stable seed file is `supabase/seed.sql`. It creates one local workspace and four deterministic users/memberships:
+
+Seed identities remain deterministic, but new authentication passwords are random and are not printed. Replaying seed/backfill SQL preserves existing passwords. After a local reset, set a private password explicitly for the existing 28 synthetic subjects:
+
+```bash
+# Enter privately in the terminal; do not paste the value into chat or commit it.
+read -r -s CLAIR_SYNTHETIC_AUTH_PASSWORD
+export CLAIR_SYNTHETIC_AUTH_PASSWORD
+npm run demo:password:local
+unset CLAIR_SYNTHETIC_AUTH_PASSWORD
+```
+
+This helper reads local CLI status, accepts only the loopback API on port54321, rejects redirects and hosted endpoints, and never prints or saves credentials. Use a private 16–72 character value. Existing real-auth QA scripts accept the same environment variable. Hosted account password changes are a separate administrator action; do not reuse this local helper remotely.
 
 | Email | User ID suffix | Role |
 | --- | --- | --- |
