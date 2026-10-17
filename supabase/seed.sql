@@ -22,7 +22,7 @@ values
     'authenticated',
     'authenticated',
     'admin@clair.local',
-    extensions.crypt('local-password', extensions.gen_salt('bf')),
+    extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"name":"송민재"}'::jsonb,
@@ -34,7 +34,7 @@ values
     'authenticated',
     'authenticated',
     'vet@clair.local',
-    extensions.crypt('local-password', extensions.gen_salt('bf')),
+    extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"name":"이수지"}'::jsonb,
@@ -46,7 +46,7 @@ values
     'authenticated',
     'authenticated',
     'technician@clair.local',
-    extensions.crypt('local-password', extensions.gen_salt('bf')),
+    extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"name":"송하윤"}'::jsonb,
@@ -58,7 +58,7 @@ values
     'authenticated',
     'authenticated',
     'front-desk@clair.local',
-    extensions.crypt('local-password', extensions.gen_salt('bf')),
+    extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"name":"최유나"}'::jsonb,
@@ -68,7 +68,6 @@ values
 on conflict (id) do update
 set
   email = excluded.email,
-  encrypted_password = excluded.encrypted_password,
   email_confirmed_at = excluded.email_confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data,
@@ -238,24 +237,23 @@ insert into auth.users (
   updated_at
 )
 values
-  ('49110000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"서지훈"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'manager@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"임유진"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'vet-cheongdam@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"이수지"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'tech-cheongdam@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"송하윤"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'desk-cheongdam@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"최유나"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'vet-doyun@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"김도윤"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'vet-seoyeon@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"박서연"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'vet-minjae@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"정민재"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'tech-harin@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"최하린"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'vet-jihoon@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"오지훈"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'vet-gayeon@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"한가연"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'desk-taeo@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"윤태오"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000013', 'authenticated', 'authenticated', 'tech-eunseo@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"문은서"}'::jsonb, now(), now()),
-  ('49110000-0000-4000-8000-000000000014', 'authenticated', 'authenticated', 'desk-jaewon@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"서재원"}'::jsonb, now(), now())
+  ('49110000-0000-4000-8000-000000000001', 'authenticated', 'authenticated', 'owner@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"서지훈"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000002', 'authenticated', 'authenticated', 'manager@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"임유진"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000003', 'authenticated', 'authenticated', 'vet-cheongdam@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"이수지"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000004', 'authenticated', 'authenticated', 'tech-cheongdam@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"송하윤"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'desk-cheongdam@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"최유나"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'vet-doyun@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"김도윤"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'vet-seoyeon@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"박서연"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'vet-minjae@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"정민재"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'tech-harin@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"최하린"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'vet-jihoon@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"오지훈"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'vet-gayeon@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"한가연"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'desk-taeo@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"윤태오"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000013', 'authenticated', 'authenticated', 'tech-eunseo@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"문은서"}'::jsonb, now(), now()),
+  ('49110000-0000-4000-8000-000000000014', 'authenticated', 'authenticated', 'desk-jaewon@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"서재원"}'::jsonb, now(), now())
 on conflict (id) do update
 set
   email = excluded.email,
-  encrypted_password = excluded.encrypted_password,
   email_confirmed_at = excluded.email_confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data,
@@ -1635,13 +1633,12 @@ insert into auth.users (
   updated_at
 )
 values
-  ('00000000-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'foreign-admin@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-197 Foreign Admin"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000013', 'authenticated', 'authenticated', 'inactive-front-desk@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-197 Inactive Front Desk"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000014', 'authenticated', 'authenticated', 'no-membership@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-197 No Membership Actor"}'::jsonb, now(), now())
+  ('00000000-0000-4000-8000-000000000012', 'authenticated', 'authenticated', 'foreign-admin@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-197 Foreign Admin"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000013', 'authenticated', 'authenticated', 'inactive-front-desk@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-197 Inactive Front Desk"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000014', 'authenticated', 'authenticated', 'no-membership@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-197 No Membership Actor"}'::jsonb, now(), now())
 on conflict (id) do update
 set
   email = excluded.email,
-  encrypted_password = excluded.encrypted_password,
   email_confirmed_at = excluded.email_confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data,
@@ -1772,17 +1769,16 @@ insert into auth.users (
   updated_at
 )
 values
-  ('00000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'vet2@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Vet Internal"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'vet3@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Vet Surgery"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'tech2@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Lab Tech"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'tech3@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Imaging Tech"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'tech4@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Treatment Tech"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'front-desk2@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Reception Billing"}'::jsonb, now(), now()),
-  ('00000000-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'front-desk3@clair.local', extensions.crypt('local-password', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Reception Triage"}'::jsonb, now(), now())
+  ('00000000-0000-4000-8000-000000000005', 'authenticated', 'authenticated', 'vet2@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Vet Internal"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000006', 'authenticated', 'authenticated', 'vet3@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Vet Surgery"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000007', 'authenticated', 'authenticated', 'tech2@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Lab Tech"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000008', 'authenticated', 'authenticated', 'tech3@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Imaging Tech"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000009', 'authenticated', 'authenticated', 'tech4@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Treatment Tech"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000010', 'authenticated', 'authenticated', 'front-desk2@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Reception Billing"}'::jsonb, now(), now()),
+  ('00000000-0000-4000-8000-000000000011', 'authenticated', 'authenticated', 'front-desk3@clair.local', extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"name":"DEN-194 Reception Triage"}'::jsonb, now(), now())
 on conflict (id) do update
 set
   email = excluded.email,
-  encrypted_password = excluded.encrypted_password,
   email_confirmed_at = excluded.email_confirmed_at,
   raw_app_meta_data = excluded.raw_app_meta_data,
   raw_user_meta_data = excluded.raw_user_meta_data,

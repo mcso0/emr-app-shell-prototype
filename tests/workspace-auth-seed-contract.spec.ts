@@ -20,9 +20,10 @@ test("workspace auth seed contract creates deterministic MVP users and membershi
   expect(seed).toContain("workspace_auth_seed_contract_version");
 });
 
-test("workspace auth seed contract qualifies pgcrypto functions for remote Supabase", () => {
-  expect(seed).toContain("extensions.crypt('local-password', extensions.gen_salt('bf'))");
-  expect(seed).not.toContain("crypt('local-password', gen_salt('bf'))");
+test("workspace auth seed uses random passwords and preserves existing credentials", () => {
+  expect(seed).toContain("extensions.crypt(encode(extensions.gen_random_bytes(32), 'hex'), extensions.gen_salt('bf'))");
+  expect(seed).not.toMatch(/crypt\s*\(\s*'/i);
+  expect(seed).not.toContain("encrypted_password = excluded.encrypted_password");
 });
 
 test("workspace auth seed contract creates email identities for Supabase password login", () => {

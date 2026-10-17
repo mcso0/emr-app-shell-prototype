@@ -11,6 +11,7 @@
     "clinical-master:publisher:benchmark": "node scripts/benchmark-clinical-master-publisher.mjs",
     "demo:seed:avatars": "node scripts/upload-staff-avatars.mjs",
     "demo:seed:check": "node scripts/check-local-supabase-replay.mjs",
+    "demo:password:local": "node scripts/set-local-synthetic-password.mjs",
     "docs:check": "node scripts/check-doc-links.mjs",
     "owner-os": "node scripts/owner-os.mjs",
     "owner-os:dashboard": "node scripts/owner-os.mjs dashboard",
