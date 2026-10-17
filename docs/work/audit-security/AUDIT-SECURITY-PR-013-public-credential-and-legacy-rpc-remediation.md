@@ -3,7 +3,7 @@ id: AUDIT-SECURITY-PR-013
 status: human_review
 area: audit-security
 priority: P0
-target_pr: pending
+target_pr: 995
 owner: Codex
 updated: 2026-10-17
 ---
@@ -55,7 +55,7 @@ Close published fixed authentication credentials and the legacy laboratory gette
 - Independent candidate review identified a first-apply session-cleanup gap after manual password changes and a Docker readiness race. Both were reproduced and corrected. The isolated SQL harness now covers that first-apply branch and preserves post-migration sessions on replay using applied migration history.
 - Local checks passed: focused Playwright contracts (17), local bootstrap tests (2), secret scanner self-tests, isolated PostgreSQL security/compatibility harness, docs, lint, typecheck and production build. The build retains an existing file-tracing warning in the documentation reader.
 - Source changes remove fixed password provisioning from all five SQL copies, preserve existing passwords on replay, restrict optional developer bootstrap to localhost, and detect SQL literal passwords in the existing secret gate. No new dependency or application UI change.
-- Source PR and exact-candidate remote CI are pending. New main/Production merge requires its own exact-candidate approval; PR #988 approval does not cover a changed candidate.
+- Source PR #995 is prepared; exact-candidate remote CI and Preview are recorded in its checks. New main/Production merge requires its own exact-candidate approval; PR #988 approval does not cover a changed candidate.
 
 ## Verification Limits And Follow-Up
 
