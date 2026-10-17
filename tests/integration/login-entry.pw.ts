@@ -2,6 +2,33 @@ import { expect, test } from "@playwright/test";
 const provider = "http://127.0.0.1:3224";
 test.beforeEach(async ({ request }) => { await request.post(`${provider}/test/control`, { data: {} }); });
 
+test("password login preserves the safe destination and persists the session cookie", async ({ page, context, request }) => {
+  await page.goto("/login?next=%2Ffind-id%3Ffrom%3Dpassword");
+  await page.getByLabel("이메일", { exact: true }).fill("login@example.test");
+  await page.getByLabel("비밀번호", { exact: true }).fill("synthetic-login-password");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+  await expect(page).toHaveURL(/\/find-id\?from=password$/);
+  const calls = await (await request.get(`${provider}/test/calls`)).json();
+  expect(calls.find((call: { path: string }) => call.path === "/auth/v1/token")).toMatchObject({ grant: "password", email: "login@example.test" });
+  expect((await context.cookies()).some(cookie => cookie.name === "sb-127-auth-token" && cookie.value)).toBe(true);
+  await page.reload();
+  await expect(page).toHaveURL(/\/find-id\?from=password$/);
+  expect((await context.cookies()).some(cookie => cookie.name === "sb-127-auth-token" && cookie.value)).toBe(true);
+});
+
+test("proxy refreshes an expired session and returns the updated cookie", async ({ page, context, request }) => {
+  const session = await (await request.get(`${provider}/test/session?expired=true`)).json();
+  const expiredCookie = `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`;
+  await context.addCookies([{ name: "sb-127-auth-token", value: expiredCookie, domain: "127.0.0.1", path: "/", httpOnly: false, secure: false, sameSite: "Lax" }]);
+  await page.goto("/find-id?from=refresh");
+  await expect(page.getByTestId("auth-entry-panel")).toBeVisible();
+  const calls = await (await request.get(`${provider}/test/calls`)).json();
+  expect(calls.some((call: { path: string; grant?: string }) => call.path === "/auth/v1/token" && call.grant === "refresh_token")).toBe(true);
+  const refreshedCookie = (await context.cookies()).find(cookie => cookie.name === "sb-127-auth-token");
+  expect(refreshedCookie?.value).toBeTruthy();
+  expect(refreshedCookie?.value).not.toBe(expiredCookie);
+});
+
 test("OTP requests existing accounts, preserves email and safe destination, requires and verifies eight digits", async ({ page, request }) => {
   await page.goto("/login?next=%2Ffind-id%3Ffrom%3Dotp");
   await page.getByLabel("이메일", { exact: true }).fill("login@example.test");

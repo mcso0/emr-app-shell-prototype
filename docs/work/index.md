@@ -214,7 +214,7 @@ For actual next work, start from the active Linear project and issue, then use t
 | WORKSPACE-TABS-PR-003 | human_review | app-shell | P1 | Approved existing dnd-kit tab reorder; preserve select/close/persistence | `docs/work/app-shell/WORKSPACE-TABS-PR-003-drag-reorder.md` |
 | AUTH-PR-001                 | human_review | auth                 | P0       | PR 1                 | `docs/work/auth/AUTH-PR-001-workspace-auth-scope-permission-matrix.md`                                 |
 | AUTH-PR-002                 | human_review | auth                 | P0       | PR 2                 | `docs/work/auth/AUTH-PR-002-workspace-membership-data-security-plan.md`                                |
-| AUTH-PR-003                 | human_review | auth                 | P0       | PR 3                 | `docs/work/auth/AUTH-PR-003-next-security-patch.md`                                                    |
+| AUTH-PR-003                 | human_review | auth                 | P0       | PR #994 follow-up     | `docs/work/auth/AUTH-PR-003-next-security-patch.md`                                                    |
 | AUTH-PR-004                 | human_review | auth                 | P0       | PR 4                 | `docs/work/auth/AUTH-PR-004-workspace-creation-foundation.md`                                          |
 | AUTH-PR-005                 | human_review | auth                 | P0       | PR 5                 | `docs/work/auth/AUTH-PR-005-member-invitation-status-flow.md`                                          |
 | AUTH-PR-006                 | human_review | auth                 | P0       | PR 6                 | `docs/work/auth/AUTH-PR-006-server-permission-resolver-contract.md`                                    |
