@@ -5,8 +5,8 @@ const userId = "91000000-0000-4000-8000-000000000001";
 let control = {};
 let calls = [];
 const user = () => ({ id: userId, email: "login@example.test", role: "authenticated", aud: "authenticated", app_metadata: { provider: "email", providers: ["email"] }, user_metadata: {}, created_at: "2026-10-14T00:00:00Z", identities: [] });
-const session = () => {
-  const now = Math.floor(Date.now() / 1000);
+const session = (expired = false) => {
+  const now = Math.floor(Date.now() / 1000) - (expired ? 3660 : 0);
   const token = [Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url"), Buffer.from(JSON.stringify({ sub: userId, role: "authenticated", email: "login@example.test", exp: now + 3600, iat: now, aud: "authenticated", amr: [{ method: control.recovery ? "recovery" : "otp", timestamp: now }] })).toString("base64url"), "synthetic-signature"].join(".");
   return { access_token: token, refresh_token: "synthetic-refresh-value", token_type: "bearer", expires_in: 3600, expires_at: now + 3600, user: user() };
 };
@@ -23,7 +23,7 @@ createServer(async (req, res) => {
   if (url.pathname === "/health") return send({ ok: true });
   if (url.pathname === "/test/control") { control = body; calls = []; return send({ ok: true }); }
   if (url.pathname === "/test/calls") return send(calls);
-  if (url.pathname === "/test/session") return send(session());
+  if (url.pathname === "/test/session") return send(session(url.searchParams.get("expired") === "true"));
   calls.push({ path: url.pathname, method: req.method, createUser: body.create_user, email: body.email, redirectTo: url.searchParams.get("redirect_to"), grant: url.searchParams.get("grant_type") });
   if (control.delayMs) await new Promise(resolve => setTimeout(resolve, control.delayMs));
   if (url.pathname === "/auth/v1/otp") {
