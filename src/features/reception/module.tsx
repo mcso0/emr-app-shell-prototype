@@ -4509,7 +4509,7 @@ function ScheduleToolbar({
               />
             }
           >
-            <CdsActionsPlusIcon data-icon="inline-start" />
+            <CdsActionsPlusIcon className="size-[18px]" data-icon="inline-start" />
             접수/예약 생성
             <ChevronDownIcon data-icon="inline-end" />
           </DropdownMenuTrigger>

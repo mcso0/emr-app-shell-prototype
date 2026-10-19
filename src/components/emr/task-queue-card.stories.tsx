@@ -101,3 +101,37 @@ export const EventMetadata: Story = {
     }
   },
 };
+
+export const LongMetadata: Story = {
+  argTypes: fixedControls,
+  parameters: { docs: { description: { story: "일반 큐 카드의 요청 시점·담당 배지는 아이콘 간격 4px, 최대 폭 144px·84px을 사용합니다. 256px·288px 카드에서 긴 합성 문구의 말줄임과 아이콘 보존을 확인합니다. 환자별 보기와 공통 배지 기본값은 바꾸지 않습니다." } } },
+  render: () => <div className="flex flex-wrap items-start gap-4">
+    {[256, 288].map(width => <div key={width} style={{ width }}>
+      <EmrTaskQueueCard selected={false} item={{
+        ...baseItem,
+        eventActorName: "합성 요청자 이름이 긴 경우",
+        eventKind: "reRequest",
+        assigneeName: "합성 담당자 이름이 긴 경우",
+        testId: `long-metadata-${width}`,
+      }} />
+    </div>)}
+  </div>,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const width of [256, 288]) {
+      const card = canvas.getByTestId(`long-metadata-${width}`);
+      const footer = card.querySelector<HTMLElement>('[data-slot="task-queue-card-footer"]')!;
+      const badges = Array.from(footer.children) as HTMLElement[];
+      await expect(badges).toHaveLength(2);
+      for (const badge of badges) {
+        const label = badge.lastElementChild as HTMLElement;
+        await expect(label.scrollWidth).toBeGreaterThan(label.clientWidth);
+        await expect(getComputedStyle(label).textOverflow).toBe("ellipsis");
+        await expect(getComputedStyle(label).overflow).toBe("hidden");
+        await expect(badge.querySelector("svg")).toBeVisible();
+        await expect(badge.getBoundingClientRect().right).toBeLessThanOrEqual(footer.getBoundingClientRect().right + 1);
+      }
+      await expect(within(card).getByLabelText("담당 합성 담당자 이름이 긴 경우")).toBeVisible();
+    }
+  },
+};
