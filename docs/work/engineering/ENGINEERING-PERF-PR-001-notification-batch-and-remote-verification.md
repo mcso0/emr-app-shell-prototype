@@ -248,3 +248,16 @@ focused checks and standard local/remote release gates before delivery.
 Implementation is in progress in isolated `codex/notification-poll-sharing`.
 The earlier profile/billing shared-read candidate must be integrated before final
 verification; overlapping documentation history must be preserved during merge.
+
+### Notification window sharing verification — 2026-10-20
+
+- Integrated the profile/billing shared-read candidate before verification. Focused Vitest configuration passed 72 tests across 8 files.
+- `npx playwright test --config playwright.notification-sharing.config.ts` passed all 11 browser tests using the actual hook and toast delivery component, native BroadcastChannel/Web Locks, a loopback-only fixture, and synthetic API interception. The fixture blocks external requests and does not load service environment files.
+- During the real 62-second two-window cadence test, each window performed its own initial GET; only two subsequent periodic GETs occurred in total. The 30-second cadence remains unchanged.
+- Browser checks covered read/archive/restore/read-all synchronization, concurrent mutations, stale GET and POST completion, ordinary/silent mutation failures, 403 fencing and own retry, login/workspace separation, unavailable sharing APIs, missing server scope, and login-generation toast reset.
+- Scope hashing tests cover stable identical inputs and isolation by actor, workspace, and login session; a missing session disables sharing. A changed-scope response cannot publish into the previous channel.
+- Frozen-lock and stopped-message/timer behavior was verified at the coordinator protocol boundary with synthetic clocks and transport. An actual browser process freeze was not executed.
+- Server/API/DB permission enforcement, notification semantics, and per-window toast ownership remain in place. No database, provider, real-data mutation, or paid service change is part of this candidate.
+- Remote required CI, current-head Preview, ordered merge, and Production smoke are separate release evidence and remain pending at this local verification checkpoint.
+
+- Parent integrated preflight passed: full ESLint, non-incremental TypeScript, and Production build (25 pages). The existing `src/lib/prd-viewer/doc-reader.ts:78` dynamic filesystem tracing warning remains unrelated. Documentation references passed for 1,073 Markdown files, secret scan for 4,930 tracked files, and `git diff --check` passed.
