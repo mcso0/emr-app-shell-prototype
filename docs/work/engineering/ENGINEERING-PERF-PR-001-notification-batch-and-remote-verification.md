@@ -12,7 +12,7 @@ source_docs:
 dependencies:
   - "RECEPTION-PERF-PR-001"
   - "NOTIFICATION-PR-024"
-updated: "2026-07-19"
+updated: "2026-10-20"
 ---
 
 # Notification Batch And Remote Verification
@@ -139,3 +139,68 @@ Expected savings: hidden reception staff interval calls stop (nominally 60 calls
 per hidden tab-hour), overlapping automatic reads collapse to one pending request,
 and disconnected Presence no longer keeps issuing activity RPCs. Real byte/egress
 savings, client attribution and deployed runtime behavior remain unmeasured.
+
+## Shared Read Refresh — 2026-10-20
+
+### Outcome And Authority
+
+승욱 authorized the ordered UI, release-policy, and request-reduction work, with
+advance approval for each bounded PR to proceed through review, checks, Ready
+Preview, protected main merge, and Production verification. The parent performs
+review; GPT-6.1 Sol workers implement the scoped changes. This section records
+that direct approval and does not grant authority by itself.
+
+Preserve existing functionality and visible freshness while eliminating duplicate
+same-scope profile/billing reads and paired focus/visibility refreshes. Keep this
+candidate separate from notification sharing across browser windows.
+
+### Scope And Boundaries
+
+- Share personal-profile reads across same-actor consumers; retain the four-minute
+  visible refresh and revalidate on visible return.
+- Share billing-assignment reads for the same actor, workspace, role, and invoice;
+  retain the visible ten-second refresh and authoritative post-mutation reads.
+- Coalesce paired focus/visibility resume events without suppressing mutation
+  invalidations. Dispose unused resources and reject stale, aborted, or previous
+  actor/workspace results.
+- Add only the feature-local live-auth subscription necessary to identify billing
+  resource scope; do not redesign global auth hydration or permission policy.
+- No DB/RLS/migration, provider, payment, real-data mutation, paid resource, polling
+  interval increase, or unrelated refactor. Notification cadence remains 30 seconds.
+
+### Verification And Completion
+
+Use synthetic fixtures and deterministic request counts. Verify multiple
+consumers, hidden/resume behavior, paired events, ref-count disposal, auth/logout,
+workspace/invoice changes, failed reads, repeated edits, mutation invalidation,
+and late responses. Retain server authorization and mutation revision contracts.
+Run focused frontend/server regression checks, lint, type checks, build, docs,
+secret scan, and diff validation. Record measured request reduction separately
+from unmeasured production CPU savings. Release requires current candidate CI,
+Ready Preview, scoped synthetic smoke and rollback evidence. Automatic Preview
+activation remains a separate usage/data-conditioned operation.
+
+Implementation and verification are in progress in the isolated
+`codex/shared-read-refresh` branch. Prior unrelated delivery history and
+outstanding database findings above remain unchanged.
+
+### Shared Read Verification Evidence
+
+- Parent-integrated frontend refresh suite: 56 tests passed across six files.
+- Existing billing assignment server/UI and provisional-invoice browser specs:
+  three passed on the isolated loopback mock server. The cold development-server
+  run timed out/had incomplete page startup; the warmed rerun passed all three
+  with a 90-second test budget. No hosted data or provider was used.
+- Actual baseline (`9002e19b`) and changed hook code ran under the same synthetic
+  effect/timer harness with three consumers: profile eight visible minutes
+  **9 -> 3 GETs**; profile startup then eight hidden minutes **9 -> 1**;
+  billing thirty visible seconds **12 -> 4**; billing startup then thirty hidden
+  seconds **3 -> 1**. These are request counts, not measured CPU savings.
+- Focused regressions cover forced post-PATCH reads, consecutive completions,
+  failed PATCH/read retry, later Realtime invalidation, disposed auth callbacks,
+  actor changes/logout before React cleanup, and same-user login epochs.
+- Parent review corrected pending-invalidation reuse and confirmed scoped billing
+  mirror cleanup cannot clear a newer resource's publication.
+- Full lint, nonincremental TypeScript, Node 22 production build, docs (1,073),
+  secret scan (4,920), and diff checks passed. Build retains the existing
+  docs-viewer dynamic-filesystem trace warning. Remote delivery remains pending.
