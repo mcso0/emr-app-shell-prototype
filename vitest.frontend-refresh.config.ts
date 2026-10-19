@@ -7,6 +7,6 @@ export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   test: {
     environment: "node",
-    include: ["tests/visible-refresh.test.ts", "tests/workspace-staff-heartbeat.test.ts", "tests/workspace-tabs-store.test.ts", "tests/workspace-tab-warning-preference.test.ts"],
+    include: ["tests/notification-poll-sharing.test.ts", "tests/notification-session-lifecycle.test.ts", "tests/visible-refresh.test.ts", "tests/workspace-staff-heartbeat.test.ts", "tests/workspace-tabs-store.test.ts", "tests/workspace-tab-warning-preference.test.ts"],
   },
 });

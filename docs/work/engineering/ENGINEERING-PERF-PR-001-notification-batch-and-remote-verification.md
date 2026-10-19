@@ -139,3 +139,47 @@ Expected savings: hidden reception staff interval calls stop (nominally 60 calls
 per hidden tab-hour), overlapping automatic reads collapse to one pending request,
 and disconnected Presence no longer keeps issuing activity RPCs. Real byte/egress
 savings, client attribution and deployed runtime behavior remain unmeasured.
+
+## Notification Window Sharing — 2026-10-20
+
+### Approved Outcome And Candidate Boundary
+
+승욱 authorized request reduction while preserving existing functionality and the
+30-second notification cadence, with parent review and GPT-6.1 Sol implementation.
+Advance bounded delivery approval covers this separate candidate after checks,
+Ready Preview, review, protected merge, scoped smoke and rollback evidence.
+No paid service, DB/RLS/migration, real-data mutation, provider effect, or global
+auth/permission redesign is included. The prior frontend follow-up's exclusion of
+multi-window sharing describes that historical candidate, not this new authority.
+
+### Implementation Contract
+
+Use server-verified actor/login-session/workspace scope. Each window performs its
+own authorized initial read before joining an in-memory group. Supported browsers
+may share steady visible polling through BroadcastChannel and Web Locks. Unsupported
+or failing coordination falls back to the existing per-window refresh. Initial,
+focus/resume, explicit retry, and post-mutation reads remain available directly.
+Hidden/disposed leaders release ownership; stalled leaders cannot indefinitely
+suppress a visible follower's independent refresh.
+
+Never persist notification payloads or credentials for coordination. Preserve
+server authorization, bounded rows, global counts, mutation permissions, and
+per-window toast/sound/preferences behavior. Leader changes must not reset toast
+history. Different users, workspaces, or login generations must not accept each
+other's payloads. Logout, denied access, delayed reads and pre-mutation responses
+must not restore protected or stale state. Sharing changes requests, not alert
+ownership or the existing delivery policy.
+
+### Verification And Done Criteria
+
+Use synthetic fixtures with no hosted DB writes. Verify two visible windows,
+unsupported APIs, leader hide/close/stall, scope changes, logout/relogin, 401/403,
+concurrent mutation invalidation, failed/repeated edits, stale replies, and retained
+per-window delivery semantics. Include actual same-origin browser coordination and
+live-mode caller evidence; mock auth alone cannot prove the sharing branch.
+Record request counts without claiming unmeasured Production CPU savings. Complete
+focused checks and standard local/remote release gates before delivery.
+
+Implementation is in progress in isolated `codex/notification-poll-sharing`.
+The earlier profile/billing shared-read candidate must be integrated before final
+verification; overlapping documentation history must be preserved during merge.
