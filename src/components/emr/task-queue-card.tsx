@@ -129,7 +129,7 @@ export function EmrTaskQueueCard({
         ) : null}
         <span className="min-w-0 flex-1 truncate">{item.secondLineText}</span>
       </div>
-      <div data-slot="task-queue-card-footer" className="flex h-6 min-w-0 items-center gap-[var(--clair-spacing-6)] overflow-hidden">
+      <div data-slot="task-queue-card-footer" className="flex h-6 min-w-0 items-center gap-[var(--clair-spacing-6)] overflow-hidden [&>span]:gap-[var(--clair-spacing-4)]">
         <EmrSidePanelStatusBadge
           icon={<ClockIcon aria-hidden="true" />}
           maxWidthClassName="max-w-[144px]"
