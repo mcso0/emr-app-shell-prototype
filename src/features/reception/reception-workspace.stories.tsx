@@ -99,6 +99,7 @@ async function ready(canvasElement: HTMLElement) {
   return { canvas, main, aside };
 }
 export const DayWeekMonthActualCalendar: Story = {
+  parameters: { docs: { description: { story: "실제 접수/예약 생성 버튼은 더하기 아이콘만 18px이며 펼침 화살표는 16px, 아이콘·라벨 간격은 4px을 유지합니다. 원본 SVG 여백은 유지합니다." } } },
   play: async ({ canvasElement }) => {
     const { main, aside } = await ready(canvasElement);
     await expect(main.getByTestId("reception-day-calendar")).toBeVisible();
