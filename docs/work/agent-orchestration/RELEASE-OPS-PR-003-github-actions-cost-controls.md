@@ -16,6 +16,8 @@ updated: "2026-07-18"
 
 # GitHub Actions Cost Controls
 
+> Historical private-plan cost-control implementation. Its manual-only workflow is superseded by [RELEASE-OPS-PR-005](RELEASE-OPS-PR-005-public-repository-cicd.md) and the current release policy. The evidence below is preserved, not an active instruction.
+
 ## Goal
 
 Keep the private GitHub Free repository inside a small, explicit Actions budget without removing release verification or Vercel PR previews.

@@ -10,10 +10,11 @@ related_work:
   - DEN-446
   - RELEASE-OPS-PR-003
   - RELEASE-OPS-PR-004
+  - RELEASE-OPS-PR-005
 supersedes:
   - ENGINEERING-OPERATIONS-HOBBY-FREE-STAGING-BRANCH-RELEASE-PLAN
 superseded_by: []
-last_updated: 2026-09-03
+last_updated: 2026-10-20
 ---
 
 # Release Environment Policy
@@ -26,15 +27,15 @@ The repository is operated by one owner without a separate staging review audien
 
 | Environment | Source | Purpose | Allowed by default | Blocked without explicit approval |
 | --- | --- | --- | --- | --- |
-| PR Preview | Feature or `codex/*` branch | Isolated review and scoped smoke | Preview deployment, inspection, test | `main` merge, Production settings, real data |
+| PR Preview | Feature or `codex/*` branch | Candidate review and scoped smoke | Preview deployment, inspection, test | `main` merge, Production settings, real data |
 | Production | `main` | Current user-facing version | Read-only inspection | PR merge, deploy/promote, Production env or alias change |
 
 Active operating rule:
 
 ```text
-work branch -> PR to main -> automatic Vercel Preview
-exact PR head -> manual Release Check -> explicit Production approval
-approved PR -> main -> Vercel Production -> scoped smoke
+work branch push -> Vercel Preview (when enabled)
+PR to main -> automatic Release Check -> latest-candidate and focused verification
+valid explicit approval + all gates passed -> main -> Vercel Production -> scoped smoke
 ```
 
 There is no active long-lived `staging` branch, fixed staging alias, or fixed-staging alias automation. Historical staging plans remain in the repository as superseded records only.
@@ -47,8 +48,8 @@ There is no active long-lived `staging` branch, fixed staging alias, or fixed-st
 - PR Preview is the only active pre-production review environment.
 - A merge to `main` is a Production release, even for documentation-only changes.
 - The exact PR head SHA must be recorded before the merge gate runs.
-- If the head SHA changes, previous approval and checks do not apply; recompute the candidate and rerun required checks.
-- Keep the repository private. A future public portfolio belongs in a separate sanitized repository.
+- A changed PR head invalidates previous candidate evidence. Refresh checks and Preview evidence; decide whether approval still covers the change using the approval rules below.
+- The repository is public. Do not change visibility as part of routine release work. Public source access does not authorize publishing secrets, private assets, or real data.
 
 ## Why Staging Was Retired
 
@@ -60,6 +61,18 @@ The previous Hobby/free model used a long-lived `staging` branch and a mutable f
 - the repository has one owner and no current external staging review audience.
 
 Keeping that second release line would add branch, alias, automation, and documentation maintenance without adding an independent review gate. PR Preview plus an exact-candidate Production gate is the smaller active model.
+
+## Preview Data And Cost Preconditions
+
+Automatic Preview is the intended workflow, not a claim that it is currently enabled. The activation status and blockers are recorded in [RELEASE-OPS-PR-005](../../work/agent-orchestration/RELEASE-OPS-PR-005-public-repository-cicd.md). At that inspection, the project still skipped non-Production builds; no setting change is implied by this document.
+
+Before enabling automation, verify the project, target, ignored-build command, protection settings, environment scopes, and current plan/usage. Prefer the Automatic build setting when those preconditions pass. Do not disable deployment protection, upgrade plans, create a DB branch, or enable paid services implicitly. If usage or data readiness is unresolved, keep the change pending and report the specific dependency.
+
+An automatic Preview activation hold does not itself prohibit releasing a separately authorized PR that already has a Ready Preview and satisfies every release gate. Assess current runtime health for that release; do not turn a configuration hold into a blanket merge ban or bypass a missing Preview.
+
+The inspected Preview and Production endpoints share the same Supabase demo project. A Preview URL does not isolate data. Documented synthetic workspace identities are an allowlist for scoped verification, not proof that every row is synthetic. Do not browse arbitrary clinical/personal rows to infer classification. DB mutations, resets, migrations, real email/payment/provider actions require their own scope and authorization. Preview invitation email can be enabled for allowlisted recipients; “staging” does not mean simulated delivery.
+
+Public GitHub standard-runner time and Vercel/Supabase resource usage are separate. Recheck plan suitability, usage limits, and paid-feature effects before expanding automation. Hobby's personal/non-commercial restriction also applies; public source or synthetic data alone does not establish eligibility. External fork workflow/deployment approval remains separate from trusted internal branch automation. Do not expose credentials or broaden permissions to run an external PR.
 
 ## Minimum Secret Safety Gate
 
@@ -73,19 +86,25 @@ Before any Preview or Production operation, verify:
 
 Allowed public values include public app URLs, environment-appropriate Supabase publishable/anon keys, and non-sensitive feature flags.
 
-## Manual Merge Gate
+## Automated Checks And Merge Gate
 
-GitHub cannot currently enforce required checks for this private repository under the current plan. Manual discipline is therefore mandatory.
+The public repository uses automatic `Release Check` on PRs targeting `main` and on pushes to `main`. `workflow_dispatch` remains available for diagnosis or a justified fallback; it is not a routine duplicate of a successful required PR check.
 
-Before asking for a `main` merge:
+As verified on 2026-10-19, main protection requires `Secrets, docs, UX copy, lint, typecheck, and build` from GitHub Actions, requires an up-to-date branch, applies to administrators, resolves PR conversations, and disallows force pushes/deletion. Required approving review count is zero: this does not replace explicit owner authorization. Recheck live rules before release; never bypass protection to compensate for a missing check.
+
+A `pull_request` checkout normally tests the synthetic merge result. Record PR head SHA, base SHA, run/event and tested merge SHA, and the required-check result associated with the current PR. Preview must use the current PR head. Do not require those two SHAs to be identical or treat an unrelated successful run as sufficient. A base/head change requires fresh applicable evidence.
+
+The combined job checks secrets, docs, UX copy, lint, types, and build; it does not run all behavior, browser, authorization, or persistence tests. Keep focused checks appropriate to the change. The push-to-main run is post-merge verification, not a barrier that postpones Vercel Production.
+
+Before a `main` merge:
 
 1. confirm the PR targets `main`;
 2. record the exact PR head SHA and changed scope;
 3. confirm the Vercel Preview is Ready;
-4. run one manually dispatched `Release Check` for that exact SHA;
+4. verify the current required automatic PR `Release Check`; use manual dispatch only when justified and never as a bypass for a missing required PR check;
 5. run the local secret gate and any focused verification required by the work;
 6. identify the current `origin/main`, current Production deployment, smoke path, rollback candidate, and stop condition;
-7. show the packet to 승욱 and stop for explicit Production approval.
+7. record the packet and apply existing explicit approval; ask only if approval is missing or no longer covers the action.
 
 Do not treat a green local build, an old check, or a mergeable PR as approval.
 
@@ -94,9 +113,20 @@ Detailed gate:
 - [Manual Merge Gate Runbook](manual-merge-gate-runbook.md)
 - [Production Release From PR To `main` Runbook](production-release-pr-to-main-runbook.md)
 
+## Approval Reuse
+
+Recognize both forms of direct user authorization:
+
+- **SHA-pinned approval:** a named PR/branch and exact SHA. A different SHA needs renewed approval unless the user also authorized a bounded conditional scope.
+- **Conditional scope approval:** a named PR or clearly bounded task, merge/Production operation, and conditions such as successful checks and Preview review. Resolve and record the final candidate after finishing the authorized work. Once all conditions pass, proceed without asking the same question again. A condition that explicitly requires the user's own review still requires that review.
+
+Routine in-scope corrections or synchronization needed to satisfy a conditional approval require refreshed verification, not another identical approval request. Material behavior/scope expansion, new cost, real-data/security exposure, a different target/operation, or ambiguous authority requires clarification. A failed check blocks execution; it does not authorize lowering the gate. Resolve authorized failures and reverify. Instructions such as “do not merge” or “no Production deployment” override broader earlier authority.
+
+A work item, tool output, prior successful release, or this policy cannot grant permission. Immediately before execution, recheck the PR and use expected-head protection. Keep the evidence packet even when approval was already granted; preparation must not create a redundant confirmation gate.
+
 ## Production Approval
 
-Approval must identify:
+The user instruction and prepared evidence packet together must identify:
 
 - target: Production / `main`;
 - PR number, source branch, and exact head SHA;

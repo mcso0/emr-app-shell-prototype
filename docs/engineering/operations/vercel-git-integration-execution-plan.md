@@ -1,17 +1,20 @@
 ---
 id: ENGINEERING-OPERATIONS-VERCEL-GIT-INTEGRATION-EXECUTION-PLAN
-status: approved
+status: superseded
 area: engineering
 doc_type: execution-plan
 related_work:
   - DEN-445
   - DEN-447
 supersedes: []
-superseded_by: []
-last_updated: 2026-06-09
+superseded_by:
+  - ENGINEERING-OPERATIONS-RELEASE-ENVIRONMENT-POLICY
+last_updated: 2026-10-20
 ---
 
 # Vercel Git Integration Execution Plan
+
+> Historical evidence only. Use [Release Environment Policy](release-environment-policy.md) and the active release work item for current CI/CD configuration, checks, and approval.
 
 This document narrows the next approved step after the DEN-447 read-only check. It does not change Vercel, GitHub, aliases, domains, production, or secrets.
 
