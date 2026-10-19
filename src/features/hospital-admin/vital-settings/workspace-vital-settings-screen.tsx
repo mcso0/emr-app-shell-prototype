@@ -541,7 +541,7 @@ function SortableVitalRow({
           type="button"
           variant="ghost"
         >
-          <IconReorderAlt />
+          <IconReorderAlt strokeWidth={1.5} />
         </Button>
         <span className="whitespace-nowrap text-[15px] leading-5 font-medium tracking-[0.014em]">
           {label}
