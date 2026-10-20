@@ -17,6 +17,7 @@ import {
 } from "@/features/notifications/server-notification-persistence";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+import { createNotificationSharingScope } from "./notification-sharing-scope";
 
 export type NotificationRouteActorContext =
   | {
@@ -26,6 +27,7 @@ export type NotificationRouteActorContext =
       notificationPersistenceGateway?: NotificationPersistenceGateway;
       permissionAdapter?: WorkspacePermissionAdapter;
       stateScopeId?: string;
+      sharingScope?: string;
     }
   | {
       ok: false;
@@ -123,6 +125,11 @@ export async function resolveNotificationRouteActor({
     ),
     permissionAdapter,
     stateScopeId: identity.actorUserId,
+    sharingScope: serverSession.ok ? createNotificationSharingScope({
+      actorUserId: identity.actorUserId,
+      sessionId: serverSession.sessionId,
+      workspaceId,
+    }) : undefined,
   };
 }
 

@@ -27,7 +27,8 @@ export async function GET(request: Request, { params }: RouteContext) {
       workspaceId,
     });
 
-    return Response.json(result, { status: result.status });
+    return Response.json(result.ok && actor.sharingScope
+      ? { ...result, sharingScope: actor.sharingScope } : result, { status: result.status });
   }
 
   const result = await readLiveNotifications({
