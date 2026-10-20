@@ -13,7 +13,7 @@ Use this map when the task's reading path is unclear. Already-loaded instruction
 | Next.js API/configuration/framework behavior | Relevant installed guide in `node_modules/next/dist/docs/`; skip for unrelated copy/styling. |
 | Documentation structure or durable guidance | `docs/_meta/intake-rules.md`; use its depth rules. Read `docs/README.md` for viewer/navigation changes. |
 | Linear operation | `.agents/skills/manual-linear-ops/SKILL.md` and the relevant issue. Read the full manual only for the branch that applies. |
-| Preview, production, alias, merge | `.agents/skills/release-deployment-ops/SKILL.md` and the relevant release runbook. |
+| CI/CD, Preview, production, alias, merge | `.agents/skills/release-deployment-ops/SKILL.md` and the relevant release runbook. |
 | Explicit Safety OS gate | `.agents/skills/emr-owner-safety-os/SKILL.md`; ordinary review proceeds directly with relevant checks. |
 
 The current product target is Product MVP. `docs/engineering/current-status.md` owns product state and mock/live evidence; `AGENTS.md` owns project operating and approval boundaries. An issue can record an approved scope but cannot grant itself permission for remote writes or a release.

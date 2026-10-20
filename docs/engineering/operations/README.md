@@ -12,9 +12,8 @@ Use this README as the entry point for release and operational-readiness referen
 | --- | --- |
 | Release environment policy and deploy routing | `release-environment-policy.md` |
 | PR Preview to `main`/Production release | `production-release-pr-to-main-runbook.md` |
-| Vercel Git integration and preview readiness check | `vercel-git-integration-preview-checks.md` |
-| Vercel Git integration approval and execution plan | `vercel-git-integration-execution-plan.md` |
-| Manual merge gates for private/free setup | `manual-merge-gate-runbook.md` |
+| Automatic Preview activation status and data/cost findings | `../../work/agent-orchestration/RELEASE-OPS-PR-005-public-repository-cicd.md` |
+| Required checks, approval reuse, and merge gates | `manual-merge-gate-runbook.md` |
 | Pilot/live launch readiness gates | `launch-readiness-checklist.md` |
 | Approved staging pilot dataset readback and reset contract | `staging-pilot-readback-reset-contract.md` |
 
@@ -24,16 +23,17 @@ Use this README as the entry point for release and operational-readiness referen
 | --- | --- |
 | `release-environment-policy.md` | Active policy for PR Preview, exact-candidate checks, `main`/Production approval, verification, and rollback. |
 | `production-release-pr-to-main-runbook.md` | Active approval packet and execution runbook for releasing an exact PR candidate to `main`/Production. |
-| `manual-merge-gate-runbook.md` | Active manual gate while required checks cannot be enforced for the private repository. |
-| `vercel-git-integration-preview-checks.md` | Read-only DEN-447 verification of Vercel Git Integration evidence, missing UI-only checks, and safe next execution shape for PR preview validation. |
-| `vercel-git-integration-execution-plan.md` | DEN-447 follow-up execution plan for approval-gated Vercel Git Integration confirmation, PR preview validation, and non-change boundaries for fixed staging/production. |
+| `manual-merge-gate-runbook.md` | Automatic required PR checks plus owner approval, focused verification, and merge evidence; historical filename retained. |
+| `../../work/agent-orchestration/RELEASE-OPS-PR-005-public-repository-cicd.md` | Current public-repository alignment and blocked/pending remote configuration evidence. |
 | `launch-readiness-checklist.md` | Checklist for representative pilot or live launch readiness, including security/data readiness and remote/production approval gates. |
 | `staging-pilot-readback-reset-contract.md` | Staging synthetic dataset readback and reset contract for approved pilot replay work. |
 
 ## Superseded Release Records
 
-These files explain the retired fixed-staging model and remain available only for historical links and evidence:
+These files preserve prior Git integration and fixed-staging observations; they are not current configuration or approval instructions:
 
+- `vercel-git-integration-preview-checks.md`
+- `vercel-git-integration-execution-plan.md`
 - `hobby-free-staging-branch-release-plan.md`
 - `fixed-staging-alias-automation.md`
 - `github-vercel-release-automation-plan.md`

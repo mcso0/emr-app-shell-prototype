@@ -245,9 +245,10 @@ live-mode caller evidence; mock auth alone cannot prove the sharing branch.
 Record request counts without claiming unmeasured Production CPU savings. Complete
 focused checks and standard local/remote release gates before delivery.
 
-Implementation is in progress in isolated `codex/notification-poll-sharing`.
-The earlier profile/billing shared-read candidate must be integrated before final
-verification; overlapping documentation history must be preserved during merge.
+Implementation and local integration verification are complete in isolated
+`codex/notification-poll-sharing`. The earlier profile/billing candidate is included;
+its documentation history and tests are preserved. Remote delivery evidence is
+recorded on the PR.
 
 ### Notification window sharing verification — 2026-10-20
 
