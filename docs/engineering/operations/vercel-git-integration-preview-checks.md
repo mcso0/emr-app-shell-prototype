@@ -1,16 +1,19 @@
 ---
 id: ENGINEERING-OPERATIONS-VERCEL-GIT-INTEGRATION-PREVIEW-CHECKS
-status: approved
+status: superseded
 area: engineering
 doc_type: verification-plan
 related_work:
   - DEN-447
 supersedes: []
-superseded_by: []
-last_updated: 2026-06-09
+superseded_by:
+  - ENGINEERING-OPERATIONS-RELEASE-ENVIRONMENT-POLICY
+last_updated: 2026-10-20
 ---
 
 # Vercel Git Integration And Preview Checks
+
+> Historical evidence only. Use [Release Environment Policy](release-environment-policy.md) and the active release work item for current CI/CD configuration, checks, and approval.
 
 This document records the read-only DEN-447 check for Vercel Git Integration and PR preview readiness. No Vercel/GitHub setting was changed.
 
