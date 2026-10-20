@@ -5,17 +5,18 @@ area: engineering
 doc_type: runbook
 related_work:
   - RELEASE-OPS-PR-004
+  - RELEASE-OPS-PR-005
 supersedes:
   - ENGINEERING-OPERATIONS-PRODUCTION-RELEASE-STAGING-TO-MAIN-RUNBOOK
 superseded_by: []
-last_updated: 2026-09-03
+last_updated: 2026-10-20
 ---
 
 # Production Release From PR To `main` Runbook
 
 This runbook defines how CLAiR EMR prepares and verifies a Production release from an exact PR candidate to `main`.
 
-It does not authorize Production by itself. It defines the evidence 승욱 must see before approving a `main` merge.
+It does not authorize Production by itself. It defines the evidence required before executing an authorized `main` merge, including a previously granted conditional approval.
 
 ## Core Rule
 
@@ -28,7 +29,7 @@ Every `main` merge is a Production-release action. The repository does not use a
 
 ## Production Approval Packet
 
-Before a merge, prepare the exact candidate packet. Reuse existing explicit approval for the same target, source SHA, included scope, and operation; otherwise show the packet and request the missing approval after authorized preparation is complete.
+Before a merge, prepare the exact candidate packet and apply [Approval Reuse](release-environment-policy.md#approval-reuse). Reuse SHA-pinned or bounded conditional approval as applicable. Once its conditions pass, execute without redundant confirmation; otherwise finish authorized preparation and ask only for the missing or materially changed authority.
 
 | Field | Required content |
 | --- | --- |
@@ -37,7 +38,7 @@ Before a merge, prepare the exact candidate packet. Reuse existing explicit appr
 | Compare target | Current `origin/main` SHA and current Ready Production deployment id or URL. |
 | Included work | Issues, work items, changed files, and reports included in the candidate. |
 | Preview evidence | Ready Vercel Preview URL for the exact branch candidate. |
-| Verification | Manually dispatched `Release Check` for the exact head SHA plus local and focused checks. |
+| Verification | Current required automatic PR Release Check, PR head/base and tested merge SHA, plus local and focused checks. |
 | Secret/env safety | No secret values printed or committed; no tracked env files with credentials. |
 | Production action | Exact-head-protected PR merge operation. |
 | Smoke | Production URL and scoped paths to verify after merge. |
@@ -51,7 +52,7 @@ Approval wording:
 검사 결과와 rollback 후보를 유지하고 병합 후 Production smoke를 확인해줘.
 ```
 
-If the candidate SHA changes, return with a new packet and new approval request.
+Conditional approval may instead name the PR/task and authorize merge/Production once checks and Preview review pass. Always record the final SHA. If it changes, refresh verification. Request new approval only when a SHA-pinned approval no longer matches or the change materially exceeds the conditional scope; do not repeat approval for routine in-scope corrections.
 
 ## Candidate Preflight
 
@@ -66,20 +67,20 @@ npx tsc --noEmit
 npm run build
 ```
 
-For docs- or workflow-only changes, the local focused gate may omit app-only checks when the PR explains why. The exact remote `Release Check` still runs its full combined job before Production approval.
+For docs- or workflow-only changes, the local focused gate may omit app-only checks when the PR explains why. The current required automatic PR `Release Check` still runs its full combined job before merge. Manual dispatch is available for diagnosis/fallback, not a mandatory duplicate.
 
 Add focused tests for changed application behavior. Do not claim a suite was run unless it completed for this candidate.
 
 ## Source Integrity
 
-Before asking for approval:
+Before executing the approved merge:
 
 - fetch the live remote state;
 - confirm the PR is open, mergeable, and targets `main`;
 - confirm the PR head SHA exactly matches the checked candidate;
 - compare changed files and commits with `origin/main`;
 - confirm no unrelated local or user-owned work is included;
-- confirm the Preview and Release Check belong to the same candidate;
+- confirm Preview uses the current PR head and the required PR check tests its current merge result; record head/base/run provenance rather than requiring literal SHA equality;
 - record the current Production source SHA and previous deployment.
 
 Useful read-only checks:
@@ -94,7 +95,7 @@ gh pr view <number> --json state,isDraft,baseRefName,headRefName,headRefOid,merg
 
 ## Merge
 
-After exact approval:
+After valid explicit approval and completion of every condition:
 
 1. Reconfirm the live PR head SHA.
 2. Use squash merge unless the approved PR requires a different documented strategy.
@@ -128,8 +129,8 @@ Use synthetic/demo data only unless a separate approved task explicitly includes
 | Option | Use when | Required evidence |
 | --- | --- | --- |
 | Promote the previous Ready Production deployment | Runtime deployment is bad and prior deployment is known good | Deployment id, URL, and post-rollback smoke |
-| Revert the merge through a PR | Repository content is faulty | Merge SHA, revert diff, exact checks, new approval |
-| Forward-fix through a PR | A narrow correction is safer than rollback | New exact candidate, checks, approval |
+| Revert the merge through a PR | Repository content is faulty | Merge SHA, revert diff, exact checks, approval covering the revert operation |
+| Forward-fix through a PR | A narrow correction is safer than rollback | New exact candidate, checks, approval covering the correction |
 
 Do not perform a rollback mutation unless it is already inside the approved response path or 승욱 separately approves it.
 
@@ -138,7 +139,7 @@ Do not perform a rollback mutation unless it is already inside the approved resp
 Stop before merge when:
 
 - exact source SHA or included work is unclear;
-- head SHA changed after checks or approval;
+- head SHA changed after checks without refreshed evidence, or approval no longer covers the candidate under the canonical reuse rules;
 - Release Check, Preview, secret gate, or required focused verification failed or is unknown;
 - rollback candidate or Production smoke path is missing;
 - secrets or unrelated work are present;
