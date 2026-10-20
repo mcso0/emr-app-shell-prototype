@@ -123,23 +123,25 @@ export function EmrSidePanelCollapsibleGroup({
               aria-hidden="true"
             />
           ) : null}
-          {resolvedStateIconState ? (
-            <EmrSidePanelStateIcon
-              state={resolvedStateIconState}
-              data-testid={dataTestId ? `${dataTestId}-status-icon` : undefined}
-              aria-hidden={true}
-            />
-          ) : null}
-          <span className="emr-text-section flex min-w-0 items-center gap-1.5 font-medium">
-            <span className="truncate text-[var(--emr-sidepanel-list-title-text)]">{label}</span>
-            {countVariant === "plain" ? (
-              <span
-                data-testid={dataTestId ? `${dataTestId}-count` : undefined}
-                className={cn("shrink-0 text-[var(--emr-sidepanel-list-title-count)]", countBadgeClassName)}
-              >
-                {count}
-              </span>
+          <span data-slot="sidepanel-state-label" className="flex min-w-0 items-center gap-1.5">
+            {resolvedStateIconState ? (
+              <EmrSidePanelStateIcon
+                state={resolvedStateIconState}
+                data-testid={dataTestId ? `${dataTestId}-status-icon` : undefined}
+                aria-hidden={true}
+              />
             ) : null}
+            <span className="emr-text-section flex min-w-0 items-center gap-1.5 font-medium">
+              <span className="truncate text-[var(--emr-sidepanel-list-title-text)]">{label}</span>
+              {countVariant === "plain" ? (
+                <span
+                  data-testid={dataTestId ? `${dataTestId}-count` : undefined}
+                  className={cn("shrink-0 text-[var(--emr-sidepanel-list-title-count)]", countBadgeClassName)}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </span>
           </span>
         </div>
         <span className="flex shrink-0 items-center gap-1.5">

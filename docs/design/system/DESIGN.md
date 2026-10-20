@@ -176,6 +176,31 @@ as 1 CSS px at a 16px display size.
 - Verify affected small icons and states in their actual callers and relevant
   Storybook stories. Local checks do not establish deployment or user acceptance.
 
+## Icon And Label Spacing
+
+Approved on 2026-10-20: a directly adjacent horizontal semantic icon and label
+use 4 CSS px between a 12px SVG box and the label, or 6 CSS px for a 16px SVG box.
+Measure the displayed SVG box, not painted paths or the text glyph outline.
+Preserve icon dimensions, typography, control height, outer padding, stroke,
+viewBox, states, and interaction. The 14px, 20px and 24px cases remain undecided.
+
+- Apply the rule to the actual icon-label pair, not every gap in its parent.
+  Keep counts, actions, keyboard hints and other sibling spacing independently
+  owned. Group the pair only where that separation is necessary.
+- Button density does not decide this gap when its icon has an explicit size:
+  a compact Button with an explicit 16px icon still uses 6px. The normal compact
+  Button 12px icon keeps 4px. Existing undecided-size overrides remain unchanged.
+- Keep independent trailing dropdown arrows, selection checks and sort
+  indicators outside this semantic-pair rule. Preserve their reserved slots.
+  Tile, illustration and card identity slots are also separate structures.
+- Input adornments use text insets rather than flex gaps. Include input border,
+  padding and any icon-slot inset when checking the SVG-box-to-content distance.
+- A 16px default inline-alert glyph remains centered in its existing 20px slot;
+  the slot's 2px trailing inset plus 4px content gap gives the required 6px.
+  The icon-box and caller-supplied custom-icon layouts retain separate contracts.
+- Validate real callers and existing Storybook stories. Source-class arithmetic
+  does not prove browser geometry; list unresolved dynamic/custom cases explicitly.
+
 ## Shape
 
 Most EMR surfaces should be compact:

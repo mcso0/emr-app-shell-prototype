@@ -468,7 +468,7 @@ export function EmrListHeader({
               <Input
                 autoFocus
                 aria-label={search.inputLabel ?? "대기열 검색"}
-                className="h-8 rounded-[var(--clair-radius-md)] border-[var(--emr-state-selected-border)] bg-card pl-8 pr-2 font-semibold shadow-[0_0_0_3px_rgba(37,99,235,0.12)]"
+                className="h-8 rounded-[var(--clair-radius-md)] border-[var(--emr-state-selected-border)] bg-card pl-[calc(var(--clair-spacing-24)+var(--clair-spacing-8)-1px)] pr-2 font-semibold shadow-[0_0_0_3px_rgba(37,99,235,0.12)]"
                 placeholder={search.placeholder ?? "대기열 검색"}
                 type="search"
                 value={searchQuery}

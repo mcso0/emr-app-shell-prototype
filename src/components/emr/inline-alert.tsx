@@ -158,7 +158,8 @@ export function EmrInlineAlert({
     >
       <div
         className={cn(
-          "flex min-w-0 flex-[1_1_16rem] items-start gap-2.5",
+          "flex min-w-0 flex-[1_1_16rem] items-start",
+          usesIconBox || icon !== undefined ? "gap-2.5" : "gap-1",
           usesIconBox ? "items-center" : undefined
         )}
         data-slot="inline-alert-content"

@@ -18,7 +18,7 @@
 .dateControl > button:first-child, .dateControl > button:last-child { width: var(--clair-control-height-sm); }
 .dateControl > button[aria-haspopup] { padding-inline: var(--clair-spacing-8); font-size: var(--clair-typography-body-2-normal-font-size); line-height: var(--clair-typography-body-2-normal-line-height); letter-spacing: var(--clair-typography-body-2-normal-letter-spacing); color: var(--clair-color-atomic-neutral-800); font-variant-numeric: normal; }
 .dateControl [data-slot="badge"] { border-width: 0; }
-.filterTrigger > span { padding-inline: var(--clair-spacing-2); }
+.filterTrigger [data-slot="filter-label-text"] { padding-inline-end: var(--clair-spacing-2); }
 .workspaceBody { display: flex; flex: 1; min-height: 0; gap: 16px; padding: 8px 16px 0 48px; }
 .board { padding-left: var(--clair-spacing-48); display: grid; height: 100%; min-height: 256px; align-items: start; gap: 16px; }
 .board.emptyBoard { display: flex; min-height: 0; align-items: center; justify-content: center; padding-left: 0; }
@@ -29,6 +29,7 @@
 .groupHeader h2 { display: flex; align-items: center; gap: 4px; min-width: 0; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--emr-text-primary); }
 .groupHeader h2 > span:last-child, .count { color: var(--emr-text-tertiary); font-size: 12px; line-height: 16px; font-weight: 500; }
 .groupHeader h2 > span:first-child:not(:last-child) { margin-right: 4px; }
+.groupHeader h2 > .headerLabel:first-child { display: inline-flex; align-items: center; gap: 6px; margin-right: 0; }
 .dividedHeader::after, .hiddenWork > header::after { content: ""; position: absolute; bottom: 0; left: 16px; right: 16px; height: 1px; background: var(--emr-border-default); }
 .groupActions { display: flex; gap: 4px; }
 .groupActions svg { width: 14px; height: 14px; }
@@ -137,7 +138,7 @@
 .workTypeTabs button:focus-visible { outline: 2px solid var(--emr-state-selected-border); outline-offset: -2px; }
 .hospitalFilterTrigger { display: flex; width: 32px; height: 32px; min-height: 32px; justify-content: center; padding: 0; }
 .hospitalSearchTrigger { width: 32px; height: 32px; min-height: 32px; padding: 0; }
-.hospitalFilterTrigger > span { display: none; }
+.hospitalFilterTrigger [data-slot="filter-label-text"] { display: none; }
 .hospitalFilterTrigger strong { position: absolute; margin: -24px 0 0 24px; border-radius: 50%; background: var(--emr-text-link); color: white; font-size: 10px; line-height: 14px; min-width: 14px; text-align: center; }
 .todayButton { height: 32px; }
 .sortButton { height: 32px; }
@@ -164,7 +165,7 @@
 .hospitalDetails > span { overflow: hidden; text-overflow: ellipsis; }
 .hospitalDetails > div { flex-shrink: 0; }
 .hospitalDetails [data-slot="badge"] { height: 20px; padding-block: 0; }
-.hospitalState { display: flex; align-items: center; gap: var(--clair-spacing-8); }
+.hospitalState { display: flex; align-items: center; gap: var(--clair-spacing-6); }
 .hospitalTypeBadge { border-radius: var(--clair-radius-atomic-6); }
 .hospitalIdentity { display: flex; align-items: center; gap: var(--clair-spacing-8); }
 .hospitalIdentity > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -217,7 +218,7 @@
 .actionButton { position: relative; }
 .actionHint { position: fixed; transform: translateX(-50%); width: max-content; max-width: 260px; padding: var(--clair-spacing-6) var(--clair-spacing-8); border-radius: var(--clair-radius-md); background: var(--emr-text-primary); color: var(--emr-surface-panel); font-size: 12px; line-height: 18px; font-weight: 400; pointer-events: none; z-index: 50; }
 @container home-toolbar (width < 900px) {
-  .actionLabel, .compactAction > span:not(.ownerDot), .ownerChevron, .filterTrigger > span { display: none; }
+  .actionLabel, .compactAction > span:not(.ownerDot), .ownerChevron, .filterTrigger [data-slot="filter-label-text"] { display: none; }
   .compactAction, .filterTrigger { width: var(--clair-control-height-md); height: var(--clair-control-height-md); min-width: var(--clair-control-height-md); padding: 0; }
   .ownerIcon, .ownerDot { display: block; }
   .viewTabs button { width: var(--clair-control-height-md); padding-inline: 0; }

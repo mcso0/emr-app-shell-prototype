@@ -47,8 +47,10 @@ export const EmrTableFilterTrigger = React.forwardRef<
       )}
       {...props}
     >
-      <CdsActionsListFilterIcon aria-hidden="true" className="size-4" />
-      <span>{label}</span>
+      <span data-slot="filter-label-pair" className="inline-flex items-center gap-1.5">
+        <CdsActionsListFilterIcon aria-hidden="true" className="size-4" />
+        <span data-slot="filter-label-text">{label}</span>
+      </span>
       {selected ? (
         <strong className="font-medium text-[var(--emr-text-link)]">{activeCount}</strong>
       ) : null}

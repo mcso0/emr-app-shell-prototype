@@ -14660,7 +14660,7 @@ const OrderArea = memo(function OrderArea({
                   bodyClassName="flex min-h-0 flex-col gap-0 overflow-hidden p-0"
 
                 >
-                  {catalogRefreshing ? <div role="status" className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />최신 목록 확인 중</div> : null}
+                  {catalogRefreshing ? <div role="status" className="flex items-center gap-1 px-3 py-2 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />최신 목록 확인 중</div> : null}
                   {catalogRefreshError ? <EmrInlineAlert className="m-3" severity="warning" title="최신 목록을 확인하지 못했어요." action={<Button size="xs" variant="outline" onClick={() => void loadCatalogRows({ reuse: true, force: true })}>다시 시도</Button>}>다시 확인한 뒤 오더를 추가해 주세요.</EmrInlineAlert> : null}
                   {quickAddQuery.trim() && catalogSearchStatus === "ready" ? (
                     <div className="flex items-center justify-between gap-2 px-3 py-2">
@@ -14671,7 +14671,7 @@ const OrderArea = memo(function OrderArea({
                     </div>
                   ) : null}
                   {catalogSearchStatus === "loading" || catalogSearchStatus === "idle" ? (
-                    <div role="status" className="flex items-center gap-2 p-3 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />검색 목록을 준비하고 있어요.</div>
+                    <div role="status" className="flex items-center gap-1 p-3 text-xs text-[var(--emr-text-tertiary)]"><CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />검색 목록을 준비하고 있어요.</div>
                   ) : catalogSearchStatus === "error" || catalogSearchStatus === "denied" ? (
                     <EmrInlineAlert
                       className="m-3"
@@ -17352,7 +17352,7 @@ export function ChartContent({
               다시 시도해 주세요. 계속 준비되지 않으면 관리자에게 문의해 주세요.
             </ChartNotice>
           ) : shouldPrepareInitialChart || encounterCharts.status !== "ready" ? (
-            <div role="status" className="flex items-center gap-2 text-xs text-[var(--emr-text-tertiary)]">
+            <div role="status" className="flex items-center gap-1 text-xs text-[var(--emr-text-tertiary)]">
               <CdsAlertsLoaderIcon className="size-3 animate-spin motion-reduce:animate-none" />
               진료 차트를 준비하는 중
             </div>

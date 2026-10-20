@@ -381,7 +381,7 @@ function SettingsBackHeader({ onBack }: { onBack: () => void }) {
       <Button
         type="button"
         variant="ghost"
-        className="gap-1 text-foreground"
+        className="gap-1.5 text-foreground"
         onClick={onBack}
       >
         <ChevronLeftIcon className="size-4" aria-hidden="true" />

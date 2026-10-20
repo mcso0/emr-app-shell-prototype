@@ -108,12 +108,12 @@ export function AuthProfileMenu({
         <a
           role="menuitem"
           href={profileHref}
-          className="relative flex h-8 cursor-pointer select-none items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+          className="relative flex h-8 cursor-pointer select-none items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
         >
           <UserIcon className="size-4 text-muted-foreground" aria-hidden="true" />
           개인 설정
         </a>
-        <DropdownMenuItem className="h-8 cursor-pointer gap-2" onClick={() => void onLogout()}>
+        <DropdownMenuItem className="h-8 cursor-pointer gap-1.5" onClick={() => void onLogout()}>
           <CdsNavigationLogOutIcon className="size-4 text-muted-foreground" aria-hidden="true" />
           로그아웃
         </DropdownMenuItem>

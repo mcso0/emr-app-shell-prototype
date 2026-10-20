@@ -925,7 +925,7 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
             <Button variant="ghost" size="icon-sm" aria-label="다음 날짜" disabled={activeDate === dates[dates.length - 1]} onClick={() => moveActiveDate(1)}><ChevronRightIcon /></Button>
             <span className="ml-2 text-sm font-medium">{getDateLabel(weekStart)} 주</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <CalendarIcon className="size-4" aria-hidden="true" />
             {publication.publishedAtLabel ? `최근 게시 ${publication.publishedAtLabel}` : "아직 게시하지 않았습니다"}
           </div>
@@ -979,8 +979,8 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
             <DialogDescription>충돌과 역할별 커버리지 공백이 없을 때만 이 주의 근무표를 게시할 수 있습니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
-            {conflicts.map((conflict) => <p key={`${conflict.kind}-${conflict.shiftId}`} className="flex gap-2"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{conflict.message}</p>)}
-            {coverageIssues.map((issue) => <p key={`${issue.date}-${issue.role}-${issue.startMinutes}`} className="flex gap-2"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{getDateLabel(issue.date, true)} {roleLabels[issue.role]} {formatScheduleMinutes(issue.startMinutes)}–{formatScheduleMinutes(issue.endMinutes)} 커버리지가 비어 있습니다.</p>)}
+            {conflicts.map((conflict) => <p key={`${conflict.kind}-${conflict.shiftId}`} className="flex gap-1.5"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{conflict.message}</p>)}
+            {coverageIssues.map((issue) => <p key={`${issue.date}-${issue.role}-${issue.startMinutes}`} className="flex gap-1.5"><WarningIcon className="mt-0.5 size-4 text-[var(--clair-color-atomic-yellow-700)]" />{getDateLabel(issue.date, true)} {roleLabels[issue.role]} {formatScheduleMinutes(issue.startMinutes)}–{formatScheduleMinutes(issue.endMinutes)} 커버리지가 비어 있습니다.</p>)}
             {!publishBlocked ? <p className="text-[var(--clair-color-atomic-green-800)]">게시할 수 있는 근무표입니다.</p> : null}
           </div>
           <DialogFooter>
@@ -1006,7 +1006,7 @@ export function HospitalScheduleV1Screen({ workspaceId }: { workspaceId: string 
                 </Select>
               </FieldContent>
             </Field>
-            <p className="text-sm text-muted-foreground"><ClockIcon className="mr-1 inline size-4" />{formatScheduleMinutes(settings.lockMinutes)}에 편성을 잠그도록 표시합니다.</p>
+            <p className="text-sm text-muted-foreground"><ClockIcon className="mr-1.5 inline size-4" />{formatScheduleMinutes(settings.lockMinutes)}에 편성을 잠그도록 표시합니다.</p>
           </div>
           <DialogFooter><Button onClick={() => setSettingsOpen(false)}>완료</Button></DialogFooter>
         </DialogContent>
