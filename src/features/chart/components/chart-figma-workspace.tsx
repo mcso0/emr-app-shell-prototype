@@ -12,6 +12,7 @@ import {
 } from "@/components/emr/patient-context-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
 import {
   Tooltip,
@@ -180,12 +181,18 @@ export function ChartActionBar({
         <span className="whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
           {timeLabel} {startTime}
         </span>
+        <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
         <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
           <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
           {doctorName}
         </span>
         {widthAction}
-        {completionAction}
+        {completionAction ? (
+          <>
+            <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
+            {completionAction}
+          </>
+        ) : null}
       </div>
     </div>
   );
