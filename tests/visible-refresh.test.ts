@@ -36,6 +36,23 @@ describe("visible automatic refresh", () => {
     cleanup();
   });
 
+  it("collapses paired resume events after a fast read without delaying later focus or interval", async () => {
+    const load = vi.fn().mockResolvedValue(undefined);
+    const refresh = coalescePendingRefresh(load);
+    const cleanup = subscribeVisibleRefresh({ intervalMs: 30_000, onRefresh: () => { void refresh(); } });
+    doc.visibilityState = "visible";
+    browser.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(25);
+    doc.dispatchEvent(new Event("visibilitychange"));
+    expect(load).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(250);
+    browser.dispatchEvent(new Event("focus"));
+    expect(load).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(29_725);
+    expect(load).toHaveBeenCalledTimes(3);
+    cleanup();
+  });
+
   it("shares a slow notification read across focus, visibility and several 30-second ticks", async () => {
     const read = deferred<void>();
     const load = vi.fn(() => read.promise);
