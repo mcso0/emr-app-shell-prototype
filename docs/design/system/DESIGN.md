@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, ux-writing, tokens, components, density]
-updated: "2026-08-25"
-last_updated: "2026-08-25"
+updated: "2026-10-20"
+last_updated: "2026-10-20"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -155,6 +155,26 @@ Shared EMR typography roles are available for repeated operational UI rhythm:
 - `emr-text-dense` / `emr-text-dense-label`: 13px dense lists, queue cards, and side-panel metadata
 - `emr-text-body` / `emr-text-section`: 14px compact body and section labels
 - `emr-text-compact-title`, `emr-text-panel-title`, `emr-text-dialog-title`: compact title steps for EMR panels and dialogs
+
+## Icon Stroke
+
+Approved on 2026-10-20: stroke-based UI icons use a nominal `strokeWidth` of
+`1.5` by default. This value is in SVG coordinates, not a fixed screen-pixel
+width. Preserve normal viewBox scaling: a `1.5` stroke in a 24px viewBox renders
+as 1 CSS px at a 16px display size.
+
+- Apply the default through the shared Obra adapter and the separately owned
+  direct Lucide/Obra usages. Respect explicit `strokeWidth` overrides.
+- Preserve icon paths, viewBox, display size, button targets, spacing, meaning,
+  and interaction states. A stroke-default change does not authorize replacing
+  the icon shape or changing its behavior.
+- Do not add strokes to filled CDS/GNB paths, crop their viewBox, or use a
+  global CSS override to normalize their visual weight.
+- Keep existing custom `1.8`, `1.4`, and `1.6` strokes as separate exceptions.
+  Review them within an explicitly scoped change rather than changing them
+  automatically with the default.
+- Verify affected small icons and states in their actual callers and relevant
+  Storybook stories. Local checks do not establish deployment or user acceptance.
 
 ## Shape
 

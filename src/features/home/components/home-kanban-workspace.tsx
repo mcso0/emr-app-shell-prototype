@@ -110,8 +110,8 @@ export function HomeNavigationSidePanel() {
     onToggleSection={() => undefined}
     items={[
       { id: "hospital-group", type: "groupLabel", label: "병원현황" },
-      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <ClipboardListIcon />, onClick: () => { setView("hospital"); enterHome(); } },
-      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <ListTodoIcon />, onClick: () => { setView("mine"); enterHome(); } },
+      { id: "hospital", type: "button", label: "원내 현황", active: view === "hospital", icon: <ClipboardListIcon strokeWidth={1.5} />, onClick: () => { setView("hospital"); enterHome(); } },
+      { id: "mine", type: "button", label: "내 업무", active: view === "mine", icon: <ListTodoIcon strokeWidth={1.5} />, onClick: () => { setView("mine"); enterHome(); } },
     ]}
   />;
 }
@@ -228,7 +228,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
         {view === "hospital" ? <div className={styles.workTypeTabs} role="group" aria-label="업무 종류">
           <button type="button" data-testid="home-all-work-tab" aria-pressed={hospitalWorkType === "all"} onClick={() => setHospitalWorkType("all")}>전체 업무 <span>{loading ? "…" : blocked ? "—" : commonTasks.length}</span></button>
           {workTypes.map((type) => <button type="button" key={type.id} aria-pressed={hospitalWorkType === type.id} onClick={() => setHospitalWorkType(type.id)}>{type.label} <span>{loading ? "…" : blocked ? "—" : workTypeCounts[type.id] ?? 0}</span></button>)}
-        </div> : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
+        </div> : <SegmentedControl className={styles.personalTabs} aria-label="내 업무 구분" value={personalTab} onValueChange={setPersonalTab} variant="tabs" size="md" itemClassName="gap-1.5 aria-pressed:bg-[var(--clair-color-atomic-common-100)] aria-pressed:hover:bg-[var(--clair-color-atomic-common-100)]" items={[{ value: "assigned", label: <><ListTodoIcon strokeWidth={1.5} className="size-3.5" aria-hidden="true" />내가 해야 할 업무</> }, { value: "requested", label: <><SendIcon strokeWidth={1.5} className="size-3.5" aria-hidden="true" />내가 요청한 업무</> }]} />}
         </HomeToolbarTabs>
         <HomeToolbarActions>
           <div className={styles.iconTools}>
@@ -245,7 +245,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           {view === "hospital" && <DropdownMenu>
             <DropdownMenuTrigger render={
               <Button variant="outline" size="icon" aria-label="정렬" title="정렬" className={cn(styles.sortButton, styles.actionButton)}>
-                <ArrowDownUpIcon aria-hidden="true" className="size-4" />
+                <ArrowDownUpIcon strokeWidth={1.5} aria-hidden="true" className="size-4" />
               </Button>
             } />
             <DropdownMenuContent align="end"><DropdownMenuRadioGroup value={hospitalSort} onValueChange={(sort) => setHospitalSort(sort as HospitalSort)}>{([ ["priority", "업무 우선순"], ["oldest", "오래된 요청순"], ["newest", "최근 요청순"] ] as const).map(([sort, label]) => <DropdownMenuRadioItem key={sort} value={sort}>{label}</DropdownMenuRadioItem>)}</DropdownMenuRadioGroup></DropdownMenuContent>
@@ -265,8 +265,8 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
             <HomeMultiSelect label="담당자" menuVariant="reception" options={owners.map((owner) => ({ id: owner, label: owner }))} values={query.owners ?? owners} allSelected={query.owners === null}
               onChange={(values) => updateQuery("hospital", { owners: values.length === owners.length ? null : values })} />
           </>}
-          {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} itemClassName={styles.actionButton} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", ariaLabel: "칸반", title: "칸반 보기", label: <><Columns3Icon aria-hidden="true" /><span className={styles.actionLabel}>칸반</span></> }, { value: "list", ariaLabel: "리스트", title: "리스트 보기", label: <><ListIcon aria-hidden="true" /><span className={styles.actionLabel}>리스트</span></> }]} /></> :
-            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" className={cn(styles.compactAction, styles.actionButton)} aria-label="정렬" title="정렬 · 기본 업무 순서"><ArrowDownUpIcon aria-hidden="true" /><span className={styles.actionLabel}>정렬</span></Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
+          {view === "hospital" ? <><span className={styles.toolbarDivider} aria-hidden="true" /><SegmentedControl className={styles.viewTabs} itemClassName={styles.actionButton} aria-label="업무 보기 방식" variant="tabs" size="md" value={preferences.layout} onValueChange={(layout) => { rememberScroll(); updatePreferences({ layout }); }} items={[{ value: "board", ariaLabel: "칸반", title: "칸반 보기", label: <><Columns3Icon strokeWidth={1.5} aria-hidden="true" /><span className={styles.actionLabel}>칸반</span></> }, { value: "list", ariaLabel: "리스트", title: "리스트 보기", label: <><ListIcon strokeWidth={1.5} aria-hidden="true" /><span className={styles.actionLabel}>리스트</span></> }]} /></> :
+            <DropdownMenu><DropdownMenuTrigger render={<Button variant="outline" size="default" className={cn(styles.compactAction, styles.actionButton)} aria-label="정렬" title="정렬 · 기본 업무 순서"><ArrowDownUpIcon strokeWidth={1.5} aria-hidden="true" /><span className={styles.actionLabel}>정렬</span></Button>} /><DropdownMenuContent align="end"><DropdownMenuItem><CheckIcon strokeWidth={1.5} aria-hidden="true" />기본 업무 순서</DropdownMenuItem></DropdownMenuContent></DropdownMenu>}
 
         </HomeToolbarActions>
       </div>
@@ -302,12 +302,12 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
           {isBoard && !loading && <div className={styles.scrollFade} data-visible={canScrollRight} data-testid="home-board-scroll-fade" aria-hidden="true" />}
         </ScrollAreaPrimitive.Root>
         {view === "hospital" && isBoard && hiddenStatuses.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 상태">
-          <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 상태</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => updatePreferences({ hiddenStatuses: [] })}><EyeIcon className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
-          <div className={styles.hiddenRows}>{hiddenStatuses.map((status) => <div key={status.id} className={styles.hiddenRow}><span>{status.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${status.label} 열 표시`} onClick={() => updatePreferences({ hiddenStatuses: preferences.hiddenStatuses.filter((id) => id !== status.id) })}><EyeIcon className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
+          <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 상태</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => updatePreferences({ hiddenStatuses: [] })}><EyeIcon strokeWidth={1.5} className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
+          <div className={styles.hiddenRows}>{hiddenStatuses.map((status) => <div key={status.id} className={styles.hiddenRow}><span>{status.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${status.label} 열 표시`} onClick={() => updatePreferences({ hiddenStatuses: preferences.hiddenStatuses.filter((id) => id !== status.id) })}><EyeIcon strokeWidth={1.5} className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
         </section>}
         {view === "mine" && hiddenTypes.length > 0 && <section className={styles.hiddenWork} aria-label="숨김 업무">
-          <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 업무</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => setHidden([])}><EyeIcon className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
-          <div className={styles.hiddenRows}>{hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><span>{type.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
+          <header className={cn(styles.groupHeader, styles.hiddenHeader)}><h2>숨김 업무</h2><Button variant="ghost" size="sm" className={styles.showAllButton} onClick={() => setHidden([])}><EyeIcon strokeWidth={1.5} className="size-3" aria-hidden="true" /><span>전체 표시</span></Button></header>
+          <div className={styles.hiddenRows}>{hiddenTypes.map((type) => <div key={type.id} className={styles.hiddenRow}><span>{type.label}</span><Button variant="ghost" size="icon-xs" className={styles.restoreButton} aria-label={`${type.label} 열 표시`} onClick={() => setHidden(hidden.filter((id) => id !== type.id))}><EyeIcon strokeWidth={1.5} className="size-3.5" aria-hidden="true" /></Button></div>)}</div>
         </section>}
 
       </div>}
@@ -504,7 +504,7 @@ function HomeBoardColumn({ id, label, tasks, date, collapsed, inclusionDisabled,
   }, [id, collapsed]);
   return <section data-testid={`home-kanban-column-${id}`} className={cn(styles.column, collapsed && styles.collapsedColumn)}>
     {collapsed ? <div className="flex flex-col items-center gap-3 py-3"><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 펼치기`} aria-expanded={false} onClick={onToggle}><ChevronRightIcon /></Button><HospitalStateIcon state={id} /><h2 className="emr-text-body [writing-mode:vertical-rl]">{label}</h2><span className="emr-text-metadata text-muted-foreground">{tasks.length}</span></div> : <>
-      <header className={cn(styles.groupHeader, styles.dividedHeader)}><h2><HospitalStateIcon state={id} />{label}<span>{tasks.length}</span></h2><div className={styles.groupActions}><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 숨기기`} onClick={onHide}><EyeOffIcon /></Button><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded="true" onClick={onToggle}><ChevronUpIcon /></Button></div></header>
+      <header className={cn(styles.groupHeader, styles.dividedHeader)}><h2><HospitalStateIcon state={id} />{label}<span>{tasks.length}</span></h2><div className={styles.groupActions}><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 숨기기`} onClick={onHide}><EyeOffIcon strokeWidth={1.5} /></Button><Button variant="ghost" size="icon-xs" aria-label={`${label} 열 접기`} aria-expanded="true" onClick={onToggle}><ChevronUpIcon strokeWidth={1.5} /></Button></div></header>
       <div ref={scrollRef} className={styles.columnBody} onScroll={(event) => useHomeWorkspaceStore.getState().rememberScroll(`status-column:${id}`, { top: event.currentTarget.scrollTop, left: 0 })}>
         <div className={styles.cards}>
             {tasks.map((task) => <div key={task.id} className="space-y-1" data-testid={`home-status-task-${task.id}`} title={`${task.requestedAt} · ${elapsed(task)} 경과`}>
@@ -530,8 +530,8 @@ function HomeGroupHeader({ id, label, count, collapsed, onToggle, onHide, column
   return <header className={cn(styles.groupHeader, !collapsed && styles.dividedHeader)}>
     <h2><HomeWorkTypeIcon id={id} />{label}<span>{count}</span></h2>
     <div className={styles.groupActions}>
-      <Button variant="ghost" size="icon-xs" aria-label={`${label} ${column ? "열" : "업무 목록"} 숨기기`} onClick={onHide}><EyeOffIcon /></Button>
-      <Button variant="ghost" size="icon-xs" aria-label={`${label} ${column ? `열 ${collapsed ? "펼치기" : "접기"}` : "업무 목록"}`} aria-expanded={!collapsed} onClick={onToggle}>{collapsed ? <ChevronDownIcon /> : <ChevronUpIcon />}</Button>
+      <Button variant="ghost" size="icon-xs" aria-label={`${label} ${column ? "열" : "업무 목록"} 숨기기`} onClick={onHide}><EyeOffIcon strokeWidth={1.5} /></Button>
+      <Button variant="ghost" size="icon-xs" aria-label={`${label} ${column ? `열 ${collapsed ? "펼치기" : "접기"}` : "업무 목록"}`} aria-expanded={!collapsed} onClick={onToggle}>{collapsed ? <ChevronDownIcon /> : <ChevronUpIcon strokeWidth={1.5} />}</Button>
     </div>
   </header>;
 }

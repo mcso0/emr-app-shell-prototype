@@ -130,12 +130,14 @@ function normalizeIconNode(node: React.ReactNode): React.ReactNode {
 
 function createIcon(Icon: ObraIcon, displayName: string): AppIcon {
   const WrappedIcon = React.forwardRef<SVGSVGElement, AppIconProps>(
-    (props, ref) => {
+    ({ strokeWidth = 1.5, ...props }, ref) => {
+      const iconProps = { ...props, strokeWidth };
+
       if (typeof Icon.render === "function") {
-        return normalizeIconNode(Icon.render(props, ref));
+        return normalizeIconNode(Icon.render(iconProps, ref));
       }
 
-      return React.createElement(Icon, { ...props, ref });
+      return React.createElement(Icon, { ...iconProps, ref });
     },
   );
 

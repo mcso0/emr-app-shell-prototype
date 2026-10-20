@@ -443,7 +443,7 @@ export function ClassificationExplorerSortableRow({
           sortableKeyDown?.(event);
         }}
       >
-        <IconReorderAlt aria-hidden="true" />
+        <IconReorderAlt aria-hidden="true" strokeWidth={1.5} />
       </Button>
       <strong className={styles.selectedName} title={label}>
         {label}
