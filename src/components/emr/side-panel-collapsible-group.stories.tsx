@@ -9,12 +9,16 @@ type EmrSidePanelCollapsibleGroupStoryArgs = {
   collapsed: boolean;
   count: number;
   label: string;
+  indicatorVisible?: boolean;
+  countVariant?: "badge" | "plain";
 };
 
 function EmrSidePanelCollapsibleGroupExample({
   collapsed,
   count,
   label,
+  indicatorVisible = false,
+  countVariant = "badge",
 }: EmrSidePanelCollapsibleGroupStoryArgs) {
   const [isCollapsed, setIsCollapsed] = useState(collapsed);
   const [selected, setSelected] = useState<number | null>(null);
@@ -26,8 +30,8 @@ function EmrSidePanelCollapsibleGroupExample({
       <EmrSidePanelCollapsibleGroup
         collapsed={isCollapsed}
         count={rowCount}
-        countVariant="badge"
-        indicatorVisible={false}
+        countVariant={countVariant}
+        indicatorVisible={indicatorVisible}
         label={label}
         onToggle={() => setIsCollapsed((current) => !current)}
         stateIconState="in-progress"
@@ -61,6 +65,12 @@ const meta = {
   tags: ["autodocs"],
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement);
+    const pair = canvasElement.querySelector("[data-slot='sidepanel-state-label']");
+    const icon = pair?.querySelector("svg");
+    const label = pair?.querySelector(".truncate");
+    await expect(icon?.getBoundingClientRect().width).toBe(16);
+    if (!icon || !label) throw new Error("The semantic group title must remain visible.");
+    await expect(label.getBoundingClientRect().left - icon.getBoundingClientRect().right).toBe(6);
     if (args.collapsed) await userEvent.click(canvas.getByRole("button", { name: `${args.label} 펼치기` }));
     if (args.count < 1) {
       await expect(canvas.queryByTestId("group-card-0")).not.toBeInTheDocument(); return;
@@ -132,5 +142,12 @@ export const InitiallyCollapsed: Story = {
           "사용할 때: 사용자가 덜 중요한 상태 그룹을 접어둘 수 있게 할 때. 쓰지 말아야 할 때: 첫 화면 핵심 작업을 기본 숨김 처리할 때.",
       },
     },
+  },
+};
+
+export const IndicatorAndPlainCount: Story = {
+  args: {
+    indicatorVisible: true,
+    countVariant: "plain",
   },
 };

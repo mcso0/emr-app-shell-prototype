@@ -398,7 +398,7 @@ function AttachmentCard({ item, url, downloadUrl, canDelete, onPreview, onDelete
         </> : thumbnailState !== "error" && pdf ? <LabAttachmentPdfThumbnail key={attempt} url={url}
           onReady={() => setThumbnailState("ready")} onError={() => setThumbnailState("error")} />
           : thumbnailState === "error" ? <div className="flex h-full w-full items-start justify-center pt-2">
-            <span role="status" className="flex items-center gap-1 whitespace-nowrap text-[10px] leading-4" title="미리보기를 불러오지 못했어요.">
+            <span role="status" className="flex items-center gap-1.5 whitespace-nowrap text-[10px] leading-4" title="미리보기를 불러오지 못했어요.">
               <AttachmentTypeIcon mimeType={item.mimeType} size="sm" />읽기 실패
             </span>
           </div> : <div className="flex flex-col items-center gap-1">

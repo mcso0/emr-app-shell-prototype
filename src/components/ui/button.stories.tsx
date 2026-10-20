@@ -144,19 +144,31 @@ export const IconUsage: Story = {
     docs: {
       description: {
         story:
-          "Use CDS icons inside buttons. Add data-icon so spacing follows the component contract; icon-only buttons require an aria-label.",
+          "Semantic icon-label pairs keep their icon size:12px uses4px separation and16px uses6px, including explicit compact16px icons. Independent trailing disclosure indicators keep their existing layout.",
       },
     },
   },
   render: () => (
     <LocalCommands><div className="flex flex-wrap items-center gap-3">
-      <Button>
+      <Button aria-label="기본 16px 아이콘">
         <CdsActionsPlusIcon data-icon="inline-start" aria-hidden="true" />
         신규 등록
       </Button>
       <Button variant="outline" size="sm">
         <CdsActionsTrashIcon data-icon="inline-start" aria-hidden="true" />
         삭제
+      </Button>
+      <Button variant="outline" size="sm" aria-label="16px 아이콘 예외">
+        <CdsActionsPlusIcon className="size-4" aria-hidden="true" />
+        Order
+      </Button>
+      <Button variant="outline" aria-label="12px 아이콘 예외">
+        <CdsActionsPlusIcon className="size-3" aria-hidden="true" />
+        저장
+      </Button>
+      <Button variant="outline" size="lg" aria-label="큰 버튼 12px 아이콘 예외">
+        <CdsActionsPlusIcon className="size-3" aria-hidden="true" />
+        저장
       </Button>
       <Button size="icon" variant="ghost" aria-label="신규 등록">
         <CdsActionsPlusIcon aria-hidden="true" />
@@ -166,6 +178,20 @@ export const IconUsage: Story = {
       </Button>
     </div></LocalCommands>
   ),
+  play: async ({ canvas }) => {
+    for (const [name, iconSize, gap] of [
+      ["기본 16px 아이콘", 16, 6],
+      ["삭제", 12, 4],
+      ["16px 아이콘 예외", 16, 6],
+      ["12px 아이콘 예외", 12, 4],
+      ["큰 버튼 12px 아이콘 예외", 12, 4],
+    ] as const) {
+      const button = canvas.getByRole("button", { name });
+      const icon = button.querySelector("svg");
+      await expect(icon?.getBoundingClientRect().width).toBe(iconSize);
+      await expect(Number.parseFloat(getComputedStyle(button).columnGap)).toBe(gap);
+    }
+  },
 };
 
 export const DisabledAndInvalid: Story = {

@@ -672,7 +672,7 @@ export function OrderWorkTable({
                 colSpan={row.getVisibleCells().length}
               >
                 <div
-                  className="emr-text-body sticky left-0 flex min-h-6 w-[var(--emr-table-left-pinned-column-width)] max-w-full items-start gap-2 font-medium text-[var(--emr-status-warning-text)]"
+                  className="emr-text-body sticky left-0 flex min-h-6 w-[var(--emr-table-left-pinned-column-width)] max-w-full items-start gap-1.5 font-medium text-[var(--emr-status-warning-text)]"
                   data-emr-cell-content="auto"
                   style={{ paddingInline: `var(--emr-table-cell-padding-x-${density})` }}
                 >

@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,color,opacity,transform] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "group/button inline-flex shrink-0 items-center justify-center border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,color,opacity,transform] duration-[var(--clair-motion-duration-fast)] ease-[var(--clair-motion-easing-standard)] outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 has-[>svg.size-4:not([data-icon=inline-end])]:gap-1.5",
   {
     variants: {
       variant: {
@@ -21,11 +21,11 @@ const buttonVariants = cva(
       },
       size: {
         default:
-          "emr-control-text h-[var(--clair-control-height-md)] gap-1 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-4",
+          "emr-control-text h-[var(--clair-control-height-md)] gap-1 has-[>svg:not([class*='size-']):not([data-icon=inline-end])]:gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5 [&_svg:not([class*='size-'])]:size-4",
         xs: "emr-control-text-compact h-[var(--clair-control-height-xs)] gap-1 px-2 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "emr-control-text-compact h-[var(--clair-control-height-sm)] gap-1 px-2 has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        lg: "emr-control-text h-[var(--clair-control-height-lg)] gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
-        xl: "emr-control-text h-[var(--clair-control-height-xl)] gap-1.5 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
+        lg: "emr-control-text h-[var(--clair-control-height-lg)] gap-1.5 has-[>svg.size-3:not([data-icon=inline-end])]:gap-1 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
+        xl: "emr-control-text h-[var(--clair-control-height-xl)] gap-1.5 has-[>svg.size-3:not([data-icon=inline-end])]:gap-1 px-4 has-data-[icon=inline-end]:pr-3.5 has-data-[icon=inline-start]:pl-3.5 [&_svg:not([class*='size-'])]:size-4",
         icon: "size-[var(--clair-control-height-md)] [&_svg:not([class*='size-'])]:size-4",
         "icon-xs": "size-[var(--clair-control-height-xs)] [&_svg:not([class*='size-'])]:size-3",
         tiny: "size-[18px] !rounded-[var(--clair-radius-atomic-4)] p-[2px] [&_svg:not([class*='size-'])]:size-[14px]",

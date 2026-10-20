@@ -35,6 +35,7 @@ For actual next work, start from the active Linear project and issue, then use t
 
 | ID                          | Status       | Area                 | Priority | Target PR            | Work Item                                                                                              |
 | --------------------------- | ------------ | -------------------- | -------- | -------------------- | ------------------------------------------------------------------------------------------------------ |
+| DESIGN-SYSTEM-PR-110 | implemented | design-system | P1 | Approved12px/4px and16px/6px semantic icon-label spacing; user-authorized scoped release after required checks | [Work item](design-system/DESIGN-SYSTEM-PR-110-icon-label-spacing.md) |
 | DESIGN-SYSTEM-PR-109 | human_review | design-system | P1 | Chart stability70/70;axe705+5 audited with findings | [Work item](design-system/DESIGN-SYSTEM-PR-109-origin-main-storybook-full-audit.md) · [Plan](design-system/DESIGN-SYSTEM-PR-109-storybook-alignment-orchestration-plan.md) |
 | DOCS-PR-001                 | done         | docs-restructure     | P0       | PR 1                 | `docs/work/docs-restructure/DOCS-PR-001-agent-first-docs-foundation.md`                                |
 | DOCS-PR-002                 | done         | docs-restructure     | P0       | PR 2                 | `docs/work/docs-restructure/DOCS-PR-002-product-planning-migration.md`                                 |

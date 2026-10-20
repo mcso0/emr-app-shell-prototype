@@ -523,16 +523,18 @@ export function GlobalCommandPalette({
             환자, 보호자, 병원 구성원, 예약, 접수와 주요 업무 화면을 검색하고 실행합니다.
           </DialogDescription>
           <div className="flex h-13 items-center gap-2 border-b px-4">
-            <SearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <Input
-              ref={inputRef}
-              value={query}
-              onChange={(event) => handleQueryChange(event.target.value)}
-              onKeyDown={handleInputKeyDown}
-              aria-label="통합 검색"
-              placeholder="동물명, 보호자명, 구성원명, 전화번호, 차트번호 검색"
-              className="h-12 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 md:text-[15px]"
-            />
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <SearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <Input
+                ref={inputRef}
+                value={query}
+                onChange={(event) => handleQueryChange(event.target.value)}
+                onKeyDown={handleInputKeyDown}
+                aria-label="통합 검색"
+                placeholder="동물명, 보호자명, 구성원명, 전화번호, 차트번호 검색"
+                className="h-12 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 md:text-[15px]"
+              />
+            </div>
             <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
               {flattenedItems[activeIndex] ? `활성 실행 항목: ${flattenedItems[activeIndex].title}` : ""}
             </span>

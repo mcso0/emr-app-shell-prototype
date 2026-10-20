@@ -344,7 +344,7 @@ function PreconsultationHeader({
         <PatientIdentity context={context} size="large" />
         <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:justify-end">
           <Button
-            className="h-8 min-w-0 gap-1 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
+            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
             variant="outline"
             size="default"
             onClick={onOpenPatientInformation}
@@ -353,7 +353,7 @@ function PreconsultationHeader({
             환자 정보
           </Button>
           <Button
-            className="h-8 min-w-0 gap-1 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
+            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
             variant="outline"
             size="default"
             onClick={onOpenGuardianInformation}
@@ -367,7 +367,7 @@ function PreconsultationHeader({
           />
           <ButtonGroup className="ml-auto lg:ml-0">
             <ButtonGroupPrimaryButton
-              className="h-8 gap-1 px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3"
+              className="h-8 gap-1.5 px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3"
               disabled={primaryActionBusy}
               onClick={onRequestCall}
               type="button"
