@@ -31,14 +31,15 @@ const meta = {
       story: { inline: false, height: "800px" },
       description: {
         component:
-          "Shared Trigger+Popover+Builder API composition follows CustomerDataTable popup wrappers. Source model helpers derive completed-rule count and filtered rows. Active starts with eight rules in two source-limit-compliant groups. Controls reset local model; this does not reproduce the full customer controller.",
+          "Shared Trigger+Popover+Builder API composition follows CustomerDataTable popup wrappers. The icon follows Button size rules: 12px for sm and 16px for default. Source model helpers derive completed-rule count and filtered rows. Active starts with eight rules in two source-limit-compliant groups. Controls reset local model; this does not reproduce the full customer controller.",
       },
     },
   },
   args: {
     activeCount: 0,
+    size: "sm",
   },
-  argTypes: { activeCount: { control: { type: "number", min: 0, max: 15, step: 1 }, description: "Initial complete synthetic rules; local source model derives the displayed count." }, onClick: { table: { disable: true } } },
+  argTypes: { size: { control: "select", options: ["sm", "default"], description: "Button sizes used by table toolbars (sm) and Home (default)." }, activeCount: { control: { type: "number", min: 0, max: 15, step: 1 }, description: "Initial complete synthetic rules; local source model derives the displayed count." }, onClick: { table: { disable: true } } },
   render: (args) => <TriggerExample key={`${args.activeCount}:${args.disabled}`} {...args} />,
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
@@ -67,6 +68,17 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Empty: Story = {};
+
+export const DefaultSize: Story = {
+  args: { size: "default" },
+  parameters: {
+    docs: {
+      description: {
+        story: "Home uses Button default size, which keeps the filter icon at 16px.",
+      },
+    },
+  },
+};
 
 export const Active: Story = {
   args: { activeCount: 8 },

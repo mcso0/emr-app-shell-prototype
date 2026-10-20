@@ -48,7 +48,7 @@ export const EmrTableFilterTrigger = React.forwardRef<
       {...props}
     >
       <span data-slot="filter-label-pair" className="inline-flex items-center gap-1.5">
-        <CdsActionsListFilterIcon aria-hidden="true" className="size-4" />
+        <CdsActionsListFilterIcon aria-hidden="true" />
         <span data-slot="filter-label-text">{label}</span>
       </span>
       {selected ? (
