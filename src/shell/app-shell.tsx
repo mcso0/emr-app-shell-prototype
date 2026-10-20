@@ -133,6 +133,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
   const {
     notifications,
     counts: notificationCounts,
+    deliveryGeneration: notificationDeliveryGeneration,
     snapshotScope: notificationSnapshotScope,
     requestState: notificationRequestState,
     errorMessage: notificationErrorMessage,
@@ -639,7 +640,7 @@ export function AppShell({ workspaceId, moduleId }: AppShellProps) {
         onSelectWorkspace={handleSelectWorkspace}
       />
       {authSession?.role === "supabase" ? <LiveNotificationDelivery
-        key={`${workspaceId}:${authSession.userId}`}
+        key={`${workspaceId}:${authSession.userId}:${notificationDeliveryGeneration}`}
         workspaceId={workspaceId}
         userId={authSession.userId}
         notifications={notifications}

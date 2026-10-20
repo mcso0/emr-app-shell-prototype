@@ -204,3 +204,61 @@ outstanding database findings above remain unchanged.
 - Full lint, nonincremental TypeScript, Node 22 production build, docs (1,073),
   secret scan (4,920), and diff checks passed. Build retains the existing
   docs-viewer dynamic-filesystem trace warning. Remote delivery remains pending.
+
+## Notification Window Sharing — 2026-10-20
+
+### Approved Outcome And Candidate Boundary
+
+승욱 authorized request reduction while preserving existing functionality and the
+30-second notification cadence, with parent review and GPT-6.1 Sol implementation.
+Advance bounded delivery approval covers this separate candidate after checks,
+Ready Preview, review, protected merge, scoped smoke and rollback evidence.
+No paid service, DB/RLS/migration, real-data mutation, provider effect, or global
+auth/permission redesign is included. The prior frontend follow-up's exclusion of
+multi-window sharing describes that historical candidate, not this new authority.
+
+### Implementation Contract
+
+Use server-verified actor/login-session/workspace scope. Each window performs its
+own authorized initial read before joining an in-memory group. Supported browsers
+may share steady visible polling through BroadcastChannel and Web Locks. Unsupported
+or failing coordination falls back to the existing per-window refresh. Initial,
+focus/resume, explicit retry, and post-mutation reads remain available directly.
+Hidden/disposed leaders release ownership; stalled leaders cannot indefinitely
+suppress a visible follower's independent refresh.
+
+Never persist notification payloads or credentials for coordination. Preserve
+server authorization, bounded rows, global counts, mutation permissions, and
+per-window toast/sound/preferences behavior. Leader changes must not reset toast
+history. Different users, workspaces, or login generations must not accept each
+other's payloads. Logout, denied access, delayed reads and pre-mutation responses
+must not restore protected or stale state. Sharing changes requests, not alert
+ownership or the existing delivery policy.
+
+### Verification And Done Criteria
+
+Use synthetic fixtures with no hosted DB writes. Verify two visible windows,
+unsupported APIs, leader hide/close/stall, scope changes, logout/relogin, 401/403,
+concurrent mutation invalidation, failed/repeated edits, stale replies, and retained
+per-window delivery semantics. Include actual same-origin browser coordination and
+live-mode caller evidence; mock auth alone cannot prove the sharing branch.
+Record request counts without claiming unmeasured Production CPU savings. Complete
+focused checks and standard local/remote release gates before delivery.
+
+Implementation and local integration verification are complete in isolated
+`codex/notification-poll-sharing`. The earlier profile/billing candidate is included;
+its documentation history and tests are preserved. Remote delivery evidence is
+recorded on the PR.
+
+### Notification window sharing verification — 2026-10-20
+
+- Integrated the profile/billing shared-read candidate before verification. Focused Vitest configuration passed 72 tests across 8 files.
+- `npx playwright test --config playwright.notification-sharing.config.ts` passed all 11 browser tests using the actual hook and toast delivery component, native BroadcastChannel/Web Locks, a loopback-only fixture, and synthetic API interception. The fixture blocks external requests and does not load service environment files.
+- During the real 62-second two-window cadence test, each window performed its own initial GET; only two subsequent periodic GETs occurred in total. The 30-second cadence remains unchanged.
+- Browser checks covered read/archive/restore/read-all synchronization, concurrent mutations, stale GET and POST completion, ordinary/silent mutation failures, 403 fencing and own retry, login/workspace separation, unavailable sharing APIs, missing server scope, and login-generation toast reset.
+- Scope hashing tests cover stable identical inputs and isolation by actor, workspace, and login session; a missing session disables sharing. A changed-scope response cannot publish into the previous channel.
+- Frozen-lock and stopped-message/timer behavior was verified at the coordinator protocol boundary with synthetic clocks and transport. An actual browser process freeze was not executed.
+- Server/API/DB permission enforcement, notification semantics, and per-window toast ownership remain in place. No database, provider, real-data mutation, or paid service change is part of this candidate.
+- Remote required CI, current-head Preview, ordered merge, and Production smoke are separate release evidence and remain pending at this local verification checkpoint.
+
+- Parent integrated preflight passed: full ESLint, non-incremental TypeScript, and Production build (25 pages). The existing `src/lib/prd-viewer/doc-reader.ts:78` dynamic filesystem tracing warning remains unrelated. Documentation references passed for 1,073 Markdown files, secret scan for 4,930 tracked files, and `git diff --check` passed.

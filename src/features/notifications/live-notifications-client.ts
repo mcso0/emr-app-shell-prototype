@@ -46,6 +46,7 @@ type LiveNotificationListResponse =
       counts: LiveNotificationCounts;
       nextCursor: string | null;
       enforcedBy: "live-notification-reader";
+      sharingScope?: string;
     }
   | {
       ok: false;
@@ -89,6 +90,7 @@ export type LiveNotificationSnapshotResult =
       ok: true;
       counts: LiveNotificationCounts;
       notifications: GlobalNotification[];
+      sharingScope?: string;
     }
   | LiveNotificationFailure;
 
@@ -215,6 +217,8 @@ async function fetchLiveNotificationList({
     ok: true,
     counts: body.counts,
     notifications: body.notifications.map(mapLiveNotificationDto),
+    sharingScope: typeof body.sharingScope === "string" && /^[a-f0-9]{64}$/.test(body.sharingScope)
+      ? body.sharingScope : undefined,
   };
 }
 
