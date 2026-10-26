@@ -75,7 +75,7 @@
     "eslint-config-next": "16.2.6",
     "eslint-plugin-storybook": "^10.4.4",
     "playwright": "^1.60.0",
-    "storybook": "^10.4.4",
+    "storybook": "^10.6.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite": "^8.0.16",
