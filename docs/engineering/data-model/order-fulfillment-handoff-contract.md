@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-10-06
+last_updated: 2026-10-27
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -29,6 +29,40 @@ last_updated: 2026-10-06
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
 `DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. `DEN-241` adds end-to-end replay coverage. `DEN-242` closes out the project and records staging readiness boundaries. Remote staging migration remains gated by dry-run and explicit approval.
+
+## Dispensing/treatment instruction candidate — 2026-10-27
+
+Local candidate only; remote application is not verified. See
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-dispensingtreatment-instruction-workflow--2026-10-27).
+
+- The authenticated instruction GET/PATCH route uses session-bound RPCs. Live
+  failures do not fall back to demo state. Existing legacy sales fixtures remain
+  an explicitly separate caller path.
+- A set has a main executor and each item has one executor. The main can assign
+  and complete its items; a sub can complete only their own item. The requesting
+  vet can complete items/the set. Server capabilities own these rules.
+- Completing all children does not finalize a set. Explicit group completion
+  completes unfinished active children atomically and keeps cancelled children
+  cancelled. Actual-result requirements and billing guards remain enforced.
+- Reopening preserves stored results and emits no undo activity/history or
+  notification. Invoiced orders cannot be reopened through this command.
+- Unassigning started work pauses it while retaining results. A successor claims
+  and resumes. Changing a child's executor does not change the set main.
+- Independent changed-child requests keep the aggregate identity and advance only
+  that child's attempt. Whole-set repeats use each child's current attempt.
+- Common set instruction text uses the existing draft save/ETag before first
+  confirmation. Confirmed common-text edits preserve completion and record
+  author, time, and before/after values. Item notes use existing clinical fields.
+- Completion receipts are actor-bound. A transaction-local private capability
+  supports completion readback/billing without granting completed-result
+  amendment permission to a requester. It is removed before the command returns.
+- Assignment, cancellation, completion and instruction-change notifications use
+  persisted user recipients and deduplicated event identities. Reopen is silent.
+
+Migrations `20261027091000` through `20261027095000` must be reviewed/applied
+as one candidate before enabling its live caller. Local isolated SQL tests use
+synthetic schema fixtures; clinical calculations and invoice internals remain
+separate dependencies. This is not a full hosted-schema or real-data proof.
 
 ## Current Inventory
 

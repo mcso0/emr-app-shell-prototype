@@ -46,7 +46,10 @@ export async function recordExecutionResult({ client, actorUserId, workspaceId, 
   if (!command || !isExecutionUuid(actorUserId)) return { ok: false, status: 400, error: "invalid_execution_command" };
   const current = await readExecutionContext({ client, workspaceId, workItemId });
   if (!current.ok) return current;
-  if (!current.context.canRecord) return { ok: false, status: 403, error: "permission_missing" };
+  // A lost successful first-result response must reach the actor-bound RPC receipt.
+  // The RPC rejects changed commands; this exception never grants amendment authority.
+  const mayReplayInitialResult = command.expectedResultVersion === 0 && current.context.results.length > 0;
+  if (!current.context.canRecord && !mayReplayInitialResult) return { ok: false, status: 403, error: "permission_missing" };
   if (!parseExecutionPayload(current.context.clinicalOrderType, command.payload, current.context.planSnapshot)) return { ok: false, status: 400, error: "invalid_execution_payload" };
   // CAS and idempotency are intentionally enforced in the write transaction,
   // not inferred from this advisory read (which can already be stale).

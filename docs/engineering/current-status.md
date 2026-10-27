@@ -33,6 +33,9 @@ This is the current product-status source for scope, mock/live boundaries, and h
 
 Local current-assignee authority candidate (2026-10-12) now covers lab, imaging, dispensing/treatment and billing. Lab input opens on claim; other clinical modules retain start/record/completion/amendment phases. Only the current assignee may edit/execute, and transfer changes authority. Billing ownership/audit and DB guards are in local migration `20261012054346`; no remote application or delivery is verified. See [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#current-assignee-boundary-follow-up-2026-10-12) for scoped synthetic verification and remaining integration limits.
 
+Local dispensing/treatment instruction follow-up (2026-10-27) adds explicit set finalization, main/sub item execution, changed-child attempts, common-instruction edits that preserve completion, requester completion, and persisted notifications. The live route requires its five local candidate migrations; none has been remotely applied in this work. Existing actual-result and billing guards remain. Local SQL/API/UI evidence and remaining hosted-schema verification are recorded in [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-dispensingtreatment-instruction-workflow--2026-10-27).
+
+
 ## Agent Compact Summary
 
 * Current target: Product MVP.

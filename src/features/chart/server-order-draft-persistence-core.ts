@@ -49,6 +49,7 @@ export type ChartOrderReadbackQuantitySource =
   | "actual_dispense_quantity";
 
 export type ChartOrderRuntimeRow = {
+  instruction?: string;
   originChartId?: string | null;
   orderId: string;
   workspaceId?: string;
@@ -125,6 +126,7 @@ export type ChartOrderDraftRowInput =
     } & ChartOrderDraftEditableValues
   | {
       rowType: "set";
+      instruction?: string;
       orderId: string;
       sourceSetId: string;
       sourceSetRevisionId: string;
@@ -1122,6 +1124,7 @@ function isValidDraftRow(value: unknown): value is ChartOrderDraftRowInput {
         "sourceSetRevisionId",
         "sourceSetRevisionNo",
         "selectionIntent",
+        "instruction",
         "detailInputs",
         "detailSchemaVersion",
         "priority",
@@ -1131,6 +1134,7 @@ function isValidDraftRow(value: unknown): value is ChartOrderDraftRowInput {
       typeof row.sourceSetId !== "string" || !row.sourceSetId.trim() ||
       typeof row.sourceSetRevisionId !== "string" || !row.sourceSetRevisionId.trim() ||
       typeof row.sourceSetRevisionNo !== "number" || !Number.isInteger(row.sourceSetRevisionNo) || row.sourceSetRevisionNo <= 0 ||
+      (row.instruction !== undefined && (typeof row.instruction !== "string" || row.instruction.length > 5000)) ||
       !isValidSelectionIntent(row.selectionIntent) ||
       !isValidEditableDraftValues(row) ||
       !isValidSetChildInputs(row.childInputs)) return false;
@@ -1412,6 +1416,7 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
     encounterId: row.encounterId,
     originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     rowType: row.rowType,
+    instruction: typeof row.instruction === "string" ? row.instruction : undefined,
     orderType: row.orderType as ChartOrderRuntimeRow["orderType"],
     clinicalOrderType,
     destinationModule,
@@ -1573,6 +1578,7 @@ async function buildMockSetRuntimeRows({
       clinicalOrderType: "other",
       destinationModule: null,
       executionMode: "aggregate",
+      instruction: row.instruction ?? previousParent?.instruction ?? "",
       detailInputs: row.detailInputs ?? previousParent?.detailInputs ?? {},
       detailSchemaVersion:
         row.detailSchemaVersion ?? previousParent?.detailSchemaVersion ?? 1,

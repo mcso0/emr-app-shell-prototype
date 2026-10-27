@@ -62,6 +62,9 @@ import {
   type FulfillmentTransitionOptions,
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
+import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
+import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
+import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
 import {
   getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
@@ -69,7 +72,6 @@ import {
   usePatientFulfillmentHistory,
   type PatientHistoryEntry,
 } from "@/features/fulfillment/patient-history-aside";
-import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
 import type {
   FulfillmentWorkItemAction,
   FulfillmentWorkItemStatus,
@@ -1757,6 +1759,11 @@ function DispensingContentBody({
       ),
     [fulfillmentQueue.workItems, selectedQueueItem],
   );
+  const instruction = useFulfillmentInstruction(
+    !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.workspaceId : undefined,
+    !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.id : undefined,
+    selectedFulfillmentWorkItem ? String(selectedFulfillmentWorkItem.rowRevision) : undefined,
+  );
   const medicationLinkPending = selectedFulfillmentWorkItem?.queueType === "treatment"
     && selectedFulfillmentWorkItem.sourceSnapshot?.detailSchemaVersion === 3
     && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
@@ -2122,6 +2129,7 @@ function DispensingContentBody({
                   </Button>
                 ) : null}
                 {selectedFulfillmentWorkItem ? (
+                  !allowLegacyFixtureFallback ? <InstructionActions controller={instruction} onChanged={fulfillmentQueue.refresh} /> : (
                   <FulfillmentExecutionActions
                     workspaceId={selectedFulfillmentWorkItem.workspaceId}
                     workItemId={selectedFulfillmentWorkItem.id}
@@ -2144,6 +2152,7 @@ function DispensingContentBody({
                     }
                     status={selectedFulfillmentWorkItem.status}
                   />
+                  )
                 ) : primaryGroup ? (
                   <GroupStatusAction
                     group={primaryGroup}
@@ -2252,7 +2261,7 @@ function DispensingContentBody({
           data-slot="instruction-result-scroll-content"
           className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}
         >
-          {visibleTableGroups.map((group, section) => {
+          {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback ? <InstructionBody key={selectedFulfillmentWorkItem.id} controller={instruction} workspaceId={selectedFulfillmentWorkItem.workspaceId} onChanged={fulfillmentQueue.refresh} /> : visibleTableGroups.map((group, section) => {
             const completedCount = group.rows.filter(
               (row) => row.workStatus === "완료",
             ).length;
@@ -2328,7 +2337,7 @@ function DispensingContentBody({
               </EmrOrderGroupSection>
             );
           })}
-          {!visibleTableGroups.length ? (
+          {!selectedFulfillmentWorkItem && !visibleTableGroups.length ? (
             <div className="rounded-lg border border-[var(--emr-border-subtle)] bg-card p-8 text-center emr-text-dense font-medium text-muted-foreground">
               표시할 오더 그룹이 없습니다.
             </div>

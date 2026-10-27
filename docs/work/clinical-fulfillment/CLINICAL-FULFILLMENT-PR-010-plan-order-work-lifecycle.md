@@ -419,3 +419,169 @@ User authorized investigating and fixing the initial billing assignment409, synt
 The candidate-only billing display model uses `invoice-live-<encounterId>` until a persisted invoice is available. The ownership hook previously queried this display id and started its polling/realtime lifecycle, causing an initial409. The hook now treats only that reserved provisional prefix as an unavailable ownership target. It skips ownership reads/listeners/polling/subscriptions for the provisional model and resumes the existing lifecycle for persisted invoice ids. Real invoice authorization errors remain errors and continue to lock financial controls. Server/API/RLS/DB schema and canonical role policies are unchanged; no migration is needed.
 
 The actual browser regression reproduced provisional ownership requests against the baseline. It covers provisional display and focus/event updates without an assignment request, followed by a real invoice target with denied/allowed authorization. Existing assignment and financial permission checks and actual-workspace billing stories are retained. Focused verification: new provisional-id browser regression plus existing assignment tests3/3, session-bound billing permission tests17/17, and actual-workspace billing stories9/9 pass (29 checks). Secrets/docs/lint/typecheck/build and diff checks passed; the existing docs NFT trace warning remains. Exact Release Check and scoped Preview screen acceptance follow. Smoke uses the existing pending UI-FINAL synthetic invoice, restores its unassigned state, and never starts/completes clinical work or submits payment. Rollback is the baseline Production deployment above or a revert of this scoped hook change.
+
+## Approved dispensing/treatment instruction workflow — 2026-10-27
+
+승욱 authorized the researched PRD update and in-scope local implementation and
+verification. Baseline: Production/main `3af3462ce256fc1762216a104299c3427ab03f34`.
+Work is isolated from the dirty primary checkout on
+`codex/dispensing-order-workflow`. This authorization covers local synthetic
+fixtures, additive migration/RPC/API preparation, application wiring, Storybook,
+and tests. It does not authorize remote DB apply, main merge, Production release,
+real data, payment, external messaging, or public publication.
+
+Accepted behavior:
+
+- Single-order row completion completes the order after a confirmation dialog.
+- The top completion action completes the entire instruction, including unfinished
+  active children. Its dialog explains the unfinished count. Cancelled children
+  remain cancelled. Existing actual-result prerequisites remain enforced; never
+  fabricate execution results to satisfy completion.
+- Completing every child does not implicitly finalize a set.
+- Unassign after start preserves performed results and pauses the work; a successor
+  claims and resumes. Replacing an item executor does not replace the set main.
+- Re-request restarts changed items only, preserving unchanged completion.
+  A set-common-instruction-only change preserves completed items and set completion.
+  Show the changed instruction and retain its author, time, and before/after history
+  (승욱 confirmed this policy).
+- Each item has one executor. The sub completes their own item. The main may
+  assign/complete all items and finalize the set. The requesting vet may complete
+  individual items or the set. Apply these explicit permissions at the server/DB
+  boundary without broadening other modules' permissions.
+- Technicians may undo a completion check without a reason or undo-history entry
+  (explicit user correction). Preserve existing results and historical entries;
+  reopening must not delete them. Transport deduplication is not a user activity
+  history. Verify no undo task/order/audit history event is emitted.
+- Match the latest reviewed prototype's card/table grouping, exact content
+  hierarchy, changed-value tooltip, compact-width current value, and expanded
+  change/instruction detail. Reuse current components and lifecycle/read models.
+
+Completion criteria: the PRD's V01–V13/T01–T18 behaviors are wired through actual
+callers; relevant local SQL/API/UI, stale response, retry, concurrent assignment,
+workspace isolation, history, notification recipient/deduplication and visual
+checks pass. Report local proof separately from remote deployment and acceptance.
+
+Planned owners: dispensing instruction presenter/controller and contract;
+fulfillment instruction read/command boundary; narrow canonical task/RPC
+extensions; chart instruction/complete entry points; notification event producer;
+existing product/data contracts and scoped regression coverage. No unrelated
+refactoring or dependency changes.
+
+### Local implementation and verification evidence
+
+The shared instruction presenter is connected to the live dispensing/treatment
+caller and the chart `지시서·완료` action. The reviewed prototype's status groups,
+compact changed-value display, tooltip and expanded notes are retained. Draft
+set notes use existing save/ETag handling; confirmed common-note revisions keep
+completion. Child notes remain in the owning clinical detail schema.
+
+Local evidence recorded on 2026-10-27:
+
+- Ten Storybook browser checks pass, covering row confirmation/reopen, compact
+  layout, read-only and save-failure states, common-note preservation, duplicate
+  clicks, lost-response retries, conflicts and late reads/writes after selection.
+- Fifty focused contract/draft/result checks pass, including the real local mock
+  draft route, set-note reload/clear, unchanged child details and result retry
+  without amendment authority.
+- Real application caller checks pass for dispensing and treatment execution
+  results, completion/history/amendment, and claim/unassign with stable request
+  time. The dispensing result check required a rerun after initial development
+  route compilation exceeded its navigation assertion timeout; the warm run passed.
+- The isolated PostgreSQL harness executes instruction commands, the canonical
+  result writer for a chart-only requester, independent child mutation and then
+  whole-set repeat, notification recipient/deduplication checks, no-history undo,
+  billing lock, actor/workspace denial, and two concurrent claim sessions.
+  It checks candidate patch anchors against reconstructed owning definitions.
+  Unchanged clinical validation/calculation and invoice internals are synthetic
+  dependencies; handoff calls are verified, not invoice arithmetic.
+- Wide/compact Storybook captures were inspected locally. Application UI uses
+  synthetic intercepted responses; this does not prove hosted persistence.
+
+A broader isolated migration replay stopped at existing migration
+`20260826160000_clinical_master_dispensing_service_review.sql` because its seeded
+master release was absent. No constraint was weakened and no original migration
+was edited to force a pass. Full schema replay, hosted permission/persistence and
+notification delivery remain release gates. Real data and remote writes were not
+used. Invoiced orders retain the existing no-reopen boundary.
+
+Final local checks pass: production build (including TypeScript), focused ESLint,
+`docs:check` (1,075 files), and `git diff --check`. The existing secret scanner
+also passed with its file list extended temporarily to include the new source
+files (4,959 files; generated local artifacts excluded). The primary checkout
+retains all 106 baseline WIP file hashes unchanged. The development server was
+stopped and its unrelated generated AGENTS.md block removed.
+
+The chart entry is wired in source and shares the tested instruction body and
+transport; its complete chart-menu browser flow was not separately exercised.
+No main merge, PR publication or Production delivery is included in this local
+implementation authorization.
+
+
+### Conditional release authorization — 2026-10-27
+
+승욱 explicitly requested completion followed by commit, push, PR, merge to
+`origin/main`, and approved deployment for this bounded instruction workflow.
+This supersedes the earlier local-only delivery limit for the same work. Resolve
+and record the final candidate and proceed after all applicable checks pass.
+Remote DB application and hosted synthetic mutation smoke still need separately
+scoped approval under the release contract; no real clinical/payment data or
+external communications are included.
+
+Current main and Ready Production source are
+`3af3462ce256fc1762216a104299c3427ab03f34`. Rollback app deployment:
+`dpl_4cCQcucPqUDgAEBBnFMWCypNdKvH`. Live main protection requires the combined
+Release Check, an up-to-date branch, and applies to administrators.
+
+The candidate requires these five migrations before its caller is released:
+
+- `20261027091000_dispensing_instruction_workflow.sql`: private instruction state,
+  bounded commands, receipts, completion and reopen handling.
+- `20261027092000_instruction_execution_authority.sql`: requester/main executor
+  access integrated with existing result and billing boundaries.
+- `20261027093000_instruction_notifications.sql`: scoped notification events and
+  recipient deduplication.
+- `20261027094000_instruction_child_attempts.sql`: restart changed child attempts
+  while preserving unaffected completion.
+- `20261027095000_instruction_draft_notes.sql`: draft set-note persistence/readback.
+
+Read-only hosted inspection confirms these migrations are not applied. Exact
+hosted function definitions were exported locally without business rows. This
+caught a context-reader anchor mismatch with the already deployed null-safe
+owner predicate; the candidate and its reconstructed test baseline now preserve
+that predicate. All further verification must use the corrected candidate.
+Production merge remains blocked until required DB readiness and scoped smoke
+are verified. Preview shares the existing DB and is not an isolated data target.
+
+
+### Hosted preflight and remote DB authorization — 2026-10-27
+
+승욱 explicitly approved applying the five PR1013 DB changes to the current
+`clair-emr-staging` service and synthetic assignment/completion/re-request,
+notification and billing-link verification. Existing clinical/payment records,
+actual payments and external communications are excluded. Stop merge on failure.
+This approval resolves the separate DB gate above; merge/Production approval
+remains valid for this bounded task after refreshed checks pass.
+
+Before permanent application, all five changes were executed inside rollback
+transactions against the actual hosted schema. Canonical draft expansion and
+confirmation created a new synthetic patient/encounter/set from an existing
+synthetic catalog. Calls ran with the `authenticated` database role and the
+allowlisted seeded actors; no authorization helper or trigger was disabled.
+
+- Main/sub assignment and actual result completion passed. Replay preserved one
+  result; child completion did not implicitly finalize the set.
+- Requester completion passed without granting completed-result amendment rights.
+- The real billing path created one synthetic candidate-linked invoice line;
+  no payment was executed. All fixture rows were rolled back.
+- Common-note changes preserved completion. Completion notifications reached the
+  three expected recipients once; note changes reached the two assigned actors.
+- A nonbillable variant passed no-history/no-notification undo with preserved
+  results, independent child re-request, then whole-set repeat with child attempt 3.
+- Workspace denial and private transaction-capability cleanup passed.
+
+The hosted re-request test caught a missing reason on the aggregate's
+`re_requested` event. The candidate now records the existing validated reason;
+its local SQL fixture includes the canonical reason constraint and passes.
+The corrected hosted re-request transaction passes as well. This supersedes the
+older hosted-runtime evidence gap; fresh empty-database replay still has its
+pre-existing master-seed dependency and is not claimed as passing.

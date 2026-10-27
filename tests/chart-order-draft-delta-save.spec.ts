@@ -139,3 +139,14 @@ test("confirmed rows remain excluded and invalid ETag never sends a request", as
   expect((await serialize([row]))[0].rows).toEqual([]);
   expect(await serialize([individual("new", false)], [], "invalid")).toEqual([]);
 });
+
+test("set instruction-only edits and clearing are persisted without altering child notes", async () => {
+  for (const instruction of ["새 공통 지시", ""]) {
+    const { parent, children } = setRows();
+    const row = { ...parent, order: { ...parent.order, instruction }, runtimeRow: { ...parent.runtimeRow, instruction: "이전 공통 지시" } };
+    const [request] = await serialize([row, ...children]);
+    expect(request.rows).toHaveLength(1);
+    expect(request.rows[0]).toMatchObject({ rowType: "set", orderId: "parent", instruction });
+    expect((request.rows[0].childInputs as Array<{ detailInputs: unknown }>).map(child => child.detailInputs)).toEqual(children.map(child => child.detailInputs));
+  }
+});

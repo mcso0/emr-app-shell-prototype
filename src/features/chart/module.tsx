@@ -1,5 +1,6 @@
 "use client";
 
+import { ChartInstructionDialog } from "./components/chart-instruction-dialog";
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { getFreshChartOrderCatalog, loadCachedChartOrderCatalog } from "./chart-order-catalog-client";
@@ -3713,6 +3714,7 @@ async function saveChartOrderDraftRoute({
             sourceSetRevisionId,
             sourceSetRevisionNo,
             selectionIntent,
+            instruction: row.order.instruction ?? "",
             childInputs,
             detailInputs: row.detailInputs,
             detailSchemaVersion: row.detailSchemaVersion,
@@ -6076,7 +6078,7 @@ function buildChartOrderDraftRowFromRuntime(
     requestedByUserId: fallback?.order.requestedByUserId ?? "",
     requestedAt: fallback?.order.requestedAt ?? snapshot.updatedAt,
     instruction:
-      getString("internalInstruction", "appliedInternalInstruction") ??
+      snapshot.instruction ?? getString("internalInstruction", "appliedInternalInstruction") ??
       fallback?.order.instruction,
     sortOrder,
     createdAt: fallback?.order.createdAt ?? snapshot.updatedAt,
@@ -7193,6 +7195,7 @@ function getChartOrderScopedChargeAmount(row: ChartOrderDraftRow) {
 }
 
 const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
+  (row.runtimeRow?.rowType === "set" && (row.order.instruction ?? "") !== (row.runtimeRow.instruction ?? "")) ||
   row.billingName !== row.committedBillingName ||
   row.quantityInput !== row.committedQuantityInput ||
   (row.runtimeRow !== undefined &&
@@ -7799,6 +7802,9 @@ function ChartOrderTable({
   onOpenDetail,
   onOpenHistory,
   onOpenMutation,
+  onOpenInstruction,
+  onEditDraftInstruction,
+  instructionOrderIds,
   onLoadIntendedAssignees,
   onSaveActualDispense,
   onSavePrebillingOverride,
@@ -7835,6 +7841,9 @@ function ChartOrderTable({
   confirmationDisabled: boolean;
   density: EmrTableDensity;
   executionTasks: ChartOrderExecutionTask[];
+  instructionOrderIds: Set<string>;
+  onOpenInstruction: (orderId: string) => void;
+  onEditDraftInstruction: (orderId: string) => void;
   hasAnyRows: boolean;
   invalidOrderIds: Set<string>;
   loading: boolean;
@@ -8065,7 +8074,7 @@ function ChartOrderTable({
   ): "amend" | "re_request" | null => {
     if (
       orderRow.runtimeRow?.rowType === "set" ||
-      orderRow.runtimeRow?.rowType === "set_child"
+      (orderRow.runtimeRow?.rowType === "set_child" && !["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow)))
     ) {
       return null;
     }
@@ -9352,6 +9361,8 @@ function ChartOrderTable({
                     ariaLabel={`${order.displayName} 더보기`}
                     density="compact"
                     items={[
+                      ...(setParent ? [{ key: "common-instruction", label: "공통 지시", disabled: writeDisabled || draftWriteDisabled,
+                        onSelect: () => onEditDraftInstruction(order.id) }] : []),
                       ...(setChild
                         ? [
                             {
@@ -9375,7 +9386,7 @@ function ChartOrderTable({
               );
             }
 
-            const editReason = setChild
+            const editReason = setChild && !["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow))
               ? "세트 자식은 개별 수정할 수 없습니다."
               : setParent
                 ? "세트 오더는 더보기에서 재요청할 수 있습니다."
@@ -9412,6 +9423,10 @@ function ChartOrderTable({
                   ariaLabel={`${order.displayName} 더보기`}
                   density="compact"
                   items={[
+                    ...(instructionOrderIds.has(order.id) ? [{
+                      key: "instruction", label: "지시서·완료",
+                      onSelect: () => onOpenInstruction(order.id),
+                    }] : []),
                     {
                       key: "history",
                       label: "이력",
@@ -10248,7 +10263,7 @@ function ChartOrderMutationDialog({
   const contract = getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion);
   if (!contract) return null;
   const editsClinicalSnapshot =
-    draft.action === "amend" || draft.action === "re_request";
+    (draft.action === "amend" || draft.action === "re_request") && row.runtimeRow?.rowType !== "set";
   const canSubmit = draft.reason.trim().length >= 3 && !draft.saving;
   const outputs = row.runtimeRow?.calculationOutputs ?? {};
   const authority = getChartOrderAuthority(row);
@@ -11797,6 +11812,8 @@ const OrderArea = memo(function OrderArea({
   const [intendedAssigneeSavingOrderIds, setIntendedAssigneeSavingOrderIds] =
     useState<Set<string>>(() => new Set());
   const intendedAssigneeSavingOrderIdsRef = useRef<Set<string>>(new Set());
+  const [draftInstruction, setDraftInstruction] = useState<{ orderId: string; text: string } | null>(null);
+  const [instructionWorkItemId, setInstructionWorkItemId] = useState<string | null>(null);
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
@@ -13971,7 +13988,9 @@ const OrderArea = memo(function OrderArea({
     const failedOrderIds: string[] = [];
     for (const row of targetRows) {
       let changes: Record<string, unknown>;
-      if (draft.action === "re_request") {
+      if (draft.action === "re_request" && row.runtimeRow?.rowType === "set") {
+        changes = {};
+      } else if (draft.action === "re_request") {
         const validation = validateClinicalOrderDetailInputs({
           clinicalOrderType: getChartOrderClinicalType(row),
           detailInputs: row.detailInputs,
@@ -14123,7 +14142,7 @@ const OrderArea = memo(function OrderArea({
     }
 
     let changes: Record<string, unknown> = {};
-    if (draft.action === "amend" || draft.action === "re_request") {
+    if ((draft.action === "amend" || draft.action === "re_request") && row.runtimeRow?.rowType !== "set") {
       const validation = validateClinicalOrderDetailInputs({
         clinicalOrderType: getChartOrderClinicalType(row),
         detailInputs: draft.detailInputs,
@@ -14724,6 +14743,18 @@ const OrderArea = memo(function OrderArea({
             }
             density={orderTableDensity}
             executionTasks={orderExecution?.tasks ?? []}
+            instructionOrderIds={new Set((orderExecution?.queues ?? []).filter((queue) => ["dispensing", "treatment"].includes(queue.queueType)).flatMap((queue) => {
+              const row = draftRows.find((row) => row.order.id === queue.orderId);
+              return [queue.orderId, ...(row?.runtimeRow?.parentOrderId ? [row.runtimeRow.parentOrderId] : [])];
+            }))}
+            onEditDraftInstruction={(orderId) => {
+              const row = draftRows.find((row) => row.order.id === orderId);
+              if (row && !isChartOrderConfirmedRow(row)) setDraftInstruction({ orderId, text: row.order.instruction ?? "" });
+            }}
+            onOpenInstruction={(orderId) => {
+              const queue = orderExecution?.queues.find((queue) => ["dispensing", "treatment"].includes(queue.queueType) && (queue.orderId === orderId || draftRows.some((row) => row.order.id === queue.orderId && row.runtimeRow?.parentOrderId === orderId)));
+              if (queue) setInstructionWorkItemId(queue.workItemId);
+            }}
             hasAnyRows={draftRows.length > 0}
             intendedAssigneeLoadingOrderIds={
               intendedAssigneeLoadingOrderIds
@@ -14808,6 +14839,22 @@ const OrderArea = memo(function OrderArea({
           open={historyOrderId !== null}
           row={historyOrderRow}
         />
+        <Dialog open={draftInstruction !== null} onOpenChange={(open) => { if (!open) setDraftInstruction(null); }}>
+          <EmrDialogShell title="공통 지시"
+            secondaryAction={<Button variant="outline" onClick={() => setDraftInstruction(null)}>취소</Button>}
+            primaryAction={<Button onClick={() => {
+              if (!draftInstruction) return;
+              setDraftRows((rows) => rows.map((row) => row.order.id === draftInstruction.orderId && !isChartOrderConfirmedRow(row)
+                ? { ...row, order: { ...row.order, instruction: draftInstruction.text } } : row));
+              setDraftInstruction(null);
+            }}>적용</Button>}>
+            <Textarea aria-label="공통 지시" maxLength={5000} value={draftInstruction?.text ?? ""}
+              onChange={(event) => setDraftInstruction((draft) => draft ? { ...draft, text: event.target.value } : draft)} />
+          </EmrDialogShell>
+        </Dialog>
+        {instructionWorkItemId ? <ChartInstructionDialog key={instructionWorkItemId}
+          workspaceId={bundle.encounter.workspaceId} workItemId={instructionWorkItemId}
+          onClose={() => setInstructionWorkItemId(null)} onChanged={() => { void refreshOrderExecution(); }} /> : null}
         <ChartOrderMutationDialog
           medicationOrders={draftRows.filter(row => getChartOrderClinicalType(row) === "dispensing" && row.order.status !== "cancelled")
             .map(row => ({ id: row.order.id, name: row.order.displayName }))}
