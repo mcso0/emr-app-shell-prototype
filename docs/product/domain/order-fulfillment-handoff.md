@@ -16,7 +16,7 @@ related_work:
   - RECEPTION-PR-013
 supersedes: []
 superseded_by: []
-last_updated: 2026-07-16T00:00:00.000Z
+last_updated: 2026-10-27
 description: >-
   Defines the product-level handoff from chart-confirmed orders to fulfillment
   queues and billing readiness.
@@ -220,3 +220,23 @@ See [Workspace Order Catalog Platform](https://github.com/mcso0/emr-app-shell-pr
 * [EMR Domain Entity Map](emr-domain-entity-map.md)
 * [Mock And Live Boundary Map](../../engineering/architecture/mock-live-boundary-map.md)
 * [Order Fulfillment Handoff Engineering Contract](../../engineering/data-model/order-fulfillment-handoff-contract.md)
+
+
+## Chart oral instruction scope — 2026-10-27
+
+- `경구제 전체 지시사항` belongs to one workspace and current chart and applies
+  only to that chart's oral (`PO`) orders. Chart Plan/Order is its editing entry.
+- Keep chart-wide, parent-set and individual instructions separate. The top
+  dispensing infobar shows the chart-wide value; a child's expanded row shows
+  its own set's common instruction followed by its individual instruction.
+- Saving appends an attributed revision. Existing work reads the latest value;
+  changing text never changes completion, execution results or billing status.
+- Capture the oral instruction version at each new task request and completion.
+  Reopening and later completion append evidence without replacing earlier
+  completion evidence. Historical tasks predating this feature have no invented
+  request/completion snapshots.
+- Closing the infobar only hides the current revision in that mounted document.
+  Its `보기` action, card remount or a new revision restores it; saved text remains.
+- Signed charts and server-denied edits remain read-only. These decisions are
+  approved; implementation and local verification are tracked in
+  [CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md).

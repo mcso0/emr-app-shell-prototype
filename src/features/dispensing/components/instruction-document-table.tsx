@@ -70,6 +70,9 @@ type Props = {
   names: Record<string, string>;
   eligibleAssignees: string[];
   busy?: boolean;
+  openExecution?: (itemId: string) => void;
+  editSetInstruction?: () => void;
+  refresh?: () => void;
   act: (id: string, type: Action["type"], extra?: Partial<Action>) => void;
   history: (id: string, item?: string) => void;
   notify: (message: string) => void;
@@ -118,6 +121,9 @@ function OrderCard({
   names,
   eligibleAssignees,
   busy,
+  openExecution,
+  editSetInstruction,
+  refresh,
 }: Props & { order: Order }) {
   const [collapsed, setCollapsed] = useState(false),
     [density, setDensity] = useState(40),
@@ -367,6 +373,8 @@ function OrderCard({
             <Icon name="more" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {editSetInstruction && <DropdownMenuItem disabled={busy} onClick={editSetInstruction}>{o.set ? "세트 공통 지시 수정" : "오더 지시 수정"}</DropdownMenuItem>}
+            {refresh && <DropdownMenuItem onClick={refresh}>지시서 새로고침</DropdownMenuItem>}
             <DropdownMenuItem onClick={() => copy(false)}>
               내용 복사
             </DropdownMenuItem>
@@ -403,8 +411,8 @@ function OrderCard({
                   >
                     <colgroup>
                       {[
-                        24, 280, 21, 0, 88, 88, 0, 88, 21, 72, 72, 21, 88, 88,
-                        24,
+                        28, 280, 21, 0, 88, 88, 0, 88, 21, 72, 72, 21, 88, 88,
+                        28,
                       ].map((w, n) => (
                         <col key={n} style={w ? { width: w } : undefined} />
                       ))}
@@ -445,7 +453,7 @@ function OrderCard({
                           o.status === "cancelled";
                         const changes = changedFields(i);
                         const hasDetails =
-                          Boolean(i.note) || changes.length > 0;
+                          Boolean(i.note || i.setInstruction) || changes.length > 0;
                         const expanded = hasDetails && !hidden.includes(i.id);
                         return (
                           <React.Fragment key={i.id}>
@@ -600,6 +608,7 @@ function OrderCard({
                                 )}
                               </TableCell>
                               <TableCell className="fd-center">
+                                {i.hasExecution && openExecution && <Button className="fd-execution" size="sm" variant="ghost" disabled={busy} aria-label={`${i.name} 수행기록·이력`} onClick={() => openExecution(i.id)}>수행기록·이력</Button>}
                                 <Button
                                   variant="outline"
                                   className={`fd-complete ${i.status === "completed" ? "is-complete" : ""}`}
@@ -645,6 +654,7 @@ function OrderCard({
                                       }
                                     />
                                     <div className="fd-detail-content">
+                                      {i.setInstruction && <p className="fd-current-instruction mb-1">{i.setInstruction}</p>}
                                       {changes.length > 0 && (
                                         <ul className="fd-change-details">
                                           {changes.map((k) => (

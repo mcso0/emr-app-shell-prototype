@@ -2258,6 +2258,9 @@ function DispensingContentBody({
         ) : null}
       </div>
 
+      {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback && instruction.loading && !instruction.document ? (
+        <div className="min-h-0 flex-1"><EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /></div>
+      ) : (
       <ScrollArea
         data-slot="instruction-result-scroll-area"
         className="min-h-0 flex-1"
@@ -2349,6 +2352,7 @@ function DispensingContentBody({
           ) : null}
         </div>
       </ScrollArea>
+      )}
     </div>
   );
 }

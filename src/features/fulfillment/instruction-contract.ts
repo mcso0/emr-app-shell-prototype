@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { oralInstructionSchema } from "@/features/chart/chart-oral-instruction-contract";
 
 const id = z.string().min(1);
 const snapshot = z.record(z.string(), z.unknown());
@@ -65,6 +66,7 @@ export const instructionItemSchema = z.object({
 });
 
 export const instructionDocumentSchema = z.object({
+  oralInstruction: oralInstructionSchema.nullable().optional(),
   rootOrderId: id,
   rootTaskId: id,
   name: z.string(),

@@ -70,6 +70,94 @@ readback files remain in `.artifacts/order-workflow/`; do not stage, publish or
 upload them. They are retained locally and are not repository dependencies.
 This closeout requests a local commit only; it does not require another release.
 
+## Collected dispensing/treatment revisions — 2026-10-27
+
+승욱 accepted the directions below and requested a consolidated list and
+implementation order. **Implementation authorized on 2026-10-27.** Implement UI-01–UI-07 locally, including chart-scoped persistence and immutable request/completion instruction versions. Verify with isolated local synthetic data and rendered app checks. No deployment or hosted DB changes are authorized. Preserve the existing local table-inset changes and all
+unrelated WIP. The earlier workflow closeout above remains historical evidence
+for its original scope.
+
+### Revision inventory
+
+| ID | Revision | Current state |
+| --- | --- | --- |
+| UI-01 | Header ends and arrow column 28px; 24px arrow button with 4px left inset; instruction-row horizontal insets 28px | Already implemented and measured in the local synthetic app; not delivered to Production |
+| UI-02 | Item-name column 280px by default, minimum 180px at compact widths; wrap long names and allocate remaining space to dose/total columns | Implemented locally; verification recorded below |
+| UI-03 | Move the detached `수행기록·이력` entry to its corresponding order row, retaining result entry, read-only history, corrections and separate order `수정이력` | Implemented locally; verification recorded below |
+| UI-04 | Use shared centered card-transition loading; retain same-item content on refresh; preserve scope guards and distinct error/retry/permission/empty states | Implemented locally; synthetic browser acceptance recorded below |
+| UI-05 | Add chart entry and separate storage/readback for current-chart oral instructions; display them in the top Figma infobar | Implemented locally with separate chart storage; verification recorded below |
+| UI-06 | Display parent-set common instructions together with the child's own instruction in each child order's expanded instruction row | Implemented locally; verification recorded below |
+| UI-07 | Align the expanded instruction-row information icon's vertical center with the first text line; keep it beside that line as text wraps, preserving icon size, horizontal gap and callout padding | Implemented locally; verification recorded below |
+
+UI-01 evidence is local presentation proof: the two changed source files are
+`src/features/dispensing/components/instruction-document-table.tsx` and
+`src/features/dispensing/components/instruction-document.css`. Its screenshots
+and measured geometry are retained outside the repository in the task's local
+evidence folder. Do not treat these checks as live API/DB or Production proof.
+
+### Accepted instruction scopes and presentation
+
+| Scope | Owner and application | Display |
+| --- | --- | --- |
+| 경구제 전체 지시 | Workspace + current chart + oral route (PO); all corresponding oral orders in that chart | Top infobar, entered through chart Plan/Order |
+| 세트 공통 지시 | Parent set; its own child orders only | Each corresponding child's expanded instruction row |
+| 개별 오더 지시 | Individual order or set child | The same instruction row, alongside the parent-set text when applicable |
+
+- Use [Figma Content 28928:20808](https://www.figma.com/design/UkfxgituFcU2rhYFriAErJ?node-id=28928-20808)
+  for the infobar: information icon, `경구제 전체 지시사항` title, body, neutral
+  background and close affordance. Wrap long text. Closing must not delete the
+  saved instruction; temporary hiding and recovery need to be defined together.
+- The current root-order `instruction` is set text, not chart-wide oral text.
+  Do not relabel or overwrite it to create UI-05. Add a distinct chart-scoped
+  value and trace it into the relevant dispensing view.
+- Read parent-set text with the child's own text. Preserve both sources and
+  their histories without copying the parent text into every child's storage.
+  A standalone order has no parent-set instruction in its detail row.
+- Another chart, a non-oral order or a treatment-only card must not inherit the
+  oral instruction. Preserve existing workspace and server permission boundaries.
+- Approved implementation: explicit chart save with expected revision; active work reads the latest value, while task request and every completion retain immutable evidence. Infobar dismissal is local to the mounted document/revision with an explicit restore action. Existing completed work and results are not rewritten.
+
+### Planned implementation order
+
+1. Define the three instruction scopes and their save/read/history contracts
+   (UI-05/UI-06). Confirm how edits reach already-requested work and how a
+   temporarily hidden infobar is recovered before implementing those behaviors.
+2. Implement chart Plan/Order entry and the separate chart-scoped oral value,
+   including persistence/readback under existing permissions (UI-05).
+3. Connect the top infobar and move parent-set common text into the corresponding
+   child instruction rows, preserving individual text (UI-05/UI-06). Align each
+   expanded row's information icon with its first text line (UI-07).
+4. Integrate `수행기록·이력` with the order row after its instruction structure
+   is settled; preserve existing completion and correction flows (UI-03).
+5. Apply the bounded item-name width and remaining-width allocation with the
+   final row controls in place; retain all UI-01 dimensions (UI-02).
+6. Integrate the common centered pending surface with the final document body;
+   retain same-item content and existing late-response guards (UI-04).
+7. Run the focused checks and synthetic rendered-app acceptance below, fixing
+   in-scope regressions before declaring the local candidate complete.
+
+### Planned acceptance and delivery boundary
+
+- Verify chart entry, save/reload and readback in the dispensing infobar. Switch
+  between multiple oral cards in the same chart and between different charts;
+  confirm no leakage into non-oral/treatment scopes.
+- Verify multiple sets, standalone orders and children with both instruction
+  sources, one source or no text. Preserve parent/child revision history.
+- Verify result entry/history/correction and distinct order `수정이력` access.
+- Measure UI-01/UI-02 geometry in wide and compact layouts with long names and
+  multiline instructions, including any row control added by UI-03.
+- Verify UI-07 with single-line and multiline expanded instructions: the icon's
+  vertical center follows the first text line rather than the full text block.
+  Confirm wrapping and collapse/reopen preserve the alignment, icon size,
+  horizontal gap and existing callout padding.
+- Verify first load, card switching, same-item refresh, rapid A-B-C/A-B-A
+  switching with late responses, error/retry, permission denial and true empty
+  state using synthetic browser fixtures. Check the actual pending state before
+  releasing delayed responses; do not substitute a resolved screenshot.
+- Choose focused contract, component, browser and documentation checks after the
+  implementation scope is concrete. The acceptance above is planned, not run.
+  This planning update performs no source, API, DB, commit, push or release work.
+
 ## Goal
 
 Implement one authoritative requested/in-progress/paused/completed/returned/
@@ -824,3 +912,67 @@ still show first-attempt results of 3 and 4 tablets, recorded at 20:45:54 and
 alongside its new 2-tablet result. Local evidence includes the recompletion
 before/after capture and reloaded completion screenshot. This verification uses
 only the approved synthetic fixture; it does not establish real clinical use.
+
+
+### Local implementation verification — 2026-10-27
+
+User approved all seven items and the proposed storage/history rules. No push,
+merge, deployment, hosted DB mutation or Production write is authorized.
+The starting Production source was `aa26f7c424967a627be498a48f47820562a8702b`.
+Existing two-file inset WIP is retained; the primary checkout was not edited.
+
+Implemented surfaces: chart oral-instruction editor and session API; distinct
+private chart revisions and task snapshots; dispensing infobar and child-row
+set instructions; row-associated execution history; bounded 280/180px item
+column; 28px ends/insets with 4px arrow-button inset; first-line icon alignment;
+centered card loading with retained transient-error content and authorization
+withdrawal. A table menu refresh action exposes same-item rereading. Minimum
+numeric/action widths use local table scrolling only when space is insufficient.
+
+Verification uses an isolated local PostgreSQL database reconstructed from local
+schema and repository migrations, with synthetic identities only. It is not a
+full migration replay or proof of hosted schema parity. Candidate installation,
+save/readback, chart isolation, workspace/member denial, signed-chart lockout,
+revision conflicts, concurrent CAS, immutable request/completion versions and
+unchanged completed status passed. The normal execution-result requirement was
+not disabled; the focused snapshot SQL fixture uses supported legacy result
+schema 0 tasks. Existing schema-1 execution UI behavior has separate stories.
+
+Rendered app verification at 1616 and 1280px measured all table ends/insets at
+28px, arrow inset 4px, name column 280/180px, and icon center on first text line.
+A local HTTP fixture proxy served synthetic queue documents; chart editor save
+and fulfillment oral-instruction readback called the actual local SQL RPCs.
+A→B→C and A→B→A, same-item delayed refresh, 500 retention, 403 withdrawal and
+retry passed without page runtime errors. Chart editor close/reload retained its
+saved DB value, and the app infobar reread that value. This is component/app and
+local DB evidence, not an authenticated deployed end-to-end session.
+
+Evidence is kept outside the repository in the task's local evidence directory.
+Final checks and user acceptance remain separate from delivery.
+
+Final local checks: production build, scoped ESLint and diff validation passed;
+12 contract checks and 21 Storybook checks across four files passed. Long names
+wrap at 180px, and the multiline icon center delta measured 0px. Treatment card
+transition, rapid selection, retained refresh and transient-error retry also
+passed in the rendered app with synthetic queue fixtures.
+
+The final document-read check caught a PL/pgSQL variable/table alias collision;
+unique aliases fixed it, and the SQL regression now calls the fulfillment reader
+and asserts both latest instruction and request/completion snapshots. Local
+realtime emitted missing-partition warnings: row revisions are updated, but
+cross-client broadcast delivery is not verified by this local environment.
+Evidence: `/Users/iseung-ug/.codex/task-evidence/2026-10-27-dispensing-seven-revisions/`.
+Local implementation and focused verification are complete; user review and
+any later release remain separate. No hosted migration or deployment occurred.
+
+### Release authorization — 2026-10-28
+
+승욱 requested deployment and gave advance approval after the assistant stated
+the bounded PR/merge/Production and required instruction-storage DB scope. This
+supersedes the prior no-deployment boundary for UI-01–UI-07 only. Proceed after
+current-candidate checks, Ready Preview, scoped smoke and schema compatibility
+verification. Preserve unrelated WIP and data. No paid resources, permission
+policy expansion, provider side effects or unrelated migrations are included.
+Previous Production: `a42357d9be4d60e2a4edc87da55f6acc368ef4cc`, deployment
+`dpl_4jMGuahAvP2Umb2NXDDqxX9K4Lr1`. Rollback is that application deployment
+or a reviewed revert; additive instruction evidence must not be deleted.

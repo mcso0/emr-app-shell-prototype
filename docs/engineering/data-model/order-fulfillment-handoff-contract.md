@@ -378,3 +378,25 @@ for synthetic proofs, verification, and delivery evidence.
 - Transfer and result writes serialize on the existing encounter billing lock. Checkout acquires all distinct encounter locks in deterministic order before invoice locks. Attachment finalize is a service-only branch after server byte validation; delete/discard use session-bound RPCs. Authenticated direct attachment inserts and inherited legacy result-writer execution are revoked.
 - Queue reads project the actual assignee name and actor-bound `canManage`. UI feedback does not substitute for DB authorization. Billing ownership uses workspace realtime refresh plus a bounded visible-page fallback.
 - Migration `20261012054346_current_assignee_mutation_boundary.sql` is a local candidate. Apply it before the app candidate. No remote apply, real data, payment execution or Production delivery is verified. Rollback must restore the prior affected function definitions; retain invoice assignment fields/events and saved results rather than deleting history.
+
+
+## Chart oral instruction candidate — 2026-10-27
+
+Local-only migration `20261027130000_chart_oral_instructions.sql` adds separate
+private revision and task-evidence tables. No hosted application is authorized.
+Session-bound `clair_get_chart_oral_instruction` and
+`clair_save_chart_oral_instruction` validate active membership, chart view/update
+permissions, encounter status, chart identity and signed-chart lockout. Saving
+serializes on the chart and compares the expected revision; clients never supply
+an actor identity. Each change stores the authenticated actor and timestamp.
+
+The existing authorized fulfillment read includes `oralInstruction` only for a
+matching current-chart oral document. Queue row revisions wake existing readers
+through the existing private queue broadcast. Order status, quantities, results,
+and parent/individual instruction storage are unchanged. Task triggers capture
+request and completion evidence; old evidence is not overwritten or backfilled.
+The tables have no direct client grants. API errors never fall back to demo data.
+
+The UI retains a loaded same-item document on transient refresh failure, blocks
+mutations until refresh succeeds, and withdraws it on 401/403/404. Endpoint scope
+and request-generation checks prevent late responses replacing another card.

@@ -261,6 +261,7 @@
 .fd-table .fd-row-arrow {
   height: 24px;
   width: 24px;
+  margin-left: 4px;
   padding: 0;
   min-height: 0;
 }
@@ -316,7 +317,7 @@
 }
 .fd-table tr.fd-info-row td {
   height: 52px !important;
-  padding: 0 24px 10px !important;
+  padding: 0 28px 10px !important;
 }
 .fd-info {
   height: auto;
@@ -643,7 +644,7 @@
   padding-right: 0;
 }
 .instruction-document-surface .fd-table col:nth-child(2) {
-  width: auto !important;
+  width: 280px !important;
 }
 .instruction-document-surface .fd-table col:nth-child(3),
 .instruction-document-surface .fd-table col:nth-child(9),
@@ -666,9 +667,6 @@
 }
 .instruction-document-surface .fd-table col:nth-child(13) {
   width: 82px !important;
-}
-.instruction-document-surface .fd-table col:last-child {
-  width: 0 !important;
 }
 .instruction-document-surface .fd-table td:nth-child(3),
 .instruction-document-surface .fd-table td:nth-child(9),
@@ -716,9 +714,6 @@
   .instruction-document-surface .fd-table-surface {
     padding-left: 4px;
     padding-right: 4px;
-  }
-  .instruction-document-surface .fd-table col:first-child {
-    width: 24px !important;
   }
   .instruction-document-surface .fd-table col:nth-child(3),
   .instruction-document-surface .fd-table col:nth-child(9),
@@ -784,7 +779,7 @@
     padding: 0 4px !important;
   }
   .instruction-document-surface .fd-table tr.fd-info-row td {
-    padding: 0 24px 10px !important;
+    padding: 0 28px 10px !important;
   }
 }
 @container (max-width:760px) {
@@ -830,7 +825,7 @@
   padding: 0 !important;
 }
 .instruction-document-surface .fd-table tr.fd-info-row td {
-  padding: 0 24px 10px !important;
+  padding: 0 28px 10px !important;
 }
 
 /* Latest Figma: narrower metadata columns and the compact completion control. */
@@ -1012,4 +1007,40 @@
 }
 .instruction-document-surface .figma-document {
   font-family: inherit;
+}
+
+/* Bounded identity column; dose and total share the remaining table width. */
+.instruction-document-surface .fd-table col:nth-child(4),
+.instruction-document-surface .fd-table col:nth-child(7) { width: auto !important; }
+.instruction-document-surface .fd-table col:nth-child(14) { width: 120px !important; }
+@container (max-width: 1000px) {
+  .instruction-document-surface .fd-table col:nth-child(2) { width: 180px !important; }
+}
+.fd-table .fd-execution { height: 24px; padding: 0 4px; font-size: 12px; white-space: nowrap; }
+.fd-table td:has(.fd-execution) .fd-complete { display: flex; margin: 2px auto; }
+.fd-info { align-items: flex-start; }
+.fd-info > .fd-icon { flex-shrink: 0; margin-top: 3px; }
+.oral-instruction-infobar {
+  display: flex; align-items: flex-start; gap: 16px; padding: 12px 18px 12px 16px;
+  border-radius: 12px; background: #fafafa; font-size: 14px; line-height: 20px;
+  font-weight: 500; letter-spacing: .196px; margin-bottom: 16px;
+}
+.oral-instruction-symbol {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 8px; background: rgb(0 0 0 / 6%);
+}
+/* Keep numerical values readable once the identity/action minimums are reached. */
+.instruction-document-surface .fd-table-container { overflow-x: auto !important; }
+.instruction-document-surface .fd-table { min-width: 1048px; }
+.instruction-document-surface .fd-table:has(.fd-execution) { --fd-action-extra: 42px; }
+.instruction-document-surface .fd-table { min-width: calc(1048px + var(--fd-action-extra, 0px)); }
+.instruction-document-surface .fd-table:not(:has(.fd-execution)) col:nth-child(14) { width: 78px !important; }
+@container (max-width: 1000px) {
+  .instruction-document-surface .fd-table { min-width: calc(948px + var(--fd-action-extra, 0px)); }
+}
+@container (max-width: 900px) {
+  .instruction-document-surface .fd-table { min-width: calc(798px + var(--fd-action-extra, 0px)); }
+}
+@container (max-width: 760px) {
+  .instruction-document-surface .fd-table { min-width: calc(766px + var(--fd-action-extra, 0px)); }
 }

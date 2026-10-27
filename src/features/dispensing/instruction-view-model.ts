@@ -17,6 +17,8 @@ export type InstructionViewItem = {
   medicationGuide: string;
   storage: string;
   note: string;
+  setInstruction?: string;
+  hasExecution?: boolean;
   status: InstructionItem["status"];
   assignees: string[];
   change: "added" | "modified" | "existing";
@@ -201,6 +203,8 @@ export function createInstructionView(document: InstructionDocument) {
     }
     return {
       ...current,
+      setInstruction: document.isSet ? document.instruction : undefined,
+      hasExecution: item.resultRequired || item.hasResult,
       id: item.id,
       name: item.name,
       status: item.status,

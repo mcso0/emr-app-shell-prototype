@@ -61,3 +61,27 @@ test("history preserves every common instruction change and actual field values"
   expect(view.orders[0].items[0].previous?.dose).toBe("0.25");
   expect(view.orders[0].items[0].dose).toBe("0.5");
 });
+
+test("set instruction is composed for its own children without overwriting individual notes", () => {
+  const doc = structuredClone(syntheticInstruction);
+  doc.instruction = "세트 지시";
+  doc.items[0].instruction = "개별 지시";
+  const view = createInstructionView(doc);
+  expect(view.orders[0].items[0].setInstruction).toBe("세트 지시");
+  expect(view.orders[0].items[0].note).toContain("개별 지시");
+  expect(doc.items[0].instruction).toBe("개별 지시");
+  doc.isSet = false;
+  expect(createInstructionView(doc).orders[0].items[0].setInstruction).toBeUndefined();
+});
+
+// A chart-wide instruction is separate from order commands and cannot accept an actor override.
+test("chart oral instruction validates its scope, revision and bounded text", async () => {
+  const { oralInstructionCommandSchema, oralInstructionTargetSchema } = await import("../src/features/chart/chart-oral-instruction-contract");
+  expect(oralInstructionCommandSchema.safeParse({ expectedRevision: 0, instruction: "" }).success).toBe(true);
+  for (const command of [
+    { expectedRevision: -1, instruction: "a" },
+    { expectedRevision: 0, instruction: "a".repeat(5001) },
+    { expectedRevision: 0, instruction: "a", actorId: "other" },
+  ]) expect(oralInstructionCommandSchema.safeParse(command).success).toBe(false);
+  expect(oralInstructionTargetSchema.safeParse({ workspaceId: "", chartId: "other" }).success).toBe(false);
+});

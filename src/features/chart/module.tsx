@@ -1,4 +1,5 @@
 "use client";
+import { ChartOralInstructionEditor } from "./chart-oral-instruction-editor";
 
 import { resolveChartOrderRequester } from "./order-requester";
 
@@ -14360,6 +14361,7 @@ const OrderArea = memo(function OrderArea({
           Plan/Order
         </h2>
         <ChartPanelActionGroup>
+          {chartId && <ChartOralInstructionEditor key={chartId} workspaceId={bundle.encounter.workspaceId} chartId={chartId} disabled={writeDisabled || draftWriteDisabled} />}
           <ChartPanelCollapseButton
             collapsed={collapsed}
             contentId={collapseContentId}
