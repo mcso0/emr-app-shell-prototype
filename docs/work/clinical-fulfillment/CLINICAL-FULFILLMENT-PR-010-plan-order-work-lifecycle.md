@@ -585,3 +585,45 @@ its local SQL fixture includes the canonical reason constraint and passes.
 The corrected hosted re-request transaction passes as well. This supersedes the
 older hosted-runtime evidence gap; fresh empty-database replay still has its
 pre-existing master-seed dependency and is not claimed as passing.
+
+### Approved hosted browser acceptance follow-up — 2026-10-27
+
+승욱 explicitly requested clicking assignment, completion, undo and re-request in
+Production using synthetic data. This authorizes one named nonbillable synthetic
+instruction fixture in the existing approved workspace and UI-driven lifecycle
+verification, with scoped readback and refresh checks. Existing real rows, payment,
+external messages, schema changes and new releases are excluded. Persist the
+synthetic fixture and its audit as acceptance evidence; do not purge it. Only setup
+uses database tools; the requested lifecycle actions must use the actual UI.
+
+### Browser acceptance defects and local correction — 2026-10-27
+
+The user reported missing item/card names and requested finding visible defects
+while exercising the workflow. Scope: correct instruction presentation and verify
+the existing synthetic lifecycle. Preserve other WIP and all permission/data rules.
+
+Observed in Production with the named nonbillable fixture:
+- Main claim, item reassignment and reload succeeded. Required-result completion
+  was rejected with the expected Korean message.
+- Recording one synthetic result completed the item. Explicit set completion,
+  undo and repeat completion succeeded. Undo preserved the one result and kept
+  task-event count unchanged at 9; no revision was added.
+- Item/card names were missing: canonical snapshots carry `displayName`, but the
+  new reader used `orderDisplayName`. A new additive reader-only migration fixes
+  both names and preserves legacy fallback names and authorization.
+- Document summary incorrectly used the child assignee/status. It now uses the
+  document main assignee and explicit finalization state. Start time now reads
+  persisted `startedAt`, instead of the request timestamp.
+- Re-request UI remains unverified: the chart live-queue route throws
+  `Cannot read properties of undefined (reading 'id')`. Retry reproduced it;
+  runtime error evidence predates this release (first occurrence September 22).
+  This separate chart lookup defect is recorded, not silently included in the
+  instruction display patch. The synthetic fixture also needs consultation-queue
+  setup before chart-based acceptance can proceed.
+
+Verification: canonical snapshot regression fails before the reader patch and
+passes after it for set and individual names. Isolated SQL lifecycle/security
+suite and 10 instruction contract tests pass. Targeted lint and type check pass.
+These checks do not establish corrected Production rendering. The new reader
+migration is prepared locally; the earlier DB approval named five migrations,
+so applying this sixth migration requires the remaining scoped DB authorization.

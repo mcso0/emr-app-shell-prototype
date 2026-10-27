@@ -68,9 +68,9 @@ values
 insert into order_tasks(id,workspace_id,encounter_id,order_id,parent_task_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot)
 select ('30000000-0000-4000-8000-'||right(id::text,12))::uuid,workspace_id,encounter_id,id,
 case when row_type='set_child' then '30000000-0000-4000-8000-000000000001'::uuid else null end,
-case when row_type='set' then 'aggregate' else 'execution' end,clinical_order_type,destination_module,'pending','normal',1,'{"orderDisplayName":"Synthetic"}' from orders order by sort_order;
+case when row_type='set' then 'aggregate' else 'execution' end,clinical_order_type,destination_module,'pending','normal',1,jsonb_build_object('displayName',case when row_type='set' then 'Synthetic set' else 'Synthetic item '||sort_order end) from orders order by sort_order;
 insert into order_fulfillment_work_items(id,workspace_id,order_id,encounter_id,task_id,task_attempt_no,status,queue_type,source_snapshot)
-select ('40000000-0000-4000-8000-'||right(order_id::text,12))::uuid,workspace_id,order_id,encounter_id,id,attempt_no,'requested','dispensing','{"orderDisplayName":"Synthetic"}' from order_tasks where task_role='execution';
+select ('40000000-0000-4000-8000-'||right(order_id::text,12))::uuid,workspace_id,order_id,encounter_id,id,attempt_no,'requested','dispensing',effective_snapshot from order_tasks where task_role='execution';
 select set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
 create function pg_temp.command(action text,item_id uuid default null,assignee uuid default null) returns jsonb language plpgsql as $$
 declare d jsonb;
@@ -83,6 +83,7 @@ do $$
 declare d jsonb; cmd jsonb; previous_result jsonb; events_before bigint; orders_before bigint; notifications_before bigint;
 begin
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002');
+ if d->>'name' is distinct from 'Synthetic set' or d#>>'{items,0,name}' is distinct from 'Synthetic item 1' then raise exception 'canonical snapshot names missing'; end if;
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002')); raise exception 'group accepted item scope'; exception when raise_exception then if sqlerrm<>'invalid_transition' then raise; end if; end;
  d:=pg_temp.command('claim');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'claim failed'; end if;
@@ -145,11 +146,12 @@ begin
  insert into public.orders(id,workspace_id,encounter_id,status,clinical_order_type,destination_module,order_confirmation_status,row_type,requested_by_user_id,instruction,sort_order)
  values('10000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','requested','dispensing','dispensing','confirmed','individual','00000000-0000-4000-8000-000000000003','',4);
  insert into public.order_tasks(id,workspace_id,encounter_id,order_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot,execution_result_schema_version,assigned_to_user_id)
- values('30000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','execution','dispensing','dispensing','pending','normal',1,'{"orderDisplayName":"Actual-result synthetic","calculationOutputs":{"plannedPracticalTotalQuantity":1,"dispenseUnit":"T"}}',1,'00000000-0000-4000-8000-000000000001');
+ values('30000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','execution','dispensing','dispensing','pending','normal',1,'{"displayName":"Actual-result synthetic","calculationOutputs":{"plannedPracticalTotalQuantity":1,"dispenseUnit":"T"}}',1,'00000000-0000-4000-8000-000000000001');
  insert into public.order_fulfillment_work_items(id,workspace_id,order_id,encounter_id,task_id,task_attempt_no,status,queue_type,source_snapshot,assigned_to_user_id,requested_by_user_id)
  values('40000000-0000-4000-8000-000000000004','workspace-a','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000004',1,'requested','dispensing','{"orderDisplayName":"Synthetic"}','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000003');
  perform set_config('test.actor','00000000-0000-4000-8000-000000000003',true);
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004');
+ if d->>'name' is distinct from 'Actual-result synthetic' or d#>>'{items,0,name}' is distinct from 'Actual-result synthetic' then raise exception 'single canonical plan name missing'; end if;
  cmd:=jsonb_build_object('action','complete','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000004');
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd); raise exception 'missing actual result accepted'; exception when raise_exception then if sqlerrm<>'actual_execution_result_required' then raise; end if; end;
  d:=public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd||jsonb_build_object('action','start_item','commandId',gen_random_uuid()));
