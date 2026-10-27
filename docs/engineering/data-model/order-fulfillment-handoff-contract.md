@@ -382,8 +382,9 @@ for synthetic proofs, verification, and delivery evidence.
 
 ## Chart oral instruction candidate — 2026-10-27
 
-Local-only migration `20261027130000_chart_oral_instructions.sql` adds separate
-private revision and task-evidence tables. No hosted application is authorized.
+Migration `20261027130000_chart_oral_instructions.sql` adds separate private
+revision and task-evidence tables. Hosted application is approved for this
+bounded release; the work item records application and verification evidence.
 Session-bound `clair_get_chart_oral_instruction` and
 `clair_save_chart_oral_instruction` validate active membership, chart view/update
 permissions, encounter status, chart identity and signed-chart lockout. Saving
@@ -400,3 +401,12 @@ The tables have no direct client grants. API errors never fall back to demo data
 The UI retains a loaded same-item document on transient refresh failure, blocks
 mutations until refresh succeeds, and withdraws it on 401/403/404. Endpoint scope
 and request-generation checks prevent late responses replacing another card.
+## RLS Helper Execution Grant (2026-10-27)
+
+Authenticated direct reads of `order_fulfillment_work_items` require EXECUTE on
+`private.clair_queue_permission_for_destination(text,text)` during RLS evaluation.
+The explicit grant preserves the existing active-membership and queue-capability
+policy; it adds no table write rights or anonymous access.
+[DB-PR-002](../../work/engineering/ENGINEERING-DB-PR-002-fulfillment-rls-helper-grant.md)
+tracks the local forward migration and isolated regression; remote application
+is not recorded.
