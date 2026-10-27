@@ -652,3 +652,35 @@ synthetic patient now has a consultation queue entry and a first chart, plus one
 new nonbillable chart-owned set created/confirmed through canonical authenticated
 RPCs. The prior fixture/order/results remain untouched. Actual result, completion
 and re-request acceptance are pending the corrected application deployment.
+
+### Chart mutation response acceptance correction — 2026-10-27
+
+PR #1015 merged as `5683976d8e75796cf068f64d1bd4cfaa3fc13bf3` after local
+checks, successful Release Check run `40492752284`, and Ready Preview
+`dpl_J77v2s2co2uUhECx4BLjd6w5vs9u`. Production
+`dpl_D5dzsPNKBVvGVPBSiiyCYm8UMcEn` is Ready for that SHA; `/login` returned
+200. Authenticated actual UI now opens the synthetic chart successfully.
+
+Actual UI completed the chart-owned synthetic set with one result, finalized it,
+and preserved completion after reload. Whole-set re-request then displayed a
+save failure even though the transaction committed: revision 2, linked attempt 2,
+requested state, and cleared assignment/start/completion fields were persisted.
+Do not retry blindly. The chart-scoped RPC delegates to the origin base without
+`billingSummary`, while the application correctly requires that response field.
+The live function definition confirms the missing wrapper; there is no new chart
+lookup exception in the corrected deployment during this check.
+
+Prepare an additive migration restoring the summary and broadcast inside the
+same chart-scoped mutation transaction. Preserve its signature, actor/chart
+checks, security-definer search path and existing grants; do not weaken response
+validation or create a second mutation. The original result, task attempts and
+nonbillable status must remain unchanged. Additional remote DB authorization is
+pending; earlier approval covered only the previously applied migrations.
+
+An isolated PostgreSQL regression reproduces the missing response before the
+patch and passes afterward. It verifies post-mutation summary, broadcast,
+idempotent replay, invocation of scope/actor checks, and rollback when summary
+construction fails. Dependencies in this wrapper test are synthetic stubs; this
+is not full hosted integration proof. Final acceptance requires the approved
+hosted correction, successful actual UI re-request response, retained prior
+actual results/history, current unassigned pending attempt, and reload readback.
