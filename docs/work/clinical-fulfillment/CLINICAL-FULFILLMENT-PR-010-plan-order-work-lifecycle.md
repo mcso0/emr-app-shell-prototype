@@ -15,10 +15,60 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-10-03"
+updated: "2026-10-27"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
+
+## Current closeout — dispensing instruction workflow, 2026-10-27
+
+The bounded dispensing instruction workflow and its follow-up corrections are
+complete. 승욱 accepted the reported result and requested this final record and
+local commit. This closes the current workflow scope, not every historical scope
+in this long-lived work item. Earlier pending/blocked statements below describe
+their recorded stage; the final evidence here supersedes them for this scope.
+
+- Delivery: PRs #1013–#1017 were merged. Required hosted DB corrections were
+  applied with explicit approval. Final application merge is
+  `c1df55a51f284993a61e24b9d36c03fdd05bbb53` (#1017); its Production deployment
+  was verified Ready with the expected source and primary alias. No uncommitted
+  application or migration changes remain in this task checkout.
+- Verification: focused contracts, SQL regressions, Storybook interactions,
+  type/build/lint, documentation and secret checks passed as recorded below.
+  Release Check and CodeQL passed for the final candidate. These are recorded
+  delivery results, not a claim that every check was rerun during closeout.
+- Actual authenticated browser acceptance used only approved synthetic data:
+  assignment, result recording, explicit set completion, undo, whole-set
+  re-request, child dose change/re-request, requester display and reload passed.
+  The final three-child scenario returned to 3/3 completed after recording the
+  changed child's new 2-tablet result and explicitly finalizing the set.
+  Unchanged 3/4-tablet sibling records, identifiers and completion times stayed
+  identical; the changed child's original 1-tablet result was preserved.
+- The display-name defect, chart lookup exception, mutation-response failure,
+  requester projection omission and Storybook router fixture blocker were
+  resolved by the subsequent corrections and acceptance recorded below.
+
+### Remaining verification limits
+
+- Full replay into an empty database remains unverified: the existing
+  `20260826160000_clinical_master_dispensing_service_review.sql` requires absent
+  seeded master data. Isolated regression and approved hosted application tests
+  do not establish fresh-database replay. Reopen this check when its required
+  baseline seed is available; no constraint or prior migration was weakened.
+- Browser acceptance does not cover real clinical use or every role/screen
+  combination. Automated permission, workspace, concurrency and notification
+  checks are separate evidence, not proof of every corresponding rendered flow.
+- No real patient/payment workflow or external communication was exercised.
+  The approved synthetic fixtures and audit records remain as evidence; earlier
+  deliberately pending fixtures do not represent unfinished production work.
+
+### Evidence retention and commit boundary
+
+Only this work document, including the final multi-child verification entries,
+is included in the closeout commit. Local screenshots, SQL captures, reports and
+readback files remain in `.artifacts/order-workflow/`; do not stage, publish or
+upload them. They are retained locally and are not repository dependencies.
+This closeout requests a local commit only; it does not require another release.
 
 ## Goal
 
@@ -730,3 +780,47 @@ retaining the same synthetic chart route and avoiding the incompatible framework
 decorator. All six actual-workspace stories passed, including the new requester
 assertion, filtering, detail, keyboard collapse, history and retry. No shared
 Storybook configuration or production routing was changed.
+
+### Multi-child browser acceptance — 2026-10-27
+
+승욱 explicitly requested actual-screen verification that changing the dose and
+re-requesting one child of a multi-child set preserves completed sibling states
+and results. Extend the existing synthetic-only browser acceptance scope with
+one separate nonbillable three-child set/encounter for the existing synthetic
+patient. Setup may use canonical draft/confirmation RPCs with the authenticated
+seed actor; completion and individual re-request must use the actual UI.
+Preserve the prior fixtures and all real records. No schema, permission, payment,
+external communication or application release change is authorized or needed.
+Compare sibling task/result IDs, content and completion timestamps before/after;
+verify the changed child's new attempt and reload the actual instruction screen.
+
+Actual browser acceptance passed. Three synthetic children (1, 3 and 4 tablets)
+were completed through saved execution results and explicit set finalization.
+Only the first child was changed to 2 tablets and re-requested through its edit
+flow. After reload the instruction shows one modified child, two completed
+children and 2/3 completed. Both unchanged siblings' actual result dialogs still
+show their original first-attempt 3/4-tablet results and original recording times.
+Scoped before/after comparisons found identical order, task, work-item and result
+records for both siblings, including IDs, content and completion timestamps.
+The changed child retains its first-attempt result and has a new pending second
+attempt. All four order rows remain nonbillable. Prior synthetic fixtures and
+real data were not changed. Evidence is retained in the local task artifacts;
+this is synthetic acceptance, not real clinical validation.
+
+승욱 subsequently requested actual-screen completion of the re-requested child,
+normal whole-set completion and preservation of sibling results. Continue only
+the same three-child synthetic fixture: save the new 2-tablet actual result,
+explicitly finalize the set, reload, and compare the unchanged siblings against
+the captured baseline. No new fixture or application/schema change is needed.
+
+Recompletion acceptance passed in the actual browser. The changed child's
+second attempt saved an actual quantity of 2 tablets and completed. Explicit
+whole-set finalization then completed the root task; after reload the instruction
+shows 3/3 completed, three completed children and a completed set footer.
+Both unchanged siblings retain identical order/task/work-item/result records,
+including IDs, content and completion timestamps. Their actual result dialogs
+still show first-attempt results of 3 and 4 tablets, recorded at 20:45:54 and
+20:46:09 KST respectively. The changed child's original 1-tablet result remains
+alongside its new 2-tablet result. Local evidence includes the recompletion
+before/after capture and reloaded completion screenshot. This verification uses
+only the approved synthetic fixture; it does not establish real clinical use.
