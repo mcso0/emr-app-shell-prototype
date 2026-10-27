@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { instructionCommandSchema, instructionCompletionConfirmation } from "../src/features/fulfillment/instruction-contract";
 import { executeInstructionRequest } from "../src/features/fulfillment/server-instruction";
 import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
-import { createInstructionView } from "../src/features/dispensing/instruction-view-model";
+import { createInstructionView, getInstructionStatusLabel } from "../src/features/dispensing/instruction-view-model";
 
 const command = { action: "complete_all" as const, commandId: "00000000-0000-4000-8000-000000000001", expectedRevision: "revision-a" };
 
@@ -33,6 +33,20 @@ for (const [message, status] of [["permission_missing", 403], ["work_item_unavai
 test("completion confirmation excludes cancelled and completed items", () => {
   expect(instructionCompletionConfirmation(syntheticInstruction).unfinished).toBe(2);
   expect(instructionCompletionConfirmation(syntheticInstruction, syntheticInstruction.items[0].id).title).toBe("이 항목을 완료할까요?");
+});
+
+test("document summary waits for explicit set finalization", () => {
+  const document = structuredClone(syntheticInstruction);
+  document.finalized = false;
+  document.items.forEach((item) => { item.status = "completed"; });
+  expect(getInstructionStatusLabel(document)).toBe("진행중");
+  document.finalized = true;
+  expect(getInstructionStatusLabel(document)).toBe("완료");
+  document.finalized = false;
+  document.items[0].status = "in_progress";
+  expect(getInstructionStatusLabel(document)).toBe("진행중");
+  document.items.forEach((item) => { item.status = "requested"; });
+  expect(getInstructionStatusLabel(document)).toBe("대기중");
 });
 
 test("history preserves every common instruction change and actual field values", () => {

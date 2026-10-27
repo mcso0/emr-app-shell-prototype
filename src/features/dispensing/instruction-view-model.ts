@@ -46,6 +46,16 @@ export type InstructionViewAction = {
   assignees?: string[];
 };
 
+export function getInstructionStatusLabel(document: InstructionDocument) {
+  if (document.finalized) return "완료";
+  const active = document.items.filter((item) => item.status !== "cancelled");
+  if (!active.length) return "취소";
+  if (active.every((item) => item.status === "returned")) return "반려";
+  if (active.every((item) => item.status === "requested")) return "대기중";
+  if (active.every((item) => item.status === "paused")) return "일시중지";
+  return "진행중";
+}
+
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)

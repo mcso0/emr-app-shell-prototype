@@ -65,6 +65,7 @@ import { FulfillmentExecutionActions } from "@/features/fulfillment/components/e
 import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
 import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
 import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
+import { getInstructionStatusLabel } from "./instruction-view-model";
 import {
   getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
@@ -132,6 +133,7 @@ type FulfillmentWorkItem = {
   canManage?: boolean;
   assignedToUserId?: string | null;
   completedAt?: string | null;
+  startedAt?: string | null;
   createdAt?: string;
   encounterId: string;
   originChartId?: string | null;
@@ -585,8 +587,8 @@ function applyFulfillmentToQueueItems(
       ...item,
       assigneeName: getFulfillmentAssigneeName(workItem) ?? item.assigneeName,
       startedAt:
-        workItem.status === "in_progress"
-          ? (item.startedAt ?? item.time)
+        workItem.startedAt
+          ? formatOperatingShortTime(workItem.startedAt)
           : item.startedAt,
       statusId: mapFulfillmentToQueueStatusId(workItem.status, item.statusId),
     };
@@ -630,8 +632,8 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
     requesterName: getFulfillmentRequesterName(workItem),
     assigneeName: getFulfillmentAssigneeName(workItem),
     startedAt:
-      workItem.status === "in_progress" || workItem.status === "completed"
-        ? time
+      workItem.startedAt
+        ? formatOperatingShortTime(workItem.startedAt)
         : undefined,
     statusId: mapFulfillmentToQueueStatusId(workItem.status, "waiting"),
     time,
@@ -1878,11 +1880,14 @@ function DispensingContentBody({
     primaryGroup?.rows[0]?.requestedAt ?? "2026.04.14 10:30";
   const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
-  const instructionAssignee =
-    selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
-  const instructionStartStatus = selectedQueueItem
-    ? selectedQueueStatusLabel
-    : primaryStartStatus;
+  const instructionAssignee = instruction.document
+    ? instruction.document.mainAssigneeName ?? "미지정"
+    : selectedQueueItem?.assigneeName ?? primaryAssigneeSummary;
+  const instructionStartStatus = instruction.document
+    ? getInstructionStatusLabel(instruction.document)
+    : selectedQueueItem
+      ? selectedQueueStatusLabel
+      : primaryStartStatus;
   const instructionStartedAt = selectedQueueItem?.startedAt ?? "미시작";
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
     {

@@ -40,7 +40,7 @@ const baseline = "set check_function_bodies=off;\n" + definitions.map(([file,nam
  if(name==="public.clair_mutate_chart_order_execution") body=body.replace("public.clair_mutate_chart_order_execution(", "public.clair_mutate_chart_order_execution_origin_base(");
  return body;
 }).join("\n");
-const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
+const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
 const fixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8");
 const notificationSource = readFileSync("supabase/migrations/20260705133000_notification_event_persistence.sql", "utf8");
 const notificationTable = notificationSource.slice(notificationSource.indexOf("create table if not exists public.notification_events"), notificationSource.indexOf("create table if not exists public.notification_user_states"))
