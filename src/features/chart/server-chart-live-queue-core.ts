@@ -139,11 +139,25 @@ export function createSupabaseChartLiveQueueGateway(
             activeEncounterStatuses.has(record.encounter.status),
         )
         .sort((a, b) => (a.queueEntry.sortOrder ?? 0) - (b.queueEntry.sortOrder ?? 0));
-      const patientIds = uniqueStrings(consultationRecords.map((record) => record.encounter.patientId));
+      const embeddedPatients = consultationRecords.flatMap((record) =>
+        record.patient?.id === record.encounter.patientId && record.patient.workspaceId === workspaceId
+          ? [record.patient]
+          : [],
+      );
+      const embeddedGuardians = consultationRecords.flatMap((record) =>
+        record.primaryGuardian?.id === record.encounter.guardianId && record.primaryGuardian?.workspaceId === workspaceId
+          ? [record.primaryGuardian]
+          : [],
+      );
+      const embeddedPatientIds = new Set(embeddedPatients.map((patient) => patient.id));
+      const embeddedGuardianIds = new Set(embeddedGuardians.map((guardian) => guardian.id));
+      const patientIds = uniqueStrings(consultationRecords.map((record) => record.encounter.patientId))
+        .filter((id) => !embeddedPatientIds.has(id));
       const guardianIds = uniqueStrings(
         consultationRecords
           .map((record) => record.encounter.guardianId)
-          .filter((value): value is string => Boolean(value)),
+          .filter((value): value is string => Boolean(value))
+          .filter((value) => !embeddedGuardianIds.has(value)),
       );
       const veterinarianIds = uniqueStrings(
         consultationRecords
@@ -173,10 +187,14 @@ export function createSupabaseChartLiveQueueGateway(
           ? lookupProfiles.guardians
           : [];
       const patientById = new Map(
-        hydratedPatients.map((patient) => [patient.id, patient]),
+        [...hydratedPatients, ...embeddedPatients]
+          .filter((patient) => patient.workspaceId === workspaceId)
+          .map((patient) => [patient.id, patient]),
       );
       const guardianById = new Map(
-        hydratedGuardians.map((guardian) => [guardian.id, guardian]),
+        [...hydratedGuardians, ...embeddedGuardians]
+          .filter((guardian) => guardian.workspaceId === workspaceId)
+          .map((guardian) => [guardian.id, guardian]),
       );
       const veterinarianNameById = new Map(
         staffUsers.ok
@@ -205,6 +223,7 @@ export function createSupabaseChartLiveQueueGateway(
         })
         .filter((record): record is ChartLiveQueueRecord => Boolean(record));
 
+      if (queue.length !== consultationRecords.length) return { ok: false, error: "db_read_failed" };
       return { ok: true, queue };
     },
   };
@@ -365,6 +384,7 @@ async function readSupabaseLookupProfiles(
   const guardians: Guardian[] = [];
 
   data.forEach((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return;
     const value = row as Record<string, unknown>;
     const patient = mapPatientRows([value.patient]).at(0);
     const guardian = mapGuardianRows([value.primaryGuardian ?? value.primary_guardian]).at(0);
@@ -381,6 +401,7 @@ function mapPatientRows(data: unknown): Patient[] {
 
   return data
     .map((row): Patient | null => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const value = row as Record<string, unknown>;
       const id = getString(value.id);
       const workspaceId = getString(value.workspace_id) ?? getString(value.workspaceId);
@@ -428,6 +449,7 @@ function mapGuardianRows(data: unknown): Guardian[] {
 
   return data
     .map((row): Guardian | null => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const value = row as Record<string, unknown>;
       const id = getString(value.id);
       const workspaceId = getString(value.workspace_id) ?? getString(value.workspaceId);
@@ -459,6 +481,7 @@ function mapStaffUserRows(data: unknown): Array<{ displayName: string; id: strin
 
   return data
     .map((row): { displayName: string; id: string } | null => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const value = row as Record<string, unknown>;
       const id = getString(value.id);
       const displayName = getString(value.display_name) ?? getString(value.displayName);

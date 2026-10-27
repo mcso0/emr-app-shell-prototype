@@ -91,6 +91,45 @@ test("chart live queue passes the selected operating date to reception queue rea
   expect(calls[0]).toBe("rpc:clair_list_reception_queue:clair-demo:2026-06-25");
 });
 
+test("chart uses scoped embedded queue profiles when direct reads are forbidden and guardian is absent", async () => {
+  const calls: string[] = [];
+  const gateway = createSupabaseChartLiveQueueGateway(
+    createFakeChartLiveQueueClient(calls, { directProfileReadFails: true, embeddedProfiles: true, missingGuardian: true }) as unknown as SupabaseChartLiveQueueClient,
+  );
+  const result = await gateway.listChartQueue({ workspaceId });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.queue).toHaveLength(2);
+  expect(result.queue[0].patient.name).toBe("Kong Synthetic");
+  expect(result.queue[1].patient.name).toBe("Nabi Synthetic");
+  expect(result.queue[1].primaryGuardian).toBeUndefined();
+  expect(calls.some((call) => /from:(patients|guardians)|patient_guardian_lookup/.test(call))).toBe(false);
+});
+
+test("legacy profile lookup tolerates an absent guardian and malformed rows", async () => {
+  const gateway = createSupabaseChartLiveQueueGateway(
+    createFakeChartLiveQueueClient([], { directProfileReadFails: true, missingGuardian: true, malformedLookup: true }) as unknown as SupabaseChartLiveQueueClient,
+  );
+  const result = await gateway.listChartQueue({ workspaceId });
+  expect(result.ok).toBe(true);
+  if (!result.ok) return;
+  expect(result.queue).toHaveLength(2);
+  expect(result.queue[1].primaryGuardian).toBeUndefined();
+});
+
+test("incomplete or foreign-workspace lookup fails instead of hiding a queued patient", async () => {
+  const gateway = createSupabaseChartLiveQueueGateway(
+    createFakeChartLiveQueueClient([], {
+      directProfileReadFails: true,
+      lookupRows: [
+        { patient: patientRows[0], primaryGuardian: guardianRows[0] },
+        { patient: { ...patientRows[1], workspace_id: "other-workspace" } },
+      ],
+    }) as unknown as SupabaseChartLiveQueueClient,
+  );
+  expect(await gateway.listChartQueue({ workspaceId })).toEqual({ ok: false, error: "db_read_failed" });
+});
+
 test("chart live queue falls back to reception profile lookup when direct profile read is blocked", async () => {
   const calls: string[] = [];
   const gateway = createSupabaseChartLiveQueueGateway(
@@ -227,16 +266,17 @@ test("Cheongdam live chart selection recovers live encounters without legacy fix
 
 function createFakeChartLiveQueueClient(
   calls: string[],
-  options: { directProfileReadFails?: boolean } = {},
+  options: { directProfileReadFails?: boolean; embeddedProfiles?: boolean; missingGuardian?: boolean; malformedLookup?: boolean; lookupRows?: unknown[] } = {},
 ) {
   return {
     async rpc(functionName: string, args: { p_day?: string; p_workspace_id: string }) {
       calls.push(`rpc:${functionName}:${args.p_workspace_id}${args.p_day ? `:${args.p_day}` : ""}`);
       if (functionName === "clair_search_reception_patient_guardian_lookup") {
         return {
-          data: [
+          data: options.lookupRows ?? [
             { patient: patientRows[0], primaryGuardian: guardianRows[0] },
-            { patient: patientRows[1], primaryGuardian: guardianRows[1] },
+            { patient: patientRows[1], primaryGuardian: options.missingGuardian ? null : guardianRows[1] },
+            ...(options.malformedLookup ? [null, {}, { patient: null }] : []),
           ],
           error: null,
         };
@@ -244,8 +284,8 @@ function createFakeChartLiveQueueClient(
 
       return {
         data: [
-          { encounter: firstEncounter, queueEntry: queueEntry(firstEncounter, "consultation", 1) },
-          { encounter: secondEncounter, queueEntry: queueEntry(secondEncounter, "consultation", 2) },
+          { encounter: firstEncounter, queueEntry: queueEntry(firstEncounter, "consultation", 1), ...(options.embeddedProfiles ? { patient: patientRows[0], primaryGuardian: guardianRows[0] } : {}) },
+          { encounter: options.missingGuardian ? { ...secondEncounter, guardianId: null } : secondEncounter, queueEntry: queueEntry(secondEncounter, "consultation", 2), ...(options.embeddedProfiles ? { patient: patientRows[1], primaryGuardian: options.missingGuardian ? null : guardianRows[1] } : {}) },
           { encounter: billingEncounter, queueEntry: queueEntry(billingEncounter, "billing", 3) },
         ],
         error: null,
