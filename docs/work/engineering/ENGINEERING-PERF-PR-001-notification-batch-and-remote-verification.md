@@ -395,3 +395,34 @@ Live Vercel inspection confirmed the existing ignored-build command skips every
 non-Production Git build. Keep that setting unchanged and do not trigger a manual
 Preview. GitHub PR Release Check runs validation only, without a deployment step.
 The PR therefore has no Ready Preview evidence and is not release-approved.
+
+
+### Latest Main Integration — 2026-10-27
+
+승욱 authorized merging latest main into PR1020's branch, refreshing relevant
+local verification, pushing the candidate, and checking the new automatic runs.
+Preview, Production and PR merge remain prohibited. The original checkout is
+untouched. Existing Vercel non-Production ignore behavior was rechecked and kept.
+
+Integrated main `a42357d9` (PR1019) without conflict using merge commit `1398cfe4`.
+The PR still changes only its original 13 files relative to main. The incoming
+change does not modify frontend runtime code. No hosted migration or database
+operation was executed during this integration.
+
+Local verification: frontend-refresh Vitest 91/91, full ESLint, non-incremental
+TypeScript, mock production build, secret scan (4,973 tracked files) and UX-copy
+check passed. The existing doc-reader filesystem tracing warning remains.
+Focused Playwright integration passed 37/37 checks: dispensing selection, empty
+and denied states; all eight eligible-assignee cases; queue lifecycle; request
+counts; reception coordinator and snapshot/return contracts.
+
+Additional out-of-scope finding: the broader reception staff-sharing test at
+`tests/reception-read-performance.spec.ts:125` still intercepts the old
+`staff?role=vet` URL, whereas the app uses `staff?date=...`. A temporary fixture
+correction exposed two initial staff reads when the content and walk-in drawer
+open together. Both callers can start before the shared store becomes ready.
+The reception runtime source is byte-identical before/after this main merge.
+This is separate from the reception calendar/queue return coalescing in this PR.
+The temporary test changes were reverted; no expectation was weakened or staff
+loading behavior changed. The existing staff hide/return test passed. Do not
+claim the entire reception-read-performance browser suite passed.
