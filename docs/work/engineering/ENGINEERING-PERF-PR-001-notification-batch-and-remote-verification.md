@@ -12,7 +12,7 @@ source_docs:
 dependencies:
   - "RECEPTION-PERF-PR-001"
   - "NOTIFICATION-PR-024"
-updated: "2026-10-20"
+updated: "2026-10-27"
 ---
 
 # Notification Batch And Remote Verification
@@ -262,3 +262,167 @@ recorded on the PR.
 - Remote required CI, current-head Preview, ordered merge, and Production smoke are separate release evidence and remain pending at this local verification checkpoint.
 
 - Parent integrated preflight passed: full ESLint, non-incremental TypeScript, and Production build (25 pages). The existing `src/lib/prd-viewer/doc-reader.ts:78` dynamic filesystem tracing warning remains unrelated. Documentation references passed for 1,073 Markdown files, secret scan for 4,930 tracked files, and `git diff --check` passed.
+
+## Queue Read Deduplication — 2026-10-27 (Local Only)
+
+### Approved Scope And Completion
+
+승욱 authorized only the dispensing/treatment duplicate reads and reception
+paired-return refresh follow-up. Work starts from `aa26f7c4` in isolated
+`codex/queue-read-dedup`; the original checkout and its WIP stay untouched.
+No push, Preview, merge, Production deployment, DB/schema/permission change,
+paid service, or hosted clinical data operation is included in this follow-up.
+The earlier release approvals do not override this explicit no-deployment scope.
+
+Done criteria: measure fewer requests with the same synthetic scenarios, retain
+current refresh cadence and mutation freshness, preserve denial/error/retry,
+protect actor/workspace/date boundaries and reject late responses. Use the actual
+hook/effect code for deterministic baseline comparisons plus local browser checks.
+
+### Implementation Contract
+
+- The dispensing panel and content share a mounted read resource scoped to actor
+  generation, workspace, and operating date. Initial pending requests are shared;
+  explicit refresh and post-mutation refresh supersede earlier reads.
+- One Realtime queue subscription belongs to that shared resource. The existing
+  400ms debounce and follow-up after an in-flight broadcast are preserved through
+  a subscription function also used by the existing hook. Other queue consumers
+  keep their existing hook contract. No polling is added.
+- Last unsubscribe or actor disposal clears protected state and aborts pending
+  requests. A remaining subscriber retains its request. Denial from either queue
+  wins over the other queue's network/JSON failure; ordinary read failure retains
+  previous rows and remains retryable.
+- Reception uses the existing `subscribeVisibleRefresh` to combine focus and
+  visibility events within 250ms, keeping immediate first return, visible 60-second
+  refresh, hidden suppression, and manual refresh.
+
+### Verification
+
+- Run the immutable baseline with
+  `QUEUE_READ_BASELINE=aa26f7c4 npx vitest run --config vitest.frontend-refresh.config.ts tests/queue-read-refresh.test.ts`.
+  The same actual-code harness measures simultaneous dispensing consumers at
+  **4 GETs before / 2 after** and paired reception return after a fast completed
+  reply at **2 refresh calls before / 1 after**, in either event order.
+- The local mock app uses the existing calendar+queue fallback. Its browser
+  reception check counts one pair per return. Live-mode snapshot selection and
+  stale/date/workspace handling are covered separately by coordinator contracts;
+  this is not hosted API/DB permission or Production CPU evidence.
+- `playwright.queue-refresh.config.ts` starts only this worktree's mock production
+  build on loopback port3417, with server reuse disabled. Build first using
+  `NEXT_PUBLIC_AUTH_MODE=mock npm run build`. The new browser specs block external
+  traffic; no credentials or service environment files are loaded.
+### Local Verification Closeout
+
+- Baseline actual-code comparison passed 5 applicable scenarios; the candidate
+  frontend refresh suite passed 91 tests across 10 files. Coverage includes shared
+  mount/unmount, actor/workspace/date separation, late reads, denial precedence,
+  ordinary failure/retry, successful and conflicting mutations, successive edits,
+  logout during mutation, Realtime debounce and a follow-up during an active read.
+- The final focused Playwright run passed 9 checks: two actual-screen request-count
+  tests, three dispensing empty/selection/denial checks, and four reception read
+  contract checks. Earlier reception coordinator (15) and fulfillment lifecycle
+  (4) checks also passed. All data used here was synthetic.
+- Full ESLint, non-incremental TypeScript and the mock production build passed.
+  The existing `doc-reader.ts:78` dynamic filesystem tracing warning remains.
+- Two broader existing UI tests failed and were independently reproduced with
+  unchanged `aa26f7c4` production sources and a freshly built local mock app:
+  `dispensing queue reconciles server totals with visible type-filter counts`
+  cannot find its expected order-row test ID; `dispensing 담당 변경 preserves
+  loading, candidates and failed-read feedback` cannot find its expected assignee
+  button. These are not passing evidence. Their underlying fixture/UI mismatch
+  was not repaired in this scope. The rest of the broader assignee suite was not
+  completed after the first failure; no whole-suite pass is claimed.
+- The original checkout's status fingerprint is unchanged. Changes remain in
+  the isolated local worktree. No push, deployment, remote data mutation, or
+  production performance measurement was performed.
+- Documentation references passed for 1,075 Markdown files; secret scan passed
+  for 4,963 tracked files. Final changed-test ESLint and `git diff --check` passed.
+
+
+### Existing UI Failure Repair — 2026-10-27 (Local Only)
+
+승욱 authorized diagnosis and correction of the two previously failing UI tests.
+Continue in the same isolated worktree, preserve the earlier queue changes and
+original checkout WIP, and do not push or deploy.
+
+Both failures used the previous dispensing/treatment UI contract: the header
+assignee action and legacy order-row IDs. The current screen reads a separate
+instruction document, preloads eligible assignees, and assigns at the item row.
+The tests lacked that instruction response. Fixtures now provide matching
+synthetic documents; queue counts and the selected instruction item stay asserted.
+Lab/imaging retain their existing header/handoff checks.
+
+The updated assignee scenario exposed a current UI defect: non-success candidate
+responses silently produced no candidates. The controller now retains the
+instruction and reports the candidate error through the existing alert and retry.
+Network/JSON failures use that same candidate-specific error. Existing generation
+and abort guards still reject stale results.
+
+The test initially reselected an automatically selected item while the candidate
+read was pending. That started another read and invalidated its loading assertion.
+It now opens the exact instruction URL and waits for menu visibility before
+closing it. A temporary trigger change was removed after the unchanged component
+passed the corrected loading assertion. No permission policy, menu component,
+API, database, or clinical state transition changes.
+
+Verification complete:
+
+- The corrected assignee test failed against the unchanged instruction hook and
+  table from `aa26f7c4` specifically because the candidate error alert was absent.
+  The loading assertion passed on that baseline. This confirms the production-code
+  fix is needed and the temporary table change is not.
+- Final local mock build passed; focused Playwright run passed all 11 scenarios:
+  eight assignee scenarios (dispensing/treatment/lab/imaging, requested/in-progress),
+  queue count/selection reconciliation, and both previous request-count checks.
+  Candidate disablement while pending, retained instruction on HTTP503, no stale
+  candidate options, retry recovery, current-assignee disablement and no unintended
+  PATCH were verified with synthetic data.
+- Non-incremental TypeScript, changed-file ESLint and the final mock production
+  build passed. The existing doc-reader filesystem tracing warning remains.
+- Original checkout status fingerprint remains unchanged. Prior queue-read changes
+  stay intact. No remote operation, push, or deployment was performed.
+- Documentation references passed for 1,075 Markdown files; `git diff --check` passed.
+
+
+### PR-Only Delivery Authorization — 2026-10-27
+
+승욱 authorized bundling only the queue-read deduplication and the UI regression
+repair above into one PR. Commit, feature-branch push and PR creation are now
+authorized; merge and deployment remain prohibited. Original checkout WIP is
+excluded. The branch still starts at current `origin/main` (`aa26f7c4`).
+
+Live Vercel inspection confirmed the existing ignored-build command skips every
+non-Production Git build. Keep that setting unchanged and do not trigger a manual
+Preview. GitHub PR Release Check runs validation only, without a deployment step.
+The PR therefore has no Ready Preview evidence and is not release-approved.
+
+
+### Latest Main Integration — 2026-10-27
+
+승욱 authorized merging latest main into PR1020's branch, refreshing relevant
+local verification, pushing the candidate, and checking the new automatic runs.
+Preview, Production and PR merge remain prohibited. The original checkout is
+untouched. Existing Vercel non-Production ignore behavior was rechecked and kept.
+
+Integrated main `a42357d9` (PR1019) without conflict using merge commit `1398cfe4`.
+The PR still changes only its original 13 files relative to main. The incoming
+change does not modify frontend runtime code. No hosted migration or database
+operation was executed during this integration.
+
+Local verification: frontend-refresh Vitest 91/91, full ESLint, non-incremental
+TypeScript, mock production build, secret scan (4,973 tracked files) and UX-copy
+check passed. The existing doc-reader filesystem tracing warning remains.
+Focused Playwright integration passed 37/37 checks: dispensing selection, empty
+and denied states; all eight eligible-assignee cases; queue lifecycle; request
+counts; reception coordinator and snapshot/return contracts.
+
+Additional out-of-scope finding: the broader reception staff-sharing test at
+`tests/reception-read-performance.spec.ts:125` still intercepts the old
+`staff?role=vet` URL, whereas the app uses `staff?date=...`. A temporary fixture
+correction exposed two initial staff reads when the content and walk-in drawer
+open together. Both callers can start before the shared store becomes ready.
+The reception runtime source is byte-identical before/after this main merge.
+This is separate from the reception calendar/queue return coalescing in this PR.
+The temporary test changes were reverted; no expectation was weakened or staff
+loading behavior changed. The existing staff hide/return test passed. Do not
+claim the entire reception-read-performance browser suite passed.
