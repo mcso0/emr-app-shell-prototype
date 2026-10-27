@@ -684,3 +684,49 @@ construction fails. Dependencies in this wrapper test are synthetic stubs; this
 is not full hosted integration proof. Final acceptance requires the approved
 hosted correction, successful actual UI re-request response, retained prior
 actual results/history, current unassigned pending attempt, and reload readback.
+
+### Chart requester display correction — 2026-10-27
+
+승욱 requested fixing the remaining chart `요청 수의사` display and verifying
+it in the actual screen. The persisted `orders.requested_by_user_id` exists,
+but the scoped runtime projection omits it, both application parsers discard
+requester metadata, and the chart resolves names from mock staff only.
+
+Preserve canonical requester ID/display name through draft/action restoration,
+row display and sorting. Explicit missing requester remains `미기록`; a known
+requester without a readable name shows `이름 미확인`. Legacy responses without
+new metadata retain their compatibility fallback. Do not substitute the current
+viewer, primary veterinarian or confirmer for a canonical requester.
+
+Prepared `20261027125000_chart_order_requester_display.sql` adds only two
+read-only fields to the existing private projection. Live preflight confirmed
+an invoker, stable function with empty search path and postgres-only execute
+ACL. Remote application is pending separate user approval. Existing lifecycle,
+results, nonbillable fixture and role/permission policy are outside this change.
+
+Local verification: requester/parser contracts 25 passed; TypeScript, lint and
+production build passed. Isolated PostgreSQL reproduced the missing requester
+before the patch and passed afterward, including individual/set/child rows,
+missing users, preserved fields, unchanged business rows and function security
+contract. This uses a synthetic projection fixture, not hosted integration proof.
+Storybook assertion covers two actual chart rows with a distinct synthetic
+requester, but its execution is currently blocked before rendering by installed
+Next.js 16.4.2 / Storybook router fixture incompatibility: `useRouter` reads
+`parentRenderTree.data` from the fixture's absent `parentRenderTree`.
+Both MCP tests and a fresh CLI run reproduce that initialization failure.
+Do not report story tests or actual screen acceptance as passed yet.
+
+Completion requires successful scoped screen checks and, after separate DB
+approval and release gates, actual authenticated synthetic-chart readback and
+reload retaining the canonical requester on the set and child rows.
+
+승욱 explicitly approved this hosted requester projection correction in chat.
+The migration applied successfully; scoped synthetic readback returned canonical
+requester IDs/names for both current set and child rows. Post-apply ACL, invoker
+mode, stable volatility and empty search path match preflight.
+
+The story now supplies per-mount App Router/path/search contexts explicitly,
+retaining the same synthetic chart route and avoiding the incompatible framework
+decorator. All six actual-workspace stories passed, including the new requester
+assertion, filtering, detail, keyboard collapse, history and retry. No shared
+Storybook configuration or production routing was changed.

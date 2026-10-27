@@ -1,3 +1,4 @@
+import { readChartOrderRequester, type ChartOrderRequester } from "./order-requester";
 import { getMockEncounterCharts } from "@/features/chart/server-soap-note-persistence-core";
 import { readPersistedOrderDefaults } from "@/features/hospital-admin/persisted-order-defaults";
 import {
@@ -48,7 +49,7 @@ export type ChartOrderReadbackQuantitySource =
   | "dispense_quantity"
   | "actual_dispense_quantity";
 
-export type ChartOrderRuntimeRow = {
+export type ChartOrderRuntimeRow = ChartOrderRequester & {
   instruction?: string;
   originChartId?: string | null;
   orderId: string;
@@ -1411,6 +1412,7 @@ function mapRuntimeRow(value: unknown): ChartOrderRuntimeRow | null {
       ? row.executionMode
       : fallbackCanonical.executionMode;
   return {
+    ...readChartOrderRequester(row),
     orderId: row.orderId,
     workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,
     encounterId: row.encounterId,
