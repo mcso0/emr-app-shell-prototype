@@ -627,3 +627,28 @@ suite and 10 instruction contract tests pass. Targeted lint and type check pass.
 These checks do not establish corrected Production rendering. The new reader
 migration is prepared locally; the earlier DB approval named five migrations,
 so applying this sixth migration requires the remaining scoped DB authorization.
+
+### Chart lookup and browser re-request acceptance — 2026-10-27
+
+승욱 explicitly requested fixing the existing chart lookup exception and verifying
+re-request through the actual UI, including related visible defects. Continue the
+same synthetic nonbillable fixture and bounded delivery approval. This authorizes
+completing its consultation-queue/chart setup and UI lifecycle verification;
+existing real rows, payments, external messages and canonical permission changes
+remain excluded. No new DB migration is planned for the lookup correction.
+
+Inspection found that the authorized reception queue already embeds patient and
+optional guardian profiles. The chart reader ignores them, attempts forbidden
+direct table reads, then runs a capped broad lookup. Missing guardians make that
+fallback throw on `undefined.id`. Use the scoped embedded profiles, retain guarded
+legacy fallback, and report incomplete hydration instead of silently hiding rows.
+Completion requires successful chart loading, UI re-request creating a new attempt,
+unchanged earlier result/history, correct new status/assignees, and refresh readback.
+
+Local regression reproduces `undefined.id` before the fix; all 20 chart/instruction
+contract checks pass after it. Type, build, docs and secret checks pass; full lint
+has no errors (one existing untracked diagnostic-script warning). The existing
+synthetic patient now has a consultation queue entry and a first chart, plus one
+new nonbillable chart-owned set created/confirmed through canonical authenticated
+RPCs. The prior fixture/order/results remain untouched. Actual result, completion
+and re-request acceptance are pending the corrected application deployment.
