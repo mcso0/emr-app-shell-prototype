@@ -688,6 +688,8 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
             {
               orderId: "00000000-0000-4000-8000-000000000101",
               encounterId,
+              requestedByUserId: "live-requester",
+              requestedByDisplayName: "실제 요청 수의사",
               rowType: "individual",
               orderType: "lab",
               quantity: 2,
@@ -738,6 +740,8 @@ test("order draft Supabase gateway keeps workspace, encounter, actor, and server
     rows: [
       {
         orderId: "00000000-0000-4000-8000-000000000101",
+        requestedByUserId: "live-requester",
+        requestedByDisplayName: "실제 요청 수의사",
       },
     ],
   });

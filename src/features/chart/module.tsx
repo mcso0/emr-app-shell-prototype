@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveChartOrderRequester } from "./order-requester";
+
 import { ChartInstructionDialog } from "./components/chart-instruction-dialog";
 import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
@@ -6075,7 +6077,7 @@ function buildChartOrderDraftRowFromRuntime(
     status,
     workStatus: status === "completed" ? "completed" : "pending",
     priority: snapshot.priority,
-    requestedByUserId: fallback?.order.requestedByUserId ?? "",
+    requestedByUserId: resolveChartOrderRequester(snapshot, fallback?.order.requestedByUserId, getChartStaffName).id,
     requestedAt: fallback?.order.requestedAt ?? snapshot.updatedAt,
     instruction:
       snapshot.instruction ?? getString("internalInstruction", "appliedInternalInstruction") ??
@@ -6277,9 +6279,7 @@ const applyPersistedOrderActions = (
         order: {
           ...nextRow.order,
           requestedByUserId:
-            row.order.requestedByUserId ||
-            legacySnapshot?.confirmedByUserId ||
-            "",
+            resolveChartOrderRequester(runtimeSnapshot, row.order.requestedByUserId || legacySnapshot?.confirmedByUserId || undefined, getChartStaffName).id,
         },
         billingCandidateId:
           legacySnapshot?.billingCandidateId ?? row.billingCandidateId,
@@ -6331,8 +6331,7 @@ const applyPersistedOrderActions = (
         order: {
           ...restoredRow.order,
           requestedByUserId:
-            legacySnapshotByOrderId.get(snapshot.orderId)
-              ?.confirmedByUserId || "",
+            resolveChartOrderRequester(snapshot, legacySnapshotByOrderId.get(snapshot.orderId)?.confirmedByUserId || undefined, getChartStaffName).id,
         },
       };
     });
@@ -7291,9 +7290,9 @@ function compareChartOrderValues(
 
   if (key === "requestedBy") {
     return (
-      getChartStaffName(a.order.requestedByUserId) ?? "미기록"
+      resolveChartOrderRequester(a.runtimeRow, a.order.requestedByUserId, getChartStaffName).name
     ).localeCompare(
-      getChartStaffName(b.order.requestedByUserId) ?? "미기록",
+      resolveChartOrderRequester(b.runtimeRow, b.order.requestedByUserId, getChartStaffName).name,
       "ko-KR",
       { numeric: true, sensitivity: "base" },
     );
@@ -9150,7 +9149,7 @@ function ChartOrderTable({
       {
         id: "requestedBy",
         accessorFn: (row) =>
-          getChartStaffName(row.order.requestedByUserId) ?? "미기록",
+          resolveChartOrderRequester(row.runtimeRow, row.order.requestedByUserId, getChartStaffName).name,
         size: getChartOrderColumnSize("requestedBy"),
         minSize: getChartOrderColumnSize("requestedBy"),
         enableResizing: false,
@@ -9159,8 +9158,7 @@ function ChartOrderTable({
           compareChartOrderValues(rowA.original, rowB.original, "requestedBy"),
         cell: ({ row }) => {
           const requestedBy =
-            getChartStaffName(row.original.order.requestedByUserId) ??
-            "미기록";
+            resolveChartOrderRequester(row.original.runtimeRow, row.original.order.requestedByUserId, getChartStaffName).name;
 
           return (
             <ChartOrderIdentityAvatar label="요청 수의사" name={requestedBy} />

@@ -1,3 +1,4 @@
+import { readChartOrderRequester } from "./order-requester";
 import {
   createMockWorkspacePermissionAdapter,
   resolveWorkspacePermission,
@@ -1321,6 +1322,7 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
       ? (row.destinationModule as ClinicalOrderDestinationModule | null)
       : canonical.destinationModule;
   return {
+    ...readChartOrderRequester(row),
     originChartId: typeof row.originChartId === "string" ? row.originChartId : null,
     orderId: row.orderId,
     workspaceId: typeof row.workspaceId === "string" ? row.workspaceId : undefined,

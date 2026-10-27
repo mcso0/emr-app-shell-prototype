@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { PathnameContext, SearchParamsContext } from "next/dist/shared/lib/hooks-client-context.shared-runtime";
 import { getModule } from "@/modules/registry";
 import { WorkspaceDocumentLayout } from "@/shell/workspace-document-layout";
 import { ChartSlotAvailabilityProvider } from "./module";
@@ -14,14 +16,19 @@ function Example({ width }: { scenario: ChartWorkspaceScenario; width: number })
   const [route, setRoute] = useState("");
   useEffect(() => { instance.setUnmount(() => flushSync(() => setMounted(false))); }, [instance]);
   const props = { workspaceId: instance.workspaceId, moduleId: "treatment", moduleLabel: "진료/차트", onNavigateWorkspaceSurface: (href: string) => { instance.routes.push(href); setRoute(href); } };
-  return <div className="flex h-[960px] max-w-full flex-col" style={{ width }}>
+  // Keep route context local to this synthetic mount. The framework's current
+  // App Router decorator lacks the Next.js 16.4 parentRenderTree fixture.
+  const navigation = meta.parameters.nextjs.navigation;
+  const [router] = useState(() => ({ bfcacheId: "synthetic-chart", back: fn(), forward: fn(), refresh: fn(), prefetch: fn(), push: fn((href: string) => { instance.routes.push(href); }), replace: fn((href: string) => { instance.routes.push(href); }) }));
+  const [searchParams] = useState(() => new URLSearchParams(navigation.query));
+  return <AppRouterContext.Provider value={router}><PathnameContext.Provider value={navigation.pathname}><SearchParamsContext.Provider value={searchParams}><div className="flex h-[960px] max-w-full flex-col" style={{ width }}>
     {mounted ? <ChartSlotAvailabilityProvider {...props}>{availability => <WorkspaceDocumentLayout moduleDefinition={getModule("treatment")} slotProps={{ ...props, ...availability }} />}</ChartSlotAvailabilityProvider> : null}
     {route ? <output aria-label="합성 차트 이동 경로">{route}</output> : null}
-  </div>;
+  </div></SearchParamsContext.Provider></PathnameContext.Provider></AppRouterContext.Provider>;
 }
 const meta = {
   title: "Features/Chart/Actual Workspace", component: Example, tags: ["autodocs"], args: { scenario: "historical" as ChartWorkspaceScenario, width: 1580 }, argTypes: { scenario: { control: false }, width: { control: { type: "number", min: 1040, max: 1900 } } },
-  parameters: { nextjs: { appDirectory: true, navigation: { pathname: "/w/storybook-chart/treatment", query: { date: "2026-10-11", encounterId: "98000000-0000-4000-8001-000000000001", historyEncounterId: "98000000-0000-4000-8001-000000000002", chartId: "98000000-0000-4000-8002-000000000001" } } }, layout: "fullscreen", docs: { story: { inline: false, height: "1000px" }, description: { component: "실제 ChartSlotAvailabilityProvider와 WorkspaceDocumentLayout에서 ChartContent와 private 처방/오더 표를 렌더합니다. 현재 접수와 완료한 과거 접수는 같은 합성 환자에 속합니다. 실제 main의 과거 차트 읽기 전용 상태를 사용합니다. 실제 과거 차트 경로의 encounterId, historyEncounterId, chartId를 사용하므로 대기열 조회 뒤에도 같은 차트를 엽니다. 표의 행·컬럼·밀도·필터·접기·비활성 이유를 새로 만들지 않습니다. 조회 API는 workspace와 진료 범위의 합성 응답이며 저장 요청은 로컬 권한 거부로 끝납니다. 미지원 읽기는 검증에서 드러납니다. 환자 컨텍스트 헤더와 전체 AppShell, 진행 중 차트 편집·확정·수납 성공은 별도 범위입니다. 기존 밀도 비교 예제와 SummaryAndDetails는 유지합니다." } } },
+  parameters: { nextjs: { appDirectory: false, navigation: { pathname: "/w/storybook-chart/treatment", query: { date: "2026-10-11", encounterId: "98000000-0000-4000-8001-000000000001", historyEncounterId: "98000000-0000-4000-8001-000000000002", chartId: "98000000-0000-4000-8002-000000000001" } } }, layout: "fullscreen", docs: { story: { inline: false, height: "1000px" }, description: { component: "실제 ChartSlotAvailabilityProvider와 WorkspaceDocumentLayout에서 ChartContent와 private 처방/오더 표를 렌더합니다. 현재 접수와 완료한 과거 접수는 같은 합성 환자에 속합니다. 실제 main의 과거 차트 읽기 전용 상태를 사용합니다. 실제 과거 차트 경로의 encounterId, historyEncounterId, chartId를 사용하므로 대기열 조회 뒤에도 같은 차트를 엽니다. 표의 행·컬럼·밀도·필터·접기·비활성 이유를 새로 만들지 않습니다. 조회 API는 workspace와 진료 범위의 합성 응답이며 저장 요청은 로컬 권한 거부로 끝납니다. 미지원 읽기는 검증에서 드러납니다. 환자 컨텍스트 헤더와 전체 AppShell, 진행 중 차트 편집·확정·수납 성공은 별도 범위입니다. 기존 밀도 비교 예제와 SummaryAndDetails는 유지합니다." } } },
   beforeEach: ({ args }) => { fixture = createChartWorkspaceFixture(args.scenario); return fixture.install(); },
 } satisfies Meta<typeof Example>;
 export default meta;
@@ -34,6 +41,7 @@ async function ready(canvas: Canvas) {
 }
 export const HistoricalTableAndDensity: Story = { play: async ({ canvas, canvasElement }) => {
   await ready(canvas); const table = canvas.getByRole("table", { name: "처방/오더 테이블" });
+  await expect(within(table).getAllByLabelText("합성 요청 수의사 요청 수의사")).toHaveLength(2);
   const headers = ["선택", "분류", "확정 여부", "Order 명", "업무 상태", "청구서명", "청구반영", "일수", "횟수", "총횟수", "head/kg당", "1회당", "성분량", "조제량", "보관", "투여/복약", "단가", "수량", "합계", "할인/할증", "%", "총 청구금액", "할인/할증 사유", "과세", "업무 담당", "요청 수의사"];
   await expect(within(table).getAllByRole("columnheader")).toHaveLength(headers.length);
   for (const name of headers) await expect(within(table).getByRole("columnheader", { name })).toBeInTheDocument();
