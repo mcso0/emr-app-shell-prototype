@@ -94,3 +94,15 @@ test("treatment V3 retains explicit actual requirements and actionable dependenc
       .toMatchObject({ ok: false, status: 409, error });
   }
 });
+
+test("a completed first-result retry reaches the RPC receipt while amendment stays forbidden", async () => {
+  const completed = { ...context, status: "completed", canRecord: false, results: [{ id, version: 1, previousResultId: null, schemaVersion: 1,
+    payload: command.payload, performedByUserId: id, performedAt: command.performedAt, recordedByUserId: id, recordedAt: command.performedAt,
+    varianceReason: "Synthetic difference", amendmentReason: null, planSha256: context.planSha256 }] };
+  const writes: unknown[] = [];
+  const client: ExecutionRpcClient = { rpc: async (name, args) => { if (name === "clair_record_order_execution_result") writes.push(args); return { data: completed, error: null }; } };
+  expect(await recordExecutionResult({ client, actorUserId: id, workspaceId: "clair-demo", workItemId: id, input: command })).toMatchObject({ ok: true });
+  expect(writes).toHaveLength(1);
+  expect(await recordExecutionResult({ client, actorUserId: id, workspaceId: "clair-demo", workItemId: id, input: { ...command, expectedResultVersion: 1, amendmentReason: "changed" } })).toMatchObject({ ok: false, status: 403 });
+  expect(writes).toHaveLength(1);
+});

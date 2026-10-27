@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
+import type { InstructionDocument } from "../src/features/fulfillment/instruction-contract";
 
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
@@ -121,6 +123,7 @@ test("actual execution UI starts empty, records completion, reloads history and 
       sourceSnapshot: { orderDisplayName: "합성 조제 작업", instruction: "합성 테스트" },
     }] : [] } });
   });
+  await installExecutionInstruction(page, workspaceId, id, () => context);
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, async route => {
     if (route.request().method() === "POST") {
       const body = route.request().postDataJSON(); bodies.push(body);
@@ -195,6 +198,7 @@ test("treatment V2 actual UI requires explicit count, measurement and device ide
       sourceSnapshot: { patientName: "합성 수행 환자", guardianName: "합성 보호자", orderDisplayName: "합성 안압 측정", instruction: "수기 입력 · 연동 안 됨", requestingVetName: "합성 수의사" },
     }] : [] } });
   });
+  await installExecutionInstruction(page, workspaceId, id, () => context);
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, async route => {
     if (route.request().method() === "POST") {
       const body = route.request().postDataJSON(); posted = body;
@@ -1517,6 +1521,17 @@ for (const queueType of ["dispensing", "treatment"] as const) {
       rowRevision += 1; updatedAt = "2026-09-07T03:45:00.000Z";
       return route.fulfill({ json: { ok: true, workItems: [workItem()] } });
     });
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/assignees`, route => route.fulfill({ json: { ok: true, assignees: [] } }));
+    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/instruction`, route => {
+      if (route.request().method() === "PATCH") {
+        assignedToUserId = route.request().postDataJSON().action === "unassign" ? null : "playwright-default-session";
+        rowRevision++; updatedAt = "2026-09-07T03:45:00.000Z";
+      }
+      return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction), isSet: false, queueType,
+        mainAssigneeId: assignedToUserId, mainAssigneeName: assignedToUserId ? "합성 담당" : null,
+        canClaim: !assignedToUserId, canStart: !!assignedToUserId, canUnassign: !!assignedToUserId, canCompleteAll: false, canEditInstruction: false,
+        revision: String(rowRevision), items: [{ ...syntheticInstruction.items[0], id, orderId: id, taskId: id, name: "합성 요청 시각 검증", status: "requested", canComplete: false, canReopen: false }] } } });
+    });
     await page.goto(`/w/${workspaceId}/dispensing?date=2026-09-07&encounterId=${encounterId}&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed`);
     const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
     await expect(card).toContainText("10:30");
@@ -1524,10 +1539,24 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     const label = queueType === "treatment" ? "처치" : "조제";
     await expect(page.getByRole("button", { name: `${label} 시작`, exact: true })).toBeEnabled();
     await expect(card).toContainText("10:30");
-    await page.getByRole("button", { name: `${label} 상태 액션 열기`, exact: true }).click();
-    await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
+    await page.getByRole("button", { name: "담당 취소", exact: true }).click();
     await expect(page.getByRole("button", { name: "담당하기", exact: true })).toBeEnabled();
     await expect(card).toContainText("10:30");
     await expect(card).not.toContainText("12:45");
+  });
+}
+
+async function installExecutionInstruction(page: Page, workspaceId: string, id: string, getContext: () => ExecutionContext) {
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/assignees`, route => route.fulfill({ json: { ok: true, assignees: [] } }));
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/instruction`, route => {
+    const context = getContext();
+    const document: InstructionDocument = { ...structuredClone(syntheticInstruction), rootOrderId: id, rootTaskId: id,
+      name: "합성 지시서", isSet: false, queueType: context.clinicalOrderType === "treatment" ? "treatment" : "dispensing",
+      revision: String(context.workItemRevision), finalized: context.status === "completed", canEditInstruction: false,
+      canCompleteAll: context.status !== "completed", instruction: "합성 테스트", changes: [], items: [{ ...structuredClone(syntheticInstruction.items[0]),
+        id, orderId: id, taskId: id, name: "합성 작업", status: context.status === "completed" ? "completed" : "in_progress",
+        plan: context.planSnapshot, sourceSnapshot: {}, resultRequired: context.results.length === 0, hasResult: context.results.length > 0,
+        canComplete: context.status !== "completed", canReopen: context.status === "completed" }] };
+    return route.fulfill({ json: { ok: true, document } });
   });
 }

@@ -1,0 +1,1015 @@
+/* Reviewed instruction prototype geometry, scoped to this feature. */
+/* Review: shared header for instructions; metadata stays in one wrapping line. */
+/* Visual rhythm: one list surface, consistent columns, restrained state accents. */
+/* Linked veterinarian and technician review flow. */
+.figma-document {
+  background: white;
+  padding: 0 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: #404040;
+  min-width: 1100px;
+  font-family: "Pretendard Variable", sans-serif;
+}
+.fd-group-label {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: #737373;
+  font-size: 12px;
+  font-weight: 500;
+}
+.fd-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 2px #0000000d;
+}
+.fd-toolbar {
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fd-title {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.fd-title strong {
+  font-size: 15px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.fd-count {
+  padding: 0 6px;
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+.fd-progress {
+  font-size: 12px;
+  line-height: 16px;
+  color: #737373;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.fd-toolbar button {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  gap: 6px;
+  height: 28px;
+  min-height: 0;
+  border-radius: 8px;
+  color: #404040;
+  box-shadow: 0 1px 2px #0000000d;
+}
+.fd-toolbar button.fd-collapse {
+  width: 24px;
+  padding: 0;
+  box-shadow: none;
+}
+.fd-collapse .fd-icon,
+.fd-row-arrow .fd-icon,
+.fd-assignee > .fd-icon {
+  width: 14px;
+  height: 14px;
+}
+.fd-toolbar .fd-tool {
+  padding: 0 8px;
+  width: 58px;
+}
+.fd-toolbar .fd-density {
+  width: 82px;
+}
+.fd-toolbar .fd-history {
+  width: 79px;
+}
+.fd-tool .fd-icon {
+  width: 12px;
+  height: 12px;
+}
+.fd-toolbar-divider {
+  width: 1px;
+  height: 16px;
+}
+.fd-toolbar-divider .fd-icon {
+  width: 1px;
+  height: 16px;
+}
+.fd-toolbar .fd-more {
+  width: 28px;
+  padding: 0;
+  box-shadow: none;
+}
+.fd-more .fd-icon {
+  width: 16px;
+  height: 16px;
+}
+.fd-sections {
+  margin-top: 12px;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fd-section-heading {
+  height: 48px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+}
+.fd-status {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.fd-status i {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: #a3a3a3;
+}
+.fd-added .fd-status i {
+  background: #4299e1;
+}
+.fd-modified .fd-status i {
+  background: #ed8936;
+}
+.fd-completed .fd-status i {
+  background: #48bb78;
+}
+.fd-cancelled .fd-status i {
+  background: #f56565;
+}
+.fd-section-heading .fd-count {
+  background: #fafafa;
+}
+.fd-table-surface {
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 4px 8px 8px;
+}
+.fd-table-container {
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+.fd-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+}
+.fd-table thead tr {
+  height: 36px;
+  background: transparent !important;
+}
+.fd-table th {
+  height: 36px !important;
+  min-height: 0 !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  color: #737373;
+  font-weight: 400;
+  text-align: left;
+  border-bottom: 1px solid #e5e5e5;
+  white-space: nowrap;
+}
+.fd-table th.fd-col-3,
+.fd-table th.fd-col-6 {
+  text-align: right;
+}
+.fd-table th.fd-col-5,
+.fd-table th.fd-col-9,
+.fd-table th.fd-col-10,
+.fd-table th.fd-col-12,
+.fd-table th.fd-col-13 {
+  text-align: center;
+}
+.fd-table td {
+  height: var(--fd-row-height) !important;
+  padding: 0 8px !important;
+  border: 0;
+  background: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #404040;
+}
+.fd-table tr {
+  border: 0 !important;
+  background: transparent !important;
+}
+.fd-table tbody tr:not(.fd-info-row) {
+  border-top: 1px solid #e5e5e5 !important;
+}
+.fd-table td:first-child,
+.fd-table th:first-child,
+.fd-table td:last-child,
+.fd-table th:last-child {
+  padding: 0 !important;
+}
+.fd-table td:nth-child(3),
+.fd-table td:nth-child(9),
+.fd-table td:nth-child(12),
+.fd-table th:nth-child(3),
+.fd-table th:nth-child(9),
+.fd-table th:nth-child(12) {
+  padding: 0 10px !important;
+}
+.fd-table td > .fd-icon,
+.fd-table th > .fd-icon {
+  width: 1px;
+  height: 12px;
+  max-width: none;
+}
+.fd-table td.fd-number {
+  text-align: right;
+}
+.fd-table td.fd-center {
+  text-align: center;
+}
+.fd-frequency {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 20px;
+}
+.fd-table .fd-row-arrow {
+  height: 24px;
+  width: 24px;
+  padding: 0;
+  min-height: 0;
+}
+.fd-rotate {
+  display: block;
+  transform: rotate(180deg);
+}
+.fd-table .fd-assignee {
+  height: 28px;
+  min-height: 0;
+  padding: 0;
+  gap: 8px;
+  margin: auto;
+}
+.fd-assignee [data-slot="avatar"] {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #e5e5e5;
+}
+.fd-assignee [data-slot="avatar-fallback"] {
+  background: #f5f5f5;
+  font-size: 10px;
+  color: #262626;
+}
+.fd-assignee [data-slot="avatar"] + [data-slot="avatar"] {
+  margin-left: -14px;
+}
+.fd-table .fd-complete {
+  height: 24px;
+  min-height: 0;
+  padding: 0 8px;
+  gap: 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  border: 1px solid #e5e5e5;
+  background: white;
+  color: #404040;
+  box-shadow: 0 1px 2px #0000000d;
+}
+.fd-complete .fd-icon {
+  width: 12px;
+  height: 12px;
+}
+.fd-table .fd-complete.is-complete {
+  border-color: #87c9ff;
+  background: rgba(66, 153, 225, 0.06);
+  color: #153e75;
+}
+.fd-table .fd-complete:disabled {
+  opacity: 0.5;
+}
+.fd-table tr.fd-info-row td {
+  height: 52px !important;
+  padding: 0 24px 10px !important;
+}
+.fd-info {
+  height: auto;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #fafafa;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.fd-info .fd-icon {
+  width: 12px;
+  height: 12px;
+}
+.fd-info-modified {
+  background: #fffaf0;
+  color: #652b19;
+}
+.fd-before {
+  color: #a3a3a3;
+}
+.fd-after {
+  color: #ed8936;
+}
+.fd-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fd-name {
+  color: #404b5a !important;
+}
+
+.fd-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+.fd-icon > svg {
+  flex-shrink: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+.fd-toolbar button.fd-collapse,
+.fd-table .fd-row-arrow {
+  background: transparent;
+}
+.fd-toolbar button.fd-collapse:hover,
+.fd-table .fd-row-arrow:hover {
+  background: #f5f5f5;
+}
+.fd-card {
+  scroll-margin-top: 16px;
+}
+
+/* Review comments: explicit group spacing and cancelled-row read-only identity. */
+.figma-document {
+  padding-top: 16px;
+}
+.fd-group-label {
+  height: 16px;
+  line-height: 16px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.fd-assignee-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  height: 28px;
+}
+.fd-assignee-readonly [data-slot="avatar"] + [data-slot="avatar"] {
+  margin-left: -5px;
+}
+
+/* Figma text-spec alignment; retain reviewed geometry and 12px info padding. */
+.fd-group-label {
+  font-family: "Geist", "Pretendard Variable", sans-serif;
+  color: #4a5568;
+}
+.fd-title strong,
+.fd-toolbar .fd-tool,
+.fd-table .fd-complete,
+.fd-frequency,
+.fd-info {
+  color: #171717;
+}
+.fd-card-single .fd-title strong,
+.fd-table td.fd-name {
+  color: #2d3748 !important;
+}
+.fd-title .fd-count {
+  color: #171923;
+}
+.fd-section-heading .fd-count {
+  color: #737373;
+}
+.fd-progress {
+  font-weight: 500;
+}
+.fd-table th {
+  font-weight: 500;
+  line-height: 16px;
+}
+.fd-section-heading {
+  line-height: 20px;
+}
+.fd-frequency {
+  line-height: 16px;
+}
+.fd-assignee [data-slot="avatar-fallback"] {
+  color: #0a0a0a;
+  line-height: 14px;
+}
+.fd-before {
+  color: #737373;
+}
+.fd-after {
+  color: #dd6b20;
+}
+.fd-table .fd-complete.is-complete {
+  color: #002a4d;
+}
+.fd-info.fd-info-modified {
+  color: #652b19;
+}
+
+/* Remaining Figma details from approved review. */
+.fd-toolbar .fd-tool,
+.fd-table .fd-complete {
+  gap: 4px;
+}
+.fd-table .fd-complete {
+  border-radius: 8px;
+}
+.fd-frequency {
+  height: 22px;
+  padding: 3px 8px;
+  gap: 2px;
+}
+.fd-section-heading {
+  padding-left: 4px;
+  padding-right: 4px;
+  gap: 4px;
+}
+.fd-section-heading .fd-count {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  padding: 1px 4px;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+.fd-cancelled .fd-complete {
+  box-shadow: none;
+}
+
+/* Collapse control: fixed icon box prevents inline baseline displacement. */
+.fd-toolbar button.fd-collapse {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  gap: 0;
+  line-height: 0;
+  align-self: center;
+}
+.fd-collapse .fd-collapse-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  line-height: 0;
+}
+.fd-collapse .fd-collapse-glyph > .fd-icon {
+  display: flex;
+  width: 14px;
+  height: 14px;
+  line-height: 0;
+}
+
+/* Read-only instruction disclosure remains available for cancelled orders. */
+.fd-table .fd-row-arrow {
+  line-height: 0;
+  gap: 0;
+}
+.fd-row-arrow .fd-row-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  line-height: 0;
+}
+.fd-row-arrow .fd-row-glyph > .fd-icon {
+  display: flex;
+  width: 14px;
+  height: 14px;
+  line-height: 0;
+}
+/* Review: halve spacing only between consecutive order cards. */
+.figma-document > .fd-card + .fd-card {
+  margin-top: -8px;
+}
+
+/* Final text tracking and cell alignment from the original design. */
+.fd-table,
+.fd-section-heading {
+  letter-spacing: 0.014em;
+}
+.fd-table th,
+.fd-toolbar .fd-tool,
+.fd-table .fd-complete,
+.fd-frequency,
+.fd-count,
+.fd-progress {
+  letter-spacing: 0.025em;
+}
+.fd-info {
+  letter-spacing: 0.019em;
+}
+.fd-assignee [data-slot="avatar-fallback"] {
+  letter-spacing: 0.031em;
+}
+.fd-table td.fd-name,
+.fd-table td:nth-child(5),
+.fd-table td:nth-child(8) {
+  padding-left: 10px !important;
+}
+.fd-table td.fd-number {
+  padding-right: 10px !important;
+}
+.fd-table td:nth-child(10),
+.fd-table td:nth-child(11) {
+  text-align: left;
+  padding-left: 10px !important;
+}
+.fd-table td:nth-child(13) {
+  padding: 0 0 0 10px !important;
+  text-align: left;
+}
+.fd-table td:nth-child(13) .fd-assignee {
+  display: inline-flex;
+  justify-content: flex-start;
+  gap: 4px;
+  height: 24px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.fd-table td:nth-child(13) .fd-assignee > .fd-icon {
+  width: 24px;
+  height: 24px;
+}
+.fd-table td:nth-child(13) .fd-assignee > .fd-icon > svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+.fd-table td:nth-child(14) {
+  padding: 0 !important;
+  text-align: left;
+}
+.fd-table .fd-complete {
+  width: 79px;
+  justify-content: flex-start;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.fd-frequency {
+  min-width: 36px;
+}
+.fd-frequency.fd-frequency-changed {
+  min-width: 73px;
+}
+.figma-document {
+  padding-bottom: 0;
+}
+
+/* Keep frequency badges within their column; never ellipsize clinical values. */
+.fd-table td.fd-frequency-cell {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* Workspace integration: longer master names and instructions remain fully readable. */
+.instruction-document-surface .figma-document {
+  min-width: 1320px;
+}
+.instruction-document-surface .fd-table td.fd-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  text-overflow: clip;
+}
+.instruction-document-surface .fd-table tr.fd-info-row td {
+  white-space: normal;
+}
+.instruction-document-surface .fd-info > span:last-child {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  text-overflow: clip;
+  min-width: 0;
+}
+.instruction-document-surface .fd-table td {
+  text-overflow: clip;
+}
+
+/* Fit the workspace; reserve the action columns and let the item name wrap. */
+.instruction-document-surface .figma-document {
+  min-width: 0;
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+.instruction-document-surface .fd-table col:nth-child(2) {
+  width: auto !important;
+}
+.instruction-document-surface .fd-table col:nth-child(3),
+.instruction-document-surface .fd-table col:nth-child(9),
+.instruction-document-surface .fd-table col:nth-child(12) {
+  width: 13px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(4),
+.instruction-document-surface .fd-table col:nth-child(7) {
+  width: 72px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(5),
+.instruction-document-surface .fd-table col:nth-child(8) {
+  width: 64px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(10) {
+  width: 64px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(11) {
+  width: 80px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(13) {
+  width: 82px !important;
+}
+.instruction-document-surface .fd-table col:last-child {
+  width: 0 !important;
+}
+.instruction-document-surface .fd-table td:nth-child(3),
+.instruction-document-surface .fd-table td:nth-child(9),
+.instruction-document-surface .fd-table td:nth-child(12),
+.instruction-document-surface .fd-table th:nth-child(3),
+.instruction-document-surface .fd-table th:nth-child(9),
+.instruction-document-surface .fd-table th:nth-child(12) {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+.instruction-document-surface .fd-toolbar {
+  height: auto;
+  min-height: 28px;
+  flex-wrap: wrap;
+}
+.instruction-document-surface .fd-title {
+  min-width: 0;
+  flex: 0 1 auto;
+  max-width: calc(100% - 40px);
+}
+.instruction-document-surface .fd-title strong {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.instruction-document-surface .fd-title .fd-count {
+  flex-shrink: 0;
+}
+.instruction-document-surface .fd-table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.instruction-document-surface .fd-frequency {
+  white-space: nowrap;
+}
+/* Keep the same table at compact widths. Actions keep their usable widths. */
+.fd-table th.fd-col-9,
+.fd-table th.fd-col-10 {
+  text-align: left;
+  padding-left: 10px !important;
+}
+@container (max-width:900px) {
+  .instruction-document-surface .fd-card {
+    padding: 12px 8px;
+  }
+  .instruction-document-surface .fd-table-surface {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .instruction-document-surface .fd-table col:first-child {
+    width: 24px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(3),
+  .instruction-document-surface .fd-table col:nth-child(9),
+  .instruction-document-surface .fd-table col:nth-child(12) {
+    width: 8px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(4),
+  .instruction-document-surface .fd-table col:nth-child(7) {
+    width: 52px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(5),
+  .instruction-document-surface .fd-table col:nth-child(8) {
+    width: 50px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(6) {
+    width: 78px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(10) {
+    width: 58px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(11) {
+    width: 70px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(13) {
+    width: 64px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(14) {
+    width: 83px !important;
+  }
+  .instruction-document-surface .fd-table th,
+  .instruction-document-surface .fd-table td {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+  }
+  .instruction-document-surface .fd-table th {
+    white-space: normal;
+  }
+  .instruction-document-surface .fd-table td.fd-name,
+  .instruction-document-surface .fd-table td:nth-child(5),
+  .instruction-document-surface .fd-table td:nth-child(8),
+  .instruction-document-surface .fd-table td:nth-child(10),
+  .instruction-document-surface .fd-table td:nth-child(11),
+  .instruction-document-surface .fd-table th.fd-col-9,
+  .instruction-document-surface .fd-table th.fd-col-10 {
+    padding-left: 4px !important;
+  }
+  .instruction-document-surface .fd-table td.fd-number {
+    padding-right: 4px !important;
+  }
+  .instruction-document-surface .fd-table td:nth-child(3),
+  .instruction-document-surface .fd-table td:nth-child(9),
+  .instruction-document-surface .fd-table td:nth-child(12),
+  .instruction-document-surface .fd-table th:nth-child(3),
+  .instruction-document-surface .fd-table th:nth-child(9),
+  .instruction-document-surface .fd-table th:nth-child(12) {
+    padding: 0 3px !important;
+  }
+  .instruction-document-surface .fd-table td.fd-frequency-cell,
+  .instruction-document-surface .fd-table td:nth-child(14) {
+    padding: 0 !important;
+  }
+  .instruction-document-surface .fd-table td:nth-child(13) {
+    padding: 0 4px !important;
+  }
+  .instruction-document-surface .fd-table tr.fd-info-row td {
+    padding: 0 24px 10px !important;
+  }
+}
+@container (max-width:760px) {
+  .instruction-document-surface .fd-table {
+    font-size: 12px;
+    line-height: 18px;
+  }
+  .instruction-document-surface .fd-table th {
+    font-size: 11px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(3),
+  .instruction-document-surface .fd-table col:nth-child(9),
+  .instruction-document-surface .fd-table col:nth-child(12) {
+    width: 4px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(4),
+  .instruction-document-surface .fd-table col:nth-child(7) {
+    width: 42px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(5),
+  .instruction-document-surface .fd-table col:nth-child(8) {
+    width: 44px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(10) {
+    width: 48px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(11) {
+    width: 58px !important;
+  }
+  .instruction-document-surface .fd-table td:nth-child(3),
+  .instruction-document-surface .fd-table td:nth-child(9),
+  .instruction-document-surface .fd-table td:nth-child(12),
+  .instruction-document-surface .fd-table th:nth-child(3),
+  .instruction-document-surface .fd-table th:nth-child(9),
+  .instruction-document-surface .fd-table th:nth-child(12) {
+    padding: 0 1px !important;
+  }
+}
+.instruction-document-surface .fd-table td:first-child,
+.instruction-document-surface .fd-table th:first-child,
+.instruction-document-surface .fd-table td:last-child:not([colspan]),
+.instruction-document-surface .fd-table th:last-child {
+  padding: 0 !important;
+}
+.instruction-document-surface .fd-table tr.fd-info-row td {
+  padding: 0 24px 10px !important;
+}
+
+/* Latest Figma: narrower metadata columns and the compact completion control. */
+.fd-group-label {
+  color: #525252;
+}
+.fd-card-single .fd-title strong,
+.fd-table td.fd-name {
+  color: #404040 !important;
+}
+.fd-title .fd-count {
+  color: #171717;
+}
+.figma-document > .fd-card + .fd-group-label {
+  margin-top: 16px;
+}
+.fd-table th.fd-col-1,
+.fd-table th.fd-col-4,
+.fd-table th.fd-col-7 {
+  padding-left: 10px !important;
+}
+.fd-table th.fd-col-3,
+.fd-table th.fd-col-6 {
+  padding-right: 10px !important;
+}
+.fd-table th.fd-col-12,
+.fd-table th.fd-col-13 {
+  text-align: left;
+  padding-left: 10px !important;
+}
+.fd-button-label {
+  display: inline-block;
+  padding: 0 2px;
+  white-space: nowrap;
+}
+.fd-toolbar .fd-tool {
+  justify-content: flex-start;
+  padding-left: 7px;
+  padding-right: 7px;
+}
+.fd-table .fd-complete {
+  width: 58px;
+  height: 24px;
+  padding-left: 7px;
+  padding-right: 7px;
+}
+.fd-table td:nth-child(14) {
+  padding-left: 10px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(5),
+.instruction-document-surface .fd-table col:nth-child(8) {
+  width: 88px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(10),
+.instruction-document-surface .fd-table col:nth-child(11) {
+  width: 72px !important;
+}
+.instruction-document-surface .fd-table col:nth-child(14) {
+  width: 78px !important;
+}
+@container (max-width:900px) {
+  .instruction-document-surface .fd-table col:nth-child(5),
+  .instruction-document-surface .fd-table col:nth-child(8) {
+    width: 50px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(10) {
+    width: 58px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(11) {
+    width: 70px !important;
+  }
+  .instruction-document-surface .fd-table th.fd-col-1,
+  .instruction-document-surface .fd-table th.fd-col-4,
+  .instruction-document-surface .fd-table th.fd-col-7,
+  .instruction-document-surface .fd-table th.fd-col-12,
+  .instruction-document-surface .fd-table th.fd-col-13 {
+    padding-left: 4px !important;
+  }
+  .instruction-document-surface .fd-table th.fd-col-3,
+  .instruction-document-surface .fd-table th.fd-col-6 {
+    padding-right: 4px !important;
+  }
+  .instruction-document-surface .fd-table td:nth-child(14) {
+    padding-left: 10px !important;
+  }
+}
+@container (max-width:760px) {
+  .instruction-document-surface .fd-table col:nth-child(5),
+  .instruction-document-surface .fd-table col:nth-child(8) {
+    width: 44px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(10) {
+    width: 48px !important;
+  }
+  .instruction-document-surface .fd-table col:nth-child(11) {
+    width: 58px !important;
+  }
+}
+
+/* Changed values: keep the current value intact and expose history to hover/focus. */
+.fd-change-value {
+  position: relative;
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: help;
+  border-radius: 3px;
+}
+.fd-change-value:focus-visible {
+  outline: 2px solid #4299e1;
+  outline-offset: 2px;
+}
+.fd-change-numeric {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.fd-change-measure {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  left: 0;
+  top: 0;
+  width: max-content;
+  font: inherit;
+  letter-spacing: inherit;
+}
+.fd-change-tooltip {
+  max-width: 340px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.fd-change-tooltip small {
+  display: block;
+  margin-top: 4px;
+  opacity: 0.75;
+}
+.fd-info .fd-detail-content {
+  min-width: 0;
+  flex: 1;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.fd-change-details {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.fd-change-details li {
+  white-space: normal;
+}
+.fd-current-instruction {
+  white-space: pre-wrap;
+}
+.fd-change-details + .fd-current-instruction {
+  margin-top: 6px;
+}
+.fd-info .fd-detail-content span {
+  overflow: visible;
+  text-overflow: clip;
+}
+.fd-info .fd-change-value {
+  white-space: normal;
+}
+
+.instruction-document-surface {
+  container-type: inline-size;
+  min-width: 0;
+}
+.instruction-document-surface .figma-document {
+  font-family: inherit;
+}

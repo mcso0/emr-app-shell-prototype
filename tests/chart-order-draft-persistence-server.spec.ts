@@ -1042,6 +1042,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
         {
           rowType: "set",
           orderId: parentOrderId,
+          instruction: "합성 세트 공통 지시",
           sourceSetId: setRow!.sourceSetId!,
           sourceSetRevisionId: setRow!.sourceSetRevisionId!,
           sourceSetRevisionNo: setRow!.sourceSetRevisionNo!,
@@ -1102,6 +1103,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
   );
   expect(firstChild?.orderId).toBeTruthy();
   expect(firstParent?.snapshotHash).toBeNull();
+  expect(firstParent?.instruction).toBe("합성 세트 공통 지시");
 
   const reloaded = await readChartOrderDraft({
     actorUserId: "user-vet",
@@ -1112,6 +1114,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
   });
   expect(reloaded.ok).toBe(true);
   if (!reloaded.ok) return;
+  expect(reloaded.rows[0].instruction).toBe("합성 세트 공통 지시");
   expect(reloaded.rows.map((row) => row.rowType)).toEqual(["set", "set_child"]);
   expect(reloaded.rows[1]).toMatchObject({
     orderId: firstChild!.orderId,
@@ -1135,6 +1138,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
           sourceSetId: setRow!.sourceSetId!,
           sourceSetRevisionId: setRow!.sourceSetRevisionId!,
           sourceSetRevisionNo: setRow!.sourceSetRevisionNo!,
+          instruction: "",
           selectionIntent: {
             items: [
               selectionIntent.items[0],
@@ -1160,6 +1164,7 @@ test("set draft keeps explicit leaf intent and runtime identity across reload an
   );
   const retryParent = retry.rows.find((row) => row.orderId === parentOrderId);
   expect(retryParent?.snapshotHash).toBeNull();
+  expect(retryParent?.instruction).toBe("");
   expect(retry.etag).not.toBe(firstSave.etag);
 });
 
