@@ -34,6 +34,7 @@ export function useFulfillmentInstruction(
   const [failure, setFailure] = useState<{
     key: string;
     message: string;
+    read?: boolean;
   } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const generation = useRef(0);
@@ -55,7 +56,7 @@ export function useFulfillmentInstruction(
     const abort = new AbortController();
     if (!endpoint) return;
     const reportError = (message: string) =>
-      setFailure({ key: readKey, message });
+      setFailure({ key: readKey, message, read: true });
     void (async () => {
       try {
         const response = await fetch(endpoint, {
@@ -70,7 +71,9 @@ export function useFulfillmentInstruction(
             instructionErrorMessages[body.error] ??
               "지시서를 불러오지 못했어요. 다시 시도해 주세요.",
           );
-          setLoaded(null);
+          // Preserve same-item content on transient failure; authorization/removal
+          // failures must immediately withdraw previously loaded information.
+          if ([401, 403, 404].includes(response.status)) setLoaded(null);
           return;
         }
         setFailure(null);
@@ -81,6 +84,9 @@ export function useFulfillmentInstruction(
           { cache: "no-store", signal: abort.signal },
         );
         const candidates = await candidatesResponse.json();
+        if (generation.current === current && (!candidatesResponse.ok || !candidates.ok)) {
+          reportError("담당자 정보를 불러오지 못했어요. 다시 조회해 주세요.");
+        }
         if (
           generation.current === current &&
           candidatesResponse.ok &&
@@ -110,7 +116,7 @@ export function useFulfillmentInstruction(
 
   const document = loaded?.endpoint === endpoint ? loaded.document : null;
   const mutate = async (intent: InstructionIntent) => {
-    if (!endpoint || !document || loading || pending.current) return false;
+    if (!endpoint || !document || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
     const current = generation.current;
     const fingerprint = JSON.stringify({
       endpoint,
@@ -160,7 +166,7 @@ export function useFulfillmentInstruction(
       setBusy(false);
     }
   };
-  return { document, assignees, loading, busy, error, refresh, mutate };
+  return { document, assignees, loading, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate };
 }
 
 export type FulfillmentInstructionController = ReturnType<

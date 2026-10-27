@@ -36,6 +36,8 @@ Local current-assignee authority candidate (2026-10-12) now covers lab, imaging,
 Local dispensing/treatment instruction follow-up (2026-10-27) adds explicit set finalization, main/sub item execution, changed-child attempts, common-instruction edits that preserve completion, requester completion, and persisted notifications. The live route requires its five local candidate migrations; none has been remotely applied in this work. Existing actual-result and billing guards remain. Local SQL/API/UI evidence and remaining hosted-schema verification are recorded in [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-dispensingtreatment-instruction-workflow--2026-10-27).
 
 
+Local collected dispensing revisions (2026-10-27) add current-chart oral instruction revisions and task snapshots, chart entry, an infobar, per-child set instructions, row-associated execution history, bounded table geometry and centered transition loading. Verification is local/synthetic; migration `20261027130000` has not been applied remotely and no deployment is authorized. See [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#local-implementation-verification--2026-10-27).
+
 ## Agent Compact Summary
 
 * Current target: Product MVP.

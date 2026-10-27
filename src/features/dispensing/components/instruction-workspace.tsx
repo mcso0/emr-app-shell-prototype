@@ -1,5 +1,7 @@
 "use client";
 
+import { OralInstructionInfobar } from "./oral-instruction-infobar";
+import { EmrContentLoadingState } from "@/components/emr/empty-state";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -147,9 +149,6 @@ export function InstructionBody({
   const [notice, setNotice] = useState<string | null>(null);
   const document = controller.document;
   const view = document ? createInstructionView(document) : null;
-  const required =
-    document?.items.filter((item) => item.resultRequired || item.hasResult) ??
-    [];
   return (
     <div
       className="instruction-document-surface"
@@ -166,43 +165,8 @@ export function InstructionBody({
           </Button>
         </div>
       ) : null}
-      {controller.loading && !document ? (
-        <p role="status" className="p-6 text-sm text-muted-foreground">
-          지시서를 불러오는 중이에요.
-        </p>
-      ) : null}
-      {document?.instruction || document?.canEditInstruction ? (
-        <div className="mb-4 rounded-lg bg-muted/50 p-4 text-sm">
-          <div className="flex items-start justify-between gap-3">
-            <p className="whitespace-pre-wrap">
-              {document.instruction || "공통 지시"}
-            </p>
-            {document.canEditInstruction ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={controller.busy || controller.loading}
-                onClick={() => setInstructionDraft(document.instruction)}
-              >
-                수정
-              </Button>
-            ) : null}
-          </div>
-          {document.changes.some(
-            (change) =>
-              change.orderId === document.rootOrderId &&
-              "instruction" in change.after,
-          ) ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setHistoryItem(null)}
-            >
-              변경 이력
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
+      {controller.loading && !document ? <EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /> : null}
+      {document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
       <Dialog
         open={instructionDraft !== null}
         onOpenChange={(open) => {
@@ -210,7 +174,7 @@ export function InstructionBody({
         }}
       >
         <EmrDialogShell
-          title="공통 지시 수정"
+          title={document?.isSet ? "세트 공통 지시 수정" : "오더 지시 수정"}
           description="완료 상태는 유지됩니다."
           secondaryAction={
             <Button
@@ -259,40 +223,20 @@ export function InstructionBody({
           ) : null}
         </EmrDialogShell>
       </Dialog>
-      {required.length ? (
-        <div className="mb-3 flex flex-wrap gap-2">
-          {required.map((item) => (
-            <Button
-              key={item.id}
-              size="sm"
-              variant="outline"
-              disabled={controller.busy || controller.loading}
-              onClick={async () => {
-                if (
-                  item.canComplete &&
-                  !item.hasResult &&
-                  item.status !== "in_progress"
-                ) {
-                  if (
-                    !(await controller.mutate({
-                      action: "start_item",
-                      itemId: item.id,
-                    }))
-                  )
-                    return;
-                  onChanged();
-                }
-                setResultItem(item.id);
-              }}
-            >
-              {document?.isSet ? `${item.name} 수행기록·이력` : "수행기록·이력"}
-            </Button>
-          ))}
-        </div>
-      ) : null}
       {view ? (
         <InstructionDocumentTable
           {...view}
+          refresh={controller.refresh}
+          editSetInstruction={document?.canEditInstruction ? () => setInstructionDraft(document.instruction) : undefined}
+          openExecution={async (itemId) => {
+            const item = document?.items.find(item => item.id === itemId);
+            if (!item) return;
+            if (item.canComplete && !item.hasResult && item.status !== "in_progress") {
+              if (!(await controller.mutate({ action: "start_item", itemId }))) return;
+              onChanged();
+            }
+            setResultItem(itemId);
+          }}
           busy={controller.busy || controller.loading}
           names={{
             ...view.names,

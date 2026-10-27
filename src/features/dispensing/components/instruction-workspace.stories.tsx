@@ -18,6 +18,11 @@ function Example({
 }) {
   const [document, setDocument] = useState(() => ({
     ...structuredClone(syntheticInstruction),
+    oralInstruction: {
+      chartId: "28110000-0000-4000-8000-000000000011", revision: 1,
+      instruction: "현재 차트 경구제 전체 지시입니다.\n여러 줄이어도 지시사항을 모두 확인할 수 있어요.",
+      history: [], snapshots: [],
+    },
     isSet: !single,
     items: single
       ? [structuredClone(syntheticInstruction.items[0])]
@@ -124,7 +129,7 @@ export const SetInstruction: Story = {
     await userEvent.click(
       canvas.getByRole("button", { name: "합성 품목 A 완료" }),
     );
-    await expect(body.getByRole("dialog")).toBeVisible();
+    await waitFor(() => expect(body.getByRole("dialog")).toBeVisible());
     await userEvent.click(
       within(body.getByRole("dialog")).getByRole("button", { name: "완료" }),
     );
@@ -197,7 +202,8 @@ export const CommonInstruction: Story = {
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    await userEvent.click(canvas.getByRole("button", { name: /^수정$/ }));
+    await userEvent.click(canvas.getByRole("button", { name: /합성 조제 세트 더 보기/ }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "세트 공통 지시 수정" }));
     const dialog = within(body.getByRole("dialog"));
     await userEvent.clear(dialog.getByRole("textbox", { name: "공통 지시" }));
     await userEvent.type(
@@ -209,7 +215,7 @@ export const CommonInstruction: Story = {
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     await expect(
-      canvas.getByText("변경된 공통 지시", { exact: true }),
+      canvas.getAllByText("변경된 공통 지시", { exact: true })[0],
     ).toBeVisible();
     await expect(
       canvas.getByRole("button", { name: "합성 품목 A 완료 해제" }),
@@ -218,4 +224,62 @@ export const CommonInstruction: Story = {
       canvas.getByRole("button", { name: "합성 품목 B 완료 해제" }),
     ).toBeEnabled();
   },
+};
+
+export const OralInstructionVisibility: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByRole("complementary", { name: "경구제 전체 지시사항" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "경구제 전체 지시사항 숨기기" }));
+    await expect(canvas.queryByRole("complementary")).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "경구제 전체 지시사항 보기" }));
+    await expect(canvas.getByRole("complementary")).toHaveTextContent("현재 차트 경구제 전체 지시입니다.");
+  },
+};
+
+let executionReads: string[] = [];
+export const ExecutionHistoryInRow: Story = {
+  beforeEach: () => {
+    const original = globalThis.fetch;
+    executionReads = [];
+    globalThis.fetch = async (input, init) => {
+      const path = String(input);
+      if (!path.endsWith('/synthetic-item-a/execution')) return original(input, init);
+      executionReads.push(path);
+      return Response.json({ ok: true, context: {
+        workspaceId: "synthetic-row-history", workItemId: "synthetic-item-a",
+        taskId: "28150000-0000-4000-8000-000000000001", orderId: "28140000-0000-4000-8000-000000000001", encounterId: "28120000-0000-4000-8000-000000000001",
+        attemptNo: 1, clinicalOrderType: "dispensing", workItemRevision: 1,
+        status: "completed", isCurrentAttempt: true, resultRequired: true,
+        canRecord: false, planSnapshot: {}, planSha256: "a".repeat(64), results: [],
+      } });
+    };
+    return () => { globalThis.fetch = original; };
+  },
+  render: () => <InstructionBody workspaceId="synthetic-row-history" onChanged={() => {}} controller={{
+    document: { ...structuredClone(syntheticInstruction), canEditInstruction: false,
+      items: syntheticInstruction.items.map((item, index) => ({ ...item, resultRequired: index === 0, canComplete: false, canReopen: false, canAssign: false })) },
+    assignees: [], loading: false, busy: false, error: null, refresh: () => {},
+    mutate: async () => { throw new Error("History-only access must not mutate work"); },
+  }} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
+    const button = canvas.getByRole("button", { name: "합성 품목 A 수행기록·이력" });
+    await expect(button.closest("tr")).toHaveAttribute("data-item", "synthetic-item-a");
+    await userEvent.click(button);
+    await waitFor(() => expect(body.getByText("조회 전용입니다. 수행기록을 변경할 수 없습니다.")).toBeVisible());
+    await expect(executionReads).toEqual(["/api/workspaces/synthetic-row-history/fulfillment/work-items/synthetic-item-a/execution"]);
+  },
+};
+
+
+export const LongInstructionRows: Story = {
+  render: () => <div style={{ width: 760, maxWidth: "100%" }}><InstructionBody workspaceId="synthetic-long-instructions" onChanged={() => {}} controller={{
+    document: { ...structuredClone(syntheticInstruction), canEditInstruction: false,
+      instruction: "세트 공통 지시의 첫 번째 줄입니다.\n세트 공통 지시의 두 번째 줄입니다.",
+      items: syntheticInstruction.items.map(item => ({ ...item,
+        name: "긴 이름의 합성 오더 품목 ".repeat(5), instruction: "개별 지시의 첫 번째 줄입니다.\n개별 지시의 두 번째 줄입니다.",
+        canComplete: false, canReopen: false, canAssign: false })) },
+    assignees: [], loading: false, busy: false, error: null, refresh: () => {}, mutate: async () => false,
+  }} /></div>,
 };
