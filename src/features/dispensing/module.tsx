@@ -97,7 +97,10 @@ import {
   getOrderQueueStatuses,
   getSelectedOrderQueueItem,
 } from "@/features/order-queue/data";
-import { useQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
+import { subscribeQueueRealtimeRefresh } from "@/features/work-queue/queue-realtime-refresh";
+import { useAuthClient } from "@/features/auth/auth-client";
+import { getSharedReadActorScope, subscribeSharedReadActorScope, useSharedReadActorScope } from "@/features/auth/shared-read-actor-scope";
+import { createSharedVisibleResource } from "@/lib/visible-refresh";
 import { usePatientLatestVitalItems } from "@/features/patient-vitals/use-patient-latest-vitals";
 import { useContextVitalEditor } from "@/features/patient-vitals/use-context-vital-editor";
 import { usePatientContextProfileInteractions } from "@/features/customer/use-patient-context-profile-interactions";
@@ -278,37 +281,14 @@ function isLiveAuthRuntime() {
   return getAuthRuntimeMode().authProvider === "supabase";
 }
 
-const fulfillmentQueueCache = new Map<
+const fulfillmentQueueResources = new Map<
   string,
-  DispensingFulfillmentQueueSnapshot
+  ReturnType<typeof createSharedVisibleResource<DispensingFulfillmentQueueSnapshot>>
 >();
-const dispensingQueueRequestIds = new Map<string, number>();
-const fulfillmentQueueListeners = new Map<
-  string,
-  Set<(snapshot: DispensingFulfillmentQueueSnapshot) => void>
->();
-
 const emptyFulfillmentQueueSnapshot: DispensingFulfillmentQueueSnapshot = {
   status: "idle",
   workItems: [],
 };
-
-function getFulfillmentQueueCacheKey(
-  workspaceId: string,
-  selectedDate: string,
-) {
-  return `${workspaceId}:${selectedDate}:dispensing-treatment`;
-}
-
-function setCachedDispensingFulfillmentQueue(
-  cacheKey: string,
-  snapshot: DispensingFulfillmentQueueSnapshot,
-) {
-  fulfillmentQueueCache.set(cacheKey, snapshot);
-  fulfillmentQueueListeners
-    .get(cacheKey)
-    ?.forEach((listener) => listener(snapshot));
-}
 
 function getFulfillmentReadFailureStatus(result: {
   denialReason?: string;
@@ -317,8 +297,96 @@ function getFulfillmentReadFailureStatus(result: {
   if (result.status === 401 || result.status === 403 || result.denialReason === "unauthenticated" || result.denialReason === "permission_missing") {
     return "permission_denied";
   }
-
   return "error";
+}
+
+async function readDispensingFulfillmentQueue(
+  workspaceId: string,
+  effectiveDate: string,
+  signal: AbortSignal,
+  previousSnapshot: DispensingFulfillmentQueueSnapshot,
+): Promise<DispensingFulfillmentQueueSnapshot> {
+  try {
+    const [dispensingResult, treatmentResult] = await Promise.allSettled([
+      fetch(
+        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
+        {
+          signal,
+          headers: { "x-clair-demo-session-user-id": "user-tech" },
+        },
+      ),
+      fetch(
+        `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
+        {
+          signal,
+          headers: { "x-clair-demo-session-user-id": "user-tech" },
+        },
+      ),
+    ]);
+    const dispensingResponse = dispensingResult.status === "fulfilled" ? dispensingResult.value : undefined;
+    const treatmentResponse = treatmentResult.status === "fulfilled" ? treatmentResult.value : undefined;
+    // HTTP denial must win over network or non-JSON failures from the other queue.
+    if ([dispensingResponse, treatmentResponse].some(response => response?.status === 401 || response?.status === 403)) {
+      return { sourceTotalCount: 0, status: "permission_denied", workItems: [] };
+    }
+    if (!dispensingResponse || !treatmentResponse) throw new Error("queue_read_failed");
+    const dispensingBody = ((await dispensingResponse.json().catch(() => null)) ?? {}) as {
+      denialReason?: string;
+      ok?: boolean;
+      status?: number;
+      summary?: FulfillmentWorkItemReadSummary;
+      workItems?: FulfillmentWorkItem[];
+    };
+    const treatmentBody = ((await treatmentResponse.json().catch(() => null)) ?? {}) as {
+      denialReason?: string;
+      ok?: boolean;
+      status?: number;
+      summary?: FulfillmentWorkItemReadSummary;
+      workItems?: FulfillmentWorkItem[];
+    };
+    const denied = [
+      { status: dispensingResponse.status, denialReason: dispensingBody.denialReason },
+      { status: treatmentResponse.status, denialReason: treatmentBody.denialReason },
+    ].some(result => getFulfillmentReadFailureStatus(result) === "permission_denied");
+    if (denied) {
+      return { sourceTotalCount: 0, status: "permission_denied", workItems: [] };
+    }
+    if (!dispensingResponse.ok || !dispensingBody.ok || !treatmentResponse.ok || !treatmentBody.ok) {
+      return {
+        sourceTotalCount: previousSnapshot?.sourceTotalCount,
+        status: "error",
+        workItems: previousSnapshot?.workItems ?? [],
+      };
+    }
+    const nextItems = [
+      ...(Array.isArray(dispensingBody.workItems)
+        ? dispensingBody.workItems
+        : []),
+      ...(Array.isArray(treatmentBody.workItems)
+        ? treatmentBody.workItems
+        : []),
+    ];
+    const sourceTotalCount =
+      (dispensingBody.summary?.totalCount ??
+        (Array.isArray(dispensingBody.workItems)
+          ? dispensingBody.workItems.length
+          : 0)) +
+      (treatmentBody.summary?.totalCount ??
+        (Array.isArray(treatmentBody.workItems)
+          ? treatmentBody.workItems.length
+          : 0));
+    return {
+      sourceTotalCount,
+      status: nextItems.length ? "ready" : "empty",
+      workItems: nextItems,
+    };
+  } catch {
+    return {
+      sourceTotalCount: previousSnapshot?.sourceTotalCount,
+      status: "error",
+      workItems: previousSnapshot?.workItems ?? [],
+    };
+  }
 }
 
 function useDispensingFulfillmentQueue(selectedDate?: string) {
@@ -327,135 +395,67 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
   const [mutationError, setMutationError] = useState<string | null>(null);
   const workspaceId = getWorkspaceIdFromPath();
   const effectiveDate = selectedDate ?? "";
-  const cacheKey = getFulfillmentQueueCacheKey(workspaceId, effectiveDate);
-  const requestSeq = useRef(0);
+  const { session } = useAuthClient();
+  const actorScope = useSharedReadActorScope(session);
+  const cacheKey = actorScope ? JSON.stringify([actorScope, workspaceId, effectiveDate, "dispensing-treatment"]) : "";
+  const subscription = useRef<{
+    key: string;
+    resource: ReturnType<typeof createSharedVisibleResource<DispensingFulfillmentQueueSnapshot>>;
+  } | null>(null);
   const [queueState, setQueueState] = useState<{ cacheKey: string; snapshot: DispensingFulfillmentQueueSnapshot }>(() => ({ cacheKey, snapshot: { ...emptyFulfillmentQueueSnapshot, status: "loading" } }));
-  const snapshot = queueState.cacheKey === cacheKey ? queueState.snapshot : { ...emptyFulfillmentQueueSnapshot, status: "loading" as const };
+  const snapshot = cacheKey && queueState.cacheKey === cacheKey ? queueState.snapshot : { ...emptyFulfillmentQueueSnapshot, status: "loading" as const };
 
-  const load = useCallback(async () => {
-    const seq = ++requestSeq.current;
-    const requestId = (dispensingQueueRequestIds.get(cacheKey) ?? 0) + 1;
-    dispensingQueueRequestIds.set(cacheKey, requestId);
-    const apply = (next: DispensingFulfillmentQueueSnapshot) => {
-      if (dispensingQueueRequestIds.get(cacheKey) !== requestId) return;
-      setCachedDispensingFulfillmentQueue(cacheKey, next);
-      if (seq === requestSeq.current) setQueueState({ cacheKey, snapshot: next });
-    };
-    try {
-      const [dispensingResult, treatmentResult] = await Promise.allSettled([
-        fetch(
-          `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=dispensing${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
-          {
-            headers: { "x-clair-demo-session-user-id": "user-tech" },
-          },
-        ),
-        fetch(
-          `/api/workspaces/${workspaceId}/fulfillment/work-items?queueType=treatment${effectiveDate ? `&date=${encodeURIComponent(effectiveDate)}` : ""}`,
-          {
-            headers: { "x-clair-demo-session-user-id": "user-tech" },
-          },
-        ),
-      ]);
-      const dispensingResponse = dispensingResult.status === "fulfilled" ? dispensingResult.value : undefined;
-      const treatmentResponse = treatmentResult.status === "fulfilled" ? treatmentResult.value : undefined;
-      // HTTP denial must win over network or non-JSON failures from the other queue.
-      if ([dispensingResponse, treatmentResponse].some(response => response?.status === 401 || response?.status === 403)) {
-        apply({ sourceTotalCount: 0, status: "permission_denied", workItems: [] });
-        return;
-      }
-      if (!dispensingResponse || !treatmentResponse) throw new Error("queue_read_failed");
-      const dispensingBody = ((await dispensingResponse.json().catch(() => null)) ?? {}) as {
-        denialReason?: string;
-        ok?: boolean;
-        status?: number;
-        summary?: FulfillmentWorkItemReadSummary;
-        workItems?: FulfillmentWorkItem[];
-      };
-      const treatmentBody = ((await treatmentResponse.json().catch(() => null)) ?? {}) as {
-        denialReason?: string;
-        ok?: boolean;
-        status?: number;
-        summary?: FulfillmentWorkItemReadSummary;
-        workItems?: FulfillmentWorkItem[];
-      };
-      const denied = [
-        { status: dispensingResponse.status, denialReason: dispensingBody.denialReason },
-        { status: treatmentResponse.status, denialReason: treatmentBody.denialReason },
-      ].some(result => getFulfillmentReadFailureStatus(result) === "permission_denied");
-      if (denied) {
-        apply({ sourceTotalCount: 0, status: "permission_denied", workItems: [] });
-        return;
-      }
-      if (!dispensingResponse.ok || !dispensingBody.ok || !treatmentResponse.ok || !treatmentBody.ok) {
-        const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
-        apply({
-          sourceTotalCount: previousSnapshot?.sourceTotalCount,
-          status: "error",
-          workItems: previousSnapshot?.workItems ?? [],
-        });
-        return;
-      }
-      const nextItems = [
-        ...(Array.isArray(dispensingBody.workItems)
-          ? dispensingBody.workItems
-          : []),
-        ...(Array.isArray(treatmentBody.workItems)
-          ? treatmentBody.workItems
-          : []),
-      ];
-      const sourceTotalCount =
-        (dispensingBody.summary?.totalCount ??
-          (Array.isArray(dispensingBody.workItems)
-            ? dispensingBody.workItems.length
-            : 0)) +
-        (treatmentBody.summary?.totalCount ??
-          (Array.isArray(treatmentBody.workItems)
-            ? treatmentBody.workItems.length
-            : 0));
-      apply({
-        sourceTotalCount,
-        status: nextItems.length ? "ready" : "empty",
-        workItems: nextItems,
-      });
-    } catch {
-      const previousSnapshot = fulfillmentQueueCache.get(cacheKey);
-
-      apply({
-        sourceTotalCount: previousSnapshot?.sourceTotalCount,
-        status: "error",
-        workItems: previousSnapshot?.workItems ?? [],
-      });
-    }
-  }, [cacheKey, effectiveDate, workspaceId]);
-
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
+    const active = subscription.current;
+    if (active?.key !== cacheKey || active.resource.isDisposed()) return;
     setQueueState(current => ({ cacheKey, snapshot: { ...(current.cacheKey === cacheKey ? current.snapshot : emptyFulfillmentQueueSnapshot), status: "loading" } }));
-    return load();
-  }, [cacheKey, load]);
-
-  useEffect(() => {
-    // Fetching the server queue is an external sync; rendering decides whether fixtures are allowed.
-    if (!enabled) return;
-    void load();
-    return () => { requestSeq.current += 1; };
-  }, [enabled, load]);
-
-  useEffect(() => {
-    const listener = (nextSnapshot: DispensingFulfillmentQueueSnapshot) =>
-      setQueueState({ cacheKey, snapshot: nextSnapshot });
-    const listeners = fulfillmentQueueListeners.get(cacheKey) ?? new Set();
-
-    listeners.add(listener);
-    fulfillmentQueueListeners.set(cacheKey, listeners);
-
-    return () => {
-      listeners.delete(listener);
-      if (listeners.size === 0) fulfillmentQueueListeners.delete(cacheKey);
-    };
+    // Explicit/post-mutation refresh must not reuse a read started before the change.
+    await active.resource.refresh(true);
   }, [cacheKey]);
+
+  useEffect(() => {
+    if (!enabled || !actorScope) return;
+    let resource = fulfillmentQueueResources.get(cacheKey);
+    if (!resource) {
+      let previousSnapshot = emptyFulfillmentQueueSnapshot;
+      const created = createSharedVisibleResource<DispensingFulfillmentQueueSnapshot>({
+        initialValue: { ...emptyFulfillmentQueueSnapshot, status: "loading" },
+        load: signal => readDispensingFulfillmentQueue(workspaceId, effectiveDate, signal, previousSnapshot),
+        onValue: next => { previousSnapshot = next; },
+        onStart: ({ refresh: reload, publish, dispose }) => {
+          // One subscription per resource, not one per panel/content consumer.
+          const stopQueue = subscribeQueueRealtimeRefresh({ workspaceId, onQueueChange: () => {
+            publish({ ...previousSnapshot, status: "loading" });
+            return reload(true);
+          } });
+          const stopActor = isLiveAuthRuntime() ? subscribeSharedReadActorScope(() => {
+            if (getSharedReadActorScope() !== actorScope) dispose();
+          }) : undefined;
+          return () => { stopQueue?.(); stopActor?.(); };
+        },
+        onDispose: () => {
+          if (fulfillmentQueueResources.get(cacheKey) === created) fulfillmentQueueResources.delete(cacheKey);
+        },
+      });
+      resource = created;
+      fulfillmentQueueResources.set(cacheKey, resource);
+    }
+    const active = { key: cacheKey, resource };
+    subscription.current = active;
+    const unsubscribe = resource.subscribe(next => setQueueState({ cacheKey, snapshot: next }));
+    // Preserve initial loading in a background document; visible subscribers share
+    // the request already started by the resource. No periodic polling is added.
+    void resource.refresh();
+    return () => {
+      if (subscription.current === active) subscription.current = null;
+      unsubscribe();
+    };
+  }, [actorScope, cacheKey, effectiveDate, enabled, workspaceId]);
 
   const updateStatus = useCallback(
     async (workItemId: string, transitions: FulfillmentTransitionCommand[]) => {
+      const active = subscription.current;
+      if (active?.key !== cacheKey || active.resource.isDisposed()) return false;
       setMutationError(null);
       let allTransitionsSucceeded = true;
       let expectedRevision = snapshot.workItems.find(
@@ -464,6 +464,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
       if (!expectedRevision) return false;
 
       for (const transition of transitions) {
+        if (subscription.current !== active || active.resource.isDisposed()) return false;
         const command =
           typeof transition === "string" ? { action: transition } : transition;
         const response = await fetch(
@@ -481,6 +482,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
             }),
           },
         );
+        if (subscription.current !== active || active.resource.isDisposed()) return false;
         if (!response.ok) {
           const failure = await response.json().catch(() => null) as { denialReason?: string } | null;
           if (failure?.denialReason === "treatment_medication_link_required") setMutationError("수행 전에 처치 계획을 수정해 약품 오더를 연결해 주세요.");
@@ -491,6 +493,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
         const body = (await response.json()) as {
           workItems?: FulfillmentWorkItem[];
         };
+        if (subscription.current !== active || active.resource.isDisposed()) return false;
         expectedRevision =
           body.workItems?.find((item) => item.id === workItemId)?.rowRevision ??
           expectedRevision + 1;
@@ -498,7 +501,7 @@ function useDispensingFulfillmentQueue(selectedDate?: string) {
       await refresh();
       return allTransitionsSucceeded;
     },
-    [refresh, snapshot.workItems, workspaceId],
+    [cacheKey, refresh, snapshot.workItems, workspaceId],
   );
 
   return {
@@ -1032,12 +1035,6 @@ export function DispensingSidePanel({
   const { selectDate, selectedDate, todayDate } =
     useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
-  useQueueRealtimeRefresh({
-    enabled: panelPresentation?.visible !== false,
-    onQueueChange: fulfillmentQueue.refresh,
-    scopeKey: `dispensing-treatment:${selectedDate}`,
-    workspaceId,
-  });
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
     [fulfillmentQueue.workItems, workspaceId],
@@ -1691,7 +1688,6 @@ export function DispensingContent({
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
-  useQueueRealtimeRefresh({ workspaceId, scopeKey: "dispensing-owner-detail", onQueueChange: fulfillmentQueue.refresh });
   const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),

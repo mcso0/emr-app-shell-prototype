@@ -76,17 +76,16 @@ export function useFulfillmentInstruction(
         setFailure(null);
         setAssignees([]);
         setLoaded({ endpoint, document: parsed.data });
-        const candidatesResponse = await fetch(
-          endpoint.replace(/instruction$/, "assignees"),
-          { cache: "no-store", signal: abort.signal },
-        );
-        const candidates = await candidatesResponse.json();
-        if (
-          generation.current === current &&
-          candidatesResponse.ok &&
-          candidates.ok &&
-          Array.isArray(candidates.assignees)
-        ) {
+        try {
+          const candidatesResponse = await fetch(
+            endpoint.replace(/instruction$/, "assignees"),
+            { cache: "no-store", signal: abort.signal },
+          );
+          const candidates = await candidatesResponse.json();
+          if (generation.current !== current) return;
+          if (!candidatesResponse.ok || !candidates.ok || !Array.isArray(candidates.assignees)) {
+            throw new Error("assignee_read_failed");
+          }
           setAssignees(
             candidates.assignees.filter(
               (item: FulfillmentEligibleAssignee) =>
@@ -94,6 +93,9 @@ export function useFulfillmentInstruction(
                 typeof item.displayName === "string",
             ),
           );
+        } catch {
+          if (!abort.signal.aborted && generation.current === current)
+            reportError("담당자 목록을 불러오지 못했어요.");
         }
       } catch {
         if (!abort.signal.aborted && generation.current === current)

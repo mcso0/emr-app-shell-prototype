@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID } from "../src/lib/emr-domain/demo-workspaces";
 
@@ -51,7 +52,8 @@ for (const screen of screens) {
   for (const status of ["requested", "in_progress"] as const) {
     const action = status === "requested" ? "담당 변경" : "담당 인계";
 
-    test(`${screen.queueType} ${action} preserves loading, candidates and failed-read feedback`, async ({ page }) => {
+    const scenario = screen.module === "dispensing" ? `${status} instruction assignment` : action;
+    test(`${screen.queueType} ${scenario} preserves loading, candidates and failed-read feedback`, async ({ page }) => {
       await grantSyntheticWorkspaceAccess(page);
       await page.route("**/*", async (route) => {
         const hostname = new URL(route.request().url()).hostname;
@@ -93,6 +95,17 @@ for (const screen of screens) {
         await route.fulfill({ json: { ok: true, workItems: queueType === screen.queueType ? [workItem] : [] } });
       });
 
+      if (screen.module === "dispensing") {
+        await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/instruction`, route => route.fulfill({
+          json: { ok: true, document: { ...structuredClone(syntheticInstruction),
+            rootOrderId: workItemId, rootTaskId: workItemId, isSet: false, queueType: screen.queueType,
+            name: "합성 업무", mainAssigneeId: "user-tech", mainAssigneeName: "합성 현재 담당자",
+            items: [{ ...syntheticInstruction.items[0], id: workItemId, orderId: workItemId, taskId: workItemId,
+              name: "합성 업무", status, assigneeId: "user-tech", assigneeName: "합성 현재 담당자" }],
+          } },
+        }));
+      }
+
       const reads: Array<{ pathname: string; method: string; actor: string | undefined }> = [];
       const mutations: string[] = [];
       page.on("request", (request) => {
@@ -110,9 +123,18 @@ for (const screen of screens) {
         });
         if (reads.length === 1) {
           await new Promise<void>((resolve) => { releaseCandidates = resolve; });
+          if (screen.module === "dispensing") {
+            await route.fulfill({ status: 503, json: { ok: false } });
+            return;
+          }
           await route.fulfill({ json: { ok: true, assignees: [
             { userId: "user-tech", displayName: "합성 현재 담당자" },
             { userId: "user-admin", displayName: "합성 다음 담당자", title: "합성 직책" },
+          ] } });
+        } else if (screen.module === "dispensing") {
+          await route.fulfill({ json: { ok: true, assignees: [
+            { userId: "user-tech", displayName: "합성 현재 담당자" },
+            { userId: "user-admin", displayName: "합성 다음 담당자" },
           ] } });
         } else {
           await route.fulfill({ status: 503, json: { ok: false } });
@@ -120,11 +142,44 @@ for (const screen of screens) {
       });
 
       try {
-        await page.goto(`/w/${workspaceId}/${screen.module}?modulePanel=open&aside=closed`);
+        const selection = screen.module === "dispensing"
+          ? `&workItemId=${workItemId}&queueItemId=live-fulfillment-${workItemId}&encounterId=${workItem.encounterId}`
+          : "";
+        await page.goto(`/w/${workspaceId}/${screen.module}?modulePanel=open&aside=closed${selection}`);
         const queueItemTestId = screen.module === "dispensing"
           ? `order-queue-item-live-fulfillment-${workItemId}`
           : `${screen.module}-queue-item-live-${screen.module}-${workItemId}`;
-        await page.getByTestId(queueItemTestId).click();
+        if (screen.module === "dispensing") await expect(page.getByTestId(queueItemTestId)).toBeVisible();
+        else await page.getByTestId(queueItemTestId).click();
+
+        if (screen.module === "dispensing") {
+          // Instruction screens preload candidates and assign per item. They no
+          // longer use the legacy header dropdown or handoff dialog.
+          const choose = page.getByRole("button", { name: "합성 업무 담당 선택", exact: true });
+          await expect.poll(() => reads.length).toBe(1);
+          await expect(choose).toBeDisabled();
+          releaseCandidates?.();
+          const alert = page.getByRole("alert").filter({ hasText: "담당자 목록을 불러오지 못했어요." });
+          await expect(alert).toBeVisible();
+          await expect(page.locator(`tr[data-item="${workItemId}"]`)).toContainText("합성 업무");
+          await choose.click();
+          await expect(page.getByRole("menu")).toBeVisible();
+          await expect(page.getByRole("menuitemcheckbox")).toHaveCount(0);
+          await page.keyboard.press("Escape");
+          await expect(page.getByRole("menu")).toHaveCount(0);
+          await alert.getByRole("button", { name: "다시 조회", exact: true }).click();
+          await expect.poll(() => reads.length).toBe(2);
+          await expect(alert).toHaveCount(0);
+          await expect(choose).toBeEnabled();
+          await choose.click();
+          const current = page.getByRole("menuitemcheckbox", { name: "합성 현재 담당자", exact: true });
+          await expect(current).toBeChecked();
+          await expect(current).toBeDisabled();
+          await expect(page.getByRole("menuitemcheckbox", { name: "합성 다음 담당자", exact: true })).toBeEnabled();
+          await page.keyboard.press("Escape");
+          expect(mutations).toEqual([]);
+          return;
+        }
 
         const openCandidates = async () => {
           await page.getByRole("button", { name: "담당자 합성 현재 담당자 변경", exact: true }).click();

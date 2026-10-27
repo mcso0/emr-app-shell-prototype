@@ -6771,19 +6771,10 @@ export function ReceptionContent() {
   useEffect(() => {
     if (!liveStaffSourceEnabled) return;
 
-    const refresh = () => {
-      if (document.visibilityState !== "visible") return;
-      void refreshReceptionReads();
-    };
-    window.addEventListener("focus", refresh);
-    document.addEventListener("visibilitychange", refresh);
-    const intervalId = window.setInterval(refresh, 60_000);
-
-    return () => {
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
-      window.clearInterval(intervalId);
-    };
+    return subscribeVisibleRefresh({
+      intervalMs: 60_000,
+      onRefresh: () => { void refreshReceptionReads(); },
+    });
   }, [liveStaffSourceEnabled, refreshReceptionReads]);
 
   return (
