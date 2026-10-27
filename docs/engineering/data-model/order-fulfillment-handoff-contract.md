@@ -378,3 +378,13 @@ for synthetic proofs, verification, and delivery evidence.
 - Transfer and result writes serialize on the existing encounter billing lock. Checkout acquires all distinct encounter locks in deterministic order before invoice locks. Attachment finalize is a service-only branch after server byte validation; delete/discard use session-bound RPCs. Authenticated direct attachment inserts and inherited legacy result-writer execution are revoked.
 - Queue reads project the actual assignee name and actor-bound `canManage`. UI feedback does not substitute for DB authorization. Billing ownership uses workspace realtime refresh plus a bounded visible-page fallback.
 - Migration `20261012054346_current_assignee_mutation_boundary.sql` is a local candidate. Apply it before the app candidate. No remote apply, real data, payment execution or Production delivery is verified. Rollback must restore the prior affected function definitions; retain invoice assignment fields/events and saved results rather than deleting history.
+
+## RLS Helper Execution Grant (2026-10-27)
+
+Authenticated direct reads of `order_fulfillment_work_items` require EXECUTE on
+`private.clair_queue_permission_for_destination(text,text)` during RLS evaluation.
+The explicit grant preserves the existing active-membership and queue-capability
+policy; it adds no table write rights or anonymous access.
+[DB-PR-002](../../work/engineering/ENGINEERING-DB-PR-002-fulfillment-rls-helper-grant.md)
+tracks the local forward migration and isolated regression; remote application
+is not recorded.
