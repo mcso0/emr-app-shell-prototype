@@ -128,8 +128,8 @@ select pg_temp.patch_instruction_function('public.clair_mutate_chart_order_execu
     update public.orders parent set status=case when v_old_aggregate.started_at is not null then 'in_progress' else 'confirmed' end,
       work_status='pending',task_status=(select status from public.order_tasks where workspace_id=p_workspace_id and id=v_old_aggregate.id),updated_at=v_now
     where parent.workspace_id=p_workspace_id and parent.id=v_order.parent_chart_order_line_id;
-    insert into public.order_task_events(workspace_id,task_id,task_attempt_no,order_id,event_type,actor_user_id,before_values,after_values)
-    values(p_workspace_id,v_old_aggregate.id,v_old_aggregate.attempt_no,v_old_aggregate.order_id,'re_requested',p_actor_user_id,
+    insert into public.order_task_events(workspace_id,task_id,task_attempt_no,order_id,event_type,actor_user_id,reason,before_values,after_values)
+    values(p_workspace_id,v_old_aggregate.id,v_old_aggregate.attempt_no,v_old_aggregate.order_id,'re_requested',p_actor_user_id,v_reason,
       jsonb_build_object('status',v_old_aggregate.status),jsonb_build_object('changedOrderId',p_order_id,'orderRevisionId',v_revision.id));
   end if;
   v_after := jsonb_build_object($new$);

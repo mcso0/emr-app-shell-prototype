@@ -551,3 +551,37 @@ owner predicate; the candidate and its reconstructed test baseline now preserve
 that predicate. All further verification must use the corrected candidate.
 Production merge remains blocked until required DB readiness and scoped smoke
 are verified. Preview shares the existing DB and is not an isolated data target.
+
+
+### Hosted preflight and remote DB authorization — 2026-10-27
+
+승욱 explicitly approved applying the five PR1013 DB changes to the current
+`clair-emr-staging` service and synthetic assignment/completion/re-request,
+notification and billing-link verification. Existing clinical/payment records,
+actual payments and external communications are excluded. Stop merge on failure.
+This approval resolves the separate DB gate above; merge/Production approval
+remains valid for this bounded task after refreshed checks pass.
+
+Before permanent application, all five changes were executed inside rollback
+transactions against the actual hosted schema. Canonical draft expansion and
+confirmation created a new synthetic patient/encounter/set from an existing
+synthetic catalog. Calls ran with the `authenticated` database role and the
+allowlisted seeded actors; no authorization helper or trigger was disabled.
+
+- Main/sub assignment and actual result completion passed. Replay preserved one
+  result; child completion did not implicitly finalize the set.
+- Requester completion passed without granting completed-result amendment rights.
+- The real billing path created one synthetic candidate-linked invoice line;
+  no payment was executed. All fixture rows were rolled back.
+- Common-note changes preserved completion. Completion notifications reached the
+  three expected recipients once; note changes reached the two assigned actors.
+- A nonbillable variant passed no-history/no-notification undo with preserved
+  results, independent child re-request, then whole-set repeat with child attempt 3.
+- Workspace denial and private transaction-capability cleanup passed.
+
+The hosted re-request test caught a missing reason on the aggregate's
+`re_requested` event. The candidate now records the existing validated reason;
+its local SQL fixture includes the canonical reason constraint and passes.
+The corrected hosted re-request transaction passes as well. This supersedes the
+older hosted-runtime evidence gap; fresh empty-database replay still has its
+pre-existing master-seed dependency and is not claimed as passing.

@@ -23,6 +23,10 @@ create table public.order_execution_result_versions(id uuid primary key default 
 create table public.order_revisions(id uuid default gen_random_uuid(),workspace_id text,order_id uuid,created_at timestamptz default now(),created_by_user_id uuid,change_type text,before_values jsonb,after_values jsonb,revision_no integer);
 create table public.order_billing_candidates(workspace_id text,encounter_id uuid,order_id uuid,status text,invoice_line_id uuid);
 create table public.order_task_events(lifecycle_command_id uuid,reason text,created_at timestamptz default now(),workspace_id text,task_id uuid,task_attempt_no integer,order_id uuid,event_type text,actor_user_id uuid,before_values jsonb,after_values jsonb);
+-- Match the canonical history reason constraint so child-repeat regressions fail locally.
+alter table public.order_task_events add constraint order_task_events_reason_v3_check check (
+ event_type not in ('cancelled','returned','amended','re_requested','priority_changed','handed_off')
+ or length(btrim(coalesce(reason,'')))>0);
 create table public.order_events(created_at timestamptz default now(),workspace_id text,order_id uuid,event_type text,performed_by_user_id uuid,payload jsonb);
 -- NOTIFICATION TABLE
 create function private.clair_notification_is_active_workspace_user(text,text) returns boolean language sql stable as $$select exists(select 1 from public.user_memberships where workspace_id=$1 and user_id::text=$2 and status='active')$$;
