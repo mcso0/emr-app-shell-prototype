@@ -504,6 +504,7 @@ Implementation guidance:
 
 - Add a shared cell text primitive before broad adoption, for example `EmrTableCellText`.
 - Suggested props: `mode`, `title`, `fullText`, `tooltip`, `className`, `as`.
+- `EmrTableCellText.tooltipOnOverflow` is opt-in for `one-line` cells. It reveals the full text through the shared tooltip on hover/focus only when clipped, remeasures on resize/text/font changes, and replaces the native `title`. Plan/Order enables it only for the order-name column; other callers retain their existing behavior.
 - Use CSS line clamp for two-line preview rather than content-measured row height.
 - Tooltips should supplement truncated data, not become the only place to read required information.
 - If a table needs long-form reading or editing, move the full content into a side panel, drawer, row detail, or editor area outside the dense grid.

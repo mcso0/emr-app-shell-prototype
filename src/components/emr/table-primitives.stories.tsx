@@ -272,3 +272,54 @@ export const Multiline: Story = {
     },
   },
 };
+
+const syntheticOrderName = "합성 테스트 오더 · 매우 긴 오더명과 추가 설명 전체 표시 확인";
+
+export const OverflowTooltip: Story = {
+  render: () => (
+    <div>
+      <div data-testid="order-name-row" className="flex w-[180px] items-center gap-1.5">
+        <EmrTableCellText mode="one-line" fullText={syntheticOrderName} tooltipOnOverflow className="font-medium">
+          {syntheticOrderName}
+        </EmrTableCellText>
+      </div>
+      <div className="w-[180px]">
+        <EmrTableCellText tooltipOnOverflow>짧은 이름</EmrTableCellText>
+        <EmrTableCellText>기존 기본 이름</EmrTableCellText>
+      </div>
+    </div>
+  ),
+  parameters: { docs: { description: { story: "Plan/Order 오더명과 같은 한 줄 셀에서 실제로 잘린 이름만 호버 또는 키보드 포커스로 펼칩니다. 기본 셀은 기존 title 동작을 유지합니다. 합성 데이터만 사용합니다." } } },
+  play: async ({ canvasElement }) => {
+    const row = canvasElement.querySelector('[data-testid="order-name-row"]') as HTMLElement;
+    const label = row.querySelector('[data-emr-cell-text-mode]') as HTMLElement;
+    const labels = canvasElement.querySelectorAll<HTMLElement>('[data-emr-cell-text-mode]');
+    const waitFor = async (condition: () => boolean, message: string) => {
+      for (let i = 0; i < 100; i++) {
+        if (condition()) return;
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+      throw new Error(message);
+    };
+    await waitFor(() => label.tabIndex === 0, "Clipped name must be keyboard focusable");
+    if (label.hasAttribute('title') || labels[1].hasAttribute('title')) throw new Error('Opt-in cells must not have duplicate native tooltips');
+    if (labels[1].tabIndex !== -1 || labels[2].title !== '기존 기본 이름') throw new Error('Short and default cells must preserve their intended behavior');
+    label.focus();
+    const popup = () => document.querySelector('[data-slot="tooltip-content"]');
+    await waitFor(() => popup()?.textContent === syntheticOrderName, "Focus must show full order name");
+    let clicks = 0;
+    const onClick = () => { clicks++; };
+    row.addEventListener('click', onClick);
+    label.click();
+    row.removeEventListener('click', onClick);
+    if (clicks !== 1) throw new Error('Text click must still reach the row');
+    label.blur();
+    row.style.width = '1000px';
+    await waitFor(() => label.tabIndex === -1 && !popup(), "Expanding column must remove tooltip and extra tab stop");
+    row.style.width = '180px';
+    await waitFor(() => label.tabIndex === 0, "Shrinking column must restore full-name access");
+    label.focus();
+    await waitFor(() => popup()?.textContent === syntheticOrderName, "Resized cell must still show full text");
+    label.blur();
+  },
+};
