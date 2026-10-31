@@ -15,17 +15,23 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-10-31"
+updated: "2026-11-01"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
 
-## Current follow-up — 2026-10-31
+## Current accepted closeout — instruction review, 2026-11-01
 
-The instruction review follow-up is locally implemented and verified. 승욱
-approved the bounded remote migration and Production release on 2026-10-31;
-remote execution and release verification are in progress. See
-[the scoped record below](#instruction-review-follow-up--2026-10-31).
+Status for this bounded follow-up: **Done**. 승욱 accepted completion of the
+16 instruction-review annotations and additional synthetic verification, and
+requested a separate local documentation commit. PR #1023 and its approved
+migration were delivered; the remaining authenticated acceptance checks passed.
+No required fix or verification remains within this scope. This does not close
+unrelated historical scopes in this long-lived work item.
+
+See [the additional verification record](#instruction-review-additional-verification--2026-11-01).
+Earlier pending statements below describe their recorded stage and are superseded
+for this follow-up. Raw evidence and test-account details remain private and local.
 
 ## Prior accepted closeout — dispensing instruction workflow, 2026-10-27
 
@@ -1082,3 +1088,95 @@ by finishing Preview/CI before applying SQL and immediately releasing the app.
 Old tabs need reload after delivery. App-only rollback to `7baa5f89` retains this
 requester limitation; a complete rollback needs separately reviewed restoration
 of the captured four prior SQL definitions. No destructive data rollback is used.
+
+
+## Instruction review additional verification — 2026-11-01
+
+승욱 authorized synthetic-only authenticated acceptance, account-specific denial,
+concurrent claims, requester exceptions and multi-item sets. Each required test
+credential reset was approved separately. Existing data, permissions and unrelated
+work were preserved. Verification used the released PR #1023 application at
+merge `6748b10b3d1f2c5ba1fac789a4212f122add5bf0` and the approved
+`20261031144538_instruction_review_fixes` migration. This is recorded release
+and acceptance evidence, not a new deployment or a rerun of every release check.
+
+### Annotation closeout
+
+| Original annotations | Completed behavior |
+| --- | --- |
+| 1, 8, 9, 10, 11 | Oral infobar uses Neutral/100, a 1px Neutral/200 border, 12px/12px/12px/18px padding and top-aligned close control. Only nonblank current text displays; stored history remains intact. |
+| 2, 3 | Card and child names resolve canonical confirmed-order snapshot fields, including set names. |
+| 4, 5, 6 | Required actual-value entry moved into completion; execution history remains available through the card menu. Empty modification history is disabled. Row densities 36/40/52px were verified. |
+| 7, 14, 16 | Claim assigns and starts atomically. Non-owner mutations are denied; read controls remain available. The approved requesting-veterinarian completion exception remains supported. |
+| 12, 13 | Explicit instruction/memo fields display; internal calculation metadata such as doseBasis is excluded without changing source values. |
+| 15 | Patient demographics use the shared profile source; read failures remain distinct from missing values. |
+
+### Authenticated persistence and authority
+
+- Actual Production UI acceptance passed for one dispensing and one treatment
+  set, each with a single child. Claim saved owner/start/state together. Required
+  actual-value entry, item completion and explicit set finalization survived
+  reload. Each item retained exactly one initial result version; no billing
+  candidates were created. Responses were not intercepted.
+- Hosted SQL authorization checks passed: 24 unassigned-account denials, 20
+  non-owner denials and eight old-owner denials after ownership transfer.
+  Checks included actor spoofing and foreign-workspace access. Positive transfer
+  controls ran inside rollback transactions and preserved their prior state.
+- Concurrent claims used two distinct DB sessions with overlapping transactions
+  for both queues. One claim won; the competitor returned revision_conflict.
+  Connector calls observed to serialize were excluded from concurrency evidence.
+  These tests establish DB enforcement using simulated authenticated subjects;
+  they do not represent simultaneous employee browser sign-ins.
+- Real browser sign-ins separately covered a non-owner of both cases, the
+  dispensing owner and the treatment owner. Non-owner completion/input controls
+  remained disabled after reload. Each owner could open the required input form;
+  these access-only checks closed without saving. A disabled empty execution-
+  history menu was not counted as independent permission evidence.
+- Normal password authentication then supplied real session cookies for direct
+  Production HTTP checks. All 16 non-owner mutations returned 403
+  permission_missing: start_item, complete, complete_all and execution POST,
+  across both queues before assignment and after another executor claimed them.
+  Document and execution-context reads were identical before/after each group.
+
+### Requester exception and multi-item sets
+
+- Four new non-billable sets each contained two child work items using a repeated
+  synthetic catalog entry. Two cases used their assigned executors; two remained
+  unassigned for the requesting veterinarian. No existing cases were reused for
+  successful mutations in this phase.
+- The requester saved actual results in both dispensing and treatment without
+  claiming. The first save completed only that item; the sibling stayed requested
+  and the document stayed unfinalized. Both saves followed by complete_all
+  finalized each set while all assignees remained null.
+- The dispensing owner passed the same partial/final sequence through HTTP.
+  The treatment owner passed through the actual UI: first save, 1/2 after reload,
+  whole-document completion requesting only the remaining result, second save,
+  explicit final confirmation, and 2/2 after reload. Normal requester browser
+  login also displayed the finalized dispensing case with 조제 담당 미지정.
+- Execution POST atomically records and completes its item. A redundant complete
+  request after a successful save returned 403 and was unnecessary. Exploratory
+  treatment requests using the display unit 회 returned 409
+  variance_reason_required; successful requests used the stored plan unit session.
+  Rejected attempts created no result versions.
+- Final HTTP readback confirmed four finalized documents and eight completed child
+  items, each with one result version. Independent hosted SQL confirmed two
+  completed items/two results per case and zero billable orders.
+
+### Preservation, remaining limits and acceptance
+
+- Immediate post-reset comparisons matched all 16 protected groups for each
+  approved single-account reset. Final verification matched 19 protected
+  pre-existing data/account/policy groups, excluding expected Auth sign-in
+  timestamps. The 65 source-checkout WIP file hashes and Git status also matched.
+- The final read-only review found zero unassigned in-progress tasks/work items
+  in the reviewed workspace's dispensing/treatment queues. The originally flagged
+  task now had an assignee. No historical data repair was performed.
+- All 16 annotations and the requested additional checks are complete. 승욱
+  accepted this bounded result on 2026-11-01. Synthetic acceptance does not establish
+  real clinical validation, every possible set composition, or unrelated historical
+  limits such as full empty-database migration replay.
+- Raw screenshots, SQL captures, fingerprints, local paths, fixture identifiers
+  and test-account identifiers/credentials are excluded from this added record.
+  Detailed evidence and the original working notes remain private and local;
+  synthetic records/audit remain retained. This closeout changes documentation
+  only and does not authorize publication, another release or data cleanup.
