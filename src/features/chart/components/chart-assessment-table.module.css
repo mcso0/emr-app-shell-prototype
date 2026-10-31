@@ -17,6 +17,9 @@
   overscroll-behavior: none;
   overflow-y: auto;
   scrollbar-gutter: auto;
+  background-image: linear-gradient(to bottom,
+    var(--clair-color-atomic-neutral-50) var(--emr-table-header-height-standard),
+    var(--emr-surface-panel) var(--emr-table-header-height-standard));
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -255,12 +258,6 @@
   white-space: normal;
 }
 
-.emptyCell {
-  height: 208px !important;
-  padding: 0 !important;
-  white-space: normal;
-}
-
 .emptyViewport {
   position: absolute;
   z-index: 1;
@@ -271,7 +268,7 @@
   bottom: 0;
   align-items: center;
   justify-content: center;
-  padding: var(--clair-spacing-24) var(--clair-spacing-12);
+  overflow: auto;
 }
 
 @container (max-width: 339px) {
