@@ -8387,6 +8387,7 @@ function ChartOrderTable({
               <EmrTableCellText
                 mode="one-line"
                 fullText={order.displayName}
+                tooltipOnOverflow
                 className={cn(
                   "font-medium",
                   isSetParent && "font-semibold",

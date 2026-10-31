@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type {
   EmrColumnResize,
   EmrTableCellTextMode,
@@ -50,6 +51,8 @@ type EmrTableCellTextProps = {
   children: React.ReactNode;
   className?: string;
   fullText?: string;
+  /** Reveal clipped one-line text on hover or keyboard focus. Opt-in only. */
+  tooltipOnOverflow?: boolean;
   mode?: EmrTableCellTextMode;
   title?: string;
 };
@@ -544,17 +547,41 @@ export function EmrTableCellText({
   children,
   className,
   fullText,
+  tooltipOnOverflow = false,
   mode = "one-line",
   title,
 }: EmrTableCellTextProps) {
+  const textRef = React.useRef<HTMLElement>(null);
+  const setTextRef = React.useCallback((element: HTMLElement | null) => {
+    textRef.current = element;
+  }, []);
+  const [overflowing, setOverflowing] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+  const tooltipEnabled = tooltipOnOverflow && mode === "one-line";
+  React.useEffect(() => {
+    const element = textRef.current;
+    if (!tooltipEnabled || !element) return;
+    const measure = () => {
+      const clipped = element.scrollWidth > element.clientWidth;
+      setOverflowing(clipped);
+      if (!clipped) setOpen(false);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    let active = true;
+    void document.fonts.ready.then(() => { if (active) measure(); });
+    return () => { active = false; observer.disconnect(); };
+  }, [tooltipEnabled, children, fullText, as]);
   const Component = as;
   const textTitle =
     title ?? fullText ?? (typeof children === "string" ? children : undefined);
 
-  return (
+  const text = (
     <Component
+      ref={setTextRef}
       data-emr-cell-text-mode={mode}
-      title={textTitle}
+      title={tooltipEnabled ? undefined : textTitle}
       className={cn(
         "min-w-0 max-w-full",
         mode === "one-line" && "block truncate",
@@ -569,5 +596,14 @@ export function EmrTableCellText({
     >
       {children}
     </Component>
+  );
+  if (!tooltipEnabled) return text;
+  return (
+    <Tooltip open={overflowing && open} onOpenChange={setOpen}>
+      <TooltipTrigger render={text} disabled={!overflowing} tabIndex={overflowing ? 0 : -1} />
+      <TooltipContent className="whitespace-normal [overflow-wrap:anywhere]">
+        {textTitle}
+      </TooltipContent>
+    </Tooltip>
   );
 }
