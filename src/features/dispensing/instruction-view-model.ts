@@ -19,6 +19,7 @@ export type InstructionViewItem = {
   note: string;
   setInstruction?: string;
   hasExecution?: boolean;
+  hasResult?: boolean;
   status: InstructionItem["status"];
   assignees: string[];
   change: "added" | "modified" | "existing";
@@ -85,18 +86,14 @@ function displayFields(
   const calculation = record(
     plan.calculationOutputs ?? source.calculationOutputs,
   );
-  const columnKeys = new Set([
-    "dose",
-    "doseUnit",
-    "frequency",
-    "durationDays",
-    "totalQuantity",
-    "totalQuantityUnit",
-    "route",
-    "administrationRoute",
-    "medicationInstruction",
-    "storageMethod",
-  ]);
+  // Explicit instructions, memos and treatment quantities belong here. Internal
+  // calculation selectors and identifiers stay in the persisted plan.
+  const instructionKeys = new Set(queueType === "dispensing"
+    ? ["taperSchedule", "compoundNote", "guardianNote"]
+    : ["method", "site", "schedule", "plannedRoute", "deviceProtocol",
+      "observationDomains", "stagedInstructions", "exceptions", "administeredAmount",
+      "plannedProcedureCount", "procedureCountUnit", "plannedAmount", "plannedAmountUnit",
+      "measurementUnit", "administrationPolicy", "productReference"]);
   const schema = getClinicalOrderFieldSchema(
     queueType,
     typeof plan.detailSchemaVersion === "number"
@@ -105,13 +102,17 @@ function displayFields(
         ? source.detailSchemaVersion
         : undefined,
   );
+  const valueLabels: Record<string, Record<string, string>> = {
+    procedureCountUnit: { session: "회", site: "부위", tooth: "치아", specimen: "검체", load: "적재 회차" },
+    administrationPolicy: { not_applicable: "해당 없음", separate_medication_order: "별도 약품 오더 연결", direct_quantity: "재료·용액 사용량 직접 계획" },
+  };
   const detailLines =
     schema?.fields
       .filter(
         (field) =>
-          !columnKeys.has(field.key) && text(inputs[field.key]) !== "—",
+          instructionKeys.has(field.key) && text(inputs[field.key]) !== "—",
       )
-      .map((field) => `${field.label}: ${text(inputs[field.key])}`) ?? [];
+      .map((field) => `${field.label}: ${valueLabels[field.key]?.[text(inputs[field.key])] ?? text(inputs[field.key])}`) ?? [];
   return {
     dose: text(inputs.dose),
     doseUnit: text(inputs.doseUnit),
@@ -126,7 +127,7 @@ function displayFields(
     route: text(inputs.route, inputs.administrationRoute),
     medicationGuide: text(inputs.medicationInstruction),
     storage: text(inputs.storageMethod),
-    note: [note, ...detailLines].filter(Boolean).join("\n"),
+    note: [note.trim() ? `오더별 지시: ${note}` : "", ...detailLines].filter(Boolean).join("\n"),
   };
 }
 const fields = [
@@ -205,6 +206,7 @@ export function createInstructionView(document: InstructionDocument) {
       ...current,
       setInstruction: document.isSet ? document.instruction : undefined,
       hasExecution: item.resultRequired || item.hasResult,
+      hasResult: item.hasResult,
       id: item.id,
       name: item.name,
       status: item.status,

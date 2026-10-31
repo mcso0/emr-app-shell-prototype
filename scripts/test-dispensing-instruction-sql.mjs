@@ -24,7 +24,7 @@ definitions.push(
  ["20260819150622_clinical_master_phase1a3_order_authority.sql", "public.clair_sync_billing_invoice_candidates_from_fulfillment"],
  ["20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql", "public.clair_mutate_chart_order_execution"],
 );
-const baseline = "set check_function_bodies=off;\n" + definitions.map(([file,name]) => {
+let baseline = "set check_function_bodies=off;\n" + definitions.map(([file,name]) => {
  const s=readFileSync(`supabase/migrations/${file}`,"utf8");
  const at=s.search(new RegExp(`create(?: or replace)? function ${name.replaceAll(".","\\.")}\\(`,"i"));
  if(at<0) throw new Error(name);
@@ -35,13 +35,21 @@ const baseline = "set check_function_bodies=off;\n" + definitions.map(([file,nam
  if(name==="public.clair_save_chart_order_draft") body=body.replace("public.clair_save_chart_order_draft(", "public.clair_save_chart_order_draft_candidate_base(");
  if(name==="public.clair_record_order_execution_result") body=body.replace("  if wi.row_revision is distinct from p_expected_revision then", "  perform private.clair_assert_work_owner(p_workspace_id,wi.order_id,p_actor_user_id);\n  if wi.row_revision is distinct from p_expected_revision then");
  if(name==="public.clair_get_order_execution_context") body=body.replace("'canRecord',t.id=wi.task_id and private", "'canRecord',t.id=wi.task_id and coalesce(wi.assigned_to_user_id=auth.uid(),false) and private");
- if(name==="public.clair_transition_fulfillment_work_item") body=body.replace("  v_next_status := v_item.status;", "  if p_action <> 'claim' and (v_item.assigned_to_user_id is distinct from p_actor_user_id) then raise exception 'current_assignee_required'; end if;\n  v_next_status := v_item.status;");
  if(name==="public.clair_sync_billing_invoice_candidates_from_fulfillment") body=body.replace("  return private.clair_sync_billing_invoice_candidates_internal(", "  if exists(select 1 from public.order_fulfillment_work_items wi where wi.workspace_id=p_workspace_id and wi.encounter_id=p_encounter_id and wi.order_id=any(p_order_ids) and wi.assigned_to_user_id is distinct from p_actor_user_id) then raise exception 'current_assignee_required' using errcode='42501'; end if;\n  return private.clair_sync_billing_invoice_candidates_internal(");
  if(name==="public.clair_mutate_chart_order_execution") body=body.replace("public.clair_mutate_chart_order_execution(", "public.clair_mutate_chart_order_execution_origin_base(");
+ if(name==="public.clair_record_order_execution_result") body=body.replaceAll("public.clair_save_chart_order_lifecycle(", "public.clair_save_chart_order_lifecycle_internal(");
  return body;
 }).join("\n");
-const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
-const fixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8");
+// Apply the actual intervening patches, including parent timestamps and encounter
+// ownership locking, rather than testing a pre-September function shape.
+const multiChart = readFileSync("supabase/migrations/20260908211856_encounter_multi_chart.sql", "utf8");
+baseline += "\n" + multiChart.slice(multiChart.indexOf("do $fulfillment_aggregate$"), multiChart.indexOf("end $fulfillment_aggregate$;") + "end $fulfillment_aggregate$;".length);
+baseline += "\n" + readFileSync("supabase/migrations/20260912230700_dispensing_execution_billing_candidate_handoff.sql", "utf8");
+const ownerPatch = readFileSync("supabase/migrations/20261012054346_current_assignee_mutation_boundary.sql", "utf8");
+baseline += "\n" + ownerPatch.slice(ownerPatch.indexOf("do $patch$"), ownerPatch.indexOf(" signature:='public.clair_save_lab_result_entry_v2")) + "\nend $patch$;";
+const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
+const fixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8")
+ .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + "\nrollback;");
 const notificationSource = readFileSync("supabase/migrations/20260705133000_notification_event_persistence.sql", "utf8");
 const notificationTable = notificationSource.slice(notificationSource.indexOf("create table if not exists public.notification_events"), notificationSource.indexOf("create table if not exists public.notification_user_states"))
  .replace("references public.workspaces(id) on delete cascade", "");

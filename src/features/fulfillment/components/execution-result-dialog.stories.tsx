@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, fireEvent, userEvent, waitFor, within } from "storybook/test";
 import { ExecutionResultDialog } from "./execution-result-dialog";
@@ -9,17 +9,25 @@ const workItemId = "91000000-0000-4000-8000-000000000001";
 const userId = "91000000-0000-4000-8000-000000000002";
 const baseContext: ExecutionContext = { workspaceId, workItemId, taskId: "91000000-0000-4000-8000-000000000003", orderId: "91000000-0000-4000-8000-000000000004", encounterId: "91000000-0000-4000-8000-000000000005", attemptNo: 1, clinicalOrderType: "dispensing", workItemRevision: 1, status: "in_progress", isCurrentAttempt: true, resultRequired: true, canRecord: true, planSnapshot: { calculationOutputs: { plannedPracticalTotalQuantity: 2, dispenseUnit: "정" } }, planSha256: "a".repeat(64), results: [] };
 let writes: Array<Record<string, unknown>> = [];
-type Scenario = "ready" | "readonly" | "requested" | "load-error" | "save-error" | "amendment";
+let reads = 0;
+let releaseSave: (() => void) | undefined;
+type Scenario = "ready" | "readonly" | "requested" | "load-error" | "save-error" | "amendment" | "pending-refresh";
 function Example(_args: { scenario: Scenario }) {
-  void _args;
+  const [ownershipRevision, setOwnershipRevision] = useState(1);
+  useEffect(() => {
+    if (_args.scenario !== "pending-refresh") return;
+    const refresh = () => setOwnershipRevision(value => value + 1);
+    window.addEventListener("synthetic:execution-authority-refresh", refresh);
+    return () => window.removeEventListener("synthetic:execution-authority-refresh", refresh);
+  }, [_args.scenario]);
   const [open, setOpen] = useState(true);const [saved, setSaved] = useState(0);
-  return <><button type="button" onClick={() => setOpen(true)}>수행기록 열기</button><output aria-label="합성 수행 저장 횟수">{saved}</output><ExecutionResultDialog workspaceId={workspaceId} workItemId={workItemId} open={open} onOpenChange={setOpen} onSaved={async () => setSaved((count) => count + 1)} /></>;
+  return <><button type="button" onClick={() => setOpen(true)}>수행기록 열기</button><output aria-label="합성 수행 저장 횟수">{saved}</output><ExecutionResultDialog workspaceId={workspaceId} workItemId={workItemId} ownershipKey={String(ownershipRevision)} open={open} onOpenChange={setOpen} onSaved={async () => setSaved((count) => count + 1)} /></>;
 }
 const meta = {
   title: "Features/Fulfillment/Execution Result", component: Example, tags: ["autodocs"], args: { scenario: "ready" as Scenario }, argTypes: { scenario: { control: false } },
   parameters: { docs: { story: { inline: false, height: "820px" }, description: { component: "조제·처치·영상 caller가 사용하는 실제 ExecutionResultDialog입니다. 실제 응답 parser를 통과하는 합성 조제 계획과 수행 이력을 제공합니다. GET/POST는 이 story의 정확한 endpoint에서만 가로채고 종료 시 복원합니다. 실제 수행·정정·청구·감사 저장은 하지 않으며 fixture는 임상 검증 자료가 아닙니다." } } },
   beforeEach: ({ args }) => {
-    const original = globalThis.fetch;writes = [];
+    const original = globalThis.fetch;writes = [];reads = 0;releaseSave = undefined;
     const context = structuredClone(baseContext);
     let failRead = args.scenario === "load-error";let failSave = args.scenario === "save-error";
     if (args.scenario === "readonly") context.canRecord = false;
@@ -34,11 +42,12 @@ const meta = {
       if (!url.pathname.startsWith("/api/")) return original(input, init);
       if (url.pathname !== `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/execution`) throw new Error(`Unexpected API ${url.pathname}`);
       const method = init?.method ?? (input instanceof Request ? input.method : "GET");
-      if (method === "GET") { if (failRead) { failRead = false; return Response.json({ ok: false, error: "request_failed" }, { status: 503 }); } return Response.json({ ok: true, context }); }
+      if (method === "GET") { reads++; if (failRead) { failRead = false; return Response.json({ ok: false, error: "request_failed" }, { status: 503 }); } return Response.json({ ok: true, context }); }
       if (method !== "POST") throw new Error(`Unexpected method ${method}`);
       const inputBody = JSON.parse(String(init?.body));writes.push(inputBody);
       const command = parseExecutionCommand(inputBody);if (!command) throw new Error("Invalid emitted execution command");
       if (failSave) { failSave = false; return Response.json({ ok: false, error: "request_failed" }, { status: 503 }); }
+      if (args.scenario === "pending-refresh") await new Promise<void>(resolve => { releaseSave = resolve; });
       const previous = context.results.at(-1);
       const record: ExecutionResultVersion = { id: `92000000-0000-4000-8000-${String(context.results.length + 1).padStart(12, "0")}`, version: context.results.length + 1, previousResultId: previous?.id ?? null, schemaVersion: 1, payload: command.payload, performedByUserId: userId, recordedByUserId: userId, performedAt: command.performedAt, recordedAt: "2026-10-11T01:00:00Z", varianceReason: command.varianceReason ?? null, amendmentReason: command.amendmentReason ?? null, planSha256: context.planSha256 };
       if (!previous) context.workItemRevision += 1;
@@ -46,7 +55,7 @@ const meta = {
       if (!parseExecutionContext(context, workspaceId, workItemId)) throw new Error("Invalid synthetic saved execution context");
       return Response.json({ ok: true, context });
     };
-    return () => { globalThis.fetch = original; };
+    return () => { releaseSave?.(); globalThis.fetch = original; };
   },
 } satisfies Meta<typeof Example>;
 export default meta;
@@ -70,4 +79,25 @@ export const Requested: Story = { args: { scenario: "requested" }, parameters: {
 export const AmendmentReason: Story = {
   args: { scenario: "amendment" }, parameters: { docs: { description: { story: "정정은 기존 입력을 불러오며 사유가 필수입니다. 합성 응답은 이전 버전과 새 버전을 모두 유지합니다." } } },
   play: async ({ canvasElement }) => { const body = within(canvasElement.ownerDocument.body);await userEvent.click(await body.findByRole("button", { name: "기록 정정" }));await expect(body.getByLabelText("실제 준비수량 *")).toHaveValue(2);await expect(body.getByRole("button", { name: "정정 저장" })).toBeDisabled();await userEvent.type(body.getByLabelText(/정정 사유/), "합성 기록 확인");await waitFor(() => expect(body.getByRole("button", { name: "정정 저장" })).toBeEnabled());await userEvent.click(body.getByRole("button", { name: "정정 저장" }));await waitFor(() => expect(body.getByText(/버전 2/)).toBeVisible());await expect(body.getByText(/버전 1/)).toBeVisible();await expect(writes[0]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 기록 확인" }); },
+};
+
+export const PendingSaveAuthorityRefresh: Story = {
+  args: { scenario: "pending-refresh" },
+  parameters: { docs: { description: { story: "저장 중 닫기와 Escape를 차단합니다. 같은 항목의 권한 revision 재조회가 POST보다 먼저 와도 저장을 확인하고 대기 상태를 해제합니다." } } },
+  play: async ({ canvas, canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await fill(body);
+    await userEvent.click(body.getByRole("button", { name: "수행기록 저장 및 완료" }));
+    await waitFor(() => expect(releaseSave).toBeDefined());
+    await expect(body.getByRole("button", { name: "닫기" })).toBeDisabled();
+    await userEvent.keyboard("{Escape}");
+    await expect(body.getByRole("dialog")).toBeVisible();
+    window.dispatchEvent(new Event("synthetic:execution-authority-refresh"));
+    await waitFor(() => expect(reads).toBeGreaterThan(1));
+    releaseSave?.();
+    await waitFor(() => expect(canvas.getByLabelText("합성 수행 저장 횟수")).toHaveTextContent("1"));
+    await waitFor(() => expect(body.getByRole("button", { name: "닫기" })).toBeEnabled());
+    await expect(body.queryByRole("button", { name: "저장 중" })).not.toBeInTheDocument();
+    await expect(writes).toHaveLength(1);
+  },
 };

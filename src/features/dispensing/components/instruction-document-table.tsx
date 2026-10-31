@@ -70,7 +70,7 @@ type Props = {
   names: Record<string, string>;
   eligibleAssignees: string[];
   busy?: boolean;
-  openExecution?: (itemId: string) => void;
+  openExecutionHistory?: () => void;
   editSetInstruction?: () => void;
   refresh?: () => void;
   act: (id: string, type: Action["type"], extra?: Partial<Action>) => void;
@@ -121,7 +121,7 @@ function OrderCard({
   names,
   eligibleAssignees,
   busy,
-  openExecution,
+  openExecutionHistory,
   editSetInstruction,
   refresh,
 }: Props & { order: Order }) {
@@ -355,6 +355,7 @@ function OrderCard({
         <Button
           variant="outline"
           className="fd-tool fd-history"
+          disabled={busy || !events.some((event) => event.orderId === o.id)}
           onClick={() => history(o.id)}
         >
           <Icon name="history" />
@@ -373,6 +374,7 @@ function OrderCard({
             <Icon name="more" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {openExecutionHistory && <DropdownMenuItem disabled={busy || !o.items.some((item) => item.hasResult)} onClick={openExecutionHistory}>수행기록</DropdownMenuItem>}
             {editSetInstruction && <DropdownMenuItem disabled={busy} onClick={editSetInstruction}>{o.set ? "세트 공통 지시 수정" : "오더 지시 수정"}</DropdownMenuItem>}
             {refresh && <DropdownMenuItem onClick={refresh}>지시서 새로고침</DropdownMenuItem>}
             <DropdownMenuItem onClick={() => copy(false)}>
@@ -599,6 +601,7 @@ function OrderCard({
                                         </DropdownMenuCheckboxItem>
                                       ))}
                                       <DropdownMenuItem
+                                        disabled={busy || !events.some((event) => event.changes.some((change) => change.itemId === i.id))}
                                         onClick={() => history(o.id, i.id)}
                                       >
                                         이 오더 이력
@@ -608,7 +611,6 @@ function OrderCard({
                                 )}
                               </TableCell>
                               <TableCell className="fd-center">
-                                {i.hasExecution && openExecution && <Button className="fd-execution" size="sm" variant="ghost" disabled={busy} aria-label={`${i.name} 수행기록·이력`} onClick={() => openExecution(i.id)}>수행기록·이력</Button>}
                                 <Button
                                   variant="outline"
                                   className={`fd-complete ${i.status === "completed" ? "is-complete" : ""}`}

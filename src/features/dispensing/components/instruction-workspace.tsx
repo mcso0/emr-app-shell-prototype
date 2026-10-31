@@ -16,70 +16,67 @@ import { InstructionDocumentTable } from "./instruction-document-table";
 type Props = {
   controller: FulfillmentInstructionController;
   onChanged: () => void;
+  workspaceId: string;
 };
 
-function CompletionConfirmation({
-  controller,
-  itemId,
-  open,
-  onClose,
-  onChanged,
-}: Props & { itemId?: string; open: boolean; onClose: () => void }) {
-  if (!controller.document) return null;
-  const confirmation = instructionCompletionConfirmation(
-    controller.document,
-    itemId,
-  );
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && !controller.busy) onClose();
-      }}
-    >
-      <EmrDialogShell
-        title={confirmation.title}
-        description={confirmation.description}
-        secondaryAction={
-          <Button
-            variant="outline"
-            disabled={controller.busy}
-            onClick={onClose}
-          >
-            취소
-          </Button>
-        }
-        primaryAction={
-          <Button
-            disabled={controller.busy}
-            onClick={async () => {
-              if (
-                await controller.mutate(
-                  itemId
-                    ? { action: "complete", itemId }
-                    : { action: "complete_all" },
-                )
-              ) {
-                onClose();
-                onChanged();
-              }
-            }}
-          >
-            {controller.busy ? "저장 중" : "완료"}
-          </Button>
-        }
-      >
-        {controller.error ? (
-          <p role="alert" className="text-sm text-destructive">
-            {controller.error}
-          </p>
-        ) : null}
-      </EmrDialogShell>
-    </Dialog>
-  );
+function CompletionConfirmation(props: Props & { itemId?: string; open: boolean; onClose: () => void }) {
+  return props.open && props.controller.document
+    ? <CompletionFlow key={`${props.workspaceId}:${props.controller.document.rootTaskId}:${props.itemId ?? "all"}`} {...props} />
+    : null;
 }
 
-export function InstructionActions({ controller, onChanged }: Props) {
+function CompletionFlow({ controller, workspaceId, itemId, onClose, onChanged }: Props & { itemId?: string; onClose: () => void }) {
+  const [resultItem, setResultItem] = useState<string | null>(null);
+  const document = controller.document;
+  if (!document) return null;
+  const confirmation = instructionCompletionConfirmation(document, itemId);
+  const targets = document.items.filter((item) => !itemId || item.id === itemId);
+  const missingResults = targets.filter((item) => item.resultRequired && !["completed", "cancelled", "returned"].includes(item.status));
+  const busy = controller.busy || controller.loading;
+  const canComplete = itemId ? targets.some((item) => item.canComplete) : document.canCompleteAll;
+  const executionItem = document.items.find((item) => item.id === resultItem);
+  return <>
+    <Dialog open={resultItem === null} onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
+      <EmrDialogShell
+        title={confirmation.title}
+        description={missingResults.length ? "완료할 항목의 실제 수행값을 먼저 기록해 주세요." : confirmation.description}
+        secondaryAction={<Button variant="outline" disabled={busy} onClick={onClose}>취소</Button>}
+        primaryAction={<Button disabled={busy || !canComplete || missingResults.length > 0} onClick={async () => {
+          if (await controller.mutate(itemId ? { action: "complete", itemId } : { action: "complete_all" })) {
+            onClose(); onChanged();
+          }
+        }}>{controller.busy ? "저장 중" : "완료"}</Button>}
+      >
+        {missingResults.length > 0 && <ul className="space-y-2">
+          {missingResults.map((item) => <li key={item.id} className="flex items-center justify-between gap-3">
+            <span className="min-w-0 break-words">{item.name}</span>
+            <Button variant="outline" disabled={busy || !item.canComplete} aria-label={`${item.name} 수행값 입력`} onClick={() => setResultItem(item.id)}>수행값 입력</Button>
+          </li>)}
+        </ul>}
+        {controller.error && <p role="alert" className="text-sm text-destructive">{controller.error}</p>}
+      </EmrDialogShell>
+    </Dialog>
+    {executionItem && <ExecutionResultDialog
+      workspaceId={workspaceId} workItemId={executionItem.id} open
+      instructionCompletion
+      ownershipAllowed={!busy && executionItem.canComplete}
+      ownershipKey={document.revision} authorityStatus={executionItem.status}
+      onOpenChange={(next) => { if (!next) setResultItem(null); }}
+      onSaved={async () => {
+        setResultItem(null);
+        controller.refresh();
+        onChanged();
+        if (itemId || !document.isSet) onClose();
+      }}
+    />}
+  </>;
+}
+
+export function InstructionActions(props: Props) {
+  return <InstructionActionsContent key={`${props.workspaceId}:${props.controller.document?.rootTaskId}`} {...props} />;
+}
+
+function InstructionActionsContent({ controller, onChanged, workspaceId }: Props) {
   const [confirm, setConfirm] = useState(false);
   const document = controller.document;
   if (!document) return null;
@@ -120,13 +117,14 @@ export function InstructionActions({ controller, onChanged }: Props) {
         </Button>
       ) : null}
       {document.canCompleteAll ? (
-        <Button size="sm" disabled={busy} onClick={() => setConfirm(true)}>
+        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={() => setConfirm(true)}>
           {document.queueType === "dispensing" ? "조제 완료" : "처치 완료"}
         </Button>
       ) : null}
       {document.finalized ? <span className="text-sm">완료</span> : null}
       <CompletionConfirmation
         controller={controller}
+        workspaceId={workspaceId}
         onChanged={onChanged}
         open={confirm}
         onClose={() => setConfirm(false)}
@@ -139,12 +137,13 @@ export function InstructionBody({
   controller,
   onChanged,
   workspaceId,
-}: Props & { workspaceId: string }) {
+}: Props) {
   const [confirmItem, setConfirmItem] = useState<string | null>(null);
   const [historyItem, setHistoryItem] = useState<string | null | undefined>(
     undefined,
   );
   const [resultItem, setResultItem] = useState<string | null>(null);
+  const [executionHistory, setExecutionHistory] = useState(false);
   const [instructionDraft, setInstructionDraft] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const document = controller.document;
@@ -228,15 +227,7 @@ export function InstructionBody({
           {...view}
           refresh={controller.refresh}
           editSetInstruction={document?.canEditInstruction ? () => setInstructionDraft(document.instruction) : undefined}
-          openExecution={async (itemId) => {
-            const item = document?.items.find(item => item.id === itemId);
-            if (!item) return;
-            if (item.canComplete && !item.hasResult && item.status !== "in_progress") {
-              if (!(await controller.mutate({ action: "start_item", itemId }))) return;
-              onChanged();
-            }
-            setResultItem(itemId);
-          }}
+          openExecutionHistory={() => setExecutionHistory(true)}
           busy={controller.busy || controller.loading}
           names={{
             ...view.names,
@@ -283,6 +274,7 @@ export function InstructionBody({
       ) : null}
       <CompletionConfirmation
         controller={controller}
+        workspaceId={workspaceId}
         onChanged={onChanged}
         itemId={confirmItem ?? undefined}
         open={confirmItem !== null}
@@ -352,17 +344,27 @@ export function InstructionBody({
           ) : null}
         </EmrDialogShell>
       </Dialog>
+      <Dialog open={executionHistory && !resultItem} onOpenChange={setExecutionHistory}>
+        <EmrDialogShell title="수행기록" description={document?.name}>
+          <ul className="space-y-2">
+            {document?.items.filter((item) => item.hasResult).map((item) => <li key={item.id}>
+              <Button variant="ghost" disabled={controller.loading || controller.busy} onClick={() => setResultItem(item.id)}>{item.name}</Button>
+            </li>)}
+          </ul>
+        </EmrDialogShell>
+      </Dialog>
       {resultItem ? (
         <ExecutionResultDialog
           workspaceId={workspaceId}
           workItemId={resultItem}
           open
-          ownershipAllowed={
+          ownershipAllowed={!(controller.loading || controller.busy) && (
             document?.items.find((item) => item.id === resultItem)
               ?.canComplete ||
-            document?.items.find((item) => item.id === resultItem)?.canReopen
+            document?.items.find((item) => item.id === resultItem)?.canReopen)
           }
           ownershipKey={document?.revision}
+          authorityStatus={document?.items.find((item) => item.id === resultItem)?.status}
           onOpenChange={(open) => {
             if (!open) setResultItem(null);
           }}
