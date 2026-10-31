@@ -9,6 +9,7 @@ import { useModuleSidePanel, useModuleSidePanelRouter, useModuleSidePanelSearchP
 import { getFreshChartOrderCatalog, loadCachedChartOrderCatalog } from "./chart-order-catalog-client";
 import { classifyChartOrderSaveFailure } from "@/features/chart/chart-order-save-failure-decision";
 import { isChartOrderDraftRowInRootIds, prepareChartOrderDraftRowsForPersistence, remapChartOrderIdSet } from "@/features/chart/chart-order-draft-identity";
+import panelFeedbackStyles from "./chart-panel-feedback.module.css";
 import historyStyles from "./chart-history.module.css";
 import historyLayoutStyles from "@/components/emr/history-aside-layout.module.css";
 import { coalescePendingRefresh, subscribeVisibleRefresh } from "@/lib/visible-refresh";
@@ -692,8 +693,8 @@ type ChartBillingCandidateRouteResponse =
     };
 
 const CHART_TOP_DEFAULT_PERCENT = 50;
-const CHART_TOP_MIN_PX = 180;
-const CHART_ORDER_MIN_PX = 220;
+const CHART_TOP_MIN_PX = 240;
+const CHART_ORDER_MIN_PX = 280;
 const CHART_RESIZER_HEIGHT_PX = 8;
 const CHART_WORKSPACE_BOTTOM_PADDING_PX = 8;
 const CHART_RESIZER_STEP_PERCENT = 5;
@@ -9600,7 +9601,7 @@ function ChartOrderTable({
         />
         {!loading && !rows.length ? (
           <EmrTableFeedbackSurface
-            className="absolute inset-x-0 bottom-0 z-20 overflow-auto"
+            className={cn("absolute inset-x-0 bottom-0 z-20 overflow-auto", panelFeedbackStyles.viewport)}
             data-testid="chart-order-empty-body"
             style={{ top: tableHeaderHeight }}
           >
@@ -15620,6 +15621,27 @@ export function ChartContent({
   const [chartTopPercent, setChartTopPercent] = useState(
     CHART_TOP_DEFAULT_PERCENT,
   );
+  const [chartWorkspaceHeight, setChartWorkspaceHeight] = useState(0);
+  const observeChartWorkspace = useCallback((node: HTMLDivElement | null) => {
+    chartWorkspaceRef.current = node;
+    if (!node) return;
+    const observer = new ResizeObserver(() => {
+      setChartWorkspaceHeight(node.clientHeight);
+      const available = Math.max(CHART_TOP_MIN_PX + CHART_ORDER_MIN_PX,
+        node.clientHeight - CHART_RESIZER_HEIGHT_PX - CHART_WORKSPACE_BOTTOM_PADDING_PX);
+      setChartTopPercent((current) => clampNumber(current,
+        CHART_TOP_MIN_PX / available * 100,
+        (available - CHART_ORDER_MIN_PX) / available * 100));
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const chartAvailableHeight = Math.max(
+    CHART_TOP_MIN_PX + CHART_ORDER_MIN_PX,
+    chartWorkspaceHeight - CHART_RESIZER_HEIGHT_PX - CHART_WORKSPACE_BOTTOM_PADDING_PX,
+  );
+  const chartSplitMin = CHART_TOP_MIN_PX / chartAvailableHeight * 100;
+  const chartSplitMax = (chartAvailableHeight - CHART_ORDER_MIN_PX) / chartAvailableHeight * 100;
   const [isChartResizing, setIsChartResizing] = useState(false);
   const [chartCompleteDialogOpen, setChartCompleteDialogOpen] = useState(false);
   const [callDialogOpen, setCallDialogOpen] = useState(false);
@@ -15748,25 +15770,9 @@ export function ChartContent({
     || (Boolean(activeChartId) && (persistedSoapState.status === "error" || persistedSoapState.status === "loading"))
     || (effectiveEncounter?.status !== "in_consultation" && effectiveEncounter?.status !== "ordered");
   const orderLoading = detailHydrationPending;
-  const getChartSplitBounds = () => {
-    const workspace = chartWorkspaceRef.current;
-    const availableHeight = workspace
-      ? workspace.getBoundingClientRect().height -
-        CHART_RESIZER_HEIGHT_PX -
-        CHART_WORKSPACE_BOTTOM_PADDING_PX
-      : 0;
-
-    if (availableHeight <= CHART_TOP_MIN_PX + CHART_ORDER_MIN_PX) {
-      return { min: 35, max: 65 };
-    }
-
-    return {
-      min: (CHART_TOP_MIN_PX / availableHeight) * 100,
-      max: ((availableHeight - CHART_ORDER_MIN_PX) / availableHeight) * 100,
-    };
-  };
   const setClampedChartTopPercent = (nextPercent: number) => {
-    const { min, max } = getChartSplitBounds();
+    const min = chartSplitMin;
+    const max = chartSplitMax;
 
     setChartTopPercent(clampNumber(nextPercent, min, max));
   };
@@ -15777,11 +15783,12 @@ export function ChartContent({
 
     const rect = workspace.getBoundingClientRect();
     const availableHeight =
-      rect.height - CHART_RESIZER_HEIGHT_PX - CHART_WORKSPACE_BOTTOM_PADDING_PX;
+      Math.max(CHART_TOP_MIN_PX + CHART_ORDER_MIN_PX,
+        workspace.clientHeight - CHART_RESIZER_HEIGHT_PX - CHART_WORKSPACE_BOTTOM_PADDING_PX);
 
     if (availableHeight <= 0) return;
 
-    const topHeight = clientY - rect.top;
+    const topHeight = clientY - rect.top + workspace.scrollTop;
 
     setClampedChartTopPercent((topHeight / availableHeight) * 100);
   };
@@ -17429,10 +17436,10 @@ export function ChartContent({
         </div>
       ) : (
         <div
-          ref={chartWorkspaceRef}
+          ref={observeChartWorkspace}
           data-slot="chart-workspace"
           className={cn(
-            "@container/chart-workspace grid min-h-0 flex-1 bg-[var(--emr-surface-workspace)] pb-2",
+            "@container/chart-workspace grid min-h-0 flex-1 overflow-y-auto bg-[var(--emr-surface-workspace)] pb-2",
             !documentLayout && "px-4",
             isChartResizing && "select-none",
           )}
@@ -17543,8 +17550,8 @@ export function ChartContent({
             role="separator"
             aria-orientation="horizontal"
             aria-label="진료 기록과 처방/오더 영역 높이 조절"
-            aria-valuemin={0}
-            aria-valuemax={100}
+            aria-valuemin={Math.round(chartSplitMin)}
+            aria-valuemax={Math.round(chartSplitMax)}
             aria-valuenow={Math.round(chartTopPercent)}
             className={cn(
               "group relative flex cursor-row-resize items-center justify-center rounded-md opacity-0 outline-none transition-opacity hover:opacity-100 focus-visible:opacity-100",

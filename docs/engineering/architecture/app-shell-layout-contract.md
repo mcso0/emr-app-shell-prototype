@@ -131,3 +131,10 @@ Screens
 - The user-approved scope excludes a tab organizer, button-based reorder and undo. Keyboard focus navigation and tab selection remain; this version does not provide keyboard or touch reordering. Workspace/session remount clears transient drag state.
 - Tabs share available width and shrink equally from the existing 148px preferred/maximum width to a component-local 80px minimum. Titles truncate; icons and close buttons retain their sizes. Horizontal overflow starts only when the minimum widths cannot fit and belongs to the tab strip. The new-tab control stays outside the tablist and does not scroll. Newly active or restored tabs scroll into view without taking focus; reordering alone does not move that viewport. Existing small-screen hiding remains.
 - See [WORKSPACE-TABS-PR-003](../../work/app-shell/WORKSPACE-TABS-PR-003-drag-reorder.md) for local verification and delivery status.
+
+## Chart vertical split and feedback
+
+- The shared S/O, Assessment, and History row has a 240px minimum, including panel titles and tools. Expanded Plan/Order has a 280px minimum, including the finance footer. The collapsed order row remains 38px.
+- Pointer and keyboard split controls share bounds. Workspace resize reclamps the split. Below 536px available workspace height (240 + 280 + 8px divider + 8px bottom padding), the workspace scrolls vertically without shrinking the panels.
+- Assessment and Plan/Order empty feedback uses the available body below the table header as a height container. Below 160px, hide decorative icons/reserved action space and wrap copy/actions as needed. Keep filter meanings, permissions, focus actions, loading, and save-error behavior intact.
+- Assessment empty data adds no fixed-height table row. Its header background continues through the scrollbar gutter; populated rows retain native table column alignment.

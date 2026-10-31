@@ -1,0 +1,32 @@
+/* The container is the available body, excluding panel tools and table header. */
+.viewport {
+  container: chart-feedback / size;
+  padding: 0;
+  align-items: safe center;
+  justify-content: safe center;
+}
+
+.viewport > section {
+  max-width: 100%;
+  padding: var(--clair-spacing-12);
+}
+
+@container chart-feedback (height < 160px) {
+  .viewport > section {
+    gap: var(--clair-spacing-8);
+    padding: var(--clair-spacing-8) var(--clair-spacing-12);
+  }
+
+  .viewport [data-slot="icon-wrapper"],
+  .viewport [data-slot="actions-spacer"] {
+    display: none;
+  }
+
+  .viewport [data-slot="body"] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: var(--clair-spacing-8);
+  }
+}
