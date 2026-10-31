@@ -33,7 +33,7 @@ export function ChartInstructionDialog({
         title={controller.document?.name ?? "조제·처치 지시서"}
         description="작업 상태와 지시사항을 확인하고 오더를 완료할 수 있어요."
         footer={
-          <InstructionActions controller={controller} onChanged={onChanged} />
+          <InstructionActions workspaceId={workspaceId} controller={controller} onChanged={onChanged} />
         }
       >
         <InstructionBody

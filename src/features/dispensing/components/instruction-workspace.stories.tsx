@@ -103,7 +103,7 @@ function Example({
   return (
     <div style={{ width, maxWidth: "100%" }}>
       <div className="flex items-center justify-end gap-2">
-        <InstructionActions controller={controller} onChanged={() => {}} />
+        <InstructionActions workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
       </div>
       <InstructionBody
         controller={controller}
@@ -239,6 +239,7 @@ export const OralInstructionVisibility: Story = {
 
 let executionReads: string[] = [];
 export const ExecutionHistoryInRow: Story = {
+  name: "Execution history in menu",
   beforeEach: () => {
     const original = globalThis.fetch;
     executionReads = [];
@@ -258,15 +259,16 @@ export const ExecutionHistoryInRow: Story = {
   },
   render: () => <InstructionBody workspaceId="synthetic-row-history" onChanged={() => {}} controller={{
     document: { ...structuredClone(syntheticInstruction), canEditInstruction: false,
-      items: syntheticInstruction.items.map((item, index) => ({ ...item, resultRequired: index === 0, canComplete: false, canReopen: false, canAssign: false })) },
+      items: syntheticInstruction.items.map((item, index) => ({ ...item, resultRequired: false, hasResult: index === 0, canComplete: false, canReopen: false, canAssign: false })) },
     assignees: [], loading: false, busy: false, error: null, refresh: () => {},
     mutate: async () => { throw new Error("History-only access must not mutate work"); },
   }} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement), body = within(canvasElement.ownerDocument.body);
-    const button = canvas.getByRole("button", { name: "합성 품목 A 수행기록·이력" });
-    await expect(button.closest("tr")).toHaveAttribute("data-item", "synthetic-item-a");
-    await userEvent.click(button);
+    await expect(canvas.queryByRole("button", { name: "합성 품목 A 수행기록·이력" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("button", { name: "합성 조제 세트 더 보기" }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "수행기록" }));
+    await userEvent.click(within(body.getByRole("dialog", { name: "수행기록" })).getByRole("button", { name: "합성 품목 A" }));
     await waitFor(() => expect(body.getByText("조회 전용입니다. 수행기록을 변경할 수 없습니다.")).toBeVisible());
     await expect(executionReads).toEqual(["/api/workspaces/synthetic-row-history/fulfillment/work-items/synthetic-item-a/execution"]);
   },

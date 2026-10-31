@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-10-27
+last_updated: 2026-10-31
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -63,6 +63,30 @@ Migrations `20261027091000` through `20261027095000` must be reviewed/applied
 as one candidate before enabling its live caller. Local isolated SQL tests use
 synthetic schema fixtures; clinical calculations and invoice internals remain
 separate dependencies. This is not a full hosted-schema or real-data proof.
+
+## Instruction review candidate — 2026-10-31
+
+`20261031120000_instruction_review_fixes.sql` is a local follow-up candidate;
+remote application and deployment still require 승욱's confirmation.
+
+- Claim assigns and starts eligible unfinished items in the same transaction.
+  Completed/cancelled/returned items and other executors' assignments remain intact.
+  Claim after unassignment resumes eligible paused work. An unassigned child cannot
+  be started through either item or group start/resume commands.
+- The requesting-vet completion exception is explicitly retained. Opening history
+  or completion input never changes status. Authorized instruction execution saves
+  may complete requested/paused work without taking ownership; actual results,
+  revision/plan checks, private completion scope and timestamps remain mandatory.
+- Completion UI collects missing results before explicit set finalization. Each
+  actual-result save already completes its item. The card menu retains execution
+  history/correction; modification history is enabled only for displayable changes.
+- The instruction name reader supports confirmed `inHospitalOrderName` then
+  `standardOrderName`, preserving existing display aliases and empty-value fallback.
+  Patient demographics use the same profile reader and labels as the context bar.
+- Instruction notes use explicit clinical/memo fields, excluding calculation
+  selectors and internal identifiers. Treatment quantities and units remain visible.
+  The oral infobar depends only on nonblank current text; stored audit/snapshots
+  are retained. No historical data repair is part of this candidate.
 
 ## Current Inventory
 
