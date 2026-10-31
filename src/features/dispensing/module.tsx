@@ -622,9 +622,6 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       workItem.guardianName ??
       workItem.sourceSnapshot?.guardianName ??
       "보호자 미지정",
-    patientAge: "나이 미상",
-    patientBreed: "품종 미상",
-    patientSex: "성별 미상",
     receptionType: "외래",
     orderType: isTreatment ? "처치" : "조제",
     orderTypeCategory: workItem.queueType,
@@ -1257,6 +1254,18 @@ function getDispensingInstructionType(
   return selectedQueueItem?.orderTypeCategory === "treatment" ? "처치" : "조제";
 }
 
+function InstructionPatientSummary({ workspaceId, patientId }: { workspaceId: string; patientId?: string | null }) {
+  // Share the exact profile reader, age calculation and breed/sex labels with
+  // the patient context bar.
+  const { patientItems } = usePatientContextProfileInteractions({ workspaceId, patientId });
+  if (patientItems?.some((item) => item.loading)) {
+    return <span role="status">환자 정보 불러오는 중</span>;
+  }
+  return <span data-testid="instruction-patient-summary" className="block min-w-0 truncate">
+    {patientItems?.map((item) => item.value).join(" · ")}
+  </span>;
+}
+
 function renderInstructionInfoCardValue(value: ReactNode) {
   if (typeof value === "string" || typeof value === "number") {
     return <span className="block min-w-0 truncate">{value}</span>;
@@ -1878,7 +1887,9 @@ function DispensingContentBody({
         : "대기중";
   const instructionRequestedAt =
     primaryGroup?.rows[0]?.requestedAt ?? "2026.04.14 10:30";
-  const instructionPatientSummary = getQueuePatientSummary(selectedQueueItem);
+  const instructionPatientSummary = selectedFulfillmentWorkItem && !allowLegacyFixtureFallback
+    ? <InstructionPatientSummary workspaceId={workspaceId} patientId={selectedFulfillmentWorkItem.patientId} />
+    : getQueuePatientSummary(selectedQueueItem);
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
   const instructionAssignee = instruction.document
     ? instruction.document.mainAssigneeName ?? "미지정"
@@ -2134,7 +2145,7 @@ function DispensingContentBody({
                   </Button>
                 ) : null}
                 {selectedFulfillmentWorkItem ? (
-                  !allowLegacyFixtureFallback ? <InstructionActions controller={instruction} onChanged={fulfillmentQueue.refresh} /> : (
+                  !allowLegacyFixtureFallback ? <InstructionActions workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} /> : (
                   <FulfillmentExecutionActions
                     workspaceId={selectedFulfillmentWorkItem.workspaceId}
                     workItemId={selectedFulfillmentWorkItem.id}

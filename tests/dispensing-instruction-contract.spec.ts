@@ -85,3 +85,38 @@ test("chart oral instruction validates its scope, revision and bounded text", as
   ]) expect(oralInstructionCommandSchema.safeParse(command).success).toBe(false);
   expect(oralInstructionTargetSchema.safeParse({ workspaceId: "", chartId: "other" }).success).toBe(false);
 });
+
+test("instruction notes include explicit memos without leaking calculation/internal fields", () => {
+  const doc = structuredClone(syntheticInstruction);
+  doc.items[0].plan = { detailSchemaVersion: 1, detailInputs: {
+    doseBasis: "patient", compoundNote: "합성 조제 메모", guardianNote: "합성 보호자 메모",
+    taperSchedule: "합성 단계 지시", extraLabelSpeciesReason: "internal",
+  } };
+  doc.items[0].instruction = "개별 지시";
+  const before = structuredClone(doc);
+  const item = createInstructionView(doc).orders[0].items[0];
+  expect(item.note).toContain("오더별 지시: 개별 지시");
+  expect(item.note).toContain("조제 메모: 합성 조제 메모");
+  expect(item.note).toContain("보호자 전달 메모: 합성 보호자 메모");
+  expect(item.note).not.toContain("patient");
+  expect(item.note).not.toContain("internal");
+  expect(doc).toEqual(before);
+});
+
+test("explicit treatment fields retain planned quantities and instructions without internal identifiers", () => {
+  const doc = structuredClone(syntheticInstruction);
+  doc.queueType = "treatment";
+  doc.items[0].plan = { detailSchemaVersion: 3, detailInputs: {
+    method: "합성 처치", site: "합성 부위", plannedProcedureCount: 2, procedureCountUnit: "session",
+    plannedAmount: 3, plannedAmountUnit: "ml", administrationPolicy: "direct_quantity",
+    productReference: "합성 제품", linkedMedicationOrderId: "internal-order-id", procedureKind: "device_session",
+    stagedInstructions: "합성 단계별 지시", exceptions: "합성 중단 조건",
+  } };
+  const note = createInstructionView(doc).orders[0].items[0].note;
+  expect(note).toContain("시행 예정 횟수: 2");
+  expect(note).toContain("시행 계수 단위: 회");
+  expect(note).toContain("예정 사용·투여량: 3");
+  expect(note).toContain("예정량 단위: ml");
+  expect(note).toContain("합성 단계별 지시");
+  expect(note).not.toMatch(/internal-order-id|device_session|direct_quantity/);
+});

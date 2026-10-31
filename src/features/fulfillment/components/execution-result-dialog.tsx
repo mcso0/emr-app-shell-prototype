@@ -24,12 +24,14 @@ const displayValue = (value: unknown) => value === null || value === undefined ?
 type ExecutionResultDialogProps = {
   workspaceId: string; workItemId: string; taskId?: string; open: boolean;
   ownershipAllowed?: boolean; ownershipKey?: string; authorityStatus?: string;
+  /** Instruction completion may save directly from requested/paused; the server checks roles. */
+  instructionCompletion?: boolean;
   onOpenChange: (open: boolean) => void; onSaved: () => Promise<void>;
 };
 export function ExecutionResultDialog(props: ExecutionResultDialogProps) {
   return props.open ? <ExecutionResultDialogContent key={`${props.workspaceId}:${props.workItemId}:${props.taskId ?? "current"}`} {...props} /> : null;
 }
-function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, onOpenChange, onSaved }: ExecutionResultDialogProps) {
+function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, instructionCompletion = false, onOpenChange, onSaved }: ExecutionResultDialogProps) {
   const [context, setContext] = useState<ExecutionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -43,8 +45,15 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
   const [amendmentReason, setAmendmentReason] = useState("");
   const [amending, setAmending] = useState(false);
   const scope = useRef(0);
+  const mounted = useRef(false);
+  const pendingSave = useRef(false);
   const command = useRef<{ fingerprint: string; id: string } | null>(null);
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/fulfillment/work-items/${encodeURIComponent(workItemId)}/execution`;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
     const generation = ++scope.current;
@@ -78,33 +87,38 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     payload[field.key] = ["number", "signed_number"].includes(field.type) ? Number(value) : field.type === "lines" ? value.split("\n").map(x => x.trim()).filter(Boolean) : value;
   }
   const canWrite = ownershipAllowed !== false && (!authorityStatus || authorityStatus === context?.status) && context?.canRecord && context.isCurrentAttempt &&
-    (context.status === "in_progress" && context.results.length === 0 || context.status === "completed" && amending);
+    ((context.status === "in_progress" || instructionCompletion && ["dispensing", "treatment"].includes(context.clinicalOrderType) && ["requested", "paused"].includes(context.status)) && context.results.length === 0 || context.status === "completed" && amending);
   const valid = context && parseExecutionPayload(context.clinicalOrderType, payload, context.planSnapshot) && performedAt &&
     Number.isFinite(new Date(performedAt).getTime()) && (!amending || amendmentReason.trim());
   const save = async () => {
-    if (!context || !canWrite || !valid || saving) return;
+    if (!context || !canWrite || !valid || pendingSave.current) return;
     const generation = scope.current;
     const body = { expectedRevision: context.workItemRevision, expectedPlanSha256: context.planSha256,
       expectedResultVersion: context.results.length, performedAt: new Date(performedAt).toISOString(), payload,
       varianceReason: varianceReason.trim() || null, amendmentReason: amending ? amendmentReason.trim() : null };
     const fingerprint = JSON.stringify(body);
     if (command.current?.fingerprint !== fingerprint) command.current = { fingerprint, id: crypto.randomUUID() };
+    pendingSave.current = true;
     setSaving(true); setError(null); setNotice(null);
     try {
       const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...body, commandId: command.current.id }) });
       const result: unknown = await response.json();
-      if (scope.current !== generation) return;
+      if (!mounted.current) return;
       if (!response.ok || !isExecutionRecord(result) || result.ok !== true) {
         setError(executionErrorMessage(isExecutionRecord(result) && typeof result.error === "string" ? result.error : "request_failed")); return;
       }
       const saved = parseExecutionContext(result.context, workspaceId, workItemId);
       if (!saved) { setError(executionErrorMessage("invalid_execution_response")); return; }
-      setContext(saved); setAmending(false); setDraft({}); setDeviceParameters([]); setPerformedAt(""); command.current = null;
+      // A same-item ownership refresh may overtake this POST. Reconcile the
+      // successful save, but never replace newer read authority with its reply.
+      if (scope.current === generation) setContext(saved);
+      setRefreshKey(key => key + 1);
+      setAmending(false); setDraft({}); setDeviceParameters([]); setPerformedAt(""); command.current = null;
       setNotice("수행기록을 저장했습니다. 확정 계획과 이전 기록은 그대로 남아 있습니다.");
-      try { await onSaved(); } catch { if (scope.current === generation) setNotice("기록은 저장됐지만 업무 목록을 새로고침하지 못했습니다. 목록을 다시 불러와 주세요."); }
-    } catch { if (scope.current === generation) setError(executionErrorMessage("request_failed")); }
-    finally { if (scope.current === generation) setSaving(false); }
+      try { await onSaved(); } catch { if (mounted.current) setNotice("기록은 저장됐지만 업무 목록을 새로고침하지 못했습니다. 목록을 다시 불러와 주세요."); }
+    } catch { if (mounted.current) setError(executionErrorMessage("request_failed")); }
+    finally { pendingSave.current = false; if (mounted.current) setSaving(false); }
   };
   const details = context && isExecutionRecord(context.planSnapshot.detailInputs) ? context.planSnapshot.detailInputs : {};
   const calculations = context && isExecutionRecord(context.planSnapshot.calculationOutputs) ? context.planSnapshot.calculationOutputs : {};
@@ -117,9 +131,9 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     ["예정 사용량", details.plannedAmount], ["예정 사용 단위", details.plannedAmountUnit],
     ["장비 프로토콜", details.deviceProtocol], ["관찰 항목", details.observationDomains],
   ].filter(([, value]) => value !== undefined);
-  return <Dialog open={open} onOpenChange={onOpenChange}>
+  return <Dialog open={open} onOpenChange={(next) => { if (!pendingSave.current) onOpenChange(next); }}>
     <EmrDialogShell variant="wide-form" title="실제 수행기록" description="확정된 계획과 실제 수행값을 구분해서 기록해 주세요. 정정은 이전 기록을 남기고 새 버전으로 저장됩니다."
-      secondaryAction={<Button variant="outline" onClick={() => onOpenChange(false)}>닫기</Button>}
+      secondaryAction={<Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>닫기</Button>}
       primaryAction={canWrite ? <Button disabled={!valid || saving} onClick={() => void save()}>{saving ? "저장 중" : amending ? "정정 저장" : "수행기록 저장 및 완료"}</Button> : null}>
       <div className="space-y-4" data-testid="execution-result-dialog">
         {loading ? <p role="status">확정 계획과 수행기록을 불러오는 중입니다.</p> : null}
@@ -156,7 +170,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
             }}>기록 정정</Button> : null}
           </section> : null}
           {ownershipAllowed === false || !context.canRecord ? <p className="text-sm text-muted-foreground">조회 전용입니다. 수행기록을 변경할 수 없습니다.</p> : null}
-          {context.status === "requested" ? <p className="text-sm">먼저 업무를 시작한 뒤 실제 수행값을 기록해 주세요.</p> : null}
+          {context.status === "requested" && !instructionCompletion ? <p className="text-sm">먼저 업무를 시작한 뒤 실제 수행값을 기록해 주세요.</p> : null}
           {canWrite ? <fieldset disabled={saving} className="space-y-3">
             <legend className="mb-3 font-semibold">{amending ? "기록 정정 · 기존 실제값에서 수정" : "실제 수행값 · 직접 입력"}</legend>
             <div className="space-y-1"><label htmlFor="execution-performed-at" className="text-sm">실제 수행 시각 *</label><div className="flex gap-2">
