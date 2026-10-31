@@ -15,12 +15,19 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-10-27"
+updated: "2026-10-31"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
 
-## Current closeout — dispensing instruction workflow, 2026-10-27
+## Current follow-up — 2026-10-31
+
+The instruction review follow-up is locally implemented and verified. 승욱
+approved the bounded remote migration and Production release on 2026-10-31;
+remote execution and release verification are in progress. See
+[the scoped record below](#instruction-review-follow-up--2026-10-31).
+
+## Prior accepted closeout — dispensing instruction workflow, 2026-10-27
 
 The bounded dispensing instruction workflow and its follow-up corrections are
 complete. 승욱 accepted the reported result and requested this final record and
@@ -976,3 +983,102 @@ policy expansion, provider side effects or unrelated migrations are included.
 Previous Production: `a42357d9be4d60e2a4edc87da55f6acc368ef4cc`, deployment
 `dpl_4jMGuahAvP2Umb2NXDDqxX9K4Lr1`. Rollback is that application deployment
 or a reviewed revert; additive instruction evidence must not be deleted.
+
+### Instruction review follow-up — 2026-10-31
+
+승욱 approved local implementation and verification of the 16 reviewed annotations,
+with existing WIP preserved. Remote DB apply and deployment require confirmation
+before execution. Baseline: `7baa5f890b4095cd5eb8281445388779f2fa2870`.
+The implementation uses a separate checkout. No existing remote data repair is
+included; inconsistent records require a separately reviewed evidence-based plan.
+
+Scope and acceptance:
+- Claim assigns and starts eligible unfinished work atomically. Ordinary unassigned
+  users cannot start/record/complete. Preserve main/item executor roles and the
+  explicitly reconfirmed requesting-vet completion exception. Opening history or
+  completion input never starts work. Requester save may complete authorized work
+  without claiming it, with actual-result prerequisites and immutable records intact.
+- Move required actual-value entry into completion; retain execution history and
+  correction access in the card menu. Keep per-item completion and explicit set
+  finalization. Disable modification history when no displayable changes exist.
+- Resolve confirmed order names using current canonical snapshot fields; use the
+  patient context profile reader/formatters for instruction patient demographics.
+- Display explicit instruction/memo fields, not calculation metadata. Preserve
+  source values. Remove row execution buttons and verify 36/40/52px density.
+- Show the oral infobar only for nonblank current text; retain stored audit data.
+  Apply Neutral/100 background, Neutral/200 1px border, padding 12px 12px 12px 18px,
+  and top-aligned close control at all widths.
+
+Planned evidence: isolated synthetic SQL lifecycle/authority/concurrent-claim and
+rollback checks, contract tests, Storybook and synthetic actual-app interaction
+checks (save failure/retry, stale response, ownership transfer, set partial work,
+empty/history/long-content/compact layout), focused lint/type/build/docs checks.
+No real patient data, hosted writes, deployment, or new clinical calculation rules.
+
+Local verification completed — 2026-10-31:
+- Isolated SQL runner passed lifecycle, requester completion without assignment,
+  current-owner revocation, required payload/revision/plan validation, preserved
+  results, workspace isolation, replay and concurrent claim checks. The fixture
+  now applies intervening ownership/aggregate patches and timestamp constraints.
+  This reconstructs the relevant schema; it is not a full migration replay or
+  hosted database/RLS proof. No hosted database was read or changed in this phase.
+- Focused Playwright suite: 23 passed. Synthetic API responses in the actual app
+  routes covered completion/correction, failed-save draft and command-ID retention,
+  set item completion before finalization, claim/status, demographics read failure,
+  36/40/52px row height, and current-text-only infobar behavior at 1624/900px.
+- Storybook browser suite: 20 passed across instruction workspace, transport and
+  execution dialog. Includes late reads, retained state, retry, and a pending POST
+  overtaken by an ownership refresh. Saving blocks dismissal and always clears
+  its pending state; successful saves reconcile through a fresh read.
+- TypeScript, full ESLint, production build, docs check, secret scan and diff
+  whitespace check passed. The final doc-only record receives another docs check.
+- Read-only authority review found two dialog race cases; both were fixed and
+  re-reviewed with no remaining finding in that bounded scope.
+
+Evidence: `/Users/iseung-ug/.codex/task-evidence/2026-10-31-instruction-review/`.
+The source checkout was not edited. A dev-generated AGENTS block was removed
+from this task checkout so it is excluded from the candidate. Local changes remain
+uncommitted for review. No PR, merge, hosted migration, deployment, or repair of
+existing inconsistent data was performed. Human acceptance remains pending.
+
+Required next delivery scope: review and explicitly authorize migration
+`20261031120000_instruction_review_fixes.sql` and the application release together.
+Before any hosted apply, compare its four function anchors against the current
+remote definitions and verify existing migration/permission compatibility. This
+candidate preserves RLS/grants, stored results and role policy. Production smoke
+and rollback preparation belong to the separately authorized release workflow.
+
+### Release authorization and preflight — 2026-10-31
+
+승욱 explicitly authorized the remote DB application and Production release for
+this instruction-review change after current-state inspection. The authorization
+covers the one migration `20261031120000_instruction_review_fixes.sql`, scoped
+commit/push/PR, exact-head main merge, and deployment verification. Preserve all
+other WIP; no data repair, unrelated migration, permission/grant changes, paid
+resources, provider side effects, or settings changes are included.
+
+Preflight confirmed `origin/main` remains `7baa5f890b4095cd5eb8281445388779f2fa2870`
+and Production `dpl_AoTGWj1WvsjL8zDQjgS2NSTy7ACv` is Ready at that SHA. This is the
+application rollback candidate. Main protection still requires the automatic
+Release Check, strict up-to-date branches and resolved conversations. All 11
+replacement anchors matched the four current remote SQL function definitions;
+the candidate has not been applied at this checkpoint. Existing function ACLs,
+table grants and RLS policy fingerprints are retained as private local evidence.
+
+Delivery gates: current-head Ready Preview and Release Check; preserved local
+verification from the unchanged app candidate; final secret/docs/diff gate;
+apply exactly the approved migration with before/after definition and ACL/RLS
+comparison; then merge with expected-head protection and verify Ready Production
+at the merge SHA. Smoke checks cover login, unauthenticated instruction/execution
+API denial and the changed UI with intercepted synthetic data. Such UI checks do
+not prove a signed-in hosted persistence flow. No real clinical rows are used.
+Do not roll back database records; any DB restoration requires review of the
+captured prior function definitions. Stop on drift, failed gates or failed smoke.
+
+Compatibility review: DB-first preserves data and existing-result reads, but the
+old UI auto-starts requested/paused items before opening result input. The new
+owner guard rejects that path for a non-executor requester. Minimize this window
+by finishing Preview/CI before applying SQL and immediately releasing the app.
+Old tabs need reload after delivery. App-only rollback to `7baa5f89` retains this
+requester limitation; a complete rollback needs separately reviewed restoration
+of the captured four prior SQL definitions. No destructive data rollback is used.

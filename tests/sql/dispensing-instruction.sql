@@ -19,6 +19,10 @@ create table public.encounters(id uuid primary key,workspace_id text,status text
 create table public.orders(id uuid primary key,workspace_id text,encounter_id uuid,status text,clinical_order_type text,destination_module text,order_confirmation_status text,row_type text,parent_chart_order_line_id uuid,requested_by_user_id uuid,instruction text,revision_no integer default 0,sort_order integer,invoice_line_id uuid,order_type text default 'dispensing',work_status text default 'pending',task_status text,updated_at timestamptz);
 create table public.order_tasks(id uuid primary key,detailed_phase text,paused_from_phase text,returned_at timestamptz,created_at timestamptz default now(),request_cycle integer default 1,workspace_id text,encounter_id uuid,order_id uuid,parent_task_id uuid,task_role text,clinical_order_type text,destination_module text,status text,priority text,attempt_no integer,re_requested_from_task_id uuid,effective_snapshot jsonb,result_snapshot jsonb,assigned_to_user_id uuid,assigned_by_user_id uuid,assigned_at timestamptz,started_at timestamptz,started_by_user_id uuid,completed_at timestamptz,cancelled_at timestamptz,row_revision bigint default 1,execution_result_schema_version integer default 0,updated_at timestamptz,unique(workspace_id,id));
 create table public.order_fulfillment_work_items(id uuid primary key,clinical_order_type text default 'dispensing',reason text,detailed_phase text,paused_from_phase text,returned_at timestamptz,requested_by_user_id uuid default '00000000-0000-4000-8000-000000000001',request_cycle integer default 1,destination_module text,order_type text default 'dispensing',created_at timestamptz default now(),workspace_id text,order_id uuid,encounter_id uuid,task_id uuid,task_attempt_no integer,assigned_to_user_id uuid,assigned_by_user_id uuid,assigned_at timestamptz,started_at timestamptz,started_by_user_id uuid,completed_at timestamptz,status text,queue_type text,source_snapshot jsonb,row_revision bigint default 1,updated_at timestamptz);
+-- Match the production timestamp invariants; no synthetic defaults conceal gaps.
+alter table public.order_tasks add constraint order_tasks_start_shape_check check ((started_at is null)=(started_by_user_id is null)),
+ add constraint order_tasks_started_status_check check (status not in ('in_progress','paused','partial_complete','complete') or started_at is not null);
+alter table public.order_fulfillment_work_items add constraint order_fulfillment_work_items_start_shape_check check ((started_at is null)=(started_by_user_id is null));
 create table public.order_execution_result_versions(id uuid primary key default gen_random_uuid(),previous_result_id uuid,schema_version integer default 1,payload jsonb,performed_by_user_id uuid,performed_at timestamptz,recorded_by_user_id uuid,recorded_at timestamptz default now(),variance_reason text,amendment_reason text,plan_sha256 text,command_id uuid,command_sha256 text,order_id uuid,encounter_id uuid,clinical_order_type text,workspace_id text,task_id uuid,task_attempt_no integer,version integer,plan_snapshot jsonb);
 create table public.order_revisions(id uuid default gen_random_uuid(),workspace_id text,order_id uuid,created_at timestamptz default now(),created_by_user_id uuid,change_type text,before_values jsonb,after_values jsonb,revision_no integer);
 create table public.order_billing_candidates(workspace_id text,encounter_id uuid,order_id uuid,status text,invoice_line_id uuid);
@@ -35,7 +39,7 @@ create function private.clair_assert_billing_surface_permission(text,text,uuid[]
 create function private.clair_sync_billing_invoice_candidates_internal(text,uuid,uuid,uuid[]) returns jsonb language plpgsql as $$begin insert into public.synthetic_billing_handoffs select x,'legacy' from unnest($4) x; return '{}'::jsonb; end$$;
 create function private.clair_link_chart_order_billing_candidates_internal(text,uuid,uuid,uuid[]) returns jsonb language plpgsql as $$begin insert into public.synthetic_billing_handoffs select x,'candidate' from unnest($4) x; return '{}'::jsonb; end$$;
 create function private.clair_fulfillment_phase_allowed(text,text) returns boolean language sql immutable as $$select $2 is null$$;
-create function public.clair_save_chart_order_lifecycle(text,uuid,uuid,uuid,text,text) returns jsonb language plpgsql as $$begin update public.orders set status=$5 where workspace_id=$1 and id=$4; return '{}'::jsonb; end$$;
+create function public.clair_save_chart_order_lifecycle_internal(text,uuid,uuid,uuid,text,text) returns jsonb language plpgsql as $$begin update public.orders set status=$5 where workspace_id=$1 and id=$4; return '{}'::jsonb; end$$;
 alter table public.orders add column detail_inputs jsonb default '{}',add column detail_schema_version integer default 1,add column calculation_outputs jsonb default '{"dispenseApplicability":false}',add column calculation_inputs jsonb default '{}',add column confirmed_snapshot jsonb default '{}',add column priority text default 'normal';
 alter table public.order_tasks alter column id set default gen_random_uuid(),add column created_by_user_id uuid;
 alter table public.order_fulfillment_work_items add column priority text,add column cancelled_at timestamptz;
@@ -87,7 +91,9 @@ begin
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002')); raise exception 'group accepted item scope'; exception when raise_exception then if sqlerrm<>'invalid_transition' then raise; end if; end;
  d:=pg_temp.command('claim');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'claim failed'; end if;
- d:=pg_temp.command('start');
+ if exists(select 1 from order_fulfillment_work_items where status<>'in_progress' or assigned_to_user_id is distinct from auth.uid())
+   or exists(select 1 from orders where status<>'in_progress')
+   or (d->>'canStart')::boolean then raise exception 'claim did not atomically start work'; end if;
  d:=pg_temp.command('assign','40000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000002');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'item transfer changed main'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
@@ -125,7 +131,8 @@ begin
  d:=pg_temp.command('unassign');
  if d->>'mainAssigneeId' is not null or (select status from order_fulfillment_work_items where id='40000000-0000-4000-8000-000000000002')<>'paused' then raise exception 'unassign did not pause'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
- d:=pg_temp.command('claim'); d:=pg_temp.command('resume');
+ d:=pg_temp.command('claim');
+ if (d->>'canResume')::boolean then raise exception 'claim did not resume paused work'; end if;
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'successor not main'; end if;
  cmd:=jsonb_build_object('action','complete','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002');
  d:=public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',cmd);
@@ -146,21 +153,28 @@ begin
  insert into public.orders(id,workspace_id,encounter_id,status,clinical_order_type,destination_module,order_confirmation_status,row_type,requested_by_user_id,instruction,sort_order)
  values('10000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','requested','dispensing','dispensing','confirmed','individual','00000000-0000-4000-8000-000000000003','',4);
  insert into public.order_tasks(id,workspace_id,encounter_id,order_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot,execution_result_schema_version,assigned_to_user_id)
- values('30000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','execution','dispensing','dispensing','pending','normal',1,'{"displayName":"Actual-result synthetic","calculationOutputs":{"plannedPracticalTotalQuantity":1,"dispenseUnit":"T"}}',1,'00000000-0000-4000-8000-000000000001');
+ values('30000000-0000-4000-8000-000000000004','workspace-a','20000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000004','execution','dispensing','dispensing','pending','normal',1,'{"displayName":"Actual-result synthetic","calculationOutputs":{"plannedPracticalTotalQuantity":1,"dispenseUnit":"T"}}',1,null);
  insert into public.order_fulfillment_work_items(id,workspace_id,order_id,encounter_id,task_id,task_attempt_no,status,queue_type,source_snapshot,assigned_to_user_id,requested_by_user_id)
- values('40000000-0000-4000-8000-000000000004','workspace-a','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000004',1,'requested','dispensing','{"orderDisplayName":"Synthetic"}','00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000003');
+ values('40000000-0000-4000-8000-000000000004','workspace-a','10000000-0000-4000-8000-000000000004','20000000-0000-4000-8000-000000000001','30000000-0000-4000-8000-000000000004',1,'requested','dispensing','{"orderDisplayName":"Synthetic"}',null,'00000000-0000-4000-8000-000000000003');
  perform set_config('test.actor','00000000-0000-4000-8000-000000000003',true);
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004');
  if d->>'name' is distinct from 'Actual-result synthetic' or d#>>'{items,0,name}' is distinct from 'Actual-result synthetic' then raise exception 'single canonical plan name missing'; end if;
  cmd:=jsonb_build_object('action','complete','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000004');
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd); raise exception 'missing actual result accepted'; exception when raise_exception then if sqlerrm<>'actual_execution_result_required' then raise; end if; end;
- d:=public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd||jsonb_build_object('action','start_item','commandId',gen_random_uuid()));
+ select count(*) into events_before from order_task_events;
+ begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000004',cmd||jsonb_build_object('action','start_item','commandId',gen_random_uuid()));
+   raise exception 'unassigned requester started work'; exception when insufficient_privilege then null; end;
+ if (select count(*) from order_task_events)<>events_before then raise exception 'denied start changed events'; end if;
  d:=public.clair_get_order_execution_context('workspace-a','40000000-0000-4000-8000-000000000004');
  cmd:=jsonb_build_object('commandId',gen_random_uuid(),'revision',d->'workItemRevision','hash',d->'planSha256');
  d:=public.clair_record_order_execution_result('workspace-a',auth.uid(),'40000000-0000-4000-8000-000000000004',(cmd->>'revision')::bigint,cmd->>'hash',0,(cmd->>'commandId')::uuid,now(),'{"preparedQuantity":1,"preparedUnit":"T"}',null,null);
  if d->>'status'<>'completed' or (d->>'canRecord')::boolean or jsonb_array_length(d->'results')<>1 then raise exception 'requester result completion/read failed'; end if;
  perform public.clair_record_order_execution_result('workspace-a',auth.uid(),'40000000-0000-4000-8000-000000000004',(cmd->>'revision')::bigint,cmd->>'hash',0,(cmd->>'commandId')::uuid,now(),'{"preparedQuantity":1,"preparedUnit":"T"}',null,null);
  if (select count(*) from public.order_execution_result_versions)<>1 then raise exception 'result replay duplicated'; end if;
+ if exists(select 1 from order_task_events where task_id='30000000-0000-4000-8000-000000000004' and event_type='started')
+   or (select count(*) from order_task_events where task_id='30000000-0000-4000-8000-000000000004' and event_type='completed')<>1
+   or (select assigned_to_user_id from order_fulfillment_work_items where id='40000000-0000-4000-8000-000000000004') is not null
+   then raise exception 'requester completion assigned or silently started'; end if;
  begin perform public.clair_record_order_execution_result('workspace-a',auth.uid(),'40000000-0000-4000-8000-000000000004',(d->>'workItemRevision')::bigint,cmd->>'hash',1,gen_random_uuid(),now(),'{"preparedQuantity":2,"preparedUnit":"T"}','changed','amendment'); raise exception 'requester amended completed result'; exception when insufficient_privilege then null; end;
  if exists(select 1 from private.fulfillment_instruction_completion_scope) then raise exception 'completion capability leaked'; end if;
  -- Exercise the canonical mutation body for an independent treatment child.
@@ -168,10 +182,10 @@ begin
  insert into orders(id,workspace_id,encounter_id,status,clinical_order_type,destination_module,order_confirmation_status,row_type,parent_chart_order_line_id,requested_by_user_id,instruction,sort_order)
  select ('11000000-0000-4000-8000-'||right(id::text,12))::uuid,workspace_id,encounter_id,'completed','treatment',case when row_type='set' then null else 'treatment' end,'confirmed',row_type,
  case when row_type='set_child' then '11000000-0000-4000-8000-000000000001'::uuid else null end,requested_by_user_id,instruction,sort_order from orders where id in ('10000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003');
- insert into order_tasks(id,workspace_id,encounter_id,order_id,parent_task_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot,assigned_to_user_id)
+ insert into order_tasks(id,workspace_id,encounter_id,order_id,parent_task_id,task_role,clinical_order_type,destination_module,status,priority,attempt_no,effective_snapshot,assigned_to_user_id,started_at,started_by_user_id)
  select ('31000000-0000-4000-8000-'||right(id::text,12))::uuid,workspace_id,encounter_id,id,
  case when row_type='set_child' then '31000000-0000-4000-8000-000000000001'::uuid else null end,
- case when row_type='set' then 'aggregate' else 'execution' end,'treatment',destination_module,'complete','normal',1,'{"orderDisplayName":"Synthetic treatment","billingReflectionEnabled":false}',auth.uid()
+ case when row_type='set' then 'aggregate' else 'execution' end,'treatment',destination_module,'complete','normal',1,'{"orderDisplayName":"Synthetic treatment","billingReflectionEnabled":false}',auth.uid(),now(),auth.uid()
  from orders where id::text like '11000000%' order by sort_order;
  insert into order_fulfillment_work_items(id,workspace_id,order_id,encounter_id,task_id,task_attempt_no,status,queue_type,source_snapshot,assigned_to_user_id)
  select ('41000000-0000-4000-8000-'||right(order_id::text,12))::uuid,workspace_id,order_id,encounter_id,id,1,'completed','treatment',effective_snapshot,auth.uid() from order_tasks where id::text like '31000000%' and task_role='execution';
