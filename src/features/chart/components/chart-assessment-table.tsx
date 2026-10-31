@@ -1,5 +1,7 @@
 "use client";
 
+import panelFeedbackStyles from "../chart-panel-feedback.module.css";
+
 import { useMemo, useState, type ReactNode } from "react";
 
 import { CdsActionsTrash2Icon } from "@/components/cds-icons/actions-and-controls";
@@ -253,20 +255,11 @@ export function ChartAssessmentTable({
                 </TableRow>
               ))
             : null}
-          {empty ? (
-            <TableRow className="hover:bg-[var(--emr-surface-panel)]">
-              <TableCell
-                aria-hidden="true"
-                colSpan={6}
-                className={`${styles.bodyCell} ${styles.emptyCell}`}
-              />
-            </TableRow>
-          ) : null}
         </TableBody>
       </Table>
       {empty ? (
         <div
-          className={styles.emptyViewport}
+          className={`${styles.emptyViewport} ${panelFeedbackStyles.viewport}`}
           data-slot="chart-assessment-empty-viewport"
         >
           {emptyState}

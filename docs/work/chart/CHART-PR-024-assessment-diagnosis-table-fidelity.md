@@ -94,3 +94,28 @@ Align the chart Assessment diagnosis table with Figma node `27985:75982` while p
 - Catalog verification confirmed `closed_at` as `timestamptz`, `closed_by_user_id` as `uuid`, and an empty `search_path` on both diagnosis RPCs.
 - Function privilege verification confirmed `anon` cannot execute either RPC while `authenticated` can execute both.
 - Post-migration advisors reported the existing project-wide RLS-without-policy and performance notices; no new CHART-PR-024-specific advisor category was introduced.
+
+## Approved follow-up — 2026-10-31
+
+승욱 authorized local implementation from `origin/main` (`7baa5f89`) and rendered verification of the integrated panel-height proposal.
+
+- Scope: 240px shared top row, 280px expanded order panel, matching pointer/keyboard/resize bounds, scroll access on short viewports, adaptive empty feedback below 160px, and Assessment empty-row/header-gutter repair.
+- Preserve collapsed height, search focus, disabled actions, filter semantics, loading/errors, clinical data, API and permission contracts. No remote writes or deployment are included.
+- Completion checks: rendered panel geometry, empty/filtered/populated states, short/narrow viewport access, collapse/expand, focused existing chart tests, type/lint and doc checks. Local implementation is ready for human review; no delivery is included.
+
+### Follow-up verification
+
+- Local Chromium with synthetic/mock data: Home/End and pointer extremes measured 240px top and 280px order; collapse/expand retained 38px/280px. At 1024×600, workspace height was 432px and scroll height 536px. Finance actions remained reachable.
+- Empty Assessment: table viewport client/scroll height both 156px; compact body was about 40px with its icon hidden. Search focus passed. Taller bodies restored the original icon/copy/action arrangement.
+- 30 synthetic diagnoses: viewport 156px, content 1236px, scrollTop 400; all six header/body column widths matched. Filtered Assessment preserved `no-filter-results` and fit its 120px body. Filtered orders fit a 108px body without the icon.
+- Injected save failure: notice stayed inside the 240px Assessment panel at desktop and 1024px widths. Loading and disabled controls passed the existing Storybook cases. This proves presentation only, not remote persistence or permissions.
+- Passed: focused chart collapse/divider Playwright tests (3), Assessment Storybook browser cases (5, including short body/search focus), TypeScript, scoped ESLint, docs links, secret scan, and diff whitespace checks.
+- Existing broader chart checks remain failing: order header action count (expected 4, current 5), no-horizontal-scroll assertion at 443px vs 480px table minimum, and legacy Assessment geometry/fixture timing. Original `7baa5f89` also failed those three tests in a baseline comparison; Assessment failed at an earlier fixture/208px-row assertion there. The initial cold-server collapse failure passed on the final focused run. No unrelated test expectations were changed.
+- At initial implementation closeout, full production build, deployment, authenticated production testing, and native browser zoom were not run. Local screenshots, scripts, and measured results are retained under `output/playwright/chart-panel-height/` and are not published.
+
+### PR preparation — 2026-10-31
+
+- 승욱 approved the full build and commit/push/PR of this follow-up only. No main merge or Production action is authorized.
+- `npm run build` passed, including TypeScript and 25 static pages. It retained one unrelated filesystem-tracing warning at `src/lib/prd-viewer/doc-reader.ts:78`.
+- Full `npm run lint` completed with zero errors; three warnings belong only to untracked local browser-verification scripts excluded from the PR. Secret scan, docs checks, and whitespace checks passed.
+- The candidate includes only the panel/feedback implementation, its Assessment story, this work record, and the owning layout contract. Screenshots, logs, browser scripts, and unrelated primary-checkout WIP remain local.
