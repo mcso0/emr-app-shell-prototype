@@ -17,7 +17,7 @@ dependencies:
   - "CHART-PR-019"
   - "CHART-PR-021"
   - "CLINICAL-BILLING-PR-006"
-updated: "2026-08-15"
+updated: "2026-11-01"
 ---
 
 # Assessment Diagnosis Table Fidelity
@@ -119,3 +119,15 @@ Align the chart Assessment diagnosis table with Figma node `27985:75982` while p
 - `npm run build` passed, including TypeScript and 25 static pages. It retained one unrelated filesystem-tracing warning at `src/lib/prd-viewer/doc-reader.ts:78`.
 - Full `npm run lint` completed with zero errors; three warnings belong only to untracked local browser-verification scripts excluded from the PR. Secret scan, docs checks, and whitespace checks passed.
 - The candidate includes only the panel/feedback implementation, its Assessment story, this work record, and the owning layout contract. Screenshots, logs, browser scripts, and unrelated primary-checkout WIP remain local.
+
+### Authenticated Production verification and closeout — 2026-11-01
+
+- 승욱 explicitly authorized read-only screen verification on the logged-in Production chart, then accepted the result and requested this work-record closeout. The panel-height follow-up is complete. Earlier approval notes above describe their respective stages; this verification does not authorize another release or remote data change.
+- Verified the Production chart in the existing authenticated Chrome session using an existing synthetic verification patient. Actions were limited to navigation, the panel divider keyboard controls, order-category tabs, temporary viewport sizing, and reload. No clinical input, save, delete, completion, billing, or order mutation control was used.
+- Divider `Home` measured the shared S/O–Assessment–History row at 240px; `End` measured Plan/Order at 280px. Rendered DOM geometry and screenshots confirmed both limits.
+- Empty Assessment remained readable at its 240px panel minimum, with its icon hidden and the message plus `진단명 추가` button fitting the compact body. Selecting an existing zero-count order category displayed filtered-empty feedback in a 108px body with the icon hidden. This verifies filtered-empty orders, not a newly created chart with no orders.
+- Panel titles and Assessment/Order table headers remained visible in the inspected minimum-height states. Both populated orders and filtered-empty orders were inspected; no header overlap with empty feedback was observed.
+- At 1440×700, the top/order rows remained 240px/280px. At 1920×600, the workspace measured 432px high with 536px scroll content and `overflow-y: auto`; the rows retained their minimum heights instead of shrinking. This confirms the rendered scroll container, not a repeat of every local bottom-action accessibility check.
+- Restored the native viewport, selected `전체오더`, and reloaded. Read back divider `aria-valuenow="50"` and the all-orders tab's selected state to confirm the default view.
+- Limits: this was authenticated presentation verification, not persistence, permission, native browser zoom, or deployment-SHA verification. No production screenshots or patient/staff identifiers are added to this record. An on-page INP diagnostic reported a 960.6ms UI-update delay during navigation; it was outside this layout check and was not investigated or attributed to this change.
+- Closeout records the accepted panel-height scope only. Earlier unrelated baseline test failures remain as documented above; this pass does not claim they were fixed.
