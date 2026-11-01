@@ -10505,6 +10505,7 @@ test("chart order add searches active workspace catalog and adds a draft row", a
 test("chart order set requires explicit leaf intent and preserves set rows on reload save", async ({
   page,
 }) => {
+  await routeQuickAddCatalog(page);
   const draftPatchBodies: Array<Record<string, unknown>> = [];
   page.on("request", (request) => {
     if (
@@ -10523,7 +10524,11 @@ test("chart order set requires explicit leaf intent and preserves set rows on re
   await page.goto(kongScenarioUrl);
   await restoreKongOrderDraftDefaults(page);
 
-  await page.getByRole("button", { name: "Order 추가", exact: true }).click();
+  await page
+    .getByRole("heading", { name: "Plan/Order", exact: true })
+    .locator("..")
+    .getByRole("button", { name: "Order 추가", exact: true })
+    .click();
   const catalogDialog = page.getByRole("dialog", {
     name: "오더 추가",
   });
