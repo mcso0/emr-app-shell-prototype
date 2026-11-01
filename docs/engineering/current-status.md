@@ -38,6 +38,18 @@ Local dispensing/treatment instruction follow-up (2026-10-27) adds explicit set 
 
 Local collected dispensing revisions (2026-10-27) add current-chart oral instruction revisions and task snapshots, chart entry, an infobar, per-child set instructions, row-associated execution history, bounded table geometry and centered transition loading. Verification is local/synthetic; migration `20261027130000` has not been applied remotely and no deployment is authorized. See [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#local-implementation-verification--2026-10-27).
 
+Local Plan/Order dispense-quantity candidate (2026-10-31) separates 1회 조제량,
+총 조제량 and 실 조제량; supports reason-free manual request edits, reconfirmation
+and automatic reset; and adds hospital rules with product exceptions. Migration
+`20261031090000` remains local. Synthetic browser/API/isolated-SQL verification
+is recorded in [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-local-follow-up--2026-10-31-dispense-request-quantities).
+The 2026-11-01 local UI follow-up unifies duration/dose/request text entry, blocks invalid input, and uses compact cell feedback without adjacent reconfirm/reset controls.
+No remote DB application or deployment is included.
+The local 2026-11-01 follow-up adds strength/SI/product-ratio dose conversion and
+atomic dose/unit editing across the table and detail/revision dialogs. Its new
+SQL migration preserves physical quantities and needs separate remote application;
+local synthetic verification does not establish hosted DB parity.
+
 ## Agent Compact Summary
 
 * Current target: Product MVP.

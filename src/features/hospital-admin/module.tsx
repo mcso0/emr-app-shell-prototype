@@ -1,5 +1,6 @@
 "use client";
 
+import { DispenseQuantityRulesDialog } from "./dispense-quantity-rules-dialog";
 import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { LabResultProfileSelection } from "@/features/lab-imaging/components/result-profile-selection";
@@ -1888,6 +1889,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
   const [orderColumnVisibility, setOrderColumnVisibility] =
     useState<VisibilityState>({});
   const [dispensingCreateOpen, setDispensingCreateOpen] = useState(false);
+  const [dispenseRulesOpen, setDispenseRulesOpen] = useState(false);
   const selectedSubcategory = getHospitalOrderSubcategory(
     selectedSubcategoryId,
   );
@@ -2865,6 +2867,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
 
   return (
     <>
+      <DispenseQuantityRulesDialog key={workspaceId} workspaceId={workspaceId} actorHeaders={session ? getDemoActorHeaders(session) : undefined}
+        initialSelection={selectedOrderIds} open={dispenseRulesOpen} onOpenChange={setDispenseRulesOpen} />
       <Dialog
         open={dispensingCreateOpen}
         onOpenChange={setDispensingCreateOpen}
@@ -2938,6 +2942,7 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
         searchValue={searchQuery}
         tableControls={
           <>
+            {isDispensingOrderTable && <Button size="sm" variant="outline" onClick={() => setDispenseRulesOpen(true)}>실 조제량 규칙</Button>}
             <Popover
               open={orderFilterOpen}
               onOpenChange={(open) => {

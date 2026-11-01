@@ -1180,3 +1180,387 @@ and acceptance evidence, not a new deployment or a rerun of every release check.
   Detailed evidence and the original working notes remain private and local;
   synthetic records/audit remain retained. This closeout changes documentation
   only and does not authorize publication, another release or data cleanup.
+
+## Approved local follow-up — 2026-10-31 dispense request quantities
+
+Status: Human Review — local implementation and scoped synthetic verification complete. Human acceptance remains pending. User authorized local implementation and synthetic verification only. No remote DB apply, deployment, merge, or real data. Original checkout WIP remains untouched; implementation uses `codex/order-dispense-quantity`.
+
+Scope: per-administration product quantity, theoretical course total, final course request quantity; editable prescription inputs; manual request edits without reasons or automatic-step restriction; explicit automatic reset and reconfirmation; hospital default plus product exceptions with bulk application and frozen rule versions; unchanged masters/presets/other patients and original sets; existing confirmation/re-request, fulfillment and quantity-linked billing integration. Preserve existing amendment/re-request reasons and old history.
+
+Exclude drug-group rounding defaults, product-strength editing/renaming, and per-dose splitting policy. New rules default to exact theoretical quantity. No invented clinical conversions.
+
+Validation: focused calculation/server tests, isolated local PostgreSQL synthetic fixtures (permissions, CAS, idempotency, immutable history, rule snapshots, set children and billing), browser editing/failure/reload/keyboard checks, type/lint and owning-doc checks. Record actual outcomes below; no remote evidence implied.
+
+### Local Result And Verification — 2026-10-31
+
+Implemented in `codex/order-dispense-quantity`, in an isolated task worktree.
+Original checkout source/WIP was not edited. No push, PR, merge, remote DB apply,
+deployment, real-data access or provider side effect was performed.
+
+- Plan/Order now shows per-administration product quantity, theoretical course
+  total and editable final course request. Prescription dose/unit, days,
+  frequency and basis use the existing order-only draft writer. Detail entry is
+  labeled `오더 상세·수정`.
+- Manual requests have no reason input or automatic-step restriction. Explicit
+  reset/reconfirm, frozen rules, exact display, failed-save input retention,
+  duplicate submission guards and optimistic version conflicts are preserved.
+  Historical manual totals survive invalid-input/recovery sequences without
+  multiplying by a newly edited occurrence count.
+- Hospital settings support unit-specific common rules, reusable product
+  exceptions, bulk apply/removal, source display, conflict reload and read-only
+  state. No drug-group policy values were invented.
+- Individual and child re-request paths preserve automatic/manual intent and
+  whole-course units. Mode-only child reset is allowed; existing order revision
+  reasons and completed attempt history remain intact. Non-dispensing quantity
+  edits keep the legacy policy path.
+
+| Check | Observed result |
+|---|---|
+| Focused Playwright calculation/server/API/UI suite | 15 passed: 7 quantity/contract cases, 5 server/API cases, 2 chart UI cases, 1 hospital rule UI case. Rule UI was rechecked after selected-label correction: 1 passed. |
+| Chart browser cases | Individual and set child: no reason, non-step value, injected save failure/input retention, keyboard retry, duplicate Enter, refresh and automatic reset. API responses are synthetic. |
+| Storybook interactions | 11 passed across chart workspace and rule dialog; rule dialog's 5 cases passed again after final label correction. |
+| Isolated PostgreSQL | Actual calculation/manual/rule functions, rule/version freezing, preset/patient preservation, child upsert, immutable history, RLS under authenticated role, stale/replayed commands, two-session CAS, individual/child re-request and billing/fulfillment snapshot propagation passed. Historical invalid→valid changed-count regression failed before the fix and passed afterward. |
+| Confirmation wrapper | Actual freeze/quantity-linked billing wrapper passed on precreated synthetic artifacts; unresolved manual values block confirmation. The predecessor artifact-creation function is stubbed. |
+| Application build | `NEXT_PUBLIC_AUTH_MODE=mock npm run build -- --webpack` passed, including TypeScript and static page generation. |
+| Storybook build/start | `npm run build-storybook` and local `--ci --smoke-test -p 6135` passed. |
+| Static/document checks | Full lint, docs links and diff whitespace passed. Secret scanner passed for tracked files and a local extended invocation including new untracked source files. |
+
+Evidence remains local and untracked in `.artifacts/dispense-quantity/`:
+focused configs, final logs and `hospital-rules.png`. Initial environment-only
+failures (shared dependency import, generated-cache lint/type scans) were
+resolved by installing this worktree's locked dependencies and separating
+checks from Next dev's generated-type writes. No repository lint/type rule was
+weakened. Test-generated Next AGENTS text was removed from the change scope.
+
+Limits: the SQL fixture uses a reduced synthetic schema and synthetic membership,
+permission and detail-schema helpers. It executes the actual affected stored
+functions but does not prove full migration replay, live permissions or hosted
+schema parity. Browser/Storybook mocks are UI evidence, not persisted DB proof.
+The new migration and settings RPC must be deployed together with the app in a
+separately authorized release. Drug-group policy defaults, product-strength
+editing/renaming and per-dose splitting remain excluded.
+
+### Interactive local preview — 2026-10-31
+
+User requested hands-on manual quantity editing and automatic reset, retaining
+the no-remote-DB/no-deployment boundary. Added `EditDispenseQuantity` to the
+actual chart workspace stories with one synthetic draft dispensing order.
+The real cell saves 1.2 mL without a reason and resets to its fixture proposal
+of 1.0 mL. Save/readback are in-memory mock responses; refresh restores the
+fixture. Other prescription edits, confirmation and DB calculation are outside
+this preview. Seven chart stories passed, including button save/reset and
+reason omission; scoped lint and TypeScript passed. Existing SVG attribute
+console warnings remain unrelated. The local preview is not deployment proof.
+
+### Prescription-change preview — 2026-10-31
+
+User requested local days/frequency recalculation with manual quantity retention
+and reconfirmation. Extended the chart Storybook fixtures and stories. Visual inspection also found
+that the quantity-cell text buttons used the 18px icon-only `tiny` size. Changed
+only those two buttons to the existing text-button `xs` size to prevent overlap.
+The synthetic draft adapter uses the existing occurrence-count and request-total
+helpers with a fixed 1 mL per-dose fixture, daily frequency values from the owning
+SQL contract, versioned draft responses and the required billing summary. It
+does not execute the DB calculator; unsupported prescription fields, confirmation
+and remote persistence remain excluded.
+
+Eight chart stories passed. The new scenario verifies automatic SID 2-day total
+2 mL, manual 1.2 mL retention after 3 days, BID total 6 mL, reconfirm clearing,
+and automatic reset to 6 mL. It leaves 4 days/BID, theoretical total 8 mL, manual
+1.2 mL and reconfirmation pending for hands-on review. Refresh reruns the scenario.
+Scoped lint, TypeScript and whitespace checks passed. Prior read-only stories
+remain passing. Evidence is local in `.artifacts/dispense-quantity/`; no remote DB
+apply or deployment occurred in this preview follow-up.
+
+### Quantity-cell simplification — 2026-10-31
+
+User requested removal of adjacent save/manual wording and number steppers,
+with an error for nonnumeric input. The dispensing request cell now uses decimal
+text entry, saves changed valid values on Enter/blur, and shows linked inline
+errors for nonnumeric, empty and non-positive values. Invalid input never calls
+the save handler. Removed the save button and replaced the manual/reset text
+with the existing accessible reset icon. Reconfirmation remains explicit; blur
+of an unchanged value cannot acknowledge it. Cell-command focus skips implicit
+save so reset cannot first submit an intermediate value. Existing pending-save
+guards and failed-save draft retention remain in place.
+
+Scope stays local. Legacy non-dispensing quantities, server/DB rules and remote
+state are unchanged. Browser evidence includes the real cell with `abc` and its
+inline error; the user-facing preview was restored to valid 1.2 mL afterward.
+
+Verification: 8 chart Storybook stories and 2 app browser cases passed. Covered
+invalid/empty/zero rejection without writes, blur saving, injected save failure
+with retained input, Enter retry, duplicate Enter, refresh and reset while an
+unsaved value is present. TypeScript, scoped lint, docs links and whitespace
+checks passed. Browser fixtures are synthetic; no live persistence is implied.
+The focused browser command used `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3135`
+to align mock-session storage with the running local app.
+
+
+### Numeric cell consistency and compact feedback — 2026-11-01
+
+User requested text-only duration/dose editing, invalid-input save prevention,
+removal of adjacent reconfirm/reset controls, and investigation of table error
+patterns. Scope remains local; remote DB application and deployment are excluded.
+This supersedes the table reset/reconfirm button presentation described above.
+
+Duration and dose retain text drafts until Enter/blur. Nonnumeric input never
+enters the draft writer; required/range/integer constraints remain enforced.
+Invalid input remains visible for correction. Local invalid cells also block
+table confirmation, including their included set-child parent. Request quantity
+retains manual values after prescription changes; Enter acknowledges the value
+without an adjacent reconfirm button. Automatic reset was removed from the table;
+existing revision-dialog/server modes remain unchanged.
+
+Errors now use the existing Input invalid border and Tooltip on focus/hover,
+with linked screen-reader text and Escape dismissal. No error text expands row
+height. shadcn's Field documentation provides inline error composition, while its
+Data Table guide leaves editing behavior to the application. AG Grid documents
+validation tooltips, and MUI documents rejecting invalid edit saves. This local
+composition follows those patterns without adding a grid library.
+References: [shadcn Field](https://ui.shadcn.com/docs/components/base/field),
+[shadcn Data Table](https://ui.shadcn.com/docs/components/base/data-table),
+[AG Grid validation](https://www.ag-grid.com/javascript-data-grid/cell-editing-validation/),
+[MUI validation](https://mui.com/x/react-data-grid/editing/#validation).
+
+The synthetic Storybook adapter now supports dose changes only for its fixed
+16 mg/mL fixture plus existing days/frequency inputs. It does not execute the DB
+calculator or establish hosted persistence. Other units, strengths and bases
+remain excluded.
+
+Verification: all 8 chart Storybook stories and both individual/set-child app
+browser cases passed. Covered invalid dose/days without writes, integer duration,
+invalid-input confirmation blocking, unchanged row height, valid dose/days
+recalculation, manual retention, Enter acknowledgment, blur not acknowledging,
+no adjacent action buttons, failed-save retention/retry and refresh. TypeScript,
+scoped lint, docs links and whitespace checks passed. Existing SVG attribute and
+React test act warnings remain in Storybook output. An intermediate local
+validation-state rerender loop was fixed by memoizing the combined invalid set;
+final focused checks passed after that correction.
+Evidence: local untracked `.artifacts/dispense-quantity/numeric-cell-*` logs.
+No remote DB application, deployment, merge or real-data operation occurred.
+
+Final local browser inspection confirmed the duration `abc` error tooltip,
+unchanged row geometry and disabled confirmation. Escape restored duration 3;
+the preview's component scenario completed successfully. Screenshot:
+`.artifacts/dispense-quantity/numeric-cell-error.png`. The local Storybook preview
+was restarted after the interrupted turn and remains on port 6136.
+
+
+### Prescription option label consistency — 2026-11-01
+
+User requested English option labels matching the selected table value.
+The table and order-detail controls now share field-specific labels: dose basis
+uses head/kg/m², frequency uses Once/SID/BID/TID/QID/PRN/Custom, and volume units
+use mL/mL/kg. Route options retain their English codes. Stored enum values and
+calculation behavior are unchanged.
+
+TypeScript and scoped ESLint passed. Local Storybook browser inspection confirmed
+the rendered dose-basis, frequency and dose-unit option lists. Evidence:
+`.artifacts/dispense-quantity/select-labels-basis.png` and `select-labels-*` logs.
+No remote DB application or deployment occurred.
+
+
+### Order-specific selectable units — 2026-11-01
+
+User authorized filtering unit choices by each medication's calculation and
+explicit conversions in the table and order detail. Applied the same resolver
+to the draft table, detail sheet and amendment/re-request dialog, using dedicated
+set-child authority when present and the current edit's dose basis. Ingredient
+inputs admit the numerator and direct conversions; product/fixed-product inputs
+and quantity units retain their configured output unit. Choices must also be
+accepted by the existing persisted field enum. No new unit, case alias, inverse
+conversion or transitive conversion is introduced. In particular the existing
+`ml` field enum and a `mL` authority are not silently treated as equivalent;
+unsupported configuration yields no selectable unit. Resolving that pre-existing
+case/enum mismatch across persistence and calculation is outside this UI filter.
+
+Missing settings disable selection. Existing unsupported values remain visible
+with invalid feedback and a disabled option; the UI does not rewrite saved
+prescriptions on opening. Other clinical order types keep their original options.
+The 16 mg/mL synthetic preview now offers only mg for patient-based ingredient
+input, without offering capsule/tablet or inventing a volume conversion.
+
+Verification: 18 authority-domain tests and 10 chart Storybook tests passed,
+including both rendered table/detail lists and retained unsupported saved values.
+TypeScript and scoped ESLint passed. Existing Storybook SVG/act warnings remain.
+Local browser inspection confirmed the detail option list; screenshot and logs
+are untracked under `.artifacts/dispense-quantity/unit-options-*`.
+No remote DB application, deployment, merge or real-data operation occurred.
+
+
+### Approved local prescription unit conversion — 2026-11-01
+
+User authorized the table, order detail, server calculation and verification of
+physical-dose preservation, including strength conversion, SI mass/volume scales,
+product-specific drop/spray ratios, reference-ingredient requirements, invalid
+configuration, weight basis, precision, manual request retention and confirmed
+revision history. This supersedes the earlier filter-only limitation.
+
+Scope: local shared resolver, atomic dose/unit edits, persisted unit enums, an
+additive SQL wrapper over the existing request calculator, synthetic Storybook
+and isolated no-network temporary PostgreSQL verification. Reuse the existing
+clinical-fulfillment work item and preserve unrelated WIP. No remote DB writes,
+release, merge, real data or product-strength editing is authorized. Historical
+confirmed records and old calculator bodies remain unchanged. Ambiguous
+mass-per-mass input needs an explicit input-kind contract; do not invent one.
+
+Completion criteria: equivalent ingredient/product/SI inputs yield the same
+per-administration, course and billed request quantity; unit-only edits keep a
+manual quantity and acknowledged state; actual prescription changes require
+reconfirmation; invalid/ambiguous conversions fail without relabeling a dose.
+Record final checks and limitations below after verification.
+
+
+Local result: implemented `dispensing-unit-conversion.ts`, shared selectors and
+atomic dose/unit updates in draft table, detail sheet and revision dialog. SQL
+migration `20261101010000_dispensing_prescription_units.sql` extends the V1
+unit enum and wraps the existing request calculation with scratch product-dose
+normalization. Both individual applied authority and set-child dedicated
+authority are normalized only on scratch rows. Stored original dose/unit,
+confirmed history, rule snapshots and B3 composition remain intact.
+
+Equivalent quantities use a relative 1e-12 numeric tolerance. The SQL wrapper
+reuses the previous exact product amount before rounding when context and amount
+are equivalent, and keeps manual acknowledgment. Actual amount/basis/weight or
+context changes still require reconfirmation. Small converted values use full
+plain-decimal input formatting. Invalid pending text cannot be relabeled by a
+unit edit. Unsupported mass-per-mass ambiguity is blocked; the exact historical
+ingredient numerator retains its prior interpretation. No input-kind UI or
+product-strength editor was added. Existing BSA limitation remains.
+
+Final verification:
+- 34 focused domain/request tests passed, including 500 repeated SI/strength
+  switches, reference ingredient, malformed strength, explicit count ratios,
+  conflicting paths, aliases, unsupported dimensions and encounter weight.
+- 12 actual-chart Storybook scenarios passed: shared table/detail options,
+  bidirectional dose conversion, manual request retention, invalid-draft blocking
+  and small decimal display. Confirm action stays enabled for a valid small dose.
+- 2 focused app browser cases passed in mock mode: individual and set-child
+  dose+unit payloads, save/readback, page refresh, manual amount retention and
+  unchanged set parent. Added a real synthetic parent/child payload for the latter.
+- Isolated network-disabled PostgreSQL passed using real V1 detail schema and
+  validation, actual request/re-request calculations, equivalent mL request
+  snapshots, quantity-linked billing, preserved prior attempts, RLS and concurrent
+  stale-write rejection. Permission helpers/support tables and the predecessor
+  confirmation artifact creator remain synthetic, so this is not full migration
+  replay, clinical validation or hosted DB evidence.
+- TypeScript, scoped lint, docs links and whitespace checks passed.
+
+An initial individual scratch-authority bug and small-number exponent rendering
+bug were fixed and regression-checked. Early full-app attempts hit cold-start
+hydration and an incomplete set-child fixture; both final cases passed after
+warming the same local mock server and correcting the fixture. Existing SVG/act
+warnings remain in browser/Storybook output. The owned mock app server was stopped
+and its generated Next.js AGENTS block removed; user-facing Storybook stays on
+6136. Local untracked evidence is `.artifacts/dispense-quantity/unit-conversion-*`,
+including `unit-conversion-detail.png`. The owning contract was updated. No
+remote DB application, deployment, merge or real-data operation occurred.
+
+Final basis-edge correction: an explicit kg-to-patient basis change removes a
+legacy `/kg` suffix while retaining the entered number; this is a real basis
+change and the server reapplies weight/reconfirmation rules. Unit-only switches
+still keep the basis unchanged. Focused domain/request tests and TypeScript
+were rerun successfully after this correction.
+
+
+### Approved two-finding local correction — 2026-11-01
+
+User authorized only the two final-review fixes and missing regressions while
+preserving existing WIP. No remote DB application, push, merge or deployment.
+
+The unshipped request-quantity migration now rejects new dispensing commands
+through the legacy actual-dispense RPC after its existing authenticated,
+workspace-scoped row lock. This prevents bypassing source-authority bounds using
+the old output-policy interpretation. Non-dispensing behavior, ACLs and existing
+idempotent result replay remain unchanged. The new course-total RPC remains the
+only writer for new dispensing commands. The added patch anchor occurs once in
+the live definition previously inspected read-only; no remote function was changed.
+
+Table and shared detail/re-request selectors canonicalize comparison and selected
+values only. Stored ml/ml/kg aliases remain unchanged on opening, and supported
+aliases no longer receive invalid feedback or a disabled duplicate option.
+
+Regression evidence: the new direct-RPC SQL case failed before the fix with
+`legacy dispensing call accepted`; all three new rendered alias scenarios failed
+before the fix with `aria-invalid=true`. After the fixes, the isolated SQL suite
+passed, including direct authenticated legacy-call rejection above/below/within
+bounds, no rejected-write/history side effects, valid new manual quantity, and
+preserved non-dispensing limits, reasons and replay. The harness now loads the
+actual legacy function and its original V2 patch. Chart/rule Storybook scenarios
+passed 20/20; focused calculation/server cases passed 38/38. Existing SVG/act
+warnings remain. Source review found no further issue in this bounded correction.
+Evidence is local/untracked under `.artifacts/dispense-quantity/two-fixes/`.
+The temporary DB still uses synthetic permissions/support schema; this does not
+prove full hosted migration replay or production behavior.
+
+Final correction checks: mock production build, TypeScript, scoped ESLint,
+extended tracked/untracked source secret scan, docs links, UX copy and whitespace
+checks passed. The initial new-story type-check error (unsupported `exact`
+query option) was corrected; the final type-check and 20 rendered scenarios pass.
+Only the two fixes, their regression harness/tests and owning documentation differ
+from the pre-correction source fingerprint. No other existing WIP was changed.
+
+### Local cutover and recovery preparation — 2026-11-01
+
+User authorized preparation of the input freeze, recovery SQL and remote
+synthetic verification scope, plus read-only backup inspection. No hosted apply,
+deployment, backup export, real-data operation or remote synthetic write is
+authorized. Existing implementation WIP remains intact.
+
+The local-only packet is `.artifacts/dispense-quantity/release-preparation/README.md`.
+It includes a reversible DB write gate, atomic migration-1/new-table gate
+assembly, migration-2 sequencing, exact synthetic workspace/actor allowlisting,
+pre-use function/ACL restoration and explicit gate release. It freezes all order
+types and related fulfillment/billing inputs; payment writes remain denied during
+synthetic verification. This is a short maintenance window, not zero-downtime
+compatibility. External workers/master publication require a separate stop check.
+
+The recovery SQL restores four freshly captured hosted definitions/owners/ACLs,
+retains additive schema/history, and closes new writers. It refuses unexpected
+definition/permission drift, a broken freeze, or any admitted write, including
+committed synthetic writes. After such writes, preserve evidence and use a
+reviewed forward fix or data-aware recovery. Assembly scripts are not a substitute
+for recorded Supabase migration operations; do not erase the migration ledger.
+
+Authenticated dashboard inspection on 2026-11-01 showed Free plan, no scheduled
+project backups and PITR not enabled. No plan or backup setting was changed.
+Availability of separately managed exports is unknown. A verified backup and
+isolated restore remain release prerequisites; the function snapshot is not a
+data backup. An existing quota/grace warning was observed but usage was not audited.
+
+Network-disabled local PostgreSQL verification passed the gate, partial/full
+pre-use restoration, ACL/definition drift rejection, transaction failure,
+synthetic isolation, payment/TRUNCATE denial and concurrent-write drain cases.
+Exact four-function definitions/owners/ACLs were restored. Synthetic support
+schema/auth helpers remain; this is not a hosted full-schema or data-restore
+rehearsal. The packet records the proposed authenticated remote verification
+matrix. No remote verification write or deployment was performed.
+
+### Production release authorization — 2026-11-01
+
+The user explicitly authorized final verification, the two dispense-quantity
+migrations, PR merge and Production deployment, while preserving existing WIP.
+The earlier no-remote boundary is superseded for this bounded change. Full DB
+backup/export is excluded at the user's request and is not a release prerequisite.
+Use the prepared temporary input gate and pre-use recovery; after committed
+new-format writes retain data and use a reviewed forward correction.
+
+The release candidate is integrated with current main in a separate checkout.
+Only the quantity/unit feature, focused verification and owning documentation are
+included. Existing instruction-review and chart layout changes are preserved.
+Remote verification is limited to explicitly labeled synthetic fixtures in a
+dedicated workspace, canonical test actors, no payments or provider side effects.
+No real clinical data, subscription or canonical permission change is authorized.
+Final candidate, checks, recorded migrations, Preview, Production and smoke
+evidence will be recorded before closing delivery.
+
+Final integrated candidate checks passed on current main `2b919c2b`: full lint,
+TypeScript, production build, secret scan, docs links, UX copy and diff checks;
+38 calculation/server contracts, the HTTP authentication/save case, 20 rendered
+chart/rule scenarios, two individual/set-child browser persistence cases and
+one rule-management browser case. Isolated SQL confirms calculation, request and
+re-request snapshots, legacy-path denial, RLS boundary and concurrent stale writes.
+The first HTTP run lacked a running server; the rerun against the built app passed.
+Existing Storybook SVG/act warnings remain. The hosted four-function baseline
+and ACLs still match the prepared cutover packet. Hosted mutations are pending.

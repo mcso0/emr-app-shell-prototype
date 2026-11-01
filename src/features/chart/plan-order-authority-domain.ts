@@ -1,3 +1,5 @@
+import { canonicalDispensingUnit, resolveDispensingDoseFactor } from "./dispensing-unit-conversion";
+
 export const PLAN_ORDER_PRICE_BASES = [
   "per_order",
   "per_day",
@@ -337,6 +339,20 @@ export function resolvePlanOrderAuthority({
   return parsed.valid ? parsed.value : null;
 }
 
+/** Options share the same snapshot conversion resolver as dose editing. */
+export function getPlanOrderSelectableUnits({ config, candidates, fieldKey, doseBasis }: {
+  config: PlanOrderAuthorityConfig | null;
+  candidates: readonly string[];
+  fieldKey: "doseUnit" | "totalQuantityUnit";
+  doseBasis: unknown;
+}): string[] {
+  if (!config?.dispenseUnit || config.calculationMode === "not_applicable") return [];
+  return [...new Set(candidates.map(canonicalDispensingUnit))].filter(unit =>
+    fieldKey === "totalQuantityUnit"
+      ? unit === canonicalDispensingUnit(config.dispenseUnit!)
+      : resolveDispensingDoseFactor(config, unit, doseBasis).ok);
+}
+
 export type PlanOrderWeightSnapshot = {
   valueKg: number;
   measuredAt: string;
@@ -369,7 +385,8 @@ export type PlanOrderDispenseCalculationResult =
         | "invalid_input"
         | "weight_missing"
         | "weight_out_of_scope"
-        | "unit_conversion_missing";
+        | "unit_conversion_missing"
+        | "unit_conversion_ambiguous";
     };
 
 export function calculatePlanOrderDispenseQuantity(
@@ -395,19 +412,11 @@ export function calculatePlanOrderDispenseQuantity(
     input.doseBasis === "kg" && weight.value ? weight.value.valueKg : 1;
 
   if (config.calculationMode === "product_unit") {
-    if (config.schemaVersion !== 2 || !config.dispenseUnit) {
-      return { ok: false, reason: "configuration_missing" };
-    }
-    if (input.doseUnit !== config.dispenseUnit) {
-      return { ok: false, reason: "unit_conversion_missing" };
-    }
-    return {
-      ok: true,
-      quantity: input.dosePerAdministration * basisMultiplier,
-      unit: config.dispenseUnit,
-      weightSnapshot: weight.value,
-      formula: "product_unit",
-    };
+    if (config.schemaVersion !== 2 || !config.dispenseUnit) return { ok: false, reason: "configuration_missing" };
+    const conversion = resolveDispensingDoseFactor(config, input.doseUnit, input.doseBasis);
+    if (!conversion.ok) return conversion;
+    return { ok: true, quantity: input.dosePerAdministration * basisMultiplier * conversion.factor,
+      unit: config.dispenseUnit, weightSnapshot: weight.value, formula: "product_unit" };
   }
 
   if (config.calculationMode === "fixed_product") {
@@ -428,30 +437,10 @@ export function calculatePlanOrderDispenseQuantity(
     };
   }
 
-  const strength = config.productStrength;
-  if (!strength || !config.referenceIngredientId || !config.dispenseUnit) {
-    return { ok: false, reason: "configuration_missing" };
-  }
-  const convertedDose = convertUnit(
-    input.dosePerAdministration * basisMultiplier,
-    input.doseUnit,
-    strength.numeratorUnit,
-    config.unitConversions ?? [],
-  );
-  if (convertedDose === null) {
-    return { ok: false, reason: "unit_conversion_missing" };
-  }
-  if (strength.denominatorUnit !== config.dispenseUnit) {
-    return { ok: false, reason: "unit_conversion_missing" };
-  }
-  return {
-    ok: true,
-    quantity:
-      (convertedDose * strength.denominatorValue) / strength.numeratorValue,
-    unit: config.dispenseUnit,
-    weightSnapshot: weight.value,
-    formula: "ingredient_based",
-  };
+  const conversion = resolveDispensingDoseFactor(config, input.doseUnit, input.doseBasis);
+  if (!conversion.ok) return conversion;
+  return { ok: true, quantity: input.dosePerAdministration * basisMultiplier * conversion.factor,
+    unit: config.dispenseUnit!, weightSnapshot: weight.value, formula: "ingredient_based" };
 }
 
 export type PlanOrderPreparedQuantity = {
@@ -850,19 +839,6 @@ function resolveWeight(
     return { ok: false, reason: "weight_out_of_scope" };
   }
   return { ok: true, value: weight };
-}
-
-function convertUnit(
-  value: number,
-  fromUnit: string,
-  toUnit: string,
-  conversions: readonly PlanOrderUnitConversion[],
-) {
-  if (fromUnit === toUnit) return value;
-  const direct = conversions.find(
-    (entry) => entry.fromUnit === fromUnit && entry.toUnit === toUnit,
-  );
-  return direct ? value * direct.factor : null;
 }
 
 function rejectUnknownKeys(

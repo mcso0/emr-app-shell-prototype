@@ -40,7 +40,8 @@ export type OrderActualDispenseGateway = {
     expectedOrderUpdatedAt: string;
     idempotencyKey: string;
     orderId: string;
-    reason: string | null;
+    mode: "manual" | "automatic" | "reconfirm" | "legacy";
+    legacyReason?: string | null;
     workspaceId: string;
   }): Promise<
     | { ok: true; state: OrderActualDispenseState }
@@ -91,6 +92,7 @@ export async function saveOrderActualDispense({
   idempotencyKey,
   orderId,
   permissionAdapter = createDemoPermissionAdapter(),
+  mode = "manual",
   reason,
   workspaceId,
 }: {
@@ -101,13 +103,14 @@ export async function saveOrderActualDispense({
   idempotencyKey?: string | null;
   orderId?: string | null;
   permissionAdapter?: WorkspacePermissionAdapter;
-  reason?: string | null;
+  reason?: string | null; // Used only by the unchanged non-dispensing legacy path.
+  mode?: "manual" | "automatic" | "reconfirm" | "legacy";
   workspaceId: string;
 }): Promise<SaveOrderActualDispenseResult> {
   const expectedUpdatedAt = trimToUndefined(expectedOrderUpdatedAt);
   const key = trimToUndefined(idempotencyKey);
   const normalizedOrderId = trimToUndefined(orderId);
-  const normalizedReason = trimToUndefined(reason) ?? null;
+
   if (
     !expectedUpdatedAt ||
     !Number.isFinite(Date.parse(expectedUpdatedAt)) ||
@@ -118,8 +121,8 @@ export async function saveOrderActualDispense({
     typeof actualQuantity !== "number" ||
     !Number.isFinite(actualQuantity) ||
     actualQuantity <= 0 ||
-    (normalizedReason !== null &&
-      (normalizedReason.length < 3 || normalizedReason.length > 500))
+    !["manual", "automatic", "reconfirm", "legacy"].includes(mode) ||
+    (mode === "legacy" && reason != null && (reason.trim().length < 3 || reason.trim().length > 500))
   ) {
     return { error: "invalid_input", ok: false, status: 400 };
   }
@@ -143,7 +146,8 @@ export async function saveOrderActualDispense({
     expectedOrderUpdatedAt: expectedUpdatedAt,
     idempotencyKey: key,
     orderId: normalizedOrderId,
-    reason: normalizedReason,
+    mode,
+    ...(mode === "legacy" ? { legacyReason: reason?.trim() || null } : {}),
     workspaceId,
   });
   if (result.ok) {
@@ -175,7 +179,7 @@ export async function saveOrderActualDispense({
 
 export type SupabaseOrderActualDispenseRpcClient = {
   rpc(
-    functionName: "clair_save_order_actual_dispense_override",
+    functionName: "clair_save_order_dispense_request" | "clair_save_order_actual_dispense_override",
     args: Record<string, unknown>,
   ): Promise<{ data: unknown; error: { message?: string } | null }>;
 };
@@ -186,14 +190,14 @@ export function createSupabaseOrderActualDispenseGateway(
   return {
     async save(input) {
       const { data, error } = await client.rpc(
-        "clair_save_order_actual_dispense_override",
+        input.mode === "legacy" ? "clair_save_order_actual_dispense_override" : "clair_save_order_dispense_request",
         {
           p_actual_quantity: input.actualQuantity,
           p_actor_user_id: input.actorUserId,
           p_expected_order_updated_at: input.expectedOrderUpdatedAt,
           p_idempotency_key: input.idempotencyKey,
           p_order_id: input.orderId,
-          p_reason: input.reason,
+          ...(input.mode === "legacy" ? { p_reason: input.legacyReason ?? null } : { p_mode: input.mode }),
           p_workspace_id: input.workspaceId,
         },
       );
@@ -226,11 +230,11 @@ export function createMockOrderActualDispenseGateway(): OrderActualDispenseGatew
       const versionNo = (versions.get(stateKey) ?? 0) + 1;
       const now = new Date().toISOString();
       const state: OrderActualDispenseState = {
-        actualDispenseOverride: input.reason
-          ? { reason: input.reason, versionNo }
+        actualDispenseOverride: input.mode !== "automatic"
+          ? { versionNo }
           : null,
         actualDispenseQuantity: input.actualQuantity,
-        actualDispenseSource: input.reason
+        actualDispenseSource: input.mode !== "automatic"
           ? "manual_override"
           : "preparation_policy",
         actualDispenseUnit: "mL",

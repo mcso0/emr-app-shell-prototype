@@ -450,6 +450,7 @@ function validateActionChanges(
               "detailSchemaVersion",
               "priority",
               "actualDispenseQuantity",
+              "actualDispenseMode",
             ])
           : new Set<string>();
   if (keys.some((key) => !allowed.has(key))) {
@@ -464,6 +465,13 @@ function validateActionChanges(
   }
   if (action === "priority_change" && !["normal", "urgent"].includes(String(changes.priority))) {
     fieldErrors.changes = "우선순위는 normal 또는 urgent여야 합니다.";
+  }
+  if (action === "re_request" && changes.actualDispenseMode !== undefined && (
+    !["automatic", "manual"].includes(String(changes.actualDispenseMode)) ||
+    (changes.actualDispenseMode === "automatic" && changes.actualDispenseQuantity !== undefined) ||
+    (changes.actualDispenseMode === "manual" && changes.actualDispenseQuantity === undefined)
+  )) {
+    fieldErrors.changes = "실 조제량의 자동·수동 상태와 수량을 확인해 주세요.";
   }
   if (
     action === "re_request" &&
