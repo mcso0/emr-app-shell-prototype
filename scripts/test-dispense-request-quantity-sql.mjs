@@ -33,11 +33,18 @@ const v2 = readFileSync("supabase/migrations/20260906092729_clinical_master_plan
 const legacyV2Patch = v2.slice(v2.indexOf("do $patch$"), v2.indexOf("end $patch$;") + "end $patch$;".length)
   .replace(/,\n\s*'public\.clair_mutate_chart_order_execution[^']*'/, "");
 const setCompat = readFileSync("supabase/migrations/20260912113946_dispensing_set_confirmation_compatibility.sql", "utf8");
+const b3Draft = readFileSync("supabase/migrations/20260820140000_clinical_master_phase1b3_chart_set_runtime.sql", "utf8");
+const draftCompatPatch = setCompat.slice(setCompat.indexOf("do $patch_b3_writer_conflict_update$"), setCompat.indexOf("$patch_b3_writer_conflict_update$;", setCompat.indexOf("do $patch_b3_writer_conflict_update$")) + "$patch_b3_writer_conflict_update$;".length);
+const draftBase = definition(b3Draft, "public.clair_save_chart_order_draft")
+  .replace("function public.clair_save_chart_order_draft(", "function public.clair_save_chart_order_draft_phase2_base(");
 const child = readFileSync("supabase/migrations/20261027094000_instruction_child_attempts.sql", "utf8");
 const owner = readFileSync("supabase/migrations/20261012054346_current_assignee_mutation_boundary.sql", "utf8");
 const childStart = child.indexOf("select pg_temp.patch_instruction_function('public.clair_mutate_chart_order_execution_origin_base");
 const childPatches = definition(child, "pg_temp.patch_instruction_function") + "\n" + child.slice(childStart, child.indexOf("drop function pg_temp.patch_instruction_function"));
 const baseFunctions = [
+  draftBase,
+  definition(setCompat, "private.clair_is_set_pricing_calculation_outputs"),
+  draftCompatPatch,
   definition(lifecycle, "private.clair_plan_order_dispense_failure"),
   definition(lifecycle, "public.clair_confirm_chart_order_candidates").replaceAll("orders.applied_snapshot #>> '{planOrderAuthority,priceBasis}'", "private.clair_order_dispensing_authority(orders) ->> 'priceBasis'"),
   definition(owner, "private.clair_lock_work_ownership"),
@@ -59,7 +66,8 @@ const baseFunctions = [
 const historyStart = lifecycle.indexOf("create table if not exists public.order_actual_dispense_overrides");
 const historyEnd = lifecycle.indexOf("create or replace function private.clair_snapshot_order_billing_authority", historyStart);
 const migration = readFileSync("supabase/migrations/20261031090000_dispense_request_quantities.sql", "utf8") + "\n" +
-  readFileSync("supabase/migrations/20261101010000_dispensing_prescription_units.sql", "utf8");
+  readFileSync("supabase/migrations/20261101010000_dispensing_prescription_units.sql", "utf8") + "\n" +
+  (process.env.SKIP_DRAFT_RETENTION_FIX === "1" ? "" : readFileSync("supabase/migrations/20261101040000_dispense_draft_manual_retention.sql", "utf8"));
 const instructionFixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8");
 const supportNames = ["order_tasks", "order_fulfillment_work_items", "order_revisions", "order_billing_candidates", "order_task_events", "invoices", "invoice_lines", "order_revision_fields", "order_execution_outbox"];
 const support = instructionFixture.split("\n").filter(line => line.endsWith(";") && supportNames.some(name => line.startsWith(`create table public.${name}(`) || line.startsWith(`alter table public.${name} `))).join("\n");
@@ -68,6 +76,7 @@ const fixture = readFileSync("tests/sql/dispense-request-quantity.sql", "utf8")
   .replace("-- BASELINE", () => schemaFunctions + "\n" + lifecycle.slice(historyStart, historyEnd) + "\n" + baseFunctions)
   .replace("-- MIGRATION", () => migration)
   .replace("-- UNIT CONVERSION TESTS", () => readFileSync("tests/sql/dispensing-unit-conversion.sql", "utf8"))
+  .replace("-- DRAFT RETENTION TESTS", () => readFileSync("tests/sql/dispense-draft-retention.sql", "utf8"))
   .replace("-- LEGACY BOUNDARY TESTS", () => readFileSync("tests/sql/dispense-legacy-boundary.sql", "utf8"));
 let owned = false;
 try {

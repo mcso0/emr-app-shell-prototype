@@ -1597,3 +1597,33 @@ migration is needed. The temporary gate stays closed pending final deployment sm
 Final gate release and smoke evidence will be recorded in the follow-up PR delivery
 record and the local, untracked release packet; these statements do not imply
 unrun UI completion, invoice issue, payment or real-user acceptance checks.
+
+### Hosted draft-save retention correction — 2026-11-01
+
+The two approved feature migrations and PRs #1028/#1029 reached Production while
+ordinary inputs remained frozen. Authenticated synthetic browser verification
+then found that an individual order's full chart-draft upsert replaced its manual
+course quantity with fresh automatic outputs before the detail projection ran.
+The earlier direct-update SQL cases did not cover this complete save path.
+
+A narrow forward migration extends the existing set-child conflict preservation
+to dispensing individual rows of the same row type. The normal projection still
+recalculates against final prescription inputs, and explicit manual/reconfirm/
+automatic commands remain authoritative. No stored rows, completed history,
+canonical permissions or price fields are rewritten. The original two applied
+migrations remain unchanged; this correction is recorded separately.
+
+The isolated SQL regression loads the real B3 function and its prior patch,
+extracts its conflict expression, and executes it with real INSERT/UPDATE
+projection triggers. It fails before the correction and passes after it for
+individual and child unit changes, duration reconfirmation and automatic reset.
+Its support schema is synthetic; it is not a full hosted draft-RPC test. The
+hosted rollback-only full draft-RPC case independently reproduced the failure.
+Final hosted post-fix, browser and release evidence is retained in the local
+release packet and the correction PR. Ordinary inputs stay frozen until passing.
+
+Post-fix hosted rollback verification passed the complete chart-draft RPC for
+individual and set-child unit changes, retained manual 5.2, changed duration
+requiring reconfirmation, automatic reset to 8, and patient/catalog isolation.
+The corrective function retains its original owner and EXECUTE ACL. The hosted
+migration receipt is `20261101030738 dispense_draft_manual_retention`.
