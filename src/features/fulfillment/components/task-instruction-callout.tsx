@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CdsAlertsInfoIcon } from "@/components/cds-icons/alerts-and-status";
 import { CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
-import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { OverallInstructionsHistoryDialog } from "@/features/chart/overall-instructions-history-dialog";
 import { createOverallInstructionsClient, InstructionRequestError } from "@/features/chart/overall-instructions-client";
@@ -34,14 +33,48 @@ function TaskInstructionHistory({ workspaceId, chartId, onClose, onReview }: { w
     loading={!document && !error} error={error} onViewSnapshots={() => { onClose(); onReview(); }} onRetry={() => { setError(null); setRetry(value => value + 1); }} />;
 }
 
+function InstructionEntry({ item, showScope }: { item: EffectiveInstructions["entries"][number]; showScope: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  const rowRef = useRef<HTMLElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const badgeRef = useRef<HTMLSpanElement>(null);
+  const contentId = useId();
+  const text = item.deleted ? "지시 삭제됨" : item.instruction;
+  const label = item.legacy ? "경구제 지시" : instructionScopeLabels[item.scope];
+  useEffect(() => {
+    const row = rowRef.current;
+    const measure = measureRef.current;
+    if (!row || !measure) return;
+    let active = true;
+    const update = () => {
+      if (!active) return;
+      // Measure against the available row before reserving the toggle's width.
+      const badgeWidth = badgeRef.current ? badgeRef.current.getBoundingClientRect().width + 6 : 0;
+      setOverflows(text.includes("\n") || measure.getBoundingClientRect().width > row.clientWidth - badgeWidth);
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(row);
+    update();
+    void window.document.fonts.ready.then(update);
+    return () => { active = false; observer.disconnect(); };
+  }, [text, showScope]);
+  return <section ref={rowRef} className={styles.entry}>
+    {showScope && <span ref={badgeRef} className={styles.badge}>{item.legacy ? "경구제" : item.scope === "overall" ? "전체" : label.replace(/ 지시$/, "")}</span>}
+    <div className={styles.text}>
+      <p id={contentId} className={expanded ? styles.expandedText : styles.summaryText}>{text}</p>
+      <span ref={measureRef} aria-hidden="true" className={styles.measure} data-measure-text={text} />
+    </div>
+    {overflows && <Button variant="ghost" className={styles.expand} aria-label={`${label} ${expanded ? "접기" : "펼치기"}`} aria-expanded={expanded} aria-controls={contentId} onClick={() => setExpanded(value => !value)}>{expanded ? "접기" : "펼치기"}</Button>}
+  </section>;
+}
+
 /** One chart/version per card. UI-only actions never acknowledge instructions. */
 export function TaskInstructionCallout({ document, workspaceId, onReview }: {
   document: EffectiveInstructions; workspaceId?: string; onReview: () => void;
 }) {
   const [hidden, setHidden] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const entriesId = useId();
   const titleId = useId();
   const restoreRef = useRef<HTMLButtonElement>(null);
   const historyRef = useRef<HTMLButtonElement>(null);
@@ -56,21 +89,17 @@ export function TaskInstructionCallout({ document, workspaceId, onReview }: {
   const title = single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
   return <div className={styles.container}>
     {hidden ? <Button ref={restoreRef} size="sm" variant="ghost" onClick={() => { movedFocus.current = true; setHidden(false); }}><CdsAlertsInfoIcon />지시사항 다시 보기</Button> :
-      <aside aria-labelledby={titleId} className={`${styles.card} ${collapsed ? styles.collapsed : ""}`}>
+      <aside aria-labelledby={titleId} className={`${styles.card} ${changed ? "" : styles.withoutHistory}`}>
         <div className={styles.symbol}><CdsAlertsInfoIcon aria-hidden="true" /></div>
         <div className={styles.content}>
-          <div className={styles.heading}><h3 id={titleId} className={styles.title}>{title}</h3>{changed && <Badge variant="secondary" size="sm">변경됨</Badge>}</div>
-          <div id={entriesId} className={styles.entries} hidden={collapsed}>
-            {document.entries.map(item => <section className={styles.entry} key={`${item.scope}:${!!item.legacy}`}>
-              {!single && <span className={styles.badge}>{item.legacy ? "경구제" : item.scope === "overall" ? "전체" : instructionScopeLabels[item.scope].replace(/ 지시$/, "")}</span>}
-              <p>{item.deleted ? "지시 삭제됨" : item.instruction}</p>
-            </section>)}
+          <div className={styles.heading}><h3 id={titleId} className={styles.title}>{title}</h3>{changed && <Badge variant="secondary" size="sm" className={styles.changedBadge}>변경됨</Badge>}</div>
+          <div className={styles.entries}>
+            {document.entries.map(item => <InstructionEntry key={`${item.scope}:${!!item.legacy}`} item={item} showScope={!single} />)}
           </div>
         </div>
         <div className={styles.actions}>
-          <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>
-          <Button variant="ghost" className={`${styles.ghost} ${styles.icon}`} aria-label={collapsed ? "지시사항 펼치기" : "지시사항 접기"} aria-expanded={!collapsed} aria-controls={entriesId} onClick={() => setCollapsed(value => !value)}><CdsNavigationChevronDownIcon className={styles.chevron} /></Button>
-          <Button variant="ghost" className={`${styles.ghost} ${styles.icon}`} aria-label="지시사항 숨기기" onClick={() => { movedFocus.current = true; setHidden(true); }}><CdsActionsXIcon /></Button>
+          {changed && <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>}
+          <Button ref={changed ? undefined : historyRef} variant="ghost" className={`${styles.ghost} ${styles.icon}`} aria-label="지시사항 숨기기" onClick={() => { movedFocus.current = true; setHidden(true); }}><CdsActionsXIcon /></Button>
         </div>
       </aside>}
     {historyOpen && workspaceId && <TaskInstructionHistory onReview={onReview} workspaceId={workspaceId} chartId={document.chartId} onClose={() => { setHistoryOpen(false); historyRef.current?.focus(); }} />}
