@@ -434,3 +434,100 @@ policy; it adds no table write rights or anonymous access.
 [DB-PR-002](../../work/engineering/ENGINEERING-DB-PR-002-fulfillment-rls-helper-grant.md)
 tracks the local forward migration and isolated regression; remote application
 is not recorded.
+
+## Local Course Dispense Request Candidate (2026-10-31)
+
+Migration `20261031090000_dispense_request_quantities.sql` is a local candidate.
+No remote apply or deployment is authorized by this follow-up. See
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#approved-local-follow-up--2026-10-31-dispense-request-quantities)
+for approval and verification evidence.
+
+For dispensing orders, `theoreticalDispenseQuantity` is the per-administration
+product quantity; `theoreticalTotalQuantity` is its course total.
+`actualDispenseQuantity`, `plannedPracticalTotalQuantity` and
+`totalRequiredDispenseQuantity` contain the final course request when
+`dispenseRequestSchemaVersion=1` and `preparationQuantityScope=course_total`.
+Execution-result quantities remain a separate contract. Product-unit billing
+uses the final course request; fixed-order/set pricing keeps its existing basis.
+
+The server captures a frozen `orders.dispense_request_rule_snapshot` on insert.
+It contains source, version, product key and rule. Updates and draft upserts
+retain that snapshot. Rule precedence is manual order value, product exception,
+unit-specific hospital default, then exact theoretical total. Product identity
+uses the source medication product; catalog-local identity is retained when no
+reliable product reference exists. Rule edits affect subsequently added orders.
+Rules apply only to the course total and do not change the per-administration
+quantity. Display precision never rounds a persisted request.
+
+The legacy `clair_save_order_actual_dispense_override` rejects new dispensing
+commands at the DB boundary. Its non-dispensing behavior and previously completed
+idempotent results remain unchanged. Dispensing callers must use the course-total
+writer, so the old entry point cannot bypass the source authority's quantity bounds.
+
+`clair_save_order_dispense_request` supports `manual`, `automatic`, and
+`reconfirm`. Manual edits require no reason and need not match the automatic
+rounding step. Existing product bounds, workspace membership, `chart:update`,
+row version, idempotency and append-only history remain enforced. Existing
+amendment/re-request reasons and historical reason values remain unchanged.
+The dispensing request, prescription dose and duration cells use text inputs
+without number steppers. Valid changed values save on Enter or blur. Invalid
+numeric text is retained locally and never submitted; required empty values,
+existing range rules and integer-only duration are also checked. Invalid cells
+use an error border with focus/hover feedback and linked screen-reader text,
+without changing row height. Invalid local inputs block table confirmation,
+including the parent of an included set child.
+There are no adjacent save/manual/reconfirm/reset controls. Unchanged manual
+requests acknowledge a prescription change only on Enter, guided by focused
+cell feedback; blur alone does not acknowledge it. The table has no automatic
+reset command. The existing revision dialog and server modes remain available.
+
+Dispensing unit choices and edits share a snapshot-based conversion resolver
+across the table, detail sheet and amendment/re-request dialog. A unit switch
+updates `dose` and `doseUnit` together, preserving the physical product quantity
+and the existing dose basis. Decimal display does not round the input, including
+values small enough for JavaScript exponent notation. Invalid local dose text
+blocks a unit switch. Missing/ambiguous conversions never relabel a saved dose.
+
+Supported standard dimensions are mcg/mg/g and mL/L, with legacy ml aliases.
+Table, detail and re-request selectors normalize only their comparison/display
+values for these aliases. Opening a selector neither rewrites persisted units
+nor marks a supported legacy alias invalid.
+Product strength connects the reference ingredient to the product/output unit.
+Tablet/capsule counts use their product strength; drop/spray/pipette/application
+ratios need explicit product-specific conversions. Supplied ratios may be used
+in reverse and combined with SI scales; conflicting paths are rejected. A
+reference ingredient is required for ingredient/strength conversion. A product-
+only configuration may use product-unit scales without inventing strength.
+
+A powder such as 10 mg/g has two different mass meanings. The exact historical
+numerator (mg) retains ingredient meaning; ambiguous alternate mass units are
+blocked. Supporting both meanings needs a separate explicit input-kind contract.
+Body-surface-area dosing remains unsupported. kg dosing uses the encounter-
+scoped weight; a unit-only switch never changes the basis or applies weight twice.
+Quantity-unit choices retain the configured product/output unit.
+
+The additive local migration `20261101010000_dispensing_prescription_units.sql`
+extends only dispensing unit enums and wraps the request calculator. It converts
+scratch inputs to product quantity before the existing weight/occurrence/rule
+pipeline. Original prescription inputs, pinned authority, prior confirmed
+snapshots and old calculator bodies are preserved. It normalizes both individual
+and set-child scratch authority without modifying the exact B3 source snapshot.
+
+Equivalent unit edits reuse the prior product quantity within a relative 1e-12
+numeric tolerance, before dispensing rounding. The semantic fingerprint uses
+physical quantity, basis, other instructions, authority, rule and weight. A
+unit-only change preserves a manual request and its acknowledged state. A real
+quantity/context change retains the manual request but requires reconfirmation.
+Pre-existing results without the new semantic context conservatively require
+reconfirmation on their next recalculation. No historical backfill is performed.
+
+Prescription changes retain a manual course quantity and require reconfirmation;
+an incomplete calculation also preserves it. Historical per-administration
+manual quantities are converted using their previous course count/total, never
+a newly edited count. Missing historical scope is blocked instead of guessed.
+
+Hospital rule writes use existing `service_catalog:manage`; reads use
+`service_catalog:view`. Direct authenticated writes are revoked and reads are
+workspace-filtered by RLS. The settings route has no successful mock persistence
+fallback. The approved follow-up leaves drug-group defaults, product-strength
+editing/renaming and per-dose splitting policy unresolved.

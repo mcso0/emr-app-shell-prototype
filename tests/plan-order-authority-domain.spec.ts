@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import {
   calculatePlanOrderCharge,
+  getPlanOrderSelectableUnits,
   calculatePlanOrderDispenseQuantity,
   derivePlanOrderBillingQuantity,
   derivePlanOrderTotalOccurrences,
@@ -185,7 +186,7 @@ test.describe("plan-order authority contract", () => {
     ).toEqual({ ok: false, reason: "weight_out_of_scope" });
   });
 
-  test("requires an explicit unit conversion rather than guessing", () => {
+  test("accepts product-volume input using the pinned product strength", () => {
     expect(
       calculatePlanOrderDispenseQuantity({
         config: ingredientConfig,
@@ -195,7 +196,7 @@ test.describe("plan-order authority contract", () => {
         encounterId: "encounter-1",
         confirmationAt: "2026-09-02T10:00:00.000Z",
       }),
-    ).toEqual({ ok: false, reason: "unit_conversion_missing" });
+    ).toMatchObject({ ok: true, quantity: 2, unit: "mL" });
   });
 
   test("copies exact theoretical quantity when no preparation rule exists", () => {
@@ -277,4 +278,14 @@ test.describe("plan-order authority contract", () => {
       chargeAmountKrw: 6,
     });
   });
+});
+
+
+test("dispensing choices include strength-based product units and SI units", () => {
+  const input = { config: ingredientConfig, candidates: ["mg", "mg/kg", "ml", "mL", "L", "g", "tablet", "drop"], fieldKey: "doseUnit" as const, doseBasis: "patient" };
+  expect(getPlanOrderSelectableUnits(input)).toEqual(["mg", "mL", "L", "g"]);
+  expect(getPlanOrderSelectableUnits({ ...input, doseBasis: "kg" })).toEqual(["mg", "mg/kg", "mL", "L", "g"]);
+  expect(getPlanOrderSelectableUnits({ ...input, doseBasis: "body_surface_area" })).toEqual([]);
+  expect(getPlanOrderSelectableUnits({ ...input, config: null })).toEqual([]);
+  expect(getPlanOrderSelectableUnits({ ...input, fieldKey: "totalQuantityUnit" })).toEqual(["mL"]);
 });

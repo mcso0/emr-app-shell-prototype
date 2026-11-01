@@ -6,6 +6,9 @@ import {
   type Route,
 } from "@playwright/test";
 
+import { resolveDispensingDoseFactor } from "../src/features/chart/dispensing-unit-conversion";
+import type { PlanOrderAuthorityConfig } from "../src/features/chart/plan-order-authority-domain";
+
 import chartWidthVisualFixture from "./fixtures/chart-width-visual.json";
 
 import { createMockOrderCatalogGateway } from "../src/features/hospital-admin/server-order-catalog-core";
@@ -1816,9 +1819,12 @@ test("chart Order all tab renders the approved order confirmation and work-state
     "횟수",
     "총횟수",
     "head/kg당",
-    "1회당",
+    "처방 용량",
+    "용량 단위",
+    "1회 조제량",
     "성분량",
-    "조제량",
+    "총 조제량",
+    "실 조제량",
     "보관",
     "투여/복약",
     "단가",
@@ -1920,12 +1926,12 @@ test("chart Order all tab renders the approved order confirmation and work-state
 
 const actualDispenseUiCases = [
   {
-    title: "chart saves a constrained actual dispense override with an anchored reason",
+    title: "chart saves arbitrary actual dispense without a reason and keeps text drafts",
     authoritySource: "applied",
     rowType: "individual",
   },
   {
-    title: "chart saves a set-child constrained actual dispense override from dedicated authority",
+    title: "chart saves a set-child actual dispense without a reason from dedicated authority",
     authoritySource: "dedicated",
     rowType: "set_child",
   },
@@ -1959,7 +1965,7 @@ async function verifyActualDispenseUiCase(
       denominatorUnit: "mL",
     },
     preparationPolicy: {
-      increment: 0.1,
+      increment: 0.5,
       roundingMode: "nearest",
       displayPrecision: 1,
       noReasonTolerance: 0.1,
@@ -2056,7 +2062,18 @@ async function verifyActualDispenseUiCase(
     status: "requested",
     updatedAt: firstUpdatedAt,
   };
+  const parentRow = actualDispenseUiCase.rowType === "set_child" ? {
+    ...currentRow, orderId: currentRow.parentOrderId!, parentOrderId: null, rowType: "set", detailInputs: {},
+    workspaceCatalogItemId: null, sourceSetRevisionItemId: null, dispensingAuthoritySnapshot: {},
+    calculationOutputs: {}, calculationInputs: {},
+    appliedSnapshot: { inHospitalOrderName: "합성 조제 세트", displayName: "합성 조제 세트", clinicalOrderType: "dispensing",
+      selectionIntent: { items: [{ revisionItemId: currentRow.sourceSetRevisionItemId, selected: true, quantity: 1 }] } },
+  } : null;
+  const readRows = () => parentRow ? [parentRow, currentRow] : [currentRow];
+  const preservedParent = JSON.stringify(parentRow);
   const patchBodies: Array<Record<string, unknown>> = [];
+  const prescriptionPatches: Array<Record<string, unknown>> = [];
+  let unitEditing = false;
   await page.route(
     "**/api/workspaces/clair-demo/chart/encounter-charts?*",
     async (route) => {
@@ -2084,10 +2101,23 @@ async function verifyActualDispenseUiCase(
   await page.route(
     "**/api/workspaces/clair-demo/chart/order-drafts*",
     async (route) => {
-      if (route.request().method() !== "GET") {
-        await route.continue();
+      if (unitEditing && route.request().method() === "PATCH") {
+        const body = route.request().postDataJSON() as { rows: Array<{ orderId: string; detailInputs: typeof detailInputs;
+          childInputs?: Array<{ revisionItemId: string; detailInputs: typeof detailInputs }> }> };
+        const candidate = parentRow ? body.rows.find(row => row.orderId === parentRow.orderId)?.childInputs?.find(child =>
+          child.revisionItemId === currentRow.sourceSetRevisionItemId) : body.rows.find(row => row.orderId === orderId);
+        expect(candidate).toBeTruthy();
+        const details = candidate!.detailInputs;
+        const conversion = resolveDispensingDoseFactor(authority as PlanOrderAuthorityConfig, details.doseUnit, details.doseBasis);
+        expect(conversion.ok).toBe(true);
+        if (!conversion.ok) throw new Error("Unsupported synthetic unit patch");
+        expect(details.dose * conversion.factor).toBeCloseTo(1, 12);
+        prescriptionPatches.push({ ...details });
+        currentRow = { ...currentRow, detailInputs: details, updatedAt: savedUpdatedAt };
+        await route.fulfill({ status: 200, json: { ok: true, status: 200, rows: readRows(), etag: `"${"a".repeat(64)}"` } });
         return;
       }
+      if (route.request().method() !== "GET") { await route.continue(); return; }
       await route.fulfill({
         contentType: "application/json",
         headers: { ETag: `"${"a".repeat(64)}"` },
@@ -2095,29 +2125,32 @@ async function verifyActualDispenseUiCase(
         json: {
           etag: `"${"a".repeat(64)}"`,
           ok: true,
-          rows: [currentRow],
+          rows: readRows(),
           status: 200,
         },
       });
     },
   );
+  let saveAttempts = 0;
   await page.route(
     `**/api/workspaces/clair-demo/chart/orders/${orderId}/actual-dispense`,
     async (route) => {
       const body = route.request().postDataJSON() as Record<string, unknown>;
+      saveAttempts++;
+      if (saveAttempts === 1) {
+        await route.fulfill({ status: 503, json: { ok: false, error: "network_error" } });
+        return;
+      }
+      await new Promise(resolve => setTimeout(resolve, 150));
       patchBodies.push(body);
-      const actualQuantity = Number(body.actualQuantity);
+      const actualQuantity = body.mode === "automatic" ? 1 : Number(body.actualQuantity);
       currentRow = {
         ...currentRow,
         calculationOutputs: {
           ...currentRow.calculationOutputs,
-          actualDispenseOverride: {
-            reason: body.reason,
-            reasonRequired: true,
-            versionNo: 1,
-          },
+          actualDispenseOverride: body.mode === "automatic" ? null : { versionNo: 1 },
           actualDispenseQuantity: actualQuantity,
-          actualDispenseSource: "manual_override",
+          actualDispenseSource: body.mode === "automatic" ? "preparation_policy" : "manual_override",
           totalRequiredDispenseQuantity: actualQuantity,
         },
         updatedAt: savedUpdatedAt,
@@ -2132,7 +2165,7 @@ async function verifyActualDispenseUiCase(
             actualDispenseOverride:
               currentRow.calculationOutputs.actualDispenseOverride,
             actualDispenseQuantity: actualQuantity,
-            actualDispenseSource: "manual_override",
+            actualDispenseSource: body.mode === "automatic" ? "preparation_policy" : "manual_override",
             actualDispenseUnit: "mL",
             orderId,
             overrideId: "override-smoke-1",
@@ -2153,30 +2186,65 @@ async function verifyActualDispenseUiCase(
   await kongQueueItem.click();
   await expect(kongQueueItem).toHaveAttribute("aria-pressed", "true");
   await expect(page).toHaveURL(/chartId=soap-kong-260501/);
-  const input = page.getByRole("spinbutton", {
-    name: "Maropitant 16mg T 준비 예정량",
+  const input = page.getByRole("textbox", {
+    name: "Maropitant 16mg T 실 조제량",
   });
-  await expect(input).toHaveValue("1", { timeout: 20_000 });
+  await expect(input).toHaveValue("1.0", { timeout: 20_000 });
+  await expect(input).toHaveAttribute("type", "text");
+  await expect(page.getByRole("button", { name: "Maropitant 16mg T 실 조제량 저장" })).toHaveCount(0);
+  await input.fill("abc");
+  await expect(input).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("alert").filter({ hasText: "숫자만 입력해 주세요." })).toBeVisible();
+  await input.press("Enter");
+  await input.press("Tab");
+  expect(saveAttempts).toBe(0);
+  await input.fill("0");
+  await expect(page.getByRole("alert").filter({ hasText: "0보다 큰 숫자를 입력해 주세요." })).toBeVisible();
+  await input.fill("");
+  await expect(page.getByRole("alert").filter({ hasText: "실 조제량을 입력해 주세요." })).toBeVisible();
   await input.fill("1.2");
-  await page
-    .getByRole("button", { name: "Maropitant 16mg T 준비 예정량 저장" })
-    .click();
-  const reasonPopover = page.getByText("준비 예정량 변경 사유가 필요해요");
-  await expect(reasonPopover).toBeVisible();
-  await page.getByRole("button", { name: "계량 단위 보정" }).click();
+  await expect(input).toHaveAttribute("aria-invalid", "false");
+  await input.press("Tab");
+  await expect(page.getByText("실 조제량을 저장하지 못했어요.", { exact: true })).toBeVisible();
+  await expect(input).toHaveValue("1.2");
+  await input.focus();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("실 조제량 변경 사유가 필요해요")).toHaveCount(0);
 
   await expect.poll(() => patchBodies.length).toBe(1);
   expect(patchBodies[0]).toMatchObject({
     actualQuantity: 1.2,
     expectedOrderUpdatedAt: firstUpdatedAt,
-    reason: "계량 단위 보정",
+    mode: "manual",
   });
   await expect(input).toHaveValue("1.2");
-  await expect(
-    page.getByRole("button", {
-      name: "Maropitant 16mg T 준비 예정량 변경 사유",
-    }),
-  ).toBeVisible();
+  expect(patchBodies[0]).not.toHaveProperty("reason");
+  expect(saveAttempts).toBe(2);
+  await expect(page.getByRole("button", { name: /Maropitant 16mg T.*(재확인|되돌리기)/ })).toHaveCount(0);
+  await page.reload();
+  await expect(input).toHaveValue("1.2", { timeout: 20_000 });
+  await input.fill("9.5");
+  await input.press("Escape");
+  await expect(input).toHaveValue("1.2");
+  expect(patchBodies).toHaveLength(1);
+  unitEditing = true;
+  const unit = page.getByRole("combobox", { name: "Maropitant 16mg T 단위", exact: true });
+  const dose = page.getByRole("textbox", { name: "Maropitant 16mg T 용량", exact: true });
+  await unit.focus(); await unit.press("Enter");
+  await page.getByRole("option", { name: "mL", exact: true }).click();
+  await expect.poll(() => prescriptionPatches.length).toBe(1);
+  expect(prescriptionPatches[0]).toMatchObject({ dose: 1, doseUnit: "mL" });
+  await expect(dose).toHaveValue("1"); await expect(input).toHaveValue("1.2");
+  await page.reload();
+  await expect(unit).toHaveText("mL", { timeout: 20_000 });
+  await expect(dose).toHaveValue("1"); await expect(input).toHaveValue("1.2");
+  await unit.focus(); await unit.press("Enter");
+  await page.getByRole("option", { name: "mg", exact: true }).click();
+  await expect.poll(() => prescriptionPatches.length).toBe(2);
+  expect(prescriptionPatches[1]).toMatchObject({ dose: 16, doseUnit: "mg" });
+  await expect(dose).toHaveValue("16"); await expect(input).toHaveValue("1.2");
+  expect(JSON.stringify(parentRow)).toBe(preservedParent);
 }
 
 for (const actualDispenseUiCase of actualDispenseUiCases) {
