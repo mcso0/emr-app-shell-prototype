@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { OverallInstructionsHistoryDialog } from "./overall-instructions-history-dialog";
 import type { OverallInstructions } from "./overall-instructions-contract";
 
@@ -25,9 +25,11 @@ export const RevisionHistory: Story = { play: async ({ canvasElement }) => {
   await body.findByText("다시 작성된 지시", { exact: false });
   await userEvent.selectOptions(body.getByLabelText("지시 범위"), "dispensing");
   await expect(body.queryByText("전체 지시")).not.toBeInTheDocument();
-  await expect(body.getByText("경구제 지시 (이전 기록) · 최초 지시")).toBeVisible();
-  await expect(body.getByText("조제 지시 · 지시 삭제")).toBeVisible();
-  await expect(body.getByText("조제 지시 · 변경된 지시")).toBeVisible();
+  await waitFor(() => {
+    expect(body.getByText("경구제 지시 (이전 기록) · 최초 지시")).toBeVisible();
+    expect(body.getByText("조제 지시 · 지시 삭제")).toBeVisible();
+    expect(body.getByText("조제 지시 · 변경된 지시")).toBeVisible();
+  });
 } };
 export const EmptyHistory: Story = { args: { empty: true }, play: async ({ canvasElement }) => {
   await within(canvasElement.ownerDocument.body).findByText("변경 이력이 없습니다.");
