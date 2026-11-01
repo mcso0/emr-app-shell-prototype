@@ -16,7 +16,7 @@ last_updated: "2026-11-01"
 
 Implement the approved chart-wide and category-specific instruction workflow described in the [PRD](../../product/features/chart/overall-instructions-prd.md) and [screen specification](../../design/screens/chart/specs/overall-instructions.md). Keep current instructions, historical request/completion snapshots, explicit performer acknowledgements, and notification reads distinct.
 
-The user authorized local implementation on 2026-11-01. Execution and verification are tracked in [CLINICAL-FULFILLMENT-PR-012](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md). Remote migrations, real notifications, PR publication, merge and deployment remain outside that authorization. Existing dirty work must remain untouched.
+The user authorized local implementation on 2026-11-01 and subsequently authorized this feature PR, one remote migration and Production delivery. Execution, exact scope and limits are tracked in [CLINICAL-FULFILLMENT-PR-012](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md); [PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) records live release results. Unrelated migrations, real clinical/provider actions and paid-resource changes remain outside scope. Existing dirty work must remain untouched.
 
 The existing CLINICAL-FULFILLMENT-PR-010 is a foundation reference, not approval for this feature. The work index was searched before implementation; PR-012 now owns this feature and its evidence. Do not create duplicate plans under `docs/implementation/`.
 

@@ -42,7 +42,7 @@ Approved behavior works through UI/API/DB with synthetic evidence. Required chec
 
 ## Local implementation and verification — 2026-11-01
 
-The approved local implementation is ready for human review. It is uncommitted in `codex/overall-instructions`; no remote DB, PR, merge, deployment, real notifications or clinical data was changed.
+At the local verification checkpoint, the approved implementation was ready for human review and uncommitted in `codex/overall-instructions`; no remote DB, PR, merge, deployment, real notifications or clinical data had changed. The subsequent delivery authorization and live release record are below.
 
 ### Implemented behavior
 
@@ -83,7 +83,7 @@ The user reaffirmed all three recommended policies and requested remaining imple
 
 Direct user instruction: create the PR, apply the remote DB change and deploy, including only this overall-instructions feature while preserving existing WIP. This is bounded authorization for the feature PR, one scoped migration, exact-head main merge and Production delivery after required checks. No unrelated migration, data backfill, real clinical/provider action or paid-resource change is included.
 
-Release preparation is in progress. Local screenshots and evidence remain outside the PR. The shared Supabase target is verified as the existing CLAiR demo project; its historical staging name does not imply Preview data isolation. Preview and Production smoke will use only existing documented synthetic context, with no instruction, order or notification writes. Remote migration preflight/readback use schema catalogs. Preserve old PO rows and snapshots.
+[PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) is the release record for the exact candidate, required checks, migration version, Preview/Production source and smoke results. This work item retains the implementation evidence and boundaries; the PR records current delivery status. Local screenshots and evidence remain outside the PR. The shared Supabase target is verified as the existing CLAiR demo project; its historical staging name does not imply Preview data isolation. Preview and Production smoke will use only existing documented synthetic context, with no instruction, order or notification writes. Remote migration preflight/readback use schema catalogs. Preserve old PO rows and snapshots.
 
 ## Earlier authoring checkpoint
 

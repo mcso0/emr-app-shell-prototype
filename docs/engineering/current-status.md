@@ -1,6 +1,6 @@
 # MVP Current Status
 
-Local overall-instructions candidate (2026-11-01) connects chart authoring, atomic scoped revisions, performer acknowledgement, immutable task snapshots and persisted in-app change notifications. Immediate and direct completion paths enforce the same actor/version review. Local contract, component, concurrent SQL and build checks pass; hosted migration/RLS parity, authenticated hospital smoke and release are not verified. See [CLINICAL-FULFILLMENT-PR-012](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md) for exact evidence and rollout limits.
+Overall instructions connects chart authoring, atomic scoped revisions, performer acknowledgement, immutable task snapshots and persisted in-app change notifications. Immediate and direct completion paths enforce the same actor/version review. Local contract, component, concurrent SQL and build checks pass. [PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) records the exact release candidate, remote migration and Preview/Production results; [CLINICAL-FULFILLMENT-PR-012](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md) defines verification limits. Synthetic checks do not establish hospital-user acceptance.
 
 Updated: 2026-11-01
 

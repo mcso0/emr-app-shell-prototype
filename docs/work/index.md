@@ -552,4 +552,4 @@ See `docs/work/inbox.md`.
 | CHART-PR-041 | in_progress | chart | P1 | Four chart regions reveal scrollbars on hover with a shared thumb color token | `docs/work/chart/CHART-PR-041-chart-scrollbar-hover-reveal.md` |
 | CLIENT-REFACTOR-PR-001 | human_review | design-system | P1 | Chart/reception/profile/Lab edit-save-read ownership and exact-head Draft PR verification | `docs/work/design-system/CLIENT-REFACTOR-PR-001-edit-save-read-ownership.md` |
 
-| CLINICAL-FULFILLMENT-PR-012 | human_review | clinical-fulfillment | P0 | Overall instructions locally implemented and verified; hosted apply and delivery remain gated | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md` |
+| CLINICAL-FULFILLMENT-PR-012 | human_review | clinical-fulfillment | P0 | Overall instructions implemented and locally verified; scoped migration and delivery evidence tracked in PR #1033 | `docs/work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md` |

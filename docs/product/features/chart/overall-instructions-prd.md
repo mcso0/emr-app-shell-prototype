@@ -15,7 +15,7 @@ last_updated: "2026-11-01"
 이 문서는 2026-11-01까지의 논의와 **최종 HTML 시안 v45**를 정리한 제품 기획이다. 확정한 화면 결정과 이번에 보완한 제품 제안을 구분한다. **이 문서 자체가 원격 DB 변경·배포 권한을 부여하지 않는다.** 별도 승인된 로컬 구현과 검증은 PR-012에 기록한다. 기존 경구제 기록의 당시 적용 범위는 보존한다.
 
 - 구현 조사와 단계별 계획: [총괄 지시사항 구현 계획](../../../engineering/architecture/overall-instructions-implementation-plan.md)
-- 이후 사용자가 로컬 구현을 승인했다. 작성·저장·수행 확인·알림의 로컬 구현과 합성 검증은 [PR-012](../../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md)에 기록한다. 실제 차트 진입점과 수행 경로를 연결했고, DB 마이그레이션은 격리된 합성 환경에서 검증했다. 원격 적용·배포·병원 사용자 수용은 아직이다.
+- 이후 사용자가 로컬 구현을 승인했다. 작성·저장·수행 확인·알림의 로컬 구현과 합성 검증은 [PR-012](../../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md)에 기록한다. 실제 차트 진입점과 수행 경로를 연결했고, DB 마이그레이션은 격리된 합성 환경에서 검증했다. 원격 적용·배포의 최신 결과는 [PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033)에 기록한다. 병원 사용자 수용 검증은 별도다.
 - 화면과 상태별 세부 규칙: [총괄 지시사항 상세 기획](../../../design/screens/chart/specs/overall-instructions.md)
 - 리뷰 대상: [v45 시안](https://spare-thumbnail-consultation-circles.trycloudflare.com/?open=1&v=45&instructions=saved)
 - 시안은 합성 데이터로 동작한다. `적용`은 브라우저 메모리만 바꾸며, 새로고침하면 초기 상태로 돌아간다.
