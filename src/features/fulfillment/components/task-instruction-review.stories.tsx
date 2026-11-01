@@ -156,7 +156,9 @@ export const LegacyPoSnapshot: Story = {
   play: async ({ canvas, canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await canvas.findByText("첫 작업 합성 지시 1");
-    await userEvent.click(canvas.getByRole("button", { name: "변경 내용 확인" }));
+    await userEvent.click(canvas.getByRole("button", { name: "변경이력 보기" }));
+    await body.findByText("합성 전체 변경 기록");
+    await userEvent.click(body.getByRole("button", { name: "요청·완료 당시 기록" }));
     await userEvent.click(await body.findByText("요청·완료 당시 기록"));
     await waitFor(() => expect(body.getByText("이전 경구제 전용 합성 기록")).toBeVisible());
     await expect(body.getByText(/이전 경구제 기록 · 1회차/)).toBeVisible();
@@ -211,4 +213,18 @@ export const CollapsedVersionReopens: Story = { play: async ({ canvas }) => {
   await userEvent.click(canvas.getByRole("button", { name: "다음 버전" }));
   await expect(await canvas.findByText("첫 작업 합성 지시 2")).toBeVisible();
   await expect(fixture.posts).toBe(0);
+} };
+
+export const RevisionBadge: Story = { play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await canvas.findByText("첫 작업 합성 지시 1");
+  await expect(canvas.queryByText("변경됨")).not.toBeInTheDocument();
+  await expect(canvas.queryByRole("button", { name: "변경 내용 확인" })).not.toBeInTheDocument();
+  await userEvent.click(canvas.getByRole("button", { name: "다음 버전" }));
+  await canvas.findByText("첫 작업 합성 지시 2");
+  await expect(canvas.getByText("변경됨")).toBeVisible();
+  await userEvent.click(canvas.getByRole("button", { name: "수행 시작" }));
+  await userEvent.click(await body.findByRole("button", { name: "최신 지시 확인" }));
+  await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+  await expect(canvas.getByText("변경됨")).toBeVisible();
 } };
