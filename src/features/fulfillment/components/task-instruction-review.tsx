@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
-import { ClipboardListIcon } from "@/components/icons";
-import { CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
+import { TaskInstructionCallout } from "./task-instruction-callout";
 import { instructionScopeLabels } from "@/features/chart/overall-instructions-contract";
 import { instructionReviewTargetId, type EffectiveInstructions } from "../task-instruction-review-contract";
 import type { TaskInstructionReviewController } from "../use-task-instruction-review";
@@ -21,22 +19,13 @@ function InstructionContent({ document }: { document: EffectiveInstructions | nu
 
 /** Shared by real task callers and synthetic interaction stories. */
 export function TaskInstructionReview({ controller }: { controller: TaskInstructionReviewController }) {
-  const [hiddenVersion, setHiddenVersion] = useState<string | null>(null);
   const visible = controller.reviews.filter(item => item.current?.entries.length);
   const unique = visible.filter((item, index) => visible.findIndex(other => other.current?.chartId === item.current?.chartId && other.current?.versionKey === item.current?.versionKey) === index);
-  const version = unique.map(item => `${item.current!.chartId}:${item.current!.versionKey}`).sort().join(";");
-  const changed = unique.some(item => item.requiresAcknowledgement);
   const selected = controller.selected.filter((item, index) => controller.selected.findIndex(other => other.current?.chartId === item.current?.chartId && other.current?.versionKey === item.current?.versionKey) === index);
   return <>
     {controller.error && !controller.open && <div role="alert" className="flex items-center justify-between gap-3 text-sm"><p>{controller.error}</p><Button size="sm" variant="outline" onClick={() => void controller.refresh()}>다시 확인</Button></div>}
-    {unique.length > 0 && (hiddenVersion === version ? <Button size="sm" variant="ghost" onClick={() => setHiddenVersion(null)}><ClipboardListIcon />지시사항 보기</Button> :
-      <aside aria-label="총괄 지시사항" className="flex gap-3 rounded-lg border border-border bg-muted/30 p-3">
-        <ClipboardListIcon className="mt-0.5 size-5 shrink-0" />
-        <div className="min-w-0 flex-1 space-y-3"><div className="flex flex-wrap items-center gap-2"><strong className="text-sm">총괄 지시사항</strong>{changed && <span className="text-xs font-medium text-primary">변경됨</span>}
-          <Button size="sm" variant="ghost" disabled={controller.busy} onClick={controller.show}>{changed ? "변경 내용 확인" : "지시·기록 보기"}</Button></div>
-          {unique.map(item => <InstructionContent key={instructionReviewTargetId(item)} document={item.current} />)}</div>
-        <Button size="icon-sm" variant="ghost" aria-label="지시사항 숨기기" onClick={() => setHiddenVersion(version)}><CdsActionsXIcon /></Button>
-      </aside>)}
+    {unique.map(item => <TaskInstructionCallout key={`${controller.workspaceId}:${item.current!.chartId}:${item.current!.versionKey}`}
+      document={item.current!} workspaceId={controller.workspaceId} changed={item.requiresAcknowledgement} busy={controller.busy} onReview={controller.show} />)}
     <Dialog open={controller.open} onOpenChange={open => { if (!open) controller.close(); }}>
       <EmrDialogShell title="지시사항 확인" variant="wide-form" showCloseButton={!controller.busy}
         secondaryAction={<Button variant="outline" disabled={controller.busy} onClick={controller.close}>닫기</Button>}

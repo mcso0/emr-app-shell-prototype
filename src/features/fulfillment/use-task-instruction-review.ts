@@ -94,7 +94,7 @@ export function useTaskInstructionReview(workspaceId: string | undefined, taskId
     }
   };
   return {
-    reviews, error, busy: busyFor === identity, open: openFor?.identity === identity,
+    workspaceId, reviews, error, busy: busyFor === identity, open: openFor?.identity === identity,
     selected: reviews.filter(item => openFor?.identity === identity && openFor.ids.includes(instructionReviewTargetId(item))),
     refresh: () => read(ids ? ids.split(",") : reviews.map(instructionReviewTargetId)), check, acknowledge,
     show: () => { setOpenFor({ identity, ids: ids ? ids.split(",") : reviews.map(instructionReviewTargetId) }); void read(ids ? ids.split(",") : reviews.map(instructionReviewTargetId)); },
