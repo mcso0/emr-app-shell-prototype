@@ -75,7 +75,7 @@ export function FulfillmentWorkLifecycleAction({
   onTransition: (
     action: FulfillmentWorkItemAction,
     options?: FulfillmentTransitionOptions,
-  ) => Promise<boolean>;
+  ) => Promise<boolean | "review_required">;
   size?: "xs" | "sm";
   startPhase?: string;
   status: FulfillmentWorkItemStatus;
@@ -102,6 +102,7 @@ export function FulfillmentWorkLifecycleAction({
     setSubmitting(true);
     try {
       const succeeded = await onTransition(action, options);
+      if (succeeded === "review_required") return false;
       if (succeeded && !(action === "complete" && completeRequiresRecord)) toast.success(action === "claim" ? "담당자로 지정됐어요." : action === "unassign" ? "담당을 취소했어요." : ["assign", "handoff"].includes(action) ? "담당자를 변경했어요." : "업무 상태를 변경했어요.");
       else if (!succeeded) toast.error("업무 상태를 변경하지 못했어요. 최신 상태를 확인해 주세요.");
       return succeeded;

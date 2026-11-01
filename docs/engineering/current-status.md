@@ -1,6 +1,8 @@
 # MVP Current Status
 
-Updated: 2026-10-11
+Overall instructions connects chart authoring, atomic scoped revisions, performer acknowledgement, immutable task snapshots and persisted in-app change notifications. Immediate and direct completion paths enforce the same actor/version review. Local contract, component, concurrent SQL and build checks pass. [PR #1033](https://github.com/mcso0/emr-app-shell-prototype/pull/1033) records the exact release candidate, remote migration and Preview/Production results; [CLINICAL-FULFILLMENT-PR-012](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md) defines verification limits. Synthetic checks do not establish hospital-user acceptance.
+
+Updated: 2026-11-01
 
 Lab result sheet phase 2 and attachment fixes were merged in PRs #848, #851,
 and #853 on 2026-09-29. PR #853 deployed to Ready Production at

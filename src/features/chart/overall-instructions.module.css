@@ -1,0 +1,20 @@
+.dialog { width: 560px; max-width: calc(100vw - 32px); height: 560px; max-height: calc(100dvh - 80px); }
+.header { border-bottom: 0; }
+.body { padding-top: 4px; padding-bottom: 24px; overflow-y: auto; scrollbar-gutter: stable; }
+.footer { flex-direction: row; flex-wrap: nowrap; justify-content: space-between; }
+.chooser { display: flex; min-height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 16px; max-width: 340px; margin: auto; padding: 24px 0; }
+.chooser h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+.symbol { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--emr-border-default); border-radius: 12px; color: var(--emr-text-secondary); }
+.scopeGrid { display: grid; width: 100%; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+.fields { display: flex; flex-direction: column; gap: 16px; }
+.field { border: 1px solid var(--emr-border-default); border-radius: 8px; padding: 8px 10px; scroll-margin-block: 4px; }
+.field:focus-within { border-color: var(--ring); outline: 2px solid color-mix(in srgb, var(--ring) 25%, transparent); }
+.fieldHeader { display: flex; align-items: center; justify-content: space-between; min-height: 24px; font-size: 13px; font-weight: 500; }
+.input { border: 0; border-radius: 0; box-shadow: none; padding: 4px 0; min-height: 84px; resize: vertical; field-sizing: fixed; }
+.input:focus-visible { border: 0; box-shadow: none; outline: none; }
+.metadata { min-height: 14px; display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--emr-text-tertiary); }
+.add { width: 100%; height: 48px; border-style: dashed; background: transparent; color: var(--emr-text-tertiary); box-shadow: none; }
+.add:hover, .add[aria-expanded=true] { background: transparent; }
+.deleted { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--emr-text-secondary); }
+.deleted span { flex: 1; }
+@media(max-width:639px) { .dialog { max-height: calc(100dvh - 32px); } .header { padding:24px 20px 16px; } .body { padding-inline:20px; } .footer { padding-inline:20px; } .scopeGrid { grid-template-columns: repeat(2,minmax(0,1fr)); } }

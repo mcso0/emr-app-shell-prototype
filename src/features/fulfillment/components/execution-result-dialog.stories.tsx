@@ -40,6 +40,9 @@ const meta = {
     globalThis.fetch = async (input, init) => {
       const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
       if (!url.pathname.startsWith("/api/")) return original(input, init);
+      if (url.pathname === `/api/workspaces/${workspaceId}/fulfillment/instruction-review` && (!init?.method || init.method === "GET")) {
+        return Response.json({ ok: true, reviews: (url.searchParams.get("taskIds") ?? "").split(",").map(taskId => ({ taskId, current: null, previous: null, snapshots: [], requiresAcknowledgement: false })) });
+      }
       if (url.pathname !== `/api/workspaces/${workspaceId}/fulfillment/work-items/${workItemId}/execution`) throw new Error(`Unexpected API ${url.pathname}`);
       const method = init?.method ?? (input instanceof Request ? input.method : "GET");
       if (method === "GET") { reads++; if (failRead) { failRead = false; return Response.json({ ok: false, error: "request_failed" }, { status: 503 }); } return Response.json({ ok: true, context }); }
@@ -78,7 +81,7 @@ export const ReadOnly: Story = { args: { scenario: "readonly" }, parameters: { d
 export const Requested: Story = { args: { scenario: "requested" }, parameters: { docs: { description: { story: "요청 상태는 업무를 먼저 시작하라는 제품 안내를 표시합니다." } } }, play: async ({ canvasElement }) => { const body = within(canvasElement.ownerDocument.body);await waitFor(() => expect(body.getByText("먼저 업무를 시작한 뒤 실제 수행값을 기록해 주세요.")).toBeVisible()); } };
 export const AmendmentReason: Story = {
   args: { scenario: "amendment" }, parameters: { docs: { description: { story: "정정은 기존 입력을 불러오며 사유가 필수입니다. 합성 응답은 이전 버전과 새 버전을 모두 유지합니다." } } },
-  play: async ({ canvasElement }) => { const body = within(canvasElement.ownerDocument.body);await userEvent.click(await body.findByRole("button", { name: "기록 정정" }));await expect(body.getByLabelText("실제 준비수량 *")).toHaveValue(2);await expect(body.getByRole("button", { name: "정정 저장" })).toBeDisabled();await userEvent.type(body.getByLabelText(/정정 사유/), "합성 기록 확인");await waitFor(() => expect(body.getByRole("button", { name: "정정 저장" })).toBeEnabled());await userEvent.click(body.getByRole("button", { name: "정정 저장" }));await waitFor(() => expect(body.getByText(/버전 2/)).toBeVisible());await expect(body.getByText(/버전 1/)).toBeVisible();await expect(writes[0]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 기록 확인" }); },
+  play: async ({ canvasElement }) => { const body = within(canvasElement.ownerDocument.body);await userEvent.click(await body.findByRole("button", { name: "기록 정정" }));await expect(body.getByLabelText("실제 준비수량 *")).toHaveValue(2);await expect(body.getByRole("button", { name: "정정 저장" })).toBeDisabled();fireEvent.change(body.getByLabelText(/정정 사유/), { target: { value: "합성 기록 확인" } });await expect(body.getByLabelText(/정정 사유/)).toHaveValue("합성 기록 확인");await waitFor(() => expect(body.getByRole("button", { name: "정정 저장" })).toBeEnabled());await userEvent.click(body.getByRole("button", { name: "정정 저장" }));await waitFor(() => expect(body.getByText(/버전 2/)).toBeVisible());await expect(body.getByText(/버전 1/)).toBeVisible();await expect(writes[0]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 기록 확인" }); },
 };
 
 export const PendingSaveAuthorityRefresh: Story = {

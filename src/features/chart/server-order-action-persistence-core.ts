@@ -307,6 +307,7 @@ export type ChartOrderActionSaveResult =
         | "idempotency_conflict"
         | "confirmation_in_progress"
         | "master_revision_requires_refresh"
+        | "instruction_ack_required"
         | "confirmation_detail_inputs_incomplete"
         | "invalid_order_selection"
         | "order_set_member_unavailable"
@@ -468,8 +469,9 @@ export async function saveChartOrderAction({
 
   if (!result.ok) {
     if (result.status === 409) {
-      if (["encounter_unavailable", "order_unavailable", "revision_conflict", "idempotency_conflict", "confirmation_in_progress", "stale_status", "catalog_revision_requires_refresh", "child_revision_requires_refresh", "master_revision_requires_refresh", "confirmation_detail_inputs_incomplete"].includes(result.error)) {
-        return { ok: false, status: 409, denialReason: result.error as "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "confirmation_in_progress" | "stale_status" | "catalog_revision_requires_refresh" | "child_revision_requires_refresh" | "master_revision_requires_refresh" | "confirmation_detail_inputs_incomplete" };
+      if (["encounter_unavailable", "order_unavailable", "revision_conflict", "idempotency_conflict", "confirmation_in_progress", "stale_status", "catalog_revision_requires_refresh", "child_revision_requires_refresh", "master_revision_requires_refresh", "instruction_ack_required", "confirmation_detail_inputs_incomplete"].includes(result.error)) {
+        return { ok: false, status: 409, denialReason: result.error as "encounter_unavailable" | "order_unavailable" | "revision_conflict" | "idempotency_conflict" | "confirmation_in_progress" | "stale_status" | "catalog_revision_requires_refresh" | "child_revision_requires_refresh" | "master_revision_requires_refresh" | "instruction_ack_required"
+        | "confirmation_detail_inputs_incomplete" };
       }
       if (result.error === "invalid_order_selection") return { ok: false, status: 422, error: result.error };
       return { ok: false, status: 409, denialReason: "order_unavailable" };
@@ -1268,6 +1270,7 @@ function mapAtomicConfirmationRpcError(
     "idempotency_conflict",
     "confirmation_in_progress",
     "master_revision_requires_refresh",
+    "instruction_ack_required",
     "confirmation_detail_inputs_incomplete",
   ] as const) {
     if (message.includes(error)) return { ok: false, status: 409, error };

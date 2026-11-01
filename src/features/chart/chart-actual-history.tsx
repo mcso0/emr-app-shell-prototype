@@ -1,5 +1,7 @@
 "use client";
 
+import { useTaskInstructionReview } from "@/features/fulfillment/use-task-instruction-review";
+import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +40,7 @@ export function ChartActualHistory({ workspaceId, taskId, onSaved }: { workspace
     })();
     return () => { scope.current = generation + 1; abort.abort(); };
   }, [endpoint, reload, workspaceId, taskId]);
+  const instructionReview = useTaskInstructionReview(workspaceId, [taskId]);
   const save = async () => {
     if (!context || saving || (context.canRecord ? !selfPerformed : !reason.trim()) || !performedAt || !Number.isFinite(Date.parse(performedAt)) || !parseChartActualPayload(context.clinicalOrderType, payload)) return;
     const generation = scope.current;
@@ -45,6 +48,8 @@ export function ChartActualHistory({ workspaceId, taskId, onSaved }: { workspace
     const input = context.canRecord ? { ...common, action: "record", selfPerformed }
       : { ...common, expectedResultVersion: context.results.at(-1)!.version, amendmentReason: reason.trim() };
     const hash = JSON.stringify(input);
+    if (context.canRecord && command.current?.hash !== hash && !await instructionReview.check()) return;
+    if (scope.current !== generation) return;
     if (command.current?.hash !== hash) command.current = { hash, id: crypto.randomUUID() };
     setSaving(true); setError("");
     try {
@@ -52,6 +57,7 @@ export function ChartActualHistory({ workspaceId, taskId, onSaved }: { workspace
       const body: unknown = await response.json();
       if (generation !== scope.current) return;
       const next = response.ok && isExecutionRecord(body) && body.ok === true ? parseChartActualContext(body.context, workspaceId, taskId) : null;
+      if (isExecutionRecord(body) && body.error === "instruction_ack_required") { instructionReview.requireReview(); command.current = null; return; }
       if (!next) { setError("수행 기록 저장을 확인하지 못했습니다. 충돌이 발생했다면 이력을 다시 불러온 뒤 확인해 주세요."); return; }
       setContext(next); setEditing(false); setReason(""); setSelfPerformed(false); command.current = null;
       await onSaved?.();
@@ -60,6 +66,7 @@ export function ChartActualHistory({ workspaceId, taskId, onSaved }: { workspace
   };
   const head = context?.results.at(-1);
   return <div className="mt-3 grid gap-2 border-t border-[var(--emr-border-default)] pt-3">
+    <TaskInstructionReview controller={instructionReview} />
     <strong className="text-sm">실제 수행 기록</strong>
     {loading ? <p role="status">불러오는 중…</p> : null}
     {error ? <><p role="alert" className="text-sm text-destructive">{error}</p><Button variant="outline" disabled={saving} onClick={() => { setEditing(false); setLoading(true); setReload(value => value + 1); }}>이력 다시 불러오기</Button></> : null}

@@ -11,6 +11,8 @@ import {
   executionErrorMessage, getExecutionResultFields, isExecutionRecord, parseExecutionContext, parseExecutionPayload,
   type ExecutionContext, type ExecutionResultPayload, type ExecutionMeasurement,
 } from "../execution-result-contract";
+import { useTaskInstructionReview } from "../use-task-instruction-review";
+import { TaskInstructionReview } from "./task-instruction-review";
 import { FulfillmentWorkLifecycleAction } from "./work-lifecycle-action";
 
 const localTimeInput = (iso: string) => {
@@ -75,6 +77,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     return () => { scope.current = generation + 1; abort.abort(); };
   }, [endpoint, refreshKey, taskId, workItemId, workspaceId, ownershipKey]);
 
+  const instructionReview = useTaskInstructionReview(workspaceId, context ? [context.taskId] : [], ownershipKey);
   const fields = context ? getExecutionResultFields(context) : [];
   const payload: ExecutionResultPayload = {};
   for (const field of fields) {
@@ -97,6 +100,8 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
       expectedResultVersion: context.results.length, performedAt: new Date(performedAt).toISOString(), payload,
       varianceReason: varianceReason.trim() || null, amendmentReason: amending ? amendmentReason.trim() : null };
     const fingerprint = JSON.stringify(body);
+    if (!amending && command.current?.fingerprint !== fingerprint && !await instructionReview.check()) return;
+    if (!mounted.current || scope.current !== generation) return;
     if (command.current?.fingerprint !== fingerprint) command.current = { fingerprint, id: crypto.randomUUID() };
     pendingSave.current = true;
     setSaving(true); setError(null); setNotice(null);
@@ -106,6 +111,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
       const result: unknown = await response.json();
       if (!mounted.current) return;
       if (!response.ok || !isExecutionRecord(result) || result.ok !== true) {
+        if (isExecutionRecord(result) && result.error === "instruction_ack_required") { instructionReview.requireReview(); command.current = null; return; }
         setError(executionErrorMessage(isExecutionRecord(result) && typeof result.error === "string" ? result.error : "request_failed")); return;
       }
       const saved = parseExecutionContext(result.context, workspaceId, workItemId);
@@ -136,6 +142,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
       secondaryAction={<Button variant="outline" disabled={saving} onClick={() => onOpenChange(false)}>닫기</Button>}
       primaryAction={canWrite ? <Button disabled={!valid || saving} onClick={() => void save()}>{saving ? "저장 중" : amending ? "정정 저장" : "수행기록 저장 및 완료"}</Button> : null}>
       <div className="space-y-4" data-testid="execution-result-dialog">
+        <TaskInstructionReview controller={instructionReview} />
         {loading ? <p role="status">확정 계획과 수행기록을 불러오는 중입니다.</p> : null}
         {error ? <div role="alert" className="space-y-2"><p>{error}</p><Button variant="outline" onClick={() => {
           setContext(null); setError(null); setNotice(null); setDraft({}); setDeviceParameters([]); setPerformedAt(""); setVarianceReason("");

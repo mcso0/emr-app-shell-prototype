@@ -1,5 +1,8 @@
 "use client";
 
+import { useTaskInstructionReview } from "@/features/fulfillment/use-task-instruction-review";
+import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
+
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
@@ -406,6 +409,8 @@ type FulfillmentTransitionCommand =
   | FulfillmentWorkItemAction
   | ({ action: FulfillmentWorkItemAction } & FulfillmentTransitionOptions);
 type FulfillmentWorkItem = {
+  taskId?: string | null;
+  taskAttemptNo?: number | null;
   assignedToDisplayName?: string | null;
   canManage?: boolean;
   assignedToUserId?: string | null;
@@ -800,7 +805,7 @@ function useFulfillmentQueue(
   }, [enabled, load]);
 
   const updateStatus = useCallback(
-    async (workItemId: string, transitions: FulfillmentTransitionCommand[]) => {
+    async (workItemId: string, transitions: FulfillmentTransitionCommand[], onError?: (code: string) => void) => {
       let allTransitionsSucceeded = true;
       let expectedRevision = snapshot.workItems.find(
         (item) => item.id === workItemId,
@@ -826,6 +831,8 @@ function useFulfillmentQueue(
           },
         );
         if (!response.ok) {
+          const failure = await response.json().catch(() => ({}));
+          onError?.(failure.denialReason ?? failure.error ?? "request_failed");
           allTransitionsSucceeded = false;
           break;
         }
@@ -3392,6 +3399,7 @@ export function LabContent({
       ),
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
+  const instructionReview = useTaskInstructionReview(workspaceId, !allowDemoContent && fulfillmentWorkItem?.taskId ? [fulfillmentWorkItem.taskId] : [], String(fulfillmentWorkItem?.rowRevision ?? ""));
   const catalogRowsState = useLabResultSheetCatalogRows({
     result: allowDemoContent ? detail?.result : undefined,
     workItem: fulfillmentWorkItem,
@@ -3482,6 +3490,7 @@ export function LabContent({
     ).length ?? 0;
   const startAssignment = async () => {
     if (fulfillmentWorkItem) {
+      if (!await instructionReview.check()) return;
       const transitionPath = getFulfillmentTransitionPath(
         fulfillmentWorkItem.status,
         "in_progress",
@@ -3501,6 +3510,7 @@ export function LabContent({
   };
   const completeAssignment = async () => {
     if (fulfillmentWorkItem) {
+      if (!await instructionReview.check()) return;
       const transitionPath = getFulfillmentTransitionPath(
         fulfillmentWorkItem.status,
         "completed",
@@ -3540,15 +3550,16 @@ export function LabContent({
       status: "requested",
     });
   };
-  const transitionFulfillment = (
+  const transitionFulfillment = async (
     action: FulfillmentWorkItemAction,
     options?: FulfillmentTransitionOptions,
-  ) =>
-    fulfillmentWorkItem
-      ? fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [
-          { action, ...options },
-        ])
-      : Promise.resolve(false);
+  ) => {
+    if (!fulfillmentWorkItem) return false;
+    if (["start", "resume", "complete"].includes(action) && !await instructionReview.check()) return "review_required" as const;
+    return fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [{ action, ...options }], code => {
+      if (code === "instruction_ack_required") instructionReview.requireReview();
+    });
+  };
   const loadEligibleAssignees = () =>
     fulfillmentWorkItem
       ? loadFulfillmentEligibleAssigneesRoute({
@@ -3828,6 +3839,7 @@ export function LabContent({
 
       <ScrollArea data-slot="lab-result-scroll-area" className="min-h-0 flex-1">
         <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
+          <TaskInstructionReview controller={instructionReview} />
           {phase2.status === "ready" && !phase2.data?.canEdit ? <div role="status" className="rounded-lg border border-border bg-card px-4 py-3 emr-text-dense text-muted-foreground">
             {!fulfillmentWorkItem?.assignedToUserId ? "담당하기 후 결과·소견·첨부자료를 입력할 수 있습니다." : "현재 담당자만 결과·소견·첨부자료를 수정할 수 있습니다."}
           </div> : null}
@@ -4308,6 +4320,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       ),
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
+  const instructionReview = useTaskInstructionReview(workspaceId, !allowDemoContent && fulfillmentWorkItem?.taskId ? [fulfillmentWorkItem.taskId] : [], String(fulfillmentWorkItem?.rowRevision ?? ""));
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
     status: getInitialImagingReadingStatus(detail?.study.status),
@@ -4320,6 +4333,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       : initialAssignment;
   const startAssignment = async () => {
     if (fulfillmentWorkItem) {
+      if (!await instructionReview.check()) return;
       const transitionPath = getFulfillmentTransitionPath(
         fulfillmentWorkItem.status,
         "in_progress",
@@ -4337,15 +4351,16 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       studyId: initialAssignment.studyId,
     });
   };
-  const transitionFulfillment = (
+  const transitionFulfillment = async (
     action: FulfillmentWorkItemAction,
     options?: FulfillmentTransitionOptions,
-  ) =>
-    fulfillmentWorkItem
-      ? fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [
-          { action, ...options },
-        ])
-      : Promise.resolve(false);
+  ) => {
+    if (!fulfillmentWorkItem) return false;
+    if (["start", "resume", "complete"].includes(action) && !await instructionReview.check()) return "review_required" as const;
+    return fulfillmentQueue.updateStatus(fulfillmentWorkItem.id, [{ action, ...options }], code => {
+      if (code === "instruction_ack_required") instructionReview.requireReview();
+    });
+  };
   const loadEligibleAssignees = () =>
     fulfillmentWorkItem
       ? loadFulfillmentEligibleAssigneesRoute({
@@ -4355,6 +4370,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       : Promise.resolve([]);
   const completeAssignment = async () => {
     if (fulfillmentWorkItem) {
+      if (!await instructionReview.check()) return;
       const transitionPath = getFulfillmentTransitionPath(
         fulfillmentWorkItem.status,
         "completed",
@@ -4609,9 +4625,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
         className="min-h-0 flex-1"
       >
         <div data-slot="instruction-result-scroll-content" className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}>
-          <section className="rounded-lg bg-[var(--emr-status-warning-bg)] px-4 py-3 emr-text-dense font-medium leading-5 text-[var(--emr-status-warning-text)]">
-            병원 내 직원이 남긴 코멘트와 총괄 지시사항을 판독 전에 확인합니다.
-          </section>
+          <TaskInstructionReview controller={instructionReview} />
           <ImagingOrderDetailTable
             detail={detail}
             requesterName={allowDemoContent

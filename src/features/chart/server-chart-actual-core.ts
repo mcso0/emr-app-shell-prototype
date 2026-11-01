@@ -5,7 +5,7 @@ export type ChartActualRpcClient = { rpc(name: "clair_get_chart_actual_context" 
   PromiseLike<{ data: unknown; error: { message?: string } | null }> };
 type Result = { ok: true; status: 200; context: ChartActualContext } | { ok: false; status: number; error: string };
 const known = new Set(["actor_mismatch", "permission_missing", "task_unavailable", "invalid_chart_actual", "invalid_performed_at",
-  "idempotency_conflict", "plan_revision_conflict", "result_revision_conflict"]);
+  "instruction_ack_required", "idempotency_conflict", "plan_revision_conflict", "result_revision_conflict"]);
 const fail = (message?: string): Result => ({ ok: false, status: message === "permission_missing" || message === "actor_mismatch" ? 403 : known.has(message ?? "") ? 409 : 500,
   error: known.has(message ?? "") ? message! : "chart_actual_unavailable" });
 export async function readChartActual({ client, workspaceId, taskId }: { client: ChartActualRpcClient; workspaceId: string; taskId: string }): Promise<Result> {

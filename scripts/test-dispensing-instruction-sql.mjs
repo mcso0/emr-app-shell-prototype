@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
+const overallInstructions = process.argv.includes("--overall-instructions");
 const container = `clair-instruction-${process.pid}`;
 const image = "public.ecr.aws/supabase/postgres:17.6.1.165";
 function docker(args, input) {
@@ -24,6 +25,12 @@ definitions.push(
  ["20260819150622_clinical_master_phase1a3_order_authority.sql", "public.clair_sync_billing_invoice_candidates_from_fulfillment"],
  ["20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql", "public.clair_mutate_chart_order_execution"],
 );
+if (overallInstructions) definitions.push(
+ ["20260908211856_encounter_multi_chart.sql", "private.clair_require_chart_encounter"],
+ ["20260908211856_encounter_multi_chart.sql", "private.clair_require_order_encounter"],
+ ["20260908211856_encounter_multi_chart.sql", "private.clair_require_order_chart"],
+ ["20260908083019_order_ready_planning_and_catalog_archive.sql", "public.clair_record_chart_actual_result"],
+);
 let baseline = "set check_function_bodies=off;\n" + definitions.map(([file,name]) => {
  const s=readFileSync(`supabase/migrations/${file}`,"utf8");
  const at=s.search(new RegExp(`create(?: or replace)? function ${name.replaceAll(".","\\.")}\\(`,"i"));
@@ -38,6 +45,7 @@ let baseline = "set check_function_bodies=off;\n" + definitions.map(([file,name]
  if(name==="public.clair_sync_billing_invoice_candidates_from_fulfillment") body=body.replace("  return private.clair_sync_billing_invoice_candidates_internal(", "  if exists(select 1 from public.order_fulfillment_work_items wi where wi.workspace_id=p_workspace_id and wi.encounter_id=p_encounter_id and wi.order_id=any(p_order_ids) and wi.assigned_to_user_id is distinct from p_actor_user_id) then raise exception 'current_assignee_required' using errcode='42501'; end if;\n  return private.clair_sync_billing_invoice_candidates_internal(");
  if(name==="public.clair_mutate_chart_order_execution") body=body.replace("public.clair_mutate_chart_order_execution(", "public.clair_mutate_chart_order_execution_origin_base(");
  if(name==="public.clair_record_order_execution_result") body=body.replaceAll("public.clair_save_chart_order_lifecycle(", "public.clair_save_chart_order_lifecycle_internal(");
+ if(name==="public.clair_record_chart_actual_result") body=body.replaceAll("public.clair_save_chart_order_lifecycle(", "public.clair_save_chart_order_lifecycle_internal(");
  return body;
 }).join("\n");
 // Apply the actual intervening patches, including parent timestamps and encounter
@@ -47,13 +55,13 @@ baseline += "\n" + multiChart.slice(multiChart.indexOf("do $fulfillment_aggregat
 baseline += "\n" + readFileSync("supabase/migrations/20260912230700_dispensing_execution_billing_candidate_handoff.sql", "utf8");
 const ownerPatch = readFileSync("supabase/migrations/20261012054346_current_assignee_mutation_boundary.sql", "utf8");
 baseline += "\n" + ownerPatch.slice(ownerPatch.indexOf("do $patch$"), ownerPatch.indexOf(" signature:='public.clair_save_lab_result_entry_v2")) + "\nend $patch$;";
-const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
+const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql", ...(overallInstructions ? ["20261027130000_chart_oral_instructions.sql", "20261101140000_overall_instructions.sql"] : [])].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
 const fixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8")
- .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + "\nrollback;");
+ .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + (overallInstructions ? readFileSync("tests/sql/overall-instructions.sql", "utf8") + readFileSync("tests/sql/overall-instructions-boundaries.sql", "utf8") : "") + "\nrollback;");
 const notificationSource = readFileSync("supabase/migrations/20260705133000_notification_event_persistence.sql", "utf8");
 const notificationTable = notificationSource.slice(notificationSource.indexOf("create table if not exists public.notification_events"), notificationSource.indexOf("create table if not exists public.notification_user_states"))
  .replace("references public.workspaces(id) on delete cascade", "");
-const sql = fixture.replace("-- NOTIFICATION TABLE", notificationTable).replace("-- BASELINE", () => baseline).replaceAll("-- MIGRATION", () => migration);
+const sql = fixture.replace("-- NOTIFICATION TABLE", notificationTable).replace("-- BASELINE", () => (overallInstructions ? readFileSync("tests/sql/overall-instructions-schema.sql", "utf8") : "") + baseline).replaceAll("-- MIGRATION", () => migration);
 let owned = false;
 try {
  docker(["run", "--detach", "--rm", "--name", container, "--network", "none", "-e", "POSTGRES_PASSWORD=synthetic-local-test", image]); owned = true;
@@ -87,5 +95,40 @@ try {
  const second = session(`begin; ${claim("00000000-0000-4000-8000-000000000002")} commit;`);
  const results = await Promise.all([first, second]);
  if (results[0].code !== 0 || results[1].code === 0 || !results[1].stderr.includes("revision_conflict")) throw new Error("Concurrent claims did not reject the stale contender: " + JSON.stringify(results));
+ if (overallInstructions) {
+  const source = readFileSync("tests/sql/overall-instructions.sql", "utf8");
+  docker(psql, "begin; select set_config('test.actor','00000000-0000-4000-8000-000000000003',true);\n" + source.slice(0, source.indexOf("do $$")) + "\ncommit;");
+  const chart = "51000000-0000-4000-8000-000000000001", task = "53000000-0000-4000-8000-000000000001", wi = "54000000-0000-4000-8000-000000000001";
+  const actor = n => `select set_config('test.actor','00000000-0000-4000-8000-00000000000${n}',true);`;
+  const apply = revision => `select public.clair_apply_overall_instructions('workspace-a','${chart}',jsonb_build_object('commandId',gen_random_uuid(),'changes',jsonb_build_array(jsonb_build_object('scope','overall','expectedRevision',${revision},'operation','set','instruction','Concurrent revision ${revision + 1}'))));`;
+  docker(psql, `begin; ${actor(3)} ${apply(0)} commit;`);
+  const version = docker([...psql, "-At"], `select private.clair_task_effective_instructions('workspace-a','${task}')->>'versionKey';`).trim();
+  async function whileLocked(firstSql, secondSql) {
+   let signalLocked;
+   const signal = new Promise(resolve => { signalLocked = resolve; });
+   const first = session(`begin; set local statement_timeout='8s'; ${firstSql} select 'CLAIM_LOCKED'; select pg_sleep(0.4); commit;`, signalLocked);
+   await Promise.race([signal, first.then(result => { throw new Error("First session exited before taking locks: " + JSON.stringify(result)); })]);
+   return Promise.all([first, session(`begin; set local statement_timeout='8s'; ${secondSql} commit;`)]);
+  }
+  const ackRace = await whileLocked(`${actor(3)} ${apply(1)}`, `${actor(2)} select public.clair_acknowledge_task_instructions('workspace-a','${task}','${version}');`);
+  if (ackRace[0].code !== 0 || ackRace[1].code === 0 || !ackRace[1].stderr.includes("instruction_version_conflict")) throw new Error("Concurrent acknowledgement accepted a stale vector: " + JSON.stringify(ackRace));
+  // Reproduce the chart-wrapper / apply lock ordering, including the later
+  // underlying ownership lock. Before the new helper ordering this deadlocks.
+  let chartLocked;
+  const chartSignal = new Promise(resolve => { chartLocked = resolve; });
+  const chartFirst = session(`begin; set local statement_timeout='8s'; ${actor(3)} select private.clair_require_order_chart('workspace-a',auth.uid()::text,'20000000-0000-4000-8000-000000000001','${chart}'); select 'CLAIM_LOCKED'; select pg_sleep(0.4); select private.clair_lock_work_ownership('workspace-a','52000000-0000-4000-8000-000000000001'); commit;`, chartLocked);
+  await Promise.race([chartSignal, chartFirst.then(result => { throw new Error("Chart lock failed: " + JSON.stringify(result)); })]);
+  const chartRace = await Promise.all([chartFirst, session(`begin; set local statement_timeout='8s'; ${actor(3)} ${apply(2)} commit;`)]);
+  if (chartRace.some(result => result.code !== 0)) throw new Error("Chart / apply lock ordering failed: " + JSON.stringify(chartRace));
+  docker(psql, `begin; ${actor(1)} select public.clair_acknowledge_task_instructions('workspace-a','${task}',private.clair_task_effective_instructions('workspace-a','${task}')->>'versionKey'); select public.clair_mutate_fulfillment_instruction('workspace-a','${wi}',jsonb_build_object('action','claim','commandId',gen_random_uuid(),'expectedRevision',public.clair_get_fulfillment_instruction('workspace-a','${wi}')->>'revision')); commit;`);
+  const completionRace = await whileLocked(`${actor(1)} select public.clair_mutate_fulfillment_instruction('workspace-a','${wi}',jsonb_build_object('action','complete','itemId','${wi}','commandId',gen_random_uuid(),'expectedRevision',public.clair_get_fulfillment_instruction('workspace-a','${wi}')->>'revision'));`, `${actor(3)} ${apply(3)}`);
+  if (completionRace.some(result => result.code !== 0)) throw new Error("Completion / apply race failed: " + JSON.stringify(completionRace));
+  docker(psql, `do $$ begin
+   if (select document#>>'{versions,overall}' from private.task_instruction_snapshots where task_id='${task}' and phase='completed')<>'3'
+    or private.clair_task_effective_instructions('workspace-a','${task}')#>>'{versions,overall}'<>'4' then raise exception 'completion snapshot changed with later instructions'; end if;
+  end $$;`);
+  console.log("PASS: two-session stale acknowledgement, chart/apply lock ordering, and completion snapshot serialization.");
+ }
+ if (overallInstructions) console.log("PASS: overall instructions migration and scoped synthetic assertions.");
  console.log("PASS: instruction lifecycle, common-text completion preservation/history, notifications, role denial, replay/stale writes, billing guard, workspace isolation and concurrent claim. Isolated synthetic schema; not full Supabase replay.");
 } finally { if (owned) docker(["stop", container]); }

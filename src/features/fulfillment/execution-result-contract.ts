@@ -161,6 +161,7 @@ export function parseExecutionContext(value: unknown, workspaceId: string, workI
 }
 
 export const executionErrorMessage = (code: string) => ({
+  instruction_ack_required: "최신 지시사항을 확인한 뒤 다시 시도해 주세요.",
   treatment_medication_link_required: "수행 전에 처치 계획을 수정해 약품 오더를 연결해 주세요.",
   treatment_medication_link_invalid: "연결 약품 오더가 취소되었거나 확정되지 않았습니다. 같은 진료의 유효한 약품 오더를 확인해 주세요.",
   unauthenticated: "로그인 세션이 필요합니다. 다시 로그인한 뒤 시도해 주세요.",
