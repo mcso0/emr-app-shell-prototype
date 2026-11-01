@@ -8,9 +8,9 @@ import { instructionReviewListSchema, type TaskInstructionReview as Review } fro
 const workspace = "synthetic-instruction-review";
 const first = "71000000-0000-4000-8000-000000000001";
 const second = "71000000-0000-4000-8000-000000000002";
-type Scenario = "normal" | "conflict" | "deleted" | "read-failure" | "late-response" | "legacy-history" | "history-denied" | "history-failure" | "history-late" | "history-wrong-chart";
+type Scenario = "history-normal" | "multiline" | "normal" | "conflict" | "deleted" | "read-failure" | "late-response" | "legacy-history" | "history-denied" | "history-failure" | "history-late" | "history-wrong-chart";
 function createFixture(scenario: Scenario) {
-  let revision = 1, posts = 0, failed = scenario === "read-failure", held = scenario === "late-response";
+  let revision = scenario.includes("history") ? 2 : 1, posts = 0, failed = scenario === "read-failure", held = scenario === "late-response";
   let release: (() => void) | undefined;
   let historyFailed = scenario === "history-failure", holdHistory = scenario === "history-late";
   const acknowledgements = new Set<string>();
@@ -21,7 +21,7 @@ function createFixture(scenario: Scenario) {
         entries: [{ scope: "dispensing", revision: 1, instruction: "이전 경구제 전용 합성 기록", deleted: false, legacy: true, actorName: "합성 수의사", createdAt: "2026-10-31T02:00:00Z" }] },
     }] : [],
     current: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { overall: revision, dispensing: 0 }, versionKey: String(revision).repeat(64),
-      entries: [{ scope: "overall", revision, instruction: scenario === "deleted" ? "" : `${taskId === first ? "첫 작업" : "둘째 작업"} 합성 지시 ${revision}`, deleted: scenario === "deleted", actorName: "합성 수의사", createdAt: "2026-11-01T03:00:00Z" }] },
+      entries: [{ scope: "overall", revision, instruction: scenario === "deleted" ? "" : `${taskId === first ? "첫 작업" : "둘째 작업"} 합성 지시 ${revision}${scenario === "multiline" ? "\n추가 지시" : ""}`, deleted: scenario === "deleted", actorName: "합성 수의사", createdAt: "2026-11-01T03:00:00Z" }] },
     previous: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { overall: 0, dispensing: 0 }, versionKey: "0".repeat(64), entries: [] },
   });
   const install = () => {
@@ -155,7 +155,7 @@ export const LegacyPoSnapshot: Story = {
   args: { scenario: "legacy-history" },
   play: async ({ canvas, canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
-    await canvas.findByText("첫 작업 합성 지시 1");
+    await canvas.findByText("첫 작업 합성 지시 2");
     await userEvent.click(canvas.getByRole("button", { name: "변경이력 보기" }));
     await body.findByText("합성 전체 변경 기록");
     await userEvent.click(body.getByRole("button", { name: "요청·완료 당시 기록" }));
@@ -166,10 +166,9 @@ export const LegacyPoSnapshot: Story = {
   },
 };
 
-export const HistoryDoesNotAcknowledge: Story = { play: async ({ canvas, canvasElement }) => {
+export const HistoryDoesNotAcknowledge: Story = { args: { scenario: "history-normal" }, play: async ({ canvas, canvasElement }) => {
   const body = within(canvasElement.ownerDocument.body);
-  await canvas.findByText("첫 작업 합성 지시 1");
-  await userEvent.click(canvas.getByRole("button", { name: "지시사항 접기" }));
+  await canvas.findByText("첫 작업 합성 지시 2");
   await userEvent.click(canvas.getByRole("button", { name: "변경이력 보기" }));
   await body.findByText("합성 전체 변경 기록");
   await userEvent.click(body.getByRole("button", { name: "닫기" }));
@@ -208,10 +207,12 @@ export const LateHistoryCannotReopen: Story = { args: { scenario: "history-late"
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   await expect(body.queryByText("합성 전체 변경 기록")).not.toBeInTheDocument();
 } };
-export const CollapsedVersionReopens: Story = { play: async ({ canvas }) => {
-  await userEvent.click(await canvas.findByRole("button", { name: "지시사항 접기" }));
+export const NewVersionResetsSummary: Story = { args: { scenario: "multiline" }, play: async ({ canvas }) => {
+  await userEvent.click(await canvas.findByRole("button", { name: "전체 오더 지시 펼치기" }));
+  await expect(canvas.getByRole("button", { name: "전체 오더 지시 접기" })).toHaveAttribute("aria-expanded", "true");
   await userEvent.click(canvas.getByRole("button", { name: "다음 버전" }));
-  await expect(await canvas.findByText("첫 작업 합성 지시 2")).toBeVisible();
+  await expect(await canvas.findByText(/첫 작업 합성 지시 2/, { selector: "p" })).toBeVisible();
+  await expect(await canvas.findByRole("button", { name: "전체 오더 지시 펼치기" })).toHaveAttribute("aria-expanded", "false");
   await expect(fixture.posts).toBe(0);
 } };
 
@@ -219,9 +220,11 @@ export const RevisionBadge: Story = { play: async ({ canvas, canvasElement }) =>
   const body = within(canvasElement.ownerDocument.body);
   await canvas.findByText("첫 작업 합성 지시 1");
   await expect(canvas.queryByText("변경됨")).not.toBeInTheDocument();
+  await expect(canvas.queryByRole("button", { name: "변경이력 보기" })).not.toBeInTheDocument();
   await expect(canvas.queryByRole("button", { name: "변경 내용 확인" })).not.toBeInTheDocument();
   await userEvent.click(canvas.getByRole("button", { name: "다음 버전" }));
   await canvas.findByText("첫 작업 합성 지시 2");
+  await expect(canvas.getByRole("button", { name: "변경이력 보기" })).toBeVisible();
   await expect(canvas.getByText("변경됨")).toBeVisible();
   await userEvent.click(canvas.getByRole("button", { name: "수행 시작" }));
   await userEvent.click(await body.findByRole("button", { name: "최신 지시 확인" }));

@@ -108,3 +108,24 @@ User requested removal of the lower `변경됨 · 변경 내용 확인` row and 
 - Full type check, focused ESLint, docs links and diff whitespace checks passed. Local Storybook screenshots visually verified the initial unbadged card and revised title-adjacent badge (`output/playwright/instruction-badge-initial.png`, `output/playwright/instruction-badge-revised.png`). This is synthetic local component evidence, not hosted app verification.
 
 Delivery authorization: the user requested a PR containing only this badge correction, merge to main after checks pass, and Production verification. This supersedes the local-only delivery limit for this follow-up. Keep local screenshots, browser artifacts and unrelated work out of the PR. Use exact-head protection; preserve existing instruction acknowledgement and data boundaries.
+
+
+## Local inline expansion and Figma spacing — 2026-11-01
+
+User approved Figma node `28979:21113` dimensions and the proposed inline expand/collapse behavior, preserving the changed badge and unrelated work. Scope is local implementation and visual verification; this follow-up does not authorize another release.
+
+- Icon box 46×46px; title/body gap 6px; main gap 16px; right controls 166px (126px history, 8px gap, 32px hide). Single-line card height 70px.
+- Each instruction retains a one-line summary. Overflow or multiline content offers an inline `펼치기` button, then `접기` with full text and original line breaks. Short text has no toggle. Resize and font-ready checks update overflow without reserving toggle width during measurement.
+- Changed badge, history, hide/restore and explicit acknowledgement boundaries remain intact. No API or persistence changes.
+
+Verification: 23 focused browser stories passed across the actual callout and review controller. Covers keyboard expansion, one-line summary retention, unchanged revision badge, short text, multiline text, independent scope expansion, 320px overflow, width changes, new-version reset, hide/restore, history and acknowledgement regressions. Local browser measurements confirmed 46×46px icon box, 6px title/body gap, 166px actions and 70px single-line card. Summary/expanded/short/320px screenshots retained locally under `output/playwright/instruction-expand/`. Focused ESLint, type check, docs links and diff checks passed. No remote data or deployment changes.
+
+Follow-up: hide `변경이력 보기` when all applicable instructions are initial revisions. Show it only for revision > 1; release its reserved width and restore focus to hide when history is absent. The proposed unread-only badge policy is not approved or implemented.
+
+Follow-up verification: 23 focused browser stories passed with initial-revision history absence, revised-history availability, and focus restoration. Local screenshot confirmed no history button or reserved gap for the initial revision. Focused ESLint, TypeScript, docs links, and diff checks passed. No deployment performed.
+
+## Instruction card delivery — 2026-11-01
+
+User authorized a scoped PR for the card changes, merge to main after successful checks, and Production verification. This supersedes the local-only limit above for this card follow-up. Included: inline expansion, 46px icon box and 6px title/body spacing, history visibility for revised instructions only, and changed-badge text #1D4ED8/background #EFF6FF. Preserve badge text and revision-based visibility, acknowledgement behavior, API/data contracts, and unrelated work. Local screenshots and other evidence remain untracked and excluded.
+
+Release baseline and rollback candidate: main `0bce2fea244b46ea97375c5ade3629262446060c`, Ready Production `dpl_4oSyfn9nVA5DUiZDMr3y72jaB6fD`. Scoped smoke: `/login`, deployed card assets, and read-only card rendering in an existing synthetic/demo workflow when an authenticated session is available. No instruction writes, acknowledgements, task transitions, DB/provider changes, or automation-setting changes. Stop for failed or unknown required checks, missing Ready Preview, unexpected source SHA, or failed scoped smoke.
