@@ -9,6 +9,7 @@ export type GlobalNotification = {
     | "order_assigned"
     | "order_assignment_cancelled"
     | "order_cancelled"
+    | "overall_instruction_changed"
     | "clinical_result_completed"
     | "device_result_received"
     | "imaging_result_completed"

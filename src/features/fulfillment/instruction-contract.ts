@@ -125,6 +125,7 @@ export function instructionCompletionConfirmation(
 }
 
 export const instructionErrorMessages: Record<string, string> = {
+  instruction_ack_required: "최신 지시사항을 확인한 뒤 다시 시도해 주세요.",
   revision_conflict:
     "다른 사용자가 오더를 변경했어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.",
   permission_missing:

@@ -1,7 +1,9 @@
 "use client";
 import { formatDispenseRequestQuantity, updateDispensingPrescriptionWithUnits, getDispenseRequestCourseQuantity, getDispenseRequestDisplayPrecision } from "@/features/chart/dispense-request-quantity";
 import { canonicalDispensingUnit } from "./dispensing-unit-conversion";
-import { ChartOralInstructionEditor } from "./chart-oral-instruction-editor";
+import { OverallInstructionsEditor } from "./overall-instructions-editor";
+import { useTaskInstructionReview } from "@/features/fulfillment/use-task-instruction-review";
+import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 
 import { resolveChartOrderRequester } from "./order-requester";
 
@@ -10902,6 +10904,8 @@ function getCatalogCandidatePriceLabel(row: ChartOrderCatalogSearchRow) {
 
 function getChartOrderPersistenceErrorMessage(error?: string) {
   switch (error) {
+    case "instruction_ack_required":
+      return "최신 지시사항을 확인한 뒤 다시 확정해 주세요.";
     case "invalid_chart_actual":
     case "chart_actual_record_required":
     case "invalid_performed_at":
@@ -12015,6 +12019,7 @@ const OrderArea = memo(function OrderArea({
   const writeDisabled = inheritedWriteDisabled || !chartId || orderDraftReadError;
   const draftWriteDisabled = inheritedDraftWriteDisabled || orderDraftReadError;
   const mutationChartId = chartId;
+  const immediateInstructionReview = useTaskInstructionReview(bundle.encounter.workspaceId, [], undefined, "order", mutationChartId ?? bundle.encounter.id);
   const inOrderScope = useCallback(
     (row: ChartOrderDraftRow) =>
       Boolean(mutationChartId) &&
@@ -13483,6 +13488,7 @@ const OrderArea = memo(function OrderArea({
       new Set(intendedAssigneeLoadingOrderIdsRef.current),
     );
     if (!result.ok) {
+      if (result.denialReason === "instruction_ack_required") immediateInstructionReview.requireReview();
       toast.error(
         result.denialReason === "permission_missing"
           ? "담당자를 지정할 권한이 없습니다."
@@ -13930,6 +13936,7 @@ const OrderArea = memo(function OrderArea({
       if (conflict) void refreshBillingSummary();
       if (!retainPendingConfirmation) pendingConfirmationRef.current = null;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
+      if (retryResult.denialReason === "instruction_ack_required") immediateInstructionReview.requireReview();
       toast.error(
         getChartOrderPersistenceErrorMessage(
           retryResult.denialReason ?? retryResult.error,
@@ -14092,6 +14099,12 @@ const OrderArea = memo(function OrderArea({
       toast.error("실제 수행 시각·본인 확인·결과를 입력해 주세요.");
       return;
     }
+    const immediateOrderIds = chartActualRows.map(row => preparedDraft.orderIdMap.get(row.orderId) ?? row.orderId);
+    if (!(await immediateInstructionReview.check(immediateOrderIds))) {
+      orderDraftSaveInFlightRef.current = false;
+      setOrderDraftSaveState("saved");
+      return;
+    }
     pendingConfirmationRef.current = {
       actualRecords: chartActualRecords,
       expectedEtag: actionExpectedEtag,
@@ -14128,6 +14141,7 @@ const OrderArea = memo(function OrderArea({
       if (!retainPendingConfirmation) pendingConfirmationRef.current = null;
       orderDraftSaveInFlightRef.current = false;
       setOrderDraftSaveState(conflict ? "conflict" : "error");
+      if (result.denialReason === "instruction_ack_required") immediateInstructionReview.requireReview();
       toast.error(
         result.denialReason === "permission_missing"
           ? "오더 작업 권한이 없어 저장하지 못했어요."
@@ -14313,6 +14327,14 @@ const OrderArea = memo(function OrderArea({
       return;
     }
 
+    if (draft.action === "re_request") {
+      const immediateIds = draftRowsRef.current.filter(row =>
+        (draft.orderIds.includes(row.order.id) || (row.runtimeRow?.parentOrderId && draft.orderIds.includes(row.runtimeRow.parentOrderId))) &&
+        row.runtimeRow?.rowType !== "set" && !row.runtimeRow?.destinationModule &&
+        isChartActualType(getChartOrderClinicalType(row)) && !isDeferredChartPlan(getChartOrderClinicalType(row), row.detailSchemaVersion)
+      ).map(row => row.order.id);
+      if (!(await immediateInstructionReview.check(immediateIds))) return;
+    }
     setBulkOrderMutation({ ...draft, error: undefined, saving: true });
     let nextRows = draftRowsRef.current;
     const succeededOrderIds: string[] = [];
@@ -14364,6 +14386,7 @@ const OrderArea = memo(function OrderArea({
         workspaceId: bundle.encounter.workspaceId,
       });
       if (!result.ok || !acceptAuthoritativeBillingSummary(result.billingSummary)) {
+        if (!result.ok && result.denialReason === "instruction_ack_required") immediateInstructionReview.requireReview();
         failedOrderIds.push(row.order.id);
         continue;
       }
@@ -14520,6 +14543,14 @@ const OrderArea = memo(function OrderArea({
       changes = { priority: draft.priority };
     }
 
+    if (draft.action === "re_request") {
+      const immediateIds = draftRowsRef.current.filter(candidate =>
+        (candidate.order.id === row.order.id || candidate.runtimeRow?.parentOrderId === row.order.id) &&
+        candidate.runtimeRow?.rowType !== "set" && !candidate.runtimeRow?.destinationModule &&
+        isChartActualType(getChartOrderClinicalType(candidate)) && !isDeferredChartPlan(getChartOrderClinicalType(candidate), candidate.detailSchemaVersion)
+      ).map(candidate => candidate.order.id);
+      if (!(await immediateInstructionReview.check(immediateIds))) return;
+    }
     setOrderMutationDraft({ ...draft, error: undefined, saving: true });
     const result = await saveChartOrderExecutionMutationRoute({
           chartId: mutationChartId,
@@ -14533,6 +14564,7 @@ const OrderArea = memo(function OrderArea({
       workspaceId: bundle.encounter.workspaceId,
     });
     if (!result.ok) {
+      if (result.denialReason === "instruction_ack_required") immediateInstructionReview.requireReview();
       if (result.denialReason === "revision_conflict") {
         setBillingSummaryFreshness("stale");
         setBillingSummaryError(
@@ -14541,7 +14573,9 @@ const OrderArea = memo(function OrderArea({
         void refreshBillingSummary();
       }
       const error =
-        result.denialReason === "amendment_requires_pending"
+        result.denialReason === "instruction_ack_required"
+          ? "최신 지시사항을 확인한 뒤 다시 요청해 주세요."
+          : result.denialReason === "amendment_requires_pending"
           ? "진행을 시작한 오더는 현재 요청에서 수정할 수 없습니다. 수정 후 재요청을 사용해 주세요."
           : result.denialReason === "revision_conflict"
             ? "다른 사용자가 먼저 변경했습니다. 최신 이력을 불러온 뒤 다시 시도해 주세요."
@@ -14694,7 +14728,6 @@ const OrderArea = memo(function OrderArea({
           Plan/Order
         </h2>
         <ChartPanelActionGroup>
-          {chartId && <ChartOralInstructionEditor key={chartId} workspaceId={bundle.encounter.workspaceId} chartId={chartId} disabled={writeDisabled || draftWriteDisabled} />}
           <ChartPanelCollapseButton
             collapsed={collapsed}
             contentId={collapseContentId}
@@ -14844,16 +14877,7 @@ const OrderArea = memo(function OrderArea({
               value={orderTableDensity}
               onValueChange={setOrderTableDensity}
             />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-lg bg-card px-2 text-xs"
-              title="준비 중"
-              disabled
-            >
-              총괄지시사항
-            </Button>
+            {chartId && <OverallInstructionsEditor workspaceId={bundle.encounter.workspaceId} chartId={chartId} disabled={writeDisabled || draftWriteDisabled} />}
             <Button
               type="button"
               variant="outline"
@@ -15435,6 +15459,7 @@ const OrderArea = memo(function OrderArea({
             </DialogContent>
           ) : null}
         </Dialog>
+        <TaskInstructionReview controller={immediateInstructionReview} />
         <Dialog
           open={deleteOrderIds.length > 0}
           onOpenChange={(open) => !open && setDeleteOrderIds([])}

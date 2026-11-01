@@ -272,6 +272,7 @@ export type FulfillmentGatewayResult =
       status: 409;
       denialReason:
         | "encounter_unavailable"
+        | "instruction_ack_required"
         | "invalid_transition"
         | "treatment_medication_link_required"
         | "treatment_medication_link_invalid"
@@ -2782,6 +2783,7 @@ function mapGatewayError(
     return { ok: false, status: 409, denialReason: "treatment_medication_link_invalid" };
   if (message?.includes("encounter_unavailable"))
     return { ok: false, status: 409, denialReason: "encounter_unavailable" };
+  if (message?.includes("instruction_ack_required")) return { ok: false, status: 409, denialReason: "instruction_ack_required" };
   if (message?.includes("invalid_transition"))
     return { ok: false, status: 409, denialReason: "invalid_transition" };
   if (message?.includes("order_unavailable"))

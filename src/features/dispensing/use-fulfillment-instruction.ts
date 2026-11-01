@@ -1,5 +1,6 @@
 "use client";
 
+import { useTaskInstructionReview, type TaskInstructionReviewController } from "@/features/fulfillment/use-task-instruction-review";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   instructionDocumentSchema,
@@ -115,6 +116,7 @@ export function useFulfillmentInstruction(
   }, [endpoint, readKey]);
 
   const document = loaded?.endpoint === endpoint ? loaded.document : null;
+  const instructionReview = useTaskInstructionReview(workspaceId, document?.items.map(item => item.taskId) ?? [], document?.revision);
   const mutate = async (intent: InstructionIntent) => {
     if (!endpoint || !document || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
     const current = generation.current;
@@ -123,6 +125,11 @@ export function useFulfillmentInstruction(
       intent,
       revision: document.revision,
     });
+    if (retry.current?.fingerprint !== fingerprint && ["claim", "start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action)) {
+      const targets = document.items.filter(item => ("itemId" in intent ? item.id === intent.itemId : true) && (intent.action === "reopen" || !["completed", "cancelled", "returned"].includes(item.status))).map(item => item.taskId);
+      if (!await instructionReview.check(targets)) return false;
+      if (generation.current !== current) return false;
+    }
     if (retry.current?.fingerprint !== fingerprint) {
       retry.current = {
         fingerprint,
@@ -146,6 +153,8 @@ export function useFulfillmentInstruction(
       if (generation.current !== current) return false;
       const parsed = instructionDocumentSchema.safeParse(body.document);
       if (!response.ok || body.ok !== true || !parsed.success) {
+        if (body.error === "instruction_ack_required") { instructionReview.requireReview(); retry.current = null; return false; }
+        if (body.error === "revision_conflict") { retry.current = null; refresh(); }
         setError(
           instructionErrorMessages[body.error] ??
             "변경을 저장하지 못했어요. 다시 시도해 주세요.",
@@ -166,9 +175,7 @@ export function useFulfillmentInstruction(
       setBusy(false);
     }
   };
-  return { document, assignees, loading, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate };
+  return { document, assignees, loading, busy: busy || Boolean(failure?.key === readKey && failure.read), error, refresh, mutate, instructionReview };
 }
 
-export type FulfillmentInstructionController = ReturnType<
-  typeof useFulfillmentInstruction
->;
+export type FulfillmentInstructionController = Omit<ReturnType<typeof useFulfillmentInstruction>, "instructionReview"> & { instructionReview?: TaskInstructionReviewController };

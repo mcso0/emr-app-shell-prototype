@@ -69,6 +69,7 @@ export type ChartOrderExecutionMutationDenialReason =
   | "billing_candidate_unavailable"
   | "idempotency_conflict"
   | "order_unavailable"
+  | "instruction_ack_required"
   | "re_request_transition_invalid"
   | "revision_conflict"
   | "set_child_independent_mutation_forbidden"
@@ -556,6 +557,7 @@ function mapMutationError(message?: string): ChartOrderExecutionMutationGatewayR
     "billing_candidate_unavailable",
     "idempotency_conflict",
     "order_unavailable",
+    "instruction_ack_required",
     "re_request_transition_invalid",
     "revision_conflict",
     "set_child_independent_mutation_forbidden",

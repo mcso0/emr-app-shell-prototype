@@ -1,6 +1,8 @@
 # MVP Current Status
 
-Updated: 2026-10-11
+Local overall-instructions candidate (2026-11-01) connects chart authoring, atomic scoped revisions, performer acknowledgement, immutable task snapshots and persisted in-app change notifications. Immediate and direct completion paths enforce the same actor/version review. Local contract, component, concurrent SQL and build checks pass; hosted migration/RLS parity, authenticated hospital smoke and release are not verified. See [CLINICAL-FULFILLMENT-PR-012](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-012-overall-instructions.md) for exact evidence and rollout limits.
+
+Updated: 2026-11-01
 
 Lab result sheet phase 2 and attachment fixes were merged in PRs #848, #851,
 and #853 on 2026-09-29. PR #853 deployed to Ready Production at

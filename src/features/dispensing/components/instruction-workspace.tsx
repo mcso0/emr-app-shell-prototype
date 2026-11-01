@@ -1,6 +1,7 @@
 "use client";
 
 import { OralInstructionInfobar } from "./oral-instruction-infobar";
+import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { EmrContentLoadingState } from "@/components/emr/empty-state";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -165,7 +166,8 @@ export function InstructionBody({
         </div>
       ) : null}
       {controller.loading && !document ? <EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /> : null}
-      {document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
+      {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview} />}
+      {!controller.instructionReview && document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
       <Dialog
         open={instructionDraft !== null}
         onOpenChange={(open) => {
