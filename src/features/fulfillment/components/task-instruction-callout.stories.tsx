@@ -9,14 +9,17 @@ const document: EffectiveInstructions = {
 };
 const meta = {
   title: "Features/Fulfillment/Task Instruction Callout", component: TaskInstructionCallout, tags: ["autodocs"],
-  args: { document, workspaceId: "synthetic-callout", changed: false, busy: false, onReview: fn() },
+  args: { document, workspaceId: "synthetic-callout", onReview: fn() },
   decorators: [Story => <div className="p-4"><Story /></div>],
 } satisfies Meta<typeof TaskInstructionCallout>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const MultipleInstructions: Story = {};
+export const MultipleInstructions: Story = { play: async ({ canvas }) => {
+  await expect(canvas.queryByText("변경됨")).not.toBeInTheDocument();
+} };
 export const SingleInstruction: Story = { args: { document: { ...document, entries: [document.entries[1]] } }, play: async ({ canvas }) => {
   await expect(canvas.getByRole("heading", { name: "조제 지시사항" })).toBeVisible();
+  await expect(canvas.queryByText("변경됨")).not.toBeInTheDocument();
   await expect(canvas.queryByText("조제", { exact: true })).not.toBeInTheDocument();
 } };
 export const FoldAndRestore: Story = { play: async ({ canvas, args }) => {
@@ -32,10 +35,13 @@ export const FoldAndRestore: Story = { play: async ({ canvas, args }) => {
   await expect(canvas.getByRole("button", { name: "변경이력 보기" })).toHaveFocus();
   await expect(args.onReview).not.toHaveBeenCalled();
 } };
-export const ChangedInstruction: Story = { args: { changed: true }, play: async ({ canvas, args }) => {
+export const ChangedInstruction: Story = { args: { document: { ...document, versions: { dispensing: 2 }, entries: [{ ...document.entries[1], revision: 2 }] } }, play: async ({ canvas, args }) => {
+  const heading = canvas.getByRole("heading", { name: "조제 지시사항" });
+  await expect(within(heading.parentElement!).getByText("변경됨")).toBeVisible();
+  await expect(canvas.queryByRole("button", { name: "변경 내용 확인" })).not.toBeInTheDocument();
   await userEvent.click(canvas.getByRole("button", { name: "지시사항 접기" }));
   await expect(canvas.getByText("변경됨")).toBeVisible();
-  await userEvent.click(canvas.getByRole("button", { name: "변경 내용 확인" }));
-  await expect(args.onReview).toHaveBeenCalledTimes(1);
+  await expect(canvas.getByRole("button", { name: "변경이력 보기" })).toBeVisible();
+  await expect(args.onReview).not.toHaveBeenCalled();
 } };
 export const LongInstruction: Story = { args: { document: { ...document, entries: document.entries.map(item => ({ ...item, instruction: "긴 합성 지시사항 ".repeat(60) + "\n두 번째 문단도 줄바꿈합니다." })) } } };

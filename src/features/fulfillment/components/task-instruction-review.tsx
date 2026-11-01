@@ -25,7 +25,7 @@ export function TaskInstructionReview({ controller }: { controller: TaskInstruct
   return <>
     {controller.error && !controller.open && <div role="alert" className="flex items-center justify-between gap-3 text-sm"><p>{controller.error}</p><Button size="sm" variant="outline" onClick={() => void controller.refresh()}>다시 확인</Button></div>}
     {unique.map(item => <TaskInstructionCallout key={`${controller.workspaceId}:${item.current!.chartId}:${item.current!.versionKey}`}
-      document={item.current!} workspaceId={controller.workspaceId} changed={item.requiresAcknowledgement} busy={controller.busy} onReview={controller.show} />)}
+      document={item.current!} workspaceId={controller.workspaceId} onReview={controller.show} />)}
     <Dialog open={controller.open} onOpenChange={open => { if (!open) controller.close(); }}>
       <EmrDialogShell title="지시사항 확인" variant="wide-form" showCloseButton={!controller.busy}
         secondaryAction={<Button variant="outline" disabled={controller.busy} onClick={controller.close}>닫기</Button>}

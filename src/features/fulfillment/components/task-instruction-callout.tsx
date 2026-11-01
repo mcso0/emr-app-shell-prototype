@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CdsAlertsInfoIcon } from "@/components/cds-icons/alerts-and-status";
 import { CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
@@ -34,8 +35,8 @@ function TaskInstructionHistory({ workspaceId, chartId, onClose, onReview }: { w
 }
 
 /** One chart/version per card. UI-only actions never acknowledge instructions. */
-export function TaskInstructionCallout({ document, workspaceId, changed, busy, onReview }: {
-  document: EffectiveInstructions; workspaceId?: string; changed: boolean; busy: boolean; onReview: () => void;
+export function TaskInstructionCallout({ document, workspaceId, onReview }: {
+  document: EffectiveInstructions; workspaceId?: string; onReview: () => void;
 }) {
   const [hidden, setHidden] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -50,6 +51,7 @@ export function TaskInstructionCallout({ document, workspaceId, changed, busy, o
     (hidden ? restoreRef : historyRef).current?.focus();
     movedFocus.current = false;
   }, [hidden]);
+  const changed = document.entries.some(item => item.revision > 1);
   const single = document.entries.length === 1 ? document.entries[0] : null;
   const title = single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
   return <div className={styles.container}>
@@ -57,14 +59,13 @@ export function TaskInstructionCallout({ document, workspaceId, changed, busy, o
       <aside aria-labelledby={titleId} className={`${styles.card} ${collapsed ? styles.collapsed : ""}`}>
         <div className={styles.symbol}><CdsAlertsInfoIcon aria-hidden="true" /></div>
         <div className={styles.content}>
-          <h3 id={titleId} className={styles.title}>{title}</h3>
+          <div className={styles.heading}><h3 id={titleId} className={styles.title}>{title}</h3>{changed && <Badge variant="secondary" size="sm">변경됨</Badge>}</div>
           <div id={entriesId} className={styles.entries} hidden={collapsed}>
             {document.entries.map(item => <section className={styles.entry} key={`${item.scope}:${!!item.legacy}`}>
               {!single && <span className={styles.badge}>{item.legacy ? "경구제" : item.scope === "overall" ? "전체" : instructionScopeLabels[item.scope].replace(/ 지시$/, "")}</span>}
               <p>{item.deleted ? "지시 삭제됨" : item.instruction}</p>
             </section>)}
           </div>
-          {changed && <div className={styles.review}><span>변경됨</span><Button size="sm" variant="ghost" disabled={busy} onClick={onReview}>변경 내용 확인</Button></div>}
         </div>
         <div className={styles.actions}>
           <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>

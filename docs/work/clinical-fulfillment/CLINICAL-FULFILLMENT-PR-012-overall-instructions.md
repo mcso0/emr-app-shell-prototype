@@ -96,3 +96,15 @@ User approved the Figma-based HTML card, shared Plan/Order history UI and collap
 Implementation uses the existing chart history GET on demand; its `chart:view` gate remains authoritative. Module-only readers receive the existing permission error. History reads and card controls never call acknowledgement. Workspace/chart/version keys reset presentation on new relevant versions, abort closed history requests and prevent late results from reopening a dialog. Legacy PO and new dispensing revision sequences remain separate when selecting the preceding history entry.
 
 Focused synthetic verification: 31 stories passed across authoring, shared history, performer review and card. Includes collapse/restore, version reappearance, no acknowledgement on history reads, 403, retry, wrong chart rejection, late history completion, explicit acknowledgement and existing conflict/deletion flows. Storybook MCP focused tests also passed. Desktop DOM measurements match 98px expanded / 68px collapsed; history button 126×32px; fold/X 32×32px; exact padding/colors/type values. The 320px viewport has no document overflow. This is local component/transport evidence; hosted smoke is recorded in the follow-up PR. Related execution-result, chart-history and lifecycle regression stories also passed (56 total). Full lint, TypeScript, production build, secret scan, UX copy check, docs check and diff check passed. No DB or clinical writes are needed for this UI release.
+
+
+## Local callout badge correction — 2026-11-01
+
+User requested removal of the lower `변경됨 · 변경 내용 확인` row and a title-adjacent `변경됨` badge only after the initial instruction. This follow-up authorizes local UI changes and synthetic verification; it does not authorize delivery.
+
+- The actual shared callout derives its badge from applicable instruction revisions greater than 1, independent of acknowledgement. Multiple scope entries at revision 1 remain unbadged. The right-side history action remains available.
+- Explicit acknowledgement and server transition guards remain unchanged. History reads do not acknowledge; the badge persists after acknowledgement.
+- Focused browser stories: 19 passed across callout and actual review/controller components, including initial versus subsequent revisions, post-acknowledgement badge, collapse/restore, historical snapshot access, failed reads and conflicts.
+- Full type check, focused ESLint, docs links and diff whitespace checks passed. Local Storybook screenshots visually verified the initial unbadged card and revised title-adjacent badge (`output/playwright/instruction-badge-initial.png`, `output/playwright/instruction-badge-revised.png`). This is synthetic local component evidence, not hosted app verification.
+
+Delivery authorization: the user requested a PR containing only this badge correction, merge to main after checks pass, and Production verification. This supersedes the local-only delivery limit for this follow-up. Keep local screenshots, browser artifacts and unrelated work out of the PR. Use exact-head protection; preserve existing instruction acknowledgement and data boundaries.

@@ -3,6 +3,7 @@
 .symbol { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; background: #fff; color: #525252; }
 .symbol svg { width: 20px; height: 20px; }
 .content { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .title { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: .196px; }
 .entries { display: flex; flex-direction: column; gap: 6px; }
 .entries[hidden] { display: none; }
@@ -20,6 +21,5 @@
 .chevron { transform: rotate(180deg); }
 .collapsed .chevron { transform: rotate(0); }
 .collapsed .content, .collapsed .actions { align-self: center; }
-.review { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; color: var(--emr-text-secondary); }
 @container(max-width:680px) { .card { grid-template-columns: 44px minmax(0, 1fr); } .actions { grid-column: 2; justify-content: flex-end; flex-wrap: wrap; } }
 @container(max-width:380px) { .actions { grid-column: 1 / -1; } }
