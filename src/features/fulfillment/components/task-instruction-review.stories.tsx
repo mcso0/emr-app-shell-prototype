@@ -8,10 +8,11 @@ import { instructionReviewListSchema, type TaskInstructionReview as Review } fro
 const workspace = "synthetic-instruction-review";
 const first = "71000000-0000-4000-8000-000000000001";
 const second = "71000000-0000-4000-8000-000000000002";
-type Scenario = "normal" | "conflict" | "deleted" | "read-failure" | "late-response" | "legacy-history";
+type Scenario = "normal" | "conflict" | "deleted" | "read-failure" | "late-response" | "legacy-history" | "history-denied" | "history-failure" | "history-late" | "history-wrong-chart";
 function createFixture(scenario: Scenario) {
   let revision = 1, posts = 0, failed = scenario === "read-failure", held = scenario === "late-response";
   let release: (() => void) | undefined;
+  let historyFailed = scenario === "history-failure", holdHistory = scenario === "history-late";
   const acknowledgements = new Set<string>();
   const review = (taskId: string): Review => ({
     taskId, requiresAcknowledgement: !acknowledgements.has(String(revision)), snapshots: scenario === "legacy-history" ? [{
@@ -27,6 +28,16 @@ function createFixture(scenario: Scenario) {
     const original = globalThis.fetch;
     const intercept: typeof fetch = async (input, init) => {
       const url = new URL(input instanceof Request ? input.url : String(input), window.location.origin);
+      if (url.pathname.startsWith(`/api/workspaces/${workspace}/chart/charts/`)) {
+        if (init?.method && init.method !== "GET") throw new Error("History must stay read-only");
+        if (scenario === "history-denied") return Response.json({ ok: false, error: "permission_missing" }, { status: 403 });
+        if (historyFailed) { historyFailed = false; return Response.json({ ok: false }, { status: 503 }); }
+        if (holdHistory) { holdHistory = false; await new Promise<void>(resolve => { release = resolve; }); }
+        return Response.json({ ok: true, document: {
+          chartId: scenario === "history-wrong-chart" ? second : "72000000-0000-4000-8000-000000000001", canEdit: false, readOnlyReason: "permission_missing", eligibleScopes: ["overall"], current: [],
+          history: [{ scope: "overall", revision: 1, instruction: "합성 전체 변경 기록", deleted: false, actorName: "합성 작성자", actorId: first, applyId: null, createdAt: "2026-11-01T03:00:00Z" }],
+        } });
+      }
       if (url.pathname !== `/api/workspaces/${workspace}/fulfillment/instruction-review`) return original(input, init);
       if (init?.method === "POST") {
         posts++;
@@ -152,3 +163,52 @@ export const LegacyPoSnapshot: Story = {
     await expect(fixture.posts).toBe(0);
   },
 };
+
+export const HistoryDoesNotAcknowledge: Story = { play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await canvas.findByText("첫 작업 합성 지시 1");
+  await userEvent.click(canvas.getByRole("button", { name: "지시사항 접기" }));
+  await userEvent.click(canvas.getByRole("button", { name: "변경이력 보기" }));
+  await body.findByText("합성 전체 변경 기록");
+  await userEvent.click(body.getByRole("button", { name: "닫기" }));
+  await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+  await expect(canvas.getByRole("button", { name: "변경이력 보기" })).toHaveFocus();
+  await expect(fixture.posts).toBe(0);
+  await userEvent.click(canvas.getByRole("button", { name: "수행 시작" }));
+  await body.findByRole("button", { name: "최신 지시 확인" });
+  await expect(canvas.getByLabelText("합성 시작 횟수")).toHaveTextContent("0");
+} };
+export const HistoryPermissionDenied: Story = { args: { scenario: "history-denied" }, play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(await canvas.findByRole("button", { name: "변경이력 보기" }));
+  await body.findByText("변경 이력을 조회할 권한이 없습니다.");
+  await expect(fixture.posts).toBe(0);
+} };
+export const HistoryRetry: Story = { args: { scenario: "history-failure" }, play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(await canvas.findByRole("button", { name: "변경이력 보기" }));
+  await userEvent.click(await body.findByRole("button", { name: "다시 조회" }));
+  await body.findByText("합성 전체 변경 기록");
+  await expect(fixture.posts).toBe(0);
+} };
+export const HistoryRejectsWrongChart: Story = { args: { scenario: "history-wrong-chart" }, play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(await canvas.findByRole("button", { name: "변경이력 보기" }));
+  await body.findByRole("alert");
+  await expect(body.queryByText("합성 전체 변경 기록")).not.toBeInTheDocument();
+} };
+export const LateHistoryCannotReopen: Story = { args: { scenario: "history-late" }, play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await userEvent.click(await canvas.findByRole("button", { name: "변경이력 보기" }));
+  await body.findByRole("status");
+  await userEvent.click(body.getByRole("button", { name: "닫기" }));
+  await userEvent.click(canvas.getByRole("button", { name: "응답 복구" }));
+  await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
+  await expect(body.queryByText("합성 전체 변경 기록")).not.toBeInTheDocument();
+} };
+export const CollapsedVersionReopens: Story = { play: async ({ canvas }) => {
+  await userEvent.click(await canvas.findByRole("button", { name: "지시사항 접기" }));
+  await userEvent.click(canvas.getByRole("button", { name: "다음 버전" }));
+  await expect(await canvas.findByText("첫 작업 합성 지시 2")).toBeVisible();
+  await expect(fixture.posts).toBe(0);
+} };

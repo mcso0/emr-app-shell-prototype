@@ -88,3 +88,11 @@ Direct user instruction: create the PR, apply the remote DB change and deploy, i
 ## Earlier authoring checkpoint
 
 Before the three policy decisions were answered, the standalone editor/API preparation passed 13 contracts and 9 authoring stories. At that checkpoint there was no RPC or app integration. The later implementation and evidence above supersede that partial state.
+
+## Approved performer-card follow-up — 2026-11-01
+
+User approved the Figma-based HTML card, shared Plan/Order history UI and collapse/expand, then authorized deployment after verification. Scope is the shared performer card and history extraction only. Preserve other WIP, DB schema, permissions and explicit acknowledgement/transition rules. Reuse this bounded conditional approval for PR/main/Production after the release gates pass.
+
+Implementation uses the existing chart history GET on demand; its `chart:view` gate remains authoritative. Module-only readers receive the existing permission error. History reads and card controls never call acknowledgement. Workspace/chart/version keys reset presentation on new relevant versions, abort closed history requests and prevent late results from reopening a dialog. Legacy PO and new dispensing revision sequences remain separate when selecting the preceding history entry.
+
+Focused synthetic verification: 31 stories passed across authoring, shared history, performer review and card. Includes collapse/restore, version reappearance, no acknowledgement on history reads, 403, retry, wrong chart rejection, late history completion, explicit acknowledgement and existing conflict/deletion flows. Storybook MCP focused tests also passed. Desktop DOM measurements match 98px expanded / 68px collapsed; history button 126×32px; fold/X 32×32px; exact padding/colors/type values. The 320px viewport has no document overflow. This is local component/transport evidence; hosted smoke is recorded in the follow-up PR. Related execution-result, chart-history and lifecycle regression stories also passed (56 total). Full lint, TypeScript, production build, secret scan, UX copy check, docs check and diff check passed. No DB or clinical writes are needed for this UI release.

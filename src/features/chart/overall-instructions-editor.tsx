@@ -14,6 +14,7 @@ import { createOverallInstructionsClient, InstructionRequestError, type OverallI
 import { instructionScopeLabels, type InstructionScope, type OverallInstructions, type OverallInstructionsCommand } from "./overall-instructions-contract";
 import { createInstructionDraft, getInstructionChanges, hasUnresolvedEmptyInstruction, instructionConflicts, type InstructionDraft } from "./overall-instructions-draft";
 import { useChartStore } from "./store";
+import { OverallInstructionsHistoryDialog } from "./overall-instructions-history-dialog";
 import styles from "./overall-instructions.module.css";
 
 const reasons: Record<string, string> = {
@@ -51,7 +52,6 @@ export function OverallInstructionsDialog({ client, disabled = false, registerGu
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [history, setHistory] = useState(false);
-  const [historyScope, setHistoryScope] = useState<InstructionScope | "all">("all");
   const [confirm, setConfirm] = useState<InstructionScope | "close" | null>(null);
   const [conflicts, setConflicts] = useState<InstructionScope[]>([]);
   const [conflictBefore, setConflictBefore] = useState<OverallInstructions | null>(null);
@@ -197,14 +197,7 @@ export function OverallInstructionsDialog({ client, disabled = false, registerGu
       </div>}
       {!!conflicts.length && <div className="mt-4 space-y-4" role="alert">{conflicts.map(scope => <section key={scope}><h3 className="font-semibold">{instructionScopeLabels[scope]}</h3><p className="text-xs text-muted-foreground">편집 시작 시: {conflictBefore?.current.find(item => item.scope === scope)?.instruction || "작성된 지시 없음"}</p><div className="my-2 grid gap-3 sm:grid-cols-2"><div><h4>내 변경</h4><p className="whitespace-pre-wrap break-words">{deleted.includes(scope) ? "지시 삭제" : fields.find(field => field.scope === scope)?.text}</p></div><div><h4>최신 지시</h4><p className="whitespace-pre-wrap break-words">{document?.current.find(item => item.scope === scope)?.instruction || "지시 삭제됨"}</p></div></div><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => resolve(scope, false)}>내 변경 유지</Button><Button variant="outline" size="sm" onClick={() => resolve(scope, true)}>최신 지시 사용</Button></div></section>)}</div>}
       <Dialog open={confirm !== null} onOpenChange={value => { if (!value) { resolveNavigation(false); setConfirm(null); } }}><EmrConfirmDialogContent finalFocus={() => title.current} title={confirm === "close" ? "작성을 취소할까요?" : "이 지시를 삭제할까요?"} description={confirm === "close" ? "적용하지 않은 변경은 저장되지 않습니다." : "저장된 지시는 적용을 눌러야 삭제됩니다."} cancelLabel="계속 작성" confirmLabel={confirm === "close" ? "변경 버리기" : "삭제"} onCancel={() => { resolveNavigation(false); setConfirm(null); }} onConfirm={() => { if (confirm === "close") { resolveNavigation(true); setConfirm(null); setOpen(false); } else if (confirm) remove(confirm); }} /></Dialog>
-      <Dialog open={history} onOpenChange={setHistory}><EmrDialogShell title="변경 이력" variant="wide-form" className="sm:max-w-[840px]" secondaryAction={<Button variant="outline" onClick={() => setHistory(false)}>닫기</Button>}>
-        <label className="sr-only" htmlFor="instruction-history-scope">지시 범위</label><select id="instruction-history-scope" className="mb-4 rounded-md border bg-background p-2" value={historyScope} onChange={event => setHistoryScope(event.target.value as InstructionScope | "all")}><option value="all">전체 범위</option>{[...new Set(document?.history.map(item => item.scope))].map(scope => <option key={scope} value={scope}>{instructionScopeLabels[scope]}</option>)}</select>
-        {document?.history.filter(item => historyScope === "all" || item.scope === historyScope).map(item => {
-          const before = document.history.filter(previous => previous.scope === item.scope && previous.revision < item.revision).sort((a, b) => b.revision - a.revision)[0];
-          const kind = item.deleted ? "지시 삭제" : !before ? "최초 지시" : before.deleted ? "다시 작성된 지시" : "변경된 지시";
-          return <section key={`${item.scope}:${item.revision}`} className="mb-5"><h3 className="text-sm font-medium"><time>{formatTime(item.createdAt)}</time> · {item.actorName ?? "작성자"}</h3><p className="mb-2 text-xs text-muted-foreground">{item.legacy ? "경구제 지시 (이전 기록)" : instructionScopeLabels[item.scope]} · {kind}</p><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border p-3"><h4 className="mb-2 text-xs text-muted-foreground">변경 전</h4><p className="whitespace-pre-wrap break-words">{before?.deleted ? "지시 삭제됨" : before?.instruction || "작성된 지시 없음"}</p></div><div className="rounded-lg border p-3"><h4 className="mb-2 text-xs text-muted-foreground">변경 후</h4><p className="whitespace-pre-wrap break-words">{item.deleted ? "지시 삭제됨" : item.instruction || "작성된 지시 없음"}</p></div></div></section>;
-        })}
-      </EmrDialogShell></Dialog>
+      <OverallInstructionsHistoryDialog open={history} onOpenChange={setHistory} history={document?.history ?? []} />
     </EmrDialogShell>}
   </Dialog>;
 }
