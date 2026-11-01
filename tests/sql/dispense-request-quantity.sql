@@ -63,6 +63,7 @@ insert into order_catalog_items values
 ('preset-b','hospital-b','dispensing','Synthetic foreign preset','{"planOrderAuthority":{"schemaVersion":2,"calculationMode":"product_unit","dispenseUnit":"tablet"}}','10000000-0000-4000-8000-000000000001'),
 ('liquid','hospital-a','dispensing','Synthetic liquid','{"planOrderAuthority":{"schemaVersion":1,"calculationMode":"ingredient_based","dispenseUnit":"ml","referenceIngredientId":"synthetic","productStrength":{"numeratorValue":5,"numeratorUnit":"mg","denominatorValue":1,"denominatorUnit":"ml"}}}',null);
 create temporary table preserved_catalog as select * from order_catalog_items;
+-- DRAFT RETENTION TESTS
 -- UNIT CONVERSION TESTS
 insert into orders(id,workspace_id,encounter_id,workspace_catalog_item_id,detail_inputs,applied_snapshot) select
   '20000000-0000-4000-8000-000000000001','hospital-a','30000000-0000-4000-8000-000000000001','preset-a',
