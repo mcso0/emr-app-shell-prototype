@@ -1564,3 +1564,36 @@ re-request snapshots, legacy-path denial, RLS boundary and concurrent stale writ
 The first HTTP run lacked a running server; the rerun against the built app passed.
 Existing Storybook SVG/act warnings remain. The hosted four-function baseline
 and ACLs still match the prepared cutover packet. Hosted mutations are pending.
+
+### Production release verification — 2026-11-01
+
+PR #1028 candidate `d9551daf` passed Release Check 41266029999 on synthetic merge
+`8d1457a` and Ready Preview. It merged as `f1cae7fb`, verified on origin/main;
+Production deployment `dpl_HPSJ9CEBaLdi1P27tnt7z4a7MLSR` is Ready at that SHA.
+The two source migrations were applied in order as hosted ledger versions
+`20261101024526` (dispense_request_quantities) and `20261101024534`
+(dispensing_prescription_units). Temporary input gating is a separate operational
+migration; 34 tables remained guarded during verification. No payment/provider
+operations or real-data tests were performed. Original worktree WIP is unchanged.
+
+Hosted rollback-only synthetic tests passed course calculations, manual/reconfirm/
+automatic modes, unit conversions, frozen product rules, stale/idempotent commands,
+individual/set-child confirmation and re-request, fulfillment/billing-candidate
+quantity handoff, and preserved prior snapshots. Prior task completion was seeded
+with valid synthetic execution-result metadata; this is not UI completion proof.
+Authenticated-role JWT tests passed RLS, direct-write denial, wrong actor/workspace,
+missing permission and inactive-membership rejection. Canonical roles were unchanged.
+Fifteen existing-data table fingerprints matched before and after migration/tests.
+
+Authenticated Production smoke saved a manual 5.2 mL request and an individual
+16 mg to 1 mL edit with DB readback. It exposed an existing reopened-set mismatch:
+hosted `amountBasis` is in `appliedPriceSnapshot`, while the UI read only
+`appliedSnapshot`; inherited template instructions also appeared dirty without edits.
+That blocked set-child prescription persistence. The bounded application follow-up
+reads the existing price snapshot and compares inherited instruction defaults
+consistently. The regression uses the hosted shape, fails before the fix, and passes
+with individual and child unit-save/reload checks after it. No third feature DB
+migration is needed. The temporary gate stays closed pending final deployment smoke.
+Final gate release and smoke evidence will be recorded in the follow-up PR delivery
+record and the local, untracked release packet; these statements do not imply
+unrun UI completion, invoice issue, payment or real-user acceptance checks.
