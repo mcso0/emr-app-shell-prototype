@@ -6182,7 +6182,7 @@ function buildChartOrderSetPreviewFromRuntime(
     return undefined;
   }
   const items = applied.items as ChartOrderSetPreview["items"];
-  const amountBasis = applied.amountBasis;
+  const amountBasis = applied.amountBasis ?? snapshot.appliedPriceSnapshot.amountBasis;
   if (
     amountBasis !== "included_order_sum" &&
     amountBasis !== "set_fixed_price" &&
@@ -7237,7 +7237,11 @@ function getChartOrderScopedChargeAmount(row: ChartOrderDraftRow) {
 }
 
 const isChartOrderDraftRowDirty = (row: ChartOrderDraftRow) =>
-  (row.runtimeRow?.rowType === "set" && (row.order.instruction ?? "") !== (row.runtimeRow.instruction ?? "")) ||
+  (row.runtimeRow?.rowType === "set" &&
+    (row.order.instruction ?? "") !==
+      (row.runtimeRow.instruction ??
+        [row.runtimeRow.appliedSnapshot.internalInstruction, row.runtimeRow.appliedSnapshot.appliedInternalInstruction]
+          .find((value): value is string => typeof value === "string") ?? "")) ||
   row.billingName !== row.committedBillingName ||
   row.quantityInput !== row.committedQuantityInput ||
   (row.runtimeRow !== undefined &&

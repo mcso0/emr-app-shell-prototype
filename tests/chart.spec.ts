@@ -2066,14 +2066,20 @@ async function verifyActualDispenseUiCase(
     ...currentRow, orderId: currentRow.parentOrderId!, parentOrderId: null, rowType: "set", detailInputs: {},
     workspaceCatalogItemId: null, sourceSetRevisionItemId: null, dispensingAuthoritySnapshot: {},
     calculationOutputs: {}, calculationInputs: {},
+    instruction: null,
+    // Hosted reads keep amountBasis in the price snapshot and reconstruct
+    // selection from items. A template instruction is not a patient edit.
+    appliedPriceSnapshot: { amountBasis: "included_order_sum" },
     appliedSnapshot: { inHospitalOrderName: "합성 조제 세트", displayName: "합성 조제 세트", clinicalOrderType: "dispensing",
-      selectionIntent: { items: [{ revisionItemId: currentRow.sourceSetRevisionItemId, selected: true, quantity: 1 }] } },
+      internalInstruction: "합성 세트 기본 지시",
+      items: [{ revisionItemId: currentRow.sourceSetRevisionItemId!, selected: true, quantity: 1 }] },
   } : null;
   const readRows = () => parentRow ? [parentRow, currentRow] : [currentRow];
   const preservedParent = JSON.stringify(parentRow);
   const patchBodies: Array<Record<string, unknown>> = [];
   const prescriptionPatches: Array<Record<string, unknown>> = [];
   let unitEditing = false;
+  let unexpectedDraftWrites = 0;
   await page.route(
     "**/api/workspaces/clair-demo/chart/encounter-charts?*",
     async (route) => {
@@ -2117,7 +2123,7 @@ async function verifyActualDispenseUiCase(
         await route.fulfill({ status: 200, json: { ok: true, status: 200, rows: readRows(), etag: `"${"a".repeat(64)}"` } });
         return;
       }
-      if (route.request().method() !== "GET") { await route.continue(); return; }
+      if (route.request().method() !== "GET") { unexpectedDraftWrites++; await route.fulfill({status:500,json:{ok:false,error:"unexpected_initial_write"}}); return; }
       await route.fulfill({
         contentType: "application/json",
         headers: { ETag: `"${"a".repeat(64)}"` },
@@ -2228,6 +2234,8 @@ async function verifyActualDispenseUiCase(
   await input.press("Escape");
   await expect(input).toHaveValue("1.2");
   expect(patchBodies).toHaveLength(1);
+  expect(unexpectedDraftWrites).toBe(0);
+  await expect(page.getByRole("status", { name: "" }).filter({ hasText: /^저장 실패$/ })).toHaveCount(0);
   unitEditing = true;
   const unit = page.getByRole("combobox", { name: "Maropitant 16mg T 단위", exact: true });
   const dose = page.getByRole("textbox", { name: "Maropitant 16mg T 용량", exact: true });
