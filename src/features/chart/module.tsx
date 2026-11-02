@@ -5869,31 +5869,34 @@ const chartOrderStatusOrder: EmrOrderStatus[] = [
 const CHART_ORDER_SCROLL_COLUMN_WIDTH_PX = 137.25;
 const CHART_ORDER_COLUMN_SIZES: Record<string, number> = {
   select: 20,
-  orderType: 88,
-  confirmation: 88,
+  orderType: 72,
+  confirmation: 80,
   displayName: 180,
   status: 88,
   billingName: 144,
   billingReflection: 64,
-  durationDays: 64,
-  frequency: 114,
-  totalOccurrences: 88,
-  doseBasis: 88,
-  dosePerAdministration: 64,
-  ingredientStrength: 88,
-  calculatedDispenseQuantity: 88,
+  durationDays: 56,
+  frequency: 72,
+  totalOccurrences: 64,
+  doseBasis: 80,
+  "detail-dose": 88,
+  "detail-doseUnit": 88,
+  dosePerAdministration: 96,
+  ingredientStrength: 104,
+  calculatedDispenseQuantity: 96,
+  actualDispenseQuantity: 120,
   storageMethod: 88,
-  administration: 114,
-  unitPrice: 114,
-  quantity: 65,
-  lineTotal: 126,
-  adjustmentAmount: 114,
-  adjustmentPercent: 72,
-  chargeAmount: 126,
+  administration: 120,
+  unitPrice: 96,
+  quantity: 64,
+  lineTotal: 104,
+  adjustmentAmount: 104,
+  adjustmentPercent: 64,
+  chargeAmount: 112,
   adjustmentReason: 126,
-  taxClass: 64,
-  assignee: 66,
-  requestedBy: 77,
+  taxClass: 56,
+  assignee: 72,
+  requestedBy: 88,
 };
 function getChartOrderColumnSize(id: string) {
   return CHART_ORDER_COLUMN_SIZES[id] ?? CHART_ORDER_SCROLL_COLUMN_WIDTH_PX;
@@ -7529,7 +7532,7 @@ function ChartOrderInlineFieldCell({
             ? "이 약품의 계산 설정에서 사용할 수 있는 단위를 확인해 주세요. 기존 값은 유지됩니다." : undefined}
           className={cn(
             "h-7 w-full min-w-0 flex-1 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata",
-            ["doseBasis", "frequency"].includes(definition.key) && "gap-1 px-1.5",
+            ["doseBasis", "frequency", "doseUnit"].includes(definition.key) && "gap-0.5 px-0.5 [&_svg]:size-3",
           )}
           data-row-interactive="true"
         >
@@ -8567,9 +8570,9 @@ function ChartOrderTable({
       {
         id: "orderType",
         accessorFn: (row) => row.order.orderType,
-        size: 88,
-        minSize: 88,
-        maxSize: 88,
+        size: getChartOrderColumnSize("orderType"),
+        minSize: getChartOrderColumnSize("orderType"),
+        maxSize: getChartOrderColumnSize("orderType"),
         enableResizing: false,
         header: chartOrderSortLabels.orderType,
         sortingFn: (rowA, rowB) =>
@@ -8601,9 +8604,9 @@ function ChartOrderTable({
       {
         id: "confirmation",
         accessorFn: (row) => getChartOrderConfirmationState(row, invalidOrderIdsRef.current),
-        size: 88,
-        minSize: 88,
-        maxSize: 88,
+        size: getChartOrderColumnSize("confirmation"),
+        minSize: getChartOrderColumnSize("confirmation"),
+        maxSize: getChartOrderColumnSize("confirmation"),
         enableResizing: false,
         header: chartOrderSortLabels.confirmation,
         cell: ({ row }) => (
@@ -8775,8 +8778,8 @@ function ChartOrderTable({
               getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion)?.fields.find(definition => definition.key === field.key);
             return definition ? getChartOrderFieldValue(row, definition) : null;
           },
-          size: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
-          minSize: CHART_ORDER_SCROLL_COLUMN_WIDTH_PX,
+          size: getChartOrderColumnSize(`detail-${field.key}`),
+          minSize: getChartOrderColumnSize(`detail-${field.key}`),
           enableSorting: false,
           header: field.key === "dose" ? "처방 용량" : field.key === "doseUnit" ? "용량 단위" : field.label,
           cell: ({ row }) => (
@@ -9066,8 +9069,8 @@ function ChartOrderTable({
       {
         id: "actualDispenseQuantity",
         accessorFn: getChartOrderActualDispense,
-        size: 280,
-        minSize: 240,
+        size: getChartOrderColumnSize("actualDispenseQuantity"),
+        minSize: getChartOrderColumnSize("actualDispenseQuantity"),
         enableSorting: false,
         header: "실 조제량",
         cell: ({ row }) => (

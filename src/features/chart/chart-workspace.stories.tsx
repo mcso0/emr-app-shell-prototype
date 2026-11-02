@@ -131,6 +131,11 @@ export const EditDispenseQuantity: Story = {
     const body = within(canvasElement.ownerDocument.body);
     const input = await body.findByRole("textbox", { name: "합성 조제 약품 실 조제량" });
     await expect(input).toHaveValue("1.0");
+    for (const label of ["빈도", "용량 기준", "단위"]) {
+      const control = body.getByRole("combobox", { name: `합성 조제 약품 ${label}` });
+      const value = control.querySelector<HTMLElement>('[data-slot="select-value"]')!;
+      await expect(value.scrollWidth).toBeLessThanOrEqual(value.clientWidth);
+    }
     await expect(input).toHaveAttribute("type", "text");
     await expect(body.queryByRole("button", { name: "합성 조제 약품 실 조제량 저장" })).not.toBeInTheDocument();
     await userEvent.clear(input); await userEvent.type(input, "abc");
@@ -146,7 +151,7 @@ export const EditDispenseQuantity: Story = {
     await expect(writes.map(request => request.body?.mode)).toEqual(["manual"]);
     for (const request of writes) await expect(request.body).not.toHaveProperty("reason");
   },
-  parameters: { docs: { description: { story: "실 조제량은 텍스트로 입력하고 Enter 또는 포커스 이동으로 저장합니다. 잘못된 입력은 유지하며 오류 테두리와 포커스·호버 툴팁을 표시합니다. 셀 옆 저장·재확인·되돌리기 버튼은 없습니다. 저장은 합성 미리보기 메모리에만 반영되며 새로고침하면 초기화됩니다." } } },
+  parameters: { docs: { description: { story: "실 조제량 컬럼의 기본·최소 너비는 120px입니다. 오더명과 업무 상태 너비는 기존 구현을 유지합니다. 실 조제량은 텍스트로 입력하고 Enter 또는 포커스 이동으로 저장합니다. 잘못된 입력은 유지하며 오류 테두리와 포커스·호버 툴팁을 표시합니다. 셀 옆 저장·재확인·되돌리기 버튼은 없습니다. 저장은 합성 미리보기 메모리에만 반영되며 새로고침하면 초기화됩니다." } } },
 };
 
 export const RecalculateDispensePrescription: Story = {

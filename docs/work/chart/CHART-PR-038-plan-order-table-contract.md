@@ -210,3 +210,62 @@ Do not delete adjustment history to restore the former required-reason CHECK.
 Once optional-reason rows exist, prefer an application rollback that remains
 compatible with the additive DB behavior. Reinstating the old CHECK requires
 a separate compatibility check and must not rewrite immutable history.
+
+## Approved column-width follow-up — 2026-11-02
+
+The owner approved applying the reviewed HTML width proposal, preserving the
+existing Order 명 (180px) and 업무 상태 (88px) implementations, and setting
+실 조제량 to 120px. They authorized local screen verification followed by
+Production delivery when checks pass. This is bounded conditional release
+approval; it does not authorize unrelated WIP, data/API, DB or provider changes.
+
+Application changes are limited to `src/features/chart/module.tsx` column sizing
+and compact padding/chevrons for the affected frequency, basis and dose-unit
+selectors, so common values remain visible at the approved widths. The actual chart
+workspace story documents the new default and continues using the same app
+component and synthetic fixture. Column order, pinning, content, rounding,
+save behavior, permission enforcement and other screens retain their contracts.
+
+| Columns | Default size, CSS px |
+| --- | --- |
+| 분류 / 확정 여부 | 72 / 80 |
+| Order 명 / 업무 상태 | 180 / 88, unchanged |
+| 청구서명 / 청구반영 | 144 / 64 |
+| 일수 / 횟수 / 총횟수 / head/kg당 | 56 / 72 / 64 / 80 |
+| 처방 용량 / 용량 단위 | 88 / 88 |
+| 1회 조제량 / 성분량 / 총 조제량 / 실 조제량 | 96 / 104 / 96 / 120 |
+| 보관 / 투여·복약 | 88 / 120 |
+| 단가 / 수량 / 합계 | 96 / 64 / 104 |
+| 할인·할증 / % / 총 청구금액 / 사유 | 104 / 64 / 112 / 126 |
+| 과세 / 업무 담당 / 요청 수의사 | 56 / 72 / 88 |
+
+Selection stays 20px. The 29 content widths total 2,606px, compared with the
+previous 2,972.5px. Existing 8px table gutters are additional: rendered table
+width is 2,830px. This is geometry evidence, not measured clinical task-time
+improvement. The actual-dispense minimum is also 120px; its old 240px lower
+bound must not prevent the approved compact size.
+
+Local verification on the isolated `codex/plan-order-column-widths` branch:
+- Actual chart workspace Storybook browser suite: 15/15 passed, including
+  invalid input, save, prescription recalculation and unit-selection flows.
+- Full lint, TypeScript, production build, docs links and secret scan passed.
+- Local Chromium geometry: all 29 content widths match the approved proposal;
+  Order 명 and 업무 상태 retain 180/88px. The 120px actual-dispense content
+  column renders as 128px including its existing 8px gutter, with an 80.125px
+  input and visible mL unit. The displayed number fits without clipping.
+- Screen evidence is retained locally in `output/playwright/plan-order-column-widths/`;
+  captures and helper scripts are excluded from the release commit.
+
+Release requires the final candidate's current automatic Release Check and
+Ready Preview, then a merge protected by the expected head SHA and a Ready
+Production deployment. Smoke: `/login` and the same scoped chart table layout.
+Rollback candidate is the Ready Production deployment recorded before merge.
+No remote clinical mutation is part of this width follow-up.
+
+- Full local production-build app route with synthetic intercepted API responses:
+  1,440px and 1,200px screenshots, header/body alignment and actual-dispense
+  keyboard resize passed. The width grows to 128px and returns to its 120px
+  minimum. These are local UI results, not live API/DB authorization evidence.
+- Final visual review found default SID/head selector text clipping; compact
+  selector insets/chevrons fix it without changing column widths or text size.
+  The existing editing story now checks that selected values fit their controls.
