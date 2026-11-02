@@ -258,3 +258,30 @@ export function createInstructionView(document: InstructionDocument) {
   };
   return { orders: [order], events, names };
 }
+
+const routeLabels: Record<string, string> = {
+  PO: "경구",
+  topical: "외용",
+  ophthalmic: "점안",
+  otic: "점이",
+};
+const storageLabels: Record<string, string> = {
+  room_temp: "실온",
+  room_temp_light_protected: "실온·차광",
+  refrigerated: "냉장",
+  refrigerated_light_protected: "냉장·차광",
+};
+
+export const formatInstructionValue = (k: string, v: unknown) =>
+    k === "medicationGuide"
+      ? {
+          before_meal: "식전",
+          after_meal: "식후",
+          with_meal: "식사와 함께",
+          any_time: "시간 무관",
+        }[String(v)] || String(v)
+      : k === "route"
+        ? routeLabels[String(v)] || String(v)
+        : k === "storage"
+          ? storageLabels[String(v)] || String(v)
+          : String(v ?? "없음");

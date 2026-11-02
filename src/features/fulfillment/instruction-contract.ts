@@ -4,6 +4,12 @@ import { oralInstructionSchema } from "@/features/chart/chart-oral-instruction-c
 const id = z.string().min(1);
 const snapshot = z.record(z.string(), z.unknown());
 export const instructionCommandSchema = z.discriminatedUnion("action", [
+  z.object({
+    action: z.literal("takeover"),
+    commandId: z.uuid(),
+    expectedRevision: id,
+    reason: z.string().trim().min(1).max(1000),
+  }).strict(),
   z
     .object({
       action: z.literal("edit_instruction"),
@@ -67,6 +73,7 @@ export const instructionItemSchema = z.object({
 
 export const instructionDocumentSchema = z.object({
   oralInstruction: oralInstructionSchema.nullable().optional(),
+  encounterNo: z.string().nullable().optional(),
   rootOrderId: id,
   rootTaskId: id,
   name: z.string(),
@@ -78,6 +85,7 @@ export const instructionDocumentSchema = z.object({
   instruction: z.string(),
   finalized: z.boolean(),
   canClaim: z.boolean(),
+  canTakeover: z.boolean().default(false),
   canStart: z.boolean(),
   canResume: z.boolean(),
   canUnassign: z.boolean(),

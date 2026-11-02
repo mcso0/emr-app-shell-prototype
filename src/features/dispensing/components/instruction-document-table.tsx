@@ -1,5 +1,7 @@
 "use client";
 
+import { formatInstructionValue } from "../instruction-view-model";
+
 import React, { useState, useRef, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -39,18 +41,6 @@ const Icon = ({ name }: { name: string }) => (
     dangerouslySetInnerHTML={{ __html: icons[name as keyof typeof icons] }}
   />
 );
-const routeLabels: Record<string, string> = {
-  PO: "경구",
-  topical: "외용",
-  ophthalmic: "점안",
-  otic: "점이",
-};
-const storageLabels: Record<string, string> = {
-  room_temp: "실온",
-  room_temp_light_protected: "실온·차광",
-  refrigerated: "냉장",
-  refrigerated_light_protected: "냉장·차광",
-};
 const groups = [
   ["added", "추가된 오더"],
   ["modified", "수정된 오더"],
@@ -198,23 +188,10 @@ function OrderCard({
         i.previous?.[k as keyof Item] !== undefined &&
         String(i.previous[k as keyof Item]) !== String(i[k as keyof Item]),
     );
-  const formatted = (k: string, v: unknown) =>
-    k === "medicationGuide"
-      ? {
-          before_meal: "식전",
-          after_meal: "식후",
-          with_meal: "식사와 함께",
-          any_time: "시간 무관",
-        }[String(v)] || String(v)
-      : k === "route"
-        ? routeLabels[String(v)] || String(v)
-        : k === "storage"
-          ? storageLabels[String(v)] || String(v)
-          : String(v ?? "없음");
   const value = (i: Item, k: keyof Item) => {
-    const current = formatted(k, i[k]);
+    const current = formatInstructionValue(k, i[k]);
     if (!changedFields(i).includes(k)) return current;
-    const before = formatted(k, i.previous?.[k]);
+    const before = formatInstructionValue(k, i.previous?.[k]);
     const recent = [...events]
       .reverse()
       .find(
@@ -663,7 +640,7 @@ function OrderCard({
                                             <li key={k}>
                                               <span>{fieldLabels[k]}: </span>
                                               <span className="fd-before">
-                                                {formatted(
+                                                {formatInstructionValue(
                                                   k,
                                                   i.previous?.[k as keyof Item],
                                                 )}{" "}
@@ -673,7 +650,7 @@ function OrderCard({
                                                 value(i, "note")
                                               ) : (
                                                 <span className="fd-after">
-                                                  {formatted(
+                                                  {formatInstructionValue(
                                                     k,
                                                     i[k as keyof Item],
                                                   )}

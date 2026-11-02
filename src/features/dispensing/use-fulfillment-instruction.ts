@@ -37,6 +37,7 @@ export function useFulfillmentInstruction(
     message: string;
     read?: boolean;
   } | null>(null);
+  const [mutationFailure, setMutationFailure] = useState<{ endpoint: string | null; message: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const generation = useRef(0);
   const pending = useRef(false);
@@ -48,9 +49,9 @@ export function useFulfillmentInstruction(
 
   const readKey = `${endpoint}:${revisionKey}:${refreshKey}`;
   const loading = Boolean(endpoint && finishedRead !== readKey);
-  const error = failure?.key === readKey ? failure.message : null;
+  const error = failure?.key === readKey ? failure.message : mutationFailure?.endpoint === endpoint ? mutationFailure.message : null;
   const setError = (message: string | null) =>
-    setFailure(message ? { key: readKey, message } : null);
+    setMutationFailure(message ? { endpoint, message } : null);
 
   useEffect(() => {
     const current = ++generation.current;
@@ -119,13 +120,16 @@ export function useFulfillmentInstruction(
   const instructionReview = useTaskInstructionReview(workspaceId, document?.items.map(item => item.taskId) ?? [], document?.revision);
   const mutate = async (intent: InstructionIntent) => {
     if (!endpoint || !document || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
+    pending.current = true;
+    setBusy(true);
+    try {
     const current = generation.current;
     const fingerprint = JSON.stringify({
       endpoint,
       intent,
       revision: document.revision,
     });
-    if (retry.current?.fingerprint !== fingerprint && ["claim", "start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action)) {
+    if (retry.current?.fingerprint !== fingerprint && ["start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action)) {
       const targets = document.items.filter(item => ("itemId" in intent ? item.id === intent.itemId : true) && (intent.action === "reopen" || !["completed", "cancelled", "returned"].includes(item.status))).map(item => item.taskId);
       if (!await instructionReview.check(targets)) return false;
       if (generation.current !== current) return false;
@@ -140,8 +144,6 @@ export function useFulfillmentInstruction(
         },
       };
     }
-    pending.current = true;
-    setBusy(true);
     setError(null);
     try {
       const response = await fetch(endpoint, {
@@ -170,6 +172,7 @@ export function useFulfillmentInstruction(
           "변경 결과를 확인하지 못했어요. 다시 시도하면 같은 요청의 결과를 확인해요.",
         );
       return false;
+    }
     } finally {
       pending.current = false;
       setBusy(false);

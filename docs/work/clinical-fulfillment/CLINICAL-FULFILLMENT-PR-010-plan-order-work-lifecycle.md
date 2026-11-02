@@ -1627,3 +1627,78 @@ individual and set-child unit changes, retained manual 5.2, changed duration
 requiring reconfirmation, automatic reset to 8, and patient/catalog isolation.
 The corrective function retains its original owner and EXECUTE ACL. The hosted
 migration receipt is `20261101030738 dispense_draft_manual_retention`.
+
+
+### Prework context and assignment — 2026-11-02 (local implementation)
+
+승욱 approved implementing the reviewed prework proposal and assignment flow in
+조제/처치, preserving existing WIP and withholding deployment. Work is isolated
+from the dirty source checkout on `codex/dispensing-prework-flow`.
+
+Scope: requested-only patient context, read-only prescribed fields and per-order
+instructions, set main assignee distinct from individual executors, claim without
+start, designated owner start, and reason-required takeover with atomic requester
+notification. Preserve requester-veterinarian completion and all API/DB checks.
+Local forward migration and isolated synthetic SQL/browser/story verification are
+authorized; no remote DB, real data, deployment, publication, or main merge.
+Completion requires observed owner/non-owner/unassigned flows, retry/duplicate/late
+response handling, scoped notification/revision checks, and responsive UI review.
+Status: Human Review (local implementation; remote application/deployment withheld).
+
+Implemented shared patient header/memo/vitals, prescribed-value table with per-item
+instructions and assignee column, and current-patient prior queue history. The
+legacy fixture caller stays separate. Designated owners start directly; unassigned
+and transferred requests enter the instruction without starting. Takeover retains
+its reason after failure, retries the same command, refreshes stale revisions and
+ignores responses for a previously selected item. Requester completion still opens
+actual-result input and remains available throughout partial set completion.
+
+Chart sets expose one intended assignee on the parent. The list/save RPCs require
+eligibility for every active child destination and reject separate child assignment.
+The real confirmation trigger initializes per-queue main ownership and passes the
+single root owner to its children without starting them. Existing post-request
+item reassignment remains available. Mixed sets keep separate queue documents;
+combined queue execution is outside the existing request contract.
+
+Verification: TypeScript and ESLint pass; docs links pass. Focused Playwright
+contract/API/UI suite: 29 passed. Storybook prework suite: 8 passed. Desktop and
+390px rendering inspected; the table scrolls within its region without page
+horizontal overflow. Isolated SQL passes assignment replay/stale/permission checks,
+root/child propagation, recipient-ineligibility rollback, designated start,
+reason/audit/requester notification, queue isolation and two-session takeover race.
+The runner removes its owned no-network synthetic container after verification.
+
+Limits: browser calls use synthetic HTTP fixtures; local API tests use mock mode.
+SQL loads real intended-assignee RPCs and the actual assignment trigger into a
+scoped synthetic schema. It inserts tasks/work items in canonical order; it does
+not execute the entire chart-confirmation/catalog/billing chain or prove hosted
+RLS parity. The forward migration is not applied remotely. No deployment, push,
+main merge or real-data mutation was performed. Original source WIP: all 138
+fingerprinted files unchanged. User acceptance is pending.
+
+
+### Prework release authorization — 2026-11-02
+
+승욱 explicitly authorized remote DB application and deployment for this bounded
+prework/assignment task. This supersedes the prior no-deployment restriction for
+this task only. Target: the existing shared Supabase demo project and the existing
+Vercel Production project through a protected PR-to-main merge. Apply only this
+feature's forward migration, after hosted function/schema/ACL preflight. Preserve
+existing business data, roles, unrelated WIP and other migrations. No paid service,
+provider/email/payment operation, arbitrary real-data inspection or data reset.
+
+Required release evidence: synchronized candidate, secret/docs/lint/type/build
+checks, focused synthetic tests, real hosted function/schema compatibility,
+current required PR Release Check and Ready exact-head Preview. Scoped hosted
+verification may use rollback-only synthetic rows in the documented demo workspace;
+persisted browser smoke must use an explicitly synthetic task fixture and keep
+private account/fixture identifiers and credentials out of public artifacts.
+Stop for unexpected schema/ACL changes, candidate drift, failed required checks or
+smoke. Previous Ready Production: `dpl_3UDqn5eFSxWEijijVzmj2wK4eHtp` at
+`d848cdc5bd6763c83e328807f13292edc3caff3a`. Retain original function definitions
+locally for a reviewed DB rollback; app-only rollback cannot undo this DB change.
+
+Release delivery record: [PR #1044](https://github.com/mcso0/emr-app-shell-prototype/pull/1044)
+tracks the final candidate, current required CI, exact Preview, remote migration
+readback, merge and Production evidence. The local-only limits above describe the
+pre-authorization checkpoint. User acceptance remains separate from release checks.

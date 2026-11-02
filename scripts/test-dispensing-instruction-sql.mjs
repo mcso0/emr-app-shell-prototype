@@ -9,6 +9,9 @@ function docker(args, input) {
  return r.stdout;
 }
 const definitions = [
+ ["20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql", "public.clair_list_order_intended_assignees"],
+ ["20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql", "public.clair_save_order_intended_assignee"],
+ ["20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql", "private.clair_apply_intended_assignee_on_confirmation"],
  ["20260825240000_chart_order_shared_draft_contract.sql", "public.clair_save_chart_order_draft"],
  ["20260912113946_dispensing_set_confirmation_compatibility.sql", "private.clair_b3_runtime_row_json"],
  ["20260906100558_clinical_master_execution_results.sql", "private.clair_execution_result_payload_valid"],
@@ -55,9 +58,9 @@ baseline += "\n" + multiChart.slice(multiChart.indexOf("do $fulfillment_aggregat
 baseline += "\n" + readFileSync("supabase/migrations/20260912230700_dispensing_execution_billing_candidate_handoff.sql", "utf8");
 const ownerPatch = readFileSync("supabase/migrations/20261012054346_current_assignee_mutation_boundary.sql", "utf8");
 baseline += "\n" + ownerPatch.slice(ownerPatch.indexOf("do $patch$"), ownerPatch.indexOf(" signature:='public.clair_save_lab_result_entry_v2")) + "\nend $patch$;";
-const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql", ...(overallInstructions ? ["20261027130000_chart_oral_instructions.sql", "20261101140000_overall_instructions.sql"] : [])].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
+const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql", ...(overallInstructions ? ["20261027130000_chart_oral_instructions.sql", "20261101140000_overall_instructions.sql"] : []), "20261102100000_fulfillment_prework_assignment.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
 const fixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8")
- .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + (overallInstructions ? readFileSync("tests/sql/overall-instructions.sql", "utf8") + readFileSync("tests/sql/overall-instructions-boundaries.sql", "utf8") : "") + "\nrollback;");
+ .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + (overallInstructions ? readFileSync("tests/sql/overall-instructions.sql", "utf8") + readFileSync("tests/sql/overall-instructions-boundaries.sql", "utf8") : "") + readFileSync("tests/sql/fulfillment-prework.sql", "utf8") + readFileSync("tests/sql/prework-designated-assignee.sql", "utf8") + "\nrollback;");
 const notificationSource = readFileSync("supabase/migrations/20260705133000_notification_event_persistence.sql", "utf8");
 const notificationTable = notificationSource.slice(notificationSource.indexOf("create table if not exists public.notification_events"), notificationSource.indexOf("create table if not exists public.notification_user_states"))
  .replace("references public.workspaces(id) on delete cascade", "");
@@ -95,6 +98,20 @@ try {
  const second = session(`begin; ${claim("00000000-0000-4000-8000-000000000002")} commit;`);
  const results = await Promise.all([first, second]);
  if (results[0].code !== 0 || results[1].code === 0 || !results[1].stderr.includes("revision_conflict")) throw new Error("Concurrent claims did not reject the stale contender: " + JSON.stringify(results));
+ // Two distinct sessions attempt the same current takeover. The first commits;
+ // the second must reject its old revision before any audit/notification writes.
+ const takeoverRevision = docker([...psql, "-At"], "select set_config('test.actor','00000000-0000-4000-8000-000000000002',false); select public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002')->>'revision';").trim().split("\n").at(-1);
+ const takeover = () => `select set_config('test.actor','00000000-0000-4000-8000-000000000002',true); select public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','takeover','reason','동시 인계 검증','commandId',gen_random_uuid(),'expectedRevision','${takeoverRevision}'));`;
+ let takeoverLocked; const takeoverSignal = new Promise(resolve => { takeoverLocked = resolve; });
+ const takeoverFirst = session(`begin; ${takeover()} select 'CLAIM_LOCKED'; select pg_sleep(0.4); commit;`, takeoverLocked);
+ await Promise.race([takeoverSignal, takeoverFirst.then(result => { throw new Error("Takeover lock failed: " + JSON.stringify(result)); })]);
+ const takeoverResults = await Promise.all([takeoverFirst, session(`begin; ${takeover()} commit;`)]);
+ if (takeoverResults[0].code !== 0 || takeoverResults[1].code === 0 || !takeoverResults[1].stderr.includes("revision_conflict")) throw new Error("Concurrent takeovers did not serialize: " + JSON.stringify(takeoverResults));
+ docker(psql, `do $$ begin
+   if (select count(distinct after_values->>'commandId') from public.order_task_events where after_values->>'action'='takeover')<>1 then raise exception 'duplicate takeover audit'; end if;
+   if (select count(*) from public.notification_events where source_payload->>'reason'='동시 인계 검증')<>1 then raise exception 'duplicate takeover notification'; end if;
+ end $$;`);
+ console.log("PASS: two-session takeover race with one audit command and requester notification.");
  if (overallInstructions) {
   const source = readFileSync("tests/sql/overall-instructions.sql", "utf8");
   docker(psql, "begin; select set_config('test.actor','00000000-0000-4000-8000-000000000003',true);\n" + source.slice(0, source.indexOf("do $$")) + "\ncommit;");

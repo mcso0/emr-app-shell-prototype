@@ -46,6 +46,7 @@ export const syntheticInstruction: InstructionDocument = {
   mainAssigneeName: "담당 A",
   instruction: "세트 공통 지시사항입니다.",
   finalized: false,
+  canTakeover: false,
   canClaim: false,
   canStart: false,
   canResume: false,

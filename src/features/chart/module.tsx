@@ -6800,7 +6800,7 @@ function getChartOrderAssignee(
   const assigneeId =
     row.executionTask?.assignedToUserId ??
     row.runtimeRow?.intendedAssigneeUserId;
-  if (!getChartOrderDestinationModule(row)) return null;
+  if (!getChartOrderDestinationModule(row) && row.runtimeRow?.rowType !== "set") return null;
   if (!assigneeId) return { id: null, name: "미지정" };
   return {
     id: assigneeId,
@@ -9352,8 +9352,28 @@ function ChartOrderTable({
         header: "업무 담당",
         cell: ({ row }) => {
           const orderId = row.original.order.id;
+          if (row.original.runtimeRow?.rowType === "set") {
+            const children = rows.filter((candidate) =>
+              candidate.runtimeRow?.parentOrderId === orderId && candidate.order.status !== "cancelled",
+            );
+            if (!children.length || children.some((child) =>
+              !["dispensing", "treatment"].includes(getChartOrderDestinationModule(child) ?? ""),
+            )) return <ChartOrderEmptyValue fullText="담당자 데이터 없음" />;
+          }
           const options = intendedAssigneeOptionsByOrderId[orderId] ?? [];
-          const assignee = getChartOrderAssignee(row.original, options);
+          const setParent = rows.find((candidate) =>
+            candidate.order.id === row.original.runtimeRow?.parentOrderId && candidate.runtimeRow?.rowType === "set",
+          );
+          const parentChildren = setParent ? rows.filter((candidate) =>
+            candidate.runtimeRow?.parentOrderId === setParent.order.id && candidate.order.status !== "cancelled",
+          ) : [];
+          const inheritedOwner = setParent && parentChildren.length
+            && parentChildren.every((child) => ["dispensing", "treatment"].includes(getChartOrderDestinationModule(child) ?? ""))
+            && !isChartOrderConfirmedRow(row.original);
+          const assignee = inheritedOwner
+            ? getChartOrderAssignee(setParent, intendedAssigneeOptionsByOrderId[setParent.order.id] ?? [])
+            : getChartOrderAssignee(row.original, options);
+          if (inheritedOwner && assignee) return <ChartOrderIdentityAvatar name={assignee.name} label="업무 담당" />;
           if (!assignee) return <ChartOrderEmptyValue fullText="담당자 데이터 없음" />;
           const confirmed = isChartOrderConfirmedRow(row.original);
           if (!confirmed) {
@@ -9464,6 +9484,7 @@ function ChartOrderTable({
       ];
     },
     [
+      rows,
       actualDispenseInputCache,
       onCellValidityChange,
       actualDispenseSavingOrderIds,

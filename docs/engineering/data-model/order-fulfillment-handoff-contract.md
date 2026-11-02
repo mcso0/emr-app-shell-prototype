@@ -30,6 +30,34 @@ This document defines the engineering contract for Project 08, `Clinical Order F
 
 `DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. `DEN-241` adds end-to-end replay coverage. `DEN-242` closes out the project and records staging readiness boundaries. Remote staging migration remains gated by dry-run and explicit approval.
 
+## Prework assignment candidate — 2026-11-02
+
+Local implementation; migration `20261102100000_fulfillment_prework_assignment.sql`
+is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#prework-context-and-assignment--2026-11-02-local-implementation).
+
+- Requested-only 조제/처치 shows shared chart patient context, read-only prescribed
+  values, item instructions, current assignee and prior queue history.
+- Claim/takeover assigns ownership without recording a start. Claim enters the
+  instruction; the designated owner can start directly from prework. Existing
+  paused/started/terminal workflows retain the instruction screen.
+- Taking another assigned request requires a reason and the current revision.
+  The transaction records assignment history and a deduplicated notification to
+  the requesting veterinarian. It retains actor/workspace and queue permissions.
+- A dispensing/treatment set request has one intended owner. Only the set parent
+  exposes draft assignment. Child intended-assignee RPCs reject separate changes.
+  Eligible set owners must be eligible for every active child destination.
+  At confirmation the root owner takes precedence over old child draft values;
+  all children start unassigned when the root is unassigned. Executors may diverge
+  after request through the existing instruction assignment command.
+- Mixed sets retain separate 조제 and 처치 documents, scoped state, starts and
+  notifications. This candidate does not introduce combined queue execution.
+- Requester-veterinarian completion, result entry/review, explicit set completion,
+  cancellation and billing safeguards remain in place.
+- Browser evidence uses mocked HTTP and synthetic data. SQL evidence uses real
+  intended-assignee RPCs and the confirmation assignment trigger in an isolated
+  scoped schema. Full confirmation/catalog/billing replay and hosted parity are
+  not verified by these tests.
+
 ## Dispensing/treatment instruction candidate — 2026-10-27
 
 Local candidate only; remote application is not verified. See

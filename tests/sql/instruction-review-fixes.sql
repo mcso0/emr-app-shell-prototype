@@ -89,6 +89,8 @@ begin
  perform set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
  d:=public.clair_get_fulfillment_instruction('workspace-a',peer);
  d:=public.clair_mutate_fulfillment_instruction('workspace-a',peer,jsonb_build_object('action','claim','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+ if (select status from order_fulfillment_work_items where id=peer)<>'requested' then raise exception 'claim started pending peer'; end if;
+ d:=public.clair_mutate_fulfillment_instruction('workspace-a',peer,jsonb_build_object('action','start','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
  if (select status from order_fulfillment_work_items where id=peer)<>'in_progress'
    or (select status from order_fulfillment_work_items where id=item)<>'completed' then raise exception 'claim rewrote completed peer'; end if;
  d:=public.clair_mutate_fulfillment_instruction('workspace-a',peer,jsonb_build_object('action','unassign','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
