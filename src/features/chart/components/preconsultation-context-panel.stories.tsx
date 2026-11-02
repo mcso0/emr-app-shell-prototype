@@ -5,7 +5,7 @@ import { ChartPreconsultationContextPanel } from "../preconsultation-context-pan
 import type { ChartPreconsultationContext } from "../preconsultation-context";
 import { createDefaultWorkspaceVitalSettingsSnapshot } from "@/features/patient-vitals/workspace-vital-settings";
 
-type ExampleArgs = { state: "ready" | "loading" | "error" | "denied" | "history"; primaryActionBusy: boolean };
+type ExampleArgs = { state: "ready" | "loading" | "error" | "denied" | "history" | "vitals" | "vitals-no-prior" | "vitals-configured"; primaryActionBusy: boolean; contentWidth?: number };
 const workspaceId = "storybook-preconsultation";
 const encounterId = "synthetic-encounter";
 const context: ChartPreconsultationContext = {
@@ -14,10 +14,14 @@ const context: ChartPreconsultationContext = {
   patient: { id: "synthetic-patient", patientNo: "SYN-P001", name: "합성 환자", species: "dog", sex: "unknown" },
   guardian: { id: "synthetic-guardian", name: "합성 보호자" }, priorEncounterCount: 0, vitals: [], history: [],
 };
+const vitalMeasurements: ChartPreconsultationContext["vitals"] = [
+  { id: "synthetic-vital-current", encounterId, measuredAt: "2026-11-02T08:00:00Z", weightKg: 123.45, temperatureC: 39.8, heartRateBpm: 185, respiratoryRateRpm: 128, bloodPressureSystolicMmhg: 189, bloodPressureDiastolicMmhg: 123 },
+  { id: "synthetic-vital-prior", encounterId: "synthetic-prior-encounter", measuredAt: "2026-10-31T08:00:00Z", weightKg: 99.99, temperatureC: 38.2, heartRateBpm: 120, respiratoryRateRpm: 28, bloodPressureSystolicMmhg: 123, bloodPressureDiastolicMmhg: 81 },
+];
 let contextRequests = 0;
-function Example({ primaryActionBusy }: ExampleArgs) {
+function Example({ primaryActionBusy, contentWidth }: ExampleArgs) {
   const [action, setAction] = useState("없음");
-  return <div className="flex h-[900px] min-w-0 flex-col"><ChartPreconsultationContextPanel workspaceId={workspaceId} encounterId={encounterId} primaryActionBusy={primaryActionBusy}
+  return <div className="flex h-[900px] max-w-full min-w-0 flex-col" style={{ width: contentWidth }}><ChartPreconsultationContextPanel workspaceId={workspaceId} encounterId={encounterId} primaryActionBusy={primaryActionBusy}
     onOpenGuardianProfile={() => setAction("guardian")} onOpenPatientProfile={() => setAction("patient")} onRequestCall={() => setAction("call")} onReturnToQueue={() => setAction("queue")} /><output aria-label="합성 패널 요청">{action}</output></div>;
 }
 const meta = {
@@ -31,14 +35,22 @@ const meta = {
     globalThis.fetch = async (input, init) => {
       const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.origin);
       const method = init?.method ?? (input instanceof Request ? input.method : "GET");
-      if (url.pathname === `/api/workspaces/${workspaceId}/vital-settings` && method === "GET") return Response.json(createDefaultWorkspaceVitalSettingsSnapshot(false));
+      if (url.pathname === `/api/workspaces/${workspaceId}/vital-settings` && method === "GET") {
+        const snapshot = createDefaultWorkspaceVitalSettingsSnapshot(false);
+        if (args.state === "vitals-configured") snapshot.items = snapshot.items.map((item) => ({
+          ...item,
+          enabled: !["heart_rate", "respiratory_rate"].includes(item.key),
+          displayUnit: item.key === "weight" ? "g" : item.key === "temperature" ? "°F" : item.displayUnit,
+        }));
+        return Response.json(snapshot);
+      }
       if (url.pathname === `/api/workspaces/${workspaceId}/chart/preconsultation-context` && url.searchParams.get("encounterId") === encounterId && method === "GET") {
         contextRequests += 1;
         if (args.state === "loading") return new Promise<Response>((resolve) => { releaseLoading.push(() => resolve(Response.json({ ok: false, error: "db_read_failed" }, { status: 500 }))); });
         if (args.state === "denied") return Response.json({ ok: false, denialReason: "permission_missing" }, { status: 403 });
         if (args.state === "error") return Response.json({ ok: false, error: "db_read_failed" }, { status: 500 });
         const history = args.state === "history" ? Array.from({ length: 4 }, (_, index) => ({ encounterId: `synthetic-history-${index}`, encounterNo: `SYN-H${index}`, checkedInAt: `2026-10-0${9 - index}T00:00:00Z`, status: "completed", visitPurpose: `합성 이전 방문 ${index + 1}` })) : [];
-        return Response.json({ ok: true, status: 200, context: { ...context, history, priorEncounterCount: history.length }, canWriteVitals: false, enforcedBy: "chart-preconsultation-context-read" });
+        return Response.json({ ok: true, status: 200, context: { ...context, history, vitals: args.state.startsWith("vitals") ? vitalMeasurements.slice(0, args.state === "vitals-no-prior" ? 1 : 2) : [], priorEncounterCount: history.length }, canWriteVitals: false, enforcedBy: "chart-preconsultation-context-read" });
       }
       if (url.pathname.startsWith("/api/")) throw new Error(`Unmocked Storybook API request: ${url.pathname}`);
       return original(input, init);
@@ -62,3 +74,20 @@ export const Loading: Story = { args: { state: "loading" }, parameters: { docs: 
 export const Denied: Story = { args: { state: "denied" }, parameters: { docs: { description: { story: "합성 권한 거부 응답과 대기 목록 콜백을 확인합니다. 실제 권한 검증은 아닙니다." } } }, play: async ({ canvasElement }) => { await until(() => canvasElement.textContent?.includes("차트 정보를 볼 권한이 없어요") === true, "권한 거부 안내가 없습니다."); if (Array.from(canvasElement.querySelectorAll("button")).some((node) => node.textContent?.includes("다시 시도"))) throw new Error("권한 거부 상태에 재시도가 표시됩니다."); await userEvent.click(button(canvasElement, "대기 목록으로")); await until(() => canvasElement.querySelector("output")?.textContent === "queue", "대기 목록 콜백이 없습니다."); } };
 export const ErrorRetry: Story = { args: { state: "error" }, parameters: { docs: { description: { story: "합성 조회 실패 후 다시 시도하면 같은 합성 조회 경로를 다시 호출하는지 확인합니다." } } }, play: async ({ canvasElement }) => { await until(() => canvasElement.textContent?.includes("접수 정보를 불러오지 못했어요") === true, "조회 실패 안내가 없습니다."); const count = contextRequests; await userEvent.click(button(canvasElement, "다시 시도")); await until(() => contextRequests > count && canvasElement.textContent?.includes("접수 정보를 불러오지 못했어요") === true, "다시 시도 조회가 없습니다."); } };
 export const CallBusy: Story = { args: { primaryActionBusy: true }, parameters: { docs: { description: { story: "호출 요청 중 두 호출 버튼이 모두 비활성화됩니다." } } }, play: async ({ canvasElement }) => { await until(() => canvasElement.textContent?.includes("환자 정보") === true, "합성 패널이 준비되지 않았습니다."); const controls = Array.from(canvasElement.querySelectorAll<HTMLButtonElement>("button")).filter((node) => node.textContent?.trim() === "호출하기" || node.getAttribute("aria-label") === "호출하기"); if (controls.length !== 2 || controls.some((node) => !node.disabled)) throw new Error("호출 중 비활성 상태가 올바르지 않습니다."); } };
+
+export const VitalsComparison: Story = {
+  args: { state: "vitals", contentWidth: 1024 },
+  parameters: { docs: { description: { story: "5개 바이탈을 활성화한 합성 데이터로 긴 측정값과 수축·이완 혈압 증감값을 표시합니다." } } },
+};
+export const VitalsNarrowComparison: Story = {
+  args: { state: "vitals", contentWidth: 560 },
+  parameters: { docs: { description: { story: "표 영역이 620px 이하일 때 항목·오늘·직전 방문으로 전환합니다. 헤더와 모든 측정값·증감값을 유지합니다." } } },
+};
+export const VitalsWithoutPrior: Story = {
+  args: { state: "vitals-no-prior", contentWidth: 560 },
+  parameters: { docs: { description: { story: "직전 방문 기록이 없으면 증감값을 만들지 않고 직전 방문 열에 빈 값을 표시합니다." } } },
+};
+export const VitalsConfiguredUnits: Story = {
+  args: { state: "vitals-configured", contentWidth: 1024 },
+  parameters: { docs: { description: { story: "체중·체온·혈압만 활성화한 병원 설정을 반영합니다. 기존 g·°F 단위 변환과 표시 순서를 유지합니다." } } },
+};
