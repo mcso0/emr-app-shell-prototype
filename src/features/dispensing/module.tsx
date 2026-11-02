@@ -2229,7 +2229,7 @@ function DispensingContentBody({
         }
       />
 
-      <div className={cn("mt-3 grid gap-2", !documentLayout && "px-4")}>
+      <div className={cn("mt-3 grid gap-2 empty:hidden", !documentLayout && "px-4")}>
         {medicationLinkPending && selectedFulfillmentWorkItem ? <EmrInlineAlert severity="warning" title="수행 전 약품 오더 연결이 필요합니다."
           action={onOpenChart ? <Button size="sm" variant="outline" onClick={() => onOpenChart(selectedFulfillmentWorkItem.encounterId)}>차트에서 약품 오더 연결</Button> : undefined}>
           차트에서 ‘{getFulfillmentDisplayName(selectedFulfillmentWorkItem) ?? "처치"}’의 오더 정정을 열어 같은 진료의 약품 오더를 연결해 주세요. 약품 오더가 없다면 먼저 추가하고 확정해 주세요.
@@ -2278,7 +2278,7 @@ function DispensingContentBody({
       >
         <div
           data-slot="instruction-result-scroll-content"
-          className={cn("flex flex-col gap-4 pb-10 pt-4", !documentLayout && "px-4")}
+          className={cn("flex flex-col gap-4 pb-10 pt-3", !documentLayout && "px-4")}
         >
           {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback ? <InstructionBody key={selectedFulfillmentWorkItem.id} controller={instruction} workspaceId={selectedFulfillmentWorkItem.workspaceId} onChanged={fulfillmentQueue.refresh} /> : visibleTableGroups.map((group, section) => {
             const completedCount = group.rows.filter(
