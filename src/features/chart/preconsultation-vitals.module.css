@@ -1,0 +1,109 @@
+.comparison {
+  container: preconsultation-vitals / inline-size;
+}
+
+.headerCell {
+  padding: 10px 12px;
+}
+
+.headerLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.headerLabel svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.label {
+  word-break: keep-all;
+}
+
+.label > span {
+  display: inline-block;
+}
+
+.valueCell {
+  height: 52px;
+  padding: 0 12px;
+  vertical-align: middle;
+}
+
+.metric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px 8px;
+}
+
+.value {
+  white-space: nowrap;
+}
+
+.dateValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+
+.dateDetail {
+  display: block;
+  color: var(--emr-text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.narrowTable {
+  display: none;
+}
+
+.narrowTable tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+@container preconsultation-vitals (max-width: 860px) {
+  .headerCell {
+    padding: 10px;
+  }
+
+  .valueCell {
+    height: 66px;
+    padding: 10px;
+  }
+
+  .metric,
+  .dateValue {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .label > span {
+    display: block;
+  }
+}
+
+@container preconsultation-vitals (max-width: 620px) {
+  .wideTable {
+    display: none;
+  }
+
+  .narrowTable {
+    display: table;
+  }
+
+  .narrowTable .valueCell {
+    height: 64px;
+    padding: 10px 12px;
+  }
+
+  .narrowTable .headerLabel {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
