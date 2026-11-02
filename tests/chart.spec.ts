@@ -611,7 +611,7 @@ test("waiting chart saves and clears only today's vital values through the dialo
 
   await expect(
     lockedState.getByLabel(
-      "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
+      "환자 바이탈 표",
     ),
   ).toContainText("—");
   expect(writes).toHaveLength(2);
@@ -782,7 +782,7 @@ test("chart vital history follows workspace omission and re-add without rewritin
   );
   const vitalTable = page
     .getByTestId("chart-start-locked-state")
-    .getByLabel("환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다");
+    .getByLabel("환자 바이탈 표");
   await expect(vitalTable).not.toContainText("심박수");
   await expect(vitalTable).not.toContainText("88 bpm");
   expect(historicalVital.heartRateBpm).toBe(88);
@@ -5344,6 +5344,107 @@ test("chart preconsultation read error uses the shared recovery empty state", as
   await expect(page).not.toHaveURL(/encounterId=/);
 });
 
+test("preconsultation vitals fit available width and preserve comparison settings", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const encounterId = "encounter-haru-260430";
+  let includePrior = true;
+  let configuredUnits = false;
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  const current = {
+    id: "synthetic-vital-current", encounterId, measuredAt: "2026-11-02T08:00:00Z",
+    weightKg: 123.45, temperatureC: 39.8, heartRateBpm: 185, respiratoryRateRpm: 128,
+    bloodPressureSystolicMmhg: 189, bloodPressureDiastolicMmhg: 123,
+  };
+  const previous = {
+    id: "synthetic-vital-prior", encounterId: "synthetic-prior-encounter", measuredAt: "2026-10-31T08:00:00Z",
+    weightKg: 99.99, temperatureC: 38.2, heartRateBpm: 120, respiratoryRateRpm: 28,
+    bloodPressureSystolicMmhg: 123, bloodPressureDiastolicMmhg: 81,
+  };
+  await page.route("**/api/workspaces/*/vital-settings", async (route) => {
+    const snapshot = createDefaultWorkspaceVitalSettingsSnapshot();
+    if (configuredUnits) snapshot.items = snapshot.items.map((item) => ({
+      ...item, enabled: !["heart_rate", "respiratory_rate"].includes(item.key),
+      displayUnit: item.key === "weight" ? "g" : item.key === "temperature" ? "°F" : item.displayUnit,
+    }));
+    await route.fulfill({ json: snapshot });
+  });
+  const queueRecord = createLiveChartQueueRecord({ encounterId, patientName: "합성 환자", sortOrder: 0 });
+  queueRecord.encounter = { ...queueRecord.encounter, workspaceId: "clair-demo", status: "waiting", startedAt: undefined };
+  queueRecord.patient.workspaceId = "clair-demo";
+  if (queueRecord.primaryGuardian) queueRecord.primaryGuardian.workspaceId = "clair-demo";
+  queueRecord.queueEntry = { ...queueRecord.queueEntry, workspaceId: "clair-demo", status: "waiting" };
+  await page.route("**/api/workspaces/clair-demo/chart/live-queue**", (route) => fulfillLiveChartQueue(route, [queueRecord]));
+  await page.route("**/api/workspaces/clair-demo/chart/encounter-charts**", (route) => route.fulfill({ json: { ok: true, status: 200, charts: [] } }));
+  await page.route("**/api/workspaces/clair-demo/chart/completion?*", (route) => route.fulfill({ json: { ok: true, status: 200, completion: { encounterId, workspaceId: "clair-demo", status: "waiting", updatedAt: queueRecord.encounter.updatedAt } } }));
+  await routePreconsultationContext(page, () => ({
+    encounter: { id: encounterId, encounterNo: "SYN-001", receptionType: "walk_in", checkedInAt: "2026-04-30T16:05:00+09:00", status: "waiting", visitPurpose: "합성 검진" },
+    queue: { id: "queue-haru-consultation", status: "waiting" },
+    patient: { id: "patient-haru", patientNo: "SYN-P001", name: "합성 환자", species: "cat", sex: "female" },
+    guardian: { id: "synthetic-guardian", name: "합성 보호자" },
+    priorEncounterCount: 1, vitals: includePrior ? [current, previous] : [current], history: [],
+  }));
+  const panel = page.getByTestId("chart-start-locked-state");
+  const section = panel.locator('section[aria-labelledby="preconsultation-vitals"]');
+  const table = section.getByRole("table", { name: "오늘 및 직전 방문 바이탈 비교" });
+  async function expectContentsFit() {
+    await expect(table).toHaveCount(1);
+    const overflow = await table.evaluate((element) => {
+      const wrapper = element.parentElement!;
+      const failures: string[] = [];
+      if (wrapper.scrollWidth > wrapper.clientWidth + 1) failures.push("table wrapper");
+      for (const cell of element.querySelectorAll("th,td")) {
+        const bounds = cell.getBoundingClientRect();
+        const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+          const node = walker.currentNode;
+          if (!node.textContent?.trim()) continue;
+          const range = document.createRange(); range.selectNodeContents(node);
+          for (const rect of range.getClientRects()) {
+            if (rect.left < bounds.left - 1 || rect.right > bounds.right + 1 || rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1) failures.push(`${node.textContent} in ${cell.textContent} (${Math.round(bounds.width)}px cell, ${Math.round(rect.right - bounds.right)}px right, ${Math.round(rect.bottom - bounds.bottom)}px bottom)`);
+          }
+        }
+      }
+      return failures;
+    });
+    expect(overflow).toEqual([]);
+    await expect(section.getByRole("button", { name: "오늘 바이탈 수정" })).toBeVisible();
+  }
+  for (const [width, modulePanel] of [[1600, "open"], [1386, "open"], [1341, "open"], [1340, "open"], [1280, "open"], [1101, "open"], [1100, "open"], [1024, "open"], [900, "open"], [1386, "closed"], [1024, "closed"]] as const) {
+    await page.setViewportSize({ width, height: 870 });
+    await page.goto(`/w/clair-demo/treatment?modulePanel=${modulePanel}&aside=closed&encounterId=${encounterId}`);
+    await expect(panel).toBeVisible({ timeout: 20_000 });
+    await expect(table).toContainText("123.45 kg");
+    await expect(table).toContainText("189/123 mmHg");
+    await expect(table).toContainText("혈압(수축/이완)");
+    await expect(table.getByLabel(/^혈압 변화:/)).toHaveCount(1);
+    await section.screenshot({ path: testInfo.outputPath(`vitals-${width}-${modulePanel}.png`) });
+    await expectContentsFit();
+    if (width === 1386 && modulePanel === "open") await page.screenshot({ path: testInfo.outputPath("vitals-app-1386.png") });
+  }
+  await page.setViewportSize({ width: 900, height: 870 });
+  await page.goto(`/w/clair-demo/treatment?modulePanel=open&aside=closed&encounterId=${encounterId}`);
+  await expect(table.getByRole("columnheader", { name: "항목", exact: true })).toBeVisible();
+  await expect(table.getByRole("rowheader")).toHaveCount(5);
+  includePrior = false;
+  await page.reload();
+  await expect(table).toContainText("기록 없음");
+  await expect(table.getByLabel(/변화:/)).toHaveCount(0);
+  await expectContentsFit();
+  await section.screenshot({ path: testInfo.outputPath("vitals-without-prior.png") });
+  configuredUnits = true;
+  includePrior = true;
+  await page.reload();
+  await expect(table).toContainText("123450 g");
+  await expect(table).toContainText("103.6 °F");
+  await expect(table).not.toContainText("심박수");
+  await expect(table).not.toContainText("호흡수");
+  await expect(table.getByRole("rowheader")).toHaveCount(3);
+  await expectContentsFit();
+  await section.screenshot({ path: testInfo.outputPath("vitals-configured-units.png") });
+  expect(pageErrors).toEqual([]);
+});
+
 test("chart consultation CTA moves from call to start before chart completion", async ({
   page,
 }) => {
@@ -5959,9 +6060,7 @@ test("chart consultation CTA moves from call to start before chart completion", 
       "rgb(250, 250, 250)",
     );
   }
-  const vitalTable = lockedState.getByLabel(
-    "환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다",
-  );
+  const vitalTable = lockedState.getByRole("table", { name: "오늘 및 직전 방문 바이탈 비교" });
   await expect(vitalTable).not.toContainText("현재");
   const weightDelta = vitalTable.getByLabel("체중 변화: 0.06 증가");
   await expect(weightDelta).toContainText("(0.06)");
@@ -5993,8 +6092,8 @@ test("chart consultation CTA moves from call to start before chart completion", 
   await expect(
     currentVitalDateCell.getByText("(26.06.25)", { exact: true }),
   ).toBeVisible();
-  await expect(vitalTable.locator("table")).toHaveCSS("min-width", "960px");
-  await expect(currentVitalDateCell).toHaveCSS("height", "52px");
+  await expect(vitalTable).toHaveCSS("min-width", "0px");
+  await expect(currentVitalDateCell).toHaveCSS("height", "66px");
   await expect(currentVitalDateCell).toHaveCSS(
     "background-color",
     "rgb(255, 255, 255)",

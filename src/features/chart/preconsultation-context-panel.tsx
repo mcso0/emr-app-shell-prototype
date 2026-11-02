@@ -58,6 +58,7 @@ import {
 } from "@/features/patient-vitals/workspace-vital-settings";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import { cn } from "@/lib/utils";
+import vitalStyles from "./preconsultation-vitals.module.css";
 
 const PRECONSULTATION_SCROLL_CLASS =
   "min-h-0 flex-1 overflow-hidden [&>[data-slot=scroll-area-scrollbar]]:opacity-0 [&>[data-slot=scroll-area-scrollbar]]:transition-opacity [&>[data-slot=scroll-area-scrollbar][data-hovering]]:opacity-100";
@@ -755,24 +756,26 @@ function VitalComparison({
   vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
   const vitalDefinitions = getVitalDefinitions(vitalSettings);
+  const columnWeights = { weight: 20, temperature: 13, heart_rate: 13, respiratory_rate: 13, blood_pressure: 26 };
+  const totalWeight = 15 + vitalDefinitions.reduce((sum, vital) => sum + columnWeights[vital.key], 0);
   return (
     <div
-      className="max-w-full overflow-x-auto rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]"
-      tabIndex={0}
-      aria-label="환자 바이탈 표, 좁은 화면에서는 가로로 스크롤할 수 있습니다"
+      className={cn("max-w-full rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)]", vitalStyles.comparison)}
+      role="group"
+      aria-label="환자 바이탈 표"
     >
-      <table className="w-full min-w-[960px] table-fixed border-separate border-spacing-0">
+      <table className={cn("w-full table-fixed border-separate border-spacing-0", vitalStyles.wideTable)}>
         <caption className="sr-only">오늘 및 직전 방문 바이탈 비교</caption>
         <colgroup>
-          <col className="w-[148px]" />
-          {vitalDefinitions.map((vital) => <col key={vital.key} />)}
+          <col style={{ width: `${15 / totalWeight * 100}%` }} />
+          {vitalDefinitions.map((vital) => <col key={vital.key} style={{ width: `${columnWeights[vital.key] / totalWeight * 100}%` }} />)}
         </colgroup>
         <thead>
           <tr>
             <VitalHeaderCell first icon={<CdsFilesCalendarIcon />}>일자</VitalHeaderCell>
             {vitalDefinitions.map((vital) => (
               <VitalHeaderCell key={vital.key} icon={vital.icon}>
-                {vital.label}
+                <VitalLabel vital={vital} />
               </VitalHeaderCell>
             ))}
           </tr>
@@ -794,17 +797,47 @@ function VitalComparison({
           ) : null}
         </tbody>
       </table>
+      <table className={cn("w-full table-fixed border-separate border-spacing-0", vitalStyles.narrowTable)}>
+        <caption className="sr-only">오늘 및 직전 방문 바이탈 비교</caption>
+        <colgroup><col style={{ width: "30%" }} /><col style={{ width: "35%" }} /><col style={{ width: "35%" }} /></colgroup>
+        <thead>
+          <tr>
+            <VitalHeaderCell>항목</VitalHeaderCell>
+            <VitalHeaderCell>오늘<span className={vitalStyles.dateDetail}>{formatShortDate(current.measuredAt)}</span></VitalHeaderCell>
+            <VitalHeaderCell>직전 방문<span className={vitalStyles.dateDetail}>{previous ? formatFullDate(previous.measuredAt) : "기록 없음"}</span></VitalHeaderCell>
+          </tr>
+        </thead>
+        <tbody>
+          {vitalDefinitions.map((vital) => (
+            <tr key={vital.key}>
+              <th scope="row" className={cn("border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] text-left text-sm font-medium text-[var(--emr-text-tertiary)]", vitalStyles.valueCell)}>
+                <span className={vitalStyles.headerLabel}>{vital.icon}<VitalLabel vital={vital} /></span>
+              </th>
+              <td className={cn("border-r border-b border-[var(--emr-border-default)] text-sm font-medium leading-5 tracking-[0.014em]", vitalStyles.valueCell)}>
+                <VitalMetric vital={vital} measurement={current} previous={previous} />
+              </td>
+              <td className={cn("border-b border-[var(--emr-border-default)] text-sm font-medium leading-5 tracking-[0.014em]", vitalStyles.valueCell)}>
+                {previous ? <VitalMetric vital={vital} measurement={previous} /> : <span className="text-muted-foreground">—</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function VitalHeaderCell({ children, first = false, icon }: { children: ReactNode; first?: boolean; icon: ReactNode }) {
+function VitalLabel({ vital }: { vital: VitalDefinition }) {
+  return <span className={vitalStyles.label}>{vital.key === "blood_pressure" ? <><span>혈압</span><span>(수축/이완)</span></> : vital.label}</span>;
+}
+
+function VitalHeaderCell({ children, first = false, icon }: { children: ReactNode; first?: boolean; icon?: ReactNode }) {
   return (
-    <th className={cn(
-      "h-11 border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] px-4 py-2.5 text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0",
-      first && "px-6",
+    <th scope="col" className={cn(
+      "h-11 border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-neutral-50)] text-left text-sm font-medium text-[var(--emr-text-tertiary)] last:border-r-0",
+      vitalStyles.headerCell,
     )}>
-      <span className="inline-flex items-center gap-1.5 [&_svg]:size-3.5">{icon}{children}</span>
+      {icon || first ? <span className={vitalStyles.headerLabel}>{icon}{children}</span> : children}
     </th>
   );
 }
@@ -828,35 +861,39 @@ function VitalRow({
   return (
     <tr>
       <th
+        scope="row"
         className={cn(
-          "h-[52px] border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] px-6 py-0 text-left text-sm font-medium leading-5 tracking-[0.014em] text-[var(--clair-color-atomic-neutral-800)]",
+          "border-r border-b border-[var(--emr-border-default)] bg-[var(--clair-color-atomic-common-100)] text-left text-sm font-medium leading-5 tracking-[0.014em] text-[var(--clair-color-atomic-neutral-800)]",
+          vitalStyles.valueCell,
           isLast && "border-b-0",
         )}
       >
-        <span className="inline-flex items-center gap-0.5 whitespace-nowrap">
+        <span className={vitalStyles.dateValue}>
           <span>{dateLabel}</span>
           {dateDetail ? <span className="text-[var(--clair-color-atomic-neutral-500)]">{dateDetail}</span> : null}
         </span>
       </th>
       {vitalDefinitions.map((vital) => {
-        const delta = current && previous ? vital.delta(measurement, previous) : null;
         return (
           <td
             key={vital.key}
             className={cn(
-              "h-[52px] border-r border-b border-[var(--emr-border-default)] px-4 py-0 text-sm font-medium leading-5 tracking-[0.014em] last:border-r-0",
+              "border-r border-b border-[var(--emr-border-default)] text-sm font-medium leading-5 tracking-[0.014em] last:border-r-0",
+              vitalStyles.valueCell,
               isLast && "border-b-0",
             )}
           >
-            <div className="flex items-center justify-between gap-2">
-              <span>{vital.format(measurement)}</span>
-              {delta ? <VitalDeltaIndicator delta={delta} /> : null}
-            </div>
+            <VitalMetric vital={vital} measurement={measurement} previous={current ? previous : undefined} />
           </td>
         );
       })}
     </tr>
   );
+}
+
+function VitalMetric({ vital, measurement, previous }: { vital: VitalDefinition; measurement: ChartPreconsultationVitalMeasurement; previous?: ChartPreconsultationVitalMeasurement }) {
+  const delta = previous ? vital.delta(measurement, previous) : null;
+  return <div className={vitalStyles.metric}><span className={vitalStyles.value}>{vital.format(measurement)}</span>{delta ? <VitalDeltaIndicator delta={delta} /> : null}</div>;
 }
 
 function VitalDeltaIndicator({ delta }: { delta: VitalDelta }) {
