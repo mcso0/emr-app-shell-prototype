@@ -132,7 +132,7 @@ export const EditDispenseQuantity: Story = {
     const input = await body.findByRole("textbox", { name: "합성 조제 약품 실 조제량" });
     await expect(input).toHaveValue("1.0");
     for (const label of ["빈도", "용량 기준", "단위"]) {
-      const control = body.getByRole("combobox", { name: `합성 조제 약품 ${label}`, exact: true });
+      const control = body.getByRole("combobox", { name: `합성 조제 약품 ${label}` });
       const value = control.querySelector<HTMLElement>('[data-slot="select-value"]')!;
       await expect(value.scrollWidth).toBeLessThanOrEqual(value.clientWidth);
     }
