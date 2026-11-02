@@ -1,15 +1,16 @@
-import { type OverallInstructions, type OverallInstructionsCommand } from "./overall-instructions-contract";
+import { instructionScopeSchema, type InstructionScope, type OverallInstructions, type OverallInstructionsCommand } from "./overall-instructions-contract";
 import { InstructionRequestError, type OverallInstructionsClient } from "./overall-instructions-client";
 
 export const syntheticOverallInstructions: OverallInstructions = {
   chartId: "51000000-0000-4000-8000-000000000001", canEdit: true, readOnlyReason: null,
-  eligibleScopes: ["overall", "consultation", "clinical_lab", "imaging", "dispensing", "treatment", "other"], current: [], history: [],
+  eligibleScopes: [...instructionScopeSchema.options], current: [], history: [],
 };
 /** Synthetic, in-memory transport for isolated stories/tests. Never used by the chart. */
-export function createSyntheticInstructionsClient({ saved = false, readOnly = false, legacy = false, mode = "normal" }: {
-  saved?: boolean; readOnly?: boolean; legacy?: boolean; mode?: "normal" | "failed-load" | "failed-save" | "lost-response" | "conflict";
+export function createSyntheticInstructionsClient({ saved = false, readOnly = false, legacy = false, mode = "normal", eligibleScopes, loadDelayMs = 0 }: {
+  saved?: boolean; readOnly?: boolean; legacy?: boolean; eligibleScopes?: InstructionScope[]; loadDelayMs?: number; mode?: "normal" | "failed-load" | "failed-save" | "lost-response" | "conflict";
 } = {}): OverallInstructionsClient {
   let document = structuredClone(syntheticOverallInstructions);
+  if (eligibleScopes) document.eligibleScopes = [...eligibleScopes];
   const results = new Map<string, OverallInstructions>();
   let attempted = false;
   const actorId = "51000000-0000-4000-8000-000000000002";
@@ -30,7 +31,7 @@ export function createSyntheticInstructionsClient({ saved = false, readOnly = fa
     document = next; results.set(command.commandId, structuredClone(next)); return structuredClone(next);
   }
   return {
-    async load() { if (mode === "failed-load") throw new InstructionRequestError("instruction_unavailable"); return structuredClone(document); },
+    async load() { if (loadDelayMs) await new Promise(resolve => setTimeout(resolve, loadDelayMs)); if (mode === "failed-load") throw new InstructionRequestError("instruction_unavailable"); return structuredClone(document); },
     async apply(command) {
       if (!document.canEdit) throw new InstructionRequestError("terminal_orders");
       if (results.has(command.commandId)) return structuredClone(results.get(command.commandId)!);
