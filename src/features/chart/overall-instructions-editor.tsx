@@ -232,7 +232,7 @@ function OverallInstructionsSession({ client, disabled = false, registerGuard }:
             value={field.text} readOnly={!editable || loading || loadFailed} disabled={saving || uncertain || !!conflicts.length} placeholder="지시사항을 입력해 주세요."
             className={styles.input} onChange={event => { if (locked) return; setFields(current => current.map(item => item.scope === field.scope ? { ...item, text: event.target.value } : item)); }} />
           {saved?.legacy && editable && <p className="text-xs text-muted-foreground">적용하면 이 경구제 지시가 모든 조제 오더에 전달됩니다.</p>}
-          <div className={styles.metadata}><span>{saved?.createdAt ? `${saved.actorName ?? ""} · ${formatTime(saved.createdAt)}` : ""}</span>{field.text.length >= 4500 && <span>{field.text.length.toLocaleString()} / 5,000</span>}</div>
+          {(saved?.createdAt || field.text.length >= 4500) && <div className={styles.metadata}><span>{saved?.createdAt ? `${saved.actorName ?? ""} · ${formatTime(saved.createdAt)}` : ""}</span>{field.text.length >= 4500 && <span>{field.text.length.toLocaleString()} / 5,000</span>}</div>}
         </section>;
       })}
       {deleted.map(scope => <div key={scope} className={styles.deleted}><CdsActionsTrash2Icon className="size-4" /><span>{instructionScopeLabels[scope]} 삭제 예정</span><Button variant="ghost" size="sm" disabled={locked || !!conflicts.length} onClick={() => undo(scope)}><CdsActionsRotateCcwIcon />되돌리기</Button></div>)}
