@@ -83,13 +83,14 @@ export function usePatientFulfillmentHistory(
   queueTypes: readonly HistoryQueueType[],
 ) {
   const queueKey = queueTypes.join(",");
+  const [reloadKey, setReloadKey] = useState(0);
   const [state, setState] = useState<{
     assigneeNames: Record<string, string>;
     key: string;
     status: HistoryReadStatus;
     workItems: FulfillmentWorkItem[];
   }>({ assigneeNames: {}, key: "", status: "loading", workItems: [] });
-  const key = `${workspaceId}:${patientId ?? ""}:${queueKey}`;
+  const key = `${workspaceId}:${patientId ?? ""}:${queueKey}:${reloadKey}`;
 
   useEffect(() => {
     if (!patientId) return;
@@ -140,9 +141,11 @@ export function usePatientFulfillmentHistory(
     return () => controller.abort();
   }, [key, patientId, queueKey, workspaceId]);
 
-  return state.key === key
+  return { ...(state.key === key
     ? state
-    : { assigneeNames: {}, key, status: "loading" as const, workItems: [] };
+    : { assigneeNames: {}, key, status: "loading" as const, workItems: [] }),
+    refresh: () => setReloadKey((value) => value + 1),
+  };
 }
 
 type PatientHistoryFilters = { dates: HistoryDateRange; statuses: string[]; assignees: string[]; names: string[]; modalities: string[] };

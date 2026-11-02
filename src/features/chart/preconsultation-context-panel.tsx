@@ -305,68 +305,20 @@ function PreconsultationLoadingState() {
   );
 }
 
-function PreconsultationHeader({
-  context,
-  onOpenGuardianInformation,
-  onOpenPatientInformation,
-  onRequestCall,
-  primaryActionBusy,
-}: {
+export type PatientPreworkContext = Pick<ChartPreconsultationContext, "patient" | "guardian"> & {
+  encounter: Pick<ChartPreconsultationContext["encounter"], "id" | "encounterNo" | "checkedInAt" | "receptionMemo">;
+};
+
+function PreconsultationHeader({ context, onOpenGuardianInformation, onOpenPatientInformation, onRequestCall, primaryActionBusy }: {
   context: ChartPreconsultationContext;
   onOpenGuardianInformation: () => void;
   onOpenPatientInformation: () => void;
   onRequestCall: () => void;
   primaryActionBusy: boolean;
 }) {
-  return (
-    <header
-      className="min-w-0 px-5 py-6 sm:px-6 sm:py-8"
-      aria-labelledby="preconsultation-patient-heading"
-    >
-      <div className="flex min-h-7 flex-wrap items-center gap-2.5">
-        <Badge
-          variant="outline"
-          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] pl-2.5 pr-3 text-sm text-[var(--emr-text-secondary)]"
-        >
-          <CdsUtilitiesCircleIcon className="size-[10px]" aria-hidden="true" />
-          진료 대기
-        </Badge>
-        <Badge
-          variant="outline"
-          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] px-3 text-sm text-[var(--emr-text-tertiary)]"
-        >
-          <span>차트번호 </span>
-          <strong className="font-medium text-[var(--emr-text-secondary)]">
-            {context.encounter.encounterNo}
-          </strong>
-        </Badge>
-      </div>
-      <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-6">
-        <PatientIdentity context={context} size="large" />
-        <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:justify-end">
-          <Button
-            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
-            variant="outline"
-            size="default"
-            onClick={onOpenPatientInformation}
-          >
-            <CdsGnbPetGnbIcon data-icon="inline-start" aria-hidden="true" />
-            환자 정보
-          </Button>
-          <Button
-            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
-            variant="outline"
-            size="default"
-            onClick={onOpenGuardianInformation}
-          >
-            <CdsPeopleUserIcon data-icon="inline-start" aria-hidden="true" />
-            보호자 정보
-          </Button>
-          <span
-            aria-hidden="true"
-            className="hidden h-6 w-px shrink-0 bg-[var(--clair-color-atomic-neutral-300)] lg:block"
-          />
-          <ButtonGroup className="ml-auto lg:ml-0">
+  return <PatientPreworkHeader context={context} statusLabel="진료 대기"
+    onOpenGuardianInformation={onOpenGuardianInformation} onOpenPatientInformation={onOpenPatientInformation}
+    actions={(          <ButtonGroup className="ml-auto lg:ml-0">
             <ButtonGroupPrimaryButton
               className="h-8 gap-1.5 px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3"
               disabled={primaryActionBusy}
@@ -386,7 +338,73 @@ function PreconsultationHeader({
             >
               <CdsNavigationChevronDownIcon aria-hidden="true" />
             </ButtonGroupIconButton>
-          </ButtonGroup>
+          </ButtonGroup>)} />;
+}
+
+export function PatientPreworkHeader({
+  context,
+  onOpenGuardianInformation,
+  onOpenPatientInformation,
+  actions,
+  statusLabel,
+}: {
+  context: PatientPreworkContext;
+  onOpenGuardianInformation?: () => void;
+  onOpenPatientInformation?: () => void;
+  actions: ReactNode;
+  statusLabel: string;
+}) {
+  return (
+    <header
+      className="min-w-0 px-5 py-6 sm:px-6 sm:py-8"
+      aria-labelledby="preconsultation-patient-heading"
+    >
+      <div className="flex min-h-7 flex-wrap items-center gap-2.5">
+        <Badge
+          variant="outline"
+          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] pl-2.5 pr-3 text-sm text-[var(--emr-text-secondary)]"
+        >
+          <CdsUtilitiesCircleIcon className="size-[10px]" aria-hidden="true" />
+          {statusLabel}
+        </Badge>
+        <Badge
+          variant="outline"
+          className="h-7 gap-1.5 rounded-full bg-[var(--emr-surface-muted)] px-3 text-sm text-[var(--emr-text-tertiary)]"
+        >
+          <span>차트번호 </span>
+          <strong className="font-medium text-[var(--emr-text-secondary)]">
+            {context.encounter.encounterNo}
+          </strong>
+        </Badge>
+      </div>
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-6">
+        <PatientIdentity context={context} size="large" />
+        <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:justify-end">
+          <Button
+            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
+            variant="outline"
+            size="default"
+            disabled={!onOpenPatientInformation}
+            onClick={onOpenPatientInformation}
+          >
+            <CdsGnbPetGnbIcon data-icon="inline-start" aria-hidden="true" />
+            환자 정보
+          </Button>
+          <Button
+            className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
+            variant="outline"
+            size="default"
+            disabled={!onOpenGuardianInformation}
+            onClick={onOpenGuardianInformation}
+          >
+            <CdsPeopleUserIcon data-icon="inline-start" aria-hidden="true" />
+            보호자 정보
+          </Button>
+          <span
+            aria-hidden="true"
+            className="hidden h-6 w-px shrink-0 bg-[var(--clair-color-atomic-neutral-300)] lg:block"
+          />
+          {actions}
         </div>
       </div>
     </header>
@@ -397,7 +415,7 @@ function PatientIdentity({
   context,
   size,
 }: {
-  context: ChartPreconsultationContext;
+  context: PatientPreworkContext;
   size: "large" | "medium";
 }) {
   const metadata = getPatientMetadata(context);
@@ -543,8 +561,9 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
   );
 }
 
-function MemoSection({ context }: { context: ChartPreconsultationContext }) {
+export function MemoSection({ context, patientMemo: memoOverride }: { context: PatientPreworkContext; patientMemo?: string }) {
   const patientMemo =
+    memoOverride ??
     context.patient.handlingCautionNote ??
     context.patient.specialNote ??
     context.patient.allergyNote ??
@@ -604,14 +623,14 @@ function MemoCard({
   );
 }
 
-function VitalSection({
+export function VitalSection({
   canWrite,
   context,
   onOpenVitalDialog,
   vitalSettings,
 }: {
   canWrite: boolean;
-  context: ChartPreconsultationContext;
+  context: { encounter: { id: string }; vitals: ChartPreconsultationVitalMeasurement[] };
   onOpenVitalDialog: () => void;
   vitalSettings: WorkspaceVitalSettingsSnapshot;
 }) {
@@ -1089,7 +1108,7 @@ function VeterinarianAvatar({ name }: { name: string }) {
   );
 }
 
-function getPatientMetadata(context: ChartPreconsultationContext) {
+function getPatientMetadata(context: PatientPreworkContext) {
   return [
     getSpeciesLabel(context.patient.species),
     context.patient.breed ?? "품종 미입력",
@@ -1098,11 +1117,12 @@ function getPatientMetadata(context: ChartPreconsultationContext) {
   ];
 }
 
-function getPatientAge(context: ChartPreconsultationContext) {
+function getPatientAge(context: PatientPreworkContext) {
   if (context.patient.estimatedAgeText) return context.patient.estimatedAgeText;
   if (!context.patient.birthDate) return "나이 미입력";
   const birth = new Date(`${context.patient.birthDate}T00:00:00`);
   const at = new Date(context.encounter.checkedInAt);
+  if (!Number.isFinite(birth.getTime()) || !Number.isFinite(at.getTime())) return "나이 미입력";
   let years = at.getFullYear() - birth.getFullYear();
   if (at.getMonth() < birth.getMonth() || (at.getMonth() === birth.getMonth() && at.getDate() < birth.getDate())) years -= 1;
   return `${Math.max(0, years)}세`;

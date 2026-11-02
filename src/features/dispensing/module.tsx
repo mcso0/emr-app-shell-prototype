@@ -1,5 +1,7 @@
 "use client";
 
+import { DispensingPreworkContext } from "./components/prework-context";
+
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
 import {
@@ -1775,6 +1777,14 @@ function DispensingContentBody({
     !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.id : undefined,
     selectedFulfillmentWorkItem ? String(selectedFulfillmentWorkItem.rowRevision) : undefined,
   );
+  const [enteredInstruction, setEnteredInstruction] = useState<string | null>(null);
+  const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
+  const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
+  const prework = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
+    && !instruction.document.finalized && instruction.document.items.length > 0
+    && (instruction.document.items.every((item) => item.status === "requested") || preworkCompletionRoot === instructionScope)
+    && !(enteredInstruction === instructionScope && instruction.document.mainAssigneeId
+      && !instruction.document.canClaim && !instruction.document.canTakeover);
   const medicationLinkPending = selectedFulfillmentWorkItem?.queueType === "treatment"
     && selectedFulfillmentWorkItem.sourceSnapshot?.detailSchemaVersion === 3
     && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
@@ -2144,7 +2154,7 @@ function DispensingContentBody({
                     {rightPanelOpen ? "우측 패널 접기" : "우측 패널 펼치기"}
                   </Button>
                 ) : null}
-                {selectedFulfillmentWorkItem ? (
+                {!prework && selectedFulfillmentWorkItem ? (
                   !allowLegacyFixtureFallback ? <InstructionActions workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} /> : (
                   <FulfillmentExecutionActions
                     workspaceId={selectedFulfillmentWorkItem.workspaceId}
@@ -2169,7 +2179,7 @@ function DispensingContentBody({
                     status={selectedFulfillmentWorkItem.status}
                   />
                   )
-                ) : primaryGroup ? (
+                ) : !prework && primaryGroup ? (
                   <GroupStatusAction
                     group={primaryGroup}
                     statusLabel={statusLabel}
@@ -2186,6 +2196,15 @@ function DispensingContentBody({
               </>
             }
           />
+  );
+
+  if (prework && selectedFulfillmentWorkItem) return (
+    <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
+      {documentLayout ? <WorkspaceDocumentToolbar>{titleBar}</WorkspaceDocumentToolbar> : titleBar}
+      <DispensingPreworkContext key={selectedFulfillmentWorkItem.id} controller={instruction} workItem={selectedFulfillmentWorkItem}
+        onChanged={fulfillmentQueue.refresh} onEntered={() => setEnteredInstruction(instructionScope)}
+        onCompletionOpenChange={(open) => setPreworkCompletionRoot(open ? instructionScope : null)} />
+    </div>
   );
 
   return (

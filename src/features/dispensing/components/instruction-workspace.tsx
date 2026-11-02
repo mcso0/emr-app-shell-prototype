@@ -18,6 +18,9 @@ type Props = {
   controller: FulfillmentInstructionController;
   onChanged: () => void;
   workspaceId: string;
+  prework?: boolean;
+  onEntered?: () => void;
+  onCompletionOpenChange?: (open: boolean) => void;
 };
 
 function CompletionConfirmation(props: Props & { itemId?: string; open: boolean; onClose: () => void }) {
@@ -77,17 +80,19 @@ export function InstructionActions(props: Props) {
   return <InstructionActionsContent key={`${props.workspaceId}:${props.controller.document?.rootTaskId}`} {...props} />;
 }
 
-function InstructionActionsContent({ controller, onChanged, workspaceId }: Props) {
+function InstructionActionsContent({ controller, onChanged, workspaceId, prework = false, onEntered, onCompletionOpenChange }: Props) {
+  const [takeover, setTakeover] = useState(false);
+  const [reason, setReason] = useState("");
   const [confirm, setConfirm] = useState(false);
   const document = controller.document;
   if (!document) return null;
   const busy = controller.busy || controller.loading;
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
-    if (await controller.mutate({ action })) onChanged();
+    if (await controller.mutate({ action })) { onChanged(); if (action === "claim" || action === "start") onEntered?.(); }
   };
   return (
     <>
-      {document.mainAssigneeName ? (
+      {!prework && document.mainAssigneeName ? (
         <span className="text-sm text-muted-foreground">
           {document.mainAssigneeName}
         </span>
@@ -97,9 +102,24 @@ function InstructionActionsContent({ controller, onChanged, workspaceId }: Props
           담당하기
         </Button>
       ) : null}
+      {document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
+      <Dialog open={takeover} onOpenChange={(open) => { if (!busy) setTakeover(open); }}>
+        <EmrDialogShell title="담당자를 변경할까요?"
+          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하면 요청 수의사에게 사유가 전달됩니다.`}
+          secondaryAction={<Button variant="outline" disabled={busy} onClick={() => setTakeover(false)}>취소</Button>}
+          primaryAction={<Button disabled={busy || !reason.trim() || !document.canTakeover} onClick={async () => {
+            if (await controller.mutate({ action: "takeover", reason: reason.trim() })) {
+              setTakeover(false); setReason(""); onChanged(); onEntered?.();
+            }
+          }}>{controller.busy ? "저장 중" : "담당하기"}</Button>}>
+          <label className="mb-2 block text-sm font-medium" htmlFor="takeover-reason">담당 변경 사유</label>
+          <Textarea id="takeover-reason" value={reason} maxLength={1000} disabled={busy} onChange={(event) => setReason(event.target.value)} />
+          {controller.error && <p role="alert" className="mt-2 text-sm text-destructive">{controller.error}</p>}
+        </EmrDialogShell>
+      </Dialog>
       {document.canStart ? (
         <Button size="sm" disabled={busy} onClick={() => void change("start")}>
-          {document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
+          {prework ? "업무 시작하기" : document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
         </Button>
       ) : null}
       {document.canResume ? (
@@ -107,7 +127,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId }: Props
           재개
         </Button>
       ) : null}
-      {document.canUnassign ? (
+      {!prework && document.canUnassign ? (
         <Button
           variant="outline"
           size="sm"
@@ -118,7 +138,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId }: Props
         </Button>
       ) : null}
       {document.canCompleteAll ? (
-        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={() => setConfirm(true)}>
+        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={() => { setConfirm(true); onCompletionOpenChange?.(true); }}>
           {document.queueType === "dispensing" ? "조제 완료" : "처치 완료"}
         </Button>
       ) : null}
@@ -128,7 +148,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId }: Props
         workspaceId={workspaceId}
         onChanged={onChanged}
         open={confirm}
-        onClose={() => setConfirm(false)}
+        onClose={() => { setConfirm(false); onCompletionOpenChange?.(false); }}
       />
     </>
   );

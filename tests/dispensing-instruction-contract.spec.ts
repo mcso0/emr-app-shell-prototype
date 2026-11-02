@@ -120,3 +120,16 @@ test("explicit treatment fields retain planned quantities and instructions witho
   expect(note).toContain("합성 단계별 지시");
   expect(note).not.toMatch(/internal-order-id|device_session|direct_quantity/);
 });
+
+
+test("takeover requires a bounded reason and rejects recipient or actor injection", () => {
+  const takeover = { action: "takeover", commandId: command.commandId, expectedRevision: "revision-a", reason: "교대 인계" };
+  expect(instructionCommandSchema.safeParse(takeover).success).toBe(true);
+  expect(instructionCommandSchema.safeParse({ ...takeover, reason: "합".repeat(1000) }).success).toBe(true);
+  for (const invalid of [
+    { ...takeover, reason: " \n " }, { ...takeover, reason: "합".repeat(1001) },
+    { ...takeover, reason: undefined }, { ...takeover, actorId: "other" },
+    { ...takeover, recipientId: "other" }, { ...takeover, itemId: "other" },
+    { ...takeover, assigneeId: "other" }, { ...takeover, action: "claim" },
+  ]) expect(instructionCommandSchema.safeParse(invalid).success).toBe(false);
+});

@@ -51,11 +51,12 @@ begin
  if not (review->>'requiresAcknowledgement')::boolean then raise exception 'missing acknowledgement requirement'; end if;
  begin perform private.clair_require_task_instruction_ack('workspace-a',po,auth.uid()); raise exception 'unacknowledged allowed';
  exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
- -- Both real mutation paths reject missing acknowledgement before state changes.
+ -- Claim changes ownership only; both execution paths still require acknowledgement.
  d:=public.clair_get_fulfillment_instruction('workspace-a',wi);
+ d:=public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','claim','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
  begin
-  perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','claim','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
-  raise exception 'instruction claim bypassed acknowledgement';
+  perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','start','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+  raise exception 'instruction start bypassed acknowledgement';
  exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
  begin
   perform public.clair_transition_fulfillment_work_item('workspace-a',auth.uid(),wi,'start',(select row_revision from order_fulfillment_work_items where id=wi),gen_random_uuid(),null,null,null);
@@ -66,16 +67,23 @@ begin
  perform private.clair_require_task_instruction_ack('workspace-a',topical,auth.uid());
  if (public.clair_get_task_instruction_review('workspace-a',topical)->>'requiresAcknowledgement')::boolean then raise exception 'same chart/vector not reused'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
+ d:=public.clair_get_fulfillment_instruction('workspace-a',wi);
+ d:=public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','takeover','reason','인계 후 지시 확인 검증','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+ begin perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','start','commandId',gen_random_uuid(),'expectedRevision',d->>'revision')); raise exception 'new owner inherited acknowledgement';
+ exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
  begin perform private.clair_require_task_instruction_ack('workspace-a',po,auth.uid()); raise exception 'another actor inherited acknowledgement';
  exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
+ perform set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
+ d:=public.clair_get_fulfillment_instruction('workspace-a',wi);
+ perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','takeover','reason','합성 담당 복귀','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
  perform set_config('test.actor','00000000-0000-4000-8000-000000000003',true);
  perform public.clair_apply_overall_instructions('workspace-a',chart,jsonb_build_object('commandId',gen_random_uuid(),'changes','[{"scope":"dispensing","expectedRevision":2,"operation":"delete"}]'::jsonb));
  perform set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
  begin -- Both real mutation paths reject missing acknowledgement before state changes.
  d:=public.clair_get_fulfillment_instruction('workspace-a',wi);
  begin
-  perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','claim','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
-  raise exception 'instruction claim bypassed acknowledgement';
+  perform public.clair_mutate_fulfillment_instruction('workspace-a',wi,jsonb_build_object('action','start','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+  raise exception 'instruction start bypassed acknowledgement';
  exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
  begin
   perform public.clair_transition_fulfillment_work_item('workspace-a',auth.uid(),wi,'start',(select row_revision from order_fulfillment_work_items where id=wi),gen_random_uuid(),null,null,null);

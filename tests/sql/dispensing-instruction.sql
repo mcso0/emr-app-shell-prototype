@@ -54,6 +54,9 @@ create table public.order_execution_outbox(workspace_id text,confirmation_comman
 -- Calculation/clinical validation are unchanged dependencies, stubbed only in this structural attempt test.
 create function private.clair_order_detail_inputs_are_valid(text,integer,jsonb,boolean default false) returns boolean language sql immutable as $$select jsonb_typeof($3)='object'$$;
 create function private.clair_compute_plan_order_dispense_projection(public.orders,timestamptz) returns jsonb language sql stable as $$select $1.calculation_outputs$$;
+alter table public.orders add current_assignee_user_id uuid;
+alter table public.user_memberships add department text, add title text;
+create table public.order_intended_assignee_commands(id uuid primary key default gen_random_uuid(),workspace_id text,order_id uuid,idempotency_key text,request_sha256 text,expected_order_updated_at timestamptz,intended_assignee_user_id uuid,result jsonb,created_by_user_id uuid,created_at timestamptz,unique(workspace_id,idempotency_key));
 -- BASELINE
 create trigger history_guard before insert or update on public.order_tasks for each row execute function private.clair_assert_order_task_identity_and_history();
 create trigger result_guard before update on public.order_tasks for each row execute function private.clair_guard_execution_result_completion();
@@ -91,9 +94,11 @@ begin
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002')); raise exception 'group accepted item scope'; exception when raise_exception then if sqlerrm<>'invalid_transition' then raise; end if; end;
  d:=pg_temp.command('claim');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'claim failed'; end if;
+ if exists(select 1 from order_fulfillment_work_items where status<>'requested' or started_at is not null) then raise exception 'claim started work'; end if;
+ d:=pg_temp.command('start');
  if exists(select 1 from order_fulfillment_work_items where status<>'in_progress' or assigned_to_user_id is distinct from auth.uid())
    or exists(select 1 from orders where status<>'in_progress')
-   or (d->>'canStart')::boolean then raise exception 'claim did not atomically start work'; end if;
+   or (d->>'canStart')::boolean then raise exception 'explicit start failed'; end if;
  d:=pg_temp.command('assign','40000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000002');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'item transfer changed main'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
@@ -132,7 +137,8 @@ begin
  if d->>'mainAssigneeId' is not null or (select status from order_fulfillment_work_items where id='40000000-0000-4000-8000-000000000002')<>'paused' then raise exception 'unassign did not pause'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
  d:=pg_temp.command('claim');
- if (d->>'canResume')::boolean then raise exception 'claim did not resume paused work'; end if;
+ if not (d->>'canResume')::boolean then raise exception 'claim resumed paused work'; end if;
+ d:=pg_temp.command('resume');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'successor not main'; end if;
  cmd:=jsonb_build_object('action','complete','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002');
  d:=public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',cmd);
