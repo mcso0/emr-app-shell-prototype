@@ -146,7 +146,7 @@ export const EditDispenseQuantity: Story = {
     await expect(writes.map(request => request.body?.mode)).toEqual(["manual"]);
     for (const request of writes) await expect(request.body).not.toHaveProperty("reason");
   },
-  parameters: { docs: { description: { story: "실 조제량은 텍스트로 입력하고 Enter 또는 포커스 이동으로 저장합니다. 잘못된 입력은 유지하며 오류 테두리와 포커스·호버 툴팁을 표시합니다. 셀 옆 저장·재확인·되돌리기 버튼은 없습니다. 저장은 합성 미리보기 메모리에만 반영되며 새로고침하면 초기화됩니다." } } },
+  parameters: { docs: { description: { story: "실 조제량 컬럼의 기본·최소 너비는 120px입니다. 오더명과 업무 상태 너비는 기존 구현을 유지합니다. 실 조제량은 텍스트로 입력하고 Enter 또는 포커스 이동으로 저장합니다. 잘못된 입력은 유지하며 오류 테두리와 포커스·호버 툴팁을 표시합니다. 셀 옆 저장·재확인·되돌리기 버튼은 없습니다. 저장은 합성 미리보기 메모리에만 반영되며 새로고침하면 초기화됩니다." } } },
 };
 
 export const RecalculateDispensePrescription: Story = {
