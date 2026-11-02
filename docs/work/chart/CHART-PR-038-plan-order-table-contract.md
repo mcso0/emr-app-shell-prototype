@@ -219,7 +219,9 @@ existing Order 명 (180px) and 업무 상태 (88px) implementations, and setting
 Production delivery when checks pass. This is bounded conditional release
 approval; it does not authorize unrelated WIP, data/API, DB or provider changes.
 
-Only `src/features/chart/module.tsx` column sizing changes. The actual chart
+Application changes are limited to `src/features/chart/module.tsx` column sizing
+and compact padding/chevrons for the affected frequency, basis and dose-unit
+selectors, so common values remain visible at the approved widths. The actual chart
 workspace story documents the new default and continues using the same app
 component and synthetic fixture. Column order, pinning, content, rounding,
 save behavior, permission enforcement and other screens retain their contracts.
@@ -259,3 +261,11 @@ Ready Preview, then a merge protected by the expected head SHA and a Ready
 Production deployment. Smoke: `/login` and the same scoped chart table layout.
 Rollback candidate is the Ready Production deployment recorded before merge.
 No remote clinical mutation is part of this width follow-up.
+
+- Full local production-build app route with synthetic intercepted API responses:
+  1,440px and 1,200px screenshots, header/body alignment and actual-dispense
+  keyboard resize passed. The width grows to 128px and returns to its 120px
+  minimum. These are local UI results, not live API/DB authorization evidence.
+- Final visual review found default SID/head selector text clipping; compact
+  selector insets/chevrons fix it without changing column widths or text size.
+  The existing editing story now checks that selected values fit their controls.

@@ -7532,7 +7532,7 @@ function ChartOrderInlineFieldCell({
             ? "이 약품의 계산 설정에서 사용할 수 있는 단위를 확인해 주세요. 기존 값은 유지됩니다." : undefined}
           className={cn(
             "h-7 w-full min-w-0 flex-1 bg-[var(--emr-surface-panel)] px-2 emr-text-metadata",
-            ["doseBasis", "frequency"].includes(definition.key) && "gap-1 px-1.5",
+            ["doseBasis", "frequency", "doseUnit"].includes(definition.key) && "gap-0.5 px-0.5 [&_svg]:size-3",
           )}
           data-row-interactive="true"
         >
