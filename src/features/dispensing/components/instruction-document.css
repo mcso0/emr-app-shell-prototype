@@ -3,7 +3,7 @@
 /* Visual rhythm: one list surface, consistent columns, restrained state accents. */
 /* Linked veterinarian and technician review flow. */
 .figma-document {
-  background: white;
+  background: transparent;
   padding: 0 16px 16px;
   display: flex;
   flex-direction: column;
@@ -22,6 +22,7 @@
   font-weight: 500;
 }
 .fd-card {
+  background: var(--clair-color-atomic-common-100);
   border: 1px solid #e5e5e5;
   border-radius: 12px;
   padding: 12px 16px;
