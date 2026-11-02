@@ -1,6 +1,10 @@
 .dialog { width: 560px; max-width: calc(100vw - 32px); height: 560px; max-height: calc(100dvh - 80px); }
+.withoutFooter { grid-template-rows: auto minmax(0, 1fr); }
+.loading { display: grid; place-items: center; min-height: 100%; color: var(--emr-text-secondary); }
+.unavailableScope { width: 100%; opacity: .5; cursor: not-allowed; box-shadow: none; }
+.unavailableScope:hover { background: var(--background); box-shadow: none; }
 .header { border-bottom: 0; }
-.body { padding-top: 4px; padding-bottom: 24px; overflow-y: auto; scrollbar-gutter: stable; }
+.body { padding-top: 4px; padding-bottom: 24px; overflow-y: auto; }
 .footer { flex-direction: row; flex-wrap: nowrap; justify-content: space-between; }
 .chooser { display: flex; min-height: 100%; flex-direction: column; align-items: center; justify-content: center; gap: 16px; max-width: 340px; margin: auto; padding: 24px 0; }
 .chooser h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
