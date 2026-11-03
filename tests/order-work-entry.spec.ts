@@ -32,9 +32,10 @@ async function install(page: Page, category: "lab" | "imaging" | "billing", init
   let status = "requested";
   const commands: string[] = [];
   let prepares = 0;
+  let pendingChange = false;
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  const invoice = { id, workspaceId, encounterId: id, guardianId, invoiceNo: "SYN-I001", status: "issued", subtotalAmount: 35000, discountAmount: 0, taxAmount: 0, totalAmount: 35000, createdAt: timestamp };
+  const invoice = { id, workspaceId, encounterId: id, guardianId, invoiceNo: "SYN-I001", status: "issued", subtotalAmount: 35000, discountAmount: 0, taxAmount: 0, totalAmount: 35000, createdAt: timestamp, updatedAt: timestamp };
   const line = { id, invoiceId: id, description: "합성 검사", quantity: 1, unitPrice: 35000, lineTotal: 35000 };
   const workItem = () => ({ id, workspaceId, orderId: id, taskId: id, encounterId: id, patientId, queueType: category,
     status, requestCycle: 1, rowRevision: revision, assignedToUserId: owner === "none" ? null : owner === "mine" ? "user-admin" : "other", assignedToDisplayName: owner === "none" ? null : "합성 담당자",
@@ -81,6 +82,11 @@ async function install(page: Page, category: "lab" | "imaging" | "billing", init
       const target = url.searchParams.get("invoiceId") ?? id;
       return route.fulfill({ json: { ok: true, invoice: { ...invoice, id: target, invoiceNo: target === id ? "SYN-I001" : "SYN-I002" }, payments: [] } });
     }
+    if (path.endsWith("/order-changes")) {
+      if (route.request().method() === "POST") { pendingChange = false; invoice.updatedAt = "2026-11-03T00:01:00Z"; }
+      const financial = { billingName: "합성 검사", billingQuantity: 1, unitPriceKrw: 35000, taxClass: "non_taxable", billingReflectionEnabled: true, adjustmentSource: null, adjustmentAmountKrw: 0, adjustmentPercent: 0, adjustmentReason: "" };
+      return route.fulfill({ json: { ok: true, changes: pendingChange ? [{ orderId: id, proposalId: id, version: 1, before: financial, proposed: { ...financial, billingName: "합성 검사 변경" }, canApprove: true, createdAt: timestamp }] : [] } });
+    }
     if (path.endsWith("/guardian-checkout")) {
       if (route.request().method() === "POST") prepares++;
       return route.fulfill({ json: { ok: true, rows: [], checkoutSession: { id, selectedInvoiceIds: [id], status: "prepared", payableAmount: 35000, excludedAmount: 0, excludedCount: 0, invoices: [] } } });
@@ -92,7 +98,7 @@ async function install(page: Page, category: "lab" | "imaging" | "billing", init
   const entry = page.getByTestId(`${category}-prework`);
   await expect(entry).toBeVisible();
   await expect(entry.getByRole("button", { name: initial === "mine" ? "업무 시작하기" : "담당하기", exact: true })).toBeVisible();
-  return { entry, commands, errors, prepares: () => prepares, setOwner: (next: Owner) => { owner = next; revision++; } };
+  return { entry, commands, errors, setPendingChange: (next: boolean) => { pendingChange = next; }, prepares: () => prepares, setOwner: (next: Owner) => { owner = next; revision++; } };
 }
 
 for (const category of ["lab", "imaging", "billing"] as const) {
@@ -174,4 +180,19 @@ test("billing late claim cannot enter a newly selected invoice", async ({ page }
   await expect(state.entry).toBeVisible();
   expect(state.prepares()).toBe(0);
   expect(state.commands).toEqual(["claim"]);
+});
+
+
+test("billing entry keeps payment preparation blocked until order change approval", async ({ page }) => {
+  const state = await install(page, "billing", "mine");
+  state.setPendingChange(true);
+  await state.entry.getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await expect(state.entry).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "청구 변경 확인" })).toBeVisible();
+  expect(state.prepares()).toBe(0);
+  await page.getByRole("button", { name: "확인 후 금액 반영", exact: true }).click();
+  await expect(page.getByRole("region", { name: "청구 변경 확인" })).toHaveCount(0);
+  await expect.poll(state.prepares).toBeGreaterThan(0);
+  expect(state.errors).toEqual([]);
 });

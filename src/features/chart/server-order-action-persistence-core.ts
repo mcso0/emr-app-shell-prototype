@@ -1374,6 +1374,7 @@ function mapRuntimeActionRow(value: unknown): ChartOrderRuntimeRow | null {
     snapshotHash: typeof row.snapshotHash === "string" ? row.snapshotHash : null,
     appliedSnapshot: objectOf("appliedSnapshot"),
     appliedPriceSnapshot: objectOf("appliedPriceSnapshot"),
+    preBillingOverride: objectOf("preBillingOverride"),
     calculationInputs: objectOf("calculationInputs"),
     calculationOutputs: objectOf("calculationOutputs"),
     billingReflectionEnabled: row.billingReflectionEnabled !== false,

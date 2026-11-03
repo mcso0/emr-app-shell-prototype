@@ -7,7 +7,11 @@ import type { EmrId, Invoice, InvoiceLine, Payment, PaymentMethod } from "@/type
 export type BillingFilter = "waiting" | "unpaid" | "closed";
 export type BillingInvoiceStatusTransitionTarget = "waiting" | "unpaid" | "paid" | "voided";
 
+export type OrderChangeReviewState = { status: "loading" | "ready" | "error"; pending: boolean; signature: string };
+
 type BillingStore = {
+  orderChangeReviews: Record<string, OrderChangeReviewState>;
+  setOrderChangeReview: (key: string, review: OrderChangeReviewState) => void;
   combinedInvoiceIds: EmrId[];
   invoiceAssignees: Record<EmrId, string | undefined>;
   filter: BillingFilter;
@@ -49,6 +53,12 @@ const recalculateInvoice = (invoice: Invoice, invoiceLines: InvoiceLine[]) => {
 };
 
 export const useBillingStore = create<BillingStore>()((set, get) => ({
+  orderChangeReviews: {},
+  setOrderChangeReview: (key, review) => set(state => {
+    const previous = state.orderChangeReviews[key];
+    if (previous?.status === review.status && previous.pending === review.pending && previous.signature === review.signature) return state;
+    return { orderChangeReviews: { ...state.orderChangeReviews, [key]: review } };
+  }),
   combinedInvoiceIds: [],
   invoiceAssignees: {},
   filter: "waiting",

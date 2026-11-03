@@ -1,9 +1,11 @@
+import { partialWorkNoteSchema } from "./partial-order-work-contract";
 import { z } from "zod";
 import { instructionRevisionSchema, instructionScopeSchema } from "@/features/chart/overall-instructions-contract";
 
 export const effectiveInstructionsSchema = z.object({
   chartId: z.uuid(), scope: instructionScopeSchema,
   entries: z.array(instructionRevisionSchema),
+  partialWork: z.array(partialWorkNoteSchema).optional(),
   versions: z.record(z.string(), z.number().int().nonnegative()),
   versionKey: z.string().regex(/^[a-f0-9]{64}$/),
 });

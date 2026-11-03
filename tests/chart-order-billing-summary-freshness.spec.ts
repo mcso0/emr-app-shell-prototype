@@ -376,7 +376,7 @@ test("included-order-sum set counts once and does not double-charge its parent",
   ).toBeVisible();
 });
 
-test("chart billing action navigates to encounter billing without a billing POST", async ({
+test("chart billing action with no requestable orders navigates without a billing POST", async ({
   page,
 }) => {
   await warmChartWorkspace(page);
@@ -457,7 +457,8 @@ test("source contract keeps UI scope local while server mutations retain chart o
     "const effectiveBillingSummary = localBillingSummary",
   );
   expect(moduleSource).toContain("onNavigateToBilling?.(");
-  expect(moduleSource).not.toContain("requestChartOrderBillingRoute");
+  expect(moduleSource).toContain("requestChartOrderBillingRoute");
+  expect(moduleSource).toContain("idempotencyKey: billingRequestAttemptRef.current.idempotencyKey");
   expect(draftServerSource).toContain("order_chart_mismatch");
   expect(actionServerSource).toContain(
     "(row.originChartId ?? null) !== (chartId ?? null)",

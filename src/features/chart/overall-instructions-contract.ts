@@ -12,6 +12,7 @@ export const instructionScopeLabels: Record<InstructionScope, string> = {
 };
 export const instructionRevisionSchema = z.object({
   scope: instructionScopeSchema, revision: z.number().int().nonnegative(),
+  kind: z.literal("clinical_edit").optional(), orderId: z.uuid().optional(),
   instruction: z.string(), deleted: z.boolean(), legacy: z.boolean().optional(),
   actorName: z.string().nullable(), createdAt: z.string().nullable(),
 });

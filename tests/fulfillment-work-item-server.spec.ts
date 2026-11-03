@@ -529,7 +529,7 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
   });
   expect(completedBody.workItems[0]?.completedAt).toEqual(expect.any(String));
   expect(completedBody.downstreamSync).toMatchObject({
-    billingCandidateCount: 1,
+    billingCandidateCount: 0,
     lifecycleStatus: "completed",
   });
 
@@ -559,7 +559,7 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
     candidateReadBody.candidates.some(
       (candidate) => candidate.orderId === orderId,
     ),
-  ).toBe(true);
+  ).toBe(true); // Pre-existing mock candidate remains untouched.
 
   const notifications = await request.get(
     `/api/workspaces/${workspaceId}/notifications?filter=all&limit=50`,
@@ -581,7 +581,7 @@ test("fulfillment work item routes sync from chart orders, read by queue, and mu
     }>;
   };
   expect(notificationBody.notifications).toEqual(
-    expect.arrayContaining([
+    expect.not.arrayContaining([
       expect.objectContaining({
         badgeCount: false,
         eventKey: "billing_waiting_ready",
@@ -1065,7 +1065,7 @@ test("fulfillment core blocks terminal-state transitions", async () => {
   });
 });
 
-test("fulfillment completion syncs order lifecycle and billing candidates from server-owned snapshots", async () => {
+test("dispensing completion updates lifecycle and waits for explicit billing request", async () => {
   const timestamp = () => "2026-05-23T10:40:00.000Z";
   const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
   const lifecycleGateway = createMockChartOrderLifecycleGateway(
@@ -1116,8 +1116,9 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
   expect(completed).toMatchObject({
     ok: true,
     downstreamSync: {
-      auditEventCount: 2,
-      billingCandidateCount: 1,
+      auditEventCount: 1,
+      billingCandidateCount: 0,
+      billingSkippedReason: "explicit_billing_request_required",
       lifecycleStatus: "completed",
     },
   });
@@ -1142,14 +1143,10 @@ test("fulfillment completion syncs order lifecycle and billing candidates from s
     candidates.ok
       ? candidates.candidates.find((candidate) => candidate.orderId === orderId)
       : null,
-  ).toMatchObject({
-    lineTotal: 4500,
-    quantity: 1,
-    unitPrice: 4500,
-  });
+  ).toMatchObject({ syncedAt: "1970-01-01T00:00:00.000Z" });
 });
 
-test("fulfillment completion emits drawer-only billing-ready notification after candidate sync", async () => {
+test("dispensing completion does not emit billing-ready notifications", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
   const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
   const lifecycleGateway = createMockChartOrderLifecycleGateway(
@@ -1198,8 +1195,9 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
   expect(completed).toMatchObject({
     ok: true,
     downstreamSync: {
-      billingCandidateCount: 1,
-      billingReadyNotificationCount: 1,
+      billingCandidateCount: 0,
+      billingSkippedReason: "explicit_billing_request_required",
+      billingReadyNotificationCount: 0,
     },
   });
 
@@ -1212,23 +1210,7 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
     workspaceId,
   });
 
-  expect(frontDeskFeed).toMatchObject({
-    ok: true,
-    counts: {
-      badge: 0,
-      unread: 1,
-    },
-    notifications: [
-      expect.objectContaining({
-        badgeCount: false,
-        dedupeKey: `${encounterId}-${orderId}-billing_waiting_ready`,
-        eventKey: "billing_waiting_ready",
-        sourceEntityId: `billcand-${orderId}`,
-        sourceRoute: `/w/${workspaceId}/billing?modulePanel=open&encounterId=${encounterId}`,
-        toastPolicy: "drawer_only",
-      }),
-    ],
-  });
+  expect(frontDeskFeed).toMatchObject({ ok: true, counts: { badge: 0, unread: 0 }, notifications: [] });
 
   const techFeed = await readLiveNotifications({
     actorUserId: "user-tech",
@@ -1245,7 +1227,7 @@ test("fulfillment completion emits drawer-only billing-ready notification after 
   });
 });
 
-test("fulfillment completion persists billing-ready notification through the DB gateway", async () => {
+test("dispensing completion does not persist a billing-ready event", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
   const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
   const lifecycleGateway = createMockChartOrderLifecycleGateway(
@@ -1297,30 +1279,15 @@ test("fulfillment completion persists billing-ready notification through the DB 
   expect(completed).toMatchObject({
     ok: true,
     downstreamSync: {
-      billingCandidateCount: 1,
-      billingReadyNotificationCount: 1,
+      billingCandidateCount: 0,
+      billingSkippedReason: "explicit_billing_request_required",
+      billingReadyNotificationCount: 0,
     },
   });
-  expect(persistedEvents).toEqual([
-    expect.objectContaining({
-      actorUserId: "user-tech",
-      badgeCount: false,
-      dedupeKey: `${encounterId}-${orderId}-billing_waiting_ready`,
-      eventKey: "billing_waiting_ready",
-      eventScopeId: null,
-      recipient: expect.objectContaining({ id: "billing", kind: "role_queue" }),
-      source: expect.objectContaining({
-        entity_id: `billcand-${orderId}`,
-        kind: "billing_candidate",
-        route: `/w/${workspaceId}/billing?modulePanel=open&encounterId=${encounterId}`,
-      }),
-      toastPolicy: "drawer_only",
-      workspaceId,
-    }),
-  ]);
+  expect(persistedEvents).toEqual([]);
 });
 
-test("fulfillment completion keeps source mutation successful when DB notification persistence rejects", async () => {
+test("dispensing completion is independent of the billing notification gateway", async () => {
   const timestamp = () => "2026-05-26T14:40:00.000Z";
   const gateway = createMockFulfillmentWorkItemGateway(undefined, timestamp);
   const lifecycleGateway = createMockChartOrderLifecycleGateway(
@@ -1367,7 +1334,8 @@ test("fulfillment completion keeps source mutation successful when DB notificati
   expect(completed).toMatchObject({
     ok: true,
     downstreamSync: {
-      billingCandidateCount: 1,
+      billingCandidateCount: 0,
+      billingSkippedReason: "explicit_billing_request_required",
       billingReadyNotificationCount: 0,
       lifecycleStatus: "completed",
     },
@@ -1379,7 +1347,7 @@ test("fulfillment completion keeps source mutation successful when DB notificati
   });
   expect(candidates).toMatchObject({
     ok: true,
-    candidates: expect.arrayContaining([expect.objectContaining({ orderId })]),
+    candidates: expect.arrayContaining([expect.objectContaining({ orderId, syncedAt: "1970-01-01T00:00:00.000Z" })]),
   });
 });
 

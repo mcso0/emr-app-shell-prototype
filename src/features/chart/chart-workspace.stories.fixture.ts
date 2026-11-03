@@ -1,3 +1,4 @@
+import { confirmedOrderEditSchema, type ConfirmedOrderContext } from "./confirmed-order-edit-contract";
 import { createEditableDispenseRow, recalculateEditableDispenseRow } from "./dispense-edit.stories.fixture";
 import { waitFor } from "storybook/test";
 import { toast } from "sonner";
@@ -13,13 +14,14 @@ import type { ChartPatientHistoryRecord } from "./chart-patient-history";
 import type { ChartOrderRuntimeRow } from "./server-order-draft-persistence-core";
 import type { Diagnosis, Encounter, Patient, SoapNote } from "@/types/emr-domain";
 
-export type ChartWorkspaceScenario = "historical" | "order-read-error" | "empty-orders" | "dispense-edit";
+export type ChartWorkspaceScenario = "historical" | "order-read-error" | "empty-orders" | "dispense-edit" | "confirmed-edit" | "selected-billing";
 const id = (kind: number, index = 1) => `98000000-0000-4000-${kind}-${String(index).padStart(12, "0")}`;
 const now = "2026-10-11T00:00:00Z";
 
 /** Actual historical chart contracts. Historical completion makes writes unavailable in main. */
 export function createChartWorkspaceFixture(scenario: ChartWorkspaceScenario) {
-  const editable = scenario === "dispense-edit";
+  const confirmed = scenario === "confirmed-edit" || scenario === "selected-billing";
+  const editable = scenario === "dispense-edit" || confirmed;
   const workspaceId = `storybook-chart-${crypto.randomUUID()}`;
   const patient: Patient = { id: id(8000), workspaceId, patientNo: "SYN-CHART-P1", name: "합성 차트 환자", species: "cat", sex: "unknown", handlingCautionLocked: false, status: "active", createdAt: now, updatedAt: now };
   const activeEncounter: Encounter = { id: id(8001), workspaceId, patientId: patient.id, encounterNo: "SYN-CURRENT", receptionType: "walk_in", status: editable ? "in_consultation" : "waiting", checkedInAt: now, createdAt: now, updatedAt: now, visitPurpose: "합성 현재 접수" };
@@ -39,6 +41,18 @@ export function createChartWorkspaceFixture(scenario: ChartWorkspaceScenario) {
     rows.splice(0, rows.length, createEditableDispenseRow(workspaceId, activeEncounter.id, chart.id));
     history.splice(0, history.length, { encounter: activeEncounter, chart, queueEntry: current.queueEntry, diagnoses: [] });
   }
+  if (confirmed) {
+    rows[0] = { ...rows[0], orderId: id(8004), orderConfirmationStatus: "confirmed", status: "confirmed", billingCandidateStatus: "candidate_created" };
+  }
+  let editContext: ConfirmedOrderContext | null = confirmed ? {
+    orderId: rows[0].orderId, chartId: chart.id, version: "synthetic-confirmed-v1", detailInputs: rows[0].detailInputs,
+    calculationOutputs: rows[0].calculationOutputs, detailSchemaVersion: 1, taskStatus: "pending", billingStage: "before",
+    financial: { billingName: "합성 조제 청구", billingQuantity: 1, unitPriceKrw: 4500, taxClass: "taxable", billingReflectionEnabled: true,
+      adjustmentSource: null, adjustmentAmountKrw: 0, adjustmentPercent: 0, adjustmentReason: "" },
+    pendingFinancial: null, canEditClinical: true, canEditFinancial: true, actualDispenseMode: "automatic", actualDispenseQuantity: 1,
+  } : null;
+  if (scenario === "selected-billing") rows.push({ ...rows[0], orderId: id(8004, 2), appliedSnapshot: { ...rows[0].appliedSnapshot, displayName: "합성 미선택 오더" } });
+  let billingAttempts = 0;
   let saveVersion = 0;
   let etag = editable ? `"${"0".repeat(64)}"` : '"synthetic-chart-orders-v1"';
   const readBillingSummary = () => createMockChartOrderBillingSummaryFromMutationRows({ workspaceId, encounterId: historicalEncounter.id, etag, generatedAt: now, rows: editable ? rows.map(row => ({ ...row, lineTotalSnapshot: Number(row.calculationOutputs.actualDispenseQuantity) * Number(row.unitPriceSnapshot) })) : rows });
@@ -69,6 +83,15 @@ export function createChartWorkspaceFixture(scenario: ChartWorkspaceScenario) {
       const target = url.searchParams.get("encounterId");
       const encounter = target === activeEncounter.id ? activeEncounter : historicalEncounter;
       if (!url.pathname.startsWith(root)) throw new Error("Unexpected synthetic chart workspace");
+      if (editContext && url.pathname === `${root}/chart/confirmed-order-edit`) {
+        if (method === "POST") {
+          const command = confirmedOrderEditSchema.parse(body);
+          if (command.orderId !== editContext.orderId || command.chartId !== chart.id || command.expectedVersion !== editContext.version) throw new Error("Confirmed edit fixture scope/version mismatch");
+          editContext = { ...editContext, version: "synthetic-confirmed-v2", financial: { ...editContext.financial!, ...command.financial }, detailInputs: command.clinical?.detailInputs ?? editContext.detailInputs };
+          rows[0] = { ...rows[0], detailInputs: editContext.detailInputs, preBillingOverride: { ...editContext.financial! } };
+        }
+        return Response.json({ ok: true, context: editContext });
+      }
       if (editable && method === "PATCH" && url.pathname === `${root}/chart/orders/${rows[0].orderId}/actual-dispense`) {
         const row = rows[0];
         if (body?.expectedOrderUpdatedAt !== row.updatedAt) return Response.json({ ok: false, error: "revision_conflict" }, { status: 409 });
@@ -102,6 +125,17 @@ export function createChartWorkspaceFixture(scenario: ChartWorkspaceScenario) {
         rows[0] = updated;
         return Response.json({ ok: true, status: 200, rows, etag, billingSummary: readBillingSummary() }, { headers: { ETag: etag } });
       }
+      if (url.pathname === `${root}/chart/order-billing-summary`) {
+        if (method === "POST") {
+          billingAttempts++;
+          if (billingAttempts === 1) return Response.json({ ok: false, error: "db_write_failed" }, { status: 500 });
+          const selected = body?.orderIds as string[];
+          if (selected.length !== 1 || selected[0] !== rows[0].orderId) throw new Error("Unexpected billing selection");
+          rows[0].billingCandidateStatus = "invoice_linked";
+          return Response.json({ ok: true, status: 200, summary: { ...readBillingSummary(), invoiceId: id(8007) } });
+        }
+        return Response.json({ ok: true, status: 200, summary: readBillingSummary() });
+      }
       if (method !== "GET") return Response.json({ ok: false, denialReason: "permission_missing", status: 403 }, { status: 403 });
       if (editable && url.pathname === `${root}/hospital-admin/order-catalog`) return Response.json({ ok: true, status: 200, rows: [] });
       if (url.pathname === `${root}/chart/live-queue`) return Response.json({ ok: true, status: 200, queue: [current], enforcedBy: "chart-live-queue-read" });
@@ -124,7 +158,6 @@ export function createChartWorkspaceFixture(scenario: ChartWorkspaceScenario) {
       if (url.pathname === `${root}/chart/order-lifecycle`) return Response.json({ ok: true, status: 200, lifecycles: [] });
       if (url.pathname === `${root}/chart/order-execution`) return Response.json({ ok: true, status: 200, execution: { tasks: [], queues: [], billingCandidates: [] } });
       if (url.pathname === `${root}/billing/invoice-candidates`) return Response.json({ ok: true, status: 200, candidates: [] });
-      if (url.pathname === `${root}/chart/order-billing-summary`) return Response.json({ ok: true, status: 200, summary: readBillingSummary() });
       if (url.pathname === `${root}/chart/preconsultation-context`) return Response.json({ ok: true, status: 200, context: { encounter: activeEncounter, queue: { id: current.queueEntry.id, status: "waiting" }, patient, guardian: null, priorEncounterCount: 2, vitals: [], history: [] }, canWriteVitals: false, enforcedBy: "chart-preconsultation-context-read" });
       unhandled.push(`${method} ${url.pathname}`);
       return Response.json({ ok: false, status: 503, error: "storybook-unhandled-api" }, { status: 503 });
