@@ -15,7 +15,7 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-11-01"
+updated: "2026-11-03"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
@@ -1702,3 +1702,239 @@ Release delivery record: [PR #1044](https://github.com/mcso0/emr-app-shell-proto
 tracks the final candidate, current required CI, exact Preview, remote migration
 readback, merge and Production evidence. The local-only limits above describe the
 pre-authorization checkpoint. User acceptance remains separate from release checks.
+
+## Confirmed order editing — 2026-11-03 local implementation
+
+Status: Human Review for this bounded local candidate. User approved local implementation and synthetic screen/behavior verification against the [confirmed proposal](../../design/screens/chart/planning/order-edit/index.html). Preserve unrelated WIP. Remote DB application, deployment and main merge are excluded.
+
+Scope: single dispensing/treatment order or set child; shared row/selection edit entry; atomic clinical and financial changes; financial-only changes preserve fulfillment state and notifications; explicit billing request only; post-request financial proposals require current billing assignee review; clinical revision acknowledgement and partial-work notes preserve prior work. Existing permissions, calculation authority, chart scope, payment restrictions and immutable history remain.
+
+Completion: local UI, API permission/error/idempotency checks and isolated PostgreSQL synthetic cases cover unchanged saves, retries, concurrent revisions, financial-only effects, billing review and performer acknowledgement. Evidence must distinguish mock UI from actual local SQL. No real patient/guardian/payment data is authorized.
+
+
+### Local verification and limits
+
+- Separate `codex/confirmed-order-edit` checkout from `origin/main` `6f5c285`.
+  Original working-copy fingerprints: 142 previously changed files remain intact.
+- Actual chart component in a synthetic browser: select one confirmed order,
+  open 수정, save price, and read back `6,000원` in the table passed. Desktop
+  and 390px mobile captures inspected; no horizontal dialog overflow.
+- Focused Storybook browser run: 13 passed, 14 unrelated stories excluded.
+  Covers financial-only/clinical editing, required reason, no-change save,
+  duplicate click, successive edits, failure/retry command identity, stale
+  revision input preservation, read-only state, late response after unmount,
+  billing review and partial-work retry. API transport in these stories is mocked.
+- Server adapter tests: 3 passed. Actual isolated PostgreSQL regression passed:
+  financial-only state/notification isolation, no-op, idempotency, stale revision,
+  workspace/permission denials, clinical acknowledgement, requester notification,
+  partial records across attempts, legacy edit acknowledgement, explicit billing,
+  owner-only approval, payment block, invoice quantity preservation and paid-state
+  nonfinancial update. Synthetic rows roll back after every run.
+- Existing fulfillment/prebilling regression suite: 31 passed, 1 failed. The
+  mock API lifecycle read returns `requested` after completion; restoring both
+  the baseline fulfillment core and baseline route test reproduces the same
+  failure at `tests/fulfillment-work-item-server.spec.ts:547`. This is recorded
+  separately and not repaired in this scope.
+- Documentation link and tracked-file secret checks passed.
+- TypeScript, focused ESLint and production build passed. Existing SVG React
+  attribute warnings (`stroke-miterlimit`, `fill-rule`, `clip-rule`) remain in the
+  actual chart fixture; they are unrelated to this change.
+- SQL verification uses a disposable network-isolated Docker PostgreSQL database
+  with repository schema and synthetic prerequisites. Local Realtime delivery is
+  not configured: notification rows were asserted, transport delivery was not.
+  Browser mock evidence and actual SQL evidence are separate; this is not a
+  fully authenticated browser-to-DB integration or real clinical-use validation.
+- Evidence remains local in `.artifacts/confirmed-order-edit/`; no raw evidence,
+  credentials or real clinical data are intended for publication. No remote DB
+  mutation, deployment or main merge occurred. User acceptance is pending.
+
+Reproduce SQL verification with `CONFIRMED_EDIT_TEST_CONTAINER` and
+`CONFIRMED_EDIT_TEST_DATABASE` pointing to the disposable container, then run
+`node scripts/test-confirmed-order-edit-sql.mjs`. The runner refuses networked
+containers. Server adapter checks: `node --test tests/confirmed-order-edit-server.test.mjs`.
+
+
+### Authenticated local integration follow-up — 2026-11-03
+
+User authorized real local login-to-DB and live update verification using only
+synthetic identities/data. Use a separate `clair-confirmed-edit-e2e` Supabase
+stack and loopback app; preserve the pre-existing Supabase stack and all WIP.
+No remote migration, deployment, provider side effects or real data are allowed.
+Verify login, single-order edit, DB readback, recipient auto-refresh, clinical
+acknowledgement and financial-only notification isolation. Distinguish private
+queue Realtime broadcasts from the notification drawer's 30-second polling.
+Status: authenticated local verification completed with two end-to-end blockers.
+This is not a fully passing UI handoff or a release-ready result.
+
+- Four synthetic accounts logged in through local Supabase Auth. Real browser
+  requests exercised application routes, authenticated RPCs and persisted DB rows.
+  No API interception or mock responses were used for this follow-up.
+- Financial-only UI edit changed 5,000 to 6,000 KRW with unchanged task data and
+  notification count (3 before/after). After the readback fix, a fresh chart read
+  retained the 6,000 KRW price and quantity 5.
+- Clinical edits reached the original requester and performer only. Queue private
+  Realtime subscriptions succeeded; observed broadcast latency was about 0.2 s,
+  followed by automatic instruction refresh without reload. Notification popups
+  appeared after about 18 s and 30 s through the existing 30-second polling path.
+  This does not establish WebSocket delivery for the notification drawer.
+- Started work, recorded partial execution, changed the order, acknowledged the
+  change, resumed and completed through actual UI/API/DB. Prior partial notes and
+  the assigned performer were retained. Completion created no invoice.
+- Anonymous, foreign-workspace and unauthorized performer requests returned
+  401/403. A non-assignee's financial approval returned 403
+  `current_assignee_required`; the current assignee's UI approval returned 200.
+- After an explicit authenticated billing API request, a 6,000 to 7,000 KRW UI
+  proposal retained the old 29,000 KRW line and 62,000 KRW invoice. Assignee
+  approval changed them to 34,000 and 67,000 KRW; reload retained those values.
+  Synthetic prepared checkout sessions were expired before this scenario so it
+  represents a proposal submitted before opening the billing screen, not a
+  successful edit of an already prepared checkout.
+
+Defects corrected in this candidate:
+
+1. Replacement task assignment now copies the preserved work-item assignment.
+2. Previous clinical acknowledgement history excludes revisions of other orders.
+3. Confirmed order-actions reads project approved financial values and the server
+   mapper preserves `preBillingOverride`; immutable snapshots remain unchanged.
+4. Financial review does not fetch for placeholder/non-persisted invoice IDs.
+
+Remaining end-to-end blockers (recorded, not redesigned in this verification):
+
+1. Existing chart billing buttons navigate to billing but do not invoke the
+   billing request API. The API creates an invoice successfully when called from
+   the authenticated browser. The selected-order UI cannot be wired blindly to
+   that API because the API requests all eligible encounter orders.
+2. Opening billing automatically prepares checkout. The candidate treats a
+   prepared checkout as locked, so a later financial edit is disabled even before
+   payment begins. Pending proposals correctly block checkout preparation, but
+   the UI shows a generic preparation error. Resolving preparation invalidation,
+   concurrent payment and selected-order handoff needs a separate bounded change;
+   payment locks and existing billing behavior were not weakened here.
+
+Verification and environment limits:
+
+- Isolated SQL regressions passed, including task assignment, order-specific
+  history and confirmed financial reload. Server adapter tests: 3 passed. The
+  action persistence suite: 21 passed; its mock-header HTTP test returned 401
+  against the Supabase-auth server and is not counted as passing. The added
+  mapper regression passed independently.
+- Final local production build (including TypeScript), affected-file ESLint and
+  diff whitespace checks passed. This build was served only on loopback.
+- Full local Supabase startup needed temporary synthetic prerequisites and
+  omission of imported demo-data-only checks/corrections. Repository historical
+  migrations were unchanged; this is not a pristine full migration replay.
+- Original checkout WIP: all 142 recorded file hashes were unchanged. Existing
+  Supabase services were preserved. Only this candidate and owned synthetic local
+  services were modified; no remote DB, deployment, real data or payment provider
+  operation occurred.
+- Sanitized screenshots and transport/DB evidence remain local under
+  `.artifacts/confirmed-order-edit-e2e/`. Credentials remain outside the repository.
+  User acceptance and the two blockers remain open.
+
+### Selected billing handoff and pre-payment changes — 2026-11-03
+
+User explicitly authorized both remaining fixes in the existing isolated checkout:
+selected-order-only billing requests and financial proposals before actual payment,
+including an already prepared checkout, with current-assignee approval before
+amount application. Preserve all prior WIP; no remote DB, deployment or providers.
+Completion requires real local Auth/UI/API/DB proof for selected-only linkage,
+repeat request safety, prepared-session invalidation, pending-payment blocking,
+assignee approval and refreshed checkout amounts. Payment-in-flight/paid locks,
+workspace isolation and audit must remain enforced. Status: Human Review for the verified local candidate.
+
+
+Follow-up verification record (local only):
+
+- Real authenticated chart UI selected one of three synthetic confirmed orders.
+  The POST contained one order ID, created one 9,000 KRW invoice line, and left
+  two candidates unlinked. Replaying the same request returned the same invoice
+  with no duplicate line. The confirmation shows existing candidate discounts,
+  including before the first financial edit.
+- With the biller already assigned and two prepared sessions present, another
+  authenticated editor proposed a price change from 5,000 to 7,000 KRW. Both
+  prepared sessions expired; the invoice remained 9,000 KRW. The open billing
+  screen detected the proposal through its 15-second polling path and disabled
+  payment. Both actual payment API paths returned 409 `billing_review_required`.
+- Non-assignee approval returned 403 `current_assignee_required`. Current-assignee
+  UI approval returned 200, updated the line, invoice, main table and right summary
+  to 13,000 KRW, and prepared checkout snapshots with that amount. Both payment
+  routes rejected the prior invoice version with 409 `invoice_revision_conflict`.
+- Focused SQL regression covers explicit selection, replay, changed-selection
+  command conflict, invalid/mixed/foreign selections, permission denial, selected
+  unfinished acknowledgement, prepared invalidation, approval, stale/missing
+  payment versions, former-RPC ACLs and payment-in-flight/paid locks. Existing
+  confirmed-edit regressions also pass. All test fixtures roll back.
+- Three actual two-connection races passed in owned network-isolated database
+  clones: prepare then proposal expires preparation; proposal then payment blocks
+  payment; payment then proposal blocks editing. Each competing transaction waited
+  for the held lock. The runner removes its clones.
+- Reproduce races with the same disposable-container environment and
+  `node scripts/test-confirmed-order-billing-races.mjs`. Evidence remains local in
+  `.artifacts/confirmed-order-edit/` and `.artifacts/confirmed-order-edit-e2e/`.
+
+The earlier two end-to-end blockers above are historical findings addressed by
+this follow-up. Full-stack setup still uses the documented synthetic bootstrap
+prerequisites; it does not prove pristine replay of every historical migration.
+No real data, remote database, deployment, main merge or payment provider is used.
+
+
+Final local follow-up checks:
+
+- After reload, both monetary surfaces retained 13,000 KRW. Changing the payment
+  method refreshed the invoice version. Actual UI confirmation displayed 13,000
+  KRW and saved one synthetic approved payment for that amount. DB status was
+  `paid`; the chart then disabled financial inputs. No payment provider ran.
+- Snapshot guards bind prepared checkout display and open confirmations to the
+  current invoice/review scope. Line edits, payment-method changes, assignment
+  changes and approvals refresh protected reads. A changed proposal signature
+  also refreshes a tab after another tab's approval. These changes preserve the
+  existing assignee and server permission checks.
+- Focused server suites: 9 billing-summary cases, 12 payment/checkout cases,
+  3 confirmed-edit adapter cases and 1 source-contract case passed. Browser
+  Storybook checks: all 12 edit/review/partial-work stories passed; selected billing
+  retry and actual-chart confirmed-edit stories passed separately. The new
+  selection story proves a failed request stays in the chart and retries with the
+  same command ID. The other-tab approval story proves one scoped refresh.
+- TypeScript, production build, affected-file ESLint, documentation links and
+  whitespace checks passed. The build is served only on loopback. Existing SVG
+  attribute warnings in chart stories are unchanged.
+- All 142 original source-checkout WIP fingerprints remained unchanged. Existing
+  Supabase services were preserved. The new local stack and candidate remain
+  available for human review. No remote migration, deployment or main merge.
+
+- A subsequent actual UI request selected the second order only. It created a
+  separate 9,000 KRW invoice because the first invoice was already paid, and left
+  the third order unlinked. Claiming the new invoice refreshed its concurrency
+  token; current-version UI payment saved one 9,000 KRW synthetic payment. A
+  confirmation opened during a version refresh closed and required reopening,
+  preserving the stale-confirmation guard.
+- Tracked-file secret scan passed (5,034 files); generated local evidence and
+  credential files remain outside publication. No release action is authorized.
+
+
+### Confirmed order edit release authorization — 2026-11-03
+
+승욱 explicitly authorized a PR containing only this confirmed-order editing,
+partial-work preservation and selected billing/pre-payment change scope; after
+checks pass, apply its remote DB migrations, merge to main, deploy and verify
+behavior. This supersedes the earlier local-only restriction for this bounded
+candidate. Preserve unrelated WIP and local evidence.
+
+Target: existing shared Supabase demo project and existing Vercel Production
+project, through a protected PR-to-main merge. Apply only the five forward
+migrations beginning `20261103100000` through `20261103104000`, after read-only
+hosted schema/function/ACL compatibility checks and backup of affected definitions.
+Do not apply unrelated pending migrations or alter canonical role policies.
+
+Required evidence: latest-main integrated candidate, local secret/docs/full lint/
+type/build gates, focused synthetic tests, current required PR Release Check,
+Ready exact-head Preview, migration readback, exact-head-protected merge and
+Ready Production. Hosted behavior smoke may use an explicitly synthetic fixture
+in the existing documented demo boundary; no real patient/guardian/payment data,
+email, external payment/provider call or new paid resource. Keep fixture identities,
+credentials, raw SQL captures and browser evidence local.
+
+Capture previous Ready Production and original hosted function/ACL definitions
+before mutation. App-only rollback does not reverse schema changes. Stop on
+unexpected drift, failed gates or smoke; retain a concrete reviewed forward-fix
+or rollback proposal instead of weakening locks, permissions or required checks.

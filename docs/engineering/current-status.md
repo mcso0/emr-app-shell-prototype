@@ -61,6 +61,18 @@ until final Production smoke. Final delivery evidence is linked from
 [CLINICAL-FULFILLMENT-PR-010](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#production-release-verification--2026-11-01).
 
 
+## Local confirmed-order edit candidate — 2026-11-03
+
+Single dispensing/treatment order editing, separate financial proposals, performer
+acknowledgement and partial-work preservation are implemented locally. Remote
+migrations and deployment remain excluded. See [the active work evidence](../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#confirmed-order-editing--2026-11-03-local-implementation)
+for authenticated local browser-to-DB, queue Realtime and notification polling
+verification. The local follow-up now persists selected-order billing before
+navigation and accepts financial proposals after checkout preparation. Proposals
+expire prepared sessions; payment waits for current-assignee approval and the
+latest invoice version. Actual local Auth/UI/API/DB validation is recorded in the
+same work item. Remote application and user acceptance remain separate.
+
 ## Agent Compact Summary
 
 * Current target: Product MVP.

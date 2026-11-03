@@ -258,6 +258,7 @@ export type FulfillmentDownstreamSyncSummary = {
     | "billable_price_required"
     | "encounter_unavailable"
     | "invoice_anchor_conflict"
+    | "explicit_billing_request_required"
     | "not_completed_status"
     | "invoice_unavailable"
     | "order_unavailable"
@@ -1904,7 +1905,9 @@ async function syncDownstreamFromFulfillmentUpdate({
 
   let billingCandidates: BillingInvoiceCandidateLine[] = [];
   if (requestedStatus === "completed") {
-    if (updatedWorkItem.sourceSnapshot.billingReflectionEnabled === false) {
+    if (["dispensing", "treatment"].includes(updatedWorkItem.queueType)) {
+      summary.billingSkippedReason = "explicit_billing_request_required";
+    } else if (updatedWorkItem.sourceSnapshot.billingReflectionEnabled === false) {
       summary.billingSkippedReason = "billing_reflection_disabled";
     } else if (requiresVetReviewBeforeBilling(updatedWorkItem.queueType)) {
       summary.billingSkippedReason = "vet_review_required";

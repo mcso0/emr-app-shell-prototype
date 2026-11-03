@@ -1051,3 +1051,19 @@ async function expectJson(
   const body = await response.json();
   expect(body).toMatchObject(expected);
 }
+
+
+test("confirmed order readback preserves approved financial edits without replacing snapshots", async () => {
+  const approved = { billingName: "수정 청구명", unitPriceKrw: 6000, billingQuantity: 5, taxClass: "taxable" };
+  const gateway = createSupabaseChartOrderActionGateway({ async rpc() {
+    return { error: null, data: { etag: "synthetic", rows: [{
+      encounterId, orderId: "00000000-0000-4000-8000-000000000701",
+      orderType: "dispensing", rowType: "individual", quantity: 2, quantitySource: "days",
+      unitPriceSnapshot: 5000, lineTotalSnapshot: 10000, updatedAt: "2026-11-03T00:00:00Z",
+      orderConfirmationStatus: "confirmed", preBillingOverride: approved,
+    }] } };
+  } });
+  expect(await gateway.readOrderActions({ encounterId, workspaceId })).toMatchObject({
+    ok: true, rows: [{ unitPriceSnapshot: 5000, quantity: 2, preBillingOverride: approved }],
+  });
+});

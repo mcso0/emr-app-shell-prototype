@@ -373,3 +373,47 @@ export const SmallDoseUnitConversion: Story = {
     await userEvent.click(dose); await userEvent.keyboard("{Escape}");
   },
 };
+
+export const ConfirmedEditFromSelectedRow: Story = { args: { scenario: "confirmed-edit" }, play: async ({ canvas, canvasElement }) => {
+  await waitFor(() => expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).toBeVisible());
+  await waitFor(() => expect(fixture.activeOrderReadWorkflows).toBe(0));
+  canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`).scrollIntoView({ block: "center" });
+  canvas.getByRole("checkbox", { name: "합성 조제 약품 선택" }).click();
+  await waitFor(() => expect(canvas.getByRole("checkbox", { name: "합성 조제 약품 선택" })).toHaveAttribute("aria-checked", "true"));
+  const toolbar = within(await within(canvasElement.ownerDocument.body).findByRole("toolbar", { name: "선택 행 작업" }));
+  await userEvent.click(toolbar.getByRole("button", { name: "수정" }));
+  const body = within(canvasElement.ownerDocument.body);
+  const dialog = within(await body.findByRole("dialog", { name: "합성 조제 약품 · 오더 수정" }));
+  const price = await dialog.findByLabelText("단가 (원)");
+  await userEvent.clear(price); await userEvent.type(price, "6000");
+  await userEvent.click(dialog.getByRole("button", { name: "수정 저장" }));
+  await waitFor(() => expect(body.queryByRole("dialog", { name: "합성 조제 약품 · 오더 수정" })).toBeNull());
+  await expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`).querySelector('[data-column-id="unitPrice"]')).toHaveTextContent("6,000원");
+  const saved = fixture.requests.filter(request => request.method === "POST" && request.url.endsWith("confirmed-order-edit"));
+  await expect(saved).toHaveLength(1); await expect(saved[0].body?.clinical).toBeUndefined(); await expect(fixture.unhandled).toEqual([]);
+} };
+export const ConfirmedEditPreview: Story = { args: { scenario: "confirmed-edit" } };
+
+export const SelectedBillingRetry: Story = { args: { scenario: "selected-billing" }, play: async ({ canvas, canvasElement }) => {
+  const body = within(canvasElement.ownerDocument.body);
+  await waitFor(() => expect(canvas.getByTestId(`chart-order-row-${fixture.rows[0].orderId}`)).toBeVisible());
+  await waitFor(() => expect(fixture.activeOrderReadWorkflows).toBe(0));
+  canvas.getByRole("checkbox", { name: "합성 조제 약품 선택" }).click();
+  const toolbar = within(await body.findByRole("toolbar", { name: "선택 행 작업" }));
+  await userEvent.click(toolbar.getByRole("button", { name: "1개 Order 수납 청구" }));
+  const dialog = within(await body.findByRole("dialog", { name: "선택 오더 수납 청구" }));
+  const confirmation = dialog.getByRole("button", { name: /^수납 청구$/ });
+  const acknowledgement = dialog.queryByRole("checkbox");
+  if (acknowledgement) await userEvent.click(acknowledgement);
+  await userEvent.click(confirmation);
+  await waitFor(() => expect(dialog.getByRole("alert")).toHaveTextContent("수납 요청에 실패"));
+  await expect(fixture.routes).toHaveLength(0);
+  await userEvent.click(confirmation);
+  await waitFor(() => expect(fixture.routes).toHaveLength(1));
+  const posts = fixture.requests.filter(request => request.method === "POST" && request.url.endsWith("order-billing-summary"));
+  await expect(posts).toHaveLength(2);
+  await expect(posts[0].body?.orderIds).toEqual([fixture.rows[0].orderId]);
+  await expect(posts[1].body?.idempotencyKey).toBe(posts[0].body?.idempotencyKey);
+  await expect(fixture.rows[1].billingCandidateStatus).toBe("candidate_created");
+  await expect(fixture.unhandled).toEqual([]);
+} };

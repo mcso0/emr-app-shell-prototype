@@ -21,7 +21,7 @@ related_work:
   - DEN-349
 supersedes: []
 superseded_by: []
-last_updated: 2026-10-31
+last_updated: 2026-11-03
 ---
 
 # Order Fulfillment Handoff Engineering Contract
@@ -29,6 +29,53 @@ last_updated: 2026-10-31
 This document defines the engineering contract for Project 08, `Clinical Order Fulfillment Handoff Persistence`. It bridges existing chart/order/billing persistence with downstream lab, imaging, dispensing, and treatment queue persistence.
 
 `DEN-235` defined the contract. `DEN-236` adds the initial local-first route/core/gateway and migration contract. `DEN-237` connects chart order confirmation to fulfillment sync. `DEN-238` connects lab and imaging screens to fulfillment queue read/status mutation. `DEN-239` connects dispensing and treatment screens to fulfillment queue read/status mutation. `DEN-240` syncs fulfillment status changes back to order lifecycle and billing candidates. `DEN-241` adds end-to-end replay coverage. `DEN-242` closes out the project and records staging readiness boundaries. Remote staging migration remains gated by dry-run and explicit approval.
+
+## Confirmed order editing — local candidate, 2026-11-03
+
+The confirmed single-order editing candidate is implemented locally. Migrations
+`20261103100000_confirmed_order_edit.sql`,
+`20261103101000_confirmed_order_edit_workflow.sql`,
+`20261103102000_partial_order_work.sql`,
+`20261103103000_selected_order_billing_request.sql`, and
+`20261103104000_pre_payment_order_changes.sql` are not applied remotely.
+
+- Clinical changes reuse the authoritative prescription calculation and task
+  mutation owner. Pending tasks are amended; started/completed work gets a new
+  attempt. Previous results and append-only partial-work notes remain available.
+- Clinical revisions require the performer to acknowledge the current version
+  and remaining work scope. Changed clinical inputs through the existing mutation
+  RPC also create this version. Current performer and original requester receive
+  the existing deduplicated change notice; the editor does not receive a self notice.
+- Financial-only edits do not change fulfillment state or clinical notifications.
+  Effective prices and tax overrides remain separate from immutable confirmation
+  snapshots. Chart reads project approved values through `preBillingOverride`.
+- Before explicit 수납 요청, financial edits update the candidate. After request,
+  proposals preserve the current invoice line until its current billing assignee
+  approves. Proposals use current invoice quantity; they do not undo earlier
+  billing edits. Version checks and invoice-line snapshots reject stale approvals.
+- Merely opening checkout does not lock financial editing. A proposal expires
+  linked `prepared` sessions under the invoice lock. `payment_pending` and paid
+  sessions still lock edits. Payment and checkout preparation cannot proceed with a pending proposal.
+  Both payment RPCs require the exact invoice `updatedAt` shown with its monetary
+  snapshot. Their former callable signatures are revoked; old confirmations fail
+  after approval. The UI refreshes lines and payment snapshots together after
+  mutation or a changed review result, including approval from another tab.
+  Paid amounts cannot be edited directly. Clinical changes may retain a proposed
+  correction for the existing reversal/refund path; nonfinancial assignment
+  changes remain allowed on already-paid invoices.
+- Dispensing/treatment completion does not create or link an invoice. Explicit
+  chart billing request remains required. The chart POST requires explicit,
+  nonempty, unique `orderIds`. The selected-order RPC validates every ID, limits
+  unfinished-work acknowledgement and authority freezing to that selection, and
+  includes the sorted selection in the idempotency fingerprint. A failed member
+  rejects the whole request. Billing navigation follows successful persistence.
+  Other queue policies are unchanged.
+- Authenticated RPCs enforce workspace/chart scope and existing permissions.
+  Billing values are hidden without `billing:view`; private tables are not
+  directly writable. Stable command IDs make retries idempotent.
+
+Evidence and local/runtime limits are recorded in
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#confirmed-order-editing--2026-11-03-local-implementation).
 
 ## Prework assignment candidate — 2026-11-02
 
