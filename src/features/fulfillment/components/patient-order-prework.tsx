@@ -181,7 +181,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const currentVitals = vitals?.key === vitalKey ? vitals : null;
   return <EmrWorkEntryPage testId={testId} header={<PatientPreworkHeader
-          loading={patient.overviewStatus === "loading" || patient.overviewStatus === "idle"}
+          loadingDetails={patient.overviewStatus === "loading" || patient.overviewStatus === "idle"}
           context={context}
           statusLabel={`${label} 대기`}
           onOpenPatientInformation={
@@ -232,7 +232,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
               onOpenVitalDialog={() => {}}
               vitalSettings={settings.snapshot}
             />
-          ) : (!currentVitals || settings.status === "loading" || settings.status === "idle") && currentVitals?.status !== "error" && currentVitals?.status !== "denied" && settings.status !== "error" && settings.status !== "denied" ? <PatientPreworkVitalsLoading /> : (
+          ) : (!currentVitals || settings.status === "loading") && currentVitals?.status !== "error" && currentVitals?.status !== "denied" && settings.status !== "error" && settings.status !== "denied" ? <PatientPreworkVitalsLoading /> : (
             <Section title="바이탈 정보">
               <p className="text-sm text-muted-foreground">
                 {currentVitals?.status === "denied" ||
