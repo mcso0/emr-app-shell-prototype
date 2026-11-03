@@ -129,3 +129,37 @@ The user then authorized the root application's PostCSS override remediation.
 - `npm audit --omit=dev` reports no PostCSS, Next, or nanoid finding for this candidate. It still exits nonzero for 24 other dependency findings; those are outside this narrowly approved fix and have not been reclassified as runtime exposures.
 - Existing PRD filesystem-tracing and Storybook docgen/chunk/direct-eval warnings remain non-blocking and outside this dependency patch.
 - Exact-head remote Release Check, CodeQL, and Ready Preview evidence will be attached to the separate PostCSS PR before requesting its Production approval. PR #994 approval does not authorize this new candidate's main merge.
+
+## Approved Local Dependency Security Follow-up — 2026-11-03
+
+### Scope and Completion Criteria
+
+- Preserve the user-approved local DOMPurify `3.4.17` and proxy-addr `2.0.8` lockfile updates.
+- Stop this task checkout's Storybook development server and its Vitest child before updating. Other active checkouts are outside this package-update scope.
+- Align Storybook core, docs/test addons, Next.js adapter and lint plugin at `10.6.2`; align Vitest, browser provider and coverage packages at `4.1.12`. Keep the existing MCP addon when its peer contract and local integration checks pass.
+- Vitest `4.1.12` also fixes the manual-mock injection and Windows path-normalization advisories left in `4.1.11`. Use the patched 4.x line without moving to Vitest 5.
+- Regenerate the npm lockfile with compatible transitive dependencies. Do not bypass peer checks with `--force` or `--legacy-peer-deps`.
+- Completion requires no critical findings in the root npm audit, preserved prior package fixes, compatible dependency resolution, focused Storybook interactions/MCP, Vitest Node tests, lint/type checks, and Storybook/app builds.
+- The initial approval was local-only: use synthetic fixtures, preserve application behavior, and keep development servers stopped after verification. The later delivery approval below supersedes the initial no-push/no-deployment boundary for this same dependency patch; remote data actions remain excluded.
+
+### Verification
+
+- Root npm audit: **0 critical**; the six previously flagged development-tool packages and the prior DOMPurify/proxy-addr targets have no remaining findings. Other findings remain: 2 low, 31 moderate, 12 high. Runtime-only audit remains 2 low, 9 moderate, 11 high, 0 critical. This is not an all-dependencies-clean claim.
+- Patched floors are supported by the [Storybook advisory](https://github.com/advisories/GHSA-f2ph-cmg5-wxc8), [Vitest browser file-access advisory](https://github.com/advisories/GHSA-p63j-vcc4-9vmv), [manual-mock follow-up](https://github.com/advisories/GHSA-qxg6-89mg-rqv8), and [Windows path-normalization follow-up](https://github.com/advisories/GHSA-xp26-3454-mjgp).
+- Node `22.22.2`: isolated `npm ci --ignore-scripts --no-audit --no-fund` and full `npm ls` exited successfully. Lifecycle scripts were intentionally disabled for this install check; actual builds below used the task checkout. Both installations report the same four extra optional WASM package artifacts (`@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads`, `@tybys/wasm-util`); no missing or invalid peer dependencies were reported. The clean install reproduces these notices, so they are not stale files unique to the task checkout.
+- Vitest Node regression suite: **72 passed** across 8 files. Focused browser stories: **29 passed** across Input, Textarea, Dialog, Popover, Dropdown Menu, Measured Loading, and Dispensing Prework Context.
+- Project-local Storybook MCP documentation listing and Input documentation retrieval passed. Native MCP story tests passed for Input Default and Measured Loading Repeated Read. Existing MCP addon `0.6.0` remains compatible in these checks.
+- Patched development preview returns a `frame-ancestors` policy restricted to self and loopback hosts. This is a focused response-header check, not a complete exploit or penetration test.
+- Full lint, app build with TypeScript checking and local mock auth, Storybook static build, documentation links, secret scan, and diff whitespace checks passed. Existing Next document-reader tracing and Storybook docgen/chunk warnings remain non-blocking.
+- Prior DOMPurify `3.4.17` and proxy-addr `2.0.8` are preserved. Application sources, story sources, and Storybook/Vitest configuration are unchanged.
+- This checkout's original and verification Storybook/Vitest server processes are stopped. Two Storybook servers owned by other active checkouts were left untouched. No remote delivery or real-data action was performed.
+
+### Approved Delivery — 2026-11-03
+
+- The user's subsequent request, "이제 배포하자", authorizes this bounded dependency patch through PR, successful current-candidate checks/Preview, main merge, and Production verification. No additional runtime behavior, migration, real-data, provider, cost, or deployment-setting change is included.
+- Source branch: `codex/security-dependency-patches`, based on main `11ed230d1029290ec0ae627ade20e0663c250fc5`. Preserve the already released confirmed-order and selected-billing work from PR #1049.
+- Scope remains `package.json`, `package-lock.json`, and this work record. Untracked local screenshots/logs remain unpublished.
+- Recheck the integrated candidate locally, require the protected automatic PR Release Check and current-head Ready Preview, and merge with expected-head protection. Record final candidate/run/merge/deployment identifiers in the PR.
+- Preview and Production smoke: unauthenticated `/login`, registered `/docs?doc=study-emr-domain-basics`, and the published diagram asset. Do not log in, send email, inspect clinical records, or mutate the shared demo database.
+- Previous Ready Production and rollback candidate: `dpl_H3t59E8FyYiJJvPbxSRUVAcfg9Va`, sourced from the main SHA above. Stop for failed/unknown checks, unexpected source changes, failed smoke, or a missing Ready Preview. No automatic rollback mutation is included.
+- Integrated local candidate verification passed: 72 Node tests, 41 browser story tests (including the latest confirmed-order dialog), full lint, explicit `tsc --noEmit`, Next app build, Storybook static build, secrets, docs links, and diff checks. Root audit remains 0 critical with 45 other findings. Hosted Preview/Production verification is recorded on the PR after these local results.
