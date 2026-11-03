@@ -8,7 +8,7 @@ const rowId = "figma-review-row";
 const resultId = "figma-review-result";
 const instruction = "합성 검수용 직원 전달사항입니다.";
 
-async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0, customAttachments?: LabResultAttachment[], setupBeforeNavigate?: () => Promise<void>) {
+async function openReview(page: Page, count: number, canEdit = true, rowCount = 1, overallCount = 0, customAttachments?: LabResultAttachment[], setupBeforeNavigate?: () => Promise<void>, enterBeforeRows?: () => Promise<void>) {
   await page.addInitScript(({ key, workspaceId }) => {
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검수 공간", representativeName: "합성 관리자",
@@ -49,6 +49,7 @@ async function openReview(page: Page, count: number, canEdit = true, rowCount = 
   });
   await setupBeforeNavigate?.();
   await page.goto(`/w/${workspaceId}/lab?date=2026-09-29&labResultId=live-lab-${workItem.id}&modulePanel=closed&aside=closed&right=closed`);
+  await enterBeforeRows?.();
   const row = page.getByTestId(`lab-result-row-${rowId}`);
   await expect(row).toBeVisible();
   await expect(page.getByTestId("lab-result-table-anchor").locator("xpath=ancestor::section[1]").getByRole("button", { name: "수정이력", exact: true })).toBeEnabled();
@@ -1288,12 +1289,15 @@ test("lab ownership opens input on claim, locks on cancel and transfers on avata
     ok: true, data: { resultId, orderId: "review-order", overallFinding: "", overallRevision: 0, canEdit: Boolean(owner && owner === currentActor), events: [], attachments: [] },
   } }));
   };
-  await openReview(page, 0, false, 1, 0, undefined, setup);
+  const claimEntry = async () => {
+    await expect(page.getByTestId("lab-prework")).toBeVisible();
+    await expect(page.getByTestId(`lab-result-row-${rowId}`)).toHaveCount(0);
+    await page.getByRole("button", { name: "담당하기", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "담당하기", exact: true }).click();
+    await expect(page.getByTestId("lab-prework")).toHaveCount(0);
+  };
+  await openReview(page, 0, false, 1, 0, undefined, setup, claimEntry);
   const value = page.getByTestId(`lab-result-row-${rowId}`).getByRole("textbox");
-  await expect(value).toBeDisabled();
-  await expect(page.getByRole("textbox", { name: "검사결과 종합소견" })).toBeDisabled();
-  await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  await expect(page.getByText("담당자로 지정됐어요.", { exact: true })).toBeVisible();
   await expect(value).toBeEnabled();
   await expect(page.getByRole("button", { name: "검사 시작", exact: true })).toBeVisible();
   await page.mouse.move(20, 20);
@@ -1303,14 +1307,15 @@ test("lab ownership opens input on claim, locks on cancel and transfers on avata
   expect(splitStyle[0].color).toBe(splitStyle[1].color);
   await page.getByRole("button", { name: "검사 상태 액션 열기" }).click();
   await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
-  await expect(value).toBeDisabled();
-  await page.getByRole("button", { name: "담당하기", exact: true }).click();
+  await claimEntry();
   await page.getByRole("button", { name: "담당자 합성 A 변경" }).click();
   await page.getByRole("menuitem", { name: "합성 B", exact: true }).click();
-  await expect(value).toBeDisabled();
-  await expect(page.getByRole("button", { name: "검사 시작", exact: true })).toBeDisabled();
+  await expect(page.getByTestId("lab-prework")).toBeVisible();
+  await expect(value).toHaveCount(0);
   currentActor = "user-admin";
   await page.reload();
+  await page.getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
   await expect(value).toBeEnabled();
   await expect(page.getByRole("button", { name: "담당자 합성 B 변경" })).toBeEnabled();
   await page.screenshot({ path: "output/playwright/current-assignee-lab.png", fullPage: false });
