@@ -1197,10 +1197,32 @@ export function ProfileSidePanel({
   onSaveEdit,
   onTabChange,
   saving = false,
-  sectionStates,
+  sectionStates: providedSectionStates,
   tabAccess,
 }: ProfileSidePanelProps) {
   const [activeTab, setActiveTab] = useState<ProfileSidePanelTab>(defaultTab);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Local synthetic profiles have no pending request. Opt in to viewing their
+  // real loading UI without changing live reads or production behavior.
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== "development" ||
+      !embedded || providedSectionStates || editing ||
+      !["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) ||
+      new URLSearchParams(window.location.search).get("skeletonPreview") !== "1"
+    ) return;
+    const start = window.setTimeout(() => setPreviewLoading(true), 0);
+    const finish = window.setTimeout(() => setPreviewLoading(false), 8000);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(finish);
+    };
+  }, [activeTab, editing, embedded, model.kind, model.name, providedSectionStates]);
+
+  const sectionStates = providedSectionStates ?? (previewLoading && !editing
+    ? { [activeTab]: { status: "loading" as const } }
+    : undefined);
 
   const changeTab = (tab: ProfileSidePanelTab) => {
     if (tabAccess?.[tab]?.allowed === false) return;
