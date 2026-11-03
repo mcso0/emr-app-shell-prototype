@@ -284,12 +284,13 @@ export const Overview: Story = {
   },
 };
 export const Unassigned: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await canvas.findByRole("columnheader", { name: "담당자" });
     await expect(
       canvas.getByRole("columnheader", { name: "오더명" }),
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "담당하기" }));
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(
       canvas.getByRole("button", { name: "조제 시작" }),
@@ -299,10 +300,11 @@ export const Unassigned: Story = {
 };
 export const DesignatedOwner: Story = {
   args: { owner: "mine" },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     const start = await canvas.findByRole("button", { name: "업무 시작하기" });
     await waitFor(() => expect(start).toBeEnabled());
     await userEvent.click(start);
+    await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "업무 시작하기" }));
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(commands.map((command) => command.action)).toEqual(["start"]);
     await expect(

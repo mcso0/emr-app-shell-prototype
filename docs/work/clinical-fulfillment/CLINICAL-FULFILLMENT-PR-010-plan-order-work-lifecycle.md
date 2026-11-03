@@ -1702,3 +1702,92 @@ Release delivery record: [PR #1044](https://github.com/mcso0/emr-app-shell-proto
 tracks the final candidate, current required CI, exact Preview, remote migration
 readback, merge and Production evidence. The local-only limits above describe the
 pre-authorization checkpoint. User acceptance remains separate from release checks.
+
+
+### Order prework screen alignment — 2026-11-03 (approved local implementation)
+
+승욱 approved applying the reviewed HTML proposal to dispensing, treatment, lab,
+imaging and billing from origin/main, preserving all existing WIP. The unchanged
+chart preconsultation page is the visual reference, not an implementation target.
+Baseline: `6f5c285da6ce130bff255331a488060468ef3d51`. Isolated branch:
+`codex/order-prework-unification`.
+
+Scope: shared chart-aligned white entry frame and existing patient context,
+category-specific read-only request information, no workflow toolbar/context bar
+before entry, and common confirmation for unassigned, own and other-assignee
+cases. Own-assignee CTA is always `업무 시작하기`. Preserve existing claim/start
+semantics, requester-vet completion, instruction review, current-assignee API/DB
+checks, and billing invoice ownership. Other-assignee takeover remains limited to
+already-authorized requested-only dispensing/treatment behavior. No new role or
+permission policy, migrations, chart edits, external-lab/inpatient implementation,
+remote mutation, deployment or public publication in this local checkpoint.
+
+Verification uses local mock-auth servers and intercepted synthetic HTTP fixtures,
+component stories, focused contract/UI checks, type/lint/docs/build checks, desktop
+and narrow-view captures. No hosted data or provider/payment operations. Completion
+requires the five categories and three assignee cases, failure/duplicate/stale
+responses, loading/error states, and unchanged chart behavior. Local evidence is
+recorded below after checks; production parity and user acceptance remain separate.
+
+Local implementation and verification completed (2026-11-03):
+
+- `EmrWorkEntryPage` / `EmrWorkEntryAction` own the common white entry frame and
+  confirmation UI. `PatientOrderPrework` reuses the unchanged chart patient header,
+  memo and vital components. The order-module slot wrapper removes the context
+  bar, document toolbar and side panels until entry. Summary columns and header
+  use the available content width for narrow layouts.
+- Dispensing/treatment retain claim/takeover/start, required takeover reason,
+  revision-conflict handling, requester-vet completion and required result entry.
+  Lab retains input-after-claim with separate actual start. Imaging retains its
+  existing instruction-review/start command. Billing uses local entry intent and
+  gates both checkout-prepare effects; neither own entry nor claim records payment.
+- Entry resets across actor/workspace/item selection and loss of ownership.
+  Confirmation is duplicate-safe and stale-authority-aware. Known queue guardian
+  names remain visible when profile details cannot be read; information actions
+  still require the resolved profile identity.
+- 44 focused Playwright cases passed: 26 entry/instruction browser cases,
+  15 instruction-contract cases, one lab ownership/input/reassignment case and
+  two billing API/UI authority cases. Final guardian-display change was rechecked
+  with all three treatment states and dispensing entry. Eight real-component
+  Storybook cases passed, including failure retry, narrow width, denied reads and
+  requester completion. Captures cover five categories at 1624x1000 and 768x900.
+- `npx tsc --noEmit`, ESLint on the changed TS/TSX files, `npm run docs:check`
+  (1087 markdown files), `git diff --check`, and `npm run build` passed. Production
+  build used mock auth locally; it is not deployed-environment proof.
+- Two additional legacy regressions failed identically on the unchanged
+  `origin/main` snapshot: `imaging-execution-browser.spec.ts` cannot save because
+  its instruction-review read is unavailable; the first
+  `workspace-document-layout.spec.ts` case attempts to edit a disabled legacy HCT
+  input. They were not changed or counted as passing. An intermediate billing UI
+  timeout passed on isolated rerun; the final billing API/UI run passed both cases.
+- Local captures and logs are retained in the task's `work-entry-implementation`
+  evidence folder, outside the repository. Its HTML viewer was checked for all
+  ten category/width combinations with no browser errors. No chart source,
+  server/API, migration, dependency, or persistent guidance changes remain.
+  The original checkout's WIP was preserved in place; implementation is isolated.
+
+Local implementation is ready for human review. No PR, main merge, deployment,
+remote mutation, or real patient/payment verification was performed. Those states
+remain separate from this local result.
+
+Release authorization — 2026-11-03:
+
+승욱 explicitly authorized a PR containing only this order-entry UI slice, followed
+by main merge and Production deployment once checks pass. This supersedes the
+local-only delivery checkpoint for this bounded task. Existing WIP, chart code,
+server/API/DB policy, migrations and remote patient/payment/provider operations
+remain excluded. Final candidate SHA and live check/deployment evidence will be
+recorded in the PR before an expected-head-protected squash merge.
+
+Release comparison/rollback: main `6f5c285da6ce130bff255331a488060468ef3d51`, Ready
+Production `dpl_HpgPPH6fPE2UBp31V7S1avqH7HkU`. Strict main protection requires the
+current `Secrets, docs, UX copy, lint, typecheck, and build` check. Automatic Preview
+is currently skipped by the existing Vercel ignore command; prepare one exact-Git
+candidate Preview without changing project settings or enabling automation.
+
+Preview/Production smoke: `/login` response and anonymous access guards on the
+five changed module routes. Use local synthetic browser evidence for assignment,
+start and checkout behavior. No remote clinical row browsing, authentication
+credential export, DB mutations, payment, email or provider side effects belong
+to this release. Stop for failed checks, missing Ready Preview, candidate drift,
+failed smoke or unexpected data/security/cost scope.

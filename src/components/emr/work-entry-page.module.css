@@ -1,0 +1,42 @@
+.frame {
+  container-name: work-entry;
+  container-type: inline-size;
+}
+
+@container work-entry (max-width: 720px) {
+  .frame > header {
+    padding: 24px 20px;
+  }
+
+  .frame > header > div:last-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .frame > header > div:last-child > div:last-child {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .frame > header > div:last-child > div:last-child > span {
+    display: none;
+  }
+
+  .frame > header div:has(> h1) {
+    flex-wrap: wrap;
+  }
+
+  .frame > header h1 {
+    font-size: 21px;
+    line-height: 28px;
+  }
+
+  .frame > header h1 ~ p,
+  .frame > header h1 ~ span {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .body {
+    padding: 24px 20px;
+  }
+}
