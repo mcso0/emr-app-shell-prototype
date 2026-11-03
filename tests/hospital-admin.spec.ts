@@ -3627,15 +3627,17 @@ test("hospital admin order drawer switches rows and closes from outside click", 
   await expect(selectedRow).not.toHaveAttribute("aria-current", "true");
 });
 
-test("hospital admin order table shows skeleton rows while loading catalog", async ({
+test("hospital admin order table shows only page loading while loading catalog", async ({
   page,
 }) => {
+  let release!: () => void;
+  let gate = new Promise<void>(resolve => { release = resolve; });
   await page.route(
     "**/api/workspaces/clair-demo/hospital-admin/order-catalog",
     async (route) => {
       if (route.request().method() === "GET") {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await route.fulfill({ json: { ok: true, items: [createGenericCatalogItem("clinical_lab", {})] } });
+        await gate;
+        await route.fulfill({ json: { ok: true, items: [] } });
         return;
       }
       await route.continue();
@@ -3644,27 +3646,21 @@ test("hospital admin order table shows skeleton rows while loading catalog", asy
 
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
-  const skeletonRow = page
-    .locator('[data-emr-data-table-skeleton-row="true"]')
-    .first();
-  await expect(skeletonRow).toBeVisible();
-  await expect(skeletonRow.locator("td").first()).toHaveAttribute(
-    "data-emr-column-pinned",
-    "left",
-  );
-  await expect(skeletonRow.locator("td").nth(1)).toHaveAttribute(
-    "data-emr-column-pinned",
-    "left",
-  );
-  await expect(
-    skeletonRow
-      .locator("td")
-      .nth(1)
-      .locator('[data-emr-table-identity-content="true"]'),
-  ).toHaveCount(1);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  release();
   await expect(
     page.getByTestId("hospital-order-catalog-read-status"),
   ).toContainText("Workspace catalog 기준");
+  await page.getByRole("link", { name: "고객관리", exact: true }).click();
+  await expect(page).toHaveURL(/\/customer/);
+  gate = new Promise<void>(resolve => { release = resolve; });
+  await page.getByRole("link", { name: "병원관리", exact: true }).click();
+  await expect(page).toHaveURL(/\/orders/);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  release();
+  await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
 });
 
 test("hospital admin Order no-data uses the shared empty state and create CTA", async ({

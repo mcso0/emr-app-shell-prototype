@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "@/lib/utils"
@@ -38,8 +40,9 @@ function TooltipContent({
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const visibility = usePagePortalVisibility();
   return (
-    <TooltipPrimitive.Portal>
+    <TooltipPrimitive.Portal {...visibility}>
       <TooltipPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}

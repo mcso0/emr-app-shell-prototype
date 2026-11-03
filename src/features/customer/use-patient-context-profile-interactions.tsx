@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useState, type ComponentProps } from "react";
 import { usePatientProfileStore } from "@/features/reception/patient-profile-store";
 import { useLayoutStore } from "@/stores/layout-store";
@@ -165,6 +167,7 @@ export function usePatientContextProfileInteractions({
   const guardianMemoStatus = localGuardian ? "ready" : guardianOverview.overviewStatus;
   const guardianMemoProfile = liveGuardianProfile ?? (localGuardian as unknown as Record<string, unknown> | undefined);
 
+  usePageReadiness(profileStatus === "loading" || encounterStatus === "loading" || guardianMemoStatus === "loading", `${workspaceId}:${encounterId}:${patientId}:${liveGuardianId}`);
   const openProfile = (type: "patient" | "guardian", id: string) => {
     if (localProfileAvailable && patient) {
       applyPatientGuardianLookupItem({ patient, primaryGuardian: localGuardian });

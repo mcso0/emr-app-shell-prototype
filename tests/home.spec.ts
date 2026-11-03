@@ -136,12 +136,13 @@ test("home data loading uses the centered shared empty state", async ({ page }) 
 
   await page.goto(`/w/${workspaceId}/home`);
 
-  const loadingState = page.getByTestId("home-loading-state");
+  const loadingState = page.getByTestId("page-loading-state");
   await expect(loadingState).toBeVisible();
-  await expect(loadingState).toContainText("업무를 불러오는 중입니다");
+  await expect(page.getByTestId("home-workspace")).not.toBeVisible();
+  await expect(loadingState).toContainText("화면을 불러오는 중입니다");
   const alignment = await loadingState.evaluate((element) => {
     const viewport = document.querySelector<HTMLElement>(
-      '[data-testid="home-workspace-scroll"]',
+      '[data-testid="page-loading-surface"]',
     );
     if (!viewport) throw new Error("Home workspace viewport is missing");
 
@@ -156,7 +157,7 @@ test("home data loading uses the centered shared empty state", async ({ page }) 
   expect(alignment.y).toBeLessThanOrEqual(1);
 
   release?.();
-  await expect(page.getByTestId("home-loading-state")).toHaveCount(0);
+  await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
 });
 
 test("hospital limits board and list to the selected day while personal work retains carry-over", async ({ page }) => {

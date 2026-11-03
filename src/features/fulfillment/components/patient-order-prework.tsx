@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -180,6 +182,13 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const currentVitals = vitals?.key === vitalKey ? vitals : null;
+  usePageReadiness(
+    (Boolean(workItem.patientId) && ["idle", "loading"].includes(patient.overviewStatus))
+      || (Boolean(guardianId) && ["idle", "loading"].includes(guardian.overviewStatus))
+      || !currentVitals || settings.status === "loading"
+      || Boolean(!historyContent && workItem.queueType && workItem.patientId && history.status === "loading"),
+    `${workspaceId}:${workItem.id}:${guardianId ?? ""}`,
+  );
   return <EmrWorkEntryPage testId={testId} header={<PatientPreworkHeader
           loadingDetails={patient.overviewStatus === "loading" || patient.overviewStatus === "idle"}
           context={context}

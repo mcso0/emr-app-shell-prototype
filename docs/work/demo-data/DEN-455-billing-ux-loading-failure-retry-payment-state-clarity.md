@@ -12,10 +12,175 @@ source_docs:
   - "docs/work/demo-data/DEN-454-billing-api-primary-invoice-payment-checkout-state.md"
 dependencies:
   - "DEN-454"
-updated: "2026-09-29"
+updated: "2026-11-03"
 ---
 
 # Billing UX Loading, Failure, Retry, and Payment State Clarity
+
+## Approved Page Loading Follow-up — 2026-11-03
+
+승욱 approved local implementation of the cross-page loading investigation.
+Baseline: `5455106e61885109e724763c92e099957654ac84`; isolated clean branch
+`codex/page-loading-boundary`. Reuse the current worktree and preserve unrelated
+WIP. No push, PR, merge, deployment, remote data, migration, or provider operation
+is authorized by this follow-up.
+
+Outcome: during initial entry and page/selected-entity transitions, show only the
+loading surface within the page-owned area. Patient/work information bars,
+document tools, internal tabs, body and page-owned supporting panels appear
+together after required reads resolve. Include queue → 담당하기, 담당하기 A → B,
+and 담당하기 → 업무 지시서. App navigation and workspace tabs remain outside the
+page-owned content boundary. Keep same-page background refresh and save states
+separate; preserve drafts, authorization, command semantics and checkout timing.
+
+Scope: shared page readiness/presentation contract; chart, dispensing/treatment,
+lab, imaging, billing, home, reception, customer lists/profile panels, hospital
+settings and personal settings. Static/local pages need no artificial requests.
+Separate loading, ready, empty, denied and failed outcomes. Keep reads mounted
+while masking presentation; avoid a load/unmount deadlock and stale completions.
+
+Verification: local mocked/synthetic API responses only, deferred first and
+subsequent reads, cold/cached selection changes, entry transitions, failures,
+rapid A/B changes, hidden/inert page chrome and draft-preserving refresh. Update
+the affected Storybook stories and previous partial-loading expectations. Run
+focused behavior checks, type/lint/docs checks and build. Record actual results
+below after verification. Human acceptance and delivery remain separate.
+
+
+### Local result — 2026-11-03
+
+Implemented a shared page boundary that masks page-owned bars, tabs, document
+controls, body, supporting panels and portals until required readers settle.
+Readers remain mounted and masked content is inert. Scope changes re-enter
+loading; same-scope background refreshes preserve drafts and the visible page.
+Module navigation, queue navigation and workspace tabs remain available.
+Customer and catalog re-entry now await this mount's read even when a shared
+store still contains an older ready result. Schedule week reads reject stale
+completions. Assignment and payment command semantics remain unchanged.
+
+Local synthetic verification:
+
+- The 45 focused entry/general-page cases passed across the main run and the
+  targeted requester-completion rerun. The additional prework A-B-A navigation
+  case passed, including rejection of the late B response. Coverage includes
+  first instruction/assignee/profile reads, entry-to-instruction reads, billing
+  checkout preparation, retry, ownership cases, and 12 delayed-page/403 cases.
+- Customer initial/re-entry, catalog initial/re-entry, and home loading checks
+  passed. Customer and catalog delayed-denial cases were rerun after the cached
+  readiness correction and passed. Screenshots show only the centered loading
+  surface inside the page-owned area.
+- Core boundary and prework Storybook: 10 passed with the repository runner.
+  The installed Storybook provider lacks Next 16.4's parentRenderTree context;
+  the normal runner failed before rendering 19 schedule/personal-profile cases.
+  An external test-only context adapter supplied that missing field: 18 passed,
+  then the new schedule loading case passed after correcting its button label.
+  These 19 are adapted-harness evidence, not a passing unmodified runner.
+  No dependency, application router, or repository test-runner config changed.
+- TypeScript, full lint, focused final lint, build, docs links, Korean copy,
+  secret scan and diff whitespace passed. Build retains the docs filesystem
+  tracing warning. Secret scan covers tracked files; new files contain only
+  generic UI/readiness code and synthetic test fixtures and were reviewed too.
+
+Initial checkpoint (superseded by the regression follow-up below): the 75-case
+run had 62 passes and 13 failures.
+Three failed cases passed targeted reruns (requester completion, lab date change,
+collapsed billing queue). Ten older queue cases remain failing. Nine reproduced
+the same assertions on unchanged `5455106e`: six late-response fixture cases,
+two collapsed-panel request counts, and one billing case that expects the invoice
+before the entry gate. The other old billing-selection case timed out navigating
+on the baseline, so an identical baseline assertion was not established. New
+billing selection/entry tests passed, but this legacy case is not counted green.
+Five pre-existing source-text contract tests also fail on unchanged baseline.
+These findings are recorded without expanding this local page-loading change.
+
+Evidence is retained locally in the chat's `page-loading-implementation` artifact
+folder (screenshots, run logs and the test-only adapter). No commit, push, PR,
+merge, remote write, migration, or deployment was performed. Local implementation
+and scoped verification are ready for human review; the broader suite is not
+reported as fully passing.
+
+### Regression follow-up authorization — 2026-11-03
+
+승욱 requested diagnosis of the remaining ten failures and correction of issues
+related to the page-loading change, with local verification only. Preserve the
+existing local implementation and unrelated WIP. Reuse synthetic browser reads;
+no remote mutation, deployment, dependency upgrade or workflow-policy change.
+Check current queue labels, shared pending-request behavior, billing prework
+identity/entry contracts and required-read completion. Keep the original
+late-response, selection, URL cleanup, loading isolation and no-write assertions.
+
+### Regression follow-up result — 2026-11-03
+
+All ten remaining cases are resolved locally. The unchanged pre-follow-up build
+reproduced all ten failures (14 selected cases: ten failed, four passed).
+
+| Cases | Confirmed cause | Correction |
+| --- | --- | --- |
+| Six lab/imaging/dispensing A-B-C/A-B-A cases | Patient-view group labels now combine patient and guardian names; exact standalone patient text no longer exists in the queue. The correct current patient was visible in the failed snapshots. | Assert the accessible patient-group name. Preserve current identity, late response rejection across the whole page, and completed loading assertions. |
+| Two lab/imaging panel-collapse cases | Opening the panel reuses the content's in-flight request. The old test incorrectly required another network request. | Assert loading with the panel closed, opened and closed again; release the pending read and require the correct empty outcome. |
+| Two billing selection cases | Old assertions expected the invoice work table and combined heading before the new prework entry gate. Required assignment/profile/vitals/history mocks were missing, and two distinct patient names shared one ID. | Assert current prework patient/guardian/claim information, distinct patient identities, invoice selection, query cleanup and domain write exclusion. |
+
+Strengthening the billing cases exposed one actual page-loading omission:
+`BillingPreworkHistory` did not register its initial ledger read with the page
+boundary. Even with all other required reads settled, the page appeared before
+history completed. Three delayed-ledger cases (200/403/500) failed before the
+fix. The runtime correction adds only the history readiness registration.
+Missing guardian and failed reads release loading; same-page retry keeps the
+page visible and recovers to the existing empty-history view.
+
+Verification after correction:
+
+- `queue-content-loading.spec.ts` (32 cases) and `order-work-entry.spec.ts`
+  (15 cases): all 47 distinct scenarios passed across the integrated run and
+  focused rerun. The integrated run was 46/47; its only failure was the newly
+  broadened no-write assertion catching the normal shell tab-preference PUT.
+  After explicitly excluding only that preference endpoint, all four affected
+  billing cases passed. Clinical/billing changes, assignment PATCH and checkout
+  POST remain prohibited by the test assertion and were not observed.
+- Late-response rejection, cached dates, initial reads, 403/500 and retry,
+  collapsed queues, ownership entry and delayed checkout preparation passed.
+  Ledger-only delay screenshots confirm the information bar, tabs and body stay
+  hidden and inert. Ledger failures release the page; deferred retries preserve
+  the ready page, then resolve successfully.
+- Build, TypeScript, focused ESLint, documentation links and diff whitespace
+  passed. Build retains the unrelated docs filesystem tracing warning.
+- Browser APIs were intercepted with synthetic responses. Unhandled workspace
+  APIs return synthetic 404 and external browser traffic is blocked. Tab
+  preference persistence is also intercepted; no remote data was changed.
+
+Evidence: local `page-loading-implementation/regression-followup` screenshots
+and logs. Only billing readiness, this regression spec and this work record
+changed in the follow-up. Prior implementation/WIP is preserved. No commit,
+push, PR, merge or deployment. The unrelated source-text test and stock
+Storybook-provider limitations from the earlier checkpoint were not included
+in this ten-case follow-up and are not newly claimed as passing.
+
+### Page loading delivery authorization — 2026-11-03
+
+승욱 explicitly authorized a PR containing only this page-loading implementation
+and its regression corrections, followed by main merge and Production deployment
+once checks pass. Preserve unrelated WIP. This supersedes the prior local-only
+hold for this bounded task; it does not authorize DB, migration, role-policy,
+provider, payment, email, environment, protection or subscription changes.
+
+Synchronize with current main, inspect the final diff, and record exact candidate,
+Release Check provenance, Ready Preview, focused verification and expected-head
+merge protection in the PR. Hosted smoke is limited to login and anonymous route
+protection for the affected modules; behavioral verification uses intercepted
+synthetic local APIs. Preview and Production share the demo backend, so no live
+patient/guardian/financial rows or mutation are included. Current rollback
+candidate is Ready deployment `dpl_H3t59E8FyYiJJvPbxSRUVAcfg9Va`, source
+`11ed230d1029290ec0ae627ade20e0663c250fc5`. Refresh this comparison if main moves.
+The existing one-off Preview path does not enable project-wide automation.
+
+Candidate integration preserves main's measured partial-loading components and
+confirmed-order editing/billing approval flow. Initial order-change reads join
+the page boundary, while approval/error states remain interactive and block
+checkout under the existing policy. A newly approved checkout phase waits for
+its own prepared response. Keep both upstream approval-gate coverage and the
+new delayed-review/checkout plus 403/500 retry cases. No upstream migration,
+dependency, financial calculation or authorization policy is modified by this PR.
+Final release evidence is recorded in the PR to avoid changing its checked head.
 
 ## Goal
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { getReceptionPatientOptionLabel, getSpeciesLabel, mapLookupItemToReceptionPatientSummary } from "./reception-patient-lookup-model";
 import { useReceptionPatientLookup, receptionPatientLookupDebounceMs, type ReceptionPatientLookupState } from "./use-reception-patient-lookup";
 
@@ -6387,6 +6389,9 @@ export function ReceptionContent() {
         : veterinarians.length === 0
           ? "empty"
           : "ready";
+  const pageReadScope = `${workspaceId}:${authSession?.id}:${operatingDate}`;
+  const [completedPageReadScope, setCompletedPageReadScope] = useState<string | null>(null);
+  usePageReadiness(calendarResourceState === "loading" || completedPageReadScope !== pageReadScope, pageReadScope);
   const visibleAppointments = useMemo(
     () =>
       appointments.filter(
@@ -6756,17 +6761,16 @@ export function ReceptionContent() {
     let cancelled = false;
 
     async function refresh() {
-      await refreshReceptionReads({ showLoading: true });
+      const result = await refreshReceptionReads({ showLoading: true });
+      if (!cancelled && !result.stale) setCompletedPageReadScope(pageReadScope);
     }
 
-    void refresh().then(() => {
-      if (cancelled) return;
-    });
+    void refresh();
 
     return () => {
       cancelled = true;
     };
-  }, [readRetryNonce, refreshReceptionReads]);
+  }, [readRetryNonce, refreshReceptionReads, pageReadScope]);
 
   useEffect(() => {
     if (!liveStaffSourceEnabled) return;

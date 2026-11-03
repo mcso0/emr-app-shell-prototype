@@ -1,4 +1,5 @@
 "use client";
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, on
  const lastLoadedSignature = useRef<string | null>(null);
  const pending = useRef(false), generation = useRef(0), readVersion = useRef(0);
  const hasPersistedInvoice = z.uuid().safeParse(invoiceId).success;
+ const [settledReviewKey, setSettledReviewKey] = useState<string | null>(null);
+ usePageReadiness(hasPersistedInvoice && settledReviewKey !== reviewKey, reviewKey);
  const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/billing/order-changes`;
  useEffect(() => {
   if (!hasPersistedInvoice) return;
@@ -32,7 +35,9 @@ export function OrderBillingChangeReview({ workspaceId, invoiceId, reviewKey, on
    } catch (cause) { if (!abort.signal.aborted && current === generation.current && version === readVersion.current && !pending.current) {
       setError(confirmedOrderErrors[cause instanceof Error ? cause.message : "unavailable"] ?? confirmedOrderErrors.unavailable);
       useBillingStore.getState().setOrderChangeReview(reviewKey, { status: "error", pending: true, signature: "" });
-    } }
+    } } finally {
+      if (!abort.signal.aborted && current === generation.current && version === readVersion.current) setSettledReviewKey(reviewKey);
+    }
   };
   void read(); const focus = () => { if (!pending.current) void read(); }; window.addEventListener("focus", focus); window.addEventListener("clair-billing-assignment", focus);
   const timer = window.setInterval(() => { if (document.visibilityState === "visible") focus(); }, 15000);

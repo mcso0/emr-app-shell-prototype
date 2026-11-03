@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -52,6 +54,7 @@ export function HospitalOperatingHoursSettingsScreen({
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  usePageReadiness(isLoading, workspaceId);
 
   useEffect(() => {
     ensureWorkspace(workspaceId);

@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import * as React from "react"
 import { useModuleSidePanel, useModuleSidePanelPopupActions } from "@/components/emr/module-side-panel-context"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
@@ -20,7 +22,8 @@ function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
 }
 
 function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
-  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />
+  const visibility = usePagePortalVisibility();
+  return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} {...visibility} />
 }
 
 function DialogClose({ ...props }: DialogPrimitive.Close.Props) {

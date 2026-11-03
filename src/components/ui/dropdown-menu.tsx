@@ -1,5 +1,7 @@
 "use client"
 
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary"
+
 import * as React from "react"
 import { useModuleSidePanel, useModuleSidePanelPopupActions } from "@/components/emr/module-side-panel-context"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
@@ -33,8 +35,9 @@ function DropdownMenuContent({
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
   const panel = useModuleSidePanel();
+  const visibility = usePagePortalVisibility();
   return (
-    <MenuPrimitive.Portal>
+    <MenuPrimitive.Portal {...visibility}>
       <MenuPrimitive.Positioner
         className="isolate z-50 outline-none"
         align={align}

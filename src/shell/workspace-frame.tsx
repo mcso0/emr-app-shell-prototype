@@ -1,5 +1,8 @@
 "use client";
 
+import { useAuthClient } from "@/features/auth/auth-client";
+import { useSharedReadActorScope } from "@/features/auth/shared-read-actor-scope";
+import { EmrPageLoadingBoundary } from "@/components/emr/page-loading-boundary";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState, type CSSProperties } from "react";
 import { CloseIcon } from "@/components/icons";
@@ -46,6 +49,8 @@ export function WorkspaceFrame({
     rightPanelWidth,
     setActiveDrawer,
   } = useLayoutStore();
+  const { session } = useAuthClient();
+  const actorScope = useSharedReadActorScope(session);
   const Header = moduleDefinition.contentHeader;
   const ContentAside = moduleDefinition.contentAside;
   const Content = moduleDefinition.content;
@@ -148,7 +153,7 @@ export function WorkspaceFrame({
   };
 
   return (
-    <SlotAvailabilityProvider {...baseSlotProps}>
+    <EmrPageLoadingBoundary key={`${actorScope}:${workspaceId}:${moduleDefinition.id}`}><SlotAvailabilityProvider {...baseSlotProps}>
       {(availability) => {
         const hasContentAside =
           Boolean(ContentAside) && (availability.hasContentAside ?? true);
@@ -353,6 +358,6 @@ export function WorkspaceFrame({
           </main>
         );
       }}
-    </SlotAvailabilityProvider>
+    </SlotAvailabilityProvider></EmrPageLoadingBoundary>
   );
 }

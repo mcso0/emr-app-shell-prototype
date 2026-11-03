@@ -1,5 +1,6 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 
 import { useState, type ReactNode } from "react";
@@ -67,6 +68,7 @@ export function HospitalBasicSettingsScreen({
     reload,
     status: profileStatus,
   } = useHospitalProfile(workspaceId);
+  usePageReadiness(profileStatus === "idle" || profileStatus === "loading", workspaceId);
   const [logoDraftOverride, setLogoDraftOverride] = useState<
     string | null | undefined
   >(undefined);

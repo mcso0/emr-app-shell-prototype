@@ -1,5 +1,6 @@
 "use client";
 
+import { EmrPageLoadingBoundary } from "./page-loading-boundary";
 import {
   useCallback,
   useEffect,
@@ -74,7 +75,7 @@ export function EmrProfilePanel({
   }, [close]);
 
   return (
-    <section
+    <EmrPageLoadingBoundary loading={loading}><section
       data-slot="emr-profile-panel"
       data-header-actions={headerActions ? "true" : undefined}
       className={cn(
@@ -174,7 +175,7 @@ export function EmrProfilePanel({
           {children}
         </EmrRightPanel>
       </TabGroup>
-    </section>
+    </section></EmrPageLoadingBoundary>
   );
 }
 

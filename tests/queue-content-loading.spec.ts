@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID as workspaceId } from "../src/lib/emr-domain/demo-workspaces";
 
@@ -19,15 +20,27 @@ async function grantAccess(page: Page) {
       invitations: [],
     }));
   }, [SESSION_WORKSPACES_STORAGE_KEY, workspaceId]);
+  // Keep every unhandled workspace read synthetic and block all external traffic.
+  // Specific scenario routes registered later take precedence.
+  await page.route("**/*", route => {
+    const url = new URL(route.request().url());
+    if (!["localhost", "127.0.0.1"].includes(url.hostname)) return route.abort();
+    if (url.pathname.startsWith(`/api/workspaces/${workspaceId}/`)) {
+      return route.fulfill({ status: 404, json: { ok: false, error: "synthetic_unavailable" } });
+    }
+    return route.fallback();
+  });
 }
 
 async function expectCenteredLoading(page: Page, id: string, object: string) {
   const main = page.getByTestId("workspace-main-content");
-  const loading = page.getByTestId(`${id}-content-loading-state`);
+  const loading = page.getByTestId("page-loading-state");
   await expect(loading).toBeVisible();
   await expect(loading).toHaveAttribute("role", "status");
   await expect(loading).toHaveAttribute("data-size", "md");
-  await expect(loading).toContainText(`${object} 업무를 불러오는 중입니다`);
+  await expect(loading).toContainText("화면을 불러오는 중입니다");
+  await expect(main).not.toBeVisible();
+  await expect(page.locator("[data-page-content]").first()).toHaveAttribute("inert", "");
   await expect(main.getByRole("heading", { name: `${object} 업무가 없습니다` })).toHaveCount(0);
   await expect(main.getByTestId("dispensing-fulfillment-state")).toHaveCount(0);
   const geometry = await loading.evaluate((state) => {
@@ -77,7 +90,7 @@ for (const { id, object } of modules) {
       pending = false;
       (release as (() => void) | undefined)?.();
       await expect(empty).toBeVisible();
-      await expect(page.getByTestId(`${id}-content-loading-state`)).toHaveCount(0);
+      await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
       if (attempt === 0) {
         await panel.getByRole("button", { name: "이전 날짜" }).click();
         await expect(page).toHaveURL(/date=2026-09-07/);
@@ -169,12 +182,16 @@ for (const { id, object } of modules) {
       hold = false;
       await panel.getByRole("button", { name: returning ? "이전 날짜" : "다음 날짜" }).click();
       await expect(page).toHaveURL(new RegExp(`date=${finalDate}`));
-      await expect(panel.getByText("현재 날짜 환자", { exact: true })).toBeVisible();
+      const currentPatient = id === "billing"
+        ? panel.getByText("현재 날짜 환자", { exact: true })
+        : panel.getByRole("button", { name: "현재 날짜 환자 · 합성 보호자 접기", exact: true });
+      await expect(currentPatient).toBeVisible();
       releases.forEach(release => release());
       await page.waitForLoadState("networkidle");
-      await expect(panel.getByText("현재 날짜 환자", { exact: true })).toBeVisible();
-      await expect(page.getByText("늦은 응답 환자", { exact: true })).toHaveCount(0);
-      await expect(page.getByTestId(`${id}-content-loading-state`)).toHaveCount(0);
+      await expect(currentPatient).toBeVisible();
+      await expect(panel.getByRole("button", { name: /늦은 응답 환자/ })).toHaveCount(0);
+      await expect(page.getByText(/늦은 응답 환자/)).toHaveCount(0);
+      await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
     });
   }
 }
@@ -189,74 +206,159 @@ for (const { id, object } of modules) {
     });
     await page.goto(`/w/${workspaceId}/${id}?date=2026-09-07&modulePanel=closed&aside=closed&right=closed`);
     await expect.poll(() => releases.length).toBeGreaterThan(0);
-    const initialCount = releases.length;
     await page.getByRole("button", { name: "사이드 패널 펼치기" }).click();
-    await expect.poll(() => releases.length).toBeGreaterThan(initialCount);
+    // The panel can subscribe to the content's pending read without a new request.
+    await expect(page.locator("aside").first()).toBeVisible();
     await expectCenteredLoading(page, id, object);
     await page.locator("aside").first().getByRole("button", { name: "사이드 패널 접기" }).click();
+    await expectCenteredLoading(page, id, object);
     releases.forEach(release => release());
     await expect(page.getByTestId("workspace-main-content").getByRole("heading", { name: `${object} 업무가 없습니다` })).toBeVisible();
+    await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
   });
 }
 
 
-test("billing selects a live queue invoice with its encounter and preserves centered detail loading", async ({ page }) => {
-  await grantAccess(page);
-  const invoiceId = "99290000-0000-4000-8000-000000000051";
-  const encounterId = "99290000-0000-4000-8000-000000000052";
-  const invoice = { id: invoiceId, workspaceId, encounterId, invoiceNo: "Q-LIVE", status: "draft", paymentState: "none", subtotalAmount: 10000, discountAmount: 0, taxAmount: 0, totalAmount: 10000, createdAt: "2026-09-07T01:00:00Z" };
-  const queue = populatedQueue("billing", "2026-09-07", "대기열 합성 환자");
-  queue.rows![0].invoice = invoice;
-  await page.route("**/billing/queue?*", route => route.fulfill({ json: queue }));
-  const releases: Array<{ kind: string; resolve: () => void }> = [];
-  let holdInvoices = true;
-  let holdSummary = true;
-  const hold = (kind: string) => (kind === "summary" ? holdSummary : holdInvoices)
-    ? new Promise<void>(resolve => releases.push({ kind, resolve }))
-    : Promise.resolve();
-  await page.route("**/billing/invoice-candidates?*", route => route.fulfill({ json: { ok: true, candidates: [] } }));
-  await page.route("**/chart/order-billing-summary?*", async route => {
-    await hold("summary");
-    await route.fulfill({ json: { ok: true, summary: {
-      workspaceId, encounterId, invoiceId, etag: '"queue-detail"', generatedAt: invoice.createdAt, currency: "KRW",
-      context: {
-        encounter: { id: encounterId, patientId: "patient-queue", guardianId: "guardian-queue", encounterNo: "E-QUEUE", status: "ordered", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
-        patient: { id: "patient-queue", patientNo: "P-QUEUE", name: "대기열 합성 환자", species: "dog", sex: "male", status: "active", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
-        guardian: { id: "guardian-queue", name: "합성 보호자", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
-      },
-      orderCounts: { total: 1, confirmed: 1, draft: 0, recheck: 0, requested: 1, requestable: 0, cancelled: 0 },
-      amounts: { gross: 10000, confirmed: 10000, draft: 0, discount: 0, surcharge: 0, tax: 0, paid: 0, outstanding: 10000, estimatedTotal: 10000, requestableTotal: 0 },
-      requestableOrderIds: [], unfinishedOrders: [],
-    } } });
-  });
-  await page.route("**/billing/invoice-lines?*", async route => {
-    await hold("invoice");
-    await route.fulfill({ json: { ok: true, invoice, lines: [{ id: "line-queue", invoiceId, description: "대기열 합성 청구", quantity: 1, unitPrice: 10000, lineTotal: 10000 }] } });
-  });
-  await page.route("**/billing/payment-status?*", async route => {
-    await hold("payment");
-    await route.fulfill({ json: { ok: true, invoice, payments: [] } });
-  });
+
+function recordDomainWrites(page: Page) {
   const writes: string[] = [];
-  page.on("request", request => { if (request.url().includes("/billing/queue") && request.method() !== "GET") writes.push(request.method()); });
-  await page.goto(`/w/${workspaceId}/billing?date=2026-09-07&modulePanel=open&aside=closed&right=closed`);
-  await page.locator("aside").first().getByText("대기열 합성 환자", { exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`encounterId=${encounterId}`));
-  await expect(page).toHaveURL(new RegExp(`invoiceId=${invoiceId}`));
-  await expectCenteredLoading(page, "billing", "수납");
-  await expect.poll(() => releases.length).toBeGreaterThanOrEqual(3);
-  // Invoice reads finish first; the center must remain pending until encounter context arrives.
-  holdInvoices = false;
-  releases.filter(release => release.kind !== "summary").forEach(release => release.resolve());
-  await expectCenteredLoading(page, "billing", "수납");
-  holdSummary = false;
-  releases.forEach(release => release.resolve());
-  await expect(page.getByRole("table", { name: "청구 항목 테이블" }).getByText("대기열 합성 청구", { exact: true })).toBeVisible();
-  expect(writes).toEqual([]);
-});
+  page.on("request", request => {
+    const path = new URL(request.url()).pathname;
+    const method = request.method();
+    // The shell saves open-tab preferences independently of clinical/billing work.
+    if (method === "PUT" && path === `/api/workspaces/${workspaceId}/app-shell/workspace-tabs`) return;
+    if (path.startsWith(`/api/workspaces/${workspaceId}/`) && !["GET", "HEAD"].includes(method)) writes.push(`${method} ${path}`);
+  });
+  return writes;
+}
+
+async function mockBillingPreworkReads(page: Page) {
+  const completed = new Set<string>();
+  await page.route("**/billing/assignment?*", async route => {
+    await route.fulfill({ json: { ok: true, assignment: { revision: 1, assignedToUserId: "user-admin", assignedToDisplayName: "합성 담당자", canManage: true, assignees: [] } } });
+    completed.add("assignment");
+  });
+  await page.route("**/customer/*/*/profile-overview", async route => {
+    const path = new URL(route.request().url()).pathname;
+    const patient = path.includes("/patient/");
+    const subjectId = path.split("/").at(-2)!;
+    const name = patient ? subjectId === "patient-next" ? "다음 합성 환자" : "대기열 합성 환자" : "합성 보호자";
+    await route.fulfill({ json: { ok: true, overview: { subjectId, subjectType: patient ? "patient" : "guardian",
+      profile: { id: subjectId, name }, relationships: { guardians: patient ? [{ id: "guardian-queue", name: "합성 보호자", isPrimary: true, workspaceId }] : [] },
+      access: { information: { allowed: true } },
+    } } });
+    completed.add(patient ? "patient" : "guardian");
+  });
+  await page.route("**/vital-settings", async route => {
+    await route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) });
+    completed.add("settings");
+  });
+  await page.route("**/patient-vitals/history?*", async route => {
+    await route.fulfill({ json: { ok: true, measurements: [] } });
+    completed.add("vitals");
+  });
+  await page.route("**/billing/guardian-checkout?*", route => route.fulfill({ json: { ok: true, rows: [] } }));
+  return completed;
+}
+
+for (const historyStatus of [200, 403, 500]) {
+  test(`billing selects a live queue invoice and waits for detail and history (${historyStatus})`, async ({ page }) => {
+    await grantAccess(page);
+    const completedPreworkReads = await mockBillingPreworkReads(page);
+    const invoiceId = "99290000-0000-4000-8000-000000000051";
+    const encounterId = "99290000-0000-4000-8000-000000000052";
+    const invoice = { id: invoiceId, workspaceId, encounterId, invoiceNo: "Q-LIVE", status: "draft", paymentState: "none", subtotalAmount: 10000, discountAmount: 0, taxAmount: 0, totalAmount: 10000, createdAt: "2026-09-07T01:00:00Z" };
+    const queue = populatedQueue("billing", "2026-09-07", "대기열 합성 환자");
+    queue.rows![0].invoice = invoice;
+    await page.route("**/billing/queue?*", route => route.fulfill({ json: queue }));
+    const releases: Array<{ kind: string; resolve: () => void }> = [];
+    let holdInvoices = true;
+    let releaseHistory!: () => void;
+    let historyAttempts = 0;
+    let historyResponseStatus = historyStatus;
+    let historyGate = new Promise<void>(resolve => { releaseHistory = resolve; });
+    await page.route("**/billing/guardian-checkout?*", async route => {
+      historyAttempts++;
+      await historyGate;
+      await route.fulfill({ status: historyResponseStatus, json: historyResponseStatus === 200 ? { ok: true, rows: [] } : { ok: false, error: "synthetic_history_failure" } });
+    });
+    let holdSummary = true;
+    const hold = (kind: string) => (kind === "summary" ? holdSummary : holdInvoices)
+      ? new Promise<void>(resolve => releases.push({ kind, resolve }))
+      : Promise.resolve();
+    await page.route("**/billing/invoice-candidates?*", route => route.fulfill({ json: { ok: true, candidates: [] } }));
+    await page.route("**/chart/order-billing-summary?*", async route => {
+      await hold("summary");
+      await route.fulfill({ json: { ok: true, summary: {
+        workspaceId, encounterId, invoiceId, etag: '"queue-detail"', generatedAt: invoice.createdAt, currency: "KRW",
+        context: {
+          encounter: { id: encounterId, patientId: "patient-queue", guardianId: "guardian-queue", encounterNo: "E-QUEUE", status: "ordered", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
+          patient: { id: "patient-queue", patientNo: "P-QUEUE", name: "대기열 합성 환자", species: "dog", sex: "male", status: "active", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
+          guardian: { id: "guardian-queue", name: "합성 보호자", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
+        },
+        orderCounts: { total: 1, confirmed: 1, draft: 0, recheck: 0, requested: 1, requestable: 0, cancelled: 0 },
+        amounts: { gross: 10000, confirmed: 10000, draft: 0, discount: 0, surcharge: 0, tax: 0, paid: 0, outstanding: 10000, estimatedTotal: 10000, requestableTotal: 0 },
+        requestableOrderIds: [], unfinishedOrders: [],
+      } } });
+    });
+    await page.route("**/billing/invoice-lines?*", async route => {
+      await hold("invoice");
+      await route.fulfill({ json: { ok: true, invoice, lines: [{ id: "line-queue", invoiceId, description: "대기열 합성 청구", quantity: 1, unitPrice: 10000, lineTotal: 10000 }] } });
+    });
+    await page.route("**/billing/payment-status?*", async route => {
+      await hold("payment");
+      await route.fulfill({ json: { ok: true, invoice, payments: [] } });
+    });
+    const writes = recordDomainWrites(page);
+    await page.goto(`/w/${workspaceId}/billing?date=2026-09-07&modulePanel=open&aside=closed&right=closed`);
+    await page.locator("aside").first().getByText("대기열 합성 환자", { exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`encounterId=${encounterId}`));
+    await expect(page).toHaveURL(new RegExp(`invoiceId=${invoiceId}`));
+    await expectCenteredLoading(page, "billing", "수납");
+    await expect.poll(() => releases.length).toBeGreaterThanOrEqual(3);
+    // Invoice reads finish first; the center must remain pending until encounter context arrives.
+    holdInvoices = false;
+    releases.filter(release => release.kind !== "summary").forEach(release => release.resolve());
+    await expectCenteredLoading(page, "billing", "수납");
+    holdSummary = false;
+    releases.forEach(release => release.resolve());
+    await expect.poll(() => historyAttempts).toBe(1);
+    await expect.poll(() => completedPreworkReads.size).toBe(5);
+    // Observe the committed frame after all other required readers have completed.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await expectCenteredLoading(page, "billing", "수납");
+    await page.screenshot({ path: test.info().outputPath("billing-history-loading.png") });
+    releaseHistory();
+    const entry = page.getByTestId("billing-prework");
+    await expect(entry.getByRole("heading", { name: "대기열 합성 환자", exact: true })).toBeVisible();
+    await expect(entry.getByText("Q-LIVE", { exact: true })).toBeVisible();
+    await expect(entry.getByText("대기열 합성 청구", { exact: true })).toBeVisible();
+    if (historyStatus === 200) {
+      await expect(entry.getByText("이전 수납 이력이 없어요.", { exact: true })).toBeVisible();
+    } else {
+      const alert = entry.getByRole("alert").filter({ hasText: "이력을 불러오지 못했어요." });
+      await expect(alert).toBeVisible();
+      await expect(alert.getByRole("button", { name: "다시 조회", exact: true })).toBeVisible();
+    }
+    await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
+    if (historyStatus !== 200) {
+      historyResponseStatus = 200;
+      historyGate = new Promise<void>(resolve => { releaseHistory = resolve; });
+      await entry.getByRole("button", { name: "다시 조회", exact: true }).click();
+      await expect.poll(() => historyAttempts).toBe(2);
+      // Same-page retries retain the ready page rather than restarting entry.
+      await expect(entry.getByRole("heading", { name: "대기열 합성 환자", exact: true })).toBeVisible();
+      await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
+      releaseHistory();
+      await expect(entry.getByText("이전 수납 이력이 없어요.", { exact: true })).toBeVisible();
+    }
+    expect(writes).toEqual([]);
+  });
+}
 
 test("billing changes queue selection without inherited order filters or previous patient context", async ({ page }) => {
   await grantAccess(page);
+  await mockBillingPreworkReads(page);
   const invoiceId = "99290000-0000-4000-8000-000000000051";
   const encounterId = "99290000-0000-4000-8000-000000000052";
   const invoice = { id: invoiceId, workspaceId, encounterId, invoiceNo: "Q-LIVE", status: "draft", paymentState: "none", subtotalAmount: 10000, discountAmount: 0, taxAmount: 0, totalAmount: 10000, createdAt: "2026-09-07T01:00:00Z" };
@@ -278,8 +380,8 @@ test("billing changes queue selection without inherited order filters or previou
     await route.fulfill({ json: { ok: true, summary: {
       workspaceId, encounterId: currentInvoice.encounterId, invoiceId: currentInvoice.id, etag: '"queue-detail"', generatedAt: invoice.createdAt, currency: "KRW",
       context: {
-        encounter: { id: currentInvoice.encounterId, patientId: "patient-queue", guardianId: "guardian-queue", encounterNo: "E-QUEUE", status: "ordered", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
-        patient: { id: "patient-queue", patientNo: "P-QUEUE", name: isNext ? "다음 합성 환자" : "대기열 합성 환자", species: "dog", sex: "male", status: "active", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
+        encounter: { id: currentInvoice.encounterId, patientId: isNext ? "patient-next" : "patient-queue", guardianId: "guardian-queue", encounterNo: isNext ? "E-NEXT" : "E-QUEUE", status: "ordered", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
+        patient: { id: isNext ? "patient-next" : "patient-queue", patientNo: isNext ? "P-NEXT" : "P-QUEUE", name: isNext ? "다음 합성 환자" : "대기열 합성 환자", species: "dog", sex: "male", status: "active", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
         guardian: { id: "guardian-queue", name: "합성 보호자", createdAt: invoice.createdAt, updatedAt: invoice.createdAt },
       },
       orderCounts: { total: 1, confirmed: 1, draft: 0, recheck: 0, requested: 1, requestable: 0, cancelled: 0 },
@@ -295,23 +397,26 @@ test("billing changes queue selection without inherited order filters or previou
     const currentInvoice = new URL(route.request().url()).searchParams.get("invoiceId") === nextInvoiceId ? nextInvoice : invoice;
     await route.fulfill({ json: { ok: true, invoice: currentInvoice, payments: [] } });
   });
-  const writes: string[] = [];
-  page.on("request", request => { if (request.url().includes("/billing/queue") && request.method() !== "GET") writes.push(request.method()); });
+  const writes = recordDomainWrites(page);
   await page.goto(`/w/${workspaceId}/billing?date=2026-09-07&modulePanel=open&aside=closed&right=closed&invoiceId=${invoiceId}&encounterId=${encounterId}&orderIds=order-old&patientId=patient-old`);
   const main = page.getByTestId("workspace-main-content");
-  await expect(main.getByText("합성 보호자 · 대기열 합성 환자", { exact: true })).toBeVisible();
+  const entry = page.getByTestId("billing-prework");
+  await expect(entry.getByRole("heading", { name: "대기열 합성 환자", exact: true })).toBeVisible();
+  await expect(entry.getByText("합성 보호자 보호자", { exact: true })).toBeVisible();
   const nextPayment = page.waitForResponse(response => response.url().includes(`payment-status?invoiceId=${nextInvoiceId}`));
   await page.locator("aside").first().getByText("다음 합성 환자", { exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`invoiceId=${nextInvoiceId}`));
   await expect.poll(() => releases.length).toBeGreaterThan(0);
   await nextPayment;
   await expectCenteredLoading(page, "billing", "수납");
-  await expect(main.getByText("합성 보호자 · 대기열 합성 환자", { exact: true })).toHaveCount(0);
+  await expect(main.getByRole("heading", { name: "대기열 합성 환자", exact: true })).toHaveCount(0);
   expect(new URL(page.url()).searchParams.has("orderIds")).toBe(false);
   expect(new URL(page.url()).searchParams.has("patientId")).toBe(false);
   holdSummary = false;
   releases.forEach(release => release.resolve());
-  await expect(main.getByText("합성 보호자 · 다음 합성 환자", { exact: true })).toBeVisible();
-  await expect(page.getByRole("table", { name: "청구 항목 테이블" }).getByText("대기열 합성 청구", { exact: true })).toBeVisible();
+  await expect(entry.getByRole("heading", { name: "다음 합성 환자", exact: true })).toBeVisible();
+  await expect(entry.getByText("Q-NEXT", { exact: true })).toBeVisible();
+  await expect(entry.getByText("대기열 합성 청구", { exact: true })).toBeVisible();
+  await expect(entry.getByText("합성 보호자 보호자", { exact: true })).toBeVisible();
   expect(writes).toEqual([]);
 });

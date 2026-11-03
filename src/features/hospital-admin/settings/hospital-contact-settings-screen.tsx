@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -46,6 +48,8 @@ export function HospitalContactSettingsScreen({ workspaceId }: { workspaceId: st
     reload,
     status: profileStatus,
   } = useHospitalProfile(workspaceId);
+  usePageReadiness(profileStatus === "idle" || profileStatus === "loading", workspaceId);
+
 
   useEffect(() => {
     ensureWorkspace(workspaceId);

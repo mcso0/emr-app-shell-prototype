@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageLoading } from "@/components/emr/page-loading-boundary";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { HomeKanbanWorkspace, HomeNavigationSidePanel } from "@/features/home/components/home-kanban-workspace";
 import { useHomeWorkspaceStore } from "@/features/home/home-workspace-store";
@@ -22,6 +24,7 @@ export function HomeContent({ workspaceId }: ShellComponentProps) {
   const scopeKey = actor ? `${actor}:${workspaceId}` : null;
   useEffect(() => { hydrate(); }, [hydrate]);
   useEffect(() => { if (hydrated && scopeKey) activate(scopeKey, today); }, [activate, hydrated, scopeKey, today]);
+  usePageLoading(!hydrated || !scopeKey || activeScope !== scopeKey);
   if (!hydrated || !scopeKey || activeScope !== scopeKey) return <HomeLoadingState />;
   return <HomeOperationsContent key={scopeKey} workspaceId={workspaceId} today={today} role={mapAuthRoleToHomeRole(session?.role)} />;
 }

@@ -270,7 +270,7 @@ test("queue panels keep visible queue rows ahead of background loading states", 
   );
 });
 
-test("chart content keeps the selected shell visible while details hydrate", () => {
+test("chart content reports full-page readiness while retaining mounted detail state", () => {
   const chartModule = readFileSync("src/features/chart/module.tsx", "utf8");
 
   expect(chartModule).toContain("const detailLoading =");

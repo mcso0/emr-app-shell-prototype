@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
 import { DispensingPreworkContext } from "./components/prework-context";
 
@@ -1728,6 +1730,8 @@ export function DispensingContent({
     selectedQueueItemId,
   ]);
 
+  usePageReadiness(fulfillmentQueue.status === "loading", `${workspaceId}:${selectedDate}:${selectedQueueItemId}`);
+
   return (
     <DispensingContentBody
       fulfillmentQueue={fulfillmentQueue}
@@ -1793,6 +1797,7 @@ function DispensingContentBody({
     pending: !allowLegacyFixtureFallback && Boolean(selectedFulfillmentWorkItem) && instruction.loading,
   });
   const prework = preworkEligible && (entry.show || preworkCompletionRoot === instructionScope);
+  usePageReadiness(instruction.loading, `${workspaceId}:${selectedFulfillmentWorkItem?.id}:${entry.show ? "entry" : "instruction"}`);
   const medicationLinkPending = selectedFulfillmentWorkItem?.queueType === "treatment"
     && selectedFulfillmentWorkItem.sourceSnapshot?.detailSchemaVersion === 3
     && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
@@ -2209,7 +2214,7 @@ function DispensingContentBody({
   if (prework && selectedFulfillmentWorkItem) return (
     <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-panel)]">
       <DispensingPreworkContext key={selectedFulfillmentWorkItem.id} controller={instruction} workItem={selectedFulfillmentWorkItem}
-        onChanged={fulfillmentQueue.refresh} onEntered={entry.enter}
+        onChanged={fulfillmentQueue.refresh} onEntered={() => { instruction.refresh(); entry.enter(); }}
         onCompletionOpenChange={(open) => setPreworkCompletionRoot(open ? instructionScope : null)} />
     </div>
   );

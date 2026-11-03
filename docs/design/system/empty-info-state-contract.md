@@ -1,7 +1,7 @@
 ---
 status: "approved"
 area: "design-system"
-updated: "2026-07-18"
+updated: "2026-11-03"
 linear_issue: "DEN-434"
 linear_project: "공통 UX/UI 기준 정리 및 화면 적용"
 source_docs:
@@ -17,6 +17,33 @@ source_docs:
 # Empty State And Info Box Contract
 
 This contract defines how CLAiR EMR distinguishes empty states from info boxes, alerts, loading states, and permission or scope boundaries. It is the source of truth for follow-up UI work after DEN-434.
+
+## Page Loading Boundary
+
+`EmrPageLoadingBoundary` owns the initial and selected-page loading surface.
+`WorkspaceFrame` wraps page-owned headers, information bars, document tools,
+internal tabs, body, history and right panels. App navigation, workspace tabs and
+module queues remain available outside this boundary. Personal settings and
+profile panels also use the boundary at their own presentation root.
+
+Readers call `usePageReadiness(pending, scope)` with the actor/workspace/entity,
+operating date and entry phase that affect their content. Readers whose first
+request starts in an effect must report an unresolved scope until that request
+finishes; a previous scope's ready status is not readiness for the next one.
+Same-scope background refresh and saving keep mounted state and remain separate
+from initial page loading. Static pages require no artificial wait.
+
+While pending, show only the centered `md` loading surface. Keep data readers and
+drafts mounted under a hidden, inert, aria-hidden content wrapper. Page-owned
+portals inherit the same visibility and focus boundary. Empty, denied and failed
+reads end loading and retain their existing explicit recovery states. A failed
+read must not become an empty success or an endless loader.
+
+Order entry readiness and instruction readiness are separate scopes. After
+assignment/start confirmation, wait for required instruction/authority reads
+before exposing the instruction. Billing retains its existing checkout preparation
+trigger and waits for that response after entry. No loading rule changes command,
+payment, permission or audit semantics.
 
 ## Intent
 

@@ -1,4 +1,6 @@
 "use client";
+
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import type { ConfirmedOrderContext } from "./confirmed-order-edit-contract";
 import { ConfirmedOrderEditDialog } from "@/features/chart/components/confirmed-order-edit-dialog";
 import { formatDispenseRequestQuantity, updateDispensingPrescriptionWithUnits, getDispenseRequestCourseQuantity, getDispenseRequestDisplayPrecision } from "@/features/chart/dispense-request-quantity";
@@ -12064,6 +12066,7 @@ const OrderArea = memo(function OrderArea({
 }) {
   const compactToolbarActions = useWorkspaceDocumentLayout()?.narrow ?? false;
   const [orderDraftReadError, setOrderDraftReadError] = useState(false);
+  const [initialOrderReadCompleted, setInitialOrderReadCompleted] = useState(false);
   const writeDisabled = inheritedWriteDisabled || !chartId || orderDraftReadError;
   const draftWriteDisabled = inheritedDraftWriteDisabled || orderDraftReadError;
   const mutationChartId = chartId;
@@ -12277,6 +12280,7 @@ const OrderArea = memo(function OrderArea({
     orderIds: string[];
   } | null>(null);
   const orderLoading = loading || orderDraftSaveState === "loading";
+  usePageReadiness(!initialOrderReadCompleted || orderLoading, `${actorKey}:${bundle.encounter.workspaceId}:${bundle.encounter.id}:${chartId}`);
   const pendingRemovalOrderIds = useMemo(
     () =>
       new Set(
@@ -13267,7 +13271,7 @@ const OrderArea = memo(function OrderArea({
       setOrderDraftSaveState("error");
     }
 
-    void loadPersistedOrderDrafts();
+    void loadPersistedOrderDrafts().finally(() => { if (!cancelled) setInitialOrderReadCompleted(true); });
 
     return () => {
       cancelled = true;
@@ -16246,6 +16250,12 @@ export function ChartContent({
       chartCompletionState.status === "loading");
   const detailLoading =
     soapLoading || diagnosisLoading || chartCompletionLoading;
+  usePageReadiness(
+    (!bundle && (liveQueueStatus === "idle" || liveQueueStatus === "loading")) || detailLoading
+      || (Boolean(bundle) && encounterCharts.status === "loading")
+      || encounterCharts.initialChartPreparationStatus === "saving",
+    `${workspaceId}:${authSession?.id}:${selectedDate}:${activeEncounterId}:${activeChartId}`,
+  );
   const detailHydrationPending = detailLoading;
   const chartWriteDisabled = detailHydrationPending || isHistoricalReadOnlyView || encounterCharts.status !== "ready"
     || encounterCharts.initialChartPreparationStatus === "saving"

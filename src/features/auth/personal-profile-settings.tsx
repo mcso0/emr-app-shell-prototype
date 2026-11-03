@@ -1,5 +1,7 @@
 "use client";
 
+import { EmrPageLoadingBoundary } from "@/components/emr/page-loading-boundary";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronLeftIcon } from "@/components/icons";
@@ -83,9 +85,9 @@ export function PersonalProfileSettings() {
   }, [hydrate]);
   if (!hydrated || !session)
     return (
-      <main className="grid min-h-svh place-items-center bg-[var(--emr-surface-2)]">
+      <EmrPageLoadingBoundary loading><main className="grid min-h-svh place-items-center bg-[var(--emr-surface-2)]">
         <p role="status">개인 설정을 불러옵니다.</p>
-      </main>
+      </main></EmrPageLoadingBoundary>
     );
   return (
     <PersonalSettingsForm
@@ -479,7 +481,7 @@ export function PersonalSettingsForm({
   }
   const selected = categories.find((item) => item.key === category)!;
   return (
-    <main className="grid min-h-svh bg-[var(--emr-surface-2)] text-foreground lg:h-svh lg:grid-cols-[240px_minmax(0,1fr)] lg:overflow-hidden">
+    <EmrPageLoadingBoundary loading={(!profile && !profileError) || (live && category === "profile" && !operational && !workspaceError) || (live && category === "notifications" && !preferences && !preferenceError)}><main className="grid min-h-svh bg-[var(--emr-surface-2)] text-foreground lg:h-svh lg:grid-cols-[240px_minmax(0,1fr)] lg:overflow-hidden">
       <aside className="border-b border-[var(--emr-border-default)] bg-card p-4 lg:border-r lg:border-b-0">
         <Button
           variant="ghost"
@@ -841,6 +843,6 @@ export function PersonalSettingsForm({
           }}
         />
       </Dialog>
-    </main>
+    </main></EmrPageLoadingBoundary>
   );
 }

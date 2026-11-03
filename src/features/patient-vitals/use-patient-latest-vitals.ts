@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useMemo, useSyncExternalStore } from "react";
 import { usePatientVitalActorScope } from "./use-patient-vital-actor-scope";
 import { createPatientLatestVitalsResource } from "./patient-latest-vitals-resource";
@@ -39,6 +41,7 @@ export function usePatientLatestVitalItems({
   const { latest: result, settings: vitalSettings, settingsStatus: vitalSettingsStatus } = useSyncExternalStore(
     resource.subscribe, resource.getSnapshot, resource.getServerSnapshot,
   );
+  usePageReadiness(Boolean(encounterId) && (result.status === "loading" || vitalSettingsStatus === "loading"), scope);
   const refresh = resource.refresh;
 
   // Keep the existing callback contract. A corrected old row must not replace

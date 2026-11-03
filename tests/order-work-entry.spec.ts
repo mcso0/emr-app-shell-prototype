@@ -183,6 +183,36 @@ test("billing late claim cannot enter a newly selected invoice", async ({ page }
 });
 
 
+test("billing entry waits for checkout preparation without repeating ownership commands", async ({ page }) => {
+  const state = await install(page, "billing", "mine");
+  let releaseReview!: () => void; let reviewRequested = false;
+  const reviewGate = new Promise<void>(resolve => { releaseReview = resolve; });
+  await page.route("**/billing/order-changes?*", async route => {
+    reviewRequested = true; await reviewGate; await route.fallback();
+  });
+  let release!: () => void; let requested = false;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/billing/guardian-checkout", async route => {
+    if (route.request().method() === "POST") { requested = true; await gate; }
+    await route.fallback();
+  });
+  await state.entry.getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await expect.poll(() => reviewRequested).toBe(true);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  expect(state.prepares()).toBe(0);
+  releaseReview();
+  await expect.poll(() => requested).toBe(true);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  expect(state.commands).toEqual([]);
+  release();
+  await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+  await expect(page.getByRole("table", { name: "청구 항목 테이블" })).toBeVisible();
+  expect(state.commands).toEqual([]);
+});
+
 test("billing entry keeps payment preparation blocked until order change approval", async ({ page }) => {
   const state = await install(page, "billing", "mine");
   state.setPendingChange(true);
@@ -196,3 +226,36 @@ test("billing entry keeps payment preparation blocked until order change approva
   await expect.poll(state.prepares).toBeGreaterThan(0);
   expect(state.errors).toEqual([]);
 });
+
+for (const status of [403, 500]) {
+  test(`billing order review ${status} releases page loading and retry waits for checkout`, async ({ page }) => {
+    const state = await install(page, "billing", "mine");
+    let fail = true;
+    await page.route("**/billing/order-changes?*", async route => {
+      if (fail) return route.fulfill({ status, json: { ok: false, error: "unavailable" } });
+      await route.fallback();
+    });
+    await state.entry.getByRole("button", { name: "업무 시작하기", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
+    const review = page.getByRole("region", { name: "청구 변경 확인" });
+    await expect(review.getByRole("alert")).toBeVisible();
+    await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+    expect(state.prepares()).toBe(0);
+    let release!: () => void; let requested = false;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    await page.route("**/billing/guardian-checkout", async route => {
+      if (route.request().method() === "POST") { requested = true; await gate; }
+      await route.fallback();
+    });
+    fail = false;
+    await review.getByRole("button", { name: "최신 변경안 조회", exact: true }).click();
+    await expect.poll(() => requested).toBe(true);
+    await expect(page.getByTestId("page-loading-state")).toBeVisible();
+    await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+    release();
+    await expect(page.getByRole("table", { name: "청구 항목 테이블" })).toBeVisible();
+    await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+    expect(state.commands).toEqual([]);
+    expect(state.errors).toEqual([]);
+  });
+}
