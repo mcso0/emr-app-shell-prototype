@@ -6,11 +6,11 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { EmrWorkEntryPage, EmrWorkEntrySection as Section } from "@/components/emr/work-entry-page";
-import { PatientPreworkHeader, MemoSection, VitalSection, type PatientPreworkContext } from "@/features/chart/preconsultation-context-panel";
+import { PatientPreworkHeader, PatientPreworkMemoLoading, PatientPreworkVitalsLoading, MemoSection, VitalSection, type PatientPreworkContext } from "@/features/chart/preconsultation-context-panel";
 import { useCustomerProfileOverview } from "@/features/customer/use-customer-profile-overview";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import type { PatientVitalMeasurement } from "@/features/patient-vitals/patient-vital-types";
-import { usePatientFulfillmentHistory, getPatientHistoryStatus, getFulfillmentOrderDisplayName } from "@/features/fulfillment/patient-history-aside";
+import { usePatientFulfillmentHistory, PatientHistoryLoading, getPatientHistoryStatus, getFulfillmentOrderDisplayName } from "@/features/fulfillment/patient-history-aside";
 import type { FulfillmentWorkItem } from "@/features/fulfillment/server-fulfillment-work-item-core";
 import { useLayoutStore } from "@/stores/layout-store";
 
@@ -190,6 +190,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
     `${workspaceId}:${workItem.id}:${guardianId ?? ""}`,
   );
   return <EmrWorkEntryPage testId={testId} header={<PatientPreworkHeader
+          loadingDetails={patient.overviewStatus === "loading" || patient.overviewStatus === "idle"}
           context={context}
           statusLabel={`${label} 대기`}
           onOpenPatientInformation={
@@ -206,7 +207,8 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
         />}>
 {children}
 <Separator />
-          <MemoSection
+          {patient.overviewStatus === "loading" || patient.overviewStatus === "idle" ? <PatientPreworkMemoLoading /> : <MemoSection
+            guardianLoading={guardian.overviewStatus === "loading"}
             context={context}
             patientMemo={
               [
@@ -217,7 +219,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
                 .filter(Boolean)
                 .join(" · ") || (profile ? undefined : unavailable)
             }
-          />
+          />}
           {patient.overviewStatus === "error" && (
             <Button variant="outline" onClick={patient.reloadOverview}>
               환자 정보 다시 조회
@@ -239,7 +241,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
               onOpenVitalDialog={() => {}}
               vitalSettings={settings.snapshot}
             />
-          ) : (
+          ) : (!currentVitals || settings.status === "loading") && currentVitals?.status !== "error" && currentVitals?.status !== "denied" && settings.status !== "error" && settings.status !== "denied" ? <PatientPreworkVitalsLoading /> : (
             <Section title="바이탈 정보">
               <p className="text-sm text-muted-foreground">
                 {currentVitals?.status === "denied" ||
@@ -266,11 +268,11 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
           )}
           <Separator />
           {historyContent ?? <Section title={`과거 ${label} 이력`}>
-            {history.status !== "ready" ? (
+            {history.refreshing && <p role="status" className="text-sm text-muted-foreground">이력을 갱신하는 중입니다.</p>}
+            {history.readError && <p role="alert" className="text-sm text-destructive">이력을 갱신하지 못했습니다.</p>}
+            {history.status === "loading" ? <PatientHistoryLoading /> : history.status !== "ready" ? (
               <p className="text-sm text-muted-foreground">
-                {history.status === "loading"
-                  ? "이력을 불러오는 중이에요."
-                  : history.status === "permission_denied"
+                {history.status === "permission_denied"
                     ? "이력 조회 권한이 없어요."
                     : "이력을 불러오지 못했어요."}
               </p>
@@ -310,7 +312,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
                 이전 {label} 이력이 없어요.
               </p>
             )}
-            {history.status === "error" && (
+            {(history.status === "error" || history.readError) && (
               <Button variant="outline" onClick={history.refresh}>
                 이력 다시 조회
               </Button>

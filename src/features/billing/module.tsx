@@ -2,6 +2,7 @@
 
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 
+import { OrderBillingChangeReview } from "./order-billing-change-review";
 import { getAuthRuntimeMode } from "@/lib/supabase/config";
 import { useOrderPrework, useOrderPreworkPresentation } from "@/features/fulfillment/use-order-prework";
 import { PatientOrderPrework } from "@/features/fulfillment/components/patient-order-prework";
@@ -348,6 +349,7 @@ type GuardianCheckoutTransitionRouteResponse =
     };
 
 type BillingPersistedInvoiceSnapshot = {
+  updatedAt?: string;
   createdAt: string;
   discountAmount: number;
   encounterId: string;
@@ -385,6 +387,7 @@ type GuardianCheckoutInvoiceSnapshot = {
 };
 
 type GuardianCheckoutSessionSnapshot = {
+  sourceKey?: string;
   excludedAmount: number;
   excludedCount: number;
   id: string;
@@ -625,6 +628,7 @@ async function saveBillingPaymentStatus({
   action,
   actorHeaders,
   invoiceId,
+  expectedUpdatedAt,
   paymentMethod,
   unpaidReason,
   workspaceId,
@@ -632,6 +636,7 @@ async function saveBillingPaymentStatus({
   action: "select_payment_method" | "mark_unpaid" | "complete_payment";
   actorHeaders?: Record<string, string>;
   invoiceId: string;
+  expectedUpdatedAt?: string;
   paymentMethod: PaymentMethod;
   unpaidReason?: string;
   workspaceId: string;
@@ -643,6 +648,7 @@ async function saveBillingPaymentStatus({
         body: JSON.stringify({
           action,
           invoiceId,
+          expectedUpdatedAt,
           paymentMethod,
           unpaidReason,
         }),
@@ -753,6 +759,7 @@ async function prepareGuardianCheckout({
 async function transitionGuardianCheckoutInvoiceStatus({
   actorHeaders,
   invoiceId,
+  expectedUpdatedAt,
   paymentMethod,
   reason,
   target,
@@ -760,6 +767,7 @@ async function transitionGuardianCheckoutInvoiceStatus({
 }: {
   actorHeaders?: Record<string, string>;
   invoiceId: string;
+  expectedUpdatedAt?: string;
   paymentMethod: PaymentMethod;
   reason: string;
   target: BillingInvoiceStatusTransitionTarget;
@@ -771,6 +779,7 @@ async function transitionGuardianCheckoutInvoiceStatus({
       {
         body: JSON.stringify({
           invoiceId,
+          expectedUpdatedAt,
           paymentMethod,
           reason,
           target,
@@ -1127,7 +1136,13 @@ function useBillingWorkspaceData() {
       : undefined,
     protectedOwnerKey,
   );
-  const protectedInvoice = ownedPaymentSnapshot?.invoice ?? ownedInvoiceSnapshot?.invoice;
+  const latestInvoice = ownedPaymentSnapshot?.invoice ?? ownedInvoiceSnapshot?.invoice;
+  // A payment token is valid only when the displayed lines and payment state
+  // were read at the same invoice revision.
+  const protectedInvoice = latestInvoice ? { ...latestInvoice,
+    updatedAt: ownedInvoiceSnapshot?.invoice.updatedAt === ownedPaymentSnapshot?.invoice.updatedAt
+      ? ownedInvoiceSnapshot?.invoice.updatedAt : undefined,
+  } : undefined;
   const workspaceInvoices = legacySalesDemo
     ? invoices
     : protectedInvoice
@@ -1151,6 +1166,20 @@ function useBillingWorkspaceData() {
         )
       : workspaceInvoiceLines;
   const retrySnapshots = () => setSnapshotReloadKey((current) => current + 1);
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const target = (event as CustomEvent<{ workspaceId: string; invoiceId: string }>).detail;
+      if (target?.workspaceId === workspaceId && target.invoiceId === effectiveInvoiceId) setSnapshotReloadKey(key => key + 1);
+    };
+    const refreshAssignment = () => setSnapshotReloadKey(key => key + 1);
+    window.addEventListener("clair-billing-order-change", refresh);
+    window.addEventListener("clair-billing-assignment", refreshAssignment);
+    return () => {
+      window.removeEventListener("clair-billing-order-change", refresh);
+      window.removeEventListener("clair-billing-assignment", refreshAssignment);
+    };
+  }, [workspaceId, effectiveInvoiceId]);
+
   const applyWorkspaceInvoiceSnapshot = (
     invoice: BillingPersistedInvoiceSnapshot,
     lines: InvoiceLine[],
@@ -1160,6 +1189,7 @@ function useBillingWorkspaceData() {
       return;
     }
     setProtectedInvoiceSnapshot({ invoice, lines, ownerKey: protectedOwnerKey });
+    window.dispatchEvent(new CustomEvent("clair-billing-order-change", { detail: { workspaceId: invoice.workspaceId, invoiceId: invoice.id } }));
   };
   const applyWorkspacePaymentSnapshot = (
     invoice: BillingPersistedInvoiceSnapshot,
@@ -1174,6 +1204,7 @@ function useBillingWorkspaceData() {
       ownerKey: protectedOwnerKey,
       payments: nextPayments,
     });
+    window.dispatchEvent(new CustomEvent("clair-billing-order-change", { detail: { workspaceId: invoice.workspaceId, invoiceId: invoice.id } }));
   };
   const baseDetail =
     getBillingDetail(
@@ -2717,7 +2748,7 @@ function SelectedCheckoutWorkspace({
                             size="xs"
                             variant="outline"
                             className="bg-card"
-                            disabled={!hasBillingAssignee}
+                            disabled={!hasBillingAssignee || (target === "paid" && !isLegacySalesDemoWorkspace(group.invoice.workspaceId) && !group.invoice.updatedAt)}
                             onClick={() =>
                               onTransitionStatus(group.invoice.id, target)
                             }
@@ -3351,6 +3382,10 @@ export function BillingContent({
         : detail,
     [checkoutInvoiceLines, checkoutInvoices, checkoutPayments, detail, legacySalesDemo],
   );
+  const orderReviewKey = !legacySalesDemo && effectiveDetail && /^[0-9a-f-]{36}$/i.test(effectiveDetail.invoice.id)
+    ? `${getBillingProtectedSnapshotOwnerKey(authSession, effectiveDetail.invoice.workspaceId)}:${effectiveDetail.invoice.id}` : null;
+  const orderReview = useBillingStore(state => orderReviewKey ? state.orderChangeReviews[orderReviewKey] : undefined);
+  const orderReviewBlocked = Boolean(orderReviewKey && (orderReview?.status !== "ready" || orderReview.pending));
   const checkoutGroups = useMemo(() => {
     const detailInvoiceIsOutsideStore = effectiveDetail
       ? !checkoutInvoices.some(
@@ -3410,7 +3445,8 @@ export function BillingContent({
   const checkoutWorkspaceId =
     checkoutGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
-  const checkoutReadKey = `${checkoutWorkspaceId}:${checkoutInvoiceIdsKey}:${entry.show}:${editOwnership.canExecute}:${checkoutReloadKey}`;
+  const checkoutSourceKey = JSON.stringify([checkoutWorkspaceId, checkoutInvoiceIdsKey, checkoutAmountsKey, effectiveDetail?.invoice.updatedAt, orderReview?.signature]);
+  const checkoutReadKey = `${checkoutSourceKey}:${entry.show}:${editOwnership.canExecute}:${checkoutReloadKey}`;
   const [finishedCheckoutKey, setFinishedCheckoutKey] = useState<string | null>(null);
   const effectiveCheckoutState = !editOwnership.canExecute
     ? billingApiIdleState
@@ -3418,7 +3454,7 @@ export function BillingContent({
       ? billingApiEmptyState
       : checkoutState;
   useEffect(() => {
-    if (entry.show || !editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
+    if (entry.show || orderReviewBlocked || !editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
       return;
     }
 
@@ -3441,7 +3477,7 @@ export function BillingContent({
         return;
       }
 
-      setCheckoutSession(result.checkoutSession);
+      setCheckoutSession({ ...result.checkoutSession, sourceKey: checkoutSourceKey });
       setCheckoutState(billingApiReadyState);
     }
 
@@ -3456,6 +3492,9 @@ export function BillingContent({
     checkoutReadKey,
     checkoutAmountsKey,
     checkoutReloadKey,
+    checkoutSourceKey,
+    orderReviewBlocked,
+    orderReview?.signature,
     editOwnership.canExecute,
     entry.show,
     checkoutWorkspaceId,
@@ -3475,8 +3514,8 @@ export function BillingContent({
     : [];
   usePageReadiness(
     pagePending || billingQueue.status === "loading" || detailReads.some(read => read.status === "loading") || editOwnership.loading
-      || Boolean(!entry.show && editOwnership.canExecute && checkoutWorkspaceId && checkoutInvoiceIds.length && finishedCheckoutKey !== checkoutReadKey),
-    `${workspaceId}:${billingQueue.selectedDate}:${queryInvoiceId ?? selectedInvoiceId}:${entry.show ? "entry" : "instruction"}`,
+      || Boolean(!entry.show && !orderReviewBlocked && editOwnership.canExecute && checkoutWorkspaceId && checkoutInvoiceIds.length && finishedCheckoutKey !== checkoutReadKey),
+    `${workspaceId}:${billingQueue.selectedDate}:${queryInvoiceId ?? selectedInvoiceId}:${entry.show ? "entry" : orderReviewBlocked ? "review" : "checkout"}`,
   );
   if (!effectiveDetail && (billingQueue.status === "loading" || detailReads.some(read => read.status === "loading"))) {
     return <EmrContentLoadingState testId="billing-content-loading-state" title="수납 업무를 불러오는 중입니다" />;
@@ -3579,13 +3618,14 @@ export function BillingContent({
       (effectiveDetail?.invoice.id === invoiceId
         ? effectiveDetail.invoice
         : undefined);
-    if (!targetInvoice || !editOwnership.canExecute || invoiceId !== detail?.invoice.id) return;
+    if (!targetInvoice || !editOwnership.canExecute || invoiceId !== detail?.invoice.id || orderReviewBlocked || (target === "paid" && orderReviewKey && !targetInvoice.updatedAt)) return;
 
     setLinePersistenceState("saving");
     const result = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
       invoiceId,
       paymentMethod: "card",
+      expectedUpdatedAt: targetInvoice.updatedAt,
       reason: `수납 화면에서 ${getBillingCheckoutTransitionLabel(target)} 상태로 변경`,
       target,
       workspaceId: targetInvoice.workspaceId,
@@ -3629,13 +3669,18 @@ export function BillingContent({
             hasRightPanel={Boolean(hasRightPanel)}
           />
           <BillingApiStateNotice apiState={apiState} />
+          {!legacySalesDemo && effectiveDetail && <OrderBillingChangeReview key={effectiveDetail.invoice.id}
+            workspaceId={effectiveDetail.invoice.workspaceId} invoiceId={effectiveDetail.invoice.id} reviewKey={orderReviewKey ?? ""}
+            onApplied={() => { void loadBillingInvoiceLines({ actorHeaders, workspaceId: effectiveDetail.invoice.workspaceId, invoiceId: effectiveDetail.invoice.id }).then(result => {
+              if (result.ok) applyInvoiceSnapshot(result.invoice, result.lines);
+            }); retryCheckout(); }} />}
           <SelectedCheckoutWorkspace
             checkoutSession={
-              editOwnership.canExecute && checkoutInvoiceIds.length ? checkoutSession : undefined
+              !orderReviewBlocked && editOwnership.canExecute && checkoutInvoiceIds.length && checkoutSession?.sourceKey === checkoutSourceKey ? checkoutSession : undefined
             }
-            checkoutState={effectiveCheckoutState}
+            checkoutState={orderReviewBlocked ? billingApiIdleState : effectiveCheckoutState}
             groups={checkoutGroups}
-            editableInvoiceId={editOwnership.canExecute ? detail?.invoice.id : undefined}
+            editableInvoiceId={!orderReviewBlocked && editOwnership.canExecute ? detail?.invoice.id : undefined}
             persistenceState={linePersistenceState}
             onRetryCheckout={retryCheckout}
             onTransitionStatus={handleTransitionInvoiceStatus}
@@ -3766,8 +3811,8 @@ export function BillingRightPanel() {
   >("idle");
   const [paymentFailureContext, setPaymentFailureContext] =
     useState<BillingPaymentFailureContext | null>(null);
-  const [pendingFinancialAction, setPendingFinancialAction] =
-    useState<BillingFinancialAction | null>(null);
+  const [pendingFinancialConfirmation, setPendingFinancialConfirmation] =
+    useState<{ action: BillingFinancialAction; scope: string } | null>(null);
   const [unpaidReason, setUnpaidReason] = useState("");
   const [paymentMemo, setPaymentMemo] = useState("");
   const [adjustmentReason, setAdjustmentReason] = useState("");
@@ -3785,6 +3830,14 @@ export function BillingRightPanel() {
         : null,
     [detail, invoiceLines, invoices, payments],
   );
+  const orderReviewKey = effectiveDetail && !isLegacySalesDemoWorkspace(effectiveDetail.invoice.workspaceId) && /^[0-9a-f-]{36}$/i.test(effectiveDetail.invoice.id)
+    ? `${getBillingProtectedSnapshotOwnerKey(authSession, effectiveDetail.invoice.workspaceId)}:${effectiveDetail.invoice.id}` : null;
+  const orderReview = useBillingStore(state => orderReviewKey ? state.orderChangeReviews[orderReviewKey] : undefined);
+  const orderReviewBlocked = Boolean(orderReviewKey && (orderReview?.status !== "ready" || orderReview.pending));
+  const paymentVersionRef = useRef<string | undefined>(undefined);
+  const financialConfirmationScope = JSON.stringify([effectiveDetail?.invoice.id, effectiveDetail?.invoice.updatedAt, orderReviewBlocked, orderReview?.signature]);
+  const pendingFinancialAction = pendingFinancialConfirmation?.scope === financialConfirmationScope ? pendingFinancialConfirmation.action : null;
+  const setPendingFinancialAction = (action: BillingFinancialAction | null) => setPendingFinancialConfirmation(action ? { action, scope: financialConfirmationScope } : null);
   const selectedCheckoutGroups = useMemo(() => {
     if (!effectiveDetail) return [];
 
@@ -3818,8 +3871,10 @@ export function BillingRightPanel() {
   const checkoutWorkspaceId =
     summaryGroups[0]?.invoice.workspaceId ??
     effectiveDetail?.invoice.workspaceId;
+  const checkoutSourceKey = JSON.stringify([checkoutWorkspaceId, checkoutInvoiceIdsKey, checkoutAmountsKey, effectiveDetail?.invoice.updatedAt, orderReview?.signature, paymentMethod, paymentMemo]);
+  const activeCheckoutSession = !orderReviewBlocked && checkoutSession?.sourceKey === checkoutSourceKey ? checkoutSession : undefined;
   useEffect(() => {
-    if (prework || !ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
+    if (prework || orderReviewBlocked || !ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
 
     const resolvedWorkspaceId = checkoutWorkspaceId;
     let cancelled = false;
@@ -3833,7 +3888,7 @@ export function BillingRightPanel() {
       });
 
       if (cancelled) return;
-      setCheckoutSession(result.ok ? result.checkoutSession : undefined);
+      setCheckoutSession(result.ok ? { ...result.checkoutSession, sourceKey: checkoutSourceKey } : undefined);
     }
 
     void prepareSelectedCheckout();
@@ -3845,6 +3900,9 @@ export function BillingRightPanel() {
     actorHeaders,
     checkoutInvoiceIds,
     checkoutAmountsKey,
+    checkoutSourceKey,
+    orderReviewBlocked,
+    orderReview?.signature,
     checkoutWorkspaceId,
     ownership.canExecute,
     prework,
@@ -3872,9 +3930,9 @@ export function BillingRightPanel() {
     0,
   );
   const dataBackedSummaryBalance =
-    checkoutSession?.payableAmount ?? summaryBalance;
+    activeCheckoutSession?.payableAmount ?? summaryBalance;
   const dataBackedExcludedSummaryGroupCount =
-    checkoutSession?.excludedCount ?? excludedSummaryGroupCount;
+    activeCheckoutSession?.excludedCount ?? excludedSummaryGroupCount;
   const actionDetail =
     payableSummaryGroups.length === 1
       ? (getBillingDetail(
@@ -3903,7 +3961,7 @@ export function BillingRightPanel() {
       ? summaryGroups[0].invoice.invoiceNo
       : `${summaryGroups.length}건 선택`;
   const financialActionDisabled =
-    !actionDetail || payableSummaryGroups.length !== 1 || !ownership.canExecute;
+    !actionDetail || payableSummaryGroups.length !== 1 || !ownership.canExecute || orderReviewBlocked || Boolean(orderReviewKey && !actionDetail?.invoice.updatedAt);
   const handleIssueInvoice = async () => {
     if (!actionDetail || !ownership.canExecute) return false;
     setConfirmationState("saving");
@@ -3992,20 +4050,22 @@ export function BillingRightPanel() {
     return true;
   };
   const handleMarkPaid = async () => {
-    if (!actionDetail || !ownership.canExecute) return false;
+    if (!actionDetail || !ownership.canExecute || orderReviewBlocked) return false;
     setPaymentState("saving");
     const transitionResult = await transitionGuardianCheckoutInvoiceStatus({
       actorHeaders,
+      expectedUpdatedAt: paymentVersionRef.current,
       invoiceId: actionDetail.invoice.id,
       paymentMethod,
       reason: "보호자 수납 완료",
       target: "paid",
       workspaceId: actionDetail.invoice.workspaceId,
     });
-    const result = transitionResult.ok
+    const result = transitionResult.ok || transitionResult.status !== 404
       ? transitionResult
       : await saveBillingPaymentStatus({
           action: "complete_payment",
+          expectedUpdatedAt: paymentVersionRef.current,
           actorHeaders,
           invoiceId: actionDetail.invoice.id,
           paymentMethod,
@@ -4015,6 +4075,7 @@ export function BillingRightPanel() {
     if (!result.ok) {
       setPaymentFailureContext("mark_paid");
       setPaymentState("error");
+      window.dispatchEvent(new CustomEvent("clair-billing-order-change", { detail: { workspaceId: actionDetail.invoice.workspaceId, invoiceId: actionDetail.invoice.id } }));
       return false;
     }
 
@@ -4024,7 +4085,7 @@ export function BillingRightPanel() {
     return true;
   };
   const handleConfirmFinancialAction = async () => {
-    if (!pendingFinancialAction) return;
+    if (!pendingFinancialAction || orderReviewBlocked) return;
     if (pendingFinancialAction === "issue_invoice") {
       await handleIssueInvoice();
     } else if (pendingFinancialAction === "mark_unpaid") {
@@ -4136,6 +4197,9 @@ export function BillingRightPanel() {
                 </EmrInlineAlert>
               ) : null}
 
+              {orderReviewBlocked && <EmrInlineAlert severity="info" title={orderReview?.pending ? "청구 변경 확인 대기" : "청구 변경 확인 중"} className="mt-3">
+                수납 담당자가 변경 내용을 확인하면 결제할 수 있어요.
+              </EmrInlineAlert>}
               <div className="mt-5 emr-text-dense font-semibold">
                 읽기 전용 수납 정보
               </div>
@@ -4245,6 +4309,7 @@ export function BillingRightPanel() {
                       return;
                     }
 
+                    paymentVersionRef.current = actionDetail?.invoice.updatedAt;
                     setPendingFinancialAction(
                       paymentFailureContext === "mark_unpaid"
                         ? "mark_unpaid"
@@ -4264,7 +4329,7 @@ export function BillingRightPanel() {
           disabled={financialActionDisabled}
           paymentState={paymentState}
           onIssueInvoice={() => setPendingFinancialAction("issue_invoice")}
-          onMarkPaid={() => setPendingFinancialAction("mark_paid")}
+          onMarkPaid={() => { paymentVersionRef.current = actionDetail?.invoice.updatedAt; setPendingFinancialAction("mark_paid"); }}
           onMarkUnpaid={() => setPendingFinancialAction("mark_unpaid")}
         />
       </EmrRightPanel>

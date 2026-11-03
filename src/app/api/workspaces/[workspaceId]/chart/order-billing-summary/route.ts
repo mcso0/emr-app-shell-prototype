@@ -79,6 +79,7 @@ export async function POST(request: Request, { params }: RouteContext) {
     return Response.json({ ok: false, error: "etag_header_body_mismatch" }, { status: 400 });
   }
   const result = await requestChartOrderBilling({
+    orderIds: body.orderIds,
     acknowledgeUnfinished: body.acknowledgeUnfinished,
     actorUserId: context.actorUserId,
     encounterId: context.encounterId,

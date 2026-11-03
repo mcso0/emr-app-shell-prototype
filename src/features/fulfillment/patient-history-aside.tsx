@@ -1,5 +1,7 @@
 "use client";
 
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ClockIcon } from "@/components/icons";
 import { CdsFilesCalendarIcon } from "@/components/cds-icons/files-and-layout";
@@ -87,10 +89,12 @@ export function usePatientFulfillmentHistory(
   const [state, setState] = useState<{
     assigneeNames: Record<string, string>;
     key: string;
+    reloadKey?: number;
+    readError?: boolean;
     status: HistoryReadStatus;
     workItems: FulfillmentWorkItem[];
   }>({ assigneeNames: {}, key: "", status: "loading", workItems: [] });
-  const key = `${workspaceId}:${patientId ?? ""}:${queueKey}:${reloadKey}`;
+  const key = `${workspaceId}:${patientId ?? ""}:${queueKey}`;
 
   useEffect(() => {
     if (!patientId) return;
@@ -112,6 +116,12 @@ export function usePatientFulfillmentHistory(
             signal: controller.signal,
           }).catch(() => null),
         ]);
+        if (controller.signal.aborted) return;
+        // Authorization takes precedence even when an error body is not JSON.
+        if (responses.some((response) => response.status === 401 || response.status === 403)) {
+          setState({ assigneeNames: {}, key, status: "permission_denied", workItems: [] });
+          return;
+        }
         const bodies = await Promise.all(responses.map((response) => response.json()));
         const staffBody = staffResponse?.ok
           ? await staffResponse.json().catch(() => null) as { staff?: Array<{ displayName: string; id: string }> } | null
@@ -120,30 +130,31 @@ export function usePatientFulfillmentHistory(
           (staffBody?.staff ?? []).map((staff) => [staff.id, staff.displayName]),
         );
         if (controller.signal.aborted) return;
-        if (responses.some((response) => response.status === 403)) {
-          setState({ assigneeNames: {}, key, status: "permission_denied", workItems: [] });
-        } else if (responses.some((response, index) => !response.ok || !bodies[index]?.ok)) {
-          setState({ assigneeNames: {}, key, status: "error", workItems: [] });
+        if (responses.some((response, index) => !response.ok || !bodies[index]?.ok)) {
+          setState(previous => previous.key === key && previous.status === "ready" ? { ...previous, reloadKey, readError: true } : { assigneeNames: {}, key, reloadKey, status: "error", workItems: [] });
         } else {
           setState({
             assigneeNames,
             key,
+            reloadKey,
             status: "ready",
             workItems: bodies.flatMap((body) => body.workItems as FulfillmentWorkItem[]),
           });
         }
       } catch {
-        if (!controller.signal.aborted) setState({ assigneeNames: {}, key, status: "error", workItems: [] });
+        if (!controller.signal.aborted) setState(previous => previous.key === key && previous.status === "ready" ? { ...previous, reloadKey, readError: true } : { assigneeNames: {}, key, reloadKey, status: "error", workItems: [] });
       }
     }
 
     void load();
     return () => controller.abort();
-  }, [key, patientId, queueKey, workspaceId]);
+  }, [key, patientId, queueKey, workspaceId, reloadKey]);
 
   return { ...(state.key === key
     ? state
     : { assigneeNames: {}, key, status: "loading" as const, workItems: [] }),
+    refreshing: state.key === key && state.status === "ready" && state.reloadKey !== reloadKey,
+    readError: state.key === key && Boolean(state.readError),
     refresh: () => setReloadKey((value) => value + 1),
   };
 }
@@ -152,7 +163,7 @@ type PatientHistoryFilters = { dates: HistoryDateRange; statuses: string[]; assi
 const emptyFilters: PatientHistoryFilters = { dates: emptyHistoryDateRange, statuses: [], assignees: [], names: [], modalities: [] };
 
 export function PatientHistoryAside({
-  entries, id, kind, label, onCollapse, showCategories = false, status = "ready",
+  entries, id, kind, label, onCollapse, showCategories = false, status = "ready", refreshing = false, readError = false, onRetry,
 }: {
   entries: PatientHistoryEntry[];
   id: string;
@@ -161,6 +172,9 @@ export function PatientHistoryAside({
   onCollapse: () => void;
   showCategories?: boolean;
   status?: HistoryReadStatus;
+  refreshing?: boolean;
+  readError?: boolean;
+  onRetry?: () => void;
 }) {
   const search = useHistorySearch();
   const searchTriggerRef = useRef<HTMLButtonElement>(null);
@@ -218,7 +232,9 @@ export function PatientHistoryAside({
       {showCategories ? <div className={styles.tabs}><SegmentedControl aria-label="조제/처치 이력 종류" items={[{ label: "전체", value: "all" }, { label: "조제", value: "dispensing" }, { label: "처치", value: "treatment" }]} size="sm" value={category} variant="tabs" onValueChange={(value) => { setCategory(value); setCollapsedGroups(new Set()); }} /></div> : null}
       <ScrollArea className={historyLayoutStyles.scrollArea}>
         <div className={historyLayoutStyles.groups}>
-          {status === "loading" ? <p className={styles.message}>이력을 불러오는 중입니다.</p> : null}
+          {refreshing ? <p role="status" className={styles.message}>이력을 갱신하는 중입니다.</p> : null}
+          {readError ? <div role="alert"><p>이력을 갱신하지 못했습니다.</p>{onRetry && <Button size="sm" variant="outline" onClick={onRetry}>다시 조회</Button>}</div> : null}
+          {status === "loading" ? <PatientHistoryLoading /> : null}
           {status === "permission_denied" ? <EmrInlineAlert severity="warning" title="이력을 볼 권한이 없습니다." /> : null}
           {status === "error" ? <EmrInlineAlert severity="warning" title="이력을 불러오지 못했습니다." /> : null}
           {status === "ready" && !groups.size ? <EmrEmptyState surface="queue" size="sm" density="compact" kind={!entries.length ? "no-data" : search.searchQuery.trim() ? "no-search-results" : "no-filter-results"} title={!entries.length ? "기록된 이력이 없습니다" : search.searchQuery.trim() ? "검색 결과가 없습니다" : "조건에 맞는 이력이 없습니다"} description={!entries.length ? "환자의 이력이 등록되면 표시됩니다." : "검색어와 필터 조건을 확인해 주세요."} primaryAction={entries.length && activeCount ? <Button size="sm" variant="outline" onClick={resetFilters}>필터 해제</Button> : undefined} testId={`${id}-empty-state`} /> : null}
@@ -257,4 +273,8 @@ function HistoryCard({ entry }: { entry: PatientHistoryEntry }) {
       {contents}
     </button>
   ) : <div className={styles.entry} data-testid={`patient-history-item-${entry.id}`}>{contents}</div>;
+}
+
+export function PatientHistoryLoading() {
+  return <EmrMeasuredLoading label="이력을 불러오는 중입니다.">{[0, 1, 2].map(index => <HistoryCard key={index} entry={{ id: `synthetic-loading-${index}`, timestamp: "2026-01-01T00:00:00Z", title: "가상 과거 이력", status: "완료", assignee: "가상 담당자" }} />)}</EmrMeasuredLoading>;
 }

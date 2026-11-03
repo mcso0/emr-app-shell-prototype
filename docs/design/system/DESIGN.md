@@ -244,6 +244,18 @@ CLAiR screens favor operational density:
   independent partial reads and same-page refresh. Preserve resolved values,
   explicit failure/denial/missing states, accessible busy descriptions and
   reduced-motion behavior. Do not add artificial loading delays.
+- measured loading for the approved small read-only profile, summary and
+  card/list slices uses `EmrMeasuredLoading` with synthetic presentation content.
+  Real loaded data, fetching owners and editors never enter the measurement
+  boundary. Keep existing content during same-scope refresh/pagination; clear it
+  on subject/workspace changes and authorization denial. Errors and empty states
+  remain explicit. Existing table/calendar/field skeletons and saving/upload
+  progress retain their current owners. Skullet 0.0.3 is pinned; verify the
+  no-persistence and accessibility stories before upgrades. Scope and evidence:
+  [approved adoption](../../work/customer/CUSTOMER-PR-002-patient-guardian-profile-side-panel.md#2026-11-03-approved-measured-loading-adoption).
+  Page-level required reads take precedence: keep these slices inside the page
+  boundary until the complete page is ready; independent partial reads may
+  continue to display their existing skeletons.
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at

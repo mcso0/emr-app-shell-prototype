@@ -150,6 +150,7 @@ export function createMockChartOrderBillingSummaryFromMutationRows({
 }
 
 export type ChartOrderBillingRequestInput = {
+  orderIds?: string[];
   acknowledgeUnfinished?: boolean;
   encounterId?: string;
   expectedEtag?: string;

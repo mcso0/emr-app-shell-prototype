@@ -539,6 +539,7 @@ export type Invoice = {
   selectedPaymentMethod?: PaymentMethod;
   unpaidReason?: string;
   createdAt: IsoDateTime;
+  updatedAt?: IsoDateTime;
 };
 
 export type InvoiceLine = {

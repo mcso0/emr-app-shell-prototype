@@ -1,6 +1,8 @@
 "use client";
 
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+import type { ConfirmedOrderContext } from "./confirmed-order-edit-contract";
+import { ConfirmedOrderEditDialog } from "@/features/chart/components/confirmed-order-edit-dialog";
 import { formatDispenseRequestQuantity, updateDispensingPrescriptionWithUnits, getDispenseRequestCourseQuantity, getDispenseRequestDisplayPrecision } from "@/features/chart/dispense-request-quantity";
 import { canonicalDispensingUnit } from "./dispensing-unit-conversion";
 import { OverallInstructionsEditor } from "./overall-instructions-editor";
@@ -4086,6 +4088,21 @@ async function loadChartOrderBillingSummaryRoute({
   }
 }
 
+async function requestChartOrderBillingRoute({
+  actorHeaders, workspaceId, encounterId, orderIds, expectedEtag, idempotencyKey, acknowledgeUnfinished,
+}: { actorHeaders?: Record<string, string>; workspaceId: string; encounterId: string;
+  orderIds: string[]; expectedEtag: string; idempotencyKey: string; acknowledgeUnfinished: boolean;
+}): Promise<ChartOrderBillingSummaryRouteResponse> {
+  try {
+    const response = await fetch(`/api/workspaces/${encodeURIComponent(workspaceId)}/chart/order-billing-summary`, {
+      method: "POST", headers: { ...actorHeaders, "Content-Type": "application/json", "If-Match": expectedEtag },
+      body: JSON.stringify({ encounterId, orderIds, expectedEtag, idempotencyKey, acknowledgeUnfinished }),
+    });
+    const body = await response.json() as ChartOrderBillingSummaryRouteResponse;
+    return response.ok && body.ok ? body : !body.ok ? { ...body, status: response.status } : { ok: false, status: response.status, error: "db_write_failed" };
+  } catch { return { ok: false, status: 500, error: "network_error" }; }
+}
+
 async function saveChartOrderPrebillingOverrideRoute({
   actorHeaders,
   encounterId,
@@ -6118,15 +6135,15 @@ function buildChartOrderDraftRowFromRuntime(
     createdAt: fallback?.order.createdAt ?? snapshot.updatedAt,
     updatedAt: snapshot.updatedAt,
   };
-  const quantityInput = String(snapshot.quantity);
+  const quantityInput = String(snapshot.preBillingOverride?.billingQuantity ?? snapshot.quantity);
 
   return {
     ...(fallback ?? {}),
     billingCandidateId: fallback?.billingCandidateId,
     billingCandidateStatus:
       snapshot.billingCandidateStatus ?? fallback?.billingCandidateStatus,
-    billingName,
-    committedBillingName: billingName,
+    billingName: typeof snapshot.preBillingOverride?.billingName === "string" ? snapshot.preBillingOverride.billingName : billingName,
+    committedBillingName: typeof snapshot.preBillingOverride?.billingName === "string" ? snapshot.preBillingOverride.billingName : billingName,
     committedQuantityInput: quantityInput,
     detailInputs: snapshot.detailInputs,
     detailSchemaVersion: snapshot.detailSchemaVersion,
@@ -6144,7 +6161,7 @@ function buildChartOrderDraftRowFromRuntime(
       rowType === "set_child" ? applied.selected !== false : undefined,
     setPreview,
     setSelectionIntent,
-    unitPrice: snapshot.unitPriceSnapshot ?? getNumber("priceKrw") ?? null,
+    unitPrice: typeof snapshot.preBillingOverride?.unitPriceKrw === "number" ? snapshot.preBillingOverride.unitPriceKrw : snapshot.unitPriceSnapshot ?? getNumber("priceKrw") ?? null,
   };
 }
 
@@ -6657,6 +6674,9 @@ function getChartOrderAdministration(row: ChartOrderDraftRow) {
 }
 
 function getChartOrderTaxValue(row: ChartOrderDraftRow) {
+  const effectiveTax = getChartOrderBillingOverride(row).taxClass;
+  if (effectiveTax === "taxable") return true;
+  if (effectiveTax === "non_taxable") return false;
   const authority = getChartOrderAuthority(row);
   if (authority?.taxClass === "taxable") return true;
   if (authority?.taxClass === "non_taxable") return false;
@@ -8116,7 +8136,7 @@ function ChartOrderTable({
   onOpenHistory: (orderId: string) => void;
   onOpenMutation: (
     orderId: string,
-    action: ChartOrderExecutionMutationAction,
+    action: ChartOrderExecutionMutationAction | "edit",
   ) => void;
   onLoadIntendedAssignees: (orderId: string) => void;
   onSaveActualDispense: (
@@ -9705,7 +9725,7 @@ function ChartOrderTable({
               ? "세트 자식은 개별 수정할 수 없습니다."
               : setParent
                 ? "세트 오더는 더보기에서 재요청할 수 있습니다."
-                : writeDisabled
+                : writeDisabled && !["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow))
                   ? "오더 수정 권한이 없습니다."
                   : !primaryEditAction
                     ? "현재 상태에서는 수정할 수 없습니다."
@@ -9727,7 +9747,7 @@ function ChartOrderTable({
                     disabled={Boolean(editReason)}
                     onClick={() =>
                       primaryEditAction &&
-                      onOpenMutation(order.id, primaryEditAction)
+                      onOpenMutation(order.id, ["dispensing", "treatment"].includes(getChartOrderClinicalType(orderRow)) ? "edit" : primaryEditAction)
                     }
                     type="button"
                   >
@@ -9836,6 +9856,10 @@ function ChartOrderTable({
                     ) : null}
                     {!hasMixedSelection ? (
                       <>
+                        <ChartOrderDisabledAction reason={selectedConfirmedRows.length !== 1 ? "한 번에 한 오더를 선택해 주세요." : undefined}>
+                          <Button variant="outline" disabled={selectedConfirmedRows.length !== 1 || !["dispensing", "treatment"].includes(getChartOrderClinicalType(selectedConfirmedRows[0])) || selectedConfirmedRows[0]?.runtimeRow?.rowType === "set"}
+                            onClick={() => onOpenMutation(selectedConfirmedRows[0].order.id, "edit")}>수정</Button>
+                        </ChartOrderDisabledAction>
                         <Button
                           size="default"
                           variant="outline"
@@ -12137,6 +12161,17 @@ const OrderArea = memo(function OrderArea({
   >(null);
   const [deleteOrderIds, setDeleteOrderIds] = useState<string[]>([]);
   const [selectedBillingOrderIds, setSelectedBillingOrderIds] = useState<string[]>([]);
+  const [billingRequesting, setBillingRequesting] = useState(false);
+  const [billingUnfinishedAcknowledged, setBillingUnfinishedAcknowledged] = useState(false);
+  const billingRequestPendingRef = useRef(false);
+  const selectedBillingEtagRef = useRef<string | null>(null);
+  const billingRequestAttemptRef = useRef<{ fingerprint: string; expectedEtag: string; idempotencyKey: string } | null>(null);
+  const billingRequestScopeRef = useRef(0);
+  useEffect(() => {
+    const generation = ++billingRequestScopeRef.current;
+    return () => { billingRequestScopeRef.current = generation + 1; };
+  }, [bundle.encounter.workspaceId, bundle.encounter.id]);
+
   const [bulkOrderMutation, setBulkOrderMutation] = useState<ChartOrderBulkMutationDraft | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [historyOrderId, setHistoryOrderId] = useState<string | null>(null);
@@ -12171,6 +12206,7 @@ const OrderArea = memo(function OrderArea({
   const intendedAssigneeSavingOrderIdsRef = useRef<Set<string>>(new Set());
   const [draftInstruction, setDraftInstruction] = useState<{ orderId: string; text: string } | null>(null);
   const [instructionWorkItemId, setInstructionWorkItemId] = useState<string | null>(null);
+  const [confirmedEditId, setConfirmedEditId] = useState<string | null>(null);
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
   const [catalogDialogOpen, setCatalogDialogOpen] = useState(false);
@@ -13415,6 +13451,19 @@ const OrderArea = memo(function OrderArea({
     void refreshBillingSummary();
     toast.success("청구 전 값을 저장했어요.");
   };
+  const handleConfirmedOrderSaved = (context: ConfirmedOrderContext) => {
+              const update = (rows: ChartOrderDraftRow[]) => rows.map(item => item.order.id === context.orderId ? {
+                ...item, detailInputs: context.detailInputs,
+                ...(context.financial ? { billingName: context.financial.billingName, committedBillingName: context.financial.billingName,
+                  quantityInput: String(context.financial.billingQuantity), committedQuantityInput: String(context.financial.billingQuantity), unitPrice: context.financial.unitPriceKrw } : {}),
+                runtimeRow: item.runtimeRow ? { ...item.runtimeRow, detailInputs: context.detailInputs, calculationOutputs: context.calculationOutputs,
+                  ...(context.financial ? { preBillingOverride: { ...item.runtimeRow.preBillingOverride, ...context.financial }, billingReflectionEnabled: context.financial.billingReflectionEnabled } : {}) } : item.runtimeRow,
+              } : item);
+              setDraftRows(update); setCommittedRows(update); setConfirmedEditId(null); setSelectedOrderIds(new Set());
+              void refreshOrderExecution(); void refreshBillingSummary();
+              toast.success(context.pendingFinancial ? "변경안을 저장했어요. 수납 담당자 확인을 기다려요." : "오더 수정을 저장했어요.");
+
+  };
   const refreshOrderExecution = async () => {
     const result = await loadChartOrderExecution({
       actorHeaders,
@@ -14322,6 +14371,11 @@ const OrderArea = memo(function OrderArea({
       toast.info("선택한 확정 오더 중 수납 청구 가능한 오더가 없습니다.");
       return;
     }
+    if (billingRequestPendingRef.current) return;
+    selectedBillingEtagRef.current = billingSummaryRef.current?.etag ?? null;
+    billingRequestAttemptRef.current = null;
+    setBillingRequestError(undefined);
+    setBillingUnfinishedAcknowledged(false);
     setSelectedBillingOrderIds(eligibleOrderIds);
   };
   const openBulkOrderMutation = (
@@ -14493,8 +14547,9 @@ const OrderArea = memo(function OrderArea({
   };
   const openOrderMutation = (
     orderId: string,
-    action: ChartOrderExecutionMutationAction,
+    action: ChartOrderExecutionMutationAction | "edit",
   ) => {
+    if (action === "edit") { setConfirmedEditId(orderId); return; }
     const row = draftRows.find((candidate) => candidate.order.id === orderId);
     if (!row || !isChartOrderConfirmedRow(row)) return;
     const outputs = row.runtimeRow?.calculationOutputs ?? {};
@@ -14717,7 +14772,7 @@ const OrderArea = memo(function OrderArea({
   const effectiveBillingSummary = localBillingSummary;
   const billingError = billingRequestError;
   const canRequestBilling =
-    Boolean(onNavigateToBilling) && orderDraftSaveState !== "loading";
+    Boolean(onNavigateToBilling) && !writeDisabled && !billingRequesting && orderDraftSaveState !== "loading";
   const orderFooterAccessibilitySummary = [
     `선택 오더 ${selectedOrderIds.size}건`,
     `선택 오더 합계 ${selectedAmount.toLocaleString()}원`,
@@ -14726,8 +14781,61 @@ const OrderArea = memo(function OrderArea({
     .filter(Boolean)
     .join(" · ");
   const openEncounterBilling = () => {
-    setBillingRequestError(undefined);
-    onNavigateToBilling?.(billingSummaryRef.current?.invoiceId ?? undefined);
+    if (localBillingSummary.requestableOrderIds.length) {
+      openSelectedBilling(localBillingSummary.requestableOrderIds);
+    } else {
+      onNavigateToBilling?.(billingSummaryRef.current?.invoiceId ?? undefined);
+    }
+  };
+  const selectedUnfinishedOrders = (billingSummary?.unfinishedOrders ?? []).filter(item => selectedBillingOrderIds.includes(item.orderId));
+  const commitSelectedBilling = async () => {
+    if (billingRequestPendingRef.current || writeDisabled || !selectedBillingOrderIds.length) return;
+    const generation = billingRequestScopeRef.current;
+    const orderIds = [...selectedBillingOrderIds].sort();
+    const fingerprint = JSON.stringify({ orderIds, acknowledgeUnfinished: billingUnfinishedAcknowledged });
+    billingRequestPendingRef.current = true; setBillingRequesting(true); setBillingRequestError(undefined);
+    try {
+      if (!selectedBillingEtagRef.current) {
+        await refreshBillingSummary();
+        if (generation !== billingRequestScopeRef.current) return;
+        selectedBillingEtagRef.current = billingSummaryRef.current?.etag ?? null;
+        setBillingRequestError("최신 금액을 확인한 뒤 다시 수납 청구해 주세요.");
+        setOrderDraftReloadKey(key => key + 1);
+        return;
+      }
+      if (billingRequestAttemptRef.current?.fingerprint !== fingerprint) {
+        billingRequestAttemptRef.current = { fingerprint, expectedEtag: selectedBillingEtagRef.current, idempotencyKey: crypto.randomUUID() };
+      }
+      const result = await requestChartOrderBillingRoute({ actorHeaders, workspaceId: bundle.encounter.workspaceId,
+        encounterId: bundle.encounter.id, orderIds, expectedEtag: billingRequestAttemptRef.current.expectedEtag,
+        idempotencyKey: billingRequestAttemptRef.current.idempotencyKey, acknowledgeUnfinished: billingUnfinishedAcknowledged });
+      if (generation !== billingRequestScopeRef.current) return;
+      if (!result.ok) {
+        const messages: Record<string, string> = {
+          revision_conflict: "오더나 금액이 변경됐어요. 최신 내용을 확인한 뒤 다시 요청해 주세요.",
+          unfinished_ack_required: "아직 완료되지 않은 오더를 확인해 주세요.",
+          billing_selection_unavailable: "선택한 오더의 청구 상태가 바뀌었어요. 오더를 다시 선택해 주세요.",
+          billing_authority_incomplete: "선택한 오더의 청구 정보가 부족해요.",
+          returned_work_blocks_billing: "반려된 오더를 확인한 뒤 요청해 주세요.",
+        };
+        setBillingRequestError(result.denialReason === "permission_missing" ? "수납 요청 권한이 없습니다." : messages[result.error ?? ""] ?? "수납 요청에 실패했어요. 다시 시도해 주세요.");
+        if (["revision_conflict", "unfinished_ack_required", "billing_selection_unavailable"].includes(result.error ?? "")) {
+          billingRequestAttemptRef.current = null;
+          await refreshBillingSummary();
+          if (generation !== billingRequestScopeRef.current) return;
+          selectedBillingEtagRef.current = billingSummaryRef.current?.etag ?? null;
+          setOrderDraftReloadKey(key => key + 1);
+        }
+        return;
+      }
+      acceptAuthoritativeBillingSummary(result.summary);
+      billingRequestAttemptRef.current = null;
+      setSelectedBillingOrderIds([]); setSelectedOrderIds(new Set()); setOrderDraftReloadKey(key => key + 1);
+      onNavigateToBilling?.(result.summary.invoiceId ?? undefined);
+    } finally {
+      billingRequestPendingRef.current = false;
+      if (generation === billingRequestScopeRef.current) setBillingRequesting(false);
+    }
   };
   useEffect(() => {
     if (!billingDrawerOpen) return;
@@ -15240,6 +15348,24 @@ const OrderArea = memo(function OrderArea({
         {instructionWorkItemId ? <ChartInstructionDialog key={instructionWorkItemId}
           workspaceId={bundle.encounter.workspaceId} workItemId={instructionWorkItemId}
           onClose={() => setInstructionWorkItemId(null)} onChanged={() => { void refreshOrderExecution(); }} /> : null}
+        {confirmedEditId && mutationChartId && (() => {
+          const row = draftRows.find(row => row.order.id === confirmedEditId);
+          if (!row) return null;
+          const contract = getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion);
+          return <ConfirmedOrderEditDialog key={`${mutationChartId}:${confirmedEditId}`} workspaceId={bundle.encounter.workspaceId}
+            chartId={mutationChartId} orderId={confirmedEditId} clinicalType={getChartOrderClinicalType(row) === "dispensing" ? "dispensing" : "treatment"} name={row.order.displayName} fieldLabels={Object.fromEntries(contract?.fields.map(field => [field.key, field.label]) ?? [])} onClose={() => setConfirmedEditId(null)}
+            renderClinical={(inputs, change, disabled) => <div className="grid gap-3 sm:grid-cols-2">{contract?.fields.map(definition => <label key={definition.key} className="grid gap-1.5 text-sm"><span>{definition.label}</span>
+              <ChartOrderFieldControl definition={definition} disabled={disabled} orderName={row.order.displayName}
+                medicationOrders={draftRows.filter(item => getChartOrderClinicalType(item) === "dispensing").map(item => ({ id: item.order.id, name: item.order.displayName }))}
+                unitOptions={getChartOrderSelectableUnits(row, definition, inputs)} value={inputs[definition.key]}
+                onChange={value => {
+                  if (getChartOrderClinicalType(row) === "dispensing") {
+                    const updated = updateDispensingPrescriptionWithUnits(inputs, definition.key, value, getChartOrderAuthority(row));
+                    if (updated.ok) change(updated.inputs); else toast.error(updated.message);
+                  } else { const next = { ...inputs }; if (value === undefined || value === "") delete next[definition.key]; else next[definition.key] = value; change(next); }
+                }} /></label>)}</div>}
+            onSaved={handleConfirmedOrderSaved} />;
+        })()}
         <ChartOrderMutationDialog
           medicationOrders={draftRows.filter(row => getChartOrderClinicalType(row) === "dispensing" && row.order.status !== "cancelled")
             .map(row => ({ id: row.order.id, name: row.order.displayName }))}
@@ -15298,7 +15424,7 @@ const OrderArea = memo(function OrderArea({
           error={billingError}
           freshness="fresh"
           hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
-          requesting={false}
+          requesting={billingRequesting}
           saveStatusText={draftStatusText}
           summary={effectiveBillingSummary}
           onOpenDetails={() => {
@@ -15314,51 +15440,26 @@ const OrderArea = memo(function OrderArea({
           freshness="fresh"
           hasAuthoritativeSummary={hasAuthoritativeBillingSummary}
           open={billingDrawerOpen}
-          requesting={false}
+          requesting={billingRequesting}
           summary={effectiveBillingSummary}
           onClose={() => setBillingDrawerOpen(false)}
           onRetry={() => setOrderDraftReloadKey((key) => key + 1)}
           onRequestBilling={openEncounterBilling}
         />
-        <Dialog
-          open={selectedBillingOrderIds.length > 0}
-          onOpenChange={(open) => {
-            if (!open) setSelectedBillingOrderIds([]);
-          }}
-        >
+        <Dialog open={selectedBillingOrderIds.length > 0} onOpenChange={open => { if (!open && !billingRequestPendingRef.current) setSelectedBillingOrderIds([]); }}>
           {selectedBillingOrderIds.length > 0 ? (
-            <EmrConfirmDialogContent
-              title="선택 오더 수납 청구"
-              description={
-                <span className="grid gap-3">
-                  <span>선택한 확정 오더만 수납 청구합니다.</span>
-                  <span className="rounded-[var(--emr-radius-control)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-muted)] p-3 emr-text-dense text-foreground">
-                    {selectedBillingOrderIds.length}개 확정 오더 ·{" "}
-                    {draftRows
-                      .filter((row) => selectedBillingOrderIds.includes(row.order.id))
-                      .reduce(
-                        (sum, row) => sum + getChartOrderScopedChargeAmount(row),
-                        0,
-                      )
-                      .toLocaleString()}
-                    원
-                  </span>
-                </span>
-              }
-              cancelLabel="취소"
-              confirmLabel="수납 청구"
-              confirmDisabled={writeDisabled}
-              onCancel={() => setSelectedBillingOrderIds([])}
-              onConfirm={() => {
-                const orderIds = [...selectedBillingOrderIds];
-                setSelectedBillingOrderIds([]);
-                setSelectedOrderIds(new Set());
-                onNavigateToBilling?.(
-                  billingSummaryRef.current?.invoiceId ?? undefined,
-                  orderIds,
-                );
-              }}
-            />
+            <EmrDialogShell variant="confirm" title="선택 오더 수납 청구" description="선택한 확정 오더만 수납 청구합니다." showCloseButton={!billingRequesting}
+              secondaryAction={<Button variant="outline" disabled={billingRequesting} onClick={() => setSelectedBillingOrderIds([])}>취소</Button>}
+              primaryAction={<Button disabled={writeDisabled || billingRequesting || (selectedUnfinishedOrders.length > 0 && !billingUnfinishedAcknowledged)} onClick={() => void commitSelectedBilling()}>{billingRequesting ? "요청 중…" : "수납 청구"}</Button>}>
+              <p className="rounded-md border bg-muted p-3 text-sm">
+                {selectedBillingOrderIds.length}개 확정 오더 · {draftRows.filter(row => selectedBillingOrderIds.includes(row.order.id)).reduce((sum, row) => sum + getChartOrderScopedChargeAmount(row), 0).toLocaleString()}원
+              </p>
+              {selectedUnfinishedOrders.length > 0 && <label className="mt-3 flex items-start gap-2 text-sm">
+                <Checkbox checked={billingUnfinishedAcknowledged} disabled={billingRequesting} onCheckedChange={checked => setBillingUnfinishedAcknowledged(checked === true)} />
+                <span>작업 미완료 {selectedUnfinishedOrders.length}건을 확인했으며 수납을 요청합니다.</span>
+              </label>}
+              {billingRequestError && <p role="alert" className="mt-3 text-sm text-destructive">{billingRequestError}</p>}
+            </EmrDialogShell>
           ) : null}
         </Dialog>
         <Dialog

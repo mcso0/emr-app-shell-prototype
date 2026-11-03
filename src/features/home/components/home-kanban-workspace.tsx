@@ -1,6 +1,7 @@
 "use client";
 
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
@@ -317,23 +318,8 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
   </section>;
 }
 
-function HomeDataLoadingState() {
-  return (
-    <div
-      aria-label="업무를 불러오는 중"
-      className="flex min-h-full w-full items-center justify-center"
-      data-testid="home-loading-state"
-      role="status"
-    >
-      <EmrEmptyState
-        kind="upstream-pending"
-        reserveActionSpace={false}
-        size="lg"
-        surface="content"
-        title="업무를 불러오는 중입니다"
-      />
-    </div>
-  );
+export function HomeDataLoadingState() {
+  return <div className="grid w-full content-start gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="home-loading-state"><EmrMeasuredLoading label="업무를 불러오는 중입니다"><div className="flex flex-col gap-2">{[0, 1, 2].map(index => <EmrTaskQueueCard key={index} selected={false} item={{ patientName: "가상 환자", guardianName: "가상 보호자", receptionType: "외래", secondLineText: "가상 업무 내용", assigneeName: "가상 담당자", eventActorName: "가상 요청자", eventTime: "00:00", eventText: "요청 00:00", actionAriaLabel: "가상 업무 메뉴" }} />)}</div></EmrMeasuredLoading></div>;
 }
 
 function HomeWorkTypeIcon({ id }: { id: string }) {

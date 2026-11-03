@@ -41,7 +41,7 @@ function InstructionEntry({ item, showScope }: { item: EffectiveInstructions["en
   const badgeRef = useRef<HTMLSpanElement>(null);
   const contentId = useId();
   const text = item.deleted ? "지시 삭제됨" : item.instruction;
-  const label = item.legacy ? "경구제 지시" : instructionScopeLabels[item.scope];
+  const label = item.kind === "clinical_edit" ? "업무 변경" : item.legacy ? "경구제 지시" : instructionScopeLabels[item.scope];
   useEffect(() => {
     const row = rowRef.current;
     const measure = measureRef.current;
@@ -84,9 +84,10 @@ export function TaskInstructionCallout({ document, workspaceId, onReview }: {
     (hidden ? restoreRef : historyRef).current?.focus();
     movedFocus.current = false;
   }, [hidden]);
-  const changed = document.entries.some(item => item.revision > 1);
+  const clinicalChanged = document.entries.some(item => item.kind === "clinical_edit");
+  const changed = clinicalChanged || document.entries.some(item => item.revision > 1);
   const single = document.entries.length === 1 ? document.entries[0] : null;
-  const title = single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
+  const title = clinicalChanged ? "업무 내용 변경됨" : single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
   return <div className={styles.container}>
     {hidden ? <Button ref={restoreRef} size="sm" variant="ghost" onClick={() => { movedFocus.current = true; setHidden(false); }}><CdsAlertsInfoIcon />지시사항 다시 보기</Button> :
       <aside aria-labelledby={titleId} className={`${styles.card} ${changed ? "" : styles.withoutHistory}`}>
@@ -94,11 +95,11 @@ export function TaskInstructionCallout({ document, workspaceId, onReview }: {
         <div className={styles.content}>
           <div className={styles.heading}><h3 id={titleId} className={styles.title}>{title}</h3>{changed && <Badge variant="secondary" size="sm" className={styles.changedBadge}>변경됨</Badge>}</div>
           <div className={styles.entries}>
-            {document.entries.map(item => <InstructionEntry key={`${item.scope}:${!!item.legacy}`} item={item} showScope={!single} />)}
+            {document.entries.map(item => <InstructionEntry key={`${item.scope}:${item.kind ?? item.legacy}:${item.orderId ?? ""}`} item={item} showScope={!single} />)}
           </div>
         </div>
         <div className={styles.actions}>
-          {changed && <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>}
+          {changed && <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => clinicalChanged ? onReview() : setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>}
           <Button ref={changed ? undefined : historyRef} variant="ghost" className={`${styles.ghost} ${styles.icon}`} aria-label="지시사항 숨기기" onClick={() => { movedFocus.current = true; setHidden(true); }}><CdsActionsXIcon /></Button>
         </div>
       </aside>}

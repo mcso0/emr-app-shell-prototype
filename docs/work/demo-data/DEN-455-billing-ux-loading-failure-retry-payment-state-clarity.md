@@ -173,6 +173,15 @@ candidate is Ready deployment `dpl_H3t59E8FyYiJJvPbxSRUVAcfg9Va`, source
 `11ed230d1029290ec0ae627ade20e0663c250fc5`. Refresh this comparison if main moves.
 The existing one-off Preview path does not enable project-wide automation.
 
+Candidate integration preserves main's measured partial-loading components and
+confirmed-order editing/billing approval flow. Initial order-change reads join
+the page boundary, while approval/error states remain interactive and block
+checkout under the existing policy. A newly approved checkout phase waits for
+its own prepared response. Keep both upstream approval-gate coverage and the
+new delayed-review/checkout plus 403/500 retry cases. No upstream migration,
+dependency, financial calculation or authorization policy is modified by this PR.
+Final release evidence is recorded in the PR to avoid changing its checked head.
+
 ## Goal
 
 Make the API-primary billing screen show understandable loading, failure, retry, and permission states for invoice lines, payment status, and checkout session preparation.

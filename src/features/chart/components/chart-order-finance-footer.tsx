@@ -1,5 +1,7 @@
 "use client";
 
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -229,7 +231,7 @@ export function ChartOrderBillingDetailAside({
         data-testid="chart-order-amount-detail-body"
       >
         {isInitialLoading ? (
-          <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="upstream-pending" reserveActionSpace={false} size="md" surface="drawer" title="금액을 불러오는 중입니다" />
+          <AmountDetailLoading />
         ) : isInitialError ? (
           <EmrEmptyState className="mx-auto min-h-[var(--emr-chart-order-amount-detail-empty-height)] justify-center" kind="read-error" primaryAction={<Button size="sm" variant="outline" onClick={onRetry}>다시 시도</Button>} priority="local-recovery" reserveActionSpace={false} size="md" surface="drawer" title="금액을 불러오지 못했습니다" />
         ) : hasNoOrders ? (
@@ -491,4 +493,8 @@ function getBillingStatusText(
   if (displayState === "invalid") return "입력 확인 필요 · 예상 금액";
   if (displayState === "save_error") return "저장 실패 · 예상 금액";
   return getFreshnessText(freshness);
+}
+
+export function AmountDetailLoading() {
+  return <EmrMeasuredLoading label="금액을 불러오는 중입니다"><div className="flex flex-col gap-[var(--clair-spacing-16)]"><AmountDetailCard muted testId="billing-loading-total"><AmountDetailCardTitle id="billing-loading-total-title" title="총 오더 합계" /><MoneyRow label="전체 오더" value="00,000 원" /></AmountDetailCard><AmountDetailCard testId="billing-loading-orders"><AmountDetailCardTitle id="billing-loading-orders-title" title="오더 상세" /><OrderDetailRow amount={0} count={0} state="draft" /><AmountDetailDivider /><OrderDetailRow amount={0} count={0} state="confirmed" /></AmountDetailCard></div></EmrMeasuredLoading>;
 }

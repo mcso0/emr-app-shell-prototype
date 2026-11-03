@@ -1,6 +1,7 @@
 "use client";
 
 import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -44,7 +45,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   type SpaceCategoryIconKey,
   type SpaceManagementMutationInput,
@@ -503,29 +503,7 @@ function CategoryOverview({
                   onClick={() => onSelectCategory(category.id)}
                   type="button"
                 >
-                  <span
-                    className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground"
-                    data-icon-key={category.iconKey}
-                    data-testid={`space-category-icon-${categoryTestId(category)}`}
-                  >
-                    <CategoryIcon iconKey={category.iconKey} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm leading-5 font-medium tracking-[0.014em]">
-                        {category.name}
-                      </span>
-                      <Badge className="min-w-5 justify-center" variant="secondary">
-                        {category.spaces.length}
-                      </Badge>
-                    </span>
-                    <span className="block text-sm leading-5 tracking-[0.014em] text-muted-foreground">
-                      {getCategoryDescription(category)}
-                    </span>
-                  </span>
-                  <span className="flex size-8 shrink-0 items-center justify-center">
-                    <CdsNavigationChevronRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                  </span>
+                  <SpaceCategoryContents category={category} />
                 </button>
               ))}
             </div>
@@ -941,22 +919,32 @@ function CategoryIcon({
   }
 }
 
-function SpaceManagementLoading() {
-  return (
-    <Card className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]">
-      <CardContent className="p-0">
-        {[0, 1, 2, 3, 4].map((item) => (
-          <div className="flex min-h-[85px] items-center gap-3 px-4 md:px-6" key={item}>
-            <Skeleton className="size-11 shrink-0 rounded-lg" />
-            <div className="grid flex-1 gap-2">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-4 w-64 max-w-full" />
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
+function SpaceCategoryContents({ category }: { category: WorkspaceSpaceCategory }) { return <>                  <span
+                    className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground"
+                    data-icon-key={category.iconKey}
+                    data-testid={`space-category-icon-${categoryTestId(category)}`}
+                  >
+                    <CategoryIcon iconKey={category.iconKey} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm leading-5 font-medium tracking-[0.014em]">
+                        {category.name}
+                      </span>
+                      <Badge className="min-w-5 justify-center" variant="secondary">
+                        {category.spaces.length}
+                      </Badge>
+                    </span>
+                    <span className="block text-sm leading-5 tracking-[0.014em] text-muted-foreground">
+                      {getCategoryDescription(category)}
+                    </span>
+                  </span>
+                  <span className="flex size-8 shrink-0 items-center justify-center">
+                    <CdsNavigationChevronRightIcon className="size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                  </span>
+</>; }
+export function SpaceManagementLoading() {
+  return <Card className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"><CardContent className="p-0"><EmrMeasuredLoading label="공간 목록을 불러오는 중입니다.">{[0, 1, 2].map(index => <div className="flex min-h-[85px] items-center gap-3 px-4 py-5 md:px-6" key={index}><SpaceCategoryContents category={{ id: `synthetic-${index}`, name: "가상 공간", iconKey: "default", spaces: [], sortOrder: index }} /></div>)}</EmrMeasuredLoading></CardContent></Card>;
 }
 
 function SpaceManagementState({
