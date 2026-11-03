@@ -10,7 +10,10 @@ test.use({ viewport: { width: 1624, height: 1000 } });
 const timestamp = "2026-11-03T00:00:00Z";
 type Owner = "none" | "mine" | "other";
 async function install(page: Page, category: "lab" | "imaging" | "billing", initial: Owner, fail = false, delay = 100) {
-  await page.addInitScript(({ key, workspaceId, id, patientId, guardianId, timestamp }) => {
+  await page.addInitScript(({ key, workspaceId, id, timestamp }) => {
+    // Fixed synthetic identities only; never accept live patient data for storage.
+    const patientId = "97080000-0000-4000-8000-000000000092";
+    const guardianId = "97080000-0000-4000-8000-000000000093";
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: timestamp }],
       memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: timestamp, activatedAt: timestamp }], invitations: [], updatedAt: timestamp }));
@@ -23,7 +26,7 @@ async function install(page: Page, category: "lab" | "imaging" | "billing", init
     const second = "97080000-0000-4000-8000-000000000094";
     handoffs[second] = { ...handoffs[id], encounter: { ...handoffs[id].encounter, id: second, encounterNo: "SYN-ENTRY-002" } };
     sessionStorage.setItem("clair-emr:chart-live-encounter-handoffs:v1", JSON.stringify(handoffs));
-  }, { key: SESSION_WORKSPACES_STORAGE_KEY, workspaceId, id, patientId, guardianId, timestamp });
+  }, { key: SESSION_WORKSPACES_STORAGE_KEY, workspaceId, id, timestamp });
   let owner = initial;
   let revision = 1;
   let status = "requested";
