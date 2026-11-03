@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCenter,
@@ -128,6 +130,7 @@ export function WorkspaceVitalSettingsScreen({
     return draft.presets.filter((preset) => !configured.has(preset.key));
   }, [draft]);
 
+  usePageReadiness(status === "loading", workspaceId);
   if (status === "loading" && !draft) {
     return <VitalSettingsState title="바이탈 설정을 불러오는 중입니다" />;
   }

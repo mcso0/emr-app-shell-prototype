@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
 import { ExamOrderPrework } from "@/features/fulfillment/components/exam-order-prework";
 
@@ -3431,6 +3433,7 @@ export function LabContent({
     };
   }, [allowDemoContent, catalogRowsState.rows, detail, persistedResult.result]);
   const phase2 = useLabResultPhase2(workspaceId, effectiveDetail?.result.id, !allowDemoContent && Boolean(persistedResult.result), fulfillmentWorkItem?.rowRevision);
+  usePageReadiness(fulfillmentQueue.status === "loading" || (!allowDemoContent && Boolean(fulfillmentWorkItem) && (persistedResult.status === "loading" || phase2.status === "loading")), `${workspaceId}:${selectedDate}:${queryLabResultId ?? selectedLabResultId}:${entry.show ? "entry" : "instruction"}`);
   const refreshPhase2 = phase2.refresh;
   const [savedEntryRevision, setSavedEntryRevision] = useState<{
     workspaceId: string;
@@ -4345,6 +4348,7 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
     ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
     pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
   });
+  usePageReadiness(fulfillmentQueue.status === "loading", `${workspaceId}:${selectedDate}:${queryImagingStudyId ?? selectedImagingStudyId}:${entry.show ? "entry" : "instruction"}`);
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
     status: getInitialImagingReadingStatus(detail?.study.status),

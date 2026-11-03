@@ -9,8 +9,8 @@ status: "active"
 area: design
 doc_type: design-system
 tags: [design-system, ui, ux-writing, tokens, components, density]
-updated: "2026-10-20"
-last_updated: "2026-10-20"
+updated: "2026-11-03"
+last_updated: "2026-11-03"
 source_docs:
   - "docs/design/references/linear-app/DESIGN.md"
   - "docs/design/system/light-operational-foundation.md"
@@ -238,11 +238,12 @@ CLAiR screens favor operational density:
   contact, and billing summaries, but follows the same context-bar surface,
   spacing, icon treatment, typography, profile interaction, and overflow controls.
   Visual alignment must not change billing data or calculations.
-- pending patient-context values use shared skeletons rather than visible loading
-  sentences. Keep resolved values, explicit failure/denial/missing states,
-  accessible busy descriptions, and reduced-motion behavior. Chart shows the same
-  skeleton while its first selected-record read is pending; keep loaded context
-  visible during refresh and never add an artificial loading delay.
+- initial page/selected-record reads use the whole-page loading boundary in
+  `empty-info-state-contract.md`; information bars, internal tabs and body appear
+  together after required reads finish. Shared skeletons remain available for
+  independent partial reads and same-page refresh. Preserve resolved values,
+  explicit failure/denial/missing states, accessible busy descriptions and
+  reduced-motion behavior. Do not add artificial loading delays.
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at

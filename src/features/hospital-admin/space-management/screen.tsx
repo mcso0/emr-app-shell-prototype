@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CdsActionsPlusIcon, CdsActionsTrashIcon } from "@/components/cds-icons/actions-and-controls";
@@ -80,6 +82,7 @@ export function WorkspaceSpaceManagementScreen({
     snapshot,
     status,
   } = useWorkspaceSpaceManagement({ actorHeaders, workspaceId });
+  usePageReadiness(status === "loading", workspaceId);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [categorySettingsOpen, setCategorySettingsOpen] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState<CategoryDraft>(null);

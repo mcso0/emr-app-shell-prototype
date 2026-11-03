@@ -10,7 +10,7 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number } = {}) {
+async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
@@ -46,6 +46,7 @@ async function install(page: Page, options: { queueType?: "dispensing" | "treatm
     patientName: "합성 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
     createdAt: "2026-10-31T00:00:00.000Z", updatedAt: "2026-10-31T00:00:00.000Z", sourceSnapshot: { inHospitalOrderName: item.name },
   }));
+  await page.route(`**/api/workspaces/${workspaceId}/staff`, route => route.fulfill({ json: { ok: true, staff: [] } }));
   await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, route => route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) }));
   await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/history?*`, route => route.fulfill({ json: { ok: true, measurements: [] } }));
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/instruction-review?*`, route => route.fulfill({ json: { ok: true, reviews: (new URL(route.request().url()).searchParams.get("taskIds") ?? "").split(",").filter(Boolean).map(taskId => ({ taskId, requiresAcknowledgement: false, previous: null, snapshots: [], current: options.emptyOral ? null : { chartId: id, scope: "dispensing", entries: [{ scope: "dispensing", revision: 1, instruction: document.oralInstruction!.instruction, deleted: false, legacy: true, actorName: null, createdAt: null }], versions: { dispensing: 1 }, versionKey: "a".repeat(64) } })) } }));
@@ -97,6 +98,7 @@ async function install(page: Page, options: { queueType?: "dispensing" | "treatm
     }
     await route.fulfill({ json: { ok: true, context } });
   });
+  await options.beforeNavigate?.();
   await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-31&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed&right=closed`);
   if (options.started) await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible();
   else await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
@@ -293,3 +295,90 @@ for (const owner of [undefined, "mine", "other"] as const) {
     expect(actions).toEqual([owner === "mine" ? "start" : owner === "other" ? "takeover" : "claim"]);
   });
 }
+
+
+function deferredRead() {
+  let release!: () => void;
+  const promise = new Promise<void>(resolve => { release = resolve; });
+  return { promise, release };
+}
+async function expectOnlyPageLoading(page: Page) {
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  const content = page.locator('[data-page-content]').first();
+  await expect(content).toHaveAttribute("inert", "");
+  await expect(content).toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByTestId("fulfillment-prework")).not.toBeVisible();
+  await expect(content.getByRole("heading", { name: "조제 지시서", exact: true })).not.toBeVisible();
+  await expect(content.locator('[data-slot="emr-instruction-header-stack"]')).not.toBeVisible();
+}
+for (const source of ["instruction", "assignees", "profile-overview"]) {
+  test(`page boundary waits for initial ${source} and then shows prework together`, async ({ page }) => {
+    const gate = deferredRead(); let requested = false;
+    const ready = install(page, { beforeNavigate: async () => {
+      await page.route(source === "profile-overview" ? "**/customer/patient/*/profile-overview" : `**/fulfillment/work-items/*/${source}`, async route => {
+        if (route.request().method() === "GET") { requested = true; await gate.promise; }
+        await route.fallback();
+      });
+    } });
+    await expect.poll(() => requested).toBe(true);
+    await expectOnlyPageLoading(page);
+    if (source === "instruction") await page.screenshot({ path: test.info().outputPath("initial-loading.png") });
+    gate.release(); await ready;
+    await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+    await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+  });
+}
+for (const owner of [undefined, "mine"] as const) {
+  test(`page boundary waits for instruction after ${owner ?? "unassigned"} entry`, async ({ page }) => {
+    const { actions } = await install(page, { owner });
+    const gate = deferredRead(); let requested = false;
+    await page.route("**/fulfillment/work-items/*/instruction", async route => {
+      if (route.request().method() === "GET") { requested = true; await gate.promise; }
+      await route.fallback();
+    });
+    const name = owner === "mine" ? "업무 시작하기" : "담당하기";
+    await page.getByRole("button", { name, exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name, exact: true }).click();
+    await expect.poll(() => requested).toBe(true);
+    await expectOnlyPageLoading(page);
+    await page.screenshot({ path: test.info().outputPath("entry-loading.png") });
+    gate.release();
+    await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible();
+    await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+    expect(actions).toEqual(owner === "mine" ? ["start"] : ["claim"]);
+  });
+}
+test("instruction refresh failure exits page loading and keeps an explicit retry", async ({ page }) => {
+  await install(page, { owner: "mine" });
+  await page.route("**/fulfillment/work-items/*/instruction", route => route.request().method() === "GET" ? route.fulfill({ status: 503, json: { ok: false } }) : route.fallback());
+  await page.getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "다시 조회", exact: true }).first()).toBeVisible();
+});
+
+test("prework A-B-A queue navigation masks each selected read and rejects the late B response", async ({ page }) => {
+  await install(page, { set: true });
+  const gate = deferredRead(); let blocked = false;
+  await page.route(`**/fulfillment/work-items/${secondId}/instruction`, async route => {
+    blocked = true; await gate.promise; await route.fallback();
+  });
+  const panel = page.locator("aside").first();
+  await panel.getByText("합성 품목 2", { exact: true }).click();
+  await expect.poll(() => blocked).toBe(true);
+  await expectOnlyPageLoading(page);
+  await page.screenshot({ path: test.info().outputPath("selection-loading.png") });
+  await panel.getByText("합성 품목 1", { exact: true }).click();
+  await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+  gate.release();
+  await page.waitForLoadState("networkidle");
+  await expect(page).toHaveURL(new RegExp(`workItemId=${id}`));
+  await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+  await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`workItemId=${secondId}`));
+  await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(new RegExp(`workItemId=${id}`));
+  await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+});

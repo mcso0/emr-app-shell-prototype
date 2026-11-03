@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { instructionReviewListSchema, instructionReviewTargetId, type TaskInstructionReview } from "./task-instruction-review-contract";
 
@@ -18,6 +20,8 @@ export function useTaskInstructionReview(workspaceId: string | undefined, taskId
   const [busyFor, setBusyFor] = useState<string | null>(null);
   const reviews = loaded?.identity === identity ? loaded.reviews : [];
   const error = failure?.identity === identity ? failure.message : null;
+
+  usePageReadiness(Boolean(endpoint && ids && loaded?.identity !== identity && !error), identity);
 
   const read = useCallback(async (targets = ids ? ids.split(",") : []) => {
     if (!endpoint || targets.length === 0) return [];

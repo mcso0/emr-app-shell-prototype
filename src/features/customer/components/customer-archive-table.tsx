@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import {
   getCoreRowModel,
   useReactTable,
@@ -82,6 +84,8 @@ export function CustomerArchiveTable({ workspaceId }: { workspaceId: string }) {
     useState<CustomerArchiveMutationFeedback | null>(null);
 
   const actorUserId = authSession?.id;
+  usePageReadiness(readStatus === "idle" || readStatus === "loading", `${workspaceId}:${actorUserId}`);
+
 
   const loadArchiveRecords = useCallback(
     async (signal?: AbortSignal) => {

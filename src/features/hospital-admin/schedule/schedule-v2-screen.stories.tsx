@@ -1,3 +1,4 @@
+import { EmrPageLoadingBoundary } from "@/components/emr/page-loading-boundary";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { getRouter } from "@storybook/nextjs-vite/navigation.mock";
@@ -6,20 +7,24 @@ import { HospitalScheduleV2Screen } from "./schedule-v2-screen";
 import { addDaysToIsoDate } from "@/lib/emr-domain/demo-date";
 import { parseHospitalScheduleRevisionCommand } from "./revision-api";
 
-type Scenario = "draft" | "published" | "empty" | "error" | "blocked" | "save-error" | "pending-save" | "pending-save-error";
+type Scenario = "pending-read" | "draft" | "published" | "empty" | "error" | "blocked" | "save-error" | "pending-save" | "pending-save-error";
 const workspaceId = "storybook-schedule";
 const revisionId = "93000000-0000-4000-8000-000000000001";
 const staffId = "93000000-0000-4000-8000-000000000002";
 const shiftId = "93000000-0000-4000-8000-000000000003";
+let releasePendingRead: (() => void) | undefined;
 let commands: Array<Record<string, unknown>> = [];
 let releasePendingSave: (() => void) | undefined;
-function Example(_args: { scenario: Scenario }) { void _args; return <div className="h-[850px]"><HospitalScheduleV2Screen workspaceId={workspaceId} /></div>; }
+function Example(_args: { scenario: Scenario }) { void _args; return <div className="h-[850px]"><EmrPageLoadingBoundary><HospitalScheduleV2Screen workspaceId={workspaceId} /></EmrPageLoadingBoundary></div>; }
 const meta = {
   title: "Features/Hospital Admin/Schedule Screen", component: Example, tags: ["autodocs"], args: { scenario: "draft" as Scenario },
   argTypes: { scenario: { control: false, description: "합성 응답의 named scenario. 새 story에서 초기화합니다." } },
   parameters: { layout: "fullscreen", nextjs: { appDirectory: true, navigation: { pathname: `/w/${workspaceId}/hospital-admin`, query: { weekStart: "2026-10-05" } } }, docs: { story: { inline: false, height: "920px" }, description: { component: "실제 HospitalScheduleV2Screen과 근무표 헤더·주차 이동·grid/day list·shift sheet·게시 검토를 렌더링합니다. 실제 persistence-client의 GET/POST 응답만 복원 가능한 합성 fixture로 대체합니다. 응답 파싱과 화면 전환은 제품 소스가 수행합니다. POST는 로컬 명령 기록이며 서버 검증·게시·직원 프로필 반영의 증거가 아닙니다." } } },
   beforeEach: ({ args }) => {
     const original = globalThis.fetch;
+    let releaseRead!: () => void;
+    const readGate = new Promise<void>(resolve => { releaseRead = resolve; });
+    releasePendingRead = releaseRead;
     const previousToastIds = new Set(toast.getHistory().map((item) => item.id));
     commands = [];
     releasePendingSave = undefined;
@@ -45,6 +50,7 @@ const meta = {
       if (!url.pathname.startsWith("/api/")) return original(input, init);
       if (url.pathname !== `/api/workspaces/${workspaceId}/hospital-admin/schedule`) throw new Error(`Unexpected story API ${url.pathname}`);
       const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+      if (args.scenario === "pending-read" && method === "GET") await readGate;
       if (method === "GET") {
         if (readFailed) { readFailed = false; return Response.json({ ok: false }, { status: 503 }); }
         if (url.searchParams.get("weekStart") === "2026-09-28") {
@@ -244,5 +250,17 @@ export const FailedSavePreservesDraftAndRetry: Story = {
     await waitFor(() => expect(body.queryByRole("dialog", { name: "저장하지 않은 변경이 있습니다" })).not.toBeInTheDocument());
     await expect(canvas.getByRole("button", { name: /합성 진료 재시도/ })).toBeVisible();
     await expect(commands).toHaveLength(2);
+  },
+};
+
+export const PageLoading: Story = {
+  args: { scenario: "pending-read" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await waitFor(() => expect(canvas.getByTestId("page-loading-state")).toBeVisible());
+    await expect(canvasElement.querySelector("[data-page-content]")).toHaveAttribute("inert");
+    releasePendingRead?.();
+    await waitFor(() => expect(canvas.queryByTestId("page-loading-state")).not.toBeInTheDocument());
+    await expect(canvas.getByRole("button", { name: "게시 전 확인" })).toBeVisible();
   },
 };

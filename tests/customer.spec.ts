@@ -329,7 +329,7 @@ test("customer permission denial uses the shared no-permission state", async ({
   await expect(denied.getByRole("button")).toHaveCount(0);
 });
 
-test("Cheongdam customer table shows skeleton while seeded profiles are loading", async ({
+test("Cheongdam customer table shows only page loading while seeded profiles are loading", async ({
   page,
 }) => {
   const workspaceId = "workspace-clair-cheongdam";
@@ -384,31 +384,9 @@ test("Cheongdam customer table shows skeleton while seeded profiles are loading"
   await page.goto(`/w/${workspaceId}/customer?modulePanel=open`);
 
   const patientTable = page.getByTestId("customer-patient-table");
-  const firstSkeletonRow = patientTable
-    .locator('[data-emr-data-table-skeleton-row="true"]')
-    .first();
-  const pinnedSkeletonCells = firstSkeletonRow.locator(
-    'td[data-emr-column-pinned="left"]',
-  );
-  const pinnedSkeletonCell = pinnedSkeletonCells.nth(1);
-  await expect(firstSkeletonRow).toBeVisible();
-  await expect(pinnedSkeletonCells).toHaveCount(2);
-  await expect(pinnedSkeletonCell).toHaveCSS("position", "sticky");
-  await expect(pinnedSkeletonCell).not.toHaveCSS(
-    "background-color",
-    "rgba(0, 0, 0, 0)",
-  );
-  await expect(
-    pinnedSkeletonCell.locator('[data-emr-table-identity-content="true"]'),
-  ).toHaveCount(1);
-  await expect(
-    page.getByTestId("customer-page-header-count-skeleton"),
-  ).toBeVisible();
-  await expect(patientTable).not.toContainText("동물 정보가 없습니다");
-  await expect(patientTable).not.toContainText("0건");
-  await expect(
-    page.getByTestId("customer-side-panel-patient"),
-  ).not.toContainText("0");
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(patientTable).not.toBeVisible();
+  await expect(page.getByTestId("customer-page-header-count-skeleton")).not.toBeVisible();
 
   resolveLookup();
 
@@ -430,7 +408,7 @@ test("Cheongdam customer table does not flash empty copy on SPA re-entry with st
   page,
 }) => {
   const workspaceId = "workspace-clair-cheongdam";
-  let lookupCallCount = 0;
+  let reentering = false;
   let resolveLookup: () => void = () => {};
   const lookupPending = new Promise<void>((resolve) => {
     resolveLookup = resolve;
@@ -439,9 +417,7 @@ test("Cheongdam customer table does not flash empty copy on SPA re-entry with st
   await page.route(
     `**/api/workspaces/${workspaceId}/reception/patient-guardian-lookup?**`,
     async (route) => {
-      lookupCallCount += 1;
-
-      if (lookupCallCount <= 2) {
+      if (!reentering) {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -502,20 +478,12 @@ test("Cheongdam customer table does not flash empty copy on SPA re-entry with st
   await page.getByRole("link", { name: "접수/예약" }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${workspaceId}/reception`));
 
+  reentering = true;
   await page.getByRole("link", { name: "고객관리" }).click();
-  await expect(
-    patientTable
-      .locator('[data-emr-data-table-skeleton-row="true"]')
-      .first(),
-  ).toBeVisible();
-  await expect(patientTable).not.toContainText("동물 정보가 없습니다");
-  await expect(patientTable).not.toContainText("0건");
-  await expect(
-    page.getByTestId("customer-page-header-count-skeleton"),
-  ).toBeVisible();
-  await expect(
-    page.getByTestId("customer-side-panel-patient"),
-  ).not.toContainText("0");
+  await expect(page).toHaveURL(new RegExp(`/w/${workspaceId}/customer`));
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(patientTable).not.toBeVisible();
+  await expect(page.getByTestId("customer-page-header-count-skeleton")).not.toBeVisible();
 
   resolveLookup();
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useModuleSidePanel } from "@/components/emr/module-side-panel-context";
@@ -209,6 +211,7 @@ export function HomeKanbanWorkspace({ data, today, loading = false, sourceStatus
       collapsed={collapsed(key)} onToggle={() => toggleGroup(key)} onHide={() => setHidden([...hidden, type.id])} onNavigate={navigate} />;
   };
 
+  usePageReadiness(loading, `${view}:${operatingDate}:${query.includeCompleted}:${query.includeCancelled}`);
   return <section className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]" data-testid="home-workspace" aria-busy={loading}>
     <EmrMainContentHeader aria-hidden="true" heightMode="fixed" style={{ height: view === "hospital" ? 52 : 56 }} />
     <header className={styles.pageHeader}>

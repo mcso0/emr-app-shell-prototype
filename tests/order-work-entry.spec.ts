@@ -175,3 +175,24 @@ test("billing late claim cannot enter a newly selected invoice", async ({ page }
   expect(state.prepares()).toBe(0);
   expect(state.commands).toEqual(["claim"]);
 });
+
+
+test("billing entry waits for checkout preparation without repeating ownership commands", async ({ page }) => {
+  const state = await install(page, "billing", "mine");
+  let release!: () => void; let requested = false;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  await page.route("**/billing/guardian-checkout", async route => {
+    if (route.request().method() === "POST") { requested = true; await gate; }
+    await route.fallback();
+  });
+  await state.entry.getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
+  await expect.poll(() => requested).toBe(true);
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  expect(state.commands).toEqual([]);
+  release();
+  await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
+  await expect(page.getByRole("table", { name: "청구 항목 테이블" })).toBeVisible();
+  expect(state.commands).toEqual([]);
+});

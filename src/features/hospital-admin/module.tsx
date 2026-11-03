@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { DispenseQuantityRulesDialog } from "./dispense-quantity-rules-dialog";
 import { useModuleSidePanel, useModuleSidePanelPathname, useModuleSidePanelRouter, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
 
@@ -1507,6 +1509,8 @@ export function HospitalAdminConceptScreen({
 
 function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRetryKey = 0) {
   const { hydrated, hydrate, session } = useAuthClient();
+  const readScope = `${workspaceId}:${session?.id}`;
+  const [completedReadScope, setCompletedReadScope] = useState<string | null>(null);
   const beginCatalogLoad = useHospitalAdminStore((state) => state.beginCatalogLoad);
   const finishCatalogLoad = useHospitalAdminStore((state) => state.finishCatalogLoad);
   useEffect(() => {
@@ -1559,7 +1563,9 @@ function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRe
       }
     };
 
-    void loadCatalog();
+    void loadCatalog().finally(() => {
+      if (!canceled) setCompletedReadScope(readScope);
+    });
 
     return () => {
       canceled = true;
@@ -1573,9 +1579,10 @@ function useHospitalCatalogRead(workspaceId: string, enabled: boolean, catalogRe
     beginCatalogLoad,
     finishCatalogLoad,
     workspaceId,
+    readScope,
   ]);
 
-  return session;
+  return { session, initialPending: enabled && (!hydrated || completedReadScope !== readScope) };
 }
 
 export function HospitalAdminSidePanel({ moduleLabel, workspaceId }: ShellComponentProps) {
@@ -2790,7 +2797,8 @@ export function HospitalAdminContent({ workspaceId }: ShellComponentProps) {
       ),
     );
   };
-  const session = useHospitalCatalogRead(workspaceId, true, catalogRetryKey);
+  const { session, initialPending: catalogInitialPending } = useHospitalCatalogRead(workspaceId, true, catalogRetryKey);
+  usePageReadiness(activeSection === "orders" && (catalogInitialPending || catalogReadStatus === "idle" || catalogReadStatus === "loading"), `${workspaceId}:${activeSection}`);
 
   if (activeSection === "members") {
     return (
@@ -3169,6 +3177,7 @@ function HospitalAdminAuditReview({ workspaceId }: { workspaceId: string }) {
   >("idle");
   const canReview =
     session?.role === "hospital_admin" || session?.role === "supabase";
+  usePageReadiness(!hydrated || (canReview && (status === "idle" || status === "loading")), workspaceId);
   const hasAuditFilters = Boolean(query.trim()) || eventType !== "all";
   const auditEmptyStateKind = hasAuditFilters ? "no-filter-results" : "no-data";
   const auditEmptyStateTitle = hasAuditFilters

@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
@@ -948,6 +950,7 @@ export function RolePermissionManagementScreen({
     );
   };
 
+  usePageReadiness(!workspace.hydrated || (workspace.usesServerCatalog && workspace.catalogStatus === "loading"), workspaceId);
   if (!workspace.hydrated || (workspace.usesServerCatalog && workspace.catalogStatus === "loading")) {
     return (
       <div className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">

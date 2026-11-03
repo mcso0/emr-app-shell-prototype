@@ -1,5 +1,7 @@
 "use client";
 
+import { usePageReadiness } from "@/components/emr/page-loading-boundary";
+
 import {
   useCallback,
   useEffect,
@@ -729,6 +731,8 @@ export function WorkspaceMembershipManagement({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [editingInvitation, setEditingInvitation] =
     useState<SessionWorkspaceInvitation | null>(null);
+  const [membershipReadScope, setMembershipReadScope] = useState<string | null>(null);
+  const membershipScope = `${workspaceId}:${session?.id}`;
   const [statusReadState, setStatusReadState] = useState<
     "idle" | "loading" | "error"
   >("idle");
@@ -1039,6 +1043,8 @@ export function WorkspaceMembershipManagement({
         setStatusReadState("idle");
       } catch {
         if (!canceled) setStatusReadState("error");
+      } finally {
+        if (!canceled) setMembershipReadScope(membershipScope);
       }
     }
 
@@ -1047,7 +1053,7 @@ export function WorkspaceMembershipManagement({
     return () => {
       canceled = true;
     };
-  }, [hydrated, session, updateState, workspaceId]);
+  }, [hydrated, session, updateState, workspaceId, membershipScope]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1699,6 +1705,7 @@ export function WorkspaceMembershipManagement({
       workspaceId,
     );
 
+  usePageReadiness(!hydrated || (Boolean(session) && membershipReadScope !== membershipScope), membershipScope);
   if (!hydrated) {
     return (
       <div className="flex h-full flex-col bg-[var(--emr-surface-workspace)] text-[13px] text-muted-foreground">
