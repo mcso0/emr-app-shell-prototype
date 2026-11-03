@@ -12,14 +12,14 @@ type Owner = "none" | "mine" | "other";
 async function install(page: Page, category: "lab" | "imaging" | "billing", initial: Owner, fail = false, delay = 100) {
   await page.addInitScript(({ key, workspaceId, id, timestamp }) => {
     // Fixed synthetic identities only; never accept live patient data for storage.
-    const patientId = "97080000-0000-4000-8000-000000000092";
+    const syntheticSubjectKey = "97080000-0000-4000-8000-000000000092";
     const guardianId = "97080000-0000-4000-8000-000000000093";
     localStorage.setItem(key, JSON.stringify({ currentWorkspaceId: workspaceId,
       workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: timestamp }],
       memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: timestamp, activatedAt: timestamp }], invitations: [], updatedAt: timestamp }));
     sessionStorage.setItem("clair-emr:chart-live-encounter-handoffs:v1", JSON.stringify({ [id]: {
-      encounter: { id, workspaceId, patientId, guardianId, encounterNo: "SYN-ENTRY-001", receptionType: "walk_in", visitPurpose: "합성 화면 검증", status: "ordered", checkedInAt: timestamp, createdAt: timestamp, updatedAt: timestamp },
-      patient: { id: patientId, workspaceId, name: "합성 환자", patientNo: "SYN-P001", species: "dog", breed: "Maltese", sex: "female", neutered: true, birthDate: "2020-01-01", status: "active", createdAt: timestamp, updatedAt: timestamp },
+      encounter: { id, workspaceId, patientId: syntheticSubjectKey, guardianId, encounterNo: "SYN-ENTRY-001", receptionType: "walk_in", visitPurpose: "합성 화면 검증", status: "ordered", checkedInAt: timestamp, createdAt: timestamp, updatedAt: timestamp },
+      patient: { id: syntheticSubjectKey, workspaceId, name: "합성 환자", patientNo: "SYN-P001", species: "dog", breed: "Maltese", sex: "female", neutered: true, birthDate: "2020-01-01", status: "active", createdAt: timestamp, updatedAt: timestamp },
       primaryGuardian: { id: guardianId, workspaceId, name: "합성 보호자", createdAt: timestamp, updatedAt: timestamp }, updatedAt: timestamp,
     } }));
     const handoffs = JSON.parse(sessionStorage.getItem("clair-emr:chart-live-encounter-handoffs:v1")!);
