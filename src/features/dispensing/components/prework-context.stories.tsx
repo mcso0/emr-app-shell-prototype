@@ -19,6 +19,7 @@ type Args = {
   denied?: boolean;
   requester?: boolean;
   width?: number;
+  loadingContext?: boolean;
 };
 const workItem = {
   id,
@@ -97,6 +98,7 @@ const meta = {
   beforeEach: ({ args }) => {
     commands = [];
     const original = globalThis.fetch;
+    const pendingReads: Array<() => void> = [];
     let fail = args.failOnce;
     const document: InstructionDocument = {
       ...structuredClone(syntheticInstruction),
@@ -213,6 +215,9 @@ const meta = {
         return args.denied
           ? Response.json({ ok: false }, { status: 403 })
           : Response.json({ ok: true, measurements: [] });
+      if (args.loadingContext && (url.pathname.endsWith("/profile-overview") || url.pathname.endsWith("/vitals"))) {
+        return new Promise<Response>(resolve => pendingReads.push(() => resolve(Response.json({ ok: false }, { status: 500 }))));
+      }
       if (url.pathname.endsWith("/profile-overview")) {
         if (args.denied) return Response.json({ ok: false }, { status: 403 });
         const isPatient = url.pathname.includes("/patient/");
@@ -269,6 +274,7 @@ const meta = {
     };
     return () => {
       globalThis.fetch = original;
+      pendingReads.forEach(release => release());
     };
   },
 } satisfies Meta<typeof Example>;
@@ -376,5 +382,17 @@ export const ReadDenied: Story = {
     await expect(
       canvas.getByRole("button", { name: "환자 정보" }),
     ).toBeDisabled();
+  },
+};
+
+
+export const LoadingContextRetainsRequest: Story = {
+  args: { owner: "mine", loadingContext: true },
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText("요청 정보");
+    await expect(canvas.getByText("합성 환자", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("합성 약품 1", { exact: true })).toBeVisible();
+    await waitFor(() => expect(canvasElement.querySelectorAll('[skullet-loading]').length).toBeGreaterThanOrEqual(2));
+    await expect(commands).toHaveLength(0);
   },
 };

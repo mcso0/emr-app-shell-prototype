@@ -3008,6 +3008,9 @@ export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: She
       key={`${workspaceId}:${detail.patient.id}`}
       kind="lab"
       entries={entries}
+      refreshing={history.refreshing}
+      readError={history.readError}
+      onRetry={history.refresh}
       status={legacyFixture ? "ready" : history.status}
       onCollapse={() => setContentAsideOpen(false)}
     />
@@ -4044,6 +4047,9 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
     key={`${workspaceId}:${detail.patient.id}`}
     kind="imaging"
     entries={entries}
+    refreshing={history.refreshing}
+    readError={history.readError}
+    onRetry={history.refresh}
     status={legacyFixture ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}
   />;

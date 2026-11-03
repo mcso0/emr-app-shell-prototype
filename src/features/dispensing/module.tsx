@@ -1373,6 +1373,9 @@ export function DispensingContentAside({
     key={`${workspaceId}:${selectedWorkItem?.patientId ?? selectedQueueItem.id}`}
     kind="fulfillment"
     showCategories
+    refreshing={history.refreshing}
+    readError={history.readError}
+    onRetry={history.refresh}
     status={allowLegacyFixtureFallback && !selectedWorkItem ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}
   />;

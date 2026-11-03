@@ -31,7 +31,7 @@ for (const kind of ["patient", "guardian"] as const) {
     );
     const panel = page.getByTestId("profile-side-panel");
     await expect(
-      panel.locator('[data-slot="emr-profile-loading"]'),
+      panel.locator('[data-testid="profile-basic-information-loading"]'),
     ).toBeVisible();
     await expect(
       panel.locator('[data-slot="emr-profile-header"] [data-slot="skeleton"]'),
@@ -58,7 +58,7 @@ for (const kind of ["patient", "guardian"] as const) {
     ).toBeVisible();
     await expect(panel.getByRole("alert")).toHaveCount(0);
     await expect(
-      panel.locator('[data-slot="emr-profile-loading"]'),
+      panel.locator('[data-testid="profile-basic-information-loading"]'),
     ).toHaveCount(0);
     expect(attempts).toBe(2);
   });

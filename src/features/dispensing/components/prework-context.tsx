@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   PatientPreworkHeader,
+  PatientPreworkMemoLoading,
+  PatientPreworkVitalsLoading,
   MemoSection,
   VitalSection,
   type PatientPreworkContext,
@@ -15,6 +17,7 @@ import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspa
 import type { PatientVitalMeasurement } from "@/features/patient-vitals/patient-vital-types";
 import {
   usePatientFulfillmentHistory,
+  PatientHistoryLoading,
   getPatientHistoryStatus,
   getFulfillmentOrderDisplayName,
 } from "@/features/fulfillment/patient-history-aside";
@@ -232,6 +235,7 @@ export function DispensingPreworkContext({
     >
       <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
         <PatientPreworkHeader
+          loadingDetails={patient.overviewStatus === "loading" || patient.overviewStatus === "idle"}
           context={context}
           statusLabel={`${label} 대기`}
           onOpenPatientInformation={
@@ -389,7 +393,9 @@ export function DispensingPreworkContext({
             </Section>
           )}
           <Separator />
+          {patient.overviewStatus === "loading" || patient.overviewStatus === "idle" ? <PatientPreworkMemoLoading /> : (
           <MemoSection
+            guardianLoading={guardian.overviewStatus === "loading"}
             context={context}
             patientMemo={
               [
@@ -400,7 +406,8 @@ export function DispensingPreworkContext({
                 .filter(Boolean)
                 .join(" · ") || (profile ? undefined : unavailable)
             }
-          />
+          />          )}
+
           {patient.overviewStatus === "error" && (
             <Button variant="outline" onClick={patient.reloadOverview}>
               환자 정보 다시 조회
@@ -422,6 +429,8 @@ export function DispensingPreworkContext({
               onOpenVitalDialog={() => {}}
               vitalSettings={settings.snapshot}
             />
+          ) : currentVitals?.status !== "denied" && currentVitals?.status !== "error" && settings.status !== "denied" && settings.status !== "error" ? (
+            <PatientPreworkVitalsLoading />
           ) : (
             <Section title="바이탈 정보">
               <p className="text-sm text-muted-foreground">
@@ -449,11 +458,11 @@ export function DispensingPreworkContext({
           )}
           <Separator />
           <Section title={`과거 ${label} 이력`}>
-            {history.status !== "ready" ? (
+            {history.refreshing && <p role="status">이력을 갱신하는 중입니다.</p>}
+            {history.readError && <p role="alert">이력을 갱신하지 못했어요.</p>}
+            {history.status === "loading" ? <PatientHistoryLoading /> : history.status !== "ready" ? (
               <p className="text-sm text-muted-foreground">
-                {history.status === "loading"
-                  ? "이력을 불러오는 중이에요."
-                  : history.status === "permission_denied"
+                {history.status === "permission_denied"
                     ? "이력 조회 권한이 없어요."
                     : "이력을 불러오지 못했어요."}
               </p>
@@ -493,7 +502,7 @@ export function DispensingPreworkContext({
                 이전 {label} 이력이 없어요.
               </p>
             )}
-            {history.status === "error" && (
+            {(history.status === "error" || history.readError) && (
               <Button variant="outline" onClick={history.refresh}>
                 이력 다시 조회
               </Button>

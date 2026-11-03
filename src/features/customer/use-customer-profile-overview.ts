@@ -27,6 +27,8 @@ export type CustomerProfileSectionState<S extends CustomerProfileSection = Custo
   filterKey?: string;
   items: Array<LiveSectionItemMap[S]>;
   nextCursor: string | null;
+  pending?: "append" | "refresh";
+  readError?: "append" | "refresh";
   status: "idle" | "loading" | "ready" | "error" | "denied" | "not_found";
 };
 
@@ -174,6 +176,9 @@ export function useCustomerProfileOverview({
       if (!options.force && !options.append && current.status === "ready" && current.filterKey === filterKey) {
         return;
       }
+      // Ref guard closes the interval before React commits the disabled button.
+      if (options.append && (sectionControllers.current[section] || !current.nextCursor || current.filterKey !== filterKey)) return;
+      const preserveItems = current.status === "ready" && current.filterKey === filterKey;
       sectionControllers.current[section]?.abort();
       const controller = new AbortController();
       sectionControllers.current[section] = controller;
@@ -183,9 +188,11 @@ export function useCustomerProfileOverview({
         [section]: {
           ...state[section],
           filterKey,
-          status: "loading",
+          status: preserveItems ? "ready" : "loading",
+          pending: preserveItems ? options.append ? "append" : "refresh" : undefined,
+          readError: undefined,
           errorStatus: undefined,
-          ...(options.append ? {} : { items: [], nextCursor: null }),
+          ...(preserveItems ? {} : { items: [], nextCursor: null }),
         },
       }));
       const params = new URLSearchParams({ limit: "20" });
@@ -203,10 +210,10 @@ export function useCustomerProfileOverview({
             | { items?: Array<LiveSectionItemMap[S]>; nextCursor?: string | null; ok?: boolean }
             | null;
           if (requestVersion.current !== version || controller.signal.aborted) return;
-          if (response.status === 403) {
+          if (response.status === 401 || response.status === 403) {
             setSectionStates((state) => ({
               ...state,
-              [section]: { ...emptySectionState("denied"), filterKey, errorStatus: 403 },
+              [section]: { ...emptySectionState("denied"), filterKey, errorStatus: response.status },
             }));
             return;
           }
@@ -220,7 +227,7 @@ export function useCustomerProfileOverview({
           if (!response.ok || !payload?.ok) {
             setSectionStates((state) => ({
               ...state,
-              [section]: { ...state[section], filterKey, status: "error", errorStatus: response.status || 500 },
+              [section]: { ...state[section], filterKey, status: preserveItems ? "ready" : "error", pending: undefined, readError: preserveItems ? options.append ? "append" : "refresh" : undefined, errorStatus: response.status || 500 },
             }));
             return;
           }
@@ -238,11 +245,14 @@ export function useCustomerProfileOverview({
           });
         })
         .catch((error: unknown) => {
-          if (requestVersion.current !== version || isAbortError(error)) return;
+          if (requestVersion.current !== version || controller.signal.aborted || isAbortError(error)) return;
           setSectionStates((state) => ({
             ...state,
-            [section]: { ...state[section], filterKey, status: "error", errorStatus: 500 },
+            [section]: { ...state[section], filterKey, status: preserveItems ? "ready" : "error", pending: undefined, readError: preserveItems ? options.append ? "append" : "refresh" : undefined, errorStatus: 500 },
           }));
+        })
+        .finally(() => {
+          if (sectionControllers.current[section] === controller) delete sectionControllers.current[section];
         });
     },
     [enabled, overview, overviewScope, scopeKey, sectionStates, subjectId, subjectType, workspaceId],

@@ -1,5 +1,7 @@
 "use client";
 
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+
 import { useMemo, useState } from "react";
 import { CloseIcon } from "@/components/icons";
 import { CdsNavigationExternalLinkIcon } from "@/components/cds-icons/navigation";
@@ -347,14 +349,7 @@ export function GlobalNotificationDrawer({
 
         <ScrollArea className="min-h-0 flex-1">
           <div data-testid="global-notification-drawer-list">
-            {loading ? (
-              <p
-                data-testid="global-notification-loading-state"
-                className="px-4 py-8 text-center text-[12px] leading-5 text-[var(--emr-text-tertiary)]"
-              >
-                알림을 불러오는 중입니다.
-              </p>
-            ) : null}
+            {loading && notifications.length === 0 ? <NotificationInitialLoading /> : null}
             {visibleNotifications.map((notification) => (
               <NotificationRow
                 key={notification.id}
@@ -375,4 +370,9 @@ export function GlobalNotificationDrawer({
       </SheetContent>
     </Sheet>
   );
+}
+
+export function NotificationInitialLoading() {
+  const notification: GlobalNotification = { id: "synthetic-loading", event_key: "order_assigned", dedupe_key: "synthetic", domain: "chart", priority: "normal", toast_policy: "drawer_only", sourceActionLabel: "확인", workTypeLabel: "업무", title: "가상 업무 알림", preview: "가상 알림 내용입니다.", detail: "", sourceLabel: "진료", recipientLabel: "가상 담당자", recipient: { kind: "user", id: "synthetic", label: "가상 담당자" }, source: { kind: "fallback_detail" }, issuedAtLabel: "00:00", created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z", read_state_key: "clair.notifications.v0.read", archive_state_key: "clair.notifications.v0.archive", unread: true, archived: false, requires_action: false, badge_count: false };
+  return <EmrMeasuredLoading label="알림을 불러오는 중입니다." testId="global-notification-loading-state">{[0, 1, 2].map(index => <NotificationRow key={index} notification={{ ...notification, id: `synthetic-loading-${index}` }} onArchive={() => {}} onMarkRead={() => {}} onOpenSource={() => {}} onRestore={() => {}} />)}</EmrMeasuredLoading>;
 }
