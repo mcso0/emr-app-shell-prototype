@@ -60,7 +60,7 @@ for (const kind of ["patient", "guardian"] as const) {
   });
 }
 
-test("loading, error and empty align centrally; XS refresh retry recovers", async ({ page }) => {
+test("measured loading preserves error and empty feedback; XS retry recovers", async ({ page }) => {
   await setup(page);
   let release!: () => void;
   const pending = new Promise<void>((resolve) => { release = resolve; });
@@ -72,9 +72,8 @@ test("loading, error and empty align centrally; XS refresh retry recovers", asyn
   });
   const section = await open(page);
   const feedback = section.getByRole("status");
-  await expect(feedback).toHaveText("오늘 접수/예약을 불러오는 중입니다");
-  await expect(feedback).toHaveCSS("text-align", "center");
-  await expect(feedback).toHaveCSS("color", "rgb(163, 163, 163)");
+  await expect(section.locator("[inert]")).toHaveCount(1);
+  await expect(section.getByText("오늘 접수/예약을 불러오는 중입니다", { exact: true })).toBeAttached();
   release();
   await expect(feedback).toContainText("오늘 접수/예약을 불러오지 못했습니다");
   const retry = section.getByRole("button", { name: "다시 시도" });
@@ -111,12 +110,12 @@ test("refresh clears old cards after permission loss and rejects foreign scope r
   await expect(section.locator("[data-today-status]")).toHaveCount(4);
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(section.getByRole("status")).toHaveText("오늘 접수/예약을 볼 권한이 없습니다");
-  await expect(section.locator("[data-today-status]")).toHaveCount(0);
+  await expect(section.locator("[data-today-status]:not([inert] *)")).toHaveCount(0);
   await page.unroute(todayPath);
   await page.route(todayPath, (route) => route.fulfill({ json: { ...payload("patient"), subjectId: "another-patient" } }));
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(section.getByRole("status")).toContainText("오늘 접수/예약을 불러오지 못했습니다");
-  await expect(section.locator("[data-today-status]")).toHaveCount(0);
+  await expect(section.locator("[data-today-status]:not([inert] *)")).toHaveCount(0);
 });
 
 test("closing a pending profile prevents its delayed result from replacing guardian cards", async ({ page }) => {
@@ -129,7 +128,7 @@ test("closing a pending profile prevents its delayed result from replacing guard
     else await route.fulfill({ json: payload("guardian", [items[2]]) });
   });
   const first = await open(page);
-  await expect(first.getByRole("status")).toHaveText("오늘 접수/예약을 불러오는 중입니다");
+  await expect(first.locator("[inert]")).toHaveCount(1);
   await page.getByTestId("profile-side-panel").getByRole("button", { name: "상세 닫기" }).click();
   const second = await open(page, "guardian");
   await expect(second.locator("[data-today-status]")).toHaveCount(1);
@@ -152,8 +151,8 @@ test("KST midnight refresh clears yesterday's cards before the new day response"
   const section = await open(page);
   await expect(section.locator("[data-today-status]")).toHaveCount(4);
   await page.clock.fastForward(61_000);
-  await expect(section.getByRole("status")).toHaveText("오늘 접수/예약을 불러오는 중입니다");
-  await expect(section.locator("[data-today-status]")).toHaveCount(0);
+  await expect(section.locator("[inert]")).toHaveCount(1);
+  await expect(section.locator("[data-today-status]:not([inert] *)")).toHaveCount(0);
   release();
   await expect(section.getByRole("status")).toHaveText("접수/예약 일정이 없습니다");
 });

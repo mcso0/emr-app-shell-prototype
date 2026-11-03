@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
@@ -321,7 +323,7 @@ export function HospitalBasicSettingsScreen({
       }}
       onSave={saveLogo}
     >
-      {profileStatus !== "ready" || !profile ? (
+      {profileStatus === "loading" || profileStatus === "idle" ? <HospitalBasicInformationLoading /> : profileStatus !== "ready" || !profile ? (
         <HospitalProfileReadState
           status={profileStatus === "ready" ? "error" : profileStatus}
           onRetry={() => void reload()}
@@ -349,36 +351,7 @@ export function HospitalBasicSettingsScreen({
                     />
                   }
                 />
-                <SettingRow
-                  testId="hospital-settings-row-name"
-                  label="병원명"
-                  description="예약과 고객 안내에 표시되는 공식 병원명입니다."
-                  action={<SettingValue label="병원명" value={profile.name} />}
-                />
-                <SettingRow
-                  testId="hospital-settings-row-representative"
-                  label="대표자/원장명"
-                  description="등록된 대표자 또는 원장 정보입니다."
-                  action={
-                    <SettingValue
-                      label="대표자/원장명"
-                      value={profile.representativeName}
-                      emptyLabel="등록된 대표자/원장 정보가 없습니다."
-                    />
-                  }
-                />
-                <SettingRow
-                  testId="hospital-settings-row-address"
-                  label="주소"
-                  description="고객 안내와 문서에 사용하는 등록 주소입니다."
-                  action={
-                    <div className="flex min-w-0 max-w-full items-center gap-2.5">
-                      <SettingValue
-                        label="주소"
-                        value={profile.address}
-                        emptyLabel="등록된 주소가 없습니다."
-                      />
-                      <Button
+                <HospitalInformationRows profile={profile} addressAction={<Button
                         type="button"
                         size="icon"
                         variant="outline"
@@ -393,10 +366,7 @@ export function HospitalBasicSettingsScreen({
                         ) : (
                           <CdsActionsCopyIcon aria-hidden="true" />
                         )}
-                      </Button>
-                    </div>
-                  }
-                />
+                      </Button>} />
                 <SettingRow
                   testId="hospital-settings-row-change-request"
                   label="등록 정보 변경"
@@ -631,4 +601,43 @@ function formatTimezone(timezone: string) {
   } catch {
     return timezone;
   }
+}
+
+function HospitalInformationRows({ profile, addressAction }: { profile: { name: string; representativeName: string | null; address: string | null }; addressAction?: ReactNode }) { return <>                <SettingRow
+                  testId="hospital-settings-row-name"
+                  label="병원명"
+                  description="예약과 고객 안내에 표시되는 공식 병원명입니다."
+                  action={<SettingValue label="병원명" value={profile.name} />}
+                />
+                <SettingRow
+                  testId="hospital-settings-row-representative"
+                  label="대표자/원장명"
+                  description="등록된 대표자 또는 원장 정보입니다."
+                  action={
+                    <SettingValue
+                      label="대표자/원장명"
+                      value={profile.representativeName}
+                      emptyLabel="등록된 대표자/원장 정보가 없습니다."
+                    />
+                  }
+                />
+                <SettingRow
+                  testId="hospital-settings-row-address"
+                  label="주소"
+                  description="고객 안내와 문서에 사용하는 등록 주소입니다."
+                  action={
+                    <div className="flex min-w-0 max-w-full items-center gap-2.5">
+                      <SettingValue
+                        label="주소"
+                        value={profile.address}
+                        emptyLabel="등록된 주소가 없습니다."
+                      />
+                      {addressAction}
+                    </div>
+                  }
+                />
+</>; }
+
+export function HospitalBasicInformationLoading() {
+  return <section className="flex w-full flex-col pb-2"><SectionTitle id="hospital-profile-loading-title">병원 정보</SectionTitle><Card className="gap-0 border-0 py-0 shadow-[var(--clair-shadow-xs)] ring-1 ring-[var(--emr-border-default)]"><CardContent className="p-0"><EmrMeasuredLoading label="병원 기본 정보를 불러오는 중입니다."><HospitalInformationRows profile={{ name: "가상 동물병원", representativeName: "가상 대표자", address: "가상 병원 주소" }} /></EmrMeasuredLoading></CardContent></Card></section>;
 }

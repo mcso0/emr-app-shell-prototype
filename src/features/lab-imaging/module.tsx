@@ -1,5 +1,8 @@
 "use client";
 
+import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
+import { ExamOrderPrework } from "@/features/fulfillment/components/exam-order-prework";
+
 import { useTaskInstructionReview } from "@/features/fulfillment/use-task-instruction-review";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 
@@ -3008,6 +3011,9 @@ export function LabContentAside({ onNavigateWorkspaceSurface, workspaceId }: She
       key={`${workspaceId}:${detail.patient.id}`}
       kind="lab"
       entries={entries}
+      refreshing={history.refreshing}
+      readError={history.readError}
+      onRetry={history.refresh}
       status={legacyFixture ? "ready" : history.status}
       onCollapse={() => setContentAsideOpen(false)}
     />
@@ -3400,6 +3406,12 @@ export function LabContent({
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
   const instructionReview = useTaskInstructionReview(workspaceId, !allowDemoContent && fulfillmentWorkItem?.taskId ? [fulfillmentWorkItem.taskId] : [], String(fulfillmentWorkItem?.rowRevision ?? ""));
+  const entry = useOrderPrework({
+    scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}`,
+    requested: !allowDemoContent && fulfillmentWorkItem?.status === "requested",
+    ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
+    pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
+  });
   const catalogRowsState = useLabResultSheetCatalogRows({
     result: allowDemoContent ? detail?.result : undefined,
     workItem: fulfillmentWorkItem,
@@ -3659,6 +3671,15 @@ export function LabContent({
       </div>
     );
   }
+
+  if (entry.show && fulfillmentWorkItem) return <ExamOrderPrework
+    workItem={fulfillmentWorkItem} review={instructionReview}
+    busy={false} onEntered={entry.enter}
+    onConfirm={async () => {
+      if (!fulfillmentWorkItem.canManage) return false;
+      if (!fulfillmentWorkItem.assignedToUserId) return transitionFulfillment("claim");
+      return true;
+    }} />;
 
   const displayDetail = {
     ...effectiveDetail,
@@ -4044,6 +4065,9 @@ export function ImagingContentAside({ onNavigateWorkspaceSurface, workspaceId }:
     key={`${workspaceId}:${detail.patient.id}`}
     kind="imaging"
     entries={entries}
+    refreshing={history.refreshing}
+    readError={history.readError}
+    onRetry={history.refresh}
     status={legacyFixture ? "ready" : history.status}
     onCollapse={() => setContentAsideOpen(false)}
   />;
@@ -4321,6 +4345,12 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
     [detail?.order?.id, fulfillmentQueue.workItems],
   );
   const instructionReview = useTaskInstructionReview(workspaceId, !allowDemoContent && fulfillmentWorkItem?.taskId ? [fulfillmentWorkItem.taskId] : [], String(fulfillmentWorkItem?.rowRevision ?? ""));
+  const entry = useOrderPrework({
+    scopeKey: `${workspaceId}:${fulfillmentWorkItem?.id ?? ""}`,
+    requested: !allowDemoContent && fulfillmentWorkItem?.status === "requested",
+    ownsWork: Boolean(fulfillmentWorkItem?.canManage && fulfillmentWorkItem.assignedToUserId),
+    pending: !allowDemoContent && fulfillmentQueue.status === "loading" && !fulfillmentWorkItem,
+  });
   const initialAssignment = {
     assigneeName: detail?.radiologistName ?? "미지정",
     status: getInitialImagingReadingStatus(detail?.study.status),
@@ -4473,6 +4503,15 @@ export function ImagingContent({ workspaceId, hasRightPanel }: ShellComponentPro
       </div>
     );
   }
+
+  if (entry.show && fulfillmentWorkItem) return <ExamOrderPrework
+    workItem={fulfillmentWorkItem} review={instructionReview}
+    busy={false} onEntered={entry.enter}
+    onConfirm={async () => {
+      if (!fulfillmentWorkItem.canManage) return false;
+      if (!fulfillmentWorkItem.assignedToUserId) return transitionFulfillment("claim");
+      return transitionFulfillment("start", { detailedPhase: "interpretation_in_progress" });
+    }} />;
 
   const summaryAction = (
     <Button variant="outline" size="sm" className="bg-card" disabled={!hasRightPanel}

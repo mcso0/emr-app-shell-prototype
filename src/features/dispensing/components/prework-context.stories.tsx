@@ -19,6 +19,7 @@ type Args = {
   denied?: boolean;
   requester?: boolean;
   width?: number;
+  loadingContext?: boolean;
 };
 const workItem = {
   id,
@@ -97,6 +98,7 @@ const meta = {
   beforeEach: ({ args }) => {
     commands = [];
     const original = globalThis.fetch;
+    const pendingReads: Array<() => void> = [];
     let fail = args.failOnce;
     const document: InstructionDocument = {
       ...structuredClone(syntheticInstruction),
@@ -213,6 +215,9 @@ const meta = {
         return args.denied
           ? Response.json({ ok: false }, { status: 403 })
           : Response.json({ ok: true, measurements: [] });
+      if (args.loadingContext && (url.pathname.endsWith("/profile-overview") || url.pathname.endsWith("/vitals"))) {
+        return new Promise<Response>(resolve => pendingReads.push(() => resolve(Response.json({ ok: false }, { status: 500 }))));
+      }
       if (url.pathname.endsWith("/profile-overview")) {
         if (args.denied) return Response.json({ ok: false }, { status: 403 });
         const isPatient = url.pathname.includes("/patient/");
@@ -269,6 +274,7 @@ const meta = {
     };
     return () => {
       globalThis.fetch = original;
+      pendingReads.forEach(release => release());
     };
   },
 } satisfies Meta<typeof Example>;
@@ -284,12 +290,13 @@ export const Overview: Story = {
   },
 };
 export const Unassigned: Story = {
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     await canvas.findByRole("columnheader", { name: "담당자" });
     await expect(
       canvas.getByRole("columnheader", { name: "오더명" }),
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
+    await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "담당하기" }));
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(
       canvas.getByRole("button", { name: "조제 시작" }),
@@ -299,10 +306,11 @@ export const Unassigned: Story = {
 };
 export const DesignatedOwner: Story = {
   args: { owner: "mine" },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement }) => {
     const start = await canvas.findByRole("button", { name: "업무 시작하기" });
     await waitFor(() => expect(start).toBeEnabled());
     await userEvent.click(start);
+    await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "업무 시작하기" }));
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(commands.map((command) => command.action)).toEqual(["start"]);
     await expect(
@@ -376,5 +384,17 @@ export const ReadDenied: Story = {
     await expect(
       canvas.getByRole("button", { name: "환자 정보" }),
     ).toBeDisabled();
+  },
+};
+
+
+export const LoadingContextRetainsRequest: Story = {
+  args: { owner: "mine", loadingContext: true },
+  play: async ({ canvas, canvasElement }) => {
+    await canvas.findByText("요청 정보");
+    await expect(canvas.getByText("합성 환자", { exact: true })).toBeVisible();
+    await expect(canvas.getByText("합성 약품 1", { exact: true })).toBeVisible();
+    await waitFor(() => expect(canvasElement.querySelectorAll('[skullet-loading]').length).toBeGreaterThanOrEqual(2));
+    await expect(commands).toHaveLength(0);
   },
 };

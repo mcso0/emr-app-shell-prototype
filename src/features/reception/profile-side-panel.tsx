@@ -9,8 +9,9 @@ import {
   type ReactNode,
 } from "react";
 
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+
 import { CdsActionsRefreshCwIcon, CdsActionsPlusIcon } from "@/components/cds-icons/actions-and-controls";
-import { CdsAlertsLoaderIcon } from "@/components/cds-icons/alerts-and-status";
 import {
   CdsCommunicationMailIcon,
   CdsCommunicationMessageSquareIcon,
@@ -145,6 +146,8 @@ export type ProfileTabAccess = {
 export type ProfileTabState = {
   errorStatus?: number;
   nextCursor?: string | null;
+  pending?: "append" | "refresh";
+  readError?: "append" | "refresh";
   status: "idle" | "loading" | "ready" | "error" | "denied" | "not_found";
 };
 
@@ -503,63 +506,49 @@ function RelatedCard({
   );
 }
 
-function InformationTab({
-  editContent,
-  editing,
+/** Only the synthetic loading branch is measured. Loaded fields remain ordinary UI. */
+export function ProfileBasicInformation({
   model,
-  overviewState,
+  loading = false,
   onBeginEdit,
-  onOpenRelated,
-  onRetryOverview,
-  onRetryToday,
-}: Pick<
-  ProfileSidePanelProps,
-  "editContent" | "editing" | "model" | "onBeginEdit" | "onOpenRelated" | "onRetryOverview" | "onRetryToday"
-> & { overviewState?: ProfileTabState }) {
-  if (overviewState && overviewState.status !== "ready") {
-    const label = overviewState.status === "loading"
-      ? "프로필 정보를 불러오는 중입니다."
-      : overviewState.status === "denied"
-        ? "프로필 정보를 볼 권한이 없습니다."
-        : overviewState.status === "not_found"
-          ? "프로필 정보를 찾을 수 없습니다."
-          : "프로필 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
+}: {
+  model: Pick<ProfileSidePanelModel, "kind" | "infoHeading" | "infoRows">;
+  loading?: boolean;
+  onBeginEdit?: () => void;
+}) {
+  const sample = {
+    ...model,
+    infoHeading: model.kind === "patient" ? "환자 정보" : "보호자 정보",
+    infoRows: (model.kind === "patient" ? [
+      { icon: "pet", label: "환자명", value: "예시 환자" },
+      { icon: "paw-print", label: "종류/품종", value: "개 / 포메라니안" },
+      { icon: "user", label: "성별", value: "중성화 암컷" },
+      { icon: "clock", label: "나이", value: "8세 3개월" },
+      { icon: "calendar", label: "생년월일", value: "2018년 8월 1일" },
+      { icon: "scan-line", label: "마이크로칩", value: "000000000000000" },
+      { icon: "file-user", label: "동물등록번호", value: "000000000" },
+      { icon: "notebook-text", label: "환자 메모", value: "가상 프로필 메모입니다." },
+    ] : [
+      { icon: "user", label: "보호자명", value: "예시 보호자" },
+      { icon: "calendar", label: "생년월일", value: "1988-01-01" },
+      { icon: "phone", label: "전화번호", value: "010-0000-0000" },
+      { icon: "mail", label: "이메일", value: "sample@example.invalid" },
+      { icon: "map-pin", label: "주소", value: "가상 주소 예시" },
+      { icon: "notebook-text", label: "보호자메모", value: "가상 프로필 메모입니다." },
+    ]) satisfies ProfileDefinitionRow[],
+  };
+  return loading ? (
+    <EmrMeasuredLoading label="프로필 기본 정보를 불러오는 중입니다." testId="profile-basic-information-loading">
+      <ProfileBasicInformationContent model={sample} />
+    </EmrMeasuredLoading>
+  ) : <ProfileBasicInformationContent model={model} onBeginEdit={onBeginEdit} />;
+}
 
-    return (
-      <EmrProfilePanelBody
-        className={cn(styles.scrollContent, styles.infoContent)}
-      >
-        <PanelState state={overviewState.status} label={label} onAction={onRetryOverview} />
-      </EmrProfilePanelBody>
-    );
-  }
-
+function ProfileBasicInformationContent({ model, onBeginEdit }: {
+  model: Pick<ProfileSidePanelModel, "infoHeading" | "infoRows">;
+  onBeginEdit?: () => void;
+}) {
   return (
-    <EmrProfilePanelBody
-      className={cn(styles.scrollContent, styles.infoContent)}
-    >
-      <section className={styles.infoSection} aria-label="오늘 접수/예약" data-testid="profile-today-section">
-        <h3 className={styles.sectionHeading}>오늘 접수/예약</h3>
-        <div className={styles.sectionBody}>
-          {model.todayState && model.todayState.status !== "ready" ? (
-            <div className={styles.todayFeedback} role="status">
-              <span className={styles.todayFeedbackMessage}>
-                {(model.todayState.status === "idle" || model.todayState.status === "loading") && (
-                  <CdsAlertsLoaderIcon aria-hidden="true" className="size-4 shrink-0 motion-safe:animate-spin motion-reduce:animate-none" />
-                )}
-                {model.todayState.status === "denied" ? "오늘 접수/예약을 볼 권한이 없습니다" : model.todayState.status === "error" || model.todayState.status === "not_found" ? "오늘 접수/예약을 불러오지 못했습니다" : "오늘 접수/예약을 불러오는 중입니다"}
-              </span>
-              {(model.todayState.status === "error" || model.todayState.status === "not_found") && onRetryToday ? <Button size="xs" variant="outline" onClick={onRetryToday}><CdsActionsRefreshCwIcon aria-hidden="true" data-icon="inline-start" />다시 시도</Button> : null}
-            </div>
-          ) : model.todayItems?.length ? model.todayItems.map((item) => <WorkCard key={`${item.id}:${item.description}`} item={item} todayStatus={item.status} showPatientName={model.kind === "guardian"} />) : model.todayItems === undefined && model.today ? <WorkCard key={`${model.today.id}:${model.today.description}`} item={model.today} todayStatus="reservation" /> : <div className={styles.todayFeedback} role="status">접수/예약 일정이 없습니다</div>}
-        </div>
-      </section>
-      <div className={styles.divider} aria-hidden="true" />
-
-      {editing && editContent ? (
-        <div className={styles.editSurface}>{editContent}</div>
-      ) : (
-        <>
           <section className={styles.infoSection}>
             <h3 className={styles.sectionHeading}>{model.infoHeading}</h3>
             {onBeginEdit ? (
@@ -588,8 +577,99 @@ function InformationTab({
               })}
             </dl>
           </section>
+  );
+}
 
-          {model.relatedGroups.map((group, index) => (
+const loadingReservation: ProfileReservationItem = {
+  id: "loading-reservation", title: "예약 일정", description: "오전 10:00 · 가상 일정 메모",
+};
+const loadingActivity: ProfileHistoryItem = {
+  id: "loading-history", kindLabel: "외래", title: "진료 기록",
+  subjectLabel: "가상 진료 항목", statusLabel: "완료", requestedAtLabel: "오전 10:00", clinicianLabel: "담당 수의사",
+};
+
+export function ProfileScheduleLoading() {
+  return <EmrMeasuredLoading label="오늘 접수/예약을 불러오는 중입니다">
+    <WorkCard item={loadingReservation} todayStatus="reservation" />
+  </EmrMeasuredLoading>;
+}
+
+export function ProfileActivityLoading({ kind }: { kind: "reservations" | "history" | "billing" }) {
+  return <EmrMeasuredLoading label={kind === "reservations" ? "예약 일정을 불러오는 중입니다." : kind === "history" ? "진료 이력을 불러오는 중입니다." : "수납 이력을 불러오는 중입니다."}>
+    <div className={styles.activityList}>
+      {[0, 1, 2].map(index => kind === "reservations"
+        ? <ReservationCard key={index} item={loadingReservation} />
+        : kind === "history" ? <ActivityCard key={index} item={loadingActivity} />
+        : <BillingCard key={index} item={{ ...loadingActivity, amountLabel: "00,000원", paymentLabel: "수납 내역" }} />)}
+    </div>
+  </EmrMeasuredLoading>;
+}
+
+function ReservationCard({ item }: { item: ProfileReservationItem }) {
+  return <div className={styles.reservationCard}>
+    <span className={styles.stateIcon} aria-hidden="true"><span className={styles.stateGlyph} /></span>
+    <div className={styles.workCopy}><p className={styles.workTitle}>{item.title}</p><p className={styles.workDescription}>{item.description}</p></div>
+  </div>;
+}
+
+function InformationTab({
+  editContent,
+  editing,
+  model,
+  overviewState,
+  onBeginEdit,
+  onOpenRelated,
+  onRetryOverview,
+  onRetryToday,
+}: Pick<
+  ProfileSidePanelProps,
+  "editContent" | "editing" | "model" | "onBeginEdit" | "onOpenRelated" | "onRetryOverview" | "onRetryToday"
+> & { overviewState?: ProfileTabState }) {
+  const loading = overviewState?.status === "loading" || overviewState?.status === "idle";
+  if (overviewState && overviewState.status !== "ready" && !loading) {
+    const label = overviewState.status === "loading"
+      ? "프로필 정보를 불러오는 중입니다."
+      : overviewState.status === "denied"
+        ? "프로필 정보를 볼 권한이 없습니다."
+        : overviewState.status === "not_found"
+          ? "프로필 정보를 찾을 수 없습니다."
+          : "프로필 정보를 불러오지 못했습니다. 다시 시도해 주세요.";
+
+    return (
+      <EmrProfilePanelBody
+        className={cn(styles.scrollContent, styles.infoContent)}
+      >
+        <PanelState state={overviewState.status} label={label} onAction={onRetryOverview} />
+      </EmrProfilePanelBody>
+    );
+  }
+
+  return (
+    <EmrProfilePanelBody
+      className={cn(styles.scrollContent, styles.infoContent)}
+    >
+      {loading ? <section className={styles.infoSection}><h3 className={styles.sectionHeading}>오늘 접수/예약</h3><div className={styles.sectionBody}><ProfileScheduleLoading /></div></section> : <section className={styles.infoSection} aria-label="오늘 접수/예약" data-testid="profile-today-section">
+        <h3 className={styles.sectionHeading}>오늘 접수/예약</h3>
+        <div className={styles.sectionBody}>
+          {model.todayState?.status === "idle" || model.todayState?.status === "loading" ? <ProfileScheduleLoading /> : model.todayState && model.todayState.status !== "ready" ? (
+            <div className={styles.todayFeedback} role="status">
+              <span className={styles.todayFeedbackMessage}>
+                {model.todayState.status === "denied" ? "오늘 접수/예약을 볼 권한이 없습니다" : model.todayState.status === "error" || model.todayState.status === "not_found" ? "오늘 접수/예약을 불러오지 못했습니다" : "오늘 접수/예약을 불러오는 중입니다"}
+              </span>
+              {(model.todayState.status === "error" || model.todayState.status === "not_found") && onRetryToday ? <Button size="xs" variant="outline" onClick={onRetryToday}><CdsActionsRefreshCwIcon aria-hidden="true" data-icon="inline-start" />다시 시도</Button> : null}
+            </div>
+          ) : model.todayItems?.length ? model.todayItems.map((item) => <WorkCard key={`${item.id}:${item.description}`} item={item} todayStatus={item.status} showPatientName={model.kind === "guardian"} />) : model.todayItems === undefined && model.today ? <WorkCard key={`${model.today.id}:${model.today.description}`} item={model.today} todayStatus="reservation" /> : <div className={styles.todayFeedback} role="status">접수/예약 일정이 없습니다</div>}
+        </div>
+      </section>}
+      <div className={styles.divider} aria-hidden="true" />
+
+      {!loading && editing && editContent ? (
+        <div className={styles.editSurface}>{editContent}</div>
+      ) : (
+        <>
+          <ProfileBasicInformation model={model} loading={loading} onBeginEdit={onBeginEdit} />
+
+          {(loading ? [] : model.relatedGroups).map((group, index) => (
             <div
               key={group.id}
               className={cn(index > 0 && styles.followingRelatedGroup)}
@@ -621,7 +701,7 @@ function InformationTab({
             </div>
           ))}
 
-          {model.upcoming ? (
+          {!loading && model.upcoming ? (
             <>
               <div className={styles.divider} aria-hidden="true" />
               <section className={styles.infoSection}>
@@ -653,10 +733,10 @@ function PanelState({ state, label, onAction }: {
   return <EmrProfilePanelState state={state} label={label} onRetry={onAction} />;
 }
 
-function LoadMoreButton({ onClick }: { onClick?: () => void }) {
+function LoadMoreButton({ onClick, pending, failed }: { onClick?: () => void; pending?: boolean; failed?: boolean }) {
   return (
-    <button type="button" className={styles.loadMoreButton} onClick={onClick}>
-      더 보기
+    <button type="button" className={styles.loadMoreButton} onClick={onClick} disabled={pending} aria-busy={pending || undefined}>
+      {pending ? "불러오는 중" : failed ? "추가 정보를 불러오지 못했습니다. 다시 시도" : "더 보기"}
     </button>
   );
 }
@@ -673,7 +753,7 @@ function ReservationsTab({
   items: ProfileReservationItem[];
   onFilterChange?: (filter: ProfileTabFilter) => void;
   onLoadMore?: (filter?: ProfileTabFilter) => void;
-  onRetry?: () => void;
+  onRetry?: (filter?: ProfileTabFilter) => void;
   state?: ProfileTabState;
 }) {
   const [monthKey, setMonthKey] = useState(() => initialMonth ?? getInitialMonth(items));
@@ -690,10 +770,12 @@ function ReservationsTab({
     [items, monthKey],
   );
 
+  if (state?.status === "loading" || state?.status === "idle") {
+    return <EmrProfilePanelBody className={styles.scrollContent}><ProfileActivityLoading kind="reservations" /></EmrProfilePanelBody>;
+  }
+
   if (state && state.status !== "ready") {
-    const label = state.status === "loading" || state.status === "idle"
-      ? "예약 일정을 불러오는 중입니다."
-      : state.status === "denied"
+    const label = state.status === "denied"
         ? "예약 정보를 볼 권한이 없습니다."
         : state.status === "not_found"
           ? "프로필 정보를 찾을 수 없습니다."
@@ -702,7 +784,7 @@ function ReservationsTab({
       <EmrProfilePanelBody
         className={styles.scrollContent}
       >
-        <PanelState state={state.status} label={label} onAction={onRetry} />
+        <PanelState state={state.status} label={label} onAction={() => onRetry?.({ month: monthKey })} />
       </EmrProfilePanelBody>
     );
   }
@@ -711,6 +793,8 @@ function ReservationsTab({
     <EmrProfilePanelBody
       className={styles.scrollContent}
     >
+      {state?.pending === "refresh" ? <p className="px-4 text-sm text-muted-foreground" role="status">최신 정보를 확인하는 중입니다.</p> : null}
+      {state?.readError === "refresh" ? <div role="alert" className="px-4 text-sm"><p>최신 정보를 불러오지 못했습니다.</p><Button variant="outline" size="sm" onClick={() => onRetry?.({ month: monthKey })}>다시 시도</Button></div> : null}
       <div className={styles.toolbar}>
         <div className={styles.monthNavigator}>
           <button
@@ -755,17 +839,9 @@ function ReservationsTab({
       {visibleItems.length ? (
         <div className={styles.activityList}>
           {visibleItems.map((item) => (
-            <div key={item.id} className={styles.reservationCard}>
-              <span className={styles.stateIcon} aria-hidden="true">
-                <span className={styles.stateGlyph} />
-              </span>
-              <div className={styles.workCopy}>
-                <p className={styles.workTitle}>{item.title}</p>
-                <p className={styles.workDescription}>{item.description}</p>
-              </div>
-            </div>
+            <ReservationCard key={item.id} item={item} />
           ))}
-          {state?.nextCursor ? <LoadMoreButton onClick={() => onLoadMore?.({ month: monthKey })} /> : null}
+          {state?.nextCursor ? <LoadMoreButton pending={Boolean(state?.pending)} failed={state?.readError === "append"} onClick={() => onLoadMore?.({ month: monthKey })} /> : null}
         </div>
       ) : (
         <EmptyTab kind="reservations" />
@@ -822,7 +898,7 @@ function HistoryTab({
   kind: ProfileSidePanelModel["kind"];
   onFilterChange?: (filter: ProfileTabFilter) => void;
   onLoadMore?: (filter?: ProfileTabFilter) => void;
-  onRetry?: () => void;
+  onRetry?: (filter?: ProfileTabFilter) => void;
   state?: ProfileTabState;
 }) {
   const [months, setMonths] = useState(6);
@@ -842,10 +918,12 @@ function HistoryTab({
   );
   const groups = useMemo(() => getDateGroups(visibleItems), [visibleItems]);
 
+  if (state?.status === "loading" || state?.status === "idle") {
+    return <EmrProfilePanelBody className={styles.scrollContent}><ProfileActivityLoading kind="history" /></EmrProfilePanelBody>;
+  }
+
   if (state && state.status !== "ready") {
-    const label = state.status === "loading" || state.status === "idle"
-      ? "진료 이력을 불러오는 중입니다."
-      : state.status === "denied"
+    const label = state.status === "denied"
         ? "진료 이력을 볼 권한이 없습니다."
         : state.status === "not_found"
           ? "프로필 정보를 찾을 수 없습니다."
@@ -854,7 +932,7 @@ function HistoryTab({
       <EmrProfilePanelBody
         className={styles.scrollContent}
       >
-        <PanelState state={state.status} label={label} onAction={onRetry} />
+        <PanelState state={state.status} label={label} onAction={() => onRetry?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} />
       </EmrProfilePanelBody>
     );
   }
@@ -863,6 +941,8 @@ function HistoryTab({
     <EmrProfilePanelBody
       className={styles.scrollContent}
     >
+      {state?.pending === "refresh" ? <p className="px-4 text-sm text-muted-foreground" role="status">최신 정보를 확인하는 중입니다.</p> : null}
+      {state?.readError === "refresh" ? <div role="alert" className="px-4 text-sm"><p>최신 정보를 불러오지 못했습니다.</p><Button variant="outline" size="sm" onClick={() => onRetry?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })}>다시 시도</Button></div> : null}
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
           전체 진료 이력 <span className={styles.countBadge}>{visibleItems.length}</span>
@@ -927,7 +1007,7 @@ function HistoryTab({
               {group.items.map((item) => <ActivityCard key={item.id} item={item} />)}
             </section>
           ))}
-          {state?.nextCursor ? <LoadMoreButton onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
+          {state?.nextCursor ? <LoadMoreButton pending={Boolean(state?.pending)} failed={state?.readError === "append"} onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
         </div>
       ) : (
         <EmptyTab kind="history" />
@@ -982,7 +1062,7 @@ function BillingTab({
   kind: ProfileSidePanelModel["kind"];
   onFilterChange?: (filter: ProfileTabFilter) => void;
   onLoadMore?: (filter?: ProfileTabFilter) => void;
-  onRetry?: () => void;
+  onRetry?: (filter?: ProfileTabFilter) => void;
   state?: ProfileTabState;
 }) {
   const [months, setMonths] = useState(6);
@@ -1002,10 +1082,12 @@ function BillingTab({
   );
   const groups = useMemo(() => getDateGroups(visibleItems), [visibleItems]);
 
+  if (state?.status === "loading" || state?.status === "idle") {
+    return <EmrProfilePanelBody className={styles.scrollContent}><ProfileActivityLoading kind="billing" /></EmrProfilePanelBody>;
+  }
+
   if (state && state.status !== "ready") {
-    const label = state.status === "loading" || state.status === "idle"
-      ? "수납 이력을 불러오는 중입니다."
-      : state.status === "denied"
+    const label = state.status === "denied"
         ? "수납 정보를 볼 권한이 없습니다."
         : state.status === "not_found"
           ? "프로필 정보를 찾을 수 없습니다."
@@ -1014,7 +1096,7 @@ function BillingTab({
       <EmrProfilePanelBody
         className={styles.scrollContent}
       >
-        <PanelState state={state.status} label={label} onAction={onRetry} />
+        <PanelState state={state.status} label={label} onAction={() => onRetry?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} />
       </EmrProfilePanelBody>
     );
   }
@@ -1023,6 +1105,8 @@ function BillingTab({
     <EmrProfilePanelBody
       className={styles.scrollContent}
     >
+      {state?.pending === "refresh" ? <p className="px-4 text-sm text-muted-foreground" role="status">최신 정보를 확인하는 중입니다.</p> : null}
+      {state?.readError === "refresh" ? <div role="alert" className="px-4 text-sm"><p>최신 정보를 불러오지 못했습니다.</p><Button variant="outline" size="sm" onClick={() => onRetry?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })}>다시 시도</Button></div> : null}
       <div className={styles.toolbar}>
         <div className={styles.toolbarStart}>
           전체 수납 이력 <span className={styles.countBadge}>{visibleItems.length}</span>
@@ -1087,7 +1171,7 @@ function BillingTab({
               {group.items.map((item) => <BillingCard key={item.id} item={item} />)}
             </section>
           ))}
-          {state?.nextCursor ? <LoadMoreButton onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
+          {state?.nextCursor ? <LoadMoreButton pending={Boolean(state?.pending)} failed={state?.readError === "append"} onClick={() => onLoadMore?.({ months: months as 6 | 12, patientId: patientId === "all" ? undefined : patientId })} /> : null}
         </div>
       ) : (
         <EmptyTab kind="billing" />
@@ -1113,10 +1197,32 @@ export function ProfileSidePanel({
   onSaveEdit,
   onTabChange,
   saving = false,
-  sectionStates,
+  sectionStates: providedSectionStates,
   tabAccess,
 }: ProfileSidePanelProps) {
   const [activeTab, setActiveTab] = useState<ProfileSidePanelTab>(defaultTab);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Local synthetic profiles have no pending request. Opt in to viewing their
+  // real loading UI without changing live reads or production behavior.
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV !== "development" ||
+      !embedded || providedSectionStates || editing ||
+      !["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) ||
+      new URLSearchParams(window.location.search).get("skeletonPreview") !== "1"
+    ) return;
+    const start = window.setTimeout(() => setPreviewLoading(true), 0);
+    const finish = window.setTimeout(() => setPreviewLoading(false), 8000);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(finish);
+    };
+  }, [activeTab, editing, embedded, model.kind, model.name, providedSectionStates]);
+
+  const sectionStates = providedSectionStates ?? (previewLoading && !editing
+    ? { [activeTab]: { status: "loading" as const } }
+    : undefined);
 
   const changeTab = (tab: ProfileSidePanelTab) => {
     if (tabAccess?.[tab]?.allowed === false) return;
@@ -1169,7 +1275,7 @@ export function ProfileSidePanel({
             items={model.reservations}
             onFilterChange={(filter) => onLoadSection?.("reservations", filter)}
             onLoadMore={(filter) => onLoadSection?.("reservations", filter ?? { month: model.reservationMonth }, true)}
-            onRetry={() => onLoadSection?.("reservations", { month: model.reservationMonth }, false)}
+            onRetry={(filter) => onLoadSection?.("reservations", filter ?? { month: model.reservationMonth }, false)}
             state={sectionStates?.reservations}
           />
         ) : null}
@@ -1179,7 +1285,7 @@ export function ProfileSidePanel({
             kind={model.kind}
             onFilterChange={(filter) => onLoadSection?.("history", filter)}
             onLoadMore={(filter) => onLoadSection?.("history", filter ?? { months: 6 }, true)}
-            onRetry={() => onLoadSection?.("history", { months: 6 }, false)}
+            onRetry={(filter) => onLoadSection?.("history", filter ?? { months: 6 }, false)}
             state={sectionStates?.history}
           />
         ) : null}
@@ -1189,7 +1295,7 @@ export function ProfileSidePanel({
             kind={model.kind}
             onFilterChange={(filter) => onLoadSection?.("billing", filter)}
             onLoadMore={(filter) => onLoadSection?.("billing", filter ?? { months: 6 }, true)}
-            onRetry={() => onLoadSection?.("billing", { months: 6 }, false)}
+            onRetry={(filter) => onLoadSection?.("billing", filter ?? { months: 6 }, false)}
             state={sectionStates?.billing}
           />
         ) : null}

@@ -105,6 +105,34 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
   scoped schema. Full confirmation/catalog/billing replay and hosted parity are
   not verified by these tests.
 
+## Shared order entry presentation — 2026-11-03
+
+Local UI implementation uses the unchanged chart preconsultation layout as its
+visual reference. Dispensing, treatment, lab, imaging and persisted open billing
+invoices share a white entry frame, patient context and confirmation dialog. The
+workspace context bar, document toolbar and work side panels remain hidden before
+entry. Completed/started workflows and provisional billing candidates keep their
+existing screen. Legacy mock-sales fixtures keep their existing direct entry.
+
+- Own-assignee entry uses `업무 시작하기` in every category. Lab and billing enter
+  locally without a start or assignment command; imaging and dispensing/treatment
+  retain their existing start commands and instruction acknowledgement checks.
+- Unassigned confirmation calls the existing revision-checked claim command, then
+  opens the work screen when the current actor owns it. Claim never records start.
+- Taking another assignee's requested work remains limited to the existing
+  dispensing/treatment takeover command and its required reason. Lab, imaging and
+  billing show the handoff explanation without adding mutation authority.
+- Entry intent is local to the actor, workspace and exact work item/invoice. A
+  selection change or loss of assignment invalidates it. Billing checkout prepare
+  remains gated until entry; payment confirmation and server checks are unchanged.
+- Shared UI lives in `EmrWorkEntryPage` and `EmrWorkEntryAction`. Patient context is
+  composed by `PatientOrderPrework`; chart source files remain unchanged. The new
+  shell presentation flag applies only to these order modules.
+
+Work and synthetic local verification:
+[CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#order-prework-screen-alignment--2026-11-03-approved-local-implementation).
+No new API, role policy, migration or remote data change belongs to this UI slice.
+
 ## Dispensing/treatment instruction candidate — 2026-10-27
 
 Local candidate only; remote application is not verified. See

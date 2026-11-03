@@ -1,6 +1,12 @@
 "use client";
 
 import { OrderBillingChangeReview } from "./order-billing-change-review";
+import { getAuthRuntimeMode } from "@/lib/supabase/config";
+import { useOrderPrework, useOrderPreworkPresentation } from "@/features/fulfillment/use-order-prework";
+import { PatientOrderPrework } from "@/features/fulfillment/components/patient-order-prework";
+import { EmrWorkEntryAction } from "@/components/emr/work-entry-action";
+import { EmrWorkEntrySection, EmrWorkEntrySummary } from "@/components/emr/work-entry-page";
+
 import { useBillingAssignment } from "./use-billing-assignment";
 import { FulfillmentWorkLifecycleAction } from "@/features/fulfillment/components/work-lifecycle-action";
 
@@ -3270,6 +3276,31 @@ function BillingCheckoutStateNotice({
   );
 }
 
+function BillingPreworkHistory({ detail }: { detail: BillingDetail }) {
+  const { session } = useAuthClient();
+  const actorHeaders = useMemo(() => getDemoActorHeader(session), [session]);
+  const [loaded, setLoaded] = useState<{ key: string; data: GuardianCheckoutLedgerRouteResponse } | null>(null);
+  const [retry, setRetry] = useState(0);
+  const guardianId = detail.guardian?.id;
+  const workspaceId = detail.invoice.workspaceId;
+  const key = `${workspaceId}:${guardianId}:${JSON.stringify(actorHeaders)}:${retry}`;
+  const result = loaded?.key === key ? loaded.data : null;
+  useEffect(() => {
+    if (!guardianId) return;
+    let active = true;
+    void loadGuardianCheckoutLedger({ actorHeaders, guardianId, workspaceId, includeCoGuardianInvoices: false }).then(data => { if (active) setLoaded({ key, data }); });
+    return () => { active = false; };
+  }, [actorHeaders, guardianId, workspaceId, key]);
+  const rows = result?.ok ? result.rows.filter(row => row.invoiceId !== detail.invoice.id) : [];
+  return <EmrWorkEntrySection title="과거 수납 이력">
+    {!guardianId ? <p className="text-sm text-muted-foreground">보호자 정보를 확인할 수 없어 이력을 표시하지 못했어요.</p>
+      : !result ? <p className="text-sm text-muted-foreground">이력을 불러오는 중이에요.</p>
+      : !result.ok ? <div role="alert" className="text-sm">이력을 불러오지 못했어요. <Button variant="outline" onClick={() => setRetry(value => value + 1)}>다시 조회</Button></div>
+      : rows.length ? rows.map(row => <div key={row.invoiceId} className="flex flex-wrap justify-between gap-4 rounded-lg border border-border p-4 text-sm"><time>{new Date(row.activityAt).toLocaleDateString("ko-KR")}</time><span>{formatAmount(row.totalAmount)}</span><span>{row.status === "paid" ? "수납 완료" : row.status === "refunded" ? "환불" : row.status === "voided" ? "취소" : row.status === "unpaid" ? "미수" : "대기"}</span></div>)
+      : <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">이전 수납 이력이 없어요.</p>}
+  </EmrWorkEntrySection>;
+}
+
 export function BillingContent({
   hasRightPanel,
   workspaceId,
@@ -3296,6 +3327,12 @@ export function BillingContent({
   const storedInvoices = useBillingStore((state) => state.invoices);
   const storedPayments = useBillingStore((state) => state.payments);
   const editOwnership = useBillingAssignment(detail?.invoice.workspaceId, detail?.invoice.id);
+  const entry = useOrderPrework({
+    scopeKey: `${workspaceId}:${detail?.invoice.id ?? ""}`,
+    requested: Boolean(detail && (getAuthRuntimeMode().authProvider === "supabase" || !isLegacySalesDemoWorkspace(workspaceId)) && !detail.invoice.id.startsWith("invoice-live-") && getBillingFilterForInvoice(detail.invoice) !== "closed"),
+    ownsWork: editOwnership.canExecute,
+    pending: !detail && billingQueue.status === "loading",
+  });
   const selectedInvoiceIds = useBillingStore(
     (state) => state.selectedInvoiceIds,
   );
@@ -3400,7 +3437,7 @@ export function BillingContent({
       ? billingApiEmptyState
       : checkoutState;
   useEffect(() => {
-    if (orderReviewBlocked || !editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
+    if (entry.show || orderReviewBlocked || !editOwnership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) {
       return;
     }
 
@@ -3440,6 +3477,7 @@ export function BillingContent({
     orderReviewBlocked,
     orderReview?.signature,
     editOwnership.canExecute,
+    entry.show,
     checkoutWorkspaceId,
   ]);
   useEffect(() => {
@@ -3578,6 +3616,26 @@ export function BillingContent({
     setLinePersistenceState("saved");
   }
 
+  if (entry.show) return <PatientOrderPrework
+    workItem={{ id: effectiveDetail.invoice.id, workspaceId, encounterId: effectiveDetail.encounter.id, patientId: effectiveDetail.patient?.id,
+      patientName: effectiveDetail.patient?.name, guardianName: effectiveDetail.guardian?.name, requesterName: effectiveDetail.requestedByName, createdAt: effectiveDetail.invoice.createdAt }}
+    encounterNo={effectiveDetail.encounter.encounterNo} label="수납" testId="billing-prework"
+    historyContent={<BillingPreworkHistory key={`${workspaceId}:${effectiveDetail.guardian?.id}`} detail={effectiveDetail} />}
+    actions={editOwnership.data ? <EmrWorkEntryAction
+      scopeKey={`${workspaceId}:${effectiveDetail.invoice.id}`} authorityKey={`${editOwnership.data.revision}:${editOwnership.data.canManage}:${editOwnership.data.assignedToUserId}`}
+      mode={editOwnership.canExecute ? "start" : editOwnership.data.canManage && !editOwnership.data.assignedToUserId ? "claim" : "blocked"}
+      assigneeName={editOwnership.data.assignedToDisplayName} onEntered={entry.enter}
+      description={editOwnership.canExecute ? "수납 업무 화면을 열어요. 결제는 별도로 확인해요." : undefined}
+      context={<><strong>{effectiveDetail.invoice.invoiceNo}</strong><p>미수금 {formatAmount(getBillingBalance(effectiveDetail))}</p></>}
+      onConfirm={() => editOwnership.canExecute ? Promise.resolve(true) : editOwnership.transition("claim")} />
+      : <Button size="sm" variant="outline" onClick={() => void editOwnership.refresh()}>담당 상태 다시 조회</Button>}>
+    <EmrWorkEntrySection title="청구 정보"><EmrWorkEntrySummary items={[
+      ["청구 번호", effectiveDetail.invoice.invoiceNo], ["청구 항목", `${effectiveDetail.lineCount}개`], ["청구 금액", formatAmount(effectiveDetail.invoice.totalAmount)],
+      ["미수금", formatAmount(getBillingBalance(effectiveDetail))], ["수납 담당", editOwnership.data?.assignedToDisplayName ?? (editOwnership.data ? "미지정" : "확인 중")],
+    ]} /></EmrWorkEntrySection>
+    <EmrWorkEntrySection title="청구 항목"><div className="divide-y rounded-lg border border-border">{effectiveDetail.invoiceLines.map(line => <div key={line.id} className="flex items-center justify-between gap-4 p-4 text-sm"><span>{line.description}</span><span>{formatAmount(line.lineTotal)}</span></div>)}</div></EmrWorkEntrySection>
+  </PatientOrderPrework>;
+
   return (
     <div data-slot="billing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)]">
       <ScrollArea data-slot="billing-content-scroll-area" className="min-h-0 flex-1">
@@ -3700,6 +3758,7 @@ function PaymentStatusNote({
 }
 
 export function BillingRightPanel() {
+  const prework = useOrderPreworkPresentation();
   const setRightPanelOpen = useLayoutStore((state) => state.setRightPanelOpen);
   const {
     applyInvoiceSnapshot,
@@ -3791,7 +3850,7 @@ export function BillingRightPanel() {
   const checkoutSourceKey = JSON.stringify([checkoutWorkspaceId, checkoutInvoiceIdsKey, checkoutAmountsKey, effectiveDetail?.invoice.updatedAt, orderReview?.signature, paymentMethod, paymentMemo]);
   const activeCheckoutSession = !orderReviewBlocked && checkoutSession?.sourceKey === checkoutSourceKey ? checkoutSession : undefined;
   useEffect(() => {
-    if (orderReviewBlocked || !ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) { return; }
+    if (prework || orderReviewBlocked || !ownership.canExecute || !checkoutWorkspaceId || checkoutInvoiceIds.length === 0) return;
 
     const resolvedWorkspaceId = checkoutWorkspaceId;
     let cancelled = false;
@@ -3822,6 +3881,7 @@ export function BillingRightPanel() {
     orderReview?.signature,
     checkoutWorkspaceId,
     ownership.canExecute,
+    prework,
     paymentMemo,
     paymentMethod,
   ]);

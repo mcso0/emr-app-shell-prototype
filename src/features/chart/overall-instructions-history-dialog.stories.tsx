@@ -13,9 +13,9 @@ const history: OverallInstructions["history"] = [
   { ...actor, scope: "dispensing", revision: 1, instruction: "경구제 전용 이전 지시", deleted: false, legacy: true },
   { ...actor, scope: "overall", revision: 1, instruction: "전체 지시", deleted: false },
 ];
-function Example({ empty = false }: { empty?: boolean }) {
+function Example({ empty = false, loading = false }: { empty?: boolean; loading?: boolean }) {
   const [open, setOpen] = useState(true);
-  return <OverallInstructionsHistoryDialog open={open} onOpenChange={setOpen} history={empty ? [] : history} />;
+  return <OverallInstructionsHistoryDialog open={open} onOpenChange={setOpen} history={empty ? [] : history} loading={loading} />;
 }
 const meta = { title: "Features/Chart/Overall Instructions History", component: Example, tags: ["autodocs"] } satisfies Meta<typeof Example>;
 export default meta;
@@ -34,3 +34,6 @@ export const RevisionHistory: Story = { play: async ({ canvasElement }) => {
 export const EmptyHistory: Story = { args: { empty: true }, play: async ({ canvasElement }) => {
   await within(canvasElement.ownerDocument.body).findByText("변경 이력이 없습니다.");
 } };
+
+export const InitialLoading: Story = { args: { empty: true, loading: true } };
+export const RefreshRetainsHistory: Story = { args: { loading: true }, play: RevisionHistory.play };

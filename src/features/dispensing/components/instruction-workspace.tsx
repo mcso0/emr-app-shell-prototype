@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { EmrWorkEntryAction } from "@/components/emr/work-entry-action";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
@@ -98,12 +99,28 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           {document.mainAssigneeName}
         </span>
       ) : null}
-      {document.canClaim ? (
+      {prework ? <EmrWorkEntryAction
+        scopeKey={`${workspaceId}:${document.rootTaskId}:${document.queueType}`}
+        authorityKey={document.revision}
+        mode={document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked"}
+        assigneeName={document.mainAssigneeName}
+        busy={busy} error={controller.error}
+        context={<><strong>{document.queueType === "dispensing" ? "조제" : "처치"} · {document.items.length}개</strong><p>현재 담당: {document.mainAssigneeName ?? "미지정"}</p></>}
+        onConfirm={async (reason) => {
+          const action = document.canClaim ? "claim" : document.canTakeover ? "takeover" : "start";
+          if (action === "start" && controller.instructionReview && !await controller.instructionReview.check()) return "review_required";
+          const succeeded = await controller.mutate(action === "takeover" ? { action, reason } : { action });
+          if (succeeded) onChanged();
+          return succeeded;
+        }}
+        onEntered={onEntered}
+      /> : null}
+      {!prework && document.canClaim ? (
         <Button size="sm" disabled={busy} onClick={() => void change("claim")}>
           담당하기
         </Button>
       ) : null}
-      {document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
+      {!prework && document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
       <Dialog open={takeover} onOpenChange={(open) => { if (!busy) setTakeover(open); }}>
         <EmrDialogShell title="담당자를 변경할까요?"
           description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하면 요청 수의사에게 사유가 전달됩니다.`}
@@ -118,7 +135,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           {controller.error && <p role="alert" className="mt-2 text-sm text-destructive">{controller.error}</p>}
         </EmrDialogShell>
       </Dialog>
-      {document.canStart ? (
+      {!prework && document.canStart ? (
         <Button size="sm" disabled={busy} onClick={() => void change("start")}>
           {prework ? "업무 시작하기" : document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
         </Button>

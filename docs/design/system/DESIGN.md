@@ -243,6 +243,15 @@ CLAiR screens favor operational density:
   accessible busy descriptions, and reduced-motion behavior. Chart shows the same
   skeleton while its first selected-record read is pending; keep loaded context
   visible during refresh and never add an artificial loading delay.
+- measured initial loading for the approved small read-only profile, summary and
+  card/list slices uses `EmrMeasuredLoading` with synthetic presentation content.
+  Real loaded data, fetching owners and editors never enter the measurement
+  boundary. Keep existing content during same-scope refresh/pagination; clear it
+  on subject/workspace changes and authorization denial. Errors and empty states
+  remain explicit. Existing table/calendar/field skeletons and saving/upload
+  progress retain their current owners. Skullet 0.0.3 is pinned; verify the
+  no-persistence and accessibility stories before upgrades. Scope and evidence:
+  [approved adoption](../../work/customer/CUSTOMER-PR-002-patient-guardian-profile-side-panel.md#2026-11-03-approved-measured-loading-adoption).
 - central workspaces for forms, tables, charting, and result entry
 - right panels for summary, history, or focused auxiliary work
 - every top-level module exposes exactly one effective main-content header at
