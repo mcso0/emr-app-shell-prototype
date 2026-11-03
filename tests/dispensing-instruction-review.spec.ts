@@ -10,13 +10,13 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number } = {}) {
+async function install(page: Page, options: { queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
   })), [SESSION_WORKSPACES_STORAGE_KEY, workspaceId]);
   const document: InstructionDocument = {
-    ...structuredClone(syntheticInstruction), rootOrderId: id, rootTaskId: id, name: "합성 검증 오더", isSet: options.set ?? false,
+    ...structuredClone(syntheticInstruction), queueType: options.queueType ?? "dispensing", rootOrderId: id, rootTaskId: id, name: "합성 검증 오더", isSet: options.set ?? false,
     mainAssigneeId: options.owner || options.started ? "synthetic-owner" : null, mainAssigneeName: options.owner || options.started ? "합성 기존 담당자" : null, revision: "1", finalized: false,
     canClaim: !options.owner && !options.started, canTakeover: options.owner === "other", canStart: options.owner === "mine" && !options.started, canResume: false, canUnassign: false, canCompleteAll: options.requester ?? true, canEditInstruction: false,
     changes: [], instruction: "", oralInstruction: { chartId: id, revision: 2,
@@ -42,14 +42,14 @@ async function install(page: Page, options: { set?: boolean; requester?: boolean
   const assignmentWrites: Record<string, unknown>[] = [];
   const workItems = () => document.items.map(item => ({ id: item.id, workspaceId, orderId: item.id, encounterId: id, patientId,
     taskId: item.id, taskAttemptNo: 1, requestCycle: 1, rowRevision: Number(document.revision), status: item.status,
-    queueType: "dispensing", assignedToUserId: item.assigneeId, requestedByUserId: id,
+    queueType: options.queueType ?? "dispensing", assignedToUserId: item.assigneeId, requestedByUserId: id,
     patientName: "합성 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
     createdAt: "2026-10-31T00:00:00.000Z", updatedAt: "2026-10-31T00:00:00.000Z", sourceSnapshot: { inHospitalOrderName: item.name },
   }));
   await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, route => route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) }));
   await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/history?*`, route => route.fulfill({ json: { ok: true, measurements: [] } }));
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/instruction-review?*`, route => route.fulfill({ json: { ok: true, reviews: (new URL(route.request().url()).searchParams.get("taskIds") ?? "").split(",").filter(Boolean).map(taskId => ({ taskId, requiresAcknowledgement: false, previous: null, snapshots: [], current: options.emptyOral ? null : { chartId: id, scope: "dispensing", entries: [{ scope: "dispensing", revision: 1, instruction: document.oralInstruction!.instruction, deleted: false, legacy: true, actorName: null, createdAt: null }], versions: { dispensing: 1 }, versionKey: "a".repeat(64) } })) } }));
-  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => route.fulfill({ json: { ok: true, workItems: new URL(route.request().url()).searchParams.get("queueType") === "dispensing" ? workItems() : [] } }));
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => route.fulfill({ json: { ok: true, workItems: new URL(route.request().url()).searchParams.get("queueType") === (options.queueType ?? "dispensing") ? workItems() : [] } }));
   await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, route => options.profileFailure
     ? route.fulfill({ status: 503, json: { ok: false } })
     : route.fulfill({ json: { ok: true, overview: { subjectId: patientId, subjectType: "patient", profile: { id: patientId, name: "합성 환자", birthDate: "2020-01-01", breed: "말티즈", sex: "female", neutered: true, species: "dog" }, relationships: { guardians: [] }, access: { information: { allowed: true, requiredPermission: "patient:view" } } } } }));
@@ -98,7 +98,8 @@ async function install(page: Page, options: { set?: boolean; requester?: boolean
     await route.fulfill({ json: { ok: true, context } });
   });
   await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-31&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed&right=closed`);
-  await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible();
+  if (options.started) await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible();
+  else await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
   if (!options.started) await expect(page.getByRole("button", { name: options.owner === "mine" ? "업무 시작하기" : "담당하기", exact: true })).toBeEnabled();
   return { document, contexts, writes, actions, assignmentWrites };
 }
@@ -148,14 +149,20 @@ test("set completion records each missing result before explicit finalization", 
 });
 
 test("claim enters the instruction without starting; start remains explicit", async ({ page }) => {
+  await page.setViewportSize({ width: 1624, height: 1000 });
   const { actions } = await install(page, { requester: false, emptyOral: true });
   await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
   await expect(page.getByRole("button", { name: "합성 품목 1 완료", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toHaveCount(0);
   await expect(page.getByRole("columnheader", { name: "담당자", exact: true })).toBeVisible();
   expect(actions).toEqual([]);
-  await page.screenshot({ path: "/tmp/clair-prework-desktop.png" });
+  await page.screenshot({ path: test.info().outputPath("dispensing-desktop.png") });
+  await page.setViewportSize({ width: 768, height: 900 });
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: test.info().outputPath("dispensing-narrow.png") });
+  await page.setViewportSize({ width: 1624, height: 1000 });
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
   await expect(page.getByTestId("instruction-status-label")).toHaveText("대기중");
   await page.getByRole("button", { name: "조제 시작", exact: true }).click();
@@ -166,6 +173,7 @@ test("claim enters the instruction without starting; start remains explicit", as
 test("designated owner starts directly from prework", async ({ page }) => {
   const { actions } = await install(page, { owner: "mine", emptyOral: true });
   await page.getByRole("button", { name: "업무 시작하기" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기" }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   expect(actions).toEqual(["start"]);
 });
@@ -235,8 +243,11 @@ test("takeover conflict refreshes the owner and keeps the reason until a new com
   await dialog.getByLabel("담당 변경 사유").fill("교대 인계");
   await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(dialog).toContainText("합성 새 담당자");
-  await expect(dialog.getByRole("alert")).toContainText("다른 사용자가 오더를 변경");
+  await expect(dialog.getByRole("alert")).toContainText("업무 내용이나 담당자가 변경");
   await expect(dialog.getByLabel("담당 변경 사유")).toHaveValue("교대 인계");
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await page.getByRole("button", { name: "담당하기", exact: true }).click();
   await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   expect(assignmentWrites).toHaveLength(2);
@@ -248,12 +259,37 @@ test("late claim response cannot open the newly selected instruction", async ({ 
   const { assignmentWrites } = await install(page, { set: true, requester: false, assignmentDelay: 900 });
   const pending = page.waitForRequest(request => request.method() === "PATCH" && request.url().endsWith("/instruction"));
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "담당하기", exact: true }).click();
   await pending;
   const selected = page.waitForRequest(request => request.method() === "GET" && request.url().endsWith(`/${secondId}/instruction`));
-  await page.getByText("합성 품목 2", { exact: true }).first().click();
+  await page.evaluate((nextId) => { const url = new URL(location.href); url.searchParams.set("workItemId", nextId); url.searchParams.set("queueItemId", `live-fulfillment-${nextId}`); history.pushState(null, "", url); }, secondId);
   await selected;
   await expect.poll(() => assignmentWrites.length).toBe(1);
   await page.waitForTimeout(1000);
   await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
   await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
 });
+
+for (const owner of [undefined, "mine", "other"] as const) {
+  test(`treatment ${owner ?? "unassigned"} uses common entry`, async ({ page }) => {
+    await page.setViewportSize({ width: 1624, height: 1000 });
+    const { actions } = await install(page, { queueType: "treatment", owner, requester: false, emptyOral: true });
+    const entry = page.getByTestId("fulfillment-prework");
+    await expect(entry.getByRole("columnheader", { name: "처치 지시" })).toBeVisible();
+    await expect(entry.locator("header")).toContainText("합성 보호자");
+    await expect(page.getByTestId("workspace-document-toolbar")).toBeHidden();
+    await page.screenshot({ path: test.info().outputPath(`treatment-${owner ?? "none"}.png`) });
+    if (!owner) {
+      await page.setViewportSize({ width: 768, height: 900 });
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: test.info().outputPath("treatment-narrow.png") });
+    }
+    const label = owner === "mine" ? "업무 시작하기" : "담당하기";
+    await entry.getByRole("button", { name: label, exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    if (owner === "other") await dialog.getByLabel("담당 변경 사유").fill("합성 교대 사유");
+    await dialog.getByRole("button", { name: label, exact: true }).click();
+    await expect(entry).toHaveCount(0);
+    expect(actions).toEqual([owner === "mine" ? "start" : owner === "other" ? "takeover" : "claim"]);
+  });
+}

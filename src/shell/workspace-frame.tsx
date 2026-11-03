@@ -214,10 +214,11 @@ export function WorkspaceFrame({
                   "overflow-hidden rounded-[var(--emr-radius-panel)] border border-[var(--emr-border-strong)] shadow-xs"
               )}
             >
-              {Header ? <Header {...slotProps} /> : null}
+              {Header && !availability.orderPrework ? <Header {...slotProps} /> : null}
               {moduleDefinition.documentLayout ? (
                 <WorkspaceDocumentLayout
                   moduleDefinition={moduleDefinition}
+                  orderPrework={availability.orderPrework}
                   slotProps={{ ...slotProps, hasRightPanel: hasModuleRightPanel }}
                 />
               ) : <div

@@ -1,5 +1,6 @@
 "use client";
 
+import { useOrderPrework } from "@/features/fulfillment/use-order-prework";
 import { DispensingPreworkContext } from "./components/prework-context";
 
 import { useModuleSidePanel, useModuleSidePanelSearchParams } from "@/components/emr/module-side-panel-context";
@@ -1780,14 +1781,18 @@ function DispensingContentBody({
     !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.id : undefined,
     selectedFulfillmentWorkItem ? String(selectedFulfillmentWorkItem.rowRevision) : undefined,
   );
-  const [enteredInstruction, setEnteredInstruction] = useState<string | null>(null);
   const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
-  const prework = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
+  const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
     && !instruction.document.finalized && instruction.document.items.length > 0
-    && (instruction.document.items.every((item) => item.status === "requested") || preworkCompletionRoot === instructionScope)
-    && !(enteredInstruction === instructionScope && instruction.document.mainAssigneeId
-      && !instruction.document.canClaim && !instruction.document.canTakeover);
+    && (instruction.document.items.every((item) => item.status === "requested") || preworkCompletionRoot === instructionScope);
+  const entry = useOrderPrework({
+    scopeKey: `${workspaceId}:${selectedFulfillmentWorkItem?.id ?? ""}:${instructionScope ?? ""}`,
+    requested: Boolean(preworkEligible),
+    ownsWork: Boolean(instruction.document?.canStart),
+    pending: !allowLegacyFixtureFallback && Boolean(selectedFulfillmentWorkItem) && instruction.loading,
+  });
+  const prework = preworkEligible && (entry.show || preworkCompletionRoot === instructionScope);
   const medicationLinkPending = selectedFulfillmentWorkItem?.queueType === "treatment"
     && selectedFulfillmentWorkItem.sourceSnapshot?.detailSchemaVersion === 3
     && selectedFulfillmentWorkItem.sourceSnapshot.detailInputs?.administrationPolicy === "separate_medication_order"
@@ -2202,10 +2207,9 @@ function DispensingContentBody({
   );
 
   if (prework && selectedFulfillmentWorkItem) return (
-    <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-workspace)] pb-2">
-      {documentLayout ? <WorkspaceDocumentToolbar>{titleBar}</WorkspaceDocumentToolbar> : titleBar}
+    <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-panel)]">
       <DispensingPreworkContext key={selectedFulfillmentWorkItem.id} controller={instruction} workItem={selectedFulfillmentWorkItem}
-        onChanged={fulfillmentQueue.refresh} onEntered={() => setEnteredInstruction(instructionScope)}
+        onChanged={fulfillmentQueue.refresh} onEntered={entry.enter}
         onCompletionOpenChange={(open) => setPreworkCompletionRoot(open ? instructionScope : null)} />
     </div>
   );
