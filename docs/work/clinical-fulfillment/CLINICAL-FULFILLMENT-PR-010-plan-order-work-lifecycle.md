@@ -2026,3 +2026,24 @@ start and checkout behavior. No remote clinical row browsing, authentication
 credential export, DB mutations, payment, email or provider side effects belong
 to this release. Stop for failed checks, missing Ready Preview, candidate drift,
 failed smoke or unexpected data/security/cost scope.
+
+Release integration checkpoint:
+
+- Integrated main `3fd4c2b7763cafa3234b39880b4d12f32deec3db`; preserved both
+  prework-entry and pending-review checkout preparation gates. Updated the entry
+  fixture for the review read and exact invoice revision token, with a regression
+  proving that approval releases preparation only after entry. All seven billing
+  entry browser cases passed.
+- Disposable SQL suites and three concurrent billing races passed. All 12
+  confirmed-order edit/review/partial-work component stories passed. Full ESLint,
+  secret/docs/copy gates, TypeScript and production build passed after installing
+  the updated main lockfile dependencies.
+- An ad hoc broad test invocation initially omitted its base URL; a later run
+  reused a temporary server that exited during the run. Those failed invocations
+  are not counted as passing. Legacy mock HTTP payment routes also returned 403
+  for their old fixture identities. Use the scoped core suites, current synthetic
+  entry cases and actual authenticated local workflow evidence above for release.
+- Previous Ready Production: `dpl_2apDG2VnJHxvUXfFeZKx4i4GrnGW`, tied to the
+  comparison main SHA. Strict protection and the required PR check remain enabled.
+  Remote function compatibility, exact-head Preview/CI and hosted smoke evidence
+  will be recorded with the final candidate before protected merge.
