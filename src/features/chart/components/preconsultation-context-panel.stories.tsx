@@ -91,3 +91,15 @@ export const VitalsConfiguredUnits: Story = {
   args: { state: "vitals-configured", contentWidth: 1024 },
   parameters: { docs: { description: { story: "체중·체온·혈압만 활성화한 병원 설정을 반영합니다. 기존 g·°F 단위 변환과 표시 순서를 유지합니다." } } },
 };
+
+
+export const NarrowLoading: Story = {
+  args: { state: "loading", contentWidth: 390 },
+  play: async ({ canvasElement }) => {
+    await until(() => canvasElement.querySelectorAll('[skullet-loading]').length === 6, "측정 로딩 구역이 준비되지 않았습니다.");
+    for (const sample of canvasElement.querySelectorAll<HTMLElement>('[skullet-loading]')) {
+      if (!sample.inert || sample.getAttribute("aria-hidden") !== "true") throw new Error("Loading content must remain inert and hidden");
+    }
+    if (contextRequests !== 1) throw new Error("Measuring must not issue extra context requests");
+  },
+};

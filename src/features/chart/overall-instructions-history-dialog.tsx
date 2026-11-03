@@ -1,5 +1,7 @@
 "use client";
 
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
+
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -30,14 +32,21 @@ export function OverallInstructionsHistoryDialog({ open, onOpenChange, history, 
   return (
       <Dialog open={open} onOpenChange={onOpenChange}><EmrDialogShell title="변경 이력" variant="wide-form" className="sm:max-w-[840px]" secondaryAction={<>{onViewSnapshots && <Button variant="ghost" onClick={onViewSnapshots}>요청·완료 당시 기록</Button>}<Button variant="outline" onClick={() => onOpenChange(false)}>닫기</Button></>}>
         <label className="sr-only" htmlFor={scopeId}>지시 범위</label><select id={scopeId} className="mb-4 rounded-md border bg-background p-2" value={historyScope} onChange={event => setHistoryScope(event.target.value as InstructionScope | "all")}><option value="all">전체 범위</option>{[...new Set(history.map(item => item.scope))].map(scope => <option key={scope} value={scope}>{instructionScopeLabels[scope]}</option>)}</select>
-        {loading && <p role="status">변경 이력을 불러오는 중입니다.</p>}
+        {loading && (history.length ? <p role="status">변경 이력을 갱신하는 중입니다.</p> : <InstructionHistoryLoading />)}
         {error && <div role="alert"><p>{error}</p>{onRetry && <Button variant="outline" size="sm" onClick={onRetry}>다시 조회</Button>}</div>}
         {!loading && !error && history.length === 0 && <p className="text-sm text-muted-foreground">변경 이력이 없습니다.</p>}
         {history.filter(item => historyScope === "all" || item.scope === historyScope).map(item => {
           const before = history.filter(previous => previous.scope === item.scope && !!previous.legacy === !!item.legacy && previous.revision < item.revision).sort((a, b) => b.revision - a.revision)[0];
           const kind = item.deleted ? "지시 삭제" : !before ? "최초 지시" : before.deleted ? "다시 작성된 지시" : "변경된 지시";
-          return <section key={`${item.scope}:${!!item.legacy}:${item.revision}`} className="mb-5"><h3 className="text-sm font-medium"><time>{formatTime(item.createdAt)}</time> · {item.actorName ?? "작성자"}</h3><p className="mb-2 text-xs text-muted-foreground">{item.legacy ? "경구제 지시 (이전 기록)" : instructionScopeLabels[item.scope]} · {kind}</p><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border p-3"><h4 className="mb-2 text-xs text-muted-foreground">변경 전</h4><p className="whitespace-pre-wrap break-words">{before?.deleted ? "지시 삭제됨" : before?.instruction || "작성된 지시 없음"}</p></div><div className="rounded-lg border p-3"><h4 className="mb-2 text-xs text-muted-foreground">변경 후</h4><p className="whitespace-pre-wrap break-words">{item.deleted ? "지시 삭제됨" : item.instruction || "작성된 지시 없음"}</p></div></div></section>;
+          return <InstructionHistoryEntry key={`${item.scope}:${!!item.legacy}:${item.revision}`} item={item} before={before} kind={kind} />;
         })}
       </EmrDialogShell></Dialog>
   );
+}
+
+type HistoryRevision = OverallInstructions["history"][number];
+function InstructionHistoryEntry({ item, before, kind }: { item: HistoryRevision; before?: HistoryRevision; kind: string }) { return <section className="mb-5"><h3 className="text-sm font-medium"><time>{formatTime(item.createdAt)}</time> · {item.actorName ?? "작성자"}</h3><p className="mb-2 text-xs text-muted-foreground">{item.legacy ? "경구제 지시 (이전 기록)" : instructionScopeLabels[item.scope]} · {kind}</p><div className="grid gap-3 sm:grid-cols-2"><div className="rounded-lg border p-3"><h4 className="mb-2 text-xs text-muted-foreground">변경 전</h4><p className="whitespace-pre-wrap break-words">{before?.deleted ? "지시 삭제됨" : before?.instruction || "작성된 지시 없음"}</p></div><div className="rounded-lg border p-3"><h4 className="mb-2 text-xs text-muted-foreground">변경 후</h4><p className="whitespace-pre-wrap break-words">{item.deleted ? "지시 삭제됨" : item.instruction || "작성된 지시 없음"}</p></div></div></section>; }
+export function InstructionHistoryLoading() {
+  const item: HistoryRevision = { scope: "overall", revision: 1, instruction: "가상 지시 내용", deleted: false, actorName: "가상 작성자", createdAt: "2026-01-01T00:00:00Z", actorId: "synthetic", applyId: null };
+  return <EmrMeasuredLoading label="변경 이력을 불러오는 중입니다."><InstructionHistoryEntry item={item} kind="변경된 지시" /><InstructionHistoryEntry item={{ ...item, revision: 2 }} before={item} kind="변경된 지시" /></EmrMeasuredLoading>;
 }

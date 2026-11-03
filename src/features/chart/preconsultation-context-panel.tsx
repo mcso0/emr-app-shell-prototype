@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/button-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 import type {
   ChartPreconsultationContext,
   ChartPreconsultationContextResponse,
@@ -51,6 +51,7 @@ import {
 } from "@/features/chart/vital-comparison-delta";
 import { ChartVitalDialog } from "@/features/chart/components/chart-vital-dialog";
 import {
+  createDefaultWorkspaceVitalSettingsSnapshot,
   fromCanonicalVitalValue,
   getEnabledWorkspaceVitalSettings,
   type WorkspaceVitalKey,
@@ -267,42 +268,47 @@ async function loadChartPreconsultationContext({
   }
 }
 
-function PreconsultationLoadingState() {
-  return (
-    <ScrollArea
-      className={PRECONSULTATION_SCROLL_CLASS}
-      viewportClassName="scroll-fade-y scroll-fade-8 px-4"
-      viewportStyle={{ overflowX: "hidden" }}
-      aria-busy="true"
-      aria-label="환자 정보 불러오는 중"
-      data-testid="preconsultation-loading-state"
-    >
-      <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
-        <div className="min-h-[204px] px-5 py-6 sm:px-6 sm:py-8">
-          <Skeleton className="h-7 w-[138px] rounded-full" />
-          <div className="mt-6 flex items-center gap-5 sm:mt-8">
-            <Skeleton className="size-16 shrink-0 rounded-[10px] sm:size-20" />
-            <div className="flex min-w-0 flex-col gap-2.5">
-              <Skeleton className="h-7 w-[210px] max-w-full" />
-              <Skeleton className="h-5 w-[330px] max-w-full" />
-            </div>
-          </div>
-        </div>
-        <Separator className="mx-6 !w-auto" />
-        <div className="flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8">
-          {[80, 56, 56, 154, 180].map((height, index) => (
-            <div className="flex flex-col gap-3.5" key={`${height}-${index}`}>
-              <Skeleton className="h-[22px] w-[130px]" />
-              <Skeleton className="w-full" style={{ height }} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <span className="sr-only" role="status">
-        환자와 접수 정보를 불러오고 있어요.
-      </span>
-    </ScrollArea>
-  );
+const loadingContext: ChartPreconsultationContext = {
+  encounter: { id: "loading-encounter", encounterNo: "000000", receptionType: "walk_in", checkedInAt: "2026-01-01T01:00:00Z", status: "waiting", visitPurpose: "가상 방문 목적" },
+  queue: { id: "loading-queue", status: "waiting" },
+  patient: { id: "loading-patient", patientNo: "000000", name: "예시 환자", species: "dog", breed: "품종 정보", sex: "unknown", estimatedAgeText: "나이 정보", specialNote: "가상 환자 메모" },
+  guardian: { id: "loading-guardian", name: "예시 보호자", memo: "가상 보호자 메모" },
+  veterinarian: { id: "loading-veterinarian", displayName: "담당 수의사" },
+  priorEncounterCount: 2,
+  vitals: [{ id: "loading-vital", encounterId: "loading-encounter", measuredAt: "2026-01-01T01:00:00Z" }],
+  history: [0, 1].map(index => ({ encounterId: `loading-history-${index}`, encounterNo: "000000", checkedInAt: "2025-12-01T01:00:00Z", status: "completed", visitPurpose: "가상 진료 이력" })),
+};
+const loadingVitalSettings = createDefaultWorkspaceVitalSettingsSnapshot(false);
+
+export function PatientPreworkMemoLoading() {
+  return <EmrMeasuredLoading label="환자와 보호자 메모를 불러오는 중입니다."><MemoSection context={loadingContext} /></EmrMeasuredLoading>;
+}
+
+export function PatientPreworkVitalsLoading() {
+  return <EmrMeasuredLoading label="바이탈 정보를 불러오는 중입니다.">
+    <VitalSection context={loadingContext} canWrite={false} onOpenVitalDialog={() => {}} vitalSettings={loadingVitalSettings} />
+  </EmrMeasuredLoading>;
+}
+
+export function PreconsultationLoadingState() {
+  return <ScrollArea className={PRECONSULTATION_SCROLL_CLASS} viewportClassName="scroll-fade-y scroll-fade-8 px-4"
+    viewportStyle={{ overflowX: "hidden" }} aria-busy="true" aria-label="환자 정보 불러오는 중" data-testid="preconsultation-loading-state">
+    <div className="mx-auto w-full max-w-[1024px] bg-[var(--emr-surface-panel)]">
+      <EmrMeasuredLoading label="환자와 접수 정보를 불러오는 중입니다.">
+        <PatientPreworkHeader context={loadingContext} statusLabel="진료 대기" actions={null} />
+      </EmrMeasuredLoading>
+      <Separator className="mx-6 !w-auto" />
+      <main className="px-5 py-6 sm:px-8 sm:py-8"><div className="flex min-w-0 flex-col gap-6">
+        <EmrMeasuredLoading label="접수 정보를 불러오는 중입니다."><ReceptionSummary context={loadingContext} /></EmrMeasuredLoading>
+        <SectionDivider />
+        <EmrMeasuredLoading label="방문 목적을 불러오는 중입니다."><VisitPurpose context={loadingContext} /></EmrMeasuredLoading>
+        <SectionDivider /><PatientPreworkMemoLoading />
+        <SectionDivider /><PatientPreworkVitalsLoading />
+        <SectionDivider />
+        <EmrMeasuredLoading label="과거 진료 이력을 불러오는 중입니다."><HistorySection context={loadingContext} expanded={false} onToggle={() => {}} /></EmrMeasuredLoading>
+      </div></main>
+    </div>
+  </ScrollArea>;
 }
 
 export type PatientPreworkContext = Pick<ChartPreconsultationContext, "patient" | "guardian"> & {
@@ -347,12 +353,14 @@ export function PatientPreworkHeader({
   onOpenPatientInformation,
   actions,
   statusLabel,
+  loadingDetails = false,
 }: {
   context: PatientPreworkContext;
   onOpenGuardianInformation?: () => void;
   onOpenPatientInformation?: () => void;
   actions: ReactNode;
   statusLabel: string;
+  loadingDetails?: boolean;
 }) {
   return (
     <header
@@ -378,7 +386,7 @@ export function PatientPreworkHeader({
         </Badge>
       </div>
       <div className="mt-6 grid grid-cols-1 gap-5 sm:mt-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-6">
-        <PatientIdentity context={context} size="large" />
+        <PatientIdentity context={context} size="large" loadingDetails={loadingDetails} />
         <div className="flex shrink-0 flex-wrap items-center gap-3 lg:flex-nowrap lg:justify-end">
           <Button
             className="h-8 min-w-0 gap-1.5 rounded-[var(--clair-radius-atomic-8)] px-3 text-sm font-medium leading-5 tracking-[0.014em] has-data-[icon=inline-start]:!pl-3 sm:flex-none"
@@ -414,9 +422,11 @@ export function PatientPreworkHeader({
 function PatientIdentity({
   context,
   size,
+  loadingDetails = false,
 }: {
   context: PatientPreworkContext;
   size: "large" | "medium";
+  loadingDetails?: boolean;
 }) {
   const metadata = getPatientMetadata(context);
   return (
@@ -460,7 +470,9 @@ function PatientIdentity({
             {`${context.guardian?.name ?? "미지정"} 보호자`}
           </p>
         </div>
-        {size === "large" ? (
+        {loadingDetails ? <EmrMeasuredLoading label="환자 상세 정보를 불러오는 중입니다.">
+          <p className="mt-1.5 text-sm leading-6 sm:text-base">종류 · 품종 정보 · 나이 정보 · 성별</p>
+        </EmrMeasuredLoading> : size === "large" ? (
           <p className="mt-1 flex flex-wrap items-baseline gap-x-1 gap-y-0 text-sm text-[var(--emr-text-tertiary)] sm:mt-1.5 sm:text-base sm:font-semibold sm:leading-6 sm:whitespace-nowrap">
             {metadata.map((item, index) => (
               <span key={`${item}-${index}`} className="inline-flex items-baseline gap-1">
@@ -561,7 +573,7 @@ function ReceptionSummary({ context }: { context: ChartPreconsultationContext })
   );
 }
 
-export function MemoSection({ context, patientMemo: memoOverride }: { context: PatientPreworkContext; patientMemo?: string }) {
+export function MemoSection({ context, patientMemo: memoOverride, guardianLoading = false }: { context: PatientPreworkContext; patientMemo?: string; guardianLoading?: boolean }) {
   const patientMemo =
     memoOverride ??
     context.patient.handlingCautionNote ??
@@ -581,10 +593,10 @@ export function MemoSection({ context, patientMemo: memoOverride }: { context: P
           label="환자"
           value={patientMemo ?? "기록된 환자 주의사항이 없어요."}
         />
-        <MemoCard
+        {guardianLoading ? <EmrMeasuredLoading label="보호자 메모를 불러오는 중입니다."><MemoCard label="보호자" value="가상 보호자 메모" /></EmrMeasuredLoading> : <MemoCard
           label="보호자"
           value={context.guardian?.memo ?? "기록된 보호자 메모가 없어요."}
-        />
+        />}
       </div>
     </section>
   );
