@@ -179,13 +179,14 @@ const meta = {
           document.canTakeover = false;
           document.canUnassign = true;
           document.canCompleteAll = true;
-          document.canStart = command.action !== "start";
+          const startsWork = command.action === "start" || command.startWork === true;
+          document.canStart = !startsWork;
           document.items.forEach((item) => {
             item.assigneeId = "synthetic-me";
             item.assigneeName = "합성 담당자 (나)";
             item.canAssign = true;
             item.canComplete = true;
-            if (command.action === "start") item.status = "in_progress";
+            if (startsWork) item.status = "in_progress";
           });
           document.revision = String(Number(document.revision) + 1);
         }
@@ -299,9 +300,9 @@ export const Unassigned: Story = {
     await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "담당하기" }));
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(
-      canvas.getByRole("button", { name: "조제 시작" }),
-    ).toBeVisible();
-    await expect(commands.map((command) => command.action)).toEqual(["claim"]);
+      canvas.queryByRole("button", { name: "조제 시작" }),
+    ).not.toBeInTheDocument();
+    await expect(commands).toEqual([expect.objectContaining({ action: "claim", startWork: true })]);
   },
 };
 export const DesignatedOwner: Story = {
@@ -345,9 +346,10 @@ export const TakeoverRetry: Story = {
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(commands).toHaveLength(2);
     await expect(commands[0].commandId).toBe(commands[1].commandId);
+    await expect(commands[1]).toMatchObject({ action: "takeover", startWork: true, reason: "교대 근무로 인계합니다." });
     await expect(
-      canvas.getByRole("button", { name: "조제 시작" }),
-    ).toBeVisible();
+      canvas.queryByRole("button", { name: "조제 시작" }),
+    ).not.toBeInTheDocument();
   },
 };
 export const Treatment: Story = {

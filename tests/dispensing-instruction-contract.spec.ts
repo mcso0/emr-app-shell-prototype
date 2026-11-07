@@ -9,6 +9,9 @@ const command = { action: "complete_all" as const, commandId: "00000000-0000-400
 test("group commands cannot smuggle a single-item target or actor", () => {
   expect(instructionCommandSchema.safeParse({ ...command, itemId: "other-item" }).success).toBe(false);
   expect(instructionCommandSchema.safeParse({ ...command, actorId: "another-user" }).success).toBe(false);
+  expect(instructionCommandSchema.safeParse({ ...command, startWork: true }).success).toBe(false);
+  expect(instructionCommandSchema.safeParse({ ...command, action: "claim", startWork: false }).success).toBe(false);
+  expect(instructionCommandSchema.safeParse({ ...command, action: "claim", startWork: true }).success).toBe(true);
   expect(instructionCommandSchema.safeParse({ ...command, action: "edit_instruction", instruction: "x".repeat(5001) }).success).toBe(false);
 });
 
@@ -22,7 +25,7 @@ test("request passes only scoped identities to session RPC and validates returne
   expect(invalid).toEqual({ ok: false, status: 500, error: "instruction_unavailable" });
 });
 
-for (const [message, status] of [["permission_missing", 403], ["work_item_unavailable", 404], ["revision_conflict", 409], ["actual_execution_result_required", 409], ["billing_locked", 409]] as const) {
+for (const [message, status] of [["permission_missing", 403], ["work_item_unavailable", 404], ["revision_conflict", 409], ["actual_execution_result_required", 409], ["billing_locked", 409], ["treatment_medication_link_required", 409], ["treatment_medication_link_invalid", 409]] as const) {
   test(`RPC ${message} remains a failed command`, async () => {
     const result = await executeInstructionRequest({ workspaceId: "workspace-a", workItemId: "item-a", command,
       client: { rpc: async () => ({ data: null, error: { message } }) } });

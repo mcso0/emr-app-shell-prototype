@@ -57,7 +57,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/*/assignees`, route => route.fulfill({ json: { ok: true, assignees: [{ userId: "synthetic-owner", displayName: "합성 담당자" }] } }));
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/*/instruction`, async route => {
     if (route.request().method() === "PATCH") {
-      const { action } = route.request().postDataJSON(); actions.push(action);
+      const { action, startWork } = route.request().postDataJSON(); actions.push(action);
       if (action === "claim" || action === "takeover") {
         assignmentWrites.push(route.request().postDataJSON());
         await new Promise(resolve => setTimeout(resolve, options.assignmentDelay ?? 80));
@@ -68,8 +68,14 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
         }
         if (assignmentFailures-- > 0) return route.fulfill({ status: 503, json: { ok: false } });
         document.mainAssigneeId = "synthetic-owner"; document.mainAssigneeName = "합성 담당자";
-        document.canClaim = false; document.canTakeover = false; document.canStart = true; document.canUnassign = true; document.canCompleteAll = true;
-        document.items.forEach(item => { if (item.status !== "completed") { item.assigneeId = "synthetic-owner"; item.assigneeName = "합성 담당자"; item.canComplete = true; } });
+        document.canClaim = false; document.canTakeover = false; document.canStart = startWork !== true; document.canUnassign = true; document.canCompleteAll = true;
+        document.items.forEach(item => {
+          if (item.status === "completed") return;
+          item.assigneeId = "synthetic-owner"; item.assigneeName = "합성 담당자"; item.canComplete = true;
+          if (startWork === true && item.status === "requested") {
+            item.status = "in_progress"; contexts[item.id].status = "in_progress";
+          }
+        });
       } else if (action === "start") {
         document.canStart = false;
         document.items.forEach(item => { if (item.status === "requested") { item.status = "in_progress"; contexts[item.id].status = "in_progress"; } });
@@ -150,9 +156,9 @@ test("set completion records each missing result before explicit finalization", 
   expect(actions).toEqual(["complete_all"]); expect(writes).toHaveLength(2);
 });
 
-test("claim enters the instruction without starting; start remains explicit", async ({ page }) => {
+test("claim assigns and starts before opening the instruction", async ({ page }) => {
   await page.setViewportSize({ width: 1624, height: 1000 });
-  const { actions } = await install(page, { requester: false, emptyOral: true });
+  const { actions, assignmentWrites } = await install(page, { requester: false, emptyOral: true });
   await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
   await expect(page.getByRole("button", { name: "합성 품목 1 완료", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toHaveCount(0);
@@ -166,10 +172,13 @@ test("claim enters the instruction without starting; start remains explicit", as
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
-  await expect(page.getByTestId("instruction-status-label")).toHaveText("대기중");
-  await page.getByRole("button", { name: "조제 시작", exact: true }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
-  expect(actions).toEqual(["claim", "start"]);
+  await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
+  expect(actions).toEqual(["claim"]);
+  expect(assignmentWrites[0]).toMatchObject({ startWork: true });
+  await page.reload();
+  await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+  await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
 });
 
 test("designated owner starts directly from prework", async ({ page }) => {
@@ -192,10 +201,53 @@ test("takeover requires a reason, retains it on failure and retries one command"
   expect(assignmentWrites).toHaveLength(1);
   await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toBeEnabled();
+  await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+  await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
   expect(actions).toEqual(["takeover", "takeover"]);
   expect(assignmentWrites[0].commandId).toBe(assignmentWrites[1].commandId);
-  expect(assignmentWrites[1].reason).toBe("교대 근무로 인계합니다.");
+  expect(assignmentWrites[1]).toMatchObject({ startWork: true, reason: "교대 근무로 인계합니다." });
+});
+
+test("takeover keeps the reason when a new instruction must be acknowledged", async ({ page }) => {
+  const { actions, assignmentWrites } = await install(page, { owner: "other", requester: false });
+  let newInstruction = false;
+  await page.route("**/fulfillment/work-items/*/instruction", route => {
+    if (route.request().method() !== "PATCH" || newInstruction || actions.length) return route.fallback();
+    newInstruction = true;
+    actions.push("takeover");
+    return route.fulfill({ status: 409, json: { ok: false, error: "instruction_ack_required" } });
+  });
+  await page.route("**/fulfillment/instruction-review*", route => {
+    if (route.request().method() === "POST") {
+      newInstruction = false;
+      return route.fulfill({ json: { ok: true } });
+    }
+    if (!newInstruction) return route.fallback();
+    return route.fulfill({ json: { ok: true, reviews: [{
+      taskId: id, requiresAcknowledgement: true, previous: null, snapshots: [],
+      current: { chartId: id, scope: "dispensing", versions: { dispensing: 2 }, versionKey: "b".repeat(64),
+        entries: [{ scope: "dispensing", revision: 2, instruction: "합성 최신 지시", deleted: false, legacy: false, actorName: null, createdAt: null }] },
+    }] } });
+  });
+
+  const entry = page.getByTestId("fulfillment-prework");
+  const takeover = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
+  await entry.getByRole("button", { name: "담당하기", exact: true }).click();
+  await takeover.getByLabel("담당 변경 사유").fill("합성 교대 사유");
+  await takeover.getByRole("button", { name: "담당하기", exact: true }).click();
+  await expect(takeover).not.toBeVisible();
+  await expect(entry).toBeVisible();
+  const review = page.getByRole("dialog", { name: "지시사항 확인" });
+  await review.getByRole("button", { name: "최신 지시 확인" }).click();
+  await expect(review).not.toBeVisible();
+
+  await entry.getByRole("button", { name: "담당하기", exact: true }).click();
+  await expect(takeover.getByLabel("담당 변경 사유")).toHaveValue("합성 교대 사유");
+  await takeover.getByRole("button", { name: "담당하기", exact: true }).click();
+  await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+  await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
+  expect(actions).toEqual(["takeover", "takeover"]);
+  expect(assignmentWrites[0]).toMatchObject({ startWork: true, reason: "합성 교대 사유" });
 });
 
 test("patient demographics, explicit memo display, all density options and responsive oral infobar", async ({ page }) => {
@@ -275,7 +327,7 @@ test("late claim response cannot open the newly selected instruction", async ({ 
 for (const owner of [undefined, "mine", "other"] as const) {
   test(`treatment ${owner ?? "unassigned"} uses common entry`, async ({ page }) => {
     await page.setViewportSize({ width: 1624, height: 1000 });
-    const { actions } = await install(page, { queueType: "treatment", owner, requester: false, emptyOral: true });
+    const { actions, assignmentWrites } = await install(page, { queueType: "treatment", owner, requester: false, emptyOral: true });
     const entry = page.getByTestId("fulfillment-prework");
     await expect(entry.getByRole("columnheader", { name: "처치 지시" })).toBeVisible();
     await expect(entry.locator("header")).toContainText("합성 보호자");
@@ -292,7 +344,13 @@ for (const owner of [undefined, "mine", "other"] as const) {
     if (owner === "other") await dialog.getByLabel("담당 변경 사유").fill("합성 교대 사유");
     await dialog.getByRole("button", { name: label, exact: true }).click();
     await expect(entry).toHaveCount(0);
+    await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+    await expect(page.getByRole("button", { name: "처치 시작", exact: true })).toHaveCount(0);
     expect(actions).toEqual([owner === "mine" ? "start" : owner === "other" ? "takeover" : "claim"]);
+    if (owner !== "mine") expect(assignmentWrites[0]).toMatchObject({
+      startWork: true,
+      ...(owner === "other" ? { reason: "합성 교대 사유" } : {}),
+    });
   });
 }
 

@@ -2047,3 +2047,27 @@ Release integration checkpoint:
   comparison main SHA. Strict protection and the required PR check remain enabled.
   Remote function compatibility, exact-head Preview/CI and hosted smoke evidence
   will be recorded with the final candidate before protected merge.
+
+### Start waiting dispensing and treatment work on assignment — 2026-11-07
+
+승욱 approved local implementation from origin/main `81e4146c`. For a waiting
+조제 or 처치 document, confirming 담당하기 assigns or takes over the work and starts
+it in one transaction. Open the instruction document with 진행중 and no second
+start button. Preserve the takeover reason, requester notification, current
+workspace and queue authority, instruction acknowledgement, and medication-link
+guard. Keep existing execution and assignment commands available for their
+other states and callers.
+
+Verify the four assignment cases in the browser using synthetic HTTP responses,
+and run the real instruction RPC in the disposable PostgreSQL fixture to check
+owner, status, start metadata, audit, notifications, rollback and concurrency.
+Scope covers local source, the forward migration and synthetic verification.
+
+Local verification passed. Playwright passed 37 browser and API contract cases,
+including both queues, reload, retry, duplicate confirmation, and a fresh
+instruction acknowledgement that preserves the takeover reason. Storybook
+passed 13 prework and transport cases. The disposable PostgreSQL suite passed
+with the forward migration, including persisted start metadata, mixed-queue
+scope, duplicate and concurrent requests, requester notification, and rollback
+when acknowledgement or a medication link is required. Browser requests used
+synthetic API responses. Production application and acceptance remain pending.

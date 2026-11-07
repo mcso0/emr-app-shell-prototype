@@ -9,6 +9,7 @@ export const instructionCommandSchema = z.discriminatedUnion("action", [
     commandId: z.uuid(),
     expectedRevision: id,
     reason: z.string().trim().min(1).max(1000),
+    startWork: z.literal(true).optional(),
   }).strict(),
   z
     .object({
@@ -18,9 +19,15 @@ export const instructionCommandSchema = z.discriminatedUnion("action", [
       instruction: z.string().max(5000),
     })
     .strict(),
+  z.object({
+    action: z.literal("claim"),
+    commandId: z.uuid(),
+    expectedRevision: id,
+    startWork: z.literal(true).optional(),
+  }).strict(),
   z
     .object({
-      action: z.enum(["claim", "start", "resume", "unassign", "complete_all"]),
+      action: z.enum(["start", "resume", "unassign", "complete_all"]),
       commandId: z.uuid(),
       expectedRevision: id,
     })
@@ -140,6 +147,8 @@ export const instructionErrorMessages: Record<string, string> = {
     "현재 담당자에게 작업 권한이 있어요. 담당 상태를 확인해 주세요.",
   actual_execution_result_required: "수행 결과를 먼저 기록해 주세요.",
   billing_locked: "수납에 반영된 오더는 완료를 해제할 수 없어요.",
+  treatment_medication_link_required: "처치를 시작하려면 차트에서 약품 오더를 연결해 주세요.",
+  treatment_medication_link_invalid: "처치를 시작하려면 차트에서 연결된 약품 오더를 확인해 주세요.",
   work_item_unavailable: "이 오더를 더 이상 찾을 수 없어요.",
   invalid_transition:
     "현재 상태에서는 이 작업을 할 수 없어요. 오더를 새로 확인해 주세요.",

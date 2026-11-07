@@ -89,8 +89,14 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const document = controller.document;
   if (!document) return null;
   const busy = controller.busy || controller.loading;
+  const claimStartsWork = document.items.length > 0 && document.items.every((item) => item.status === "requested");
+  const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
-    if (await controller.mutate({ action })) { onChanged(); if (action === "claim" || action === "start") onEntered?.(); }
+    const intent = action === "claim" ? claimIntent : { action };
+    if (await controller.mutate(intent)) {
+      onChanged();
+      if (action === "claim" || action === "start") onEntered?.();
+    }
   };
   return (
     <>
@@ -105,13 +111,20 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
         mode={document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked"}
         assigneeName={document.mainAssigneeName}
         busy={busy} error={controller.error}
+        description={document.canClaim && claimStartsWork
+          ? "나를 담당자로 지정하고 바로 업무를 시작해요."
+          : document.canTakeover
+            ? `${document.mainAssigneeName ?? "다른 담당자"}님이 담당하는 업무예요. 담당을 변경하고 바로 업무를 시작해요. 변경 사유는 요청 수의사에게 전달돼요.`
+            : undefined}
         context={<><strong>{document.queueType === "dispensing" ? "조제" : "처치"} · {document.items.length}개</strong><p>현재 담당: {document.mainAssigneeName ?? "미지정"}</p></>}
         onConfirm={async (reason) => {
-          const action = document.canClaim ? "claim" : document.canTakeover ? "takeover" : "start";
-          if (action === "start" && controller.instructionReview && !await controller.instructionReview.check()) return "review_required";
-          const succeeded = await controller.mutate(action === "takeover" ? { action, reason } : { action });
+          const intent = document.canClaim ? claimIntent
+            : document.canTakeover ? { action: "takeover" as const, startWork: true as const, reason }
+            : { action: "start" as const };
+          let reviewRequired = false;
+          const succeeded = await controller.mutate(intent, () => { reviewRequired = true; });
           if (succeeded) onChanged();
-          return succeeded;
+          return reviewRequired ? "review_required" : succeeded;
         }}
         onEntered={onEntered}
       /> : null}
@@ -123,10 +136,10 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       {!prework && document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
       <Dialog open={takeover} onOpenChange={(open) => { if (!busy) setTakeover(open); }}>
         <EmrDialogShell title="담당자를 변경할까요?"
-          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하면 요청 수의사에게 사유가 전달됩니다.`}
+          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하고 바로 업무를 시작합니다. 요청 수의사에게 사유가 전달됩니다.`}
           secondaryAction={<Button variant="outline" disabled={busy} onClick={() => setTakeover(false)}>취소</Button>}
           primaryAction={<Button disabled={busy || !reason.trim() || !document.canTakeover} onClick={async () => {
-            if (await controller.mutate({ action: "takeover", reason: reason.trim() })) {
+            if (await controller.mutate({ action: "takeover", startWork: true, reason: reason.trim() }, () => setTakeover(false))) {
               setTakeover(false); setReason(""); onChanged(); onEntered?.();
             }
           }}>{controller.busy ? "저장 중" : "담당하기"}</Button>}>
@@ -137,7 +150,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       </Dialog>
       {!prework && document.canStart ? (
         <Button size="sm" disabled={busy} onClick={() => void change("start")}>
-          {prework ? "업무 시작하기" : document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
+          {document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
         </Button>
       ) : null}
       {document.canResume ? (
