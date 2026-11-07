@@ -297,7 +297,10 @@ export const Unassigned: Story = {
       canvas.getByRole("columnheader", { name: "오더명" }),
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
-    await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "담당하기" }));
+    const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog"));
+    await waitFor(() => expect(dialog.getByText("미지정 → 나")).toBeVisible());
+    await expect(within(dialog.getByRole("list", { name: "대상 오더" })).getAllByRole("listitem")).toHaveLength(2);
+    await userEvent.click(dialog.getByRole("button", { name: "담당하기" }));
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(
       canvas.queryByRole("button", { name: "조제 시작" }),
@@ -311,7 +314,7 @@ export const DesignatedOwner: Story = {
     const start = await canvas.findByRole("button", { name: "업무 시작하기" });
     await waitFor(() => expect(start).toBeEnabled());
     await userEvent.click(start);
-    await userEvent.click(within(await within(canvasElement.ownerDocument.body).findByRole("dialog")).getByRole("button", { name: "업무 시작하기" }));
+    await expect(within(canvasElement.ownerDocument.body).queryByRole("dialog")).not.toBeInTheDocument();
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(commands.map((command) => command.action)).toEqual(["start"]);
     await expect(
@@ -329,20 +332,20 @@ export const TakeoverRetry: Story = {
     const dialog = within(
       await body.findByRole("dialog", { name: "담당자를 변경할까요?" }),
     );
-    await expect(
-      dialog.getByRole("button", { name: "담당하기" }),
-    ).toBeDisabled();
+    await waitFor(() => expect(dialog.getByText("합성 기존 담당자 → 나")).toBeVisible());
+    const confirm = dialog.getByRole("button", { name: "담당 변경" });
+    await expect(confirm).toBeDisabled();
     await userEvent.type(
       dialog.getByLabelText("담당 변경 사유"),
       "교대 근무로 인계합니다.",
     );
-    await userEvent.dblClick(dialog.getByRole("button", { name: "담당하기" }));
+    await userEvent.dblClick(confirm);
     await dialog.findByRole("alert");
     await expect(dialog.getByLabelText("담당 변경 사유")).toHaveValue(
       "교대 근무로 인계합니다.",
     );
     await expect(commands).toHaveLength(1);
-    await userEvent.click(dialog.getByRole("button", { name: "담당하기" }));
+    await userEvent.click(confirm);
     await canvas.findByRole("heading", { name: "지시서 작업 화면" });
     await expect(commands).toHaveLength(2);
     await expect(commands[0].commandId).toBe(commands[1].commandId);
