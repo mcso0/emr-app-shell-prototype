@@ -127,6 +127,8 @@ Rows must not expose final workflow actions. The notification center can route t
 ### Toasts
 
 - Use the existing max-3 visible toast stack and queue behavior.
+- Anchor live notification toasts 16px from the viewport bottom and right, including when a reception form is open. Users can dismiss a toast to reveal controls it covers.
+- Use the panel radius and the E2 floating shadow for the toast card.
 - Show toasts only for current recipient-owned notifications whose `toast_policy` allows transient interruption.
 - Toast primary action opens the source workflow.
 - Toast secondary action dismisses or defers; it must not perform clinical, billing, reception, or treatment completion.
