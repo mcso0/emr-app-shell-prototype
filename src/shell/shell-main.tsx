@@ -252,6 +252,15 @@ export function ShellMain({
     if (!sheet) return;
     setSheetTop(panelArea.current?.getBoundingClientRect().top ?? 60);
     focusHeader();
+
+    const blockToastHotkey = (event: KeyboardEvent) => {
+      if (!event.altKey || event.code !== "KeyT") return;
+      // Capture the shortcut before Sonner's document listener can move focus outside the modal.
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    document.addEventListener("keydown", blockToastHotkey, true);
+    return () => document.removeEventListener("keydown", blockToastHotkey, true);
   }, [sheet, focusHeader]);
 
   useEffect(() => {

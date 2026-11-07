@@ -94,6 +94,9 @@ to the general 8% active token. Preserve its accessible label, keyboard
 dismissal, and visible focus ring. Scope these styles to the toaster and make
 them independent of Sonner's runtime stylesheet insertion order.
 
+When the compact side panel is modal, `Alt+T` leaves keyboard focus inside the
+panel. Close the panel with `Escape` to use the toast shortcut again.
+
 ## Color
 
 CLAiR uses a bright clinical surface ladder:
