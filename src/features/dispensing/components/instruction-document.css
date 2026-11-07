@@ -1042,3 +1042,24 @@
 @container (max-width: 760px) {
   .instruction-document-surface .fd-table { min-width: 766px; }
 }
+
+/* Before work starts, reuse the document's read-only row disclosure and note. */
+.fd-prework-table thead th {
+  background: var(--emr-surface-muted);
+}
+.fd-prework-table th.fd-prework-item-name {
+  height: 40px !important;
+  border-bottom: 0;
+  color: var(--emr-text-primary);
+  font-size: 14px !important;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.fd-prework-table .fd-info-row[hidden] {
+  display: none !important;
+}
+.fd-prework-table.fd-prework-treatment td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

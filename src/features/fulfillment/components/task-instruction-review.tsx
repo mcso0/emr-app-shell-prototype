@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
@@ -18,13 +19,16 @@ function InstructionContent({ document }: { document: EffectiveInstructions | nu
 }
 
 /** Shared by real task callers and synthetic interaction stories. */
-export function TaskInstructionReview({ controller }: { controller: TaskInstructionReviewController }) {
+export function TaskInstructionReview({ controller, renderInstructions }: {
+  controller: TaskInstructionReviewController;
+  renderInstructions?: (documents: EffectiveInstructions[]) => ReactNode;
+}) {
   const visible = controller.reviews.filter(item => item.current?.entries.length);
   const unique = visible.filter((item, index) => visible.findIndex(other => other.current?.chartId === item.current?.chartId && other.current?.versionKey === item.current?.versionKey) === index);
   const selected = controller.selected.filter((item, index) => controller.selected.findIndex(other => other.current?.chartId === item.current?.chartId && other.current?.versionKey === item.current?.versionKey) === index);
   return <>
     {controller.error && !controller.open && <div role="alert" className="flex items-center justify-between gap-3 text-sm"><p>{controller.error}</p><Button size="sm" variant="outline" onClick={() => void controller.refresh()}>다시 확인</Button></div>}
-    {unique.map(item => <TaskInstructionCallout key={`${controller.workspaceId}:${item.current!.chartId}:${item.current!.versionKey}`}
+    {renderInstructions ? renderInstructions(unique.map(item => item.current!)) : unique.map(item => <TaskInstructionCallout key={`${controller.workspaceId}:${item.current!.chartId}:${item.current!.versionKey}`}
       document={item.current!} workspaceId={controller.workspaceId} onReview={controller.show} />)}
     <Dialog open={controller.open} onOpenChange={open => { if (!open) controller.close(); }}>
       <EmrDialogShell title="지시사항 확인" variant="wide-form" showCloseButton={!controller.busy}

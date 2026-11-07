@@ -292,9 +292,9 @@ export const Overview: Story = {
 };
 export const Unassigned: Story = {
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByRole("columnheader", { name: "담당자" });
+    await canvas.findByRole("heading", { name: "오더 정보" });
     await expect(
-      canvas.getByRole("columnheader", { name: "오더명" }),
+      canvas.getByRole("columnheader", { name: "항목" }),
     ).toBeVisible();
     await userEvent.click(canvas.getByRole("button", { name: "담당하기" }));
     const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog"));
@@ -358,23 +358,30 @@ export const TakeoverRetry: Story = {
 export const Treatment: Story = {
   args: { owner: "other", treatment: true },
   play: async ({ canvas }) => {
-    await canvas.findByRole("columnheader", { name: "처치 지시" });
+    await canvas.findByRole("columnheader", { name: "처치 계획" });
     await expect(
-      canvas.getByRole("columnheader", { name: "담당자" }),
+      canvas.getByText("담당자", { exact: true }),
     ).toBeVisible();
   },
 };
 export const RequesterCompletion: Story = {
   args: { requester: true },
-  play: async ({ canvas }) => {
-    const complete = await canvas.findByRole("button", { name: "조제 완료" });
-    await waitFor(() => expect(complete).toBeEnabled());
+  play: async ({ canvas, canvasElement }) => {
+    const menu = await canvas.findByRole("button", { name: "완료 메뉴 열기" });
+    await waitFor(() => expect(menu).toBeEnabled());
+    menu.focus();
+    await userEvent.keyboard("{ArrowDown}");
+    const body = within(canvasElement.ownerDocument.body);
+    const complete = await body.findByRole("menuitem", { name: "조제 완료" });
+    await expect(complete).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    await expect(await body.findByRole("dialog", { name: "오더를 완료할까요?" })).toBeInTheDocument();
   },
 };
 export const Narrow: Story = {
   args: { width: 390 },
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByRole("columnheader", { name: "담당자" });
+    await canvas.findByRole("heading", { name: "오더 정보" });
     await waitFor(() =>
       expect(canvasElement.scrollWidth).toBeLessThanOrEqual(
         canvasElement.clientWidth,
@@ -396,7 +403,7 @@ export const ReadDenied: Story = {
 export const LoadingContextRetainsRequest: Story = {
   args: { owner: "mine", loadingContext: true },
   play: async ({ canvas, canvasElement }) => {
-    await canvas.findByText("요청 정보");
+    await canvas.findByRole("heading", { name: "오더 정보" });
     await expect(canvas.getByText("합성 환자", { exact: true })).toBeVisible();
     await expect(canvas.getByText("합성 약품 1", { exact: true })).toBeVisible();
     await waitFor(() => expect(canvasElement.querySelectorAll('[skullet-loading]').length).toBeGreaterThanOrEqual(2));

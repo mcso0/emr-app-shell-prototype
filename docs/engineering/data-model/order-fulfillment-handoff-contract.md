@@ -152,6 +152,13 @@ Work and synthetic local verification:
 [CLINICAL-FULFILLMENT-PR-010](../../work/clinical-fulfillment/CLINICAL-FULFILLMENT-PR-010-plan-order-work-lifecycle.md#order-prework-screen-alignment--2026-11-03-approved-local-implementation).
 No new API, role policy, migration or remote data change belongs to this UI slice.
 
+## Dispensing and treatment prework layout — 2026-11-07
+
+- The header uses the 32px work entry action and a completion menu for users with existing completion authority. The menu opens the existing result and confirmation flow. Order cancellation stays in the chart workflow.
+- Order information shows the first item and remaining count, request time, requester, and assignee. The read-only table reuses instruction row disclosure. The per-item assignee column appears when an item differs from the set assignee. Dispensing prework shows the route in the table.
+- Applicable instructions appear below the order table. The scope labels are 전체 지시, 조제 지시 or 처치 지시, and 세트 지시. A required review opens through the existing start or completion flow.
+- Below vitals, the prework history reuses the chart timeline with Seoul dates, timestamps, and order names. It starts with the latest three past orders for the selected category and expands when more are available.
+
 ## Dispensing/treatment instruction candidate — 2026-10-27
 
 Local candidate only; remote application is not verified. See

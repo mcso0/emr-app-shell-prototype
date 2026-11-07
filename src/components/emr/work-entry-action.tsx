@@ -2,6 +2,9 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton, ButtonGroupPrimaryButton } from "@/components/ui/button-group";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { Dialog } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { EmrDialogShell } from "./dialog-shell";
@@ -17,16 +20,41 @@ export type EmrWorkEntryActionProps = {
   busy?: boolean;
   error?: string | null;
   description?: string;
+  size?: "sm" | "default";
+  menuAction?: { label: string; triggerLabel: string; onSelect: () => void };
   onConfirm?: (reason: string) => Promise<boolean | "review_required">;
   onEntered?: () => void;
 };
+
+export function EmrWorkEntryTrigger({ label, disabled, onClick, size = "sm", menuAction }: Pick<EmrWorkEntryActionProps, "size" | "menuAction"> & {
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return menuAction ? (
+    <ButtonGroup aria-label="업무 액션">
+      <ButtonGroupPrimaryButton size={size} disabled={disabled} onClick={onClick}>
+        {label}
+      </ButtonGroupPrimaryButton>
+      <ButtonGroupDivider />
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<ButtonGroupIconButton size={size} aria-label={menuAction.triggerLabel} disabled={disabled} />}>
+          <CdsNavigationChevronDownIcon className="size-3" aria-hidden="true" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem disabled={disabled} onClick={menuAction.onSelect}>{menuAction.label}</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </ButtonGroup>
+  ) : <Button size={size} disabled={disabled} onClick={onClick}>{label}</Button>;
+}
 
 /** Confirmation UI only; callers retain their existing assignment and execution commands. */
 export function EmrWorkEntryAction(props: EmrWorkEntryActionProps) {
   return <WorkEntryAction key={props.scopeKey} {...props} />;
 }
 
-function WorkEntryAction({ mode, authorityKey, assigneeName, context, children, busy, error, description, onConfirm, onEntered }: EmrWorkEntryActionProps) {
+function WorkEntryAction({ mode, authorityKey, assigneeName, context, children, busy, error, description, size, menuAction, onConfirm, onEntered }: EmrWorkEntryActionProps) {
   const [openedAuthority, setOpenedAuthority] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
@@ -58,8 +86,9 @@ function WorkEntryAction({ mode, authorityKey, assigneeName, context, children, 
       if (mounted.current) setSubmitting(false);
     }
   };
+  const open = () => { setOpenedAuthority(authorityKey); setFailure(null); };
   return <>
-    <Button size="sm" disabled={saving} onClick={() => { setOpenedAuthority(authorityKey); setFailure(null); }}>{label}</Button>
+    <EmrWorkEntryTrigger label={label} size={size} disabled={saving} onClick={open} menuAction={menuAction} />
     <Dialog open={openedAuthority !== null} onOpenChange={(open) => { if (!open) close(); }}>
       <EmrDialogShell variant="confirm"
         title={mode === "start" ? "업무를 시작할까요?" : mode === "takeover" ? "담당자를 변경할까요?" : mode === "blocked" ? "담당 상태를 확인해 주세요" : "이 업무를 담당할까요?"}

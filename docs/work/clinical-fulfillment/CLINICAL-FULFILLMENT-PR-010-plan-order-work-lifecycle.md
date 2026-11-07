@@ -2083,3 +2083,9 @@ Verified all three assignee states in each queue in the local app with synthetic
 HTTP responses. The 39 focused browser cases covered dispensing, treatment and
 the other shared entry callers. The 21 dispensing/treatment cases passed again
 after the fixture began returning the start time. Nine Storybook cases passed.
+
+### Approved dispensing and treatment prework layout — 2026-11-07
+
+Implemented the [prework presentation contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-prework-layout--2026-11-07) in the isolated worktree at origin/main base 81e4146c. Both categories use the approved header, order table, request instructions, and dated history. Completion uses the existing permission and required-record checks.
+
+Local synthetic verification covered 30 Playwright cases across dispensing, treatment, chart, and shared order entry. The two presentation cases were rechecked with a required instruction acknowledgement. Both covered the 32px actions, row-level disclosure, scope labels, the history timeline, and a 390px viewport. All 18 affected Storybook cases, focused ESLint, and TypeScript passed. This evidence covers the local app with synthetic responses.

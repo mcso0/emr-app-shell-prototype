@@ -17,6 +17,7 @@ export type InstructionViewItem = {
   medicationGuide: string;
   storage: string;
   note: string;
+  planSummary?: string;
   setInstruction?: string;
   hasExecution?: boolean;
   hasResult?: boolean;
@@ -127,6 +128,7 @@ function displayFields(
     route: text(inputs.route, inputs.administrationRoute),
     medicationGuide: text(inputs.medicationInstruction),
     storage: text(inputs.storageMethod),
+    planSummary: detailLines[0],
     note: [note.trim() ? `오더별 지시: ${note}` : "", ...detailLines].filter(Boolean).join("\n"),
   };
 }
