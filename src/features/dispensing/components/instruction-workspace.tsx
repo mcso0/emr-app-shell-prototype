@@ -89,6 +89,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const document = controller.document;
   if (!document) return null;
   const busy = controller.busy || controller.loading;
+  const entryMode = document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked";
   const claimStartsWork = document.items.length > 0 && document.items.every((item) => item.status === "requested");
   const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
@@ -105,29 +106,42 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           {document.mainAssigneeName}
         </span>
       ) : null}
-      {prework ? <EmrWorkEntryAction
+      {prework && entryMode === "start" ? (
+        <Button size="sm" disabled={busy} onClick={() => void change("start")}>
+          업무 시작하기
+        </Button>
+      ) : prework ? <EmrWorkEntryAction
         scopeKey={`${workspaceId}:${document.rootTaskId}:${document.queueType}`}
         authorityKey={document.revision}
-        mode={document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked"}
+        mode={entryMode}
         assigneeName={document.mainAssigneeName}
         busy={busy} error={controller.error}
-        description={document.canClaim && claimStartsWork
-          ? "나를 담당자로 지정하고 바로 업무를 시작해요."
-          : document.canTakeover
-            ? `${document.mainAssigneeName ?? "다른 담당자"}님이 담당하는 업무예요. 담당을 변경하고 바로 업무를 시작해요. 변경 사유는 요청 수의사에게 전달돼요.`
+        description={entryMode === "claim" && claimStartsWork
+          ? "담당을 지정하면 업무가 바로 시작됩니다."
+          : entryMode === "takeover"
+            ? "담당을 변경하면 업무가 바로 시작됩니다. 변경 사유는 요청 수의사에게 전달됩니다."
             : undefined}
-        context={<><strong>{document.queueType === "dispensing" ? "조제" : "처치"} · {document.items.length}개</strong><p>현재 담당: {document.mainAssigneeName ?? "미지정"}</p></>}
-        onConfirm={async (reason) => {
-          const intent = document.canClaim ? claimIntent
-            : document.canTakeover ? { action: "takeover" as const, startWork: true as const, reason }
-            : { action: "start" as const };
+        onConfirm={entryMode === "blocked" ? undefined : async (reason) => {
+          const intent = entryMode === "claim" ? claimIntent
+            : { action: "takeover" as const, startWork: true as const, reason };
           let reviewRequired = false;
           const succeeded = await controller.mutate(intent, () => { reviewRequired = true; });
           if (succeeded) onChanged();
           return reviewRequired ? "review_required" : succeeded;
         }}
         onEntered={onEntered}
-      /> : null}
+      >
+        {entryMode !== "blocked" && (
+          <div className={entryMode === "takeover" ? "mb-4" : undefined}>
+            <p className="break-words text-sm font-medium">
+              {entryMode === "claim" ? "미지정" : document.mainAssigneeName?.trim() || "기존 담당자"} → 나
+            </p>
+            <ul aria-label="대상 오더" className="mt-2 max-h-[min(7rem,20dvh)] list-disc space-y-1 overflow-y-auto pl-5 text-sm text-muted-foreground">
+              {document.items.map((item) => <li key={item.id} className="break-words">{item.name}</li>)}
+            </ul>
+          </div>
+        )}
+      </EmrWorkEntryAction> : null}
       {!prework && document.canClaim ? (
         <Button size="sm" disabled={busy} onClick={() => void change("claim")}>
           담당하기

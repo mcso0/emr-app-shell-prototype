@@ -114,6 +114,10 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
 - Taking over an assigned request requires a reason. The same transaction
   records the handoff and notifies the requesting veterinarian. A failed start
   rolls back the assignment, audit and notification.
+- The 조제/처치 entry confirmation shows the assignee transition to the current
+  user and the order names in the selected document. Takeover also shows the
+  required reason field. The designated assignee starts with one click on
+  `업무 시작하기`. Required instruction acknowledgement still opens before start.
 - The server still checks the current actor, workspace, queue permission,
   instruction acknowledgement and any required medication link. Claim preserves
   existing child executors, and a mixed set keeps its other queue's work state.

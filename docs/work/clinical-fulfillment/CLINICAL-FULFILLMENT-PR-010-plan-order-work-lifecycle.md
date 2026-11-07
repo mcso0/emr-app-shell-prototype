@@ -2071,3 +2071,15 @@ with the forward migration, including persisted start metadata, mixed-queue
 scope, duplicate and concurrent requests, requester notification, and rollback
 when acknowledgement or a medication link is required. Browser requests used
 synthetic API responses. Production application and acceptance remain pending.
+
+### Dispensing and treatment assignment confirmation — 2026-11-07
+
+Local UI follow-up from `origin/main` `392de7dc`. The confirmation shows the
+assignee transition to the current user and the order names in the selected
+document. Takeover requires a reason. The designated assignee uses
+`업무 시작하기` once, with instruction acknowledgement when required.
+
+Verified all three assignee states in each queue in the local app with synthetic
+HTTP responses. The 39 focused browser cases covered dispensing, treatment and
+the other shared entry callers. The 21 dispensing/treatment cases passed again
+after the fixture began returning the start time. Nine Storybook cases passed.

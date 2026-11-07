@@ -44,6 +44,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     taskId: item.id, taskAttemptNo: 1, requestCycle: 1, rowRevision: Number(document.revision), status: item.status,
     queueType: options.queueType ?? "dispensing", assignedToUserId: item.assigneeId, requestedByUserId: id,
     patientName: "합성 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
+    startedAt: item.status === "in_progress" ? "2026-10-31T00:05:00.000Z" : null,
     createdAt: "2026-10-31T00:00:00.000Z", updatedAt: "2026-10-31T00:00:00.000Z", sourceSnapshot: { inHospitalOrderName: item.name },
   }));
   await page.route(`**/api/workspaces/${workspaceId}/staff`, route => route.fulfill({ json: { ok: true, staff: [] } }));
@@ -170,7 +171,11 @@ test("claim assigns and starts before opening the instruction", async ({ page })
   await page.screenshot({ path: test.info().outputPath("dispensing-narrow.png") });
   await page.setViewportSize({ width: 1624, height: 1000 });
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "담당하기", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "이 업무를 담당할까요?" });
+  await expect(dialog.getByText("미지정 → 나", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("list", { name: "대상 오더" }).getByRole("listitem")).toHaveText(["합성 품목 1"]);
+  await expect(dialog.getByText("현재 담당:", { exact: false })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
@@ -184,22 +189,54 @@ test("claim assigns and starts before opening the instruction", async ({ page })
 test("designated owner starts directly from prework", async ({ page }) => {
   const { actions } = await install(page, { owner: "mine", emptyOral: true });
   await page.getByRole("button", { name: "업무 시작하기" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+  await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+  expect(actions).toEqual(["start"]);
+});
+
+test("direct start still requires acknowledgement of changed instructions", async ({ page }) => {
+  const { actions } = await install(page, { owner: "mine", requester: false });
+  let requiresAcknowledgement = true;
+  await page.route("**/fulfillment/instruction-review*", route => {
+    if (route.request().method() === "POST") {
+      requiresAcknowledgement = false;
+      return route.fulfill({ json: { ok: true } });
+    }
+    if (!requiresAcknowledgement) return route.fallback();
+    return route.fulfill({ json: { ok: true, reviews: [{
+      taskId: id, requiresAcknowledgement: true, previous: null, snapshots: [],
+      current: { chartId: id, scope: "dispensing", versions: { dispensing: 2 }, versionKey: "b".repeat(64),
+        entries: [{ scope: "dispensing", revision: 2, instruction: "합성 최신 지시", deleted: false, legacy: false, actorName: null, createdAt: null }] },
+    }] } });
+  });
+  const start = page.getByRole("button", { name: "업무 시작하기", exact: true });
+  await start.click();
+  const review = page.getByRole("dialog", { name: "지시사항 확인" });
+  await expect(review).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "업무를 시작할까요?" })).toHaveCount(0);
+  expect(actions).toEqual([]);
+  await review.getByRole("button", { name: "최신 지시 확인" }).click();
+  await expect(review).not.toBeVisible();
+  await start.click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   expect(actions).toEqual(["start"]);
 });
 
 test("takeover requires a reason, retains it on failure and retries one command", async ({ page }) => {
-  const { actions, assignmentWrites } = await install(page, { owner: "other", failAssignment: true, requester: false });
+  const { actions, assignmentWrites } = await install(page, { owner: "other", set: true, failAssignment: true, requester: false });
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
-  await expect(dialog.getByRole("button", { name: "담당하기", exact: true })).toBeDisabled();
+  await expect(dialog.getByText("합성 기존 담당자 → 나", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("list", { name: "대상 오더" }).getByRole("listitem")).toHaveText(["합성 품목 1", "합성 품목 2"]);
+  const confirm = dialog.getByRole("button", { name: "담당 변경", exact: true });
+  await expect(confirm).toBeDisabled();
   await dialog.getByLabel("담당 변경 사유").fill("교대 근무로 인계합니다.");
-  await dialog.getByRole("button", { name: "담당하기", exact: true }).dblclick();
+  await confirm.dblclick();
   await expect(dialog.getByRole("alert")).toBeVisible();
   await expect(dialog.getByLabel("담당 변경 사유")).toHaveValue("교대 근무로 인계합니다.");
   expect(assignmentWrites).toHaveLength(1);
-  await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
+  await confirm.click();
   await expect(dialog).not.toBeVisible();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
@@ -234,7 +271,7 @@ test("takeover keeps the reason when a new instruction must be acknowledged", as
   const takeover = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
   await entry.getByRole("button", { name: "담당하기", exact: true }).click();
   await takeover.getByLabel("담당 변경 사유").fill("합성 교대 사유");
-  await takeover.getByRole("button", { name: "담당하기", exact: true }).click();
+  await takeover.getByRole("button", { name: "담당 변경", exact: true }).click();
   await expect(takeover).not.toBeVisible();
   await expect(entry).toBeVisible();
   const review = page.getByRole("dialog", { name: "지시사항 확인" });
@@ -243,7 +280,7 @@ test("takeover keeps the reason when a new instruction must be acknowledged", as
 
   await entry.getByRole("button", { name: "담당하기", exact: true }).click();
   await expect(takeover.getByLabel("담당 변경 사유")).toHaveValue("합성 교대 사유");
-  await takeover.getByRole("button", { name: "담당하기", exact: true }).click();
+  await takeover.getByRole("button", { name: "담당 변경", exact: true }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   await expect(page.getByRole("button", { name: "조제 시작", exact: true })).toHaveCount(0);
   expect(actions).toEqual(["takeover", "takeover"]);
@@ -295,14 +332,16 @@ test("takeover conflict refreshes the owner and keeps the reason until a new com
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "담당자를 변경할까요?" });
   await dialog.getByLabel("담당 변경 사유").fill("교대 인계");
-  await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
-  await expect(dialog).toContainText("합성 새 담당자");
+  const confirm = dialog.getByRole("button", { name: "담당 변경", exact: true });
+  await confirm.click();
+  await expect(dialog.getByText("합성 새 담당자 → 나", { exact: true })).toBeVisible();
   await expect(dialog.getByRole("alert")).toContainText("업무 내용이나 담당자가 변경");
+  await expect(confirm).toBeDisabled();
   await expect(dialog.getByLabel("담당 변경 사유")).toHaveValue("교대 인계");
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.getByRole("button", { name: "담당하기", exact: true }).click();
-  await dialog.getByRole("button", { name: "담당하기", exact: true }).click();
+  await confirm.click();
   await expect(dialog).not.toBeVisible();
   expect(assignmentWrites).toHaveLength(2);
   expect(assignmentWrites[0].commandId).not.toBe(assignmentWrites[1].commandId);
@@ -341,8 +380,14 @@ for (const owner of [undefined, "mine", "other"] as const) {
     const label = owner === "mine" ? "업무 시작하기" : "담당하기";
     await entry.getByRole("button", { name: label, exact: true }).click();
     const dialog = page.getByRole("dialog");
-    if (owner === "other") await dialog.getByLabel("담당 변경 사유").fill("합성 교대 사유");
-    await dialog.getByRole("button", { name: label, exact: true }).click();
+    if (owner === "mine") {
+      await expect(dialog).toHaveCount(0);
+    } else {
+      await expect(dialog.getByText(owner === "other" ? "합성 기존 담당자 → 나" : "미지정 → 나", { exact: true })).toBeVisible();
+      await expect(dialog.getByRole("list", { name: "대상 오더" }).getByRole("listitem")).toHaveText(["합성 품목 1"]);
+      if (owner === "other") await dialog.getByLabel("담당 변경 사유").fill("합성 교대 사유");
+      await dialog.getByRole("button", { name: owner === "other" ? "담당 변경" : "담당하기", exact: true }).click();
+    }
     await expect(entry).toHaveCount(0);
     await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
     await expect(page.getByRole("button", { name: "처치 시작", exact: true })).toHaveCount(0);
@@ -396,7 +441,7 @@ for (const owner of [undefined, "mine"] as const) {
     });
     const name = owner === "mine" ? "업무 시작하기" : "담당하기";
     await page.getByRole("button", { name, exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name, exact: true }).click();
+    if (!owner) await page.getByRole("dialog").getByRole("button", { name, exact: true }).click();
     await expect.poll(() => requested).toBe(true);
     await expectOnlyPageLoading(page);
     await page.screenshot({ path: test.info().outputPath("entry-loading.png") });
@@ -410,7 +455,6 @@ test("instruction refresh failure exits page loading and keeps an explicit retry
   await install(page, { owner: "mine" });
   await page.route("**/fulfillment/work-items/*/instruction", route => route.request().method() === "GET" ? route.fulfill({ status: 503, json: { ok: false } }) : route.fallback());
   await page.getByRole("button", { name: "업무 시작하기", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
   await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
   await expect(page.getByRole("button", { name: "다시 조회", exact: true }).first()).toBeVisible();
 });

@@ -12,6 +12,8 @@ export type EmrWorkEntryActionProps = {
   authorityKey: string;
   assigneeName?: string | null;
   context?: ReactNode;
+  /** Unboxed content shown before the takeover reason field. */
+  children?: ReactNode;
   busy?: boolean;
   error?: string | null;
   description?: string;
@@ -24,7 +26,7 @@ export function EmrWorkEntryAction(props: EmrWorkEntryActionProps) {
   return <WorkEntryAction key={props.scopeKey} {...props} />;
 }
 
-function WorkEntryAction({ mode, authorityKey, assigneeName, context, busy, error, description, onConfirm, onEntered }: EmrWorkEntryActionProps) {
+function WorkEntryAction({ mode, authorityKey, assigneeName, context, children, busy, error, description, onConfirm, onEntered }: EmrWorkEntryActionProps) {
   const [openedAuthority, setOpenedAuthority] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
@@ -36,6 +38,7 @@ function WorkEntryAction({ mode, authorityKey, assigneeName, context, busy, erro
   const stale = openedAuthority !== null && openedAuthority !== authorityKey;
   const saving = busy || submitting;
   const label = mode === "start" ? "업무 시작하기" : "담당하기";
+  const confirmLabel = mode === "takeover" ? "담당 변경" : label;
   const close = () => { if (!pending.current && !busy) setOpenedAuthority(null); };
   const submit = async () => {
     if (pending.current || busy || stale) return;
@@ -62,8 +65,9 @@ function WorkEntryAction({ mode, authorityKey, assigneeName, context, busy, erro
         title={mode === "start" ? "업무를 시작할까요?" : mode === "takeover" ? "담당자를 변경할까요?" : mode === "blocked" ? "담당 상태를 확인해 주세요" : "이 업무를 담당할까요?"}
         description={description ?? (mode === "start" ? "현재 담당자로 업무를 진행해요." : mode === "takeover" ? `${assigneeName ?? "다른 담당자"}님이 담당하는 업무예요. 변경 사유는 요청 수의사에게 전달돼요.` : mode === "blocked" ? (assigneeName ? `${assigneeName}의 담당 변경 또는 인계가 필요해요.` : "이 업무의 담당 권한을 확인해 주세요.") : "나를 담당자로 지정하고 업무 화면을 열어요. 실제 업무는 아직 시작하지 않아요.")}
         secondaryAction={<Button variant="outline" disabled={saving} onClick={close}>{mode === "blocked" ? "닫기" : "취소"}</Button>}
-        primaryAction={mode === "blocked" ? undefined : <Button disabled={saving || stale || (mode === "takeover" && !reason.trim())} onClick={() => void submit()}>{saving ? "처리 중" : label}</Button>}>
+        primaryAction={mode === "blocked" ? undefined : <Button disabled={saving || stale || (mode === "takeover" && !reason.trim())} onClick={() => void submit()}>{saving ? "처리 중" : confirmLabel}</Button>}>
         {context && <div className="mb-4 rounded-lg border border-border px-4 py-3 text-sm">{context}</div>}
+        {children}
         {mode === "takeover" && <><label htmlFor={inputId} className="mb-2 block text-sm font-medium">담당 변경 사유</label><Textarea id={inputId} maxLength={1000} value={reason} disabled={saving} onChange={event => setReason(event.target.value)} /></>}
         {(stale || error || failure) && <p role="alert" className="mt-3 text-sm text-destructive">{stale ? "업무 내용이나 담당자가 변경됐어요. 창을 닫고 최신 상태를 확인해 주세요." : error || failure}</p>}
       </EmrDialogShell>
