@@ -48,15 +48,28 @@ for (const colorScheme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "새 업무 탭", exact: true }).click();
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await toast.hover({ position: { x: 20, y: 20 } });
-      // Sonner exposes the toast region through Alt+T, then the toast and
-      // its close button through Tab. Leaving the region restores prior focus.
+      if (viewport.label === "mobile") {
+        const panel = page.getByTestId("module-side-panel-host");
+        const collapse = panel.getByRole("button", { name: /패널 접기$/ });
+        await expect(panel).toHaveAttribute("data-panel-mode", "sheet");
+        await expect(collapse).toBeFocused();
+        await page.keyboard.press("Alt+t");
+        await expect(collapse).toBeFocused();
+
+        await page.keyboard.press("Escape");
+        await expect(panel).toHaveAttribute("data-panel-mode", "hidden");
+        await expect(page.getByRole("button", { name: "사이드 패널 펼치기", exact: true })).toBeFocused();
+      }
+
       await page.keyboard.press("Alt+t");
+      await expect(toaster).toBeFocused();
       await page.keyboard.press("Tab");
+      await expect(toast).toBeFocused();
       await page.keyboard.press("Tab");
       await expect(close).toBeFocused();
       await expect.poll(() => close.evaluate((button) => button.matches(":focus-visible"))).toBe(true);
       await expect.poll(() => close.evaluate((button) => getComputedStyle(button).boxShadow)).not.toBe("none");
-      await close.press("Enter");
+      await page.keyboard.press("Enter");
       await expect(toast).toBeHidden();
     });
   }
