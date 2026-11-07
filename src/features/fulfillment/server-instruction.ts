@@ -25,6 +25,8 @@ const errors: Record<string, number> = {
   invalid_transition: 409,
   billing_locked: 409,
   actual_execution_result_required: 409,
+  treatment_medication_link_required: 409,
+  treatment_medication_link_invalid: 409,
 };
 
 /** The session-bound RPC owns workspace, current attempt and executor checks. */

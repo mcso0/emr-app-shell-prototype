@@ -105,6 +105,21 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
   scoped schema. Full confirmation/catalog/billing replay and hosted parity are
   not verified by these tests.
 
+## Start waiting dispensing and treatment work on assignment — 2026-11-07
+
+- Confirming 담당하기 on an entirely waiting 조제 or 처치 document sends one
+  revision-checked assignment command with `startWork: true`. The transaction
+  saves the assignee and starts the work in the selected queue. It records the
+  start, and the returned instruction opens as 진행중.
+- Taking over an assigned request requires a reason. The same transaction
+  records the handoff and notifies the requesting veterinarian. A failed start
+  rolls back the assignment, audit and notification.
+- The server still checks the current actor, workspace, queue permission,
+  instruction acknowledgement and any required medication link. Claim preserves
+  existing child executors, and a mixed set keeps its other queue's work state.
+- Assignment-only commands remain available to existing callers. The follow-up
+  migration is verified in a scoped local PostgreSQL fixture.
+
 ## Shared order entry presentation — 2026-11-03
 
 Local UI implementation uses the unchanged chart preconsultation layout as its

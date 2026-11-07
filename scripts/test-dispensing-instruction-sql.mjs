@@ -29,6 +29,7 @@ definitions.push(
  ["20260903003949_plan_order_work_lifecycle_and_rpc_boundary.sql", "public.clair_mutate_chart_order_execution"],
 );
 if (overallInstructions) definitions.push(
+ ["20260908083048_treatment_medication_link_at_execution.sql", "private.clair_guard_treatment_execution_medication"],
  ["20260908211856_encounter_multi_chart.sql", "private.clair_require_chart_encounter"],
  ["20260908211856_encounter_multi_chart.sql", "private.clair_require_order_encounter"],
  ["20260908211856_encounter_multi_chart.sql", "private.clair_require_order_chart"],
@@ -58,9 +59,9 @@ baseline += "\n" + multiChart.slice(multiChart.indexOf("do $fulfillment_aggregat
 baseline += "\n" + readFileSync("supabase/migrations/20260912230700_dispensing_execution_billing_candidate_handoff.sql", "utf8");
 const ownerPatch = readFileSync("supabase/migrations/20261012054346_current_assignee_mutation_boundary.sql", "utf8");
 baseline += "\n" + ownerPatch.slice(ownerPatch.indexOf("do $patch$"), ownerPatch.indexOf(" signature:='public.clair_save_lab_result_entry_v2")) + "\nend $patch$;";
-const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql", ...(overallInstructions ? ["20261027130000_chart_oral_instructions.sql", "20261101140000_overall_instructions.sql"] : []), "20261102100000_fulfillment_prework_assignment.sql"].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
+const migration = ["20261027091000_dispensing_instruction_workflow.sql", "20261027092000_instruction_execution_authority.sql", "20261027093000_instruction_notifications.sql", "20261027094000_instruction_child_attempts.sql", "20261027095000_instruction_draft_notes.sql", "20261027110000_instruction_display_names.sql", "20261031120000_instruction_review_fixes.sql", ...(overallInstructions ? ["20261027130000_chart_oral_instructions.sql", "20261101140000_overall_instructions.sql"] : []), "20261102100000_fulfillment_prework_assignment.sql", ...(overallInstructions ? ["20261107065927_fulfillment_assign_and_start.sql"] : [])].map(file=>readFileSync(`supabase/migrations/${file}`, "utf8")).join("\n");
 const fixture = readFileSync("tests/sql/dispensing-instruction.sql", "utf8")
- .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + (overallInstructions ? readFileSync("tests/sql/overall-instructions.sql", "utf8") + readFileSync("tests/sql/overall-instructions-boundaries.sql", "utf8") : "") + readFileSync("tests/sql/fulfillment-prework.sql", "utf8") + readFileSync("tests/sql/prework-designated-assignee.sql", "utf8") + "\nrollback;");
+ .replace("rollback;", () => readFileSync("tests/sql/instruction-review-fixes.sql", "utf8") + (overallInstructions ? readFileSync("tests/sql/overall-instructions.sql", "utf8") + readFileSync("tests/sql/overall-instructions-boundaries.sql", "utf8") : "") + readFileSync("tests/sql/fulfillment-prework.sql", "utf8") + readFileSync("tests/sql/prework-designated-assignee.sql", "utf8") + (overallInstructions ? readFileSync("tests/sql/fulfillment-assign-and-start.sql", "utf8") : "") + "\nrollback;");
 const notificationSource = readFileSync("supabase/migrations/20260705133000_notification_event_persistence.sql", "utf8");
 const notificationTable = notificationSource.slice(notificationSource.indexOf("create table if not exists public.notification_events"), notificationSource.indexOf("create table if not exists public.notification_user_states"))
  .replace("references public.workspaces(id) on delete cascade", "");
@@ -101,7 +102,7 @@ try {
  // Two distinct sessions attempt the same current takeover. The first commits;
  // the second must reject its old revision before any audit/notification writes.
  const takeoverRevision = docker([...psql, "-At"], "select set_config('test.actor','00000000-0000-4000-8000-000000000002',false); select public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002')->>'revision';").trim().split("\n").at(-1);
- const takeover = () => `select set_config('test.actor','00000000-0000-4000-8000-000000000002',true); select public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','takeover','reason','동시 인계 검증','commandId',gen_random_uuid(),'expectedRevision','${takeoverRevision}'));`;
+ const takeover = () => `select set_config('test.actor','00000000-0000-4000-8000-000000000002',true); select public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','takeover','reason','동시 인계 검증','commandId',gen_random_uuid(),'expectedRevision','${takeoverRevision}'${overallInstructions ? ",'startWork',true" : ""}));`;
  let takeoverLocked; const takeoverSignal = new Promise(resolve => { takeoverLocked = resolve; });
  const takeoverFirst = session(`begin; ${takeover()} select 'CLAIM_LOCKED'; select pg_sleep(0.4); commit;`, takeoverLocked);
  await Promise.race([takeoverSignal, takeoverFirst.then(result => { throw new Error("Takeover lock failed: " + JSON.stringify(result)); })]);
