@@ -41,7 +41,6 @@ import { EmrMeasuredLoading } from "@/components/emr/measured-loading";
 import type {
   ChartPreconsultationContext,
   ChartPreconsultationContextResponse,
-  ChartPreconsultationHistoryEntry,
   ChartPreconsultationVitalMeasurement,
 } from "@/features/chart/preconsultation-context";
 import {
@@ -996,7 +995,15 @@ function HistorySection({
       </SectionTitle>
       {entries.length > 0 ? (
         <>
-          <HistoryTimeline entries={entries} />
+          <PatientPreworkHistoryTimeline
+            label="과거 진료 이력"
+            testId="preconsultation-history-timeline"
+            entries={entries.map(entry => ({
+              id: entry.encounterId,
+              timestamp: entry.checkedInAt,
+              summary: entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력",
+            }))}
+          />
           {hasMoreHistory ? (
             <div className="flex justify-center">
               <Button
@@ -1025,18 +1032,20 @@ function HistorySection({
   );
 }
 
-function HistoryTimeline({
-  entries,
-}: {
-  entries: ChartPreconsultationHistoryEntry[];
+type PreworkHistoryEntry = { id: string; timestamp: string; summary: string };
+
+export function PatientPreworkHistoryTimeline({ entries, label, testId }: {
+  entries: PreworkHistoryEntry[];
+  label: string;
+  testId?: string;
 }) {
   const groups = groupHistoryEntries(entries);
 
   return (
     <ol
       className="flex min-w-0 flex-col gap-3 px-6 py-1"
-      aria-label="과거 진료 이력"
-      data-testid="preconsultation-history-timeline"
+      aria-label={label}
+      data-testid={testId}
     >
       {groups.map((group) => (
         <li key={group.date} className="flex min-w-0 gap-2">
@@ -1053,25 +1062,22 @@ function HistoryTimeline({
               {group.date}
             </div>
             <ol className="flex min-w-0 flex-col gap-2">
-              {group.entries.map((entry) => {
-                const summary = entry.visitPurpose ?? entry.chiefComplaint ?? entry.primaryDiagnosis ?? "진료 요약 미입력";
-                return (
-                  <li
-                    key={entry.encounterId}
-                    className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-4"
+              {group.entries.map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex h-14 min-w-0 items-center gap-3 overflow-hidden rounded-[var(--clair-radius-atomic-8)] border border-[var(--emr-border-default)] bg-[var(--emr-surface-panel)] p-4"
+                >
+                  <Badge
+                    className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
+                    variant="outline"
                   >
-                    <Badge
-                      className="h-[22px] w-[69px] shrink-0 rounded-[var(--clair-radius-atomic-6)] border-[rgba(0,0,0,0.08)] bg-[var(--emr-surface-panel)] px-2 font-mono text-xs font-medium"
-                      variant="outline"
-                    >
-                      {formatHistoryTime(entry.checkedInAt)}
-                    </Badge>
-                    <span className="min-w-0 truncate text-[15px] font-medium leading-6 tracking-[0.006em]">
-                      {summary}
-                    </span>
-                  </li>
-                );
-              })}
+                    {formatHistoryTime(entry.timestamp)}
+                  </Badge>
+                  <span className="min-w-0 truncate text-[15px] font-medium leading-6 tracking-[0.006em]">
+                    {entry.summary}
+                  </span>
+                </li>
+              ))}
             </ol>
           </div>
         </li>
@@ -1189,12 +1195,10 @@ function formatShortDate(value: string) {
   return `${year}.${month}.${day}`;
 }
 
-function groupHistoryEntries(
-  entries: ChartPreconsultationHistoryEntry[],
-) {
-  return entries.reduce<Array<{ date: string; entries: ChartPreconsultationHistoryEntry[] }>>(
+function groupHistoryEntries(entries: PreworkHistoryEntry[]) {
+  return entries.reduce<Array<{ date: string; entries: PreworkHistoryEntry[] }>>(
     (groups, entry) => {
-      const date = formatHistoryDate(entry.checkedInAt);
+      const date = formatHistoryDate(entry.timestamp);
       const existing = groups.find((group) => group.date === date);
       if (existing) {
         existing.entries.push(entry);

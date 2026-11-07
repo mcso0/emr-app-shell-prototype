@@ -10,7 +10,7 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number } = {}) {
+async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
@@ -29,6 +29,11 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
       plan: { detailSchemaVersion: 1, detailInputs: { route: "PO", dose: 0.5, doseUnit: "T", totalQuantity: 1, totalQuantityUnit: "T", doseBasis: "patient", compoundNote: "합성 조제 메모", guardianNote: "합성 보호자 전달 메모" }, calculationOutputs: { plannedPracticalTotalQuantity: 1, dispenseUnit: "T" } },
     })),
   };
+  if (options.layoutFixture) {
+    document.instruction = "합성 세트 지시";
+    document.items[1].assigneeId = "synthetic-second-assignee";
+    document.items[1].assigneeName = "합성 보조 담당자";
+  }
   const contexts = Object.fromEntries(document.items.map(item => [item.id, {
     workspaceId, workItemId: item.id, taskId: item.id, orderId: item.id, encounterId: id, attemptNo: 1,
     workItemRevision: 1, clinicalOrderType: "dispensing", status: "requested", isCurrentAttempt: true,
@@ -38,6 +43,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   const writes: ExecutionResultCommand[] = [];
   let failures = options.failSave ? 1 : 0;
   let staleAssignment = options.staleAssignment;
+  let requiresAcknowledgement = false;
   let assignmentFailures = options.failAssignment ? 1 : 0;
   const assignmentWrites: Record<string, unknown>[] = [];
   const workItems = () => document.items.map(item => ({ id: item.id, workspaceId, orderId: item.id, encounterId: id, patientId,
@@ -47,11 +53,38 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     startedAt: item.status === "in_progress" ? "2026-10-31T00:05:00.000Z" : null,
     createdAt: "2026-10-31T00:00:00.000Z", updatedAt: "2026-10-31T00:00:00.000Z", sourceSnapshot: { inHospitalOrderName: item.name },
   }));
+  const historyItems = ["2026-10-30T06:22:08Z", "2026-10-30T05:16:32Z", "2026-10-24T02:09:14Z", "2026-10-20T07:32:51Z"].map((createdAt, index) => ({
+    ...workItems()[0],
+    id: id.slice(0, -1) + (index + 3),
+    encounterId: secondId,
+    createdAt,
+    sourceSnapshot: { inHospitalOrderName: "합성 과거 오더 " + (index + 1) },
+  }));
+  const category = options.queueType ?? "dispensing";
+  const layoutInstructions = [
+    { scope: "overall", instruction: "합성 전체 지시" },
+    { scope: category, instruction: "합성 분류 지시".repeat(24) },
+  ].map(entry => ({ ...entry, revision: 1, deleted: false, actorName: null, createdAt: null }));
   await page.route(`**/api/workspaces/${workspaceId}/staff`, route => route.fulfill({ json: { ok: true, staff: [] } }));
   await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, route => route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) }));
   await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/history?*`, route => route.fulfill({ json: { ok: true, measurements: [] } }));
-  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/instruction-review?*`, route => route.fulfill({ json: { ok: true, reviews: (new URL(route.request().url()).searchParams.get("taskIds") ?? "").split(",").filter(Boolean).map(taskId => ({ taskId, requiresAcknowledgement: false, previous: null, snapshots: [], current: options.emptyOral ? null : { chartId: id, scope: "dispensing", entries: [{ scope: "dispensing", revision: 1, instruction: document.oralInstruction!.instruction, deleted: false, legacy: true, actorName: null, createdAt: null }], versions: { dispensing: 1 }, versionKey: "a".repeat(64) } })) } }));
-  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => route.fulfill({ json: { ok: true, workItems: new URL(route.request().url()).searchParams.get("queueType") === (options.queueType ?? "dispensing") ? workItems() : [] } }));
+  await page.route("**/fulfillment/instruction-review?*", route => {
+    const taskIds = new URL(route.request().url()).searchParams.get("taskIds")?.split(",") ?? [];
+    const current = options.emptyOral ? null : {
+      chartId: id,
+      scope: category,
+      entries: options.layoutFixture ? layoutInstructions : [{ scope: category, revision: 1, instruction: document.oralInstruction!.instruction, deleted: false, legacy: true, actorName: null, createdAt: null }],
+      versions: { [category]: 1 },
+      versionKey: "a".repeat(64),
+    };
+    return route.fulfill({ json: { ok: true, reviews: taskIds.map(taskId => ({ taskId, requiresAcknowledgement, previous: null, snapshots: [], current })) } });
+  });
+  await page.route("**/fulfillment/work-items?*", route => {
+    const params = new URL(route.request().url()).searchParams;
+    const current = params.get("queueType") === category ? workItems() : [];
+    const past = options.layoutFixture && current.length && params.has("patientId") ? historyItems : [];
+    return route.fulfill({ json: { ok: true, workItems: [...current, ...past] } });
+  });
   await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, route => options.profileFailure
     ? route.fulfill({ status: 503, json: { ok: false } })
     : route.fulfill({ json: { ok: true, overview: { subjectId: patientId, subjectType: "patient", profile: { id: patientId, name: "합성 환자", birthDate: "2020-01-01", breed: "말티즈", sex: "female", neutered: true, species: "dog" }, relationships: { guardians: [] }, access: { information: { allowed: true, requiredPermission: "patient:view" } } } } }));
@@ -109,8 +142,12 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-31&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed&right=closed`);
   if (options.started) await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible();
   else await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
-  if (!options.started) await expect(page.getByRole("button", { name: options.owner === "mine" ? "업무 시작하기" : "담당하기", exact: true })).toBeEnabled();
-  return { document, contexts, writes, actions, assignmentWrites };
+  if (!options.started) {
+    const entryAction = page.getByRole("button", { name: options.owner === "mine" ? "업무 시작하기" : "담당하기", exact: true });
+    await expect(entryAction).toBeEnabled();
+    await expect(entryAction).toHaveCSS("height", "32px");
+  }
+  return { document, contexts, writes, actions, assignmentWrites, requireInstructionReview: () => { requiresAcknowledgement = true; } };
 }
 
 async function fillResult(page: Page) {
@@ -123,8 +160,9 @@ async function fillResult(page: Page) {
 
 test("unassigned requester completes through required input without starting; failed save retains draft and retry id", async ({ page }) => {
   const { actions, writes, document } = await install(page, { failSave: true });
-  await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "조제 완료", exact: true }).click();
+  await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "완료 메뉴 열기" }).click();
+  await page.getByRole("menuitem", { name: "조제 완료", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("button", { name: "완료", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "합성 품목 1 수행값 입력" }).click();
   const dialog = await fillResult(page);
@@ -143,7 +181,8 @@ test("unassigned requester completes through required input without starting; fa
 
 test("set completion records each missing result before explicit finalization", async ({ page }) => {
   const { actions, writes, document } = await install(page, { set: true });
-  await page.getByRole("button", { name: "조제 완료", exact: true }).click();
+  await page.getByRole("button", { name: "완료 메뉴 열기" }).click();
+  await page.getByRole("menuitem", { name: "조제 완료", exact: true }).click();
   for (const n of [1, 2]) {
     await page.getByRole("button", { name: `합성 품목 ${n} 수행값 입력` }).click();
     const dialog = await fillResult(page);
@@ -163,7 +202,7 @@ test("claim assigns and starts before opening the instruction", async ({ page })
   await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
   await expect(page.getByRole("button", { name: "합성 품목 1 완료", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("columnheader", { name: "담당자", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "오더 정보" })).toBeVisible();
   expect(actions).toEqual([]);
   await page.screenshot({ path: test.info().outputPath("dispensing-desktop.png") });
   await page.setViewportSize({ width: 768, height: 900 });
@@ -368,7 +407,8 @@ for (const owner of [undefined, "mine", "other"] as const) {
     await page.setViewportSize({ width: 1624, height: 1000 });
     const { actions, assignmentWrites } = await install(page, { queueType: "treatment", owner, requester: false, emptyOral: true });
     const entry = page.getByTestId("fulfillment-prework");
-    await expect(entry.getByRole("columnheader", { name: "처치 지시" })).toBeVisible();
+    await expect(entry.getByRole("columnheader", { name: "처치 계획" })).toBeVisible();
+    await expect(entry.getByRole("button", { name: "완료 메뉴 열기" })).toHaveCount(0);
     await expect(entry.locator("header")).toContainText("합성 보호자");
     await expect(page.getByTestId("workspace-document-toolbar")).toBeHidden();
     await page.screenshot({ path: test.info().outputPath(`treatment-${owner ?? "none"}.png`) });
@@ -396,6 +436,83 @@ for (const owner of [undefined, "mine", "other"] as const) {
       startWork: true,
       ...(owner === "other" ? { reason: "합성 교대 사유" } : {}),
     });
+  });
+}
+
+
+for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처치"]] as const) {
+  test(label + " prework uses the approved header, order disclosure, scoped instructions and dated history", async ({ page }, testInfo) => {
+    const { actions, writes, requireInstructionReview } = await install(page, { queueType, set: true, owner: "mine", layoutFixture: true });
+    const entry = page.getByTestId("fulfillment-prework");
+    const menu = entry.getByRole("button", { name: "완료 메뉴 열기" });
+    await expect(menu).toHaveCSS("height", "32px");
+    await expect(menu).toHaveCSS("width", "32px");
+    await expect(entry.getByRole("button", { name: "업무 시작하기" }).locator("svg")).toHaveCount(0);
+    await menu.press("ArrowDown");
+    await expect(page.getByRole("menuitem", { name: label + " 완료" })).toBeVisible();
+    await expect(page.getByRole("menuitem")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeFocused();
+
+    const summary = entry.locator("dl").filter({ hasText: "요청 시각" });
+    await expect(summary.locator("dt")).toHaveText(["오더명", "요청 시각", "요청자", "담당자"]);
+    await expect(summary).toContainText("합성 품목 1 외 1건");
+    await expect(summary.locator("dd > span > svg")).toHaveCount(2);
+    await expect(summary.locator('[data-slot="avatar"]')).toHaveCount(2);
+    const table = entry.getByRole("region", { name: "요청된 " + label + " 오더" });
+    await expect(table.getByRole("columnheader", { name: "항목 담당" })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: /복약지도|보관/ })).toHaveCount(0);
+    const toggle = table.getByRole("button", { name: /합성 품목 1 지시/ });
+    await expect(toggle).toHaveCSS("height", "24px");
+    await expect(toggle).toHaveCSS("width", "24px");
+    const details = table.locator(".fd-info-row");
+    await expect(details).toHaveCount(2);
+    await expect(details.first()).toContainText("개별 지시");
+    await expect(details.first()).not.toContainText("오더별 지시:");
+    await toggle.click();
+    await expect(details.first()).toBeHidden();
+    await expect(details.last()).toBeVisible();
+    await toggle.press("Enter");
+    await expect(details.first()).toBeVisible();
+    await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+    const instructions = entry.locator("section").filter({ has: page.getByRole("heading", { name: label + " 요청 사항" }) });
+    for (const scope of ["전체 지시", label + " 지시", "세트 지시"]) {
+      await expect(instructions.getByText(scope, { exact: true })).toHaveCount(1);
+    }
+    await expect(instructions.getByRole("button")).toHaveCount(0);
+    expect(await instructions.locator("p").evaluateAll(paragraphs => new Set(paragraphs.map(node => node.previousElementSibling?.getBoundingClientRect().width)).size)).toBe(1);
+    const history = entry.getByTestId("fulfillment-prework-history-timeline");
+    await expect(history).toContainText("2026년 10월 30일");
+    await expect(history).toContainText("15:22:08");
+    await expect(history.locator("ol").locator("li")).toHaveCount(3);
+    await expect(history).not.toContainText("합성 품목 1");
+    await entry.getByRole("button", { name: "전체 이력 보기" }).click();
+    await expect(history.locator("ol").locator("li")).toHaveCount(4);
+    await entry.getByRole("button", { name: "이력 접기" }).press("Enter");
+    await expect(history.locator("ol").locator("li")).toHaveCount(3);
+    await expect(history).not.toContainText("합성 기존 담당자");
+
+    await history.screenshot({ path: testInfo.outputPath("prework-history.png") });
+    await entry.locator("header").scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath("prework-desktop.png") });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByRole("button", { name: "사이드 패널 접기" }).click();
+    await expect(page).toHaveURL(/modulePanel=closed/);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(toggle).toBeVisible();
+    await expect.poll(() => instructions.evaluate(node => node.scrollWidth <= node.clientWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath("prework-narrow.png") });
+    await menu.click();
+    await page.getByRole("menuitem", { name: label + " 완료" }).click();
+    const completion = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+    await expect(completion.getByRole("button", { name: "완료", exact: true })).toBeDisabled();
+    await completion.getByRole("button", { name: "취소", exact: true }).click();
+    requireInstructionReview();
+    await entry.getByRole("button", { name: "업무 시작하기" }).click();
+    await expect(page.getByRole("dialog", { name: "지시사항 확인" }).getByRole("button", { name: "최신 지시 확인" })).toBeVisible();
+    expect(actions).toEqual([]);
+    expect(writes).toEqual([]);
   });
 }
 

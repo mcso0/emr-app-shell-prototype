@@ -41,6 +41,40 @@ const Icon = ({ name }: { name: string }) => (
     dangerouslySetInnerHTML={{ __html: icons[name as keyof typeof icons] }}
   />
 );
+export function InstructionRowDisclosure({ name, expanded, onToggle, controls }: {
+  name: string;
+  expanded: boolean;
+  onToggle: () => void;
+  controls?: string;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      className="fd-row-arrow"
+      aria-label={name + (expanded ? " 지시 접기" : " 지시 펼치기")}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      onClick={onToggle}
+    >
+      <span className={expanded ? "fd-row-glyph" : "fd-row-glyph fd-rotate"}>
+        <Icon name="row-arrow" />
+      </span>
+    </Button>
+  );
+}
+
+export function InstructionRowNote({ children, modified = false }: {
+  children: React.ReactNode;
+  modified?: boolean;
+}) {
+  return (
+    <div className={modified ? "fd-info fd-info-modified" : "fd-info"}>
+      <Icon name={modified ? "info-modified" : "info"} />
+      <div className="fd-detail-content">{children}</div>
+    </div>
+  );
+}
+
 const groups = [
   ["added", "추가된 오더"],
   ["modified", "수정된 오더"],
@@ -439,25 +473,13 @@ function OrderCard({
                             <TableRow data-item={i.id}>
                               <TableCell>
                                 {hasDetails && (
-                                  <Button
-                                    variant="ghost"
-                                    className="fd-row-arrow"
-                                    aria-label={`${i.name} 지시 ${expanded ? "접기" : "펼치기"}`}
-                                    aria-expanded={expanded}
-                                    onClick={() =>
-                                      setHidden((s) =>
-                                        expanded
-                                          ? [...s, i.id]
-                                          : s.filter((id) => id !== i.id),
-                                      )
-                                    }
-                                  >
-                                    <span
-                                      className={`fd-row-glyph ${expanded ? "" : "fd-rotate"}`}
-                                    >
-                                      <Icon name="row-arrow" />
-                                    </span>
-                                  </Button>
+                                  <InstructionRowDisclosure
+                                    name={i.name}
+                                    expanded={expanded}
+                                    onToggle={() => setHidden((items) =>
+                                      expanded ? [...items, i.id] : items.filter((id) => id !== i.id),
+                                    )}
+                                  />
                                 )}
                               </TableCell>
                               <TableCell className="fd-name">
@@ -622,51 +644,40 @@ function OrderCard({
                             {expanded && (
                               <TableRow className="fd-info-row">
                                 <TableCell colSpan={15}>
-                                  <div
-                                    className={`fd-info ${changes.length ? "fd-info-modified" : ""}`}
-                                  >
-                                    <Icon
-                                      name={
-                                        changes.length
-                                          ? "info-modified"
-                                          : "info"
-                                      }
-                                    />
-                                    <div className="fd-detail-content">
-                                      {i.setInstruction && <p className="fd-current-instruction mb-1">{i.setInstruction}</p>}
-                                      {changes.length > 0 && (
-                                        <ul className="fd-change-details">
-                                          {changes.map((k) => (
-                                            <li key={k}>
-                                              <span>{fieldLabels[k]}: </span>
-                                              <span className="fd-before">
+                                  <InstructionRowNote modified={changes.length > 0}>
+                                    {i.setInstruction && <p className="fd-current-instruction mb-1">{i.setInstruction}</p>}
+                                    {changes.length > 0 && (
+                                      <ul className="fd-change-details">
+                                        {changes.map((k) => (
+                                          <li key={k}>
+                                            <span>{fieldLabels[k]}: </span>
+                                            <span className="fd-before">
+                                              {formatInstructionValue(
+                                                k,
+                                                i.previous?.[k as keyof Item],
+                                              )}{" "}
+                                              →{" "}
+                                            </span>
+                                            {k === "note" ? (
+                                              value(i, "note")
+                                            ) : (
+                                              <span className="fd-after">
                                                 {formatInstructionValue(
                                                   k,
-                                                  i.previous?.[k as keyof Item],
-                                                )}{" "}
-                                                →{" "}
+                                                  i[k as keyof Item],
+                                                )}
                                               </span>
-                                              {k === "note" ? (
-                                                value(i, "note")
-                                              ) : (
-                                                <span className="fd-after">
-                                                  {formatInstructionValue(
-                                                    k,
-                                                    i[k as keyof Item],
-                                                  )}
-                                                </span>
-                                              )}
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      )}
-                                      {i.note && !changes.includes("note") && (
-                                        <div className="fd-current-instruction">
-                                          {value(i, "note")}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
+                                            )}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    )}
+                                    {i.note && !changes.includes("note") && (
+                                      <div className="fd-current-instruction">
+                                        {value(i, "note")}
+                                      </div>
+                                    )}
+                                  </InstructionRowNote>
                                 </TableCell>
                               </TableRow>
                             )}

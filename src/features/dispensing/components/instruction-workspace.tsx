@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-import { EmrWorkEntryAction } from "@/components/emr/work-entry-action";
+import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-entry-action";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
@@ -92,6 +92,14 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const entryMode = document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked";
   const claimStartsWork = document.items.length > 0 && document.items.every((item) => item.status === "requested");
   const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
+  const completionLabel = document.queueType === "dispensing" ? "조제 완료" : "처치 완료";
+  const openCompletion = () => {
+    setConfirm(true);
+    onCompletionOpenChange?.(true);
+  };
+  const completionMenuAction = document.canCompleteAll
+    ? { label: completionLabel, triggerLabel: "완료 메뉴 열기", onSelect: openCompletion }
+    : undefined;
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
     const intent = action === "claim" ? claimIntent : { action };
     if (await controller.mutate(intent)) {
@@ -107,10 +115,10 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
         </span>
       ) : null}
       {prework && entryMode === "start" ? (
-        <Button size="sm" disabled={busy} onClick={() => void change("start")}>
-          업무 시작하기
-        </Button>
+        <EmrWorkEntryTrigger size="default" label="업무 시작하기" disabled={busy} onClick={() => void change("start")} menuAction={completionMenuAction} />
       ) : prework ? <EmrWorkEntryAction
+        size="default"
+        menuAction={completionMenuAction}
         scopeKey={`${workspaceId}:${document.rootTaskId}:${document.queueType}`}
         authorityKey={document.revision}
         mode={entryMode}
@@ -182,9 +190,9 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           담당 취소
         </Button>
       ) : null}
-      {document.canCompleteAll ? (
-        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={() => { setConfirm(true); onCompletionOpenChange?.(true); }}>
-          {document.queueType === "dispensing" ? "조제 완료" : "처치 완료"}
+      {!prework && document.canCompleteAll ? (
+        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={openCompletion}>
+          {completionLabel}
         </Button>
       ) : null}
       {document.finalized ? <span className="text-sm">완료</span> : null}

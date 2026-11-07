@@ -4,9 +4,11 @@ import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 
 import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { CdsNavigationChevronDownIcon, CdsNavigationChevronUpIcon } from "@/components/cds-icons/navigation";
+import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { Separator } from "@/components/ui/separator";
 import { EmrWorkEntryPage, EmrWorkEntrySection as Section } from "@/components/emr/work-entry-page";
-import { PatientPreworkHeader, PatientPreworkMemoLoading, PatientPreworkVitalsLoading, MemoSection, VitalSection, type PatientPreworkContext } from "@/features/chart/preconsultation-context-panel";
+import { PatientPreworkHeader, PatientPreworkHistoryTimeline, PatientPreworkMemoLoading, PatientPreworkVitalsLoading, MemoSection, VitalSection, type PatientPreworkContext } from "@/features/chart/preconsultation-context-panel";
 import { useCustomerProfileOverview } from "@/features/customer/use-customer-profile-overview";
 import { useWorkspaceVitalSettings } from "@/features/patient-vitals/use-workspace-vital-settings";
 import type { PatientVitalMeasurement } from "@/features/patient-vitals/patient-vital-types";
@@ -181,6 +183,7 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
         Boolean(workItem.createdAt && item.createdAt < workItem.createdAt),
     )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const usesOrderTimeline = workItem.queueType === "dispensing" || workItem.queueType === "treatment";
   const currentVitals = vitals?.key === vitalKey ? vitals : null;
   usePageReadiness(
     (Boolean(workItem.patientId) && ["idle", "loading"].includes(patient.overviewStatus))
@@ -267,7 +270,10 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
             </Section>
           )}
           <Separator />
-          {historyContent ?? <Section title={`과거 ${label} 이력`}>
+          {historyContent ?? <Section
+            title={usesOrderTimeline ? label + " 이력" : "과거 " + label + " 이력"}
+            icon={usesOrderTimeline ? <CdsUtilitiesHistoryIcon aria-hidden="true" /> : undefined}
+          >
             {history.refreshing && <p role="status" className="text-sm text-muted-foreground">이력을 갱신하는 중입니다.</p>}
             {history.readError && <p role="alert" className="text-sm text-destructive">이력을 갱신하지 못했습니다.</p>}
             {history.status === "loading" ? <PatientHistoryLoading /> : history.status !== "ready" ? (
@@ -278,7 +284,17 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
               </p>
             ) : historyItems.length ? (
               <Fragment>
-                {historyItems.slice(0, expanded ? undefined : 3).map((item) => (
+                {usesOrderTimeline ? (
+                  <PatientPreworkHistoryTimeline
+                    label={label + " 이력"}
+                    testId="fulfillment-prework-history-timeline"
+                    entries={historyItems.slice(0, expanded ? undefined : 3).map(item => ({
+                      id: item.id,
+                      timestamp: item.createdAt,
+                      summary: getFulfillmentOrderDisplayName(item.sourceSnapshot) ?? "오더",
+                    }))}
+                  />
+                ) : historyItems.slice(0, expanded ? undefined : 3).map((item) => (
                   <div
                     key={item.id}
                     className="flex flex-wrap items-center gap-4 rounded-lg border border-border p-4 text-sm"
@@ -298,14 +314,24 @@ export function PatientOrderPrework({ workItem, label, actions, children, encoun
                     </span>
                   </div>
                 ))}
-                {historyItems.length > 3 && (
-                  <Button
-                    variant="ghost"
-                    onClick={() => setExpanded(!expanded)}
-                  >
+                {historyItems.length > 3 && (usesOrderTimeline ? (
+                  <div className="flex justify-center">
+                    <Button
+                      variant="ghost"
+                      size="xl"
+                      className="gap-1.5 pl-5 pr-4"
+                      aria-expanded={expanded}
+                      onClick={() => setExpanded(current => !current)}
+                    >
+                      {expanded ? "이력 접기" : "전체 이력 보기"}
+                      {expanded ? <CdsNavigationChevronUpIcon data-icon="inline-end" /> : <CdsNavigationChevronDownIcon data-icon="inline-end" />}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="ghost" onClick={() => setExpanded(current => !current)}>
                     {expanded ? "접기" : "더 보기"}
                   </Button>
-                )}
+                ))}
               </Fragment>
             ) : (
               <p className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
