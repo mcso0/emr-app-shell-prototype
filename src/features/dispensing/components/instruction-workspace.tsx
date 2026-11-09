@@ -209,9 +209,10 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
 
 export function InstructionBody({
   controller,
+  focusedItemId,
   onChanged,
   workspaceId,
-}: Props) {
+}: Props & { focusedItemId?: string }) {
   const [confirmItem, setConfirmItem] = useState<string | null>(null);
   const [historyItem, setHistoryItem] = useState<string | null | undefined>(
     undefined,
@@ -300,6 +301,7 @@ export function InstructionBody({
       {view ? (
         <InstructionDocumentTable
           {...view}
+          focusedItemId={focusedItemId}
           refresh={controller.refresh}
           editSetInstruction={document?.canEditInstruction ? () => setInstructionDraft(document.instruction) : undefined}
           openExecutionHistory={() => setExecutionHistory(true)}

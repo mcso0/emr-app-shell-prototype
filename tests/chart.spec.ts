@@ -9,6 +9,7 @@ import {
 import { resolveDispensingDoseFactor } from "../src/features/chart/dispensing-unit-conversion";
 import { createEditableDispenseRow } from "../src/features/chart/dispense-edit.stories.fixture";
 import type { PlanOrderAuthorityConfig } from "../src/features/chart/plan-order-authority-domain";
+import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
 
 import chartWidthVisualFixture from "./fixtures/chart-width-visual.json";
 
@@ -8022,6 +8023,178 @@ for (const [actor, canCancel] of [["user-tech", false], ["user-vet", true]] as c
         await expect(cancel).toHaveCount(0);
         await page.keyboard.press("Escape");
       }
+    }
+  });
+}
+
+for (const [queueType, label, waiting] of [["dispensing", "조제", false], ["treatment", "처치", true]] as const) {
+  test(`Plan/Order confirms navigation to the exact ${queueType} instruction item`, async ({ page }) => {
+    const workspaceId = "clair-demo";
+    const name = waiting
+      ? "합성 처치 세트의 오더명이 길어도 버튼과 전체 이름을 확인할 수 있는지 검증하는 대상 오더"
+      : "SYNTHETICCOMPOUNDINGORDERWITHAVERYLONGUNBROKENNAME20261109".repeat(2);
+    const createdAt = "2026-05-01T00:00:00Z";
+    const dueAt = "2026-05-02T16:00:00Z";
+    const chartRow = createEditableDispenseRow(workspaceId, kongEncounterId, "soap-kong-260501");
+    const order = {
+      ...chartRow,
+      orderType: queueType,
+      clinicalOrderType: queueType,
+      destinationModule: queueType,
+      orderConfirmationStatus: "confirmed",
+      status: "confirmed",
+      appliedSnapshot: { ...chartRow.appliedSnapshot, inHospitalOrderName: name, clinicalOrderType: queueType, destinationModule: queueType, orderType: queueType },
+    };
+    const unlinkedOrder = { ...order, orderId: "synthetic-unlinked-order", appliedSnapshot: { ...order.appliedSnapshot, inHospitalOrderName: "합성 지시서 미연결 오더" } };
+    const draftOrder = { ...unlinkedOrder, orderId: "synthetic-unconfirmed-order", orderConfirmationStatus: "draft", status: "requested", appliedSnapshot: { ...order.appliedSnapshot, inHospitalOrderName: "합성 미확정 오더" } };
+    const workItemId = "97090000-0000-4000-8000-000000000003";
+    const priorWorkItemId = "97090000-0000-4000-8000-000000000001";
+    const siblingId = "97090000-0000-4000-8000-000000000002";
+    const task = {
+      taskId: "synthetic-instruction-current-task", orderId: order.orderId, parentTaskId: "synthetic-set-task",
+      taskRole: "execution", clinicalOrderType: queueType, destinationModule: queueType,
+      attemptNo: 2, status: waiting ? "pending" : "in_progress", priority: "normal",
+      reRequestedFromTaskId: "synthetic-instruction-prior-task", effectiveSnapshot: {},
+      resultSnapshot: null, startedAt: null, completedAt: null, cancelledAt: null, createdAt, updatedAt: createdAt,
+    };
+    const priorTask = { ...task, taskId: task.reRequestedFromTaskId, attemptNo: 1, status: "returned", reRequestedFromTaskId: null };
+    const item = {
+      ...syntheticInstruction.items[0], id: workItemId, orderId: order.orderId,
+      name, taskId: task.taskId, attemptNo: task.attemptNo, status: waiting ? "requested" : "in_progress",
+    };
+    const sibling = { ...item, id: siblingId, orderId: "synthetic-sibling-order", taskId: "synthetic-sibling-task", name: waiting ? "합성 같은 세트 오더" : name };
+    const workItems = [sibling, item].map(row => ({
+      id: row.id, orderId: row.orderId, taskId: row.taskId, taskAttemptNo: row.attemptNo, rowRevision: 1,
+      encounterId: kongEncounterId, workspaceId, queueType, status: row.status, createdAt, dueAt,
+      assignedToUserId: "synthetic-owner", patientName: "합성 환자", requesterName: "합성 수의사",
+      sourceSnapshot: { inHospitalOrderName: row.name }, updatedAt: createdAt,
+    }));
+    const exactReads: (string | null)[] = [];
+    const writes: string[] = [];
+    let denied = !waiting;
+    let pendingRead: Promise<void> | undefined;
+    let instructionItems = [sibling, item];
+
+    await page.route("**/chart/order-drafts?*", route => route.fulfill({
+      json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [order, unlinkedOrder, draftOrder] },
+    }));
+    await page.route("**/chart/order-execution?*", route => route.fulfill({
+      json: { ok: true, status: 200, execution: {
+        workspaceId, encounterId: kongEncounterId, tasks: [priorTask, task],
+        queues: [priorTask, task].map((entry, index) => ({
+          taskId: entry.taskId, orderId: entry.orderId, taskAttemptNo: entry.attemptNo,
+          workItemId: index === 0 ? priorWorkItemId : workItemId, queueType, destinationModule: queueType,
+          queueStatus: index === 0 ? "returned" : item.status, updatedAt: createdAt,
+        })),
+        events: [], revisions: [], billingCandidates: [],
+      } },
+    }));
+    await page.route("**/fulfillment/work-items?*", async route => {
+      const params = new URL(route.request().url()).searchParams;
+      const targetId = params.get("workItemId");
+      if (targetId) {
+        exactReads.push(targetId);
+        if (denied) return route.fulfill({ status: 403, json: { ok: false } });
+        await pendingRead;
+      }
+      const matches = params.get("queueType") === queueType &&
+        (!params.has("date") || params.get("date") === "2026-05-03");
+      return route.fulfill({ json: { ok: true, workItems: matches ? workItems.filter(row => !targetId || row.id === targetId) : [] } });
+    });
+    await page.route("**/fulfillment/work-items/*/instruction", route => {
+      if (route.request().method() !== "GET") {
+        writes.push(route.request().method());
+        return route.fulfill({ status: 409, json: { ok: false } });
+      }
+      return route.fulfill({ json: { ok: true, document: {
+        ...syntheticInstruction, queueType, items: instructionItems, changes: [],
+      } } });
+    });
+    await page.route("**/fulfillment/work-items/*/assignees", route => route.fulfill({ json: { ok: true, assignees: [] } }));
+    await page.route("**/fulfillment/instruction-review?*", route => route.fulfill({ json: { ok: true, reviews: [] } }));
+    await page.goto(kongScenarioUrl);
+
+    const row = page.getByTestId(`chart-order-row-${order.orderId}`);
+    const nameCell = row.locator('[data-column-id="displayName"]');
+    const nameText = nameCell.getByText(name, { exact: true });
+    const shortcut = nameCell.getByRole("button", { name: `${name} 지시서로 이동` });
+    await expect(shortcut).toHaveCSS("opacity", "0", { timeout: 10_000 });
+    for (const unavailable of [unlinkedOrder, draftOrder]) {
+      const unavailableCell = page.getByTestId(`chart-order-row-${unavailable.orderId}`).locator('[data-column-id="displayName"]');
+      await expect(unavailableCell).toBeVisible();
+      await unavailableCell.hover();
+      await expect(unavailableCell.getByRole("button", { name: /지시서로 이동/ })).toHaveCount(0);
+    }
+    await expect(nameText).toHaveCSS("text-overflow", "ellipsis");
+    expect(await nameText.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true);
+    const originalNamePosition = await nameText.boundingBox();
+    await row.locator('[data-column-id="status"]').hover();
+    await expect(shortcut).toHaveCSS("opacity", "0");
+    await nameText.hover();
+    await expect(page.locator('[data-slot="tooltip-content"]').filter({ hasText: name })).toBeVisible();
+    await expect(shortcut).toHaveCSS("opacity", "1");
+    expect(await nameText.boundingBox()).toEqual(originalNamePosition);
+    await shortcut.click();
+    const dialog = page.getByRole("dialog", { name: `${label} 지시서로 이동할까요?` });
+    await expect(dialog).toContainText(name);
+    expect(await dialog.getByText(name, { exact: true }).evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    await expect(page).toHaveURL(/\/treatment\?/);
+    expect(exactReads).toEqual([]);
+    await dialog.getByRole("button", { name: "취소", exact: true }).click();
+    await expect(dialog).toBeHidden();
+    await expect(shortcut).toBeFocused();
+    await row.locator('[data-column-id="status"]').hover();
+    await expect(shortcut).toHaveCSS("opacity", "0");
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(shortcut).toBeFocused();
+    await expect(shortcut).toHaveCSS("opacity", "1");
+    await page.keyboard.press("Enter");
+    const confirm = dialog.getByRole("button", { name: "지시서로 이동", exact: true });
+    if (denied) {
+      await confirm.click();
+      await expect(dialog.getByRole("alert")).toHaveText("이 지시서를 볼 권한이 없어요.");
+      await expect(page).toHaveURL(/\/treatment\?/);
+      denied = false;
+    } else {
+      let releaseRead!: () => void;
+      pendingRead = new Promise(resolve => { releaseRead = resolve; });
+      try {
+        await confirm.click();
+        await expect(dialog.getByRole("button", { name: "확인 중" })).toBeDisabled();
+        await expect.poll(() => exactReads).toEqual([workItemId]);
+        await dialog.getByRole("button", { name: "취소", exact: true }).click();
+        await expect(dialog).toBeHidden();
+      } finally {
+        releaseRead();
+        pendingRead = undefined;
+      }
+      await expect(page).toHaveURL(/\/treatment\?/);
+      await expect(shortcut).toBeFocused();
+      await shortcut.press("Enter");
+    }
+    await confirm.click();
+    await expect(page).toHaveURL(/\/dispensing\?date=2026-05-03/);
+    expect(new URL(page.url()).searchParams.get("workItemId")).toBe(workItemId);
+    expect(exactReads).toEqual([workItemId, workItemId]);
+    const target = page.locator('tr[data-instruction-target="true"]');
+    await expect(target).toHaveCount(1);
+    await expect(target).toContainText(name);
+    await expect(target).toBeInViewport();
+    await expect(target).toBeFocused();
+    if (waiting) {
+      await expect(page.getByRole("row").filter({ hasText: sibling.name })).toBeVisible();
+    } else {
+      await expect(target).toHaveAttribute("data-item", workItemId);
+      await expect(page.locator(`tr[data-item="${siblingId}"]`)).toBeVisible();
+    }
+    expect(writes).toEqual([]);
+    if (waiting) {
+      instructionItems = [sibling];
+      await page.reload();
+      await expect(page.getByText("연결된 조제·처치 오더를 찾을 수 없어요")).toBeVisible();
+      await expect(target).toHaveCount(0);
+      await expect(page.getByRole("row").filter({ hasText: sibling.name })).toHaveCount(0);
     }
   });
 }

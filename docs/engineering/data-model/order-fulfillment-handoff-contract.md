@@ -180,6 +180,19 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
 - After releasing a replacement attempt, 업무 계속하기 checks the latest instructions and claims and resumes the existing attempt for an eligible assignee. Its earlier start remains in the instruction history.
 
+## Chart navigation to a dispensing or treatment instruction — 2026-11-09
+
+- A confirmed executable order with a current dispensing or treatment work item
+  offers `지시서 ›` in the Plan/Order name cell. Pointer hover and keyboard
+  focus reveal the action. Touch keeps the action visible.
+- The dialog names the order and destination. `취소` closes it and returns
+  focus to the order action. `지시서로 이동` reads the exact work item under
+  the existing workspace permission and uses its operating date. The shell
+  runs its existing save guard before switching screens.
+- The destination scrolls to and highlights the exact item in the instruction
+  document or the prework order table. For a set, it identifies the clicked
+  child by work item ID. A missing or denied target shows a recovery message.
+
 ## Dispensing and treatment order cancellation authority — 2026-11-09
 
 Cancelling a confirmed dispensing or treatment order, including a set containing

@@ -15,7 +15,7 @@ import type { InstructionDocument } from "@/features/fulfillment/instruction-con
 import type { EffectiveInstructions } from "@/features/fulfillment/task-instruction-review-contract";
 import { createInstructionView, formatInstructionValue } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
-import { InstructionRowDisclosure, InstructionRowNote } from "./instruction-document-table";
+import { InstructionItemRow, InstructionRowDisclosure, InstructionRowNote } from "./instruction-document-table";
 import { InstructionActions } from "./instruction-workspace";
 
 const requestTimeFormat = new Intl.DateTimeFormat("ko-KR", {
@@ -59,8 +59,9 @@ function StaffValue({ name }: { name: string | null | undefined }) {
   );
 }
 
-function PreworkOrderTable({ document, items, label }: {
+function PreworkOrderTable({ document, focusedItemId, items, label }: {
   document: InstructionDocument;
+  focusedItemId?: string;
   items: ReturnType<typeof createInstructionView>["orders"][number]["items"];
   label: string;
 }) {
@@ -102,7 +103,7 @@ function PreworkOrderTable({ document, items, label }: {
               : [item.planSummary || "—"];
             return (
               <Fragment key={item.id}>
-                <TableRow>
+                <InstructionItemRow focused={item.id === focusedItemId}>
                   <TableCell>
                     {note && (
                       <InstructionRowDisclosure
@@ -120,7 +121,7 @@ function PreworkOrderTable({ document, items, label }: {
                   <th scope="row" className="fd-prework-item-name">{item.name}</th>
                   {values.map((value, index) => <TableCell key={index}>{value}</TableCell>)}
                   {showItemAssignee && <TableCell>{assigneeById.get(item.id) ?? "미지정"}</TableCell>}
-                </TableRow>
+                </InstructionItemRow>
                 {note && (
                   <TableRow id={noteId} hidden={!expanded} className="fd-info-row">
                     <TableCell colSpan={headings.length + 1}>
@@ -176,8 +177,9 @@ function RequestInstructions({ document, label, instructions }: {
   );
 }
 
-export function DispensingPreworkContext({ controller, workItem, onChanged, onEntered, onCompletionOpenChange }: {
+export function DispensingPreworkContext({ controller, focusedItemId, workItem, onChanged, onEntered, onCompletionOpenChange }: {
   controller: FulfillmentInstructionController;
+  focusedItemId?: string;
   workItem: PatientOrderPreworkItem;
   onChanged: () => void;
   onEntered: () => void;
@@ -221,7 +223,7 @@ export function DispensingPreworkContext({ controller, workItem, onChanged, onEn
           ]}
         />
         {items.length ? (
-          <PreworkOrderTable key={document.rootTaskId} document={document} items={items} label={label} />
+          <PreworkOrderTable key={document.rootTaskId} document={document} items={items} label={label} focusedItemId={focusedItemId} />
         ) : <p className="text-sm text-muted-foreground">요청된 오더가 없어요.</p>}
       </Section>
       {controller.instructionReview
