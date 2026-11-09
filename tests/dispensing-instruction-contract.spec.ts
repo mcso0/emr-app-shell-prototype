@@ -65,6 +65,30 @@ test("history preserves every common instruction change and actual field values"
   expect(view.orders[0].items[0].dose).toBe("0.5");
 });
 
+test("the dispensing instruction and history show the saved course request over the legacy total", () => {
+  const document = structuredClone(syntheticInstruction);
+  const item = document.items[0];
+  const before = {
+    ...item.plan,
+    calculationOutputs: { plannedPracticalTotalQuantity: 4, actualDispenseUnit: "tablet" },
+  };
+  const after = {
+    ...before,
+    calculationOutputs: { plannedPracticalTotalQuantity: 6, actualDispenseUnit: "tablet" },
+  };
+  item.plan = after;
+  document.changes.push({
+    id: "request-quantity", orderId: item.orderId, createdAt: "2026-10-27T04:00:00Z",
+    actorName: "합성 작성자", changeType: "amendment", before, after,
+  });
+  const view = createInstructionView(document);
+  expect(view.orders[0].items[0]).toMatchObject({ total: "6", totalUnit: "TAB", previous: { total: "4" } });
+  expect(view.events.find(event => event.id === "request-quantity")?.changes).toEqual([
+    { itemId: item.id, field: "total", before: "4", after: "6" },
+  ]);
+  expect(view.orders[0].items[1]).toMatchObject({ total: "3", totalUnit: "T" });
+});
+
 test("set instruction is composed for its own children without overwriting individual notes", () => {
   const doc = structuredClone(syntheticInstruction);
   doc.instruction = "세트 지시";

@@ -385,6 +385,10 @@ export const ConfirmedEditFromSelectedRow: Story = { args: { scenario: "confirme
   const body = within(canvasElement.ownerDocument.body);
   const dialog = within(await body.findByRole("dialog", { name: "합성 조제 약품 · 오더 수정" }));
   const price = await dialog.findByLabelText("단가 (원)");
+  await expect(dialog.getByLabelText("총량", { exact: true })).toHaveAttribute("readonly");
+  for (const label of ["증감 스케줄", "병원 종 범위 예외 확인", "종 범위 예외 사유"]) {
+    await expect(dialog.queryByText(label, { exact: true })).toBeNull();
+  }
   await userEvent.clear(price); await userEvent.type(price, "6000");
   await userEvent.click(dialog.getByRole("button", { name: "수정 저장" }));
   await waitFor(() => expect(body.queryByRole("dialog", { name: "합성 조제 약품 · 오더 수정" })).toBeNull());

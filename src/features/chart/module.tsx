@@ -15379,16 +15379,24 @@ const OrderArea = memo(function OrderArea({
         {confirmedEditId && mutationChartId && (() => {
           const row = draftRows.find(row => row.order.id === confirmedEditId);
           if (!row) return null;
-          const contract = getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion);
+          const clinicalType = getChartOrderClinicalType(row);
+          const dispensing = clinicalType === "dispensing";
+          const dispensingAuthority = dispensing ? getChartOrderAuthority(row) : null;
+          const contract = getClinicalOrderFieldSchema(clinicalType, row.detailSchemaVersion);
+          // Keep the saved values in the edit payload. These fields have no input in this dialog.
+          const editableFields = contract?.fields.filter(field => !dispensing ||
+            !["totalQuantity", "taperSchedule", "extraLabelSpeciesConfirmed", "extraLabelSpeciesReason"].includes(field.key));
           return <ConfirmedOrderEditDialog key={`${mutationChartId}:${confirmedEditId}`} workspaceId={bundle.encounter.workspaceId}
-            chartId={mutationChartId} orderId={confirmedEditId} clinicalType={getChartOrderClinicalType(row) === "dispensing" ? "dispensing" : "treatment"} name={row.order.displayName} fieldLabels={Object.fromEntries(contract?.fields.map(field => [field.key, field.label]) ?? [])} onClose={() => setConfirmedEditId(null)}
-            renderClinical={(inputs, change, disabled) => <div className="grid gap-3 sm:grid-cols-2">{contract?.fields.map(definition => <label key={definition.key} className="grid gap-1.5 text-sm"><span>{definition.label}</span>
+            chartId={mutationChartId} orderId={confirmedEditId} clinicalType={dispensing ? "dispensing" : "treatment"}
+            dispensingAuthority={dispensingAuthority} name={row.order.displayName}
+            fieldLabels={Object.fromEntries(contract?.fields.map(field => [field.key, field.label]) ?? [])} onClose={() => setConfirmedEditId(null)}
+            renderClinical={(inputs, change, disabled) => <div className="grid gap-3 sm:grid-cols-2">{editableFields?.map(definition => <label key={definition.key} className="grid gap-1.5 text-sm"><span>{definition.label}</span>
               <ChartOrderFieldControl definition={definition} disabled={disabled} orderName={row.order.displayName}
                 medicationOrders={draftRows.filter(item => getChartOrderClinicalType(item) === "dispensing").map(item => ({ id: item.order.id, name: item.order.displayName }))}
                 unitOptions={getChartOrderSelectableUnits(row, definition, inputs)} value={inputs[definition.key]}
                 onChange={value => {
-                  if (getChartOrderClinicalType(row) === "dispensing") {
-                    const updated = updateDispensingPrescriptionWithUnits(inputs, definition.key, value, getChartOrderAuthority(row));
+                  if (dispensing) {
+                    const updated = updateDispensingPrescriptionWithUnits(inputs, definition.key, value, dispensingAuthority);
                     if (updated.ok) change(updated.inputs); else toast.error(updated.message);
                   } else { const next = { ...inputs }; if (value === undefined || value === "") delete next[definition.key]; else next[definition.key] = value; change(next); }
                 }} /></label>)}</div>}
