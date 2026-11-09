@@ -2296,3 +2296,24 @@ non-billable synthetic dispensing order and one non-billable synthetic
 treatment order. Verify completion without an execution result and verify
 cleanup of the smoke fixtures. Capture the previous Ready deployment and
 both replaced database functions and grants before applying the migration.
+
+### Treatment instruction review and continuation in Production — 2026-11-09
+
+승욱 authorized verification with isolated, non-billable synthetic treatment
+orders and cleanup of the test data and accounts.
+
+- On Ready Production `6b2ac2df`, the treatment re-request and review passed
+  in a rollback-only transaction. The signed-in browser opened a removable
+  fixture with the same pending V3 change. `지시사항 확인` showed
+  `단계별 예정 지시` changing from `합성 준비 확인` to
+  `합성 준비 및 마무리 확인`, and `시행 예정 횟수` changing from `1` to `2`.
+  The fixture and its account were removed after the check.
+- On Ready Production `899f0203`, the signed-in browser confirmed the changes
+  and used `업무 계속하기` on a separate synthetic order. The server recorded
+  one acknowledgement and one start event. The same `처치 지시서`, original
+  start time, and `진행중` card and group persisted after reload. The workspace
+  was archived and the synthetic account was disabled after verification.
+- With 승욱's subsequent approval, cleanup removed only that archived fixture,
+  its account, and its one start audit event. Readback found zero workspace
+  records, application and Auth users, identities, sessions, and refresh
+  tokens for the fixture. The order task audit guard was enabled after commit.
