@@ -1954,11 +1954,15 @@ function DispensingContentBody({
       : primaryStartStatus;
   const instructionStartedAt = firstStartedAt ? formatOperatingShortTime(firstStartedAt) : selectedQueueItem?.startedAt ?? "미시작";
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
+    { label: "요청 일시", value: instructionRequestedAt },
+    { label: "환자 정보", value: instructionPatientSummary },
+    { label: "요청 수의사", value: instructionRequester },
+    { label: `${instructionType} 담당`, value: instructionAssignee },
     {
-      label: "요청 일시",
+      label: `${instructionType} 시작`,
       value: (
-        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap">
-          <span className="min-w-0 truncate">{instructionRequestedAt}</span>
+        <span className="inline-flex shrink-0 items-center gap-1.5">
+          <span>{instructionStartedAt}</span>
           <EmrStatusBadge
             label={instructionStartStatus}
             marker="none"
@@ -1967,10 +1971,6 @@ function DispensingContentBody({
         </span>
       ),
     },
-    { label: "환자 정보", value: instructionPatientSummary },
-    { label: "요청 수의사", value: instructionRequester },
-    { label: `${instructionType} 담당`, value: instructionAssignee },
-    { label: `${instructionType} 시작`, value: instructionStartedAt },
   ];
   const updateGroup = (
     groupId: string,
@@ -2279,7 +2279,7 @@ function DispensingContentBody({
           <div className="grid gap-2">
             <div
               data-slot="instruction-info-card"
-              className="grid min-h-[72px] grid-cols-5 rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
+              className="grid min-h-[72px] grid-cols-[repeat(4,minmax(0,1fr))_minmax(max-content,1fr)] rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
             >
               {instructionInfoItems.map(({ label, value }) => (
                 <div
