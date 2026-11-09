@@ -389,6 +389,24 @@ export const ConfirmedEditFromSelectedRow: Story = { args: { scenario: "confirme
   for (const label of ["증감 스케줄", "병원 종 범위 예외 확인", "종 범위 예외 사유"]) {
     await expect(dialog.queryByText(label, { exact: true })).toBeNull();
   }
+  const footer = price.closest('[data-slot="dialog-content"]')!.querySelector('[data-slot="dialog-footer"]') as HTMLElement;
+  await expect(footer).toHaveTextContent(/^취소수정 저장$/);
+  await expect(within(footer).getByRole("button", { name: "수정 저장" })).toBeDisabled();
+  const tax = dialog.getByRole("combobox", { name: "과세 구분" });
+  const reflection = dialog.getByRole("checkbox", { name: "청구에 반영" });
+  const adjustment = dialog.getByRole("combobox", { name: "할인·할증 방식" });
+  const billingPositions = () => [tax, reflection].map(control => [control.offsetLeft, control.offsetTop]);
+  const initialPositions = billingPositions();
+  for (const [method, amountLabel] of [["금액", "할인·할증 (원)"], ["비율", "할인·할증 (%)"], ["없음", null]] as const) {
+    await userEvent.click(adjustment);
+    await userEvent.click(await body.findByRole("option", { name: method }));
+    if (amountLabel) {
+      await expect(dialog.getByRole("spinbutton", { name: amountLabel })).toBeVisible();
+    } else {
+      await expect(dialog.queryByRole("spinbutton", { name: /할인·할증/ })).toBeNull();
+    }
+    await expect(billingPositions()).toEqual(initialPositions);
+  }
   await userEvent.clear(price); await userEvent.type(price, "6000");
   await userEvent.click(dialog.getByRole("button", { name: "수정 저장" }));
   await waitFor(() => expect(body.queryByRole("dialog", { name: "합성 조제 약품 · 오더 수정" })).toBeNull());

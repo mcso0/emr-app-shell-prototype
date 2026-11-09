@@ -65,7 +65,9 @@ function Example({ scenario }: { scenario: Scenario }) {
   const saved = () => { state.recordSaved(); setCount(n => n + 1); };
   return <div className="p-6"><output aria-label="합성 저장 횟수">{count}</output><Button onClick={() => setOpen(value => !value)}>{open ? "합성 화면 전환" : "수정 열기"}</Button>
     {open && (scenario === "billing" ? <OrderBillingChangeReview workspaceId="synthetic-confirmed-edit" invoiceId={id(5)} reviewKey="synthetic-story-invoice" onApplied={saved} /> : scenario === "partial" ? <PartialOrderWorkDialog workspaceId="synthetic-confirmed-edit" taskId={id(4)} name="합성 조제" onClose={() => setOpen(false)} onSaved={saved} /> : <ConfirmedOrderEditDialog workspaceId="synthetic-confirmed-edit" chartId={id(2)} orderId={id(1)} name={scenario === "treatment" ? "합성 처치" : "합성 조제"} clinicalType={scenario === "treatment" ? "treatment" : "dispensing"} fieldLabels={{ dose: "용량", durationDays: "일수" }} onClose={() => setOpen(false)} onSaved={() => { saved(); setOpen(false); }}
-      renderClinical={(inputs, change, disabled) => <div className="grid grid-cols-2 gap-3">{([['dose', '용량'], ['durationDays', '일수']] as const).map(([key, label]) => <label className="grid gap-2 text-sm" key={key}>{label}<Input aria-label={label} disabled={disabled} type="number" value={Number(inputs[key])} onChange={e => change(updateDispensingPrescriptionInput(inputs, key, Number(e.target.value)))} /></label>)}</div>} />)}
+      renderClinical={(inputs, change, disabled) => ({
+        fields: ([['dose', '용량'], ['durationDays', '일수']] as const).map(([key, label]) => <label className="grid gap-1.5 text-sm" key={key}>{label}<Input aria-label={label} disabled={disabled} type="number" value={Number(inputs[key])} onChange={e => change(updateDispensingPrescriptionInput(inputs, key, Number(e.target.value)))} /></label>),
+      })} />)}
   </div>;
 }
 const meta = { title: "Features/Chart/Confirmed Order Edit", component: Example, args: { scenario: "financial" as Scenario }, tags: ["autodocs"], parameters: { docs: { story: { inline: false, height: "920px" }, description: { component: "실제 수정·수납 확인·부분 수행 컴포넌트의 합성 통신 검증. DB 권한·원자성은 SQL 회귀 테스트로 별도 확인합니다. 진료 용량 예시는 합성 데이터입니다." } } }, beforeEach: ({ args }) => { state = createFixture(args.scenario); return state.install(); } } satisfies Meta<typeof Example>;
@@ -75,7 +77,7 @@ const body = (element: HTMLElement) => within(element.ownerDocument.body);
 async function editPrice(element: HTMLElement) { const screen = body(element); const price = await screen.findByLabelText("단가 (원)"); await userEvent.clear(price); await userEvent.type(price, "6000"); return screen; }
 export const FinancialOnlyAndSuccessiveEdit: Story = { play: async ({ canvasElement, canvas }) => {
  const screen = body(canvasElement); await screen.findByLabelText("단가 (원)"); await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
- await expect(screen.getByText("변경된 내용이 없어요.")).toHaveAttribute("role", "status");
+ await expect(screen.queryByText("변경된 내용이 없어요.")).toBeNull();
  await expect(screen.queryByLabelText(/수정 사유/)).toBeNull();
  await expect(screen.getByLabelText("요청 조제량")).toHaveAttribute("readonly");
  await userEvent.click(screen.getByRole("button", { name: "수동으로 조정" }));
@@ -98,7 +100,7 @@ export const ClinicalReason: Story = { args: { scenario: "clinical" }, play: asy
   await expect(screen.getByLabelText("요청 조제량")).toHaveValue("저장 시 자동 계산");
   await userEvent.clear(days);
   await userEvent.type(days, "3");
-  await expect(screen.getByText("변경된 내용이 없어요.")).toHaveAttribute("role", "status");
+  await expect(screen.queryByText("변경된 내용이 없어요.")).toBeNull();
   await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
   await userEvent.clear(days);
   await userEvent.type(days, "5");

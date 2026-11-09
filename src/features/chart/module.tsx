@@ -15450,21 +15450,37 @@ const OrderArea = memo(function OrderArea({
           const contract = getClinicalOrderFieldSchema(clinicalType, row.detailSchemaVersion);
           // Keep the saved values in the edit payload. These fields have no input in this dialog.
           const editableFields = contract?.fields.filter(field => !dispensing ||
-            !["totalQuantity", "taperSchedule", "extraLabelSpeciesConfirmed", "extraLabelSpeciesReason"].includes(field.key));
+            !["totalQuantity", "taperSchedule", "extraLabelSpeciesConfirmed", "extraLabelSpeciesReason"].includes(field.key)) ?? [];
+          const isDispenseMemo = (field: ClinicalOrderFieldDefinition) =>
+            dispensing && (field.key === "compoundNote" || field.key === "guardianNote");
+          const dispenseUnit = dispensing ? editableFields.find(field => field.key === "totalQuantityUnit") : undefined;
+          const dispenseMemos = editableFields.filter(isDispenseMemo);
+          const clinicalFields = editableFields.filter(field => field !== dispenseUnit && !isDispenseMemo(field));
           return <ConfirmedOrderEditDialog key={`${mutationChartId}:${confirmedEditId}`} workspaceId={bundle.encounter.workspaceId}
             chartId={mutationChartId} orderId={confirmedEditId} clinicalType={dispensing ? "dispensing" : "treatment"}
             dispensingAuthority={dispensingAuthority} name={row.order.displayName}
             fieldLabels={Object.fromEntries(contract?.fields.map(field => [field.key, field.label]) ?? [])} onClose={() => setConfirmedEditId(null)}
-            renderClinical={(inputs, change, disabled) => <div className="grid gap-3 sm:grid-cols-2">{editableFields?.map(definition => <label key={definition.key} className="grid gap-1.5 text-sm"><span>{definition.label}</span>
-              <ChartOrderFieldControl definition={definition} disabled={disabled} orderName={row.order.displayName}
-                medicationOrders={draftRows.filter(item => getChartOrderClinicalType(item) === "dispensing").map(item => ({ id: item.order.id, name: item.order.displayName }))}
-                unitOptions={getChartOrderSelectableUnits(row, definition, inputs)} value={inputs[definition.key]}
-                onChange={value => {
-                  if (dispensing) {
-                    const updated = updateDispensingPrescriptionWithUnits(inputs, definition.key, value, dispensingAuthority);
-                    if (updated.ok) change(updated.inputs); else toast.error(updated.message);
-                  } else { const next = { ...inputs }; if (value === undefined || value === "") delete next[definition.key]; else next[definition.key] = value; change(next); }
-                }} /></label>)}</div>}
+            renderClinical={(inputs, change, disabled) => {
+              const renderField = (definition: ClinicalOrderFieldDefinition) => (
+                <label key={definition.key} className={cn("grid gap-1.5 text-sm", dispensing && "content-start")}>
+                  <span>{definition.label}</span>
+                  <ChartOrderFieldControl definition={definition} disabled={disabled} orderName={row.order.displayName}
+                    medicationOrders={draftRows.filter(item => getChartOrderClinicalType(item) === "dispensing").map(item => ({ id: item.order.id, name: item.order.displayName }))}
+                    unitOptions={getChartOrderSelectableUnits(row, definition, inputs)} value={inputs[definition.key]}
+                    onChange={value => {
+                      if (dispensing) {
+                        const updated = updateDispensingPrescriptionWithUnits(inputs, definition.key, value, dispensingAuthority);
+                        if (updated.ok) change(updated.inputs); else toast.error(updated.message);
+                      } else { const next = { ...inputs }; if (value === undefined || value === "") delete next[definition.key]; else next[definition.key] = value; change(next); }
+                    }} />
+                </label>
+              );
+              return {
+                fields: clinicalFields.map(renderField),
+                dispenseUnit: dispenseUnit && renderField(dispenseUnit),
+                dispenseMemos: dispenseMemos.map(renderField),
+              };
+            }}
             onSaved={handleConfirmedOrderSaved} />;
         })()}
         <ChartOrderMutationDialog
