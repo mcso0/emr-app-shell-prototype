@@ -2089,3 +2089,24 @@ after the fixture began returning the start time. Nine Storybook cases passed.
 Implemented the [prework presentation contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-prework-layout--2026-11-07) in the isolated worktree at origin/main base 81e4146c. Both categories use the approved header, order table, request instructions, and dated history. Completion uses the existing permission and required-record checks.
 
 Local synthetic verification covered 30 Playwright cases across dispensing, treatment, chart, and shared order entry. The two presentation cases were rechecked with a required instruction acknowledgement. Both covered the 32px actions, row-level disclosure, scope labels, the history timeline, and a 390px viewport. All 18 affected Storybook cases, focused ESLint, and TypeScript passed. This evidence covers the local app with synthetic responses.
+
+### Veterinarian-only dispensing and treatment order cancellation — 2026-11-09
+
+Local implementation on `origin/main` `b875da72`. Use the chart order execution
+read to gate the cancellation action and the shared chart mutation writer to
+enforce the [cancellation authority](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-order-cancellation-authority--2026-11-09).
+
+Synthetic PostgreSQL verification uses `tests/sql/fulfillment-vet-only-cancel.sql`
+in an isolated migrated database. It covers technician completion after actual
+result entry, denied direct technician and administrator cancellations, and
+successful veterinarian cancellations for both queues, a set with a treatment
+child, and the legacy chartless path. The fixtures roll back. Playwright
+verifies cancellation menu visibility for both roles.
+
+승욱 approved the single veterinarian-only cancellation migration and the
+application release on 2026-11-09. The release gate requires a current PR
+Release Check, Ready exact-candidate Preview, captured prior writer definition
+and ACLs, and rollback-only verification in the documented synthetic demo
+workspace. Apply the forward migration before merging the UI, then verify the
+Ready Production source and repeat the role checks. Real data and provider
+operations are outside this release scope.
