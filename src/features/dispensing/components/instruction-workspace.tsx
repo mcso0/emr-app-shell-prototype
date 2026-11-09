@@ -1,6 +1,5 @@
 "use client";
 
-import { PartialOrderWorkDialog } from "@/features/fulfillment/components/partial-order-work-dialog";
 import { OralInstructionInfobar } from "./oral-instruction-infobar";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { EmrContentLoadingState } from "@/components/emr/empty-state";
@@ -214,7 +213,6 @@ export function InstructionBody({
   workspaceId,
 }: Props) {
   const [confirmItem, setConfirmItem] = useState<string | null>(null);
-  const [partialTask, setPartialTask] = useState<{ taskId: string; name: string } | null>(null);
   const [historyItem, setHistoryItem] = useState<string | null | undefined>(
     undefined,
   );
@@ -339,10 +337,6 @@ export function InstructionBody({
           }}
         />
       ) : null}
-      {document && document.items.some(item => ["in_progress", "paused", "completed"].includes(item.status)) && <div className="flex flex-wrap gap-2 px-4 py-3">
-        {document.items.filter(item => ["in_progress", "paused", "completed"].includes(item.status)).map(item => <Button key={item.id} size="sm" variant="outline" onClick={() => setPartialTask({ taskId: item.taskId, name: item.name })}>{document.isSet ? `${item.name} · ` : ""}부분 수행 기록</Button>)}
-      </div>}
-      {partialTask && <PartialOrderWorkDialog key={partialTask.taskId} workspaceId={workspaceId} {...partialTask} onClose={() => setPartialTask(null)} onSaved={() => { controller.refresh(); onChanged(); }} />}
       {document && !document.items.length ? (
         <p className="p-6 text-sm text-muted-foreground">
           표시할 오더가 없어요.
