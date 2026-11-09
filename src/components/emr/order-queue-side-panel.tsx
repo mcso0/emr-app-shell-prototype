@@ -66,7 +66,7 @@ type OrderQueueActionItemsResolver = (
 ) => EmrRowActionMenuItem[];
 
 type EmrOrderQueueSidePanelProps = {
-  patientGrouping?: { workspaceId: string; readable: boolean; ready: boolean };
+  patientGrouping?: { workspaceId: string; readable: boolean };
   items: OrderQueueItem[];
   statuses: OrderQueueStatusDefinition[];
   title: string;
@@ -459,7 +459,7 @@ export function EmrOrderQueueSidePanel({
           placement="panel-center"
           title={readStatus === "permission_denied" ? "업무 대기열을 볼 권한이 없습니다" : "업무 대기열을 불러오지 못했습니다"}
           primaryAction={readStatus === "error" && onRetry ? <Button variant="outline" size="sm" onClick={onRetry}>재시도</Button> : undefined}
-        /> : patientGrouping ? <PatientQueueContent key={`${patientGrouping.workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={selectedItemId} groupSort={patientSort} orderSort={sortKey} onSelect={id => onSelectItem?.(id)} readable={patientGrouping.readable} ready={patientGrouping.ready} onClearConditions={() => { setDetailFilter("all"); setFilter("all"); closeSearch(); }}>{queueBody}</PatientQueueContent> : queueBody}
+        /> : patientGrouping ? <PatientQueueContent key={`${patientGrouping.workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={selectedItemId} groupSort={patientSort} orderSort={sortKey} onSelect={id => onSelectItem?.(id)} readable={patientGrouping.readable} onClearConditions={() => { setDetailFilter("all"); setFilter("all"); closeSearch(); }}>{queueBody}</PatientQueueContent> : queueBody}
       </EmrSubpanelBody>
     </EmrSubpanel>
   );
