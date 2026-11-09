@@ -20,7 +20,7 @@ insert into public.workspace_order_billing_policies(workspace_id,vat_calculation
 insert into public.orders(id,workspace_id,encounter_id,origin_chart_id,order_type,clinical_order_type,execution_mode,destination_module,display_name,status,order_confirmation_status,detail_schema_version,detail_inputs,applied_snapshot,unit_price_snapshot,quantity,billing_reflection_enabled,requested_by_user_id)
 select ('86000000-0000-4000-8000-00000000000'||n)::uuid,'synthetic-order-edit','84000000-0000-4000-8000-000000000001','85000000-0000-4000-8000-000000000001',
  'dispensing','dispensing','routed','dispensing','합성 약품 '||n,'confirmed','confirmed',1,
- '{"doseBasis":"patient","dose":1,"doseUnit":"tablet","route":"PO","frequency":"sid","durationDays":2,"totalQuantity":2,"totalQuantityUnit":"tablet","medicationInstruction":"any_time","storageMethod":"room_temp"}'::jsonb,
+ '{"doseBasis":"patient","dose":1,"doseUnit":"tablet","route":"PO","frequency":"sid","durationDays":2,"totalQuantity":2,"totalQuantityUnit":"tablet","medicationInstruction":"any_time","storageMethod":"room_temp","guardianNote":"하루 2회"}'::jsonb,
  '{"displayName":"합성 약품","billingName":"합성 약품","taxType":"non_taxable","planOrderAuthority":{"schemaVersion":1,"calculationMode":"fixed_product","fixedProductQuantity":1,"fixedProductQuantityBasis":"head","dispenseUnit":"tablet","priceBasis":"per_day","billingUnit":"day","taxClass":"non_taxable"}}'::jsonb,
  5000,2,true,'81000000-0000-4000-8000-000000000002'
 from generate_series(1,3) n;
@@ -50,6 +50,7 @@ end $$;
 create function pg_temp.assert_true(v boolean,msg text) returns void language plpgsql as $$ begin if v is distinct from true then raise exception 'ASSERT: %',msg; end if; end $$;
 do $$
 declare d jsonb; r jsonb; cmd jsonb; task_before jsonb; notifications bigint; commands bigint; old_tax text; inputs jsonb; inv uuid; line_before jsonb; change jsonb; partial_cmd jsonb; current_task uuid;
+ raw_review jsonb; review_text text;
 begin
  select to_jsonb(t) into task_before from public.order_tasks t where id='87000000-0000-4000-8000-000000000001';
  select count(*) into notifications from public.notification_events where workspace_id='synthetic-order-edit';
@@ -71,7 +72,7 @@ begin
   perform public.clair_edit_confirmed_order('synthetic-order-edit','85000000-0000-4000-8000-000000000001','86000000-0000-4000-8000-000000000001',jsonb_set(cmd,'{commandId}',to_jsonb(gen_random_uuid())));
   raise exception 'stale version was accepted';
  exception when raise_exception then if sqlerrm<>'revision_conflict' then raise; end if; end;
- inputs:=jsonb_set(d->'detailInputs','{durationDays}','4');
+ inputs:=(d->'detailInputs')||'{"durationDays":4,"guardianNote":"하루 4회","compoundNote":"합성 조제 메모"}'::jsonb;
  d:=pg_temp.edit('86000000-0000-4000-8000-000000000001',null,jsonb_build_object('detailInputs',inputs,'detailSchemaVersion',1,'actualDispenseMode','automatic'),'합성 처방 수정');
  perform pg_temp.assert_true(d#>>'{detailInputs,durationDays}'='4','clinical pending amendment');
  perform pg_temp.assert_true((select amount=27000 from public.order_billing_candidates where order_id='86000000-0000-4000-8000-000000000001'),'fixed 1000 discount survives quantity x2');
@@ -79,7 +80,24 @@ begin
  perform pg_temp.assert_true((select previous_value->>'durationDays'='2' and current_value->>'durationDays'='4' from public.order_revision_fields where workspace_id='synthetic-order-edit' and field_name='detailInputs' limit 1),'existing before/after history retained');
  perform pg_temp.assert_true((select count(*)=notifications+2 from public.notification_events where workspace_id='synthetic-order-edit'),'performer and original requester receive change once');
  perform set_config('request.jwt.claim.sub','81000000-0000-4000-8000-000000000003',true);
+ raw_review:=private.clair_task_effective_instructions('synthetic-order-edit','87000000-0000-4000-8000-000000000001');
+ insert into private.chart_instruction_acknowledgements(workspace_id,chart_id,actor_id,scope,version_key,document)
+ values('synthetic-order-edit',(raw_review->>'chartId')::uuid,auth.uid(),'dispensing',repeat('a',64),raw_review);
+ insert into private.task_instruction_snapshots(workspace_id,task_id,request_cycle,phase,chart_id,document)
+ values('synthetic-order-edit','87000000-0000-4000-8000-000000000001',1,'completed',(raw_review->>'chartId')::uuid,raw_review);
  r:=public.clair_get_task_instruction_review('synthetic-order-edit','87000000-0000-4000-8000-000000000001');
+ select e->>'instruction' into review_text from jsonb_array_elements(r#>'{current,entries}') e where e->>'kind'='clinical_edit';
+ perform pg_temp.assert_true(review_text like '%보호자 전달 메모: 하루 2회 → 하루 4회%'
+   and review_text like '%조제 메모: — → 합성 조제 메모%' and review_text not like '%guardianNote:%','review uses the dispensing field labels');
+ perform pg_temp.assert_true(exists(select 1 from jsonb_array_elements(r#>'{previous,entries}') e
+   where e->>'instruction'=review_text),'previous acknowledgement uses the same labels');
+ perform pg_temp.assert_true(exists(select 1 from jsonb_array_elements(r->'snapshots') s
+   cross join lateral jsonb_array_elements(s#>'{document,entries}') e
+   where s->>'phase'='completed' and e->>'instruction'=review_text),'stored snapshots are localized on read');
+ perform pg_temp.assert_true(r#>>'{current,versionKey}'=raw_review->>'versionKey'
+   and (select document=raw_review from private.chart_instruction_acknowledgements where workspace_id='synthetic-order-edit' and version_key=repeat('a',64))
+   and (select document=raw_review from private.task_instruction_snapshots where workspace_id='synthetic-order-edit'
+     and task_id='87000000-0000-4000-8000-000000000001' and phase='completed'),'version and saved history are unchanged');
  perform pg_temp.assert_true((r->>'requiresAcknowledgement')::boolean,'clinical edit requires performer acknowledgement');
  begin
   perform private.clair_require_task_instruction_ack('synthetic-order-edit','87000000-0000-4000-8000-000000000001',auth.uid());
@@ -183,5 +201,31 @@ begin
  perform pg_temp.assert_true(d->'pendingFinancial'<>'null'::jsonb,'paid clinical amount held for correction');
  perform pg_temp.assert_true(not has_table_privilege('authenticated','private.order_financial_edits','UPDATE'),'financial table cannot be directly written');
  perform pg_temp.assert_true(not has_function_privilege('anon','public.clair_edit_confirmed_order(text,uuid,uuid,jsonb)','EXECUTE'),'anonymous cannot execute edit');
+end $$;
+
+do $$
+declare task public.order_tasks; schema_version integer; fields jsonb; inputs jsonb; document jsonb; result text;
+begin
+ select * into task from public.order_tasks where id='87000000-0000-4000-8000-000000000001';
+ task.clinical_order_type:='treatment';
+ foreach schema_version in array array[1,2,3] loop
+  fields:=private.clair_order_detail_field_schema('treatment',schema_version)->'fields';
+  select jsonb_object_agg(field->>'key','합성 이전 값'::text) into inputs from jsonb_array_elements(fields) field;
+  insert into private.order_clinical_edit_revisions(workspace_id,order_id,revision,command_id,before_values,after_values,reason,actor_id)
+  values(task.workspace_id,task.order_id,100+schema_version,gen_random_uuid(),
+    jsonb_build_object('detailSchemaVersion',schema_version,'detailInputs',inputs),
+    '{"detailInputs":{"stagedInstructions":"합성 새 지시","legacyUnknownField":"합성 추가 값"}}',
+    '합성 변경 사유','81000000-0000-4000-8000-000000000001');
+  document:=jsonb_build_object('entries',jsonb_build_array(jsonb_build_object('kind','clinical_edit',
+    'orderId',task.order_id,'revision',100+schema_version,'instruction','합성 이전 표시')));
+  result:=private.clair_localize_task_instruction_changes(task,document)#>>'{entries,0,instruction}';
+  perform pg_temp.assert_true(not exists(select 1 from jsonb_array_elements(fields) field
+    where position((field->>'label')||': 합성 이전 값 → ' in result)=0),format('all treatment v%s fields use schema labels',schema_version));
+  perform pg_temp.assert_true(result like '%기타 업무 항목: — → 합성 추가 값%'
+    and result not like '%legacyUnknownField:%' and result not like '%stagedInstructions:%',
+    'legacy unknown keys are not shown and deleted field values are retained');
+ end loop;
+ perform pg_temp.assert_true(not has_function_privilege('authenticated',
+   'private.clair_localize_task_instruction_changes(public.order_tasks,jsonb)','EXECUTE'),'label projection is private');
 end $$;
 rollback;
