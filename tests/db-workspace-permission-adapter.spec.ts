@@ -7,8 +7,42 @@ import {
 import { resolveWorkspacePermission } from "../src/features/auth/permission-resolver";
 import {
   createSupabaseWorkspacePermissionGateway,
+  loadChartDraftPermissionAdapter,
   type SupabaseWorkspacePermissionClient,
 } from "../src/features/auth/supabase-workspace-permission-gateway-core";
+
+test("chart draft permission snapshot only falls back when the RPC is missing", async () => {
+  const reads: string[] = [];
+  const rows = Promise.resolve({ data: [] as never[], error: null });
+  const builder = {
+    select: () => builder,
+    eq: () => builder,
+    in: () => builder,
+    then: rows.then.bind(rows),
+  };
+  const client = {
+    from(table: string) {
+      reads.push(table);
+      return builder;
+    },
+    async rpc() {
+      return { data: null, error: { code: "42501", message: "permission denied" } };
+    },
+  };
+  const context = { workspaceId: "workspace-a", sessionUserId: "user-a" };
+  await expect(loadChartDraftPermissionAdapter({ ...context, client })).rejects.toThrow("permission denied");
+  expect(reads).toEqual([]);
+
+  const adapter = await loadChartDraftPermissionAdapter({
+    ...context,
+    client: { ...client, rpc: async () => ({ data: null, error: { code: "PGRST202", message: "function missing" } }) },
+  });
+  expect(reads).toEqual(["user_memberships", "users", "permission_policies"]);
+  expect(resolveWorkspacePermission(adapter, {
+    ...context,
+    requiredPermission: "chart:update",
+  }).allowed).toBe(false);
+});
 
 test("permission adapter starts independent reads together after membership lookup", async () => {
   const started: string[] = [];
