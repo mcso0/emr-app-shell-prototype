@@ -2219,6 +2219,25 @@ acknowledgement. A fresh Supabase replay stopped at the pre-existing service
 review migration `20260826160000`, which requires seeded workspace and catalog
 release rows. The UI and DB migration are local.
 
+### Clinical change labels in instruction review — 2026-11-09
+
+The review uses the order field schema to label changes in the current
+instructions, previous acknowledgement, and request or completion history.
+The read keeps the stored values, reason, and acknowledgement version. An
+unrecognized historical field uses 기타 업무 항목.
+
+Migration `20261109055635` is a local candidate. The isolated confirmed-order
+SQL suite reproduced the raw dispensing label on the baseline and passed with
+the migration. It covers previous and historical documents, treatment schema
+versions 1–3, and the existing acknowledgement and permission checks.
+
+승욱 authorized commit, push, PR, application of migration `20261109055635`,
+protected `main` merge, and Production verification for these labels. Capture
+the previous read function and grants before applying the migration. Verify the
+reported order in the existing instruction review using read-only interaction.
+Record the exact candidate, Release Check, Preview, migration readback, Ready
+Production deployment, and rollback evidence in the PR.
+
 승욱 approved release of this scope on 2026-11-09, including the PR, main
 merge, migration `20261109053938`, and Production verification. Use one
 non-billable synthetic dispensing order and one non-billable synthetic
