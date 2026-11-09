@@ -149,6 +149,12 @@ for its original scope.
 | UI-06 | Display parent-set common instructions together with the child's own instruction in each child order's expanded instruction row | Implemented locally; verification recorded below |
 | UI-07 | Align the expanded instruction-row information icon's vertical center with the first text line; keep it beside that line as text wraps, preserving icon size, horizontal gap and callout padding | Implemented locally; verification recorded below |
 
+The current instruction table supersedes the UI-02 wrapping rule. Item names
+stay on one line and reveal the full text on hover or keyboard focus when
+clipped. Each order card sizes the dose and total unit columns independently
+to the widest visible label or value. At narrow widths, the table scrolls
+horizontally and keeps unit values intact.
+
 UI-01 evidence is local presentation proof: the two changed source files are
 `src/features/dispensing/components/instruction-document-table.tsx` and
 `src/features/dispensing/components/instruction-document.css`. Its screenshots

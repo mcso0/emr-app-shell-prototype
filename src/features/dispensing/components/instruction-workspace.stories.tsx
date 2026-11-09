@@ -280,9 +280,20 @@ export const LongInstructionRows: Story = {
   render: () => <div style={{ width: 760, maxWidth: "100%" }}><InstructionBody workspaceId="synthetic-long-instructions" onChanged={() => {}} controller={{
     document: { ...structuredClone(syntheticInstruction), canEditInstruction: false,
       instruction: "세트 공통 지시의 첫 번째 줄입니다.\n세트 공통 지시의 두 번째 줄입니다.",
-      items: syntheticInstruction.items.map(item => ({ ...item,
-        name: "긴 이름의 합성 오더 품목 ".repeat(5), instruction: "개별 지시의 첫 번째 줄입니다.\n개별 지시의 두 번째 줄입니다.",
-        canComplete: false, canReopen: false, canAssign: false })) },
+      items: syntheticInstruction.items.map((item, index) => ({
+        ...item,
+        name: index === 0 ? "긴 이름의 합성 오더 품목 ".repeat(5).trim() : item.name,
+        instruction: "개별 지시의 첫 번째 줄입니다.\n개별 지시의 두 번째 줄입니다.",
+        plan: {
+          ...item.plan,
+          detailInputs: {
+            ...item.plan.detailInputs as object,
+            doseUnit: index === 0 ? "application" : "T",
+            totalQuantityUnit: index === 1 ? "synthetic long dispensing unit" : "APPL",
+          },
+        },
+        canComplete: false, canReopen: false, canAssign: false,
+      })) },
     assignees: [], loading: false, busy: false, error: null, refresh: () => {}, mutate: async () => false,
   }} /></div>,
 };
