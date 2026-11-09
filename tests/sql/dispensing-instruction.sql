@@ -91,6 +91,7 @@ declare d jsonb; cmd jsonb; previous_result jsonb; events_before bigint; orders_
 begin
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002');
  if d->>'name' is distinct from 'Synthetic set' or d#>>'{items,0,name}' is distinct from 'Synthetic item 1' then raise exception 'canonical snapshot names missing'; end if;
+ if d->'firstStartedAt' is distinct from 'null'::jsonb then raise exception 'fresh dispensing work has a start history'; end if;
  begin perform public.clair_mutate_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002',jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId','40000000-0000-4000-8000-000000000002')); raise exception 'group accepted item scope'; exception when raise_exception then if sqlerrm<>'invalid_transition' then raise; end if; end;
  d:=pg_temp.command('claim');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'claim failed'; end if;
@@ -98,7 +99,7 @@ begin
  d:=pg_temp.command('start');
  if exists(select 1 from order_fulfillment_work_items where status<>'in_progress' or assigned_to_user_id is distinct from auth.uid())
    or exists(select 1 from orders where status<>'in_progress')
-   or (d->>'canStart')::boolean then raise exception 'explicit start failed'; end if;
+   or (d->>'canStart')::boolean or (d->>'firstStartedAt')::timestamptz is distinct from now() then raise exception 'explicit start failed'; end if;
  d:=pg_temp.command('assign','40000000-0000-4000-8000-000000000003','00000000-0000-4000-8000-000000000002');
  if d->>'mainAssigneeId'<>auth.uid()::text then raise exception 'item transfer changed main'; end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
@@ -209,6 +210,10 @@ begin
  if not exists(select 1 from order_fulfillment_work_items where id='41000000-0000-4000-8000-000000000003' and task_attempt_no=2) then raise exception 'whole repeat wrong unchanged child attempt'; end if;
  d:=public.clair_get_fulfillment_instruction('workspace-a','41000000-0000-4000-8000-000000000002');
  if d->>'rootTaskId'='31000000-0000-4000-8000-000000000001' or jsonb_array_length(d->'items')<>2 then raise exception 'whole repeat root/readback mismatch'; end if;
+ if (d->>'firstStartedAt')::timestamptz is distinct from now()
+   or exists(select 1 from jsonb_array_elements(d->'items') item where item->>'status'<>'requested')
+   or exists(select 1 from order_fulfillment_work_items where queue_type='treatment' and started_at is not null)
+   then raise exception 'replacement treatment attempts lost the original start history or started automatically'; end if;
  if not exists(select 1 from order_task_events where order_id='11000000-0000-4000-8000-000000000002' and task_attempt_no=2 and after_values->>'nextAttemptNo'='3') then raise exception 'whole repeat next attempt history wrong'; end if;
 
  raise notice 'PASS: main/sub ownership, explicit finalization, unassign/resume, no-history reopen with preserved results, replay/conflict, billing lock, workspace isolation';

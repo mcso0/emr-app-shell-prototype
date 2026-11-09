@@ -50,6 +50,10 @@ export type InstructionViewAction = {
   assignees?: string[];
 };
 
+export function hasPendingInstructionRerequest(document: InstructionDocument) {
+  return document.items.some((item) => item.status === "requested" && item.attemptNo > 1);
+}
+
 export function isWaitingInstruction(document: InstructionDocument) {
   if (document.finalized || !document.items.length) return false;
   if (document.items.every((item) => item.status === "requested")) return true;
@@ -64,6 +68,7 @@ export function isWaitingInstruction(document: InstructionDocument) {
 
 export function getInstructionStatusLabel(document: InstructionDocument) {
   if (document.finalized) return "완료";
+  if (hasPendingInstructionRerequest(document)) return "재요청";
   const active = document.items.filter((item) => item.status !== "cancelled");
   if (!active.length) return "취소";
   if (active.every((item) => item.status === "returned")) return "반려";
