@@ -749,6 +749,77 @@ test("instruction units fit both columns and only clipped item names reveal a to
   await expect(tooltip).toBeVisible();
 });
 
+test("dispensing item columns resize live and the changed frequency badge is narrower", async ({ page }) => {
+  await page.setViewportSize({ width: 1853, height: 1000 });
+  const { document: fixture, actions } = await install(page, { started: true, set: true, itemLayout: true });
+  const item = fixture.items[0];
+  item.name = "cm.order.synthetic.long-dispensing-item-name-for-resize";
+  const before = { ...item.plan, detailInputs: { ...item.plan.detailInputs as object, frequency: "bid" } };
+  const after = { ...before, detailInputs: { ...before.detailInputs, frequency: "tid" } };
+  item.plan = after;
+  fixture.changes = [{
+    id: "synthetic-frequency-change", orderId: item.orderId, createdAt: "2026-10-31T00:20:00Z",
+    actorName: "합성 수의사", changeType: "re_request",
+    before: { ...before, instruction: item.instruction }, after: { ...after, instruction: item.instruction },
+  }];
+  await page.reload();
+
+  const row = page.locator(`tr[data-item='${item.id}']`);
+  const name = row.getByText(item.name, { exact: true });
+  const badge = row.locator(".fd-frequency-changed");
+  await expect(badge.getByRole("button")).toHaveText(/bid\s*→\s*tid/);
+  await expect(badge).toHaveCSS("padding-inline-start", "6px");
+  await expect(badge).toHaveCSS("padding-inline-end", "6px");
+  await expect(badge).toHaveCSS("height", "22px");
+  expect((await badge.boundingBox())!.width).toBeLessThan(73);
+  await expect(name).toHaveAttribute("tabindex", "0");
+
+  const grips = page.getByRole("button", { name: "항목 컬럼 너비 조절" });
+  const widths = () => page.getByRole("columnheader", { name: "항목", exact: true })
+    .evaluateAll((headers) => headers.map((header) => Math.round(header.getBoundingClientRect().width)));
+  await expect(grips).toHaveCount(2);
+  const grip = grips.first();
+  await expect(grip).toHaveCSS("cursor", "col-resize");
+  await expect.poll(widths).toEqual([280, 280]);
+  const handle = (await grip.boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  try {
+    await page.mouse.move(handle.x + handle.width / 2 + 175, handle.y + handle.height / 2, { steps: 5 });
+    await expect.poll(widths).toEqual([455, 455]);
+  } finally {
+    await page.mouse.up();
+  }
+  await expect(name).toHaveAttribute("tabindex", "-1");
+  await grip.press("ArrowLeft");
+  await expect.poll(widths).toEqual([447, 447]);
+  await grip.press("Home");
+  await expect.poll(widths).toEqual([280, 280]);
+  await name.hover();
+  await expect(page.locator('[data-slot="tooltip-content"]').filter({ hasText: item.name })).toBeVisible();
+
+  await page.setViewportSize({ width: 768, height: 1000 });
+  await expect.poll(widths).toEqual([180, 180]);
+  await grip.press("Shift+ArrowRight");
+  await expect.poll(widths).toEqual([204, 204]);
+  const tableScroll = page.locator(".fd-table-container").first();
+  expect(await tableScroll.evaluate((element) => element.scrollWidth)).toBeGreaterThan(
+    await tableScroll.evaluate((element) => element.clientWidth),
+  );
+  const unit = row.locator('[data-fd-unit="dose"]');
+  await expect(unit).toHaveText("application");
+  expect(await unit.evaluate((label) => {
+    const cell = label.parentElement!;
+    const style = getComputedStyle(cell);
+    const available = cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return label.getBoundingClientRect().width <= available;
+  })).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(768);
+  await grip.dblclick();
+  await expect.poll(widths).toEqual([180, 180]);
+  expect(actions).toEqual([]);
+});
+
 test("profile read failure stays distinct from missing demographics", async ({ page }) => {
   await install(page, { profileFailure: true, started: true });
   await expect(page.getByTestId("instruction-patient-summary")).toHaveText("환자 정보 불러오기 실패");

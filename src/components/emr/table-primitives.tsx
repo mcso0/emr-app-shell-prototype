@@ -132,6 +132,37 @@ function SortIcon({ direction }: { direction?: "asc" | "desc" }) {
   );
 }
 
+export function EmrTableColumnResizeHandle({
+  className,
+  isResizing,
+  pinnedBoundary,
+  hideIndicator,
+  ...props
+}: Omit<React.ComponentProps<"button">, "type" | "onClick"> & {
+  isResizing?: boolean;
+  pinnedBoundary?: boolean;
+  hideIndicator?: boolean;
+}) {
+  return (
+    <button
+      {...props}
+      data-row-interactive="true"
+      data-emr-column-resize-handle="true"
+      type="button"
+      className={cn(
+        "absolute right-[-4px] top-1/2 z-[16] h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none select-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)]",
+        pinnedBoundary
+          ? "focus-visible:outline-none focus-visible:ring-0"
+          : "hover:bg-[var(--clair-color-atomic-black-alpha-6)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
+        hideIndicator && "before:opacity-0",
+        className,
+      )}
+      data-resizing={isResizing ? "true" : undefined}
+      onClick={(event) => event.stopPropagation()}
+    />
+  );
+}
+
 export function EmrTableHeaderCell({
   align = "left",
   children,
@@ -287,20 +318,11 @@ export function EmrTableHeaderCell({
         />
       ) : null}
       {resizable ? (
-        <button
-          data-row-interactive="true"
-          data-emr-column-resize-handle="true"
-          type="button"
+        <EmrTableColumnResizeHandle
           aria-label={resizeLabel ?? `${label} 컬럼 너비 조절`}
-          className={cn(
-            "absolute right-[-4px] top-1/2 z-[16] h-6 w-2 -translate-y-1/2 cursor-col-resize touch-none rounded-sm before:absolute before:left-1 before:top-1 before:h-4 before:w-px before:bg-[var(--clair-color-atomic-neutral-300)]",
-            pinnedHeaderBoundary
-              ? "focus-visible:outline-none focus-visible:ring-0"
-              : "hover:bg-[var(--clair-color-atomic-black-alpha-6)] focus-visible:ring-3 focus-visible:ring-ring/50 data-[resizing=true]:bg-[var(--clair-color-atomic-black-alpha-8)]",
-            hidePinnedBoundaryResizeIndicator && "before:opacity-0",
-          )}
-          data-resizing={isResizing ? "true" : undefined}
-          onClick={(event) => event.stopPropagation()}
+          isResizing={isResizing}
+          pinnedBoundary={pinnedHeaderBoundary}
+          hideIndicator={hidePinnedBoundaryResizeIndicator}
           onDoubleClick={onResizeDoubleClick}
           onKeyDown={onResizeKeyDown}
           onMouseDown={onResizeMouseDown}

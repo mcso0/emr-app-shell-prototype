@@ -172,12 +172,16 @@
   border-radius: 0 !important;
 }
 .fd-table {
+  --fd-frequency-change-padding-inline: 8px;
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 14px;
   line-height: 20px;
   font-weight: 500;
+}
+.fd-card[data-dispensing] .fd-table {
+  --fd-frequency-change-padding-inline: 6px;
 }
 .fd-table thead tr {
   height: 36px;
@@ -599,7 +603,8 @@
   min-width: 36px;
 }
 .fd-frequency.fd-frequency-changed {
-  min-width: 73px;
+  min-width: calc(57px + 2 * var(--fd-frequency-change-padding-inline));
+  padding-inline: var(--fd-frequency-change-padding-inline);
 }
 .figma-document {
   padding-bottom: 0;
@@ -640,9 +645,6 @@
   width: 100%;
   padding-left: 0;
   padding-right: 0;
-}
-.instruction-document-surface .fd-table col:nth-child(2) {
-  width: 280px !important;
 }
 .instruction-document-surface .fd-table col:nth-child(3),
 .instruction-document-surface .fd-table col:nth-child(9),
@@ -987,9 +989,6 @@
 .instruction-document-surface .fd-table col:nth-child(4),
 .instruction-document-surface .fd-table col:nth-child(7) { width: auto !important; }
 .instruction-document-surface .fd-table col:nth-child(14) { width: 120px !important; }
-@container (max-width: 1000px) {
-  .instruction-document-surface .fd-table col:nth-child(2) { width: 180px !important; }
-}
 .fd-info { align-items: flex-start; }
 .fd-info > .fd-icon { flex-shrink: 0; margin-top: 3px; }
 .oral-instruction-infobar {
@@ -1005,14 +1004,23 @@
 /* Keep numerical values readable once the identity/action minimums are reached. */
 .instruction-document-surface .fd-table-container { overflow-x: auto !important; }
 .instruction-document-surface .fd-table {
+  --fd-item-column-default: 280px;
+  --fd-item-column-width: var(--fd-item-column-default);
   --fd-table-base-width: 1048px;
   --fd-unit-base-width: 88px;
   --fd-dose-unit-column: var(--fd-dose-unit-width, var(--fd-unit-base-width));
   --fd-total-unit-column: var(--fd-total-unit-width, var(--fd-unit-base-width));
   min-width: calc(
     var(--fd-table-base-width) +
+    max(0px, var(--fd-item-column-width) - var(--fd-item-column-default)) +
     max(0px, var(--fd-dose-unit-column) + var(--fd-total-unit-column) - 2 * var(--fd-unit-base-width))
   );
+}
+.instruction-document-surface .fd-card[data-dispensing] .fd-table {
+  --fd-item-column-width: var(--fd-item-column-resized-width, var(--fd-item-column-default));
+}
+.instruction-document-surface .fd-table col:nth-child(2) {
+  width: var(--fd-item-column-width) !important;
 }
 .instruction-document-surface .fd-table col:nth-child(5) { width: var(--fd-dose-unit-column); }
 .instruction-document-surface .fd-table col:nth-child(8) { width: var(--fd-total-unit-column); }
@@ -1023,7 +1031,10 @@
 }
 .instruction-document-surface .fd-table col:nth-child(14) { width: 78px !important; }
 @container (max-width: 1000px) {
-  .instruction-document-surface .fd-table { --fd-table-base-width: 948px; }
+  .instruction-document-surface .fd-table {
+    --fd-item-column-default: 180px;
+    --fd-table-base-width: 948px;
+  }
 }
 @container (max-width: 900px) {
   .instruction-document-surface .fd-table {

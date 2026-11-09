@@ -2379,3 +2379,15 @@ No linked users, memberships, orders, work items, storage objects, realtime
 messages, identities, sessions, refresh tokens, or matching Auth audit entries
 remained. The task audit, set revision, and workspace admin guards were enabled
 after commit.
+
+### Dispensing instruction item column — 2026-11-09
+
+The `항목` header divider resizes the item column across all groups in the
+dispensing instruction. The width follows the pointer while dragging. Arrow
+keys adjust it, and Home or a double click restores the responsive default.
+When the table needs more room, it scrolls within the instruction.
+
+The inline frequency change badge uses 6px side padding, a 69px minimum width,
+and the existing 22px height. Local Chromium with synthetic responses verified
+live resize, keyboard adjustment and reset, table overflow, the narrower badge,
+and the existing clipped-name tooltip.
