@@ -3,6 +3,7 @@
 import { formatInstructionValue } from "../instruction-view-model";
 
 import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
+import { EmrTableCellText } from "@/components/emr/table-primitives";
 import { Button } from "@/components/ui/button";
 import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -199,7 +200,19 @@ function OrderCard({
   useLayoutEffect(() => {
     const element = root.current;
     if (!element) return;
+    const unitLabels = element.querySelectorAll<HTMLElement>("[data-fd-unit]");
     const measure = () => {
+      const unitWidths = { dose: 0, total: 0 };
+      unitLabels.forEach((label) => {
+        const column = label.dataset.fdUnit === "dose" ? "dose" : "total";
+        const cell = getComputedStyle(label.parentElement!);
+        const width = label.getBoundingClientRect().width
+          + parseFloat(cell.paddingLeft) + parseFloat(cell.paddingRight);
+        unitWidths[column] = Math.max(unitWidths[column], Math.ceil(width));
+      });
+      element.style.setProperty("--fd-dose-unit-width", `${unitWidths.dose}px`);
+      element.style.setProperty("--fd-total-unit-width", `${unitWidths.total}px`);
+
       const fields = new Set<string>();
       element
         .querySelectorAll<HTMLElement>(".fd-change-measure")
@@ -219,12 +232,14 @@ function OrderCard({
       setCompact((old) => (old.join() === next.join() ? old : next));
     };
     const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    unitLabels.forEach((label) => observer.observe(label));
     element
       .querySelectorAll(".fd-change-measure,td[data-label]")
       .forEach((n) => observer.observe(n));
     measure();
     return () => observer.disconnect();
-  }, [o.items, density, collapsed]);
+  }, [o.items, density, collapsed, pending]);
   const totalLabel = o.kind === "조제" ? "요청 조제량" : "총 용량";
   const fieldLabels: Record<string, string> = {
     dose: "1회 용량",
@@ -442,7 +457,7 @@ function OrderCard({
                   >
                     <colgroup>
                       {[
-                        28, 280, 21, 0, 88, 88, 0, 88, 21, 72, 72, 21, 88, 88,
+                        28, 280, 21, 0, 0, 88, 0, 0, 21, 72, 72, 21, 88, 88,
                         28,
                       ].map((w, n) => (
                         <col key={n} style={w ? { width: w } : undefined} />
@@ -470,6 +485,8 @@ function OrderCard({
                           <TableHead key={n} className={`fd-col-${n}`}>
                             {[2, 8, 11].includes(n) ? (
                               <Icon name="cell-divider" />
+                            ) : n === 4 || n === 7 ? (
+                              <span data-fd-unit={n === 4 ? "dose" : "total"}>{text}</span>
                             ) : (
                               text
                             )}
@@ -501,7 +518,9 @@ function OrderCard({
                                 )}
                               </TableCell>
                               <TableCell className="fd-name">
-                                {i.name}
+                                <EmrTableCellText tooltipOnOverflow>
+                                  {i.name}
+                                </EmrTableCellText>
                               </TableCell>
                               <TableCell>
                                 <Icon name="cell-divider" />
@@ -513,7 +532,7 @@ function OrderCard({
                                 {value(i, "dose")}
                               </TableCell>
                               <TableCell data-label="단위">
-                                {value(i, "doseUnit")}
+                                <span data-fd-unit="dose">{value(i, "doseUnit")}</span>
                               </TableCell>
                               <TableCell
                                 data-label={
@@ -534,7 +553,7 @@ function OrderCard({
                                 {value(i, "total")}
                               </TableCell>
                               <TableCell data-label="단위">
-                                {value(i, "totalUnit")}
+                                <span data-fd-unit="total">{value(i, "totalUnit")}</span>
                               </TableCell>
                               <TableCell>
                                 <Icon name="cell-divider" />

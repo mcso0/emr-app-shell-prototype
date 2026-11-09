@@ -9,7 +9,7 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; failReopen?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; canUnassign?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean } = {}) {
+async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; failReopen?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; canUnassign?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean; itemLayout?: boolean } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
@@ -32,6 +32,20 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     document.instruction = "합성 세트 지시";
     document.items[1].assigneeId = "synthetic-second-assignee";
     document.items[1].assigneeName = "합성 보조 담당자";
+  }
+  if (options.itemLayout) {
+    document.items[0].name = "cm.order.synthetic.long-dispensing-item-name".repeat(2);
+    document.items.forEach((item, index) => {
+      item.plan = {
+        ...item.plan,
+        detailInputs: {
+          ...item.plan.detailInputs as object,
+          doseUnit: index === 0 ? "application" : "T",
+          totalQuantityUnit: index === 0 ? "APPL" : "synthetic long dispensing unit",
+        },
+        calculationOutputs: {},
+      };
+    });
   }
   const actions: string[] = [];
   const writes: string[] = [];
@@ -678,6 +692,61 @@ test("patient demographics, explicit memo display, all density options and respo
   await page.getByRole("button", { name: "지시사항 다시 보기" }).click();
   await expect(bar).toBeVisible();
   expect(actions).toEqual([]); expect(errors).toEqual([]);
+});
+
+test("instruction units fit both columns and only clipped item names reveal a tooltip", async ({ page }) => {
+  await page.setViewportSize({ width: 1853, height: 1000 });
+  const { document: fixture } = await install(page, { started: true, set: true, itemLayout: true });
+  const rows = page.locator(".fd-table tr[data-item]");
+  const longName = rows.nth(0).getByText(fixture.items[0].name, { exact: true });
+  const shortName = rows.nth(1).getByText(fixture.items[1].name, { exact: true });
+  const tooltips = page.locator('[data-slot="tooltip-content"]');
+  const tooltip = tooltips.filter({ hasText: fixture.items[0].name });
+
+  for (const width of [1853, 768]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect(longName).toHaveCSS("white-space", "nowrap");
+    await expect(longName).toHaveCSS("text-overflow", "ellipsis");
+    await expect(longName).toHaveAttribute("tabindex", "0");
+    await expect(shortName).toHaveAttribute("tabindex", "-1");
+    for (const [column, values] of [
+      ["dose", ["application", "T"]],
+      ["total", ["APPL", "synthetic long dispensing unit"]],
+    ] as const) {
+      const units = rows.locator(`[data-fd-unit="${column}"]`);
+      await expect(units).toHaveText([...values]);
+      await expect.poll(() => units.evaluateAll((labels) => {
+        const cells = labels.map((label) => {
+          const cell = label.parentElement!;
+          const style = getComputedStyle(cell);
+          return {
+            available: cell.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+            needed: label.getBoundingClientRect().width,
+            nowrap: getComputedStyle(label).whiteSpace === "nowrap",
+          };
+        });
+        const maxNeeded = Math.max(...cells.map(({ needed }) => needed));
+        return cells.every(({ available, nowrap }) => nowrap && available >= maxNeeded && available < maxNeeded + 2);
+      })).toBe(true);
+    }
+
+    await page.mouse.move(0, 0);
+    await longName.hover();
+    await expect(tooltip).toBeVisible();
+    await shortName.hover();
+    await expect(tooltips).toHaveCount(0);
+  }
+
+  const tableScroll = page.locator(".fd-table-container").first();
+  expect(await tableScroll.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+    return element.scrollLeft;
+  })).toBeGreaterThan(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(768);
+  await rows.nth(0).getByRole("button", { name: /지시 접기/ }).focus();
+  await page.keyboard.press("Tab");
+  await expect(longName).toBeFocused();
+  await expect(tooltip).toBeVisible();
 });
 
 test("profile read failure stays distinct from missing demographics", async ({ page }) => {

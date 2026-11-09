@@ -612,16 +612,13 @@
   overflow: visible;
   text-overflow: clip;
 }
-/* Workspace integration: longer master names and instructions remain fully readable. */
+/* Workspace integration: keep instructions readable and reserve row padding. */
 .instruction-document-surface .figma-document {
   min-width: 1320px;
 }
 .instruction-document-surface .fd-table td.fd-name {
-  white-space: normal;
-  overflow-wrap: anywhere;
   padding-top: 6px !important;
   padding-bottom: 6px !important;
-  text-overflow: clip;
 }
 .instruction-document-surface .fd-table tr.fd-info-row td {
   white-space: normal;
@@ -637,7 +634,7 @@
   text-overflow: clip;
 }
 
-/* Fit the workspace; reserve the action columns and let the item name wrap. */
+/* Fit the workspace and reserve the action columns. */
 .instruction-document-surface .figma-document {
   min-width: 0;
   width: 100%;
@@ -655,10 +652,6 @@
 .instruction-document-surface .fd-table col:nth-child(4),
 .instruction-document-surface .fd-table col:nth-child(7) {
   width: 72px !important;
-}
-.instruction-document-surface .fd-table col:nth-child(5),
-.instruction-document-surface .fd-table col:nth-child(8) {
-  width: 64px !important;
 }
 .instruction-document-surface .fd-table col:nth-child(10) {
   width: 64px !important;
@@ -724,10 +717,6 @@
   .instruction-document-surface .fd-table col:nth-child(4),
   .instruction-document-surface .fd-table col:nth-child(7) {
     width: 52px !important;
-  }
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 50px !important;
   }
   .instruction-document-surface .fd-table col:nth-child(6) {
     width: 78px !important;
@@ -799,10 +788,6 @@
   .instruction-document-surface .fd-table col:nth-child(4),
   .instruction-document-surface .fd-table col:nth-child(7) {
     width: 42px !important;
-  }
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 44px !important;
   }
   .instruction-document-surface .fd-table col:nth-child(10) {
     width: 48px !important;
@@ -876,10 +861,6 @@
 .fd-table td:nth-child(14) {
   padding-left: 10px !important;
 }
-.instruction-document-surface .fd-table col:nth-child(5),
-.instruction-document-surface .fd-table col:nth-child(8) {
-  width: 88px !important;
-}
 .instruction-document-surface .fd-table col:nth-child(10),
 .instruction-document-surface .fd-table col:nth-child(11) {
   width: 72px !important;
@@ -888,10 +869,6 @@
   width: 78px !important;
 }
 @container (max-width:900px) {
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 50px !important;
-  }
   .instruction-document-surface .fd-table col:nth-child(10) {
     width: 58px !important;
   }
@@ -914,10 +891,6 @@
   }
 }
 @container (max-width:760px) {
-  .instruction-document-surface .fd-table col:nth-child(5),
-  .instruction-document-surface .fd-table col:nth-child(8) {
-    width: 44px !important;
-  }
   .instruction-document-surface .fd-table col:nth-child(10) {
     width: 48px !important;
   }
@@ -1031,16 +1004,38 @@
 }
 /* Keep numerical values readable once the identity/action minimums are reached. */
 .instruction-document-surface .fd-table-container { overflow-x: auto !important; }
-.instruction-document-surface .fd-table { min-width: 1048px; }
+.instruction-document-surface .fd-table {
+  --fd-table-base-width: 1048px;
+  --fd-unit-base-width: 88px;
+  --fd-dose-unit-column: var(--fd-dose-unit-width, var(--fd-unit-base-width));
+  --fd-total-unit-column: var(--fd-total-unit-width, var(--fd-unit-base-width));
+  min-width: calc(
+    var(--fd-table-base-width) +
+    max(0px, var(--fd-dose-unit-column) + var(--fd-total-unit-column) - 2 * var(--fd-unit-base-width))
+  );
+}
+.instruction-document-surface .fd-table col:nth-child(5) { width: var(--fd-dose-unit-column); }
+.instruction-document-surface .fd-table col:nth-child(8) { width: var(--fd-total-unit-column); }
+.fd-table [data-fd-unit] {
+  display: inline-block;
+  width: max-content;
+  white-space: nowrap;
+}
 .instruction-document-surface .fd-table col:nth-child(14) { width: 78px !important; }
 @container (max-width: 1000px) {
-  .instruction-document-surface .fd-table { min-width: 948px; }
+  .instruction-document-surface .fd-table { --fd-table-base-width: 948px; }
 }
 @container (max-width: 900px) {
-  .instruction-document-surface .fd-table { min-width: 798px; }
+  .instruction-document-surface .fd-table {
+    --fd-table-base-width: 798px;
+    --fd-unit-base-width: 50px;
+  }
 }
 @container (max-width: 760px) {
-  .instruction-document-surface .fd-table { min-width: 766px; }
+  .instruction-document-surface .fd-table {
+    --fd-table-base-width: 766px;
+    --fd-unit-base-width: 44px;
+  }
 }
 
 /* Before work starts, reuse the document's read-only row disclosure and note. */
