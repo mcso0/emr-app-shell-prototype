@@ -247,3 +247,61 @@ real patient/guardian/payment/provider/email actions.
   scoped checks, current Production/rollback identity and migration backup.
 - Stop on a failed gate, unexpected target/function drift, failed server quantity
   or confirmation guard, or unresolved cleanup. No permission/RLS weakening.
+
+## 2026-11-09 save timing and response follow-up
+
+The local candidate uses origin/main `34379835`. The user approved the
+follow-up in this order: distinguish wait stages, remove discarded intermediate
+readbacks, then combine permission reads. Verification uses the isolated local
+Supabase fixture with 1,001 catalog items and a three-item mixed set.
+
+- The chart PATCH correlates its server-generated request ID with the Supabase
+  response request ID when available. Timing records contain allowlisted
+  durations and no clinical or request payload fields. The DB reports total
+  function time, the chart guard (authorization and chart/encounter lock
+  acquisition), and the catalog advisory lock plus encounter relock.
+- Supabase upstream and PostgREST transaction times are optional and depend on
+  response headers. The difference between RPC time and DB function time can
+  include pool wait, transport, and response work. Use pool occupancy and wait
+  metrics alongside the correlated logs to classify a production incident.
+  Later row locks are included in DB function time.
+- The two owner-only intermediate writers no longer construct unused draft
+  responses. The final readback follows candidate removals and remains in the
+  same transaction. Optimistic version checks, server quantity calculation,
+  billing summary, and confirmation validation retain their existing contracts.
+- PATCH reads the existing permission inputs through one invoker RPC subject
+  to existing RLS. The server uses the same resolver. Only a missing RPC
+  triggers the legacy read path during rollout.
+
+With each initial sample excluded, 32 local warm samples per variant measured
+mixed-set DB save median 37.31 to 21.76ms and p95 58.55 to 33.18ms.
+Full draft readbacks decreased from three to one. An earlier run measured
+27.84 to 24.44ms, so these local timings vary across runs.
+In 32 alternating pairs, permission reads decreased from five to one and
+median lookup time from 3.20 to 1.96ms. Separate controlled probes attributed
+about 449ms to each of the chart and catalog lock scenarios. When all ten
+local PostgREST slots were occupied, HTTP time was 1,514ms, DB function time
+88ms, and initial lock acquisition 0.1ms.
+
+The three migrations applied and reapplied successfully in the isolated
+stack. The permission RPC is invoker-only and executable by authenticated
+callers, with anonymous and service-role execution denied. The real
+authenticated PATCH verified set save and removal, quantities, billing
+summary, version conflict, workspace and catalog permission denials, and
+confirmation gating. The shared draft and consultation SQL checks and
+production build passed. The focused Playwright run passed 52 cases.
+Two baseline source-text assertions are stale. Two tests requiring a mock
+HTTP server were replaced for this check by authenticated local API probes.
+
+Raw evidence lives in the untracked `.artifacts/chart-draft-save-stages`
+directory. These measurements do not establish the cause of the historical
+7.53-second production request. Production observation requires the
+instrumented candidate and simultaneous connection-pool evidence.
+
+승욱 authorized this follow-up through PR, required checks, exact-candidate
+Preview, main merge, the three hosted schema migrations, and Production
+verification. The timing log distinguishes a submitted set with a boolean.
+Post-release observation uses aggregate timing and connection evidence for the
+released route. The Production smoke uses the login route, anonymous denial,
+and a transaction-scoped synthetic DB check with rollback. Any real clinical
+record, external delivery, or paid telemetry change requires separate scope.

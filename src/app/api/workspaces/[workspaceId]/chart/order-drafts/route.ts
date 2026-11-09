@@ -7,6 +7,8 @@ import {
 } from "@/features/auth/server-role-update-identity";
 import {
   createSupabaseWorkspacePermissionGateway,
+  loadChartDraftPermissionAdapter,
+  type ChartDraftPermissionClient,
   type SupabaseWorkspacePermissionClient,
 } from "@/features/auth/supabase-workspace-permission-gateway";
 import {
@@ -23,7 +25,7 @@ import {
 } from "@/features/chart/server-encounter-id-bridge";
 import { enforceWorkspaceMutationRateLimit } from "@/lib/security/rate-limit";
 import { createServerTimingRecorder } from "@/lib/http/server-timing";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, normalizeSupabaseRequestId } from "@/lib/supabase/server";
 
 type RouteContext = {
   params: Promise<{
@@ -190,8 +192,38 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       ),
     );
   }
+  const requestId = crypto.randomUUID();
+  const upstreamDurations: Record<string, number> = {};
+  let supabaseRequestId: string | null = null;
+  const fetchWithSaveTiming: typeof fetch = async (resource, init) => {
+    const url = resource instanceof Request ? resource.url : String(resource);
+    if (!/\/rest\/v1\/rpc\/clair_save_chart_order_draft(?:_for_chart)?$/.test(url)) {
+      return fetch(resource, init);
+    }
+
+    const startedAt = performance.now();
+    const response = await fetch(resource, init);
+    upstreamDurations.rpc_headers = performance.now() - startedAt;
+    supabaseRequestId = normalizeSupabaseRequestId(response.headers.get("sb-request-id"));
+    const envoyTime = response.headers.get("x-envoy-upstream-service-time");
+    if (envoyTime && /^[0-9]{1,9}$/.test(envoyTime)) {
+      upstreamDurations.supabase_upstream = Number(envoyTime);
+    }
+
+    for (const entry of response.headers.get("x-clair-draft-timing")?.split(",") ?? []) {
+      const match = /^\s*(db_function|db_chart_guard|db_initial_locks);dur=([0-9]{1,9}(?:\.[0-9]{1,3})?)\s*$/.exec(entry);
+      if (match) upstreamDurations[match[1]] = Number(match[2]);
+    }
+    const transaction = /(?:^|,)\s*transaction;dur=([0-9]{1,9}(?:\.[0-9]{1,3})?)(?=\s*(?:,|$))/.exec(
+      response.headers.get("server-timing") ?? "",
+    );
+    if (transaction) upstreamDurations.postgrest_transaction = Number(transaction[1]);
+    return response;
+  };
   const permissionContext = await timing.measure("permission", async () => {
-    const client = identity.source === "supabase_session" ? await createClient() : null;
+    const client = identity.source === "supabase_session"
+      ? await createClient({ requestId, fetch: fetchWithSaveTiming })
+      : null;
     const resolvedEncounter = await resolveServerChartEncounterId({
       client: client as unknown as SupabaseEncounterIdBridgeClient | null,
       encounterId: input.encounterId,
@@ -199,10 +231,8 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     });
     if (!resolvedEncounter.ok) return { ok: false as const, resolvedEncounter };
     const permissionAdapter = client
-      ? await loadWorkspacePermissionAdapterFromDb({
-          gateway: createSupabaseWorkspacePermissionGateway(
-            client as unknown as SupabaseWorkspacePermissionClient,
-          ),
+      ? await loadChartDraftPermissionAdapter({
+          client: client as unknown as ChartDraftPermissionClient,
           workspaceId,
           sessionUserId: identity.actorUserId,
         })
@@ -296,7 +326,14 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     });
   });
 
-  return timing.respond(Response.json(result, { status: result.status }));
+  return timing.respond(Response.json(result, { status: result.status }), client
+    ? {
+        requestId,
+        supabaseRequestId,
+        submittedSet: input.rows.some((row) => row?.rowType === "set"),
+        durations: upstreamDurations,
+      }
+    : undefined);
 }
 
 async function readJsonBody(request: Request): Promise<ChartOrderDraftInput> {
