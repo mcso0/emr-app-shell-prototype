@@ -383,30 +383,51 @@ export const ConfirmedEditFromSelectedRow: Story = { args: { scenario: "confirme
   const toolbar = within(await within(canvasElement.ownerDocument.body).findByRole("toolbar", { name: "선택 행 작업" }));
   await userEvent.click(toolbar.getByRole("button", { name: "수정" }));
   const body = within(canvasElement.ownerDocument.body);
-  const dialog = within(await body.findByRole("dialog", { name: "합성 조제 약품 · 오더 수정" }));
+  const dialogElement = await body.findByRole("dialog", { name: "합성 조제 약품 · 오더 수정" });
+  const dialog = within(dialogElement);
   const price = await dialog.findByLabelText("단가 (원)");
   await expect(dialog.getByLabelText("총량", { exact: true })).toHaveAttribute("readonly");
   for (const label of ["증감 스케줄", "병원 종 범위 예외 확인", "종 범위 예외 사유"]) {
     await expect(dialog.queryByText(label, { exact: true })).toBeNull();
   }
-  const footer = price.closest('[data-slot="dialog-content"]')!.querySelector('[data-slot="dialog-footer"]') as HTMLElement;
+  const footer = dialogElement.querySelector<HTMLElement>('[data-slot="dialog-footer"]')!;
   await expect(footer).toHaveTextContent(/^취소수정 저장$/);
   await expect(within(footer).getByRole("button", { name: "수정 저장" })).toBeDisabled();
   const tax = dialog.getByRole("combobox", { name: "과세 구분" });
   const reflection = dialog.getByRole("checkbox", { name: "청구에 반영" });
   const adjustment = dialog.getByRole("combobox", { name: "할인·할증 방식" });
-  const billingPositions = () => [tax, reflection].map(control => [control.offsetLeft, control.offsetTop]);
-  const initialPositions = billingPositions();
+  const formBody = adjustment.closest<HTMLElement>(".overflow-y-auto")!;
+  const billingViewport = () => ({
+    scrollTop: formBody.scrollTop,
+    positions: [tax, reflection].map(control => {
+      const { x, y } = control.getBoundingClientRect();
+      return [Math.round(x), Math.round(y)];
+    }),
+  });
+  await Promise.all(dialogElement.getAnimations().map(animation => animation.finished));
+  adjustment.scrollIntoView({ block: "end" });
+  const initialScroll = formBody.scrollTop;
+  const initialScrollHeight = formBody.scrollHeight;
   for (const [method, amountLabel] of [["금액", "할인·할증 (원)"], ["비율", "할인·할증 (%)"], ["없음", null]] as const) {
+    const before = billingViewport();
     await userEvent.click(adjustment);
-    await userEvent.click(await body.findByRole("option", { name: method }));
+    const option = await body.findByRole("option", { name: method });
+    await expect(billingViewport()).toEqual(before);
+    await userEvent.click(option);
     if (amountLabel) {
       await expect(dialog.getByRole("spinbutton", { name: amountLabel })).toBeVisible();
     } else {
       await expect(dialog.queryByRole("spinbutton", { name: /할인·할증/ })).toBeNull();
     }
-    await expect(billingPositions()).toEqual(initialPositions);
+    await expect(billingViewport()).toEqual(before);
+    if (method === "금액") {
+      // Read the change summary at the bottom before returning to the visible menu.
+      formBody.scrollTop = formBody.scrollHeight;
+      await expect(formBody.scrollTop).toBeGreaterThan(initialScroll);
+    }
   }
+  formBody.scrollTop = initialScroll;
+  await waitFor(() => expect(formBody.scrollHeight).toBe(initialScrollHeight));
   await userEvent.clear(price); await userEvent.type(price, "6000");
   await userEvent.click(dialog.getByRole("button", { name: "수정 저장" }));
   await waitFor(() => expect(body.queryByRole("dialog", { name: "합성 조제 약품 · 오더 수정" })).toBeNull());

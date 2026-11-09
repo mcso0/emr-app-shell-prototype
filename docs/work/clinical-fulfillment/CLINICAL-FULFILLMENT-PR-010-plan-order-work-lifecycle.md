@@ -2176,6 +2176,9 @@ The follow-up layout groups the dispensing quantities and pairs the memo fields.
 Keep tax class and billing reflection above the optional adjustment input.
 The footer shows cancel and save only. Save stays disabled when values match.
 Synthetic browser checks covered the adjustment modes and the 390px layout.
+Keep the visible tax and billing reflection rows in place when the adjustment fields and
+change summary shrink. The browser regression checks viewport coordinates and
+body scroll while reopening the menu and returning to no adjustment.
 
 ### Return released dispensing and treatment work to waiting — 2026-11-09
 
