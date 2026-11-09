@@ -1,13 +1,15 @@
 "use client";
 
 import { createContext, useCallback, useContext, useId, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import { EmrContentLoadingState } from "./empty-state";
 
 const ReadinessContext = createContext<((id: string, pending: boolean) => void) | null>(null);
 const LoadingContext = createContext(false);
+const IndicatorContext = createContext(true);
 
-/** Keep readers and drafts mounted. Only presentation and interaction are suspended. */
-export function EmrPageLoadingBoundary({ children, loading = false }: { children: ReactNode; loading?: boolean }) {
+/** Share readiness across surfaces without hiding their structural frames. */
+export function EmrPageLoadingProvider({ children, loading = false }: { children: ReactNode; loading?: boolean }) {
   const [readers, setReaders] = useState<ReadonlySet<string>>(() => new Set());
   const report = useCallback((id: string, pending: boolean) => {
     setReaders(previous => {
@@ -22,16 +24,33 @@ export function EmrPageLoadingBoundary({ children, loading = false }: { children
   const masked = parentPending || pending;
   return <ReadinessContext.Provider value={report}>
     <LoadingContext.Provider value={masked}>
-      <div className="relative h-full min-h-0 min-w-0" data-page-loading={pending ? "true" : "false"} aria-busy={pending}>
-        <div className="h-full min-h-0 min-w-0 [&>main]:h-full" style={pending ? { visibility: "hidden" } : undefined} inert={pending || undefined} aria-hidden={pending || undefined} data-page-content="">
-          {children}
-        </div>
-        {pending && <div className="absolute inset-0 z-40 bg-[var(--emr-surface-workspace)]" data-testid="page-loading-surface">
-          <EmrContentLoadingState testId="page-loading-state" title="화면을 불러오는 중입니다" />
-        </div>}
-      </div>
+      <IndicatorContext.Provider value={!parentPending}>{children}</IndicatorContext.Provider>
     </LoadingContext.Provider>
   </ReadinessContext.Provider>;
+}
+
+/** Mask only the contents inside a persistent frame. */
+export function EmrPageLoadingSurface({ children, className, contentClassName, showIndicator = true }: {
+  children: ReactNode;
+  className?: string;
+  contentClassName?: string;
+  showIndicator?: boolean;
+}) {
+  const pending = useContext(LoadingContext);
+  const showOwnIndicator = useContext(IndicatorContext);
+  return <div className={cn("relative h-full min-h-0 min-w-0", className)} data-page-loading={pending ? "true" : "false"} aria-busy={pending}>
+    <div className={cn("h-full min-h-0 min-w-0 [&>main]:h-full", contentClassName)} style={pending ? { visibility: "hidden" } : undefined} inert={pending || undefined} aria-hidden={pending || undefined} data-page-content="">
+      {children}
+    </div>
+    {pending && <div className="absolute inset-0 z-40 bg-[var(--emr-surface-workspace)]" data-testid="page-loading-surface">
+      {showIndicator && showOwnIndicator && <EmrContentLoadingState testId="page-loading-state" title="화면을 불러오는 중입니다" />}
+    </div>}
+  </div>;
+}
+
+/** Keep readers and drafts mounted. Only presentation and interaction are suspended. */
+export function EmrPageLoadingBoundary({ children, loading = false }: { children: ReactNode; loading?: boolean }) {
+  return <EmrPageLoadingProvider loading={loading}><EmrPageLoadingSurface>{children}</EmrPageLoadingSurface></EmrPageLoadingProvider>;
 }
 
 /** Report required reads before paint; cleanup cannot clear another reader's state. */

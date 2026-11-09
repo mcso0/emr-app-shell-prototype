@@ -75,7 +75,7 @@ export function EmrProfilePanel({
   }, [close]);
 
   return (
-    <EmrPageLoadingBoundary loading={loading}><section
+    <section
       data-slot="emr-profile-panel"
       data-header-actions={headerActions ? "true" : undefined}
       className={cn(
@@ -84,7 +84,7 @@ export function EmrProfilePanel({
       )}
       {...props}
     >
-      <TabGroup
+      <EmrPageLoadingBoundary loading={loading}><TabGroup
         value={value}
         onValueChange={(next) => {
           if (
@@ -174,8 +174,8 @@ export function EmrProfilePanel({
         >
           {children}
         </EmrRightPanel>
-      </TabGroup>
-    </section></EmrPageLoadingBoundary>
+      </TabGroup></EmrPageLoadingBoundary>
+    </section>
   );
 }
 

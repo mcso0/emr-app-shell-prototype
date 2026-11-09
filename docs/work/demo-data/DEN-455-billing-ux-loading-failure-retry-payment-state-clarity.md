@@ -12,10 +12,92 @@ source_docs:
   - "docs/work/demo-data/DEN-454-billing-api-primary-invoice-payment-checkout-state.md"
 dependencies:
   - "DEN-454"
-updated: "2026-11-03"
+updated: "2026-11-09"
 ---
 
 # Billing UX Loading, Failure, Retry, and Payment State Clarity
+
+## Approved Frame Retention Follow-up — 2026-11-07
+
+승욱 approved local implementation and synthetic verification from `origin/main`
+`593fc2cb80650d00edb75d4ced28ea8256329487`, preserving existing WIP in an isolated
+worktree. Scope includes shared frame retention on every workspace module,
+profile/personal settings, and same-patient dispensing task transitions.
+
+Completion requires visible borders/corners and stable geometry during pending
+reads, correct empty/error/denied release, preserved portal masking and drafts,
+and one instruction loading interval with a continuously visible same-patient,
+same-encounter header under the previous 300 ms queue-response delay scenario.
+Verification uses local intercepted synthetic responses. Release and remote data
+operations are outside this local implementation request.
+
+### Local frame-retention result — 2026-11-07
+
+Implemented persistent outer frames with separate loading contents. Main,
+detached right, document portal, profile, and personal settings frames retain
+their borders. Mobile personal settings keeps its navigation divider in place.
+Dispensing uses document-scoped readiness and preserves its resolved prework
+layout while another instruction loads; other order modules retain their
+existing prework behavior. Patient context reads still block the whole page
+when a different patient is selected.
+
+Synthetic local verification:
+
+- All 17 actual required-read routes passed at desktop and 390 px mobile widths:
+  chart, lab, imaging, dispensing, billing, home, two reception reads, customer,
+  catalog, order sets, hospital profile/contact/hours/members/vitals/spaces.
+  Each held the read, checked visible borders/radii and stable frame geometry,
+  then verified release after a 403 response with no browser runtime errors.
+- Shared boundary/profile and all 10 registry module frame configurations passed
+  11 Storybook browser checks. Static inpatient layout uses injected pending
+  content in the registry test; no artificial production request was added.
+- Same-patient/same-encounter dispensing selection passed at 1673 x 867 with
+  queue latency 300 ms, instruction 220 ms, assignees 140 ms and review 75 ms.
+  The original header node stayed mounted and visible throughout; one document
+  loading interval occurred and the queue was not fetched again. A separate
+  300 ms different-patient profile read correctly masked the stale context.
+- Existing dispensing flow checks passed for entry/claim/start, failures,
+  duplicate actions, and rapid selection. All 18 other order-entry checks and
+  the hospital catalog loading check passed. Queue transition/empty/error
+  checks passed except the pre-existing billing-history cases described below.
+- Personal settings passed direct browser checks at 1673 and 390 px with
+  deferred synthetic profile responses, stable dividers and no runtime errors.
+  The temporary local verification route was removed after verification.
+
+The production build, `tsc --noEmit`, scoped ESLint, documentation link check, and
+`git diff --check` passed. Build warnings about broad filesystem tracing in the
+unchanged PRD document reader remain outside this UI change.
+
+Verification limits: billing queue history tests for 200/403/500 expect one
+history read but observe two. The unchanged origin/main snapshot reproduces
+this assertion failure. No billing behavior or request-count expectation was
+changed to hide it. The supplementary AppShell caller-parity Storybook suite
+cannot render its Next AppRouter decorator with the installed dependency set
+(`Cannot read properties of undefined (reading 'data')`); actual route/browser
+checks and the isolated shared-frame stories provide the coverage above.
+Production/live acceptance and delivery have not been performed.
+
+Local evidence: `/tmp/clair-loading-verification/`,
+`/tmp/clair-loading-frames-entry/`, `/tmp/clair-loading-mobile/`,
+`/tmp/clair-loading-targeted/`, and the matching `/tmp/clair-loading-*.log` files.
+
+### Release revalidation — 2026-11-09
+
+The approved frame and dispensing changes were reapplied on
+`origin/main` at `b875da72fcc798b7fdd8566814be47ec787658f3` in the existing
+isolated worktree. The owner authorized PR, main merge, and Production
+delivery once the release gates pass.
+
+- 89 desktop browser regressions, 17 mobile route checks, the hospital
+  catalog loading check, and 11 shared frame and profile stories passed.
+- The 300 ms dispensing selection trace passed on both the development
+  server and a locally built production bundle with synthetic responses.
+- Full lint, typecheck, build, UX copy, documentation and secret checks passed.
+- The three existing billing history tests reproduced the same two-read
+  count on both the release candidate and unchanged latest main.
+- Hosted smoke is limited to the login route, static assets, and anonymous
+  access denial on chart and dispensing reads. UI behavior is verified
+  locally with synthetic responses.
 
 ## Approved Page Loading Follow-up — 2026-11-03
 

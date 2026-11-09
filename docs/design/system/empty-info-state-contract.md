@@ -20,11 +20,20 @@ This contract defines how CLAiR EMR distinguishes empty states from info boxes, 
 
 ## Page Loading Boundary
 
-`EmrPageLoadingBoundary` owns the initial and selected-page loading surface.
-`WorkspaceFrame` wraps page-owned headers, information bars, document tools,
-internal tabs, body, history and right panels. App navigation, workspace tabs and
-module queues remain available outside this boundary. Personal settings and
-profile panels also use the boundary at their own presentation root.
+`EmrPageLoadingProvider` coordinates required reads. `EmrPageLoadingSurface`
+masks the contents inside a persistent frame. `EmrPageLoadingBoundary` combines
+both for a self-contained region. `WorkspaceFrame` keeps borders, corner radii,
+shadows, panel gaps and geometry visible while its interior surfaces load.
+Detached panels and document-panel portals retain their own frames and mask their
+contents with the shared readiness state. App navigation, workspace tabs and
+module queues remain available. Profile panels and personal settings use the
+same separation at their own presentation roots.
+
+Dispensing instruction documents have a separate loading boundary. Selecting
+another task for the same patient and encounter retains the mounted patient bar
+and masks the document until all its required reads settle. Patient/encounter
+changes still mask the page while the new context is unresolved. Pending reads
+do not change the prework layout; resolved work state selects that layout.
 
 Readers call `usePageReadiness(pending, scope)` with the actor/workspace/entity,
 operating date and entry phase that affect their content. Readers whose first

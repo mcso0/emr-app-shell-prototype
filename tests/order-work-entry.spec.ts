@@ -200,12 +200,14 @@ test("billing entry waits for checkout preparation without repeating ownership c
   await page.getByRole("dialog").getByRole("button", { name: "업무 시작하기", exact: true }).click();
   await expect.poll(() => reviewRequested).toBe(true);
   await expect(page.getByTestId("page-loading-state")).toBeVisible();
-  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
   expect(state.prepares()).toBe(0);
   releaseReview();
   await expect.poll(() => requested).toBe(true);
   await expect(page.getByTestId("page-loading-state")).toBeVisible();
-  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
   expect(state.commands).toEqual([]);
   release();
   await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
@@ -251,7 +253,8 @@ for (const status of [403, 500]) {
     await review.getByRole("button", { name: "최신 변경안 조회", exact: true }).click();
     await expect.poll(() => requested).toBe(true);
     await expect(page.getByTestId("page-loading-state")).toBeVisible();
-    await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+    await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+    await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
     release();
     await expect(page.getByRole("table", { name: "청구 항목 테이블" })).toBeVisible();
     await expect(page.getByTestId("page-loading-state")).not.toBeVisible();

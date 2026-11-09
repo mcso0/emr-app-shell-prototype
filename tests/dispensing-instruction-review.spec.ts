@@ -10,7 +10,7 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean } = {}) {
+async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
@@ -46,7 +46,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   let requiresAcknowledgement = false;
   let assignmentFailures = options.failAssignment ? 1 : 0;
   const assignmentWrites: Record<string, unknown>[] = [];
-  const workItems = () => document.items.map(item => ({ id: item.id, workspaceId, orderId: item.id, encounterId: id, patientId,
+  const workItems = () => document.items.map(item => ({ id: item.id, workspaceId, orderId: item.id, encounterId: id, patientId: options.differentPatient && item.id === secondId ? secondId : patientId,
     taskId: item.id, taskAttemptNo: 1, requestCycle: 1, rowRevision: Number(document.revision), status: item.status,
     queueType: options.queueType ?? "dispensing", assignedToUserId: item.assigneeId, requestedByUserId: id,
     patientName: "합성 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
@@ -137,6 +137,10 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
       document.revision = String(Number(document.revision) + 1);
     }
     await route.fulfill({ json: { ok: true, context } });
+  });
+  if (options.differentPatient) await page.route(`**/customer/patient/${secondId}/profile-overview`, async route => {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await route.fulfill({ json: { ok: true, overview: { subjectId: secondId, subjectType: "patient", profile: { id: secondId, name: "다른 합성 환자", birthDate: "2020-01-01", breed: "말티즈", sex: "female", neutered: true, species: "dog" }, relationships: { guardians: [] }, access: { information: { allowed: true, requiredPermission: "patient:view" } } } } });
   });
   await options.beforeNavigate?.();
   await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-31&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed&right=closed`);
@@ -524,7 +528,7 @@ function deferredRead() {
 }
 async function expectOnlyPageLoading(page: Page) {
   await expect(page.getByTestId("page-loading-state")).toBeVisible();
-  const content = page.locator('[data-page-content]').first();
+  const content = page.locator('[data-page-content][inert]').first();
   await expect(content).toHaveAttribute("inert", "");
   await expect(content).toHaveAttribute("aria-hidden", "true");
   await expect(page.getByTestId("fulfillment-prework")).not.toBeVisible();
@@ -600,4 +604,69 @@ test("prework A-B-A queue navigation masks each selected read and rejects the la
   await page.goForward();
   await expect(page).toHaveURL(new RegExp(`workItemId=${id}`));
   await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+});
+
+
+test("same-patient instruction selection retains the header through one loading interval with 300ms queue latency", async ({ page }) => {
+  await page.setViewportSize({ width: 1673, height: 867 });
+  const { document } = await install(page, { set: true, started: true });
+  const header = page.locator('[data-slot="patient-context-bar"]').first();
+  await expect(header).toBeVisible();
+  let queueReads = 0;
+  await page.route("**/fulfillment/work-items?*", async route => {
+    queueReads += 1;
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await route.fallback();
+  });
+  await page.route(`**/fulfillment/work-items/${secondId}/instruction`, async route => {
+    await new Promise(resolve => setTimeout(resolve, 220));
+    await route.fulfill({ json: { ok: true, document: { ...document, rootTaskId: secondId, rootOrderId: secondId, isSet: false, items: document.items.filter(item => item.id === secondId) } } });
+  });
+  await page.route(`**/fulfillment/work-items/${secondId}/assignees`, async route => {
+    await new Promise(resolve => setTimeout(resolve, 140));
+    await route.fallback();
+  });
+  await page.route("**/fulfillment/instruction-review?*", async route => {
+    await new Promise(resolve => setTimeout(resolve, 75));
+    await route.fallback();
+  });
+  await header.evaluate(node => {
+    const samples: Array<{ header: boolean; loading: boolean }> = [];
+    const state = { samples, running: true };
+    Object.assign(window, { instructionSelectionTrace: state });
+    const sample = () => {
+      if (!state.running) return;
+      const loading = node.ownerDocument.querySelector('[data-testid="page-loading-state"]');
+      const next = { header: node.isConnected && getComputedStyle(node).visibility === "visible", loading: Boolean(loading && getComputedStyle(loading).visibility === "visible") };
+      const previous = samples.at(-1);
+      if (!previous || previous.header !== next.header || previous.loading !== next.loading) samples.push(next);
+      requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.getByTestId("module-side-panel-host").getByText("합성 품목 2", { exact: true }).click();
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(header).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("same-patient-loading.png") });
+  await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
+  await expect(header).toBeVisible();
+  const samples = await page.evaluate(() => {
+    const state = (window as unknown as { instructionSelectionTrace: { running: boolean; samples: Array<{ header: boolean; loading: boolean }> } }).instructionSelectionTrace;
+    state.running = false;
+    return state.samples;
+  });
+  expect(samples.every(sample => sample.header)).toBe(true);
+  expect(samples.filter((sample, index) => sample.loading && !samples[index - 1]?.loading)).toHaveLength(1);
+  expect(queueReads).toBe(0);
+});
+
+
+test("a different patient's instruction waits for the new header context", async ({ page }) => {
+  await install(page, { set: true, started: true, differentPatient: true });
+  await page.getByTestId("module-side-panel-host").getByText("합성 품목 2", { exact: true }).click();
+  await expect(page.getByTestId("page-loading-state")).toBeVisible();
+  await expect(page.locator('[data-slot="patient-context-bar"]').first()).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).not.toBeVisible();
+  await expect(page.getByTestId("page-loading-state")).toHaveCount(0);
+  await expect(page.locator('[data-slot="patient-context-bar"]').first()).toContainText("다른 합성 환자");
 });

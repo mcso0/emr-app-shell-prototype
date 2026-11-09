@@ -29,11 +29,12 @@ export function useOrderPreworkPresentation() {
 }
 
 /** Session-local entry intent. Ownership and mutation authority remain server-owned. */
-export function useOrderPrework({ scopeKey, requested, ownsWork, pending = false }: {
+export function useOrderPrework({ scopeKey, requested, ownsWork, pending = false, preserveLayoutWhilePending = false }: {
   scopeKey: string;
   requested: boolean;
   ownsWork: boolean;
   pending?: boolean;
+  preserveLayoutWhilePending?: boolean;
 }) {
   const { session } = useAuthClient();
   const actorScope = useSharedReadActorScope(session);
@@ -51,7 +52,11 @@ export function useOrderPrework({ scopeKey, requested, ownsWork, pending = false
   useLayoutEffect(() => {
     currentKey.current = key;
   }, [key, ownsWork]);
-  useLayoutEffect(() => { setPrework?.(pending || show); }, [pending, show, setPrework]);
+  // Dispensing keeps its patient readers mounted while another instruction loads.
+  useLayoutEffect(() => {
+    if (pending && preserveLayoutWhilePending) return;
+    setPrework?.(pending || show);
+  }, [pending, show, preserveLayoutWhilePending, setPrework]);
   return {
     show,
     enter: () => { if (currentKey.current === key) setEntered(key); },
