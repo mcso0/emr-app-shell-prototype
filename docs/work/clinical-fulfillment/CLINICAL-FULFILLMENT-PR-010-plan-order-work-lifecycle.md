@@ -2110,3 +2110,36 @@ and ACLs, and rollback-only verification in the documented synthetic demo
 workspace. Apply the forward migration before merging the UI, then verify the
 Ready Production source and repeat the role checks. Real data and provider
 operations are outside this release scope.
+
+### Dispensing and treatment re-request continuity — 2026-11-09
+
+Local implementation from `origin/main` `34379835`. The patient card and
+order queue group label pending replacement attempts as 재요청. An existing
+instruction stays available with the modified rows and original start time.
+The performer reviews the latest instructions before using 업무 계속하기.
+See the [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09).
+
+Migration `20261109043222` adds start history to the authorized instruction
+read. The local scope covers that read, the two queue presentations and
+synthetic verification. Production delivery requires the read migration
+before the UI release.
+
+Playwright exercised both categories with synthetic replacement responses and
+verified reload, card and group labels, changed values, the original start time,
+and acknowledgement before continuation. The disposable PostgreSQL fixture
+verified the start history after replacement, queue and workspace scope, and
+the existing replay and permission checks.
+
+#### Re-request continuity production authorization
+
+On 2026-11-09, 승욱 authorized the commit, PR, migration `20261109043222`,
+protected main merge, and Production verification for this change. Apply only
+the approved instruction-read migration after the exact candidate gates pass.
+Capture the previous instruction reader and grants before applying it.
+
+Verify dispensing and treatment in a scoped synthetic workspace. Confirm the
+pending re-request, modified row, retained instruction and original start,
+then acknowledge the change and continue. Use non-billable fixtures and
+remove any temporary records and accounts after verification. Record the exact
+candidate, Preview, Release Check, DB readback, prior Ready deployment, and
+Production results in the PR. Stop on candidate drift or a failed gate.

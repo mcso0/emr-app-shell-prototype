@@ -159,6 +159,12 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - Applicable instructions appear below the order table. The scope labels are 전체 지시, 조제 지시 or 처치 지시, and 세트 지시. A required review opens through the existing start or completion flow.
 - Below vitals, the prework history reuses the chart timeline with Seoul dates, timestamps, and order names. It starts with the latest three past orders for the selected category and expands when more are available.
 
+## Dispensing and treatment re-request continuity — 2026-11-09
+
+- A pending replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
+- An instruction with prior work stays open after re-request and reload. The scoped instruction read returns the earliest start time of the displayed items across their attempts. A document without start history follows the prework entry.
+- The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
+
 ## Dispensing and treatment order cancellation authority — 2026-11-09
 
 Cancelling a confirmed dispensing or treatment order, including a set containing

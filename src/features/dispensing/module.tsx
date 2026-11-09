@@ -595,7 +595,7 @@ function applyFulfillmentToQueueItems(
         workItem.startedAt
           ? formatOperatingShortTime(workItem.startedAt)
           : item.startedAt,
-      statusId: mapFulfillmentToQueueStatusId(workItem.status, item.statusId),
+      statusId: mapFulfillmentToQueueStatusId(workItem, item.statusId),
     };
   });
 
@@ -616,9 +616,19 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const timestamp =
     workItem.createdAt ?? new Date().toISOString();
   const time = formatOperatingShortTime(timestamp);
+  const statusId = mapFulfillmentToQueueStatusId(workItem, "waiting");
 
   return {
-    patientQueue: { assignedToUserId: workItem.assignedToUserId, patientId: workItem.patientId, workspaceId: workItem.workspaceId, status: workItem.status, priority: workItem.priority, requestedAt: workItem.createdAt, originChartId: workItem.originChartId, originChartCreatedAt: workItem.originChartCreatedAt },
+    patientQueue: {
+      assignedToUserId: workItem.assignedToUserId,
+      patientId: workItem.patientId,
+      workspaceId: workItem.workspaceId,
+      status: statusId === "reRequested" && workItem.status === "requested" ? "re_requested" : workItem.status,
+      priority: workItem.priority,
+      requestedAt: workItem.createdAt,
+      originChartId: workItem.originChartId,
+      originChartCreatedAt: workItem.originChartCreatedAt,
+    },
     id: `live-fulfillment-${workItem.id}`,
     instructionId: `${isTreatment ? "TR" : "RX"}-${workItem.id.slice(0, 8).toUpperCase()}`,
     patientName:
@@ -637,7 +647,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       workItem.startedAt
         ? formatOperatingShortTime(workItem.startedAt)
         : undefined,
-    statusId: mapFulfillmentToQueueStatusId(workItem.status, "waiting"),
+    statusId,
     time,
     waitMinutes: workItem.status === "requested" ? 0 : undefined,
   };
@@ -694,14 +704,14 @@ function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
 }
 
 function mapFulfillmentToQueueStatusId(
-  status: FulfillmentWorkItemStatus,
+  { status, requestCycle, taskAttemptNo }: FulfillmentWorkItem,
   fallback: string,
 ) {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
   if (status === "in_progress" || status === "paused") return "inProgress";
-  if (status === "requested") return "waiting";
+  if (status === "requested") return (requestCycle ?? taskAttemptNo ?? 1) > 1 ? "reRequested" : "waiting";
   return fallback;
 }
 
@@ -1008,7 +1018,8 @@ function getDispensingTaskCardItem(item: OrderQueueItem): EmrTaskQueueCardItem {
     actionTestId: `order-queue-item-action-${item.id}`,
     assigneeName: item.assigneeName,
     eventActorName: item.requesterName,
-    eventKind: getTaskQueueEventKindFromStatus(item.statusId),
+    // This line retains the original request time and requester.
+    eventKind: item.patientQueue?.status === "re_requested" ? "request" : getTaskQueueEventKindFromStatus(item.statusId),
     eventTime: item.time,
     guardianName: item.guardianName,
     patientName: item.patientName,
@@ -1788,9 +1799,11 @@ function DispensingContentBody({
   );
   const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
+  const firstStartedAt = instruction.document?.firstStartedAt;
   const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
     && !instruction.document.finalized && instruction.document.items.length > 0
-    && (instruction.document.items.every((item) => item.status === "requested") || preworkCompletionRoot === instructionScope);
+    && (preworkCompletionRoot === instructionScope
+      || (!firstStartedAt && instruction.document.items.every((item) => item.status === "requested")));
   const entry = useOrderPrework({
     preserveLayoutWhilePending: true,
     scopeKey: `${workspaceId}:${selectedFulfillmentWorkItem?.id ?? ""}:${instructionScope ?? ""}`,
@@ -1924,7 +1937,7 @@ function DispensingContentBody({
     : selectedQueueItem
       ? selectedQueueStatusLabel
       : primaryStartStatus;
-  const instructionStartedAt = selectedQueueItem?.startedAt ?? "미시작";
+  const instructionStartedAt = firstStartedAt ? formatOperatingShortTime(firstStartedAt) : selectedQueueItem?.startedAt ?? "미시작";
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
     {
       label: "요청 일시",

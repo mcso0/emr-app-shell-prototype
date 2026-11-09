@@ -4,7 +4,7 @@ insert into orders(id,workspace_id,encounter_id,origin_chart_id,status,clinical_
   order_confirmation_status,row_type,requested_by_user_id,sort_order)
 select ('1c000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'workspace-a',
   '20000000-0000-4000-8000-000000000001','51000000-0000-4000-8000-000000000001','requested',
-  queue_type,queue_type,'confirmed','single','00000000-0000-4000-8000-000000000003',n
+  queue_type,queue_type,'confirmed','individual','00000000-0000-4000-8000-000000000003',n
 from (values (1,'dispensing'),(2,'dispensing'),(3,'treatment'),(4,'treatment')) seed(n,queue_type);
 insert into order_tasks(id,workspace_id,encounter_id,order_id,task_role,clinical_order_type,destination_module,
   status,priority,attempt_no,effective_snapshot)
@@ -134,4 +134,28 @@ begin
   if other_after-'revision' is distinct from other_before-'revision' then
     raise exception 'set claim and start changed the other queue';
   end if;
+end $$;
+
+do $$
+declare wi public.order_fulfillment_work_items; document jsonb;
+begin
+  perform set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
+  for wi in select * from order_fulfillment_work_items where id in (
+    '4c000000-0000-4000-8000-000000000001','4c000000-0000-4000-8000-000000000003'
+  ) loop
+    update orders
+    set calculation_outputs='{"dispenseApplicability":true,"calculationStatus":"ready","actualDispenseQuantity":1}'
+    where workspace_id='workspace-a' and id=wi.order_id and clinical_order_type='dispensing';
+    perform public.clair_mutate_chart_order_execution_origin_base('workspace-a',auth.uid(),
+      wi.order_id,'re_request','Synthetic edited instruction',0,
+      '{"detailInputs":{"instruction":"Synthetic updated plan"}}','rerequest-history-'||wi.queue_type);
+    document:=public.clair_get_fulfillment_instruction('workspace-a',wi.id);
+    if wi.started_at is null or (document->>'firstStartedAt')::timestamptz is distinct from wi.started_at
+      or document#>>'{items,0,status}' is distinct from 'requested'
+      or document#>>'{items,0,attemptNo}' is distinct from '2'
+      or document#>>'{items,0,plan,detailInputs,instruction}' is distinct from 'Synthetic updated plan'
+      or (select started_at from order_fulfillment_work_items where id=wi.id) is not null then
+      raise exception '% replacement did not preserve start history and pending edited work',wi.queue_type;
+    end if;
+  end loop;
 end $$;
