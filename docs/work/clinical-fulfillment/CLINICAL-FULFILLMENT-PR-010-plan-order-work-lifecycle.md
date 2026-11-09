@@ -2203,3 +2203,25 @@ and duplicate names, hover and keyboard focus, unavailable actions,
 `취소` during a pending read, denied reads, due-date selection, and landing
 on the latest attempt in the instruction document or prework table. A stale
 item shows an explicit empty state.
+
+### Complete dispensing and treatment as ordered — 2026-11-09
+
+Local implementation from `origin/main` `ad3dec9f`. Item and set completion
+record the existing lifecycle events without collecting a separate result.
+Existing results remain visible in 수행기록. See the
+[handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#complete-dispensing-and-treatment-as-ordered--2026-11-09).
+
+Synthetic Chromium checks cover single-order completion and retry, item and
+set completion, both prework entries, and existing dispensing and treatment
+results. Isolated PostgreSQL checks exercise the instruction command and
+trigger, including denied unscoped completion and current instruction
+acknowledgement. A fresh Supabase replay stopped at the pre-existing service
+review migration `20260826160000`, which requires seeded workspace and catalog
+release rows. The UI and DB migration are local.
+
+승욱 approved release of this scope on 2026-11-09, including the PR, main
+merge, migration `20261109053938`, and Production verification. Use one
+non-billable synthetic dispensing order and one non-billable synthetic
+treatment order. Verify completion without an execution result and verify
+cleanup of the smoke fixtures. Capture the previous Ready deployment and
+both replaced database functions and grants before applying the migration.

@@ -30,51 +30,28 @@ function CompletionConfirmation(props: Props & { itemId?: string; open: boolean;
     : null;
 }
 
-function CompletionFlow({ controller, workspaceId, itemId, onClose, onChanged }: Props & { itemId?: string; onClose: () => void }) {
-  const [resultItem, setResultItem] = useState<string | null>(null);
+function CompletionFlow({ controller, itemId, onClose, onChanged }: Props & { itemId?: string; onClose: () => void }) {
   const document = controller.document;
   if (!document) return null;
   const confirmation = instructionCompletionConfirmation(document, itemId);
-  const targets = document.items.filter((item) => !itemId || item.id === itemId);
-  const missingResults = targets.filter((item) => item.resultRequired && !["completed", "cancelled", "returned"].includes(item.status));
   const busy = controller.busy || controller.loading;
-  const canComplete = itemId ? targets.some((item) => item.canComplete) : document.canCompleteAll;
-  const executionItem = document.items.find((item) => item.id === resultItem);
-  return <>
-    <Dialog open={resultItem === null} onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
+  const canComplete = itemId ? document.items.some((item) => item.id === itemId && item.canComplete) : document.canCompleteAll;
+  return (
+    <Dialog open onOpenChange={(next) => { if (!next && !busy) onClose(); }}>
       <EmrDialogShell
         title={confirmation.title}
-        description={missingResults.length ? "완료할 항목의 실제 수행값을 먼저 기록해 주세요." : confirmation.description}
+        description={confirmation.description}
         secondaryAction={<Button variant="outline" disabled={busy} onClick={onClose}>취소</Button>}
-        primaryAction={<Button disabled={busy || !canComplete || missingResults.length > 0} onClick={async () => {
+        primaryAction={<Button disabled={busy || !canComplete} onClick={async () => {
           if (await controller.mutate(itemId ? { action: "complete", itemId } : { action: "complete_all" })) {
             onClose(); onChanged();
           }
         }}>{controller.busy ? "저장 중" : "완료"}</Button>}
       >
-        {missingResults.length > 0 && <ul className="space-y-2">
-          {missingResults.map((item) => <li key={item.id} className="flex items-center justify-between gap-3">
-            <span className="min-w-0 break-words">{item.name}</span>
-            <Button variant="outline" disabled={busy || !item.canComplete} aria-label={`${item.name} 수행값 입력`} onClick={() => setResultItem(item.id)}>수행값 입력</Button>
-          </li>)}
-        </ul>}
         {controller.error && <p role="alert" className="text-sm text-destructive">{controller.error}</p>}
       </EmrDialogShell>
     </Dialog>
-    {executionItem && <ExecutionResultDialog
-      workspaceId={workspaceId} workItemId={executionItem.id} open
-      instructionCompletion
-      ownershipAllowed={!busy && executionItem.canComplete}
-      ownershipKey={document.revision} authorityStatus={executionItem.status}
-      onOpenChange={(next) => { if (!next) setResultItem(null); }}
-      onSaved={async () => {
-        setResultItem(null);
-        controller.refresh();
-        onChanged();
-        if (itemId || !document.isSet) onClose();
-      }}
-    />}
-  </>;
+  );
 }
 
 export function InstructionActions(props: Props) {

@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
-import type { InstructionDocument } from "../src/features/fulfillment/instruction-contract";
-import type { ExecutionContext, ExecutionResultCommand } from "../src/features/fulfillment/execution-result-contract";
+import type { InstructionCommand, InstructionDocument } from "../src/features/fulfillment/instruction-contract";
 import { createDefaultWorkspaceVitalSettingsSnapshot } from "../src/features/patient-vitals/workspace-vital-settings";
 import { SESSION_WORKSPACES_STORAGE_KEY } from "../src/features/auth/workspace-session";
 import { PREPARED_EMPTY_CLINIC_WORKSPACE_ID as workspaceId } from "../src/lib/emr-domain/demo-workspaces";
@@ -25,7 +24,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     items: (options.set ? [id, secondId] : [id]).map((itemId, index) => ({
       ...structuredClone(syntheticInstruction.items[0]), id: itemId, taskId: itemId, orderId: itemId, name: `합성 품목 ${index + 1}`,
       status: options.started ? "in_progress" : "requested", assigneeId: options.owner || options.started ? "synthetic-owner" : null, assigneeName: options.owner || options.started ? "합성 기존 담당자" : null, canAssign: false, canComplete: options.requester ?? true, canReopen: false,
-      resultRequired: true, hasResult: false, instruction: "개별 지시",
+      resultRequired: false, hasResult: false, instruction: "개별 지시",
       plan: { detailSchemaVersion: 1, detailInputs: { route: "PO", dose: 0.5, doseUnit: "T", totalQuantity: 1, totalQuantityUnit: "T", doseBasis: "patient", compoundNote: "합성 조제 메모", guardianNote: "합성 보호자 전달 메모" }, calculationOutputs: { plannedPracticalTotalQuantity: 1, dispenseUnit: "T" } },
     })),
   };
@@ -34,13 +33,9 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     document.items[1].assigneeId = "synthetic-second-assignee";
     document.items[1].assigneeName = "합성 보조 담당자";
   }
-  const contexts = Object.fromEntries(document.items.map(item => [item.id, {
-    workspaceId, workItemId: item.id, taskId: item.id, orderId: item.id, encounterId: id, attemptNo: 1,
-    workItemRevision: 1, clinicalOrderType: "dispensing", status: "requested", isCurrentAttempt: true,
-    planSnapshot: item.plan, planSha256: "a".repeat(64), resultRequired: true, canRecord: true, results: [],
-  } satisfies ExecutionContext])) as Record<string, ExecutionContext>;
   const actions: string[] = [];
-  const writes: ExecutionResultCommand[] = [];
+  const writes: string[] = [];
+  const completionWrites: InstructionCommand[] = [];
   let failures = options.failSave ? 1 : 0;
   let staleAssignment = options.staleAssignment;
   let requiresAcknowledgement = false;
@@ -91,8 +86,11 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/*/assignees`, route => route.fulfill({ json: { ok: true, assignees: [{ userId: "synthetic-owner", displayName: "합성 담당자" }] } }));
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/*/instruction`, async route => {
     if (route.request().method() === "PATCH") {
-      const { action, startWork } = route.request().postDataJSON(); actions.push(action);
+      const command = route.request().postDataJSON() as InstructionCommand;
+      const { action } = command;
+      actions.push(action);
       if (action === "claim" || action === "takeover") {
+        const { startWork } = command;
         assignmentWrites.push(route.request().postDataJSON());
         await new Promise(resolve => setTimeout(resolve, options.assignmentDelay ?? 80));
         if (staleAssignment) {
@@ -107,12 +105,12 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
           if (item.status === "completed") return;
           item.assigneeId = "synthetic-owner"; item.assigneeName = "합성 담당자"; item.canComplete = true;
           if (startWork === true && (item.status === "requested" || item.status === "paused")) {
-            item.status = "in_progress"; contexts[item.id].status = "in_progress";
+            item.status = "in_progress";
           }
         });
       } else if (action === "start") {
         document.canStart = false;
-        document.items.forEach(item => { if (item.status === "requested") { item.status = "in_progress"; contexts[item.id].status = "in_progress"; } });
+        document.items.forEach(item => { if (item.status === "requested") item.status = "in_progress"; });
       } else if (action === "unassign") {
         document.mainAssigneeId = null;
         document.mainAssigneeName = null;
@@ -124,30 +122,21 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
           item.assigneeId = null;
           item.assigneeName = null;
         });
-      } else if (action === "complete_all") {
-        if (document.items.some(item => item.resultRequired)) return route.fulfill({ status: 409, json: { ok: false, error: "actual_execution_result_required" } });
-        document.finalized = true; document.canCompleteAll = false;
+      } else if (action === "complete" || action === "complete_all") {
+        completionWrites.push(command);
+        if (failures-- > 0) return route.fulfill({ status: 503, json: { ok: false } });
+        const targets = action === "complete" ? document.items.filter(item => item.id === command.itemId) : document.items;
+        targets.forEach(item => { item.status = "completed"; item.canComplete = false; item.canReopen = true; });
+        document.finalized = action === "complete_all" || !document.isSet;
+        document.canCompleteAll = !document.finalized;
       } else return route.fulfill({ status: 400, json: { ok: false, error: "invalid_transition" } });
       document.revision = String(Number(document.revision) + 1);
     }
     await route.fulfill({ json: { ok: true, document } });
   });
-  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/*/execution`, async route => {
-    const itemId = new URL(route.request().url()).pathname.split("/").at(-2)!;
-    const context = contexts[itemId];
-    if (route.request().method() === "POST") {
-      const body = route.request().postDataJSON() as ExecutionResultCommand; writes.push(body);
-      if (failures-- > 0) return route.fulfill({ status: 503, json: { ok: false, error: "request_failed" } });
-      context.status = "completed"; context.workItemRevision++;
-      context.results.push({ id: itemId, version: 1, previousResultId: null, schemaVersion: 1, payload: body.payload,
-        performedAt: body.performedAt, performedByUserId: id, recordedByUserId: id, recordedAt: new Date().toISOString(),
-        varianceReason: null, amendmentReason: null, planSha256: context.planSha256 });
-      const item = document.items.find(item => item.id === itemId)!;
-      item.status = "completed"; item.resultRequired = false; item.hasResult = true; item.canComplete = false;
-      document.finalized = !document.isSet; document.canCompleteAll = document.isSet;
-      document.revision = String(Number(document.revision) + 1);
-    }
-    await route.fulfill({ json: { ok: true, context } });
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/*/execution`, route => {
+    writes.push(route.request().method());
+    return route.fulfill({ status: 400, json: { ok: false } });
   });
   if (options.differentPatient) await page.route(`**/customer/patient/${secondId}/profile-overview`, async route => {
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -162,53 +151,48 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     await expect(entryAction).toBeEnabled();
     await expect(entryAction).toHaveCSS("height", "32px");
   }
-  return { document, contexts, writes, actions, assignmentWrites, requireInstructionReview: () => { requiresAcknowledgement = true; } };
+  return { document, writes, actions, assignmentWrites, completionWrites, requireInstructionReview: () => { requiresAcknowledgement = true; } };
 }
 
-async function fillResult(page: Page) {
-  const dialog = page.getByRole("dialog", { name: "실제 수행기록", exact: true });
-  await dialog.getByRole("button", { name: "현재 시각", exact: true }).click();
-  await dialog.getByLabel("실제 준비수량", { exact: false }).fill("1");
-  await dialog.getByLabel("실제 준비 단위", { exact: false }).fill("T");
-  return dialog;
-}
-
-test("unassigned requester completes through required input without starting; failed save retains draft and retry id", async ({ page }) => {
-  const { actions, writes, document } = await install(page, { failSave: true });
+test("unassigned requester completes dispensing without result input and retries the same command on failure", async ({ page }) => {
+  const { actions, writes, document, completionWrites } = await install(page, { failSave: true });
   await expect(page.getByRole("button", { name: "조제 완료", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "완료 메뉴 열기" }).click();
   await page.getByRole("menuitem", { name: "조제 완료", exact: true }).click();
-  await expect(page.getByRole("dialog").getByRole("button", { name: "완료", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "합성 품목 1 수행값 입력" }).click();
-  const dialog = await fillResult(page);
+  const dialog = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+  await expect(dialog.getByRole("button", { name: /수행값 입력/ })).toHaveCount(0);
   expect(actions).toEqual([]); expect(writes).toEqual([]);
-  await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
+  await dialog.getByRole("button", { name: "완료", exact: true }).click();
   await expect(dialog.getByRole("alert")).toBeVisible();
-  await expect(dialog.getByLabel("실제 준비수량", { exact: false })).toHaveValue("1");
-  await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
+  expect(document.items[0].status).toBe("requested");
+  await dialog.getByRole("button", { name: "완료", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  expect(writes).toHaveLength(2); expect(writes[0].commandId).toBe(writes[1].commandId);
-  expect(actions).toEqual([]); expect(document.items[0].assigneeId).toBeNull();
+  expect(completionWrites[0].commandId).toBe(completionWrites[1].commandId);
+  expect(writes).toEqual([]);
+  expect(actions).toEqual(["complete_all", "complete_all"]);
+  expect(document.items[0].assigneeId).toBeNull();
   await page.reload();
   await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
 });
 
-test("set completion records each missing result before explicit finalization", async ({ page }) => {
-  const { actions, writes, document } = await install(page, { set: true });
-  await page.getByRole("button", { name: "완료 메뉴 열기" }).click();
-  await page.getByRole("menuitem", { name: "조제 완료", exact: true }).click();
-  for (const n of [1, 2]) {
-    await page.getByRole("button", { name: `합성 품목 ${n} 수행값 입력` }).click();
-    const dialog = await fillResult(page);
-    await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
-    await expect(dialog).not.toBeVisible();
-    await expect(page.getByRole("dialog", { name: "오더를 완료할까요?" })).toBeVisible();
-    expect(document.finalized).toBe(false);
-  }
-  await page.getByRole("dialog").getByRole("button", { name: "완료", exact: true }).click();
+test("treatment set completes one item and then the rest without result input", async ({ page }) => {
+  const { actions, writes, document } = await install(page, { queueType: "treatment", set: true, started: true });
+  await page.getByRole("button", { name: "합성 품목 1 완료", exact: true }).click();
+  const item = page.getByRole("dialog", { name: "이 항목을 완료할까요?" });
+  await expect(item.getByRole("button", { name: /수행값 입력/ })).toHaveCount(0);
+  await item.getByRole("button", { name: "완료", exact: true }).click();
+  await expect(item).not.toBeVisible();
+  expect(document.items.map(row => row.status)).toEqual(["completed", "in_progress"]);
+  expect(document.finalized).toBe(false);
+  await page.getByRole("button", { name: "처치 완료", exact: true }).click();
+  const set = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+  await expect(set.getByText("미완료 항목 1개도 함께 완료됩니다.")).toBeVisible();
+  await set.getByRole("button", { name: "완료", exact: true }).click();
   await expect(page.getByTestId("instruction-status-label")).toHaveText("완료");
-  expect(actions).toEqual(["complete_all"]); expect(writes).toHaveLength(2);
+  expect(document.items.map(row => row.status)).toEqual(["completed", "completed"]);
+  expect(actions).toEqual(["complete", "complete_all"]);
+  expect(writes).toEqual([]);
 });
 
 test("claim assigns and starts before opening the instruction", async ({ page }) => {
@@ -622,7 +606,7 @@ for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처�
     await menu.click();
     await page.getByRole("menuitem", { name: label + " 완료" }).click();
     const completion = page.getByRole("dialog", { name: "오더를 완료할까요?" });
-    await expect(completion.getByRole("button", { name: "완료", exact: true })).toBeDisabled();
+    await expect(completion.getByRole("button", { name: "완료", exact: true })).toBeEnabled();
     await completion.getByRole("button", { name: "취소", exact: true }).click();
     requireInstructionReview();
     await entry.getByRole("button", { name: "업무 시작하기" }).click();
