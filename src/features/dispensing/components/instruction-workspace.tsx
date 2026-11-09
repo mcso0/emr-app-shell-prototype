@@ -135,10 +135,16 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
     : undefined;
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
     const intent = action === "claim" ? claimIntent : { action };
-    if (await controller.mutate(intent)) {
+    const onSuccess = () => {
       onChanged();
       if (action === "claim" || action === "start") onEntered?.();
-    }
+    };
+    const continuing = !prework && continuingRerequest && (action === "start" || (action === "claim" && claimStartsWork));
+    const continueAfterReview = continuing ? {
+      label: document.queueType === "dispensing" ? "확인하고 조제 계속" : "확인하고 처치 계속",
+      onSuccess,
+    } : undefined;
+    if (await controller.mutate(intent, undefined, continueAfterReview)) onSuccess();
   };
   const statusMenu = showStatusMenu ? (
     <DropdownMenu>
