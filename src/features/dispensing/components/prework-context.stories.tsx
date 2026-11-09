@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { DispensingPreworkContext } from "./prework-context";
@@ -20,6 +20,8 @@ type Args = {
   requester?: boolean;
   width?: number;
   loadingContext?: boolean;
+  refreshDuringEntry?: boolean;
+  denyEntryRefresh?: boolean;
 };
 const workItem = {
   id,
@@ -34,15 +36,28 @@ const workItem = {
   sourceSnapshot: { encounterNo: "SYN-001" },
 };
 let commands: Record<string, unknown>[] = [];
+let releaseEntry: (() => void) | undefined;
+let releaseRead: (() => void) | undefined;
+let entryResponseReturned = false;
+let delayNextReview = false;
+let releaseReview: (() => void) | undefined;
+let instructionReads = 0;
 
 function Example(args: Args) {
-  const controller = useFulfillmentInstruction(workspaceId, id);
+  const [queueRevision, setQueueRevision] = useState(0);
+  const controller = useFulfillmentInstruction(workspaceId, id, String(queueRevision));
   const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const refresh = () => setQueueRevision(value => value + 1);
+    window.addEventListener("storybook:queue-refresh", refresh);
+    return () => window.removeEventListener("storybook:queue-refresh", refresh);
+  }, []);
   return (
     <div
       style={{ width: args.width ?? 1100, maxWidth: "100%", height: 1000 }}
       className="flex min-w-0 flex-col bg-card"
     >
+      {args.refreshDuringEntry && <output aria-label="업무 처리 상태">{controller.busy ? "처리 중" : "대기"}</output>}
       {entered ? (
         <>
           <div className="flex gap-3 p-4">
@@ -69,7 +84,7 @@ function Example(args: Args) {
           onChanged={() => {}}
           onEntered={() => setEntered(true)}
         />
-      ) : (
+      ) : controller.error ? <p role="alert">{controller.error}</p> : (
         <p role="status">업무를 불러오는 중이에요.</p>
       )}
     </div>
@@ -97,6 +112,13 @@ const meta = {
   },
   beforeEach: ({ args }) => {
     commands = [];
+    releaseEntry = undefined;
+    releaseRead = undefined;
+    entryResponseReturned = false;
+    delayNextReview = false;
+    releaseReview = undefined;
+    instructionReads = 0;
+    let entryPending = false;
     const original = globalThis.fetch;
     const pendingReads: Array<() => void> = [];
     let fail = args.failOnce;
@@ -165,9 +187,12 @@ const meta = {
       );
       const method = init?.method ?? "GET";
       if (url.pathname.endsWith("/instruction")) {
+        if (method !== "PATCH") instructionReads += 1;
         if (method === "PATCH") {
           const command = JSON.parse(String(init?.body));
           commands.push(command);
+          entryPending = true;
+          if (args.refreshDuringEntry) await new Promise<void>(resolve => { releaseEntry = resolve; });
           await new Promise((resolve) => setTimeout(resolve, 40));
           if (fail) {
             fail = false;
@@ -189,12 +214,23 @@ const meta = {
             if (startsWork) item.status = "in_progress";
           });
           document.revision = String(Number(document.revision) + 1);
+          entryPending = false;
+          entryResponseReturned = true;
+        } else if (args.refreshDuringEntry && entryPending) {
+          if (args.denyEntryRefresh) return Response.json({ ok: false, error: "permission_missing" }, { status: 403 });
+          const stale = structuredClone(document);
+          await new Promise<void>(resolve => { releaseRead = resolve; });
+          return Response.json({ ok: true, document: stale });
         }
         return Response.json({ ok: true, document });
       }
       if (url.pathname.endsWith("/assignees"))
         return Response.json({ ok: true, assignees: [] });
-      if (url.pathname.endsWith("/instruction-review"))
+      if (url.pathname.endsWith("/instruction-review")) {
+        if (delayNextReview) {
+          delayNextReview = false;
+          await new Promise<void>(resolve => { releaseReview = resolve; });
+        }
         return Response.json({
           ok: true,
           reviews: (url.searchParams.get("taskIds") ?? "")
@@ -208,6 +244,7 @@ const meta = {
               snapshots: [],
             })),
         });
+      }
       if (url.pathname.endsWith("/vital-settings"))
         return Response.json(
           createDefaultWorkspaceVitalSettingsSnapshot(false),
@@ -275,6 +312,9 @@ const meta = {
     };
     return () => {
       globalThis.fetch = original;
+      releaseEntry?.();
+      releaseRead?.();
+      releaseReview?.();
       pendingReads.forEach(release => release());
     };
   },
@@ -322,6 +362,75 @@ export const DesignatedOwner: Story = {
     ).not.toBeInTheDocument();
   },
 };
+
+async function enterDuringQueueRefresh({ canvas, canvasElement }: Parameters<NonNullable<Story["play"]>>[0]) {
+  await canvas.findByRole("heading", { name: "오더 정보" });
+  const start = canvas.queryByRole("button", { name: "업무 시작하기" });
+  const trigger = start ?? await canvas.findByRole("button", { name: "담당하기" });
+  await waitFor(() => expect(trigger).toBeEnabled());
+  await userEvent.click(trigger);
+  let takeover = false;
+  if (!start) {
+    const dialog = within(await within(canvasElement.ownerDocument.body).findByRole("dialog"));
+    const reason = dialog.queryByLabelText("담당 변경 사유");
+    takeover = Boolean(reason);
+    if (reason) await userEvent.type(reason, "합성 교대 사유");
+    await userEvent.click(dialog.getByRole("button", { name: takeover ? "담당 변경" : "담당하기" }));
+  }
+  await waitFor(() => expect(releaseEntry).toBeDefined());
+  canvasElement.ownerDocument.defaultView!.dispatchEvent(new Event("storybook:queue-refresh"));
+  await waitFor(() => expect(releaseRead).toBeDefined());
+  releaseEntry?.();
+  // An older requested-state read must not replace the committed start response.
+  await canvas.findByRole("heading", { name: "지시서 작업 화면" });
+  releaseRead?.();
+  await waitFor(() => expect(canvas.getByLabelText("업무 처리 상태")).toHaveTextContent("대기"));
+  await expect(canvas.getByRole("heading", { name: "지시서 작업 화면" })).toBeVisible();
+  await waitFor(() => expect(canvas.queryByRole("button", { name: /^(업무 시작하기|조제 시작|처치 시작)$/ })).not.toBeInTheDocument());
+  await expect(commands).toEqual([expect.objectContaining(start ? { action: "start" } : takeover
+    ? { action: "takeover", startWork: true, reason: "합성 교대 사유" }
+    : { action: "claim", startWork: true })]);
+}
+
+export const ClaimDuringQueueRefresh: Story = { args: { refreshDuringEntry: true }, play: enterDuringQueueRefresh };
+export const StartDuringQueueRefresh: Story = { args: { owner: "mine", refreshDuringEntry: true }, play: enterDuringQueueRefresh };
+export const TreatmentClaimDuringQueueRefresh: Story = { args: { treatment: true, refreshDuringEntry: true }, play: enterDuringQueueRefresh };
+export const TreatmentStartDuringQueueRefresh: Story = { args: { treatment: true, owner: "mine", refreshDuringEntry: true }, play: enterDuringQueueRefresh };
+export const TakeoverDuringQueueRefresh: Story = { args: { owner: "other", refreshDuringEntry: true }, play: enterDuringQueueRefresh };
+export const TreatmentTakeoverDuringQueueRefresh: Story = { args: { treatment: true, owner: "other", refreshDuringEntry: true }, play: enterDuringQueueRefresh };
+export const DeniedRefreshDuringEntry: Story = {
+  args: { owner: "mine", refreshDuringEntry: true, denyEntryRefresh: true },
+  play: async ({ canvas, canvasElement }) => {
+    const start = await canvas.findByRole("button", { name: "업무 시작하기" });
+    await waitFor(() => expect(start).toBeEnabled());
+    await userEvent.click(start);
+    await waitFor(() => expect(releaseEntry).toBeDefined());
+    canvasElement.ownerDocument.defaultView!.dispatchEvent(new Event("storybook:queue-refresh"));
+    await canvas.findByRole("alert");
+    releaseEntry?.();
+    await waitFor(() => expect(entryResponseReturned).toBe(true));
+    await expect(canvas.getByRole("alert")).toHaveTextContent("권한");
+    await expect(canvas.queryByRole("heading", { name: "지시서 작업 화면" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("heading", { name: "오더 정보" })).not.toBeInTheDocument();
+    await expect(commands).toHaveLength(1);
+  },
+};
+
+async function startDuringReviewRefresh({ canvas, canvasElement }: Parameters<NonNullable<Story["play"]>>[0]) {
+  const start = await canvas.findByRole("button", { name: "업무 시작하기" });
+  await waitFor(() => expect(start).toBeEnabled());
+  delayNextReview = true;
+  await userEvent.click(start);
+  await waitFor(() => expect(releaseReview).toBeDefined());
+  canvasElement.ownerDocument.defaultView!.dispatchEvent(new Event("storybook:queue-refresh"));
+  await waitFor(() => expect(instructionReads).toBe(2));
+  releaseReview?.();
+  await canvas.findByRole("heading", { name: "지시서 작업 화면" });
+  await expect(commands).toEqual([expect.objectContaining({ action: "start" })]);
+}
+
+export const StartWithQueueRefreshDuringReview: Story = { args: { owner: "mine" }, play: startDuringReviewRefresh };
+export const TreatmentStartWithQueueRefreshDuringReview: Story = { args: { owner: "mine", treatment: true }, play: startDuringReviewRefresh };
 export const TakeoverRetry: Story = {
   args: { owner: "other", failOnce: true },
   play: async ({ canvas, canvasElement }) => {
