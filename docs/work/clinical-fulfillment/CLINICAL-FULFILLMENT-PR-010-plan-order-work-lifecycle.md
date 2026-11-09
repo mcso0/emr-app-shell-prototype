@@ -2339,3 +2339,37 @@ reopen followed by release preserves the completed sibling and prior results.
 The instruction workspace stories pass. The existing common-header integration
 story reports the same Next.js router error on the baseline. Production
 verification remains outside this local implementation.
+
+The owner authorized signed-in Production verification of the completed-set
+reopen and assignment release flow on 2026-11-09. The smoke used a dedicated
+synthetic workspace, a disposable test identity, and one non-billable two-item
+set per queue.
+
+Signed-in Chromium verified both sets on Ready Production commit `339a8055`
+from [PR #1074](https://github.com/mcso0/emr-app-shell-prototype/pull/1074).
+In each set, both rows started completed and disabled. The header confirmation
+reopened only the second item. Its queue card moved to 진행중 while the first
+item stayed in 완료. 담당 취소 moved only the second card to 대기중 and kept
+it selected after reload. The Production instruction API confirmed the
+completed sibling's unchanged item data and the selected item's paused status
+with no assignee.
+
+Database readback found one reopen receipt and one item-level release audit
+entry for each selected item. The unselected items had neither. The fixture
+created zero billing candidates or invoices. After the smoke, the workspace was
+archived and test sign-in was disabled. No active Auth sessions remained.
+
+The owner then authorized permanent cleanup of only this smoke fixture:
+the archived synthetic workspace, both two-item order sets, their dependent
+records and history, and the disabled test identity.
+
+Production cleanup completed. The fixture inventory matched the local manifest,
+and a rolled-back trial verified the deletion order. The cleanup removed one
+workspace, two sets with four item orders, the linked synthetic records and
+workspace realtime messages. The Auth Admin API permanently deleted the
+synthetic account. A follow-up lookup returned 404. A post-commit scan
+of 148 workspace tables and 12 Auth reference tables found no fixture rows.
+No linked users, memberships, orders, work items, storage objects, realtime
+messages, identities, sessions, refresh tokens, or matching Auth audit entries
+remained. The task audit, set revision, and workspace admin guards were enabled
+after commit.
