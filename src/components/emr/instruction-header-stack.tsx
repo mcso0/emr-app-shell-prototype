@@ -105,7 +105,7 @@ export function EmrInstructionHistoryToggle({
   );
 }
 
-export function EmrInstructionOutputMenu() {
+export function EmrInstructionOutputMenu({ children }: { children?: ReactNode }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -123,6 +123,7 @@ export function EmrInstructionOutputMenu() {
         <CdsFilesMoreHorizontalIcon aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
+        {children}
         <DropdownMenuItem className="h-8 gap-2 text-xs" disabled>
           <DownloadIcon aria-hidden="true" />
           PDF 다운로드

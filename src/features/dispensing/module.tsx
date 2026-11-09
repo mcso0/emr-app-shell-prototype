@@ -68,7 +68,7 @@ import {
 } from "@/features/fulfillment/components/work-lifecycle-action";
 import { FulfillmentExecutionActions } from "@/features/fulfillment/components/execution-result-dialog";
 import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
-import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
+import { InstructionActions, InstructionBody, InstructionDocumentOutputMenu } from "./components/instruction-workspace";
 import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
 import { getInstructionStatusLabel, hasPendingInstructionRerequest, isPendingFulfillmentRerequest, isWaitingInstruction } from "./instruction-view-model";
 import {
@@ -2253,7 +2253,9 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
-                <EmrInstructionOutputMenu />
+                {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback
+                  ? <InstructionDocumentOutputMenu workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} />
+                  : <EmrInstructionOutputMenu />}
               </>
             }
           />
