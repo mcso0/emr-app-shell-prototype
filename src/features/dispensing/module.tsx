@@ -25,6 +25,7 @@ import {
 import {
   CdsActionsRefreshCcwIcon,
 } from "@/components/cds-icons/actions-and-controls";
+import { CdsPeopleUserIcon } from "@/components/cds-icons/people-and-places";
 import { EmrEmptyState, EmrContentLoadingState } from "@/components/emr/empty-state";
 import { EmrCopyLinkButton } from "@/components/emr/copy-link-button";
 import { EmrInlineAlert } from "@/components/emr/inline-alert";
@@ -62,6 +63,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { OrderWorkTable } from "@/features/dispensing/components/order-work-table";
 import {
   type FulfillmentTransitionOptions,
@@ -1940,7 +1942,8 @@ function DispensingContentBody({
         : "대기중";
   const instructionRequestedAt =
     primaryGroup?.rows[0]?.requestedAt ?? "2026.04.14 10:30";
-  const instructionPatientSummary = selectedFulfillmentWorkItem && !allowLegacyFixtureFallback
+  const usesInstructionWorkspace = Boolean(selectedFulfillmentWorkItem && !allowLegacyFixtureFallback);
+  const instructionPatientSummary = selectedFulfillmentWorkItem && usesInstructionWorkspace
     ? <InstructionPatientSummary workspaceId={workspaceId} patientId={selectedFulfillmentWorkItem.patientId} />
     : getQueuePatientSummary(selectedQueueItem);
   const instructionRequester = selectedQueueItem?.requesterName ?? "이수지";
@@ -1969,8 +1972,10 @@ function DispensingContentBody({
     },
     { label: "환자 정보", value: instructionPatientSummary },
     { label: "요청 수의사", value: instructionRequester },
-    { label: `${instructionType} 담당`, value: instructionAssignee },
-    { label: `${instructionType} 시작`, value: instructionStartedAt },
+    ...(!usesInstructionWorkspace ? [
+      { label: `${instructionType} 담당`, value: instructionAssignee },
+      { label: `${instructionType} 시작`, value: instructionStartedAt },
+    ] : []),
   ];
   const updateGroup = (
     groupId: string,
@@ -2176,6 +2181,7 @@ function DispensingContentBody({
   const titleBar = (
     <EmrInstructionTitleBar
             className={documentLayout ? "min-h-9 flex-wrap gap-2" : "px-4"}
+            actionsClassName={usesInstructionWorkspace ? "max-w-full flex-wrap justify-end" : undefined}
             title={`${instructionType} 지시서`}
             icon={
               <EmrInstructionHistoryToggle
@@ -2187,20 +2193,40 @@ function DispensingContentBody({
               />
             }
             badge={
-              <EmrCopyLinkButton
-                ariaLabel={`${instructionType} 지시서 링크 복사`}
-                date={selectedDate}
-                moduleId="dispensing"
-                params={{
-                  encounterId: selectedFulfillmentWorkItem?.encounterId,
-                  workItemId: selectedFulfillmentWorkItem?.id,
-                  queueItemId: selectedQueueItem.id,
-                }}
-                workspaceId={workspaceId}
-              />
+              <>
+                <EmrCopyLinkButton
+                  ariaLabel={`${instructionType} 지시서 링크 복사`}
+                  date={selectedDate}
+                  moduleId="dispensing"
+                  params={{
+                    encounterId: selectedFulfillmentWorkItem?.encounterId,
+                    workItemId: selectedFulfillmentWorkItem?.id,
+                    queueItemId: selectedQueueItem.id,
+                  }}
+                  workspaceId={workspaceId}
+                />
+                {usesInstructionWorkspace ? (
+                  <>
+                    <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
+                    <InstructionDocumentOutputMenu workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} />
+                  </>
+                ) : null}
+              </>
             }
             actions={
               <>
+                {usesInstructionWorkspace ? (
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
+                      {`${instructionType} 시작 일시 ${instructionStartedAt}`}
+                    </span>
+                    <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
+                    <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
+                      <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
+                      {instructionAssignee}
+                    </span>
+                  </div>
+                ) : null}
                 <WorkspaceDocumentWidthToggle />
                 {hasRightPanel && instructionType === "처치" ? (
                   <Button
@@ -2216,7 +2242,11 @@ function DispensingContentBody({
                   </Button>
                 ) : null}
                 {!prework && selectedFulfillmentWorkItem ? (
-                  !allowLegacyFixtureFallback ? <InstructionActions workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} /> : (
+                  usesInstructionWorkspace ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2 empty:hidden before:h-4 before:w-px before:shrink-0 before:bg-border">
+                      <InstructionActions inDocumentToolbar workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} />
+                    </div>
+                  ) : (
                   <FulfillmentExecutionActions
                     workspaceId={selectedFulfillmentWorkItem.workspaceId}
                     workItemId={selectedFulfillmentWorkItem.id}
@@ -2253,9 +2283,7 @@ function DispensingContentBody({
                     }
                   />
                 ) : null}
-                {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback
-                  ? <InstructionDocumentOutputMenu workspaceId={workspaceId} controller={instruction} onChanged={fulfillmentQueue.refresh} />
-                  : <EmrInstructionOutputMenu />}
+                {!usesInstructionWorkspace ? <EmrInstructionOutputMenu /> : null}
               </>
             }
           />
@@ -2279,7 +2307,7 @@ function DispensingContentBody({
           <div className="grid gap-2">
             <div
               data-slot="instruction-info-card"
-              className="grid min-h-[72px] grid-cols-5 rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]"
+              className={cn("grid min-h-[72px] rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]", usesInstructionWorkspace ? "grid-cols-3" : "grid-cols-5")}
             >
               {instructionInfoItems.map(({ label, value }) => (
                 <div

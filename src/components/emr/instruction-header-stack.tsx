@@ -26,6 +26,7 @@ type EmrInstructionHeaderStackProps = {
 
 type EmrInstructionTitleBarProps = {
   actions?: ReactNode;
+  actionsClassName?: string;
   badge?: ReactNode;
   className?: string;
   icon?: ReactNode;
@@ -44,6 +45,7 @@ type EmrInstructionHistoryToggleProps = {
 
 export function EmrInstructionTitleBar({
   actions,
+  actionsClassName,
   badge,
   className,
   icon,
@@ -53,7 +55,7 @@ export function EmrInstructionTitleBar({
   return (
     <EmrPageHeader
       actions={actions}
-      actionsClassName="ml-auto gap-2"
+      actionsClassName={cn("ml-auto gap-2", actionsClassName)}
       badge={badge}
       className={cn(
         "min-h-12 flex-wrap gap-x-4 gap-y-2 py-2.5 [&>div:first-child]:gap-2",

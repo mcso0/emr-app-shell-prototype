@@ -6,7 +6,8 @@ import { EmrContentLoadingState } from "@/components/emr/empty-state";
 import { useId, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton } from "@/components/ui/button-group";
+import { ButtonGroup, ButtonGroupDivider, ButtonGroupIconButton, ButtonGroupPrimaryButton } from "@/components/ui/button-group";
+import { CdsActionsCheckCircleIcon } from "@/components/cds-icons/actions-and-controls";
 import { CdsNavigationChevronDownIcon } from "@/components/cds-icons/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Radio, RadioGroup } from "@/components/ui/radio-group";
@@ -25,6 +26,7 @@ type Props = {
   onChanged: () => void;
   workspaceId: string;
   prework?: boolean;
+  inDocumentToolbar?: boolean;
   onEntered?: () => void;
   onCompletionOpenChange?: (open: boolean) => void;
 };
@@ -104,7 +106,7 @@ export function InstructionActions(props: Props) {
   return <InstructionActionsContent key={`${props.workspaceId}:${props.controller.document?.rootTaskId}:${props.controller.document?.queueType}`} {...props} />;
 }
 
-function InstructionActionsContent({ controller, onChanged, workspaceId, prework = false, onEntered, onCompletionOpenChange }: Props) {
+function InstructionActionsContent({ controller, onChanged, workspaceId, prework = false, inDocumentToolbar = false, onEntered, onCompletionOpenChange }: Props) {
   const [takeover, setTakeover] = useState(false);
   const [reason, setReason] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -124,7 +126,11 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const canReopen = !prework && document.items.some(item => item.status === "completed" && item.canReopen);
   const canUnassign = !prework && !document.finalized && document.canUnassign;
   const showStatusMenu = canReopen || canUnassign;
-  const completionMenuAction = !document.finalized && document.canCompleteAll
+  const canComplete = !document.finalized && document.canCompleteAll;
+  const primaryCompletion = canComplete && !document.canClaim;
+  const splitCompletion = inDocumentToolbar && canComplete && showStatusMenu;
+  const separateStatus = !inDocumentToolbar || document.finalized;
+  const completionMenuAction = canComplete
     ? { label: completionLabel, triggerLabel: "완료 메뉴 열기", onSelect: openCompletion }
     : undefined;
   const change = async (action: "claim" | "start" | "resume" | "unassign") => {
@@ -134,9 +140,33 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       if (action === "claim" || action === "start") onEntered?.();
     }
   };
+  const statusMenu = showStatusMenu ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={splitCompletion || separateStatus ? (
+        <ButtonGroupIconButton type="button" size="sm" variant={splitCompletion && primaryCompletion ? "default" : "ghost"}
+          className={splitCompletion ? "rounded-r-lg" : undefined} aria-label="업무 상태 변경" disabled={busy} />
+      ) : (
+        <Button type="button" size="icon-sm" variant="outline" aria-label="업무 상태 변경" disabled={busy} />
+      )}>
+        <CdsNavigationChevronDownIcon className="size-3" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-max">
+        {canReopen && <DropdownMenuItem onClick={() => setReopen(true)}>
+          {document.finalized ? "진행 중으로 변경" : "완료 항목 다시 진행"}
+        </DropdownMenuItem>}
+        {canUnassign && <DropdownMenuItem onClick={() => void change("unassign")}>담당 취소</DropdownMenuItem>}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+  const completionContent = (
+    <>
+      {inDocumentToolbar ? <CdsActionsCheckCircleIcon data-icon="inline-start" aria-hidden="true" /> : null}
+      {completionLabel}
+    </>
+  );
   return (
     <>
-      {!prework && document.mainAssigneeName ? (
+      {!prework && !inDocumentToolbar && document.mainAssigneeName ? (
         <span className="text-sm text-muted-foreground">
           {document.mainAssigneeName}
         </span>
@@ -207,28 +237,26 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
           재개
         </Button>
       ) : null}
-      {!prework && !document.finalized && document.canCompleteAll ? (
-        <Button size="sm" variant={document.canClaim ? "outline" : "default"} disabled={busy} onClick={openCompletion}>
-          {completionLabel}
+      {!prework && canComplete ? (splitCompletion ? (
+        <ButtonGroup aria-label={`${completionLabel} 보조 작업`} className={primaryCompletion ? "shrink-0" : "shrink-0 rounded-lg border border-border bg-card"}>
+          <ButtonGroupPrimaryButton size="sm" variant={primaryCompletion ? "default" : "outline"} className="rounded-l-lg" disabled={busy} onClick={openCompletion}>
+            {completionContent}
+          </ButtonGroupPrimaryButton>
+          <ButtonGroupDivider className={primaryCompletion ? undefined : "bg-border"} />
+          {statusMenu}
+        </ButtonGroup>
+      ) : (
+        <Button size="sm" variant={primaryCompletion ? "default" : "outline"} disabled={busy} onClick={openCompletion}>
+          {completionContent}
         </Button>
-      ) : null}
-      {showStatusMenu ? (
+      )) : null}
+      {!splitCompletion && (separateStatus && statusMenu ? (
         <ButtonGroup aria-label="업무 상태" className="shrink-0 items-center rounded-md border border-border bg-card">
           <span className="flex items-center px-2 text-sm">{getInstructionStatusLabel(document)}</span>
           <ButtonGroupDivider className="bg-border" />
-          <DropdownMenu>
-            <DropdownMenuTrigger render={<ButtonGroupIconButton type="button" size="sm" variant="ghost" aria-label="업무 상태 변경" disabled={busy} />}>
-              <CdsNavigationChevronDownIcon aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-max">
-              {canReopen && <DropdownMenuItem onClick={() => setReopen(true)}>
-                {document.finalized ? "진행 중으로 변경" : "완료 항목 다시 진행"}
-              </DropdownMenuItem>}
-              {canUnassign && <DropdownMenuItem onClick={() => void change("unassign")}>담당 취소</DropdownMenuItem>}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {statusMenu}
         </ButtonGroup>
-      ) : document.finalized ? <span className="text-sm">완료</span> : null}
+      ) : document.finalized ? <span className="text-sm">완료</span> : statusMenu)}
       {reopen && <ReopenConfirmation controller={controller} workspaceId={workspaceId} onChanged={onChanged} onClose={() => setReopen(false)} />}
       <CompletionConfirmation
         controller={controller}
