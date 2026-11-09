@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { Fragment, createContext, useContext, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { EmrPageLoadingBoundary, EmrPageLoadingSurface } from "@/components/emr/page-loading-boundary";
 import { createPortal } from "react-dom";
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { CdsNavigationMaximize2Icon, CdsNavigationMinimize2Icon } from "@/components/cds-icons/navigation";
@@ -158,7 +159,7 @@ function WorkspacePanel({
         )}
       >
         <div className={cn("relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-[var(--emr-surface-content-panel)] border-[var(--emr-border-strong)]", styles.panelSurface, side === "left" ? "border-r" : "border-l")}>
-          {children}
+          <EmrPageLoadingSurface contentClassName="flex flex-col" showIndicator={false}>{children}</EmrPageLoadingSurface>
         </div>
       </DialogPrimitive.Popup>
       </div>
@@ -177,6 +178,7 @@ export function WorkspaceDocumentLayout({
 }) {
   const config = moduleDefinition.documentLayout!;
   const Content = moduleDefinition.content;
+  const DocumentLoadingBoundary = moduleDefinition.id === "dispensing" ? EmrPageLoadingBoundary : Fragment;
   const ContentAside = moduleDefinition.contentAside;
   const RightPanel = moduleDefinition.rightPanel;
   const areaRef = useRef<HTMLDivElement>(null);
@@ -405,10 +407,12 @@ export function WorkspaceDocumentLayout({
         <div ref={centerRef} data-testid="workspace-document-center" onFocusCapture={(event) => {
           if (compact && centerRef.current?.contains(event.target as Node)) setCompactSurface("body");
         }} className={cn(orderPrework && "!bg-[var(--emr-surface-panel)] !px-0", styles.center, "col-start-2 row-start-1 min-h-0 min-w-0 overflow-clip px-4 has-[[data-chart-start-locked=true]]:bg-[var(--emr-surface-panel)] has-[[data-chart-start-locked=true]]:px-0")} style={{ paddingBottom: switcherHeight }}>
+          <DocumentLoadingBoundary>
           <div ref={documentRef} data-testid="workspace-document" data-width-mode={widthMode} className="flex h-full min-h-0 w-full flex-col has-[[data-chart-start-locked=true]]:!max-w-none has-[[data-chart-start-locked=true]]:!ml-0" style={{ maxWidth: orderPrework ? "none" : targetWidth, marginLeft: orderPrework ? 0 : documentLeft - leftInset, transitionProperty: "max-width, margin-left", transitionDuration: animateWidth && !reduceMotion ? `${transitionMs}ms` : "0s", transitionTimingFunction: "cubic-bezier(.2,0,0,1)" }}>
             <div ref={setToolbarHost} data-slot="instruction-header-title-bar" data-testid="workspace-document-toolbar" className="shrink-0 empty:hidden" hidden={orderPrework} />
             <div className="min-h-0 flex-1"><Content {...slotProps} /></div>
           </div>
+          </DocumentLoadingBoundary>
         </div>
         {RightPanel && config.rightLabel ? <WorkspacePanel key={rightControlsId} open={rightOpen} visible={rightVisible} drawer={overlay} side="right" controlsId={rightControlsId} label={config.rightLabel} width={panelWidth} position={rightPosition} sliding={receiptSliding} instant={!receiptMotion || Boolean(reduceMotion)} presentationInstant={shadowPresentation.instant} reduceMotion={reduceMotion} onClose={(pointer) => { preparePanelMotion("right", pointer); closeRight(false); }}>
           {RightPanel && !orderPrework ? <RightPanel {...slotProps} /> : null}

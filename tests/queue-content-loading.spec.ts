@@ -39,7 +39,8 @@ async function expectCenteredLoading(page: Page, id: string, object: string) {
   await expect(loading).toHaveAttribute("role", "status");
   await expect(loading).toHaveAttribute("data-size", "md");
   await expect(loading).toContainText("화면을 불러오는 중입니다");
-  await expect(main).not.toBeVisible();
+  await expect(main).toBeVisible();
+  await expect(main.locator("[data-page-content]").first()).not.toBeVisible();
   await expect(page.locator("[data-page-content]").first()).toHaveAttribute("inert", "");
   await expect(main.getByRole("heading", { name: `${object} 업무가 없습니다` })).toHaveCount(0);
   await expect(main.getByTestId("dispensing-fulfillment-state")).toHaveCount(0);

@@ -3647,7 +3647,8 @@ test("hospital admin order table shows only page loading while loading catalog",
   await page.goto("/w/clair-demo/orders?modulePanel=open");
 
   await expect(page.getByTestId("page-loading-state")).toBeVisible();
-  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
   release();
   await expect(
     page.getByTestId("hospital-order-catalog-read-status"),
@@ -3658,7 +3659,8 @@ test("hospital admin order table shows only page loading while loading catalog",
   await page.getByRole("link", { name: "병원관리", exact: true }).click();
   await expect(page).toHaveURL(/\/orders/);
   await expect(page.getByTestId("page-loading-state")).toBeVisible();
-  await expect(page.getByTestId("workspace-main-content")).not.toBeVisible();
+  await expect(page.getByTestId("workspace-main-content")).toBeVisible();
+  await expect(page.getByTestId("workspace-main-content").locator("[data-page-content]").first()).not.toBeVisible();
   release();
   await expect(page.getByTestId("page-loading-state")).not.toBeVisible();
 });

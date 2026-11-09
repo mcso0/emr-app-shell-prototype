@@ -1160,6 +1160,7 @@ export function DispensingHeader({
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
+  usePageReadiness(fulfillmentQueue.status === "loading", `${workspaceId}:${selectedDate}:${selectedQueueItemId}`);
   const allowLegacyFixtureFallback = !isLiveAuthRuntime() && isLegacySalesDemoWorkspace(workspaceId);
   const items = useMemo(
     () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
@@ -1791,6 +1792,7 @@ function DispensingContentBody({
     && !instruction.document.finalized && instruction.document.items.length > 0
     && (instruction.document.items.every((item) => item.status === "requested") || preworkCompletionRoot === instructionScope);
   const entry = useOrderPrework({
+    preserveLayoutWhilePending: true,
     scopeKey: `${workspaceId}:${selectedFulfillmentWorkItem?.id ?? ""}:${instructionScope ?? ""}`,
     requested: Boolean(preworkEligible),
     ownsWork: Boolean(instruction.document?.canStart),

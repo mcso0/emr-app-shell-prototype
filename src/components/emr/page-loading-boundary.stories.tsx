@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { EmrPageLoadingBoundary, usePageReadiness } from "./page-loading-boundary";
+import { EmrPageLoadingBoundary, EmrPageLoadingProvider, EmrPageLoadingSurface, usePageReadiness } from "./page-loading-boundary";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 function Page({ pending, scope }: { pending: boolean; scope: string }) {
@@ -58,5 +58,41 @@ export const PortalVisibility: Story = {
     await waitFor(() => expect(body.getByText("페이지 보조 정보")).toBeVisible());
     await userEvent.click(canvas.getByRole("button", { name: "다른 업무" }));
     await expect(body.queryByText("페이지 보조 정보")).not.toBeVisible();
+  },
+};
+
+function FramedExample() {
+  const [pending, setPending] = useState(true);
+  return <div className="h-[480px] p-4">
+    <button onClick={() => setPending(value => !value)}>로딩 전환</button>
+    <EmrPageLoadingProvider loading={pending}>
+      <div className="grid h-[400px] grid-cols-[1fr_220px] gap-4">
+        <section data-testid="main-frame" className="overflow-hidden rounded-xl border border-border shadow-xs">
+          <EmrPageLoadingSurface><Page pending={false} scope="frame" /></EmrPageLoadingSurface>
+        </section>
+        <aside data-testid="side-frame" className="overflow-hidden rounded-xl border border-border shadow-xs">
+          <EmrPageLoadingSurface showIndicator={false}>보조 패널 내용</EmrPageLoadingSurface>
+        </aside>
+      </div>
+    </EmrPageLoadingProvider>
+  </div>;
+}
+export const PersistentFrames: Story = {
+  render: () => <FramedExample />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const frames = [canvas.getByTestId("main-frame"), canvas.getByTestId("side-frame")];
+    const bounds = frames.map(frame => frame.getBoundingClientRect().toJSON());
+    for (const frame of frames) {
+      await expect(frame).toBeVisible();
+      expect(getComputedStyle(frame).borderTopWidth).toBe("1px");
+      expect(parseFloat(getComputedStyle(frame).borderTopLeftRadius)).toBeGreaterThan(0);
+    }
+    await expect(canvas.getByText("환자 정보 바")).not.toBeVisible();
+    await expect(canvas.getByText("보조 패널 내용")).not.toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "로딩 전환" }));
+    await expect(canvas.getByText("환자 정보 바")).toBeVisible();
+    await expect(canvas.getByText("보조 패널 내용")).toBeVisible();
+    expect(frames.map(frame => frame.getBoundingClientRect().toJSON())).toEqual(bounds);
   },
 };

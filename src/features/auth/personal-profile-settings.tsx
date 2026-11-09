@@ -1,6 +1,6 @@
 "use client";
 
-import { EmrPageLoadingBoundary } from "@/components/emr/page-loading-boundary";
+import { EmrPageLoadingBoundary, EmrPageLoadingProvider, EmrPageLoadingSurface } from "@/components/emr/page-loading-boundary";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -481,8 +481,9 @@ export function PersonalSettingsForm({
   }
   const selected = categories.find((item) => item.key === category)!;
   return (
-    <EmrPageLoadingBoundary loading={(!profile && !profileError) || (live && category === "profile" && !operational && !workspaceError) || (live && category === "notifications" && !preferences && !preferenceError)}><main className="grid min-h-svh bg-[var(--emr-surface-2)] text-foreground lg:h-svh lg:grid-cols-[240px_minmax(0,1fr)] lg:overflow-hidden">
+    <EmrPageLoadingProvider loading={(!profile && !profileError) || (live && category === "profile" && !operational && !workspaceError) || (live && category === "notifications" && !preferences && !preferenceError)}><main className="grid min-h-svh grid-rows-[auto_minmax(0,1fr)] bg-[var(--emr-surface-2)] text-foreground lg:h-svh lg:grid-cols-[240px_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
       <aside className="border-b border-[var(--emr-border-default)] bg-card p-4 lg:border-r lg:border-b-0">
+        <EmrPageLoadingSurface showIndicator={false}>
         <Button
           variant="ghost"
           className="w-full justify-start"
@@ -514,8 +515,10 @@ export function PersonalSettingsForm({
             </button>
           ))}
         </nav>
+        </EmrPageLoadingSurface>
       </aside>
-      <div className="min-w-0 overflow-y-auto pb-28">
+      <EmrPageLoadingSurface contentClassName="overflow-y-auto">
+      <div className="min-w-0 pb-28">
         <EmrMainContentHeader heightMode="adaptive" />
         <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4 px-4 md:px-0">
           <header className="flex min-h-[92px] flex-col justify-center gap-2 p-4">
@@ -843,6 +846,7 @@ export function PersonalSettingsForm({
           }}
         />
       </Dialog>
-    </main></EmrPageLoadingBoundary>
+      </EmrPageLoadingSurface>
+    </main></EmrPageLoadingProvider>
   );
 }
