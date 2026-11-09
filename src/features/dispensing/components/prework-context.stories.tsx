@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { DispensingPreworkContext } from "./prework-context";
 import { InstructionActions, InstructionBody } from "./instruction-workspace";
 import { syntheticInstruction } from "../instruction-fixtures";
@@ -12,8 +13,10 @@ const workspaceId = "synthetic-prework";
 const id = "71000000-0000-4000-8000-000000000001";
 const patientId = "71000000-0000-4000-8000-000000000002";
 const guardianId = "71000000-0000-4000-8000-000000000003";
+const longOrderName = "합성-조제-항목-긴-이름-말줄임과-전체-표시를-확인하는-테스트-오더";
 type Args = {
   owner: "unassigned" | "mine" | "other";
+  firstItemName?: string;
   treatment?: boolean;
   failOnce?: boolean;
   denied?: boolean;
@@ -160,9 +163,9 @@ const meta = {
           status: "requested",
           resultRequired: false,
           hasResult: false,
-          name: args.treatment
+          name: (index === 0 ? args.firstItemName : undefined) ?? (args.treatment
             ? `합성 처치 ${index + 1}`
-            : `합성 약품 ${index + 1}`,
+            : `합성 약품 ${index + 1}`),
           instruction: `합성 개별 지시 ${index + 1}`,
           canAssign: false,
           canComplete: false,
@@ -498,6 +501,26 @@ export const Narrow: Story = {
     );
   },
 };
+export const LongOrderName: Story = {
+  args: { firstItemName: longOrderName },
+  decorators: [Story => <TooltipProvider><Story /></TooltipProvider>],
+  play: async ({ canvas, canvasElement }) => {
+    const summaryName = await canvas.findByText(longOrderName, { selector: "dd span" });
+    await waitFor(() => expect(summaryName.tabIndex).toBe(0));
+    await expect(summaryName.scrollWidth).toBeGreaterThan(summaryName.clientWidth);
+    await expect(canvas.getByText("외 1건", { exact: true })).toBeVisible();
+
+    const itemName = canvas.getByRole("rowheader", { name: longOrderName });
+    await expect(itemName).toBeVisible();
+    await expect(getComputedStyle(itemName).whiteSpace).toBe("normal");
+
+    summaryName.focus();
+    const tooltip = () => canvasElement.ownerDocument.querySelector('[data-slot="tooltip-content"]');
+    await waitFor(() => expect(tooltip()).toHaveTextContent(longOrderName));
+    summaryName.blur();
+    await waitFor(() => expect(tooltip()).not.toBeInTheDocument());
+  },
+};
 export const ReadDenied: Story = {
   args: { denied: true },
   play: async ({ canvas }) => {
@@ -514,7 +537,7 @@ export const LoadingContextRetainsRequest: Story = {
   play: async ({ canvas, canvasElement }) => {
     await canvas.findByRole("heading", { name: "오더 정보" });
     await expect(canvas.getByText("합성 환자", { exact: true })).toBeVisible();
-    await expect(canvas.getByText("합성 약품 1", { exact: true })).toBeVisible();
+    await expect(canvas.getByRole("rowheader", { name: /^합성 약품 1$/ })).toBeVisible();
     await waitFor(() => expect(canvasElement.querySelectorAll('[skullet-loading]').length).toBeGreaterThanOrEqual(2));
     await expect(commands).toHaveLength(0);
   },

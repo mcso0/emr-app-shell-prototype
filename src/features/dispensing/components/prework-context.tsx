@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useId, useState } from "react";
 import { CdsFilesClockIcon } from "@/components/cds-icons/files-and-layout";
 import { CdsMedicalClipboardCheckIcon, CdsMedicalNotebookTextIcon } from "@/components/cds-icons/medical-and-domain";
+import { EmrTableCellText } from "@/components/emr/table-primitives";
 import { EmrWorkEntrySection as Section, EmrWorkEntrySummary } from "@/components/emr/work-entry-page";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -215,7 +216,8 @@ export function DispensingPreworkContext({ controller, focusedItemId, workItem, 
           items={[
             ["오더명", <span key="order-name" className="flex min-w-0 items-center gap-1.5">
               <CdsMedicalClipboardCheckIcon className={summaryIconClass} aria-hidden="true" />
-              <span className="min-w-0 break-words">{representativeName}{items.length > 1 ? " 외 " + (items.length - 1) + "건" : ""}</span>
+              <EmrTableCellText tooltipOnOverflow>{representativeName}</EmrTableCellText>
+              {items.length > 1 && <span className="shrink-0 whitespace-nowrap">외 {items.length - 1}건</span>}
             </span>],
             ["요청 시각", <RequestTime key="requested-at" value={workItem.createdAt} />],
             ["요청자", <StaffValue key="requester" name={workItem.requesterName} />],
