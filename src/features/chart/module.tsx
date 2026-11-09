@@ -668,6 +668,7 @@ type ChartOrderExecutionMutationRouteResponse =
     };
 type ChartOrderExecutionReadRouteResponse =
   | {
+      canCancelDispensingTreatmentOrders: boolean;
       ok: true;
       status: 200;
       execution: ChartOrderExecutionReadModel;
@@ -8048,6 +8049,7 @@ function ChartOrderDisabledAction({
 }
 
 function ChartOrderTable({
+  blockedCancellationOrderIds,
   detailOpen,
   quickAdd,
   quickAddOpen,
@@ -8098,6 +8100,7 @@ function ChartOrderTable({
   writeDisabled,
   draftWriteDisabled,
 }: {
+  blockedCancellationOrderIds: ReadonlySet<string>;
   quickAdd?: ReactNode;
   quickAddOpen: boolean;
   quickAddSessionActive: boolean;
@@ -9781,13 +9784,15 @@ function ChartOrderTable({
                         writeDisabled || setChild || !repeatRequestAvailable,
                       onSelect: () => onOpenMutation(order.id, "re_request"),
                     },
-                    {
-                      key: "cancel",
-                      label: "취소",
-                      disabled: writeDisabled || setChild,
-                      onSelect: () => onOpenMutation(order.id, "cancel"),
-                      variant: "destructive",
-                    },
+                    ...(!blockedCancellationOrderIds.has(order.id)
+                      ? [{
+                          key: "cancel",
+                          label: "취소",
+                          disabled: writeDisabled || setChild,
+                          onSelect: () => onOpenMutation(order.id, "cancel"),
+                          variant: "destructive" as const,
+                        }]
+                      : []),
                   ]}
                   testId={`chart-order-more-${order.id}`}
                   triggerClassName={iconClassName}
@@ -10605,6 +10610,7 @@ function ChartOrderMutationDialog({
   onConfirm,
   onOpenChange,
   row,
+  submitDisabled,
 }: {
   draft: ChartOrderMutationDraft | null;
   medicationOrders: Array<{ id: string; name: string }>;
@@ -10612,13 +10618,14 @@ function ChartOrderMutationDialog({
   onConfirm: () => void;
   onOpenChange: (open: boolean) => void;
   row?: ChartOrderDraftRow;
+  submitDisabled: boolean;
 }) {
   if (!draft || !row) return null;
   const contract = getClinicalOrderFieldSchema(getChartOrderClinicalType(row), row.detailSchemaVersion);
   if (!contract) return null;
   const editsClinicalSnapshot =
     (draft.action === "amend" || draft.action === "re_request") && row.runtimeRow?.rowType !== "set";
-  const canSubmit = draft.reason.trim().length >= 3 && !draft.saving;
+  const canSubmit = !submitDisabled && draft.reason.trim().length >= 3 && !draft.saving;
   const outputs = row.runtimeRow?.calculationOutputs ?? {};
   const authority = getChartOrderAuthority(row);
 
@@ -12177,6 +12184,7 @@ const OrderArea = memo(function OrderArea({
   const [historyOrderId, setHistoryOrderId] = useState<string | null>(null);
   const [orderExecution, setOrderExecution] =
     useState<ChartOrderExecutionReadModel>();
+  const [canCancelDispensingTreatmentOrders, setCanCancelDispensingTreatmentOrders] = useState(false);
   const [billingSummary, setBillingSummary] =
     useState<ChartOrderBillingSummary>();
   const billingSummaryRef = useRef<ChartOrderBillingSummary | undefined>(
@@ -13244,6 +13252,9 @@ const OrderArea = memo(function OrderArea({
             executionResult.execution.billingCandidates,
           );
         }
+        if (!cancelled) {
+          setCanCancelDispensingTreatmentOrders(executionResult.ok && executionResult.canCancelDispensingTreatmentOrders === true);
+        }
         const billingCandidateResult = await loadChartBillingCandidates({
           actorHeaders,
           encounterId: bundle.encounter.id,
@@ -13470,6 +13481,7 @@ const OrderArea = memo(function OrderArea({
       encounterId: bundle.encounter.id,
       workspaceId: bundle.encounter.workspaceId,
     });
+    setCanCancelDispensingTreatmentOrders(result.ok && result.canCancelDispensingTreatmentOrders === true);
     if (!result.ok) return;
     setOrderExecution(result.execution);
     setCommittedRows((currentRows) =>
@@ -14545,6 +14557,19 @@ const OrderArea = memo(function OrderArea({
       );
     }
   };
+  const blockedCancellationOrderIds = useMemo(() => {
+    const blocked = new Set<string>();
+    if (canCancelDispensingTreatmentOrders) return blocked;
+    for (const row of draftRows) {
+      const type = getChartOrderClinicalType(row);
+      const destination = row.runtimeRow?.destinationModule;
+      if (type === "dispensing" || type === "treatment" || destination === "dispensing" || destination === "treatment") {
+        blocked.add(row.order.id);
+        if (row.runtimeRow?.parentOrderId) blocked.add(row.runtimeRow.parentOrderId);
+      }
+    }
+    return blocked;
+  }, [canCancelDispensingTreatmentOrders, draftRows]);
   const openOrderMutation = (
     orderId: string,
     action: ChartOrderExecutionMutationAction | "edit",
@@ -14552,6 +14577,7 @@ const OrderArea = memo(function OrderArea({
     if (action === "edit") { setConfirmedEditId(orderId); return; }
     const row = draftRows.find((candidate) => candidate.order.id === orderId);
     if (!row || !isChartOrderConfirmedRow(row)) return;
+    if (action === "cancel" && blockedCancellationOrderIds.has(orderId)) return;
     const outputs = row.runtimeRow?.calculationOutputs ?? {};
     const currentActual = getChartOrderClinicalType(row) === "dispensing" ? getDispenseRequestCourseQuantity(outputs) : outputs.actualDispenseQuantity;
     const manual = getChartOrderClinicalType(row) === "dispensing" ? outputs.actualDispenseSource === "manual_override" : Boolean(getChartOrderAuthority(row)?.preparationPolicy);
@@ -14570,6 +14596,7 @@ const OrderArea = memo(function OrderArea({
     const draft = orderMutationDraft;
     const row = mutationOrderRow;
     if (!draft || !row || draft.saving) return;
+    if (draft.action === "cancel" && blockedCancellationOrderIds.has(draft.orderId)) return;
     if (draft.reason.trim().length < 3) {
       setOrderMutationDraft({
         ...draft,
@@ -15101,6 +15128,7 @@ const OrderArea = memo(function OrderArea({
         ) : null}
         <div className="min-h-0 flex-1 overflow-hidden bg-[var(--emr-surface-panel)]">
           <ChartOrderTable
+            blockedCancellationOrderIds={blockedCancellationOrderIds}
             detailOpen={detailOrderId !== null}
             highlightedOrderId={quickAddedSourceKey === quickAddHighlightedKey ? quickAddedRow?.order.id : undefined}
             quickAddOpen={quickAddOpen}
@@ -15374,6 +15402,7 @@ const OrderArea = memo(function OrderArea({
           onConfirm={() => void commitOrderMutation()}
           onOpenChange={(open) => !open && setOrderMutationDraft(null)}
           row={mutationOrderRow}
+          submitDisabled={orderMutationDraft?.action === "cancel" && blockedCancellationOrderIds.has(orderMutationDraft.orderId)}
         />
         <ChartOrderCatalogDialog
           initialQuery={catalogInitialQuery}

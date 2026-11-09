@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 
 import { resolveDispensingDoseFactor } from "../src/features/chart/dispensing-unit-conversion";
+import { createEditableDispenseRow } from "../src/features/chart/dispense-edit.stories.fixture";
 import type { PlanOrderAuthorityConfig } from "../src/features/chart/plan-order-authority-domain";
 
 import chartWidthVisualFixture from "./fixtures/chart-width-visual.json";
@@ -7969,6 +7970,61 @@ test("chart safety context identifies the patient while order review shows only 
   await expect(orderConfirmDialog).not.toContainText("공유 Draft");
   await expect(orderConfirmDialog).not.toContainText("재요청 포함");
 });
+
+for (const [actor, canCancel] of [["user-tech", false], ["user-vet", true]] as const) {
+  test(`chart shows dispensing and treatment cancellation only to the veterinarian (${actor})`, async ({ page }) => {
+    const dispensing = {
+      ...createEditableDispenseRow("clair-demo", kongEncounterId, "soap-kong-260501"),
+      orderConfirmationStatus: "confirmed",
+      status: "confirmed",
+    };
+    const treatment = {
+      ...dispensing,
+      orderId: "synthetic-treatment-order",
+      orderType: "treatment",
+      clinicalOrderType: "treatment",
+      destinationModule: "treatment",
+      detailInputs: {},
+      appliedSnapshot: {
+        ...dispensing.appliedSnapshot,
+        billingName: "합성 처치",
+        inHospitalOrderName: "합성 처치",
+        clinicalOrderType: "treatment",
+        destinationModule: "treatment",
+        orderType: "treatment",
+      },
+    };
+    await page.route("**/chart/order-drafts?**", route => route.fulfill({
+      json: { ok: true, status: 200, etag: `"${"a".repeat(64)}"`, rows: [dispensing, treatment] },
+    }));
+    await page.route("**/chart/order-execution?**", async route => {
+      const response = await route.fetch({ headers: {
+        ...route.request().headers(),
+        "x-clair-demo-session-user-id": actor,
+      } });
+      await route.fulfill({ response });
+    });
+    await page.goto(kongScenarioUrl);
+    await page.getByRole("button", { name: /^예약 콩이 · 김하늘/ }).first().click();
+    for (const order of [dispensing, treatment]) {
+      const row = page.getByTestId(`chart-order-row-${order.orderId}`);
+      await expect(row).toHaveAttribute("data-order-confirmation", "confirmed");
+      await row.hover();
+      await row.getByTestId(`chart-order-more-${order.orderId}`).click();
+      const cancel = page.getByRole("menuitem", { name: "취소", exact: true });
+      if (canCancel) {
+        await cancel.click();
+        const dialog = page.getByRole("dialog", { name: /오더 취소/ });
+        await expect(dialog).toBeVisible();
+        await dialog.getByRole("button", { name: "취소", exact: true }).click();
+      } else {
+        await expect(page.getByRole("menuitem", { name: "이력", exact: true })).toBeVisible();
+        await expect(cancel).toHaveCount(0);
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
+}
 
 test("chart order review counts selected roots, matches scoped row charges, and cancels without a mutation", async ({ page }) => {
   await page.goto(kongScenarioUrl);

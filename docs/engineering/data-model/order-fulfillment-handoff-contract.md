@@ -159,6 +159,15 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - Applicable instructions appear below the order table. The scope labels are 전체 지시, 조제 지시 or 처치 지시, and 세트 지시. A required review opens through the existing start or completion flow.
 - Below vitals, the prework history reuses the chart timeline with Seoul dates, timestamps, and order names. It starts with the latest three past orders for the selected category and expands when more are available.
 
+## Dispensing and treatment order cancellation authority — 2026-11-09
+
+Cancelling a confirmed dispensing or treatment order, including a set containing
+either type, requires an active veterinarian in the order's workspace and the
+existing order-update permission. The chart uses server-read authority to show
+the cancellation action. Both chart mutation entry points enforce the same
+rule before writing or replaying a cancellation. Assigned technicians can
+complete work using the existing execution-result requirements.
+
 ## Dispensing/treatment instruction candidate — 2026-10-27
 
 Local candidate only; remote application is not verified. See
