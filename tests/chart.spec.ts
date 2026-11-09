@@ -1535,8 +1535,8 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
 
   // The left pinned span includes the terminal 8px boundary gap. The visible
   // divider is drawn at its trailing edge and the scroll layer starts after it.
-  expect(referenceMetrics.leftPinnedWidth).toBe(408);
-  expect(referenceMetrics.scrollRegionWidth).toBe(1130);
+  expect(referenceMetrics.leftPinnedWidth).toBe(392);
+  expect(referenceMetrics.scrollRegionWidth).toBe(1146);
   await expect(
     orderTable
       .locator("[data-slot='table-body'] [data-slot='table-row']")
@@ -1565,7 +1565,7 @@ test("chart Plan/Order keeps the approved pinned region and scrolls detail colum
   });
 
   await expect(selectionHeader).toHaveCSS("width", "28px");
-  await expect(statusHeader).toHaveCSS("width", "96px");
+  await expect(statusHeader).toHaveCSS("width", "104px");
 
   const selectionCheckboxBox = await selectionCheckbox.boundingBox();
   const statusSortButtonBox = await statusSortButton.boundingBox();

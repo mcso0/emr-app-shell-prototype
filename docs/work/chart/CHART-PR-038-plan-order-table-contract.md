@@ -269,3 +269,13 @@ No remote clinical mutation is part of this width follow-up.
 - Final visual review found default SID/head selector text clipping; compact
   selector insets/chevrons fix it without changing column widths or text size.
   The existing editing story now checks that selected values fit their controls.
+
+## 2026-11-09 header width follow-up
+
+The default and minimum content widths are 88px for 확정 여부, 96px for
+업무 상태, 72px for 총횟수, and 96px for 요청 수의사. 확정 여부 and
+요청 수의사 have fixed widths.
+
+Local Chromium verification at 1,673 × 867 confirmed that all four labels fit
+on first open. 업무 상태 and 총횟수 still fit after keyboard resizing to their
+minimum widths. Six focused Plan/Order browser tests passed.
