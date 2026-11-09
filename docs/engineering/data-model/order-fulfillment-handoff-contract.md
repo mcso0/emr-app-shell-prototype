@@ -610,6 +610,15 @@ product quantity; `theoreticalTotalQuantity` is its course total.
 Execution-result quantities remain a separate contract. Product-unit billing
 uses the final course request; fixed-order/set pricing keeps its existing basis.
 
+In the confirmed dispensing order dialog, `총량` shows the saved theoretical
+total as a read-only value, with the saved legacy total as a fallback. The
+separate `요청 조제량` shows the final course request and its calculation mode.
+Open manual adjustment explicitly. A change that affects the course quantity
+requires reconfirming a manual request or returning it to automatic calculation
+before saving. Use the existing server calculation on save. The instruction
+table and its change history show the saved course request and unit under
+`요청 조제량`, falling back to the saved total for older instructions.
+
 The server captures a frozen `orders.dispense_request_rule_snapshot` on insert.
 It contains source, version, product key and rule. Updates and draft upserts
 retain that snapshot. Rule precedence is manual order value, product exception,
