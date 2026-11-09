@@ -171,8 +171,9 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
 }
 
 for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처치"]] as const) {
-  test(`${queueType} header separates the progress indicator from the completion group`, async ({ page }, testInfo) => {
+  test(`${queueType} header keeps the status beside the start time in narrow view`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
     const { actions } = await install(page, { queueType, started: true, canUnassign: true });
     const header = page.locator('[data-slot="emr-page-header"]').filter({
       has: page.getByRole("heading", { name: `${label} 지시서`, exact: true }),
@@ -181,15 +182,34 @@ for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처�
     const group = header.getByRole("group", { name: `${label} 완료 보조 작업` });
     const arrow = group.getByRole("button", { name: "업무 상태 변경" });
     const info = page.locator('[data-slot="instruction-info-card"]');
-    await expect(header).toContainText(new RegExp(`${label} 시작 일시 .*합성 기존 담당자좁게 보기${label} 완료`));
-    await expect(header.getByRole("button", { name: "좁게 보기", exact: true })).toBeVisible();
-    await expect(header.getByText("진행중", { exact: true })).toHaveCount(0);
+    const start = header.getByText(`${label} 시작 일시 09:05`, { exact: true });
+    const badge = header.getByTestId("instruction-status-label");
+    const narrow = header.getByRole("button", { name: "좁게 보기", exact: true });
+    await expect(header).toContainText(new RegExp(`${label} 시작 일시 09:05진행중합성 기존 담당자좁게 보기${label} 완료`));
+    await expect(page.getByTestId("instruction-status-label")).toHaveCount(1);
+    await expect(badge).toHaveText("진행중");
     await expect(complete).toHaveCount(1);
     await expect(group.getByRole("button", { name: `${label} 완료`, exact: true })).toBeEnabled();
-    await expect(info.getByTestId("instruction-status-label")).toHaveText("진행중");
+    const request = info.getByText("요청 일시", { exact: true }).locator("..");
+    await expect(request.locator('[data-slot="instruction-info-card-value"]')).toHaveText("2026.10.31 09:00");
     await expect(info.getByText(`${label} 시작`, { exact: true })).toHaveCount(0);
     await expect(info.getByText(`${label} 담당`, { exact: true })).toHaveCount(0);
 
+    await narrow.click();
+    const workspace = page.getByTestId("workspace-document");
+    await expect(workspace).toHaveAttribute("data-width-mode", "narrow");
+    await expect(workspace).toHaveCSS("max-width", "1120px");
+    for (const width of [1920, 768]) {
+      await page.setViewportSize({ width, height: 1080 });
+      await expect(start).toBeInViewport({ ratio: 0.99 });
+      await expect(badge).toBeInViewport({ ratio: 0.99 });
+      const [startBox, badgeBox] = await Promise.all([start.boundingBox(), badge.boundingBox()]);
+      const gap = badgeBox!.x - (startBox!.x + startBox!.width);
+      expect(gap).toBeGreaterThan(0);
+      expect(gap).toBeLessThanOrEqual(8);
+      expect(Math.abs(badgeBox!.y + badgeBox!.height / 2 - startBox!.y - startBox!.height / 2)).toBeLessThan(2);
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
     const headerBox = (await header.boundingBox())!;
     const infoBox = (await info.boundingBox())!;
     await page.screenshot({

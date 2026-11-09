@@ -1956,25 +1956,24 @@ function DispensingContentBody({
       ? selectedQueueStatusLabel
       : primaryStartStatus;
   const instructionStartedAt = firstStartedAt ? formatOperatingShortTime(firstStartedAt) : selectedQueueItem?.startedAt ?? "미시작";
+  const instructionStatusBadge = (
+    <EmrStatusBadge label={instructionStartStatus} marker="none" testId="instruction-status-label" />
+  );
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
-    {
-      label: "요청 일시",
-      value: (
-        <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap">
-          <span className="min-w-0 truncate">{instructionRequestedAt}</span>
-          <EmrStatusBadge
-            label={instructionStartStatus}
-            marker="none"
-            testId="instruction-status-label"
-          />
-        </span>
-      ),
-    },
+    { label: "요청 일시", value: instructionRequestedAt },
     { label: "환자 정보", value: instructionPatientSummary },
     { label: "요청 수의사", value: instructionRequester },
     ...(!usesInstructionWorkspace ? [
       { label: `${instructionType} 담당`, value: instructionAssignee },
-      { label: `${instructionType} 시작`, value: instructionStartedAt },
+      {
+        label: `${instructionType} 시작`,
+        value: (
+          <span className="inline-flex shrink-0 items-center gap-1.5">
+            <span>{instructionStartedAt}</span>
+            {instructionStatusBadge}
+          </span>
+        ),
+      },
     ] : []),
   ];
   const updateGroup = (
@@ -2216,14 +2215,19 @@ function DispensingContentBody({
             actions={
               <>
                 {usesInstructionWorkspace ? (
-                  <div className="flex items-center gap-2 whitespace-nowrap">
-                    <span className="text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
-                      {`${instructionType} 시작 일시 ${instructionStartedAt}`}
+                  <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+                    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                      <span className="text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
+                        {`${instructionType} 시작 일시 ${instructionStartedAt}`}
+                      </span>
+                      {instructionStatusBadge}
                     </span>
-                    <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
-                    <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
-                      <CdsPeopleUserIcon className="size-3.5" aria-hidden="true" />
-                      {instructionAssignee}
+                    <span className="inline-flex min-w-0 items-center gap-2">
+                      <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
+                      <span className="inline-flex h-7 min-w-0 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium">
+                        <CdsPeopleUserIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">{instructionAssignee}</span>
+                      </span>
                     </span>
                   </div>
                 ) : null}
@@ -2307,7 +2311,10 @@ function DispensingContentBody({
           <div className="grid gap-2">
             <div
               data-slot="instruction-info-card"
-              className={cn("grid min-h-[72px] rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]", usesInstructionWorkspace ? "grid-cols-3" : "grid-cols-5")}
+              className={cn(
+                "grid min-h-[72px] rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]",
+                usesInstructionWorkspace ? "grid-cols-3" : "grid-cols-[repeat(4,minmax(0,1fr))_minmax(max-content,1fr)]",
+              )}
             >
               {instructionInfoItems.map(({ label, value }) => (
                 <div
