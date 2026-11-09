@@ -28,7 +28,7 @@ declare
   requester uuid:='00000000-0000-4000-8000-000000000003';
   chart uuid:='51000000-0000-4000-8000-000000000001';
   chart_revision integer; d jsonb; cmd jsonb; review jsonb; action text; actor uuid; reason text:='합성 교대 사유';
-  events_before bigint; notes_before bigint;
+  events_before bigint; notes_before bigint; original_start timestamptz;
 begin
   perform set_config('test.actor',requester::text,true);
   select coalesce(max(revision),0) into chart_revision from private.chart_instruction_revisions
@@ -104,6 +104,36 @@ begin
       or (select count(*) from notification_events)<>notes_before then
       raise exception 'assignment and start replay changed outcome or wrote duplicate events';
     end if;
+    -- A released single order is available to another assignee through the
+    -- same claim-and-start command, with the original timestamps preserved.
+    if action='claim' then
+      select started_at into original_start from order_fulfillment_work_items where id=wi.id;
+      d:=public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,jsonb_build_object(
+        'action','unassign','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+      if d->>'mainAssigneeId' is not null or d#>>'{items,0,status}'<>'paused' then
+        raise exception '% was not released',wi.queue_type;
+      end if;
+      perform set_config('test.actor',next_owner::text,true);
+      cmd:=jsonb_build_object('action','claim','startWork',true,
+        'commandId',gen_random_uuid(),'expectedRevision',d->>'revision');
+      review:=public.clair_get_task_instruction_review('workspace-a',wi.task_id);
+      if (review->>'requiresAcknowledgement')::boolean then
+        begin
+          perform public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,cmd);
+          raise exception 'reassignment bypassed instruction acknowledgement';
+        exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
+        if d is distinct from public.clair_get_fulfillment_instruction('workspace-a',wi.id) then
+          raise exception 'failed reassignment changed owner or state';
+        end if;
+        perform public.clair_acknowledge_task_instructions('workspace-a',wi.task_id,review#>>'{current,versionKey}');
+      end if;
+      d:=public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,cmd);
+      if d->>'mainAssigneeId' is distinct from next_owner::text or d#>>'{items,0,status}'<>'in_progress'
+        or (d->>'canResume')::boolean or not exists(
+          select 1 from order_fulfillment_work_items where id=wi.id and assigned_to_user_id=next_owner
+            and created_at=wi.created_at and started_at=original_start
+        ) then raise exception '% reassign changed the original timestamps or required a second command',wi.queue_type; end if;
+    end if;
   end loop;
 end $$;
 
@@ -133,6 +163,16 @@ begin
   other_after:=public.clair_get_fulfillment_instruction('workspace-a',treatment);
   if other_after-'revision' is distinct from other_before-'revision' then
     raise exception 'set claim and start changed the other queue';
+  end if;
+  d:=public.clair_mutate_fulfillment_instruction('workspace-a',dispensing,jsonb_build_object(
+    'action','unassign','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+  begin
+    perform public.clair_mutate_fulfillment_instruction('workspace-a',dispensing,jsonb_build_object(
+      'action','claim','startWork',true,'commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
+    raise exception 'reassignment started a separately owned item';
+  exception when raise_exception then if sqlerrm<>'invalid_transition' then raise; end if; end;
+  if d is distinct from public.clair_get_fulfillment_instruction('workspace-a',dispensing) then
+    raise exception 'blocked set reassignment changed owner or state';
   end if;
 end $$;
 

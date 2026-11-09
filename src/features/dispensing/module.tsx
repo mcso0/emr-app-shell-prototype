@@ -70,7 +70,7 @@ import { FulfillmentExecutionActions } from "@/features/fulfillment/components/e
 import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
 import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
 import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
-import { getInstructionStatusLabel } from "./instruction-view-model";
+import { getInstructionStatusLabel, hasPendingInstructionRerequest, isWaitingInstruction } from "./instruction-view-model";
 import {
   getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
@@ -613,6 +613,9 @@ function applyFulfillmentToQueueItems(
 
 function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
+  const queueStatus = workItem.status === "paused" && !workItem.assignedToUserId
+    ? "requested"
+    : workItem.status;
   const timestamp =
     workItem.createdAt ?? new Date().toISOString();
   const time = formatOperatingShortTime(timestamp);
@@ -623,7 +626,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       assignedToUserId: workItem.assignedToUserId,
       patientId: workItem.patientId,
       workspaceId: workItem.workspaceId,
-      status: statusId === "reRequested" && workItem.status === "requested" ? "re_requested" : workItem.status,
+      status: statusId === "reRequested" && workItem.status === "requested" ? "re_requested" : queueStatus,
       priority: workItem.priority,
       requestedAt: workItem.createdAt,
       originChartId: workItem.originChartId,
@@ -649,7 +652,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
         : undefined,
     statusId,
     time,
-    waitMinutes: workItem.status === "requested" ? 0 : undefined,
+    waitMinutes: queueStatus === "requested" ? 0 : undefined,
   };
 }
 
@@ -704,12 +707,13 @@ function getFulfillmentRequesterName(workItem: FulfillmentWorkItem) {
 }
 
 function mapFulfillmentToQueueStatusId(
-  { status, requestCycle, taskAttemptNo }: FulfillmentWorkItem,
+  { status, assignedToUserId, requestCycle, taskAttemptNo }: FulfillmentWorkItem,
   fallback: string,
 ) {
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
+  if (status === "paused" && !assignedToUserId) return "waiting";
   if (status === "in_progress" || status === "paused") return "inProgress";
   if (status === "requested") return (requestCycle ?? taskAttemptNo ?? 1) > 1 ? "reRequested" : "waiting";
   return fallback;
@@ -1800,10 +1804,13 @@ function DispensingContentBody({
   const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
   const firstStartedAt = instruction.document?.firstStartedAt;
+  const keepStartedRerequestOpen = firstStartedAt && instruction.document
+    && hasPendingInstructionRerequest(instruction.document)
+    && instruction.document.items.every((item) => item.status === "requested");
   const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
     && !instruction.document.finalized && instruction.document.items.length > 0
     && (preworkCompletionRoot === instructionScope
-      || (!firstStartedAt && instruction.document.items.every((item) => item.status === "requested")));
+      || (isWaitingInstruction(instruction.document) && !keepStartedRerequestOpen));
   const entry = useOrderPrework({
     preserveLayoutWhilePending: true,
     scopeKey: `${workspaceId}:${selectedFulfillmentWorkItem?.id ?? ""}:${instructionScope ?? ""}`,

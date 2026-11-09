@@ -124,6 +124,20 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
 - Assignment-only commands remain available to existing callers. The follow-up
   migration is verified in a scoped local PostgreSQL fixture.
 
+## Return released dispensing and treatment work to waiting — 2026-11-09
+
+- After a successful 담당 취소, a released item keeps its exact selection and
+  appears as 대기중 in both queue views.
+  An instruction with no main assignee opens prework when its remaining items
+  are unassigned and at least one item is paused.
+- Confirming 담당하기 on that screen assigns and starts the remaining items in
+  one command and opens the instruction. Existing timestamps and completed
+  items are preserved. The flow uses the existing instruction acknowledgement
+  and treatment medication-link checks.
+- An assigned paused item still belongs to 진행중. The start command leaves
+  separately assigned work and the other queue in a mixed set in their
+  existing scope. The migration changes the instruction command only.
+
 ## Shared order entry presentation — 2026-11-03
 
 Local UI implementation uses the unchanged chart preconsultation layout as its
@@ -164,6 +178,7 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - A pending replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
 - An instruction with prior work stays open after re-request and reload. The scoped instruction read returns the earliest start time of the displayed items across their attempts. A document without start history follows the prework entry.
 - The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
+- Releasing the assignment after continuation shows the waiting entry and queue group for that item. Its earlier start remains in the instruction history.
 
 ## Dispensing and treatment order cancellation authority — 2026-11-09
 
@@ -508,7 +523,8 @@ SOAP charts. Missing patient identities stay task-specific. Names are display
 labels only. Type/status/search counts retain their existing task semantics.
 Urgency is independent of lifecycle status. Patient priority/latest sorting
 uses raw priority/status and immutable request creation time; equal task ranks
-use the chosen request/assignee/wait sort. Paused belongs to 진행중 filtering.
+use the chosen request/assignee/wait sort. Assigned paused items belong to
+진행중. Unassigned paused dispensing and treatment items appear as 대기중.
 Assignment filtering uses assignedToUserId, not whether a display name resolves.
 
 Selection still uses exact lab result, imaging study, or fulfillment queue

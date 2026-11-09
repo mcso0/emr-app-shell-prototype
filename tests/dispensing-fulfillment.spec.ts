@@ -1499,53 +1499,127 @@ test("dispensing context opens the selected live profile and vital editor", asyn
 });
 
 for (const queueType of ["dispensing", "treatment"] as const) {
-  test(`${queueType} keeps request time after claim and cancellation`, async ({ page }) => {
+  test(`${queueType} returns the selected order to waiting after unassign and opens it on reclaim`, async ({ page }, testInfo) => {
     await grantCheongdamWorkspaceAccess(page);
     const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
     const id = "97090000-0000-4000-8000-000000000991";
+    const siblingId = "97090000-0000-4000-8000-000000000993";
     const encounterId = "97090000-0000-4000-8000-000000000992";
+    const patientId = "97090000-0000-4000-8000-000000000994";
+    const orderName = "합성 담당 취소 검증";
     let assignedToUserId: string | null = null;
+    let status: InstructionDocument["items"][number]["status"] = "requested";
     let rowRevision = 1;
-    let updatedAt = "2026-09-07T02:45:00.000Z";
-    const workItem = () => ({ id, workspaceId, encounterId, orderId: id, queueType,
-      status: assignedToUserId ? "in_progress" : "paused", requestCycle: 1, rowRevision, assignedToUserId,
+    const commands: Array<{ action: string; startWork?: boolean; commandId: string }> = [];
+    let rejectUnassign = queueType === "dispensing";
+    await page.route("**/fulfillment/instruction-review?*", route => {
+      const taskIds = new URL(route.request().url()).searchParams.get("taskIds")?.split(",") ?? [];
+      return route.fulfill({ json: { ok: true, reviews: taskIds.map(taskId => ({
+        taskId, requiresAcknowledgement: false, previous: null, snapshots: [], current: null,
+      })) } });
+    });
+    await page.route(`**/api/workspaces/${workspaceId}/customer/patient/${patientId}/profile-overview`, route =>
+      route.fulfill({ json: { ok: true, overview: {
+        subjectId: patientId, subjectType: "patient",
+        profile: { id: patientId, name: "합성 환자", breed: "말티즈", species: "dog", sex: "female", neutered: true },
+        relationships: { guardians: [] }, access: { information: { allowed: true, requiredPermission: "patient:view" } },
+      } } }));
+    await page.route(`**/api/workspaces/${workspaceId}/vital-settings`, route => route.fulfill({ json: createDefaultWorkspaceVitalSettingsSnapshot(false) }));
+    await page.route(`**/api/workspaces/${workspaceId}/patient-vitals/history?*`, route => route.fulfill({ json: { ok: true, measurements: [] } }));
+    const workItem = () => ({ id, workspaceId, encounterId, patientId, orderId: id, queueType, status,
+      requesterName: "합성 요청자",
+      requestCycle: 1, rowRevision, assignedToUserId,
       assignedToDisplayName: assignedToUserId ? "합성 담당" : null, canManage: true,
-      createdAt: "2026-09-07T01:30:00.000Z", updatedAt,
-      sourceSnapshot: { orderDisplayName: "합성 요청 시각 검증", patientName: "합성 환자" },
+      createdAt: "2026-09-07T01:30:00.000Z", updatedAt: rowRevision > 1 ? "2026-09-07T03:45:00.000Z" : "2026-09-07T02:45:00.000Z",
+      sourceSnapshot: { orderDisplayName: orderName, patientName: "합성 환자" },
     });
     await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, route => {
       const type = new URL(route.request().url()).searchParams.get("queueType");
-      return route.fulfill({ json: { ok: true, workItems: type === queueType ? [workItem()] : [] } });
-    });
-    await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}`, route => {
-      const command = route.request().postDataJSON();
-      assignedToUserId = command.action === "unassign" ? null : "playwright-default-session";
-      rowRevision += 1; updatedAt = "2026-09-07T03:45:00.000Z";
-      return route.fulfill({ json: { ok: true, workItems: [workItem()] } });
+      return route.fulfill({ json: { ok: true, workItems: type === queueType ? [workItem(), {
+        ...workItem(), id: siblingId, orderId: siblingId, status: "paused", assignedToUserId: "another-assignee",
+        assignedToDisplayName: "다른 담당자", sourceSnapshot: { orderDisplayName: "같은 환자의 다른 오더", patientName: "합성 환자" },
+      }] : [] } });
     });
     await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/assignees`, route => route.fulfill({ json: { ok: true, assignees: [] } }));
     await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/instruction`, route => {
       if (route.request().method() === "PATCH") {
-        assignedToUserId = route.request().postDataJSON().action === "unassign" ? null : "playwright-default-session";
-        rowRevision++; updatedAt = "2026-09-07T03:45:00.000Z";
+        const { action, startWork, commandId } = route.request().postDataJSON();
+        commands.push({ action, startWork, commandId });
+        if (action === "unassign") {
+          if (rejectUnassign) {
+            rejectUnassign = false;
+            return route.fulfill({ status: 503, json: { ok: false } });
+          }
+          assignedToUserId = null;
+          status = "paused";
+        } else if (action === "claim" && startWork === true) {
+          assignedToUserId = "playwright-default-session";
+          status = "in_progress";
+        } else {
+          return route.fulfill({ status: 409, json: { ok: false, error: "invalid_transition" } });
+        }
+        rowRevision++;
       }
-      return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction), isSet: false, queueType,
+      return route.fulfill({ json: { ok: true, document: { ...structuredClone(syntheticInstruction), rootTaskId: id, rootOrderId: id,
+        name: orderName, encounterNo: "SYNTHETIC-001", isSet: false, queueType,
         mainAssigneeId: assignedToUserId, mainAssigneeName: assignedToUserId ? "합성 담당" : null,
         canClaim: !assignedToUserId, canStart: false, canUnassign: !!assignedToUserId, canCompleteAll: false, canEditInstruction: false,
-        revision: String(rowRevision), items: [{ ...syntheticInstruction.items[0], id, orderId: id, taskId: id, name: "합성 요청 시각 검증", status: assignedToUserId ? "in_progress" : "paused", canComplete: false, canReopen: false }] } } });
+        revision: String(rowRevision), items: [{ ...syntheticInstruction.items[0], id, orderId: id, taskId: id, name: orderName, status,
+          assigneeId: assignedToUserId, assigneeName: assignedToUserId ? "합성 담당" : null, canComplete: false, canReopen: false }] } } });
     });
     await page.goto(`/w/${workspaceId}/dispensing?date=2026-09-07&encounterId=${encounterId}&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed`);
-    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
-    await expect(card).toContainText("10:30");
-    await page.getByRole("button", { name: "담당하기", exact: true }).click();
+    const cardId = `order-queue-item-live-fulfillment-${id}`;
+    const waiting = page.getByTestId("order-queue-status-waiting");
+    const inProgress = page.getByTestId("order-queue-status-inProgress");
+    const prework = page.getByTestId("fulfillment-prework");
     const label = queueType === "treatment" ? "처치" : "조제";
-    await expect(page.getByRole("button", { name: `${label} 시작`, exact: true })).toHaveCount(0);
-    await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
-    await expect(card).toContainText("10:30");
-    await page.getByRole("button", { name: "담당 취소", exact: true }).click();
-    await expect(page.getByRole("button", { name: "담당하기", exact: true })).toBeEnabled();
-    await expect(card).toContainText("10:30");
-    await expect(card).not.toContainText("12:45");
+    const heading = page.getByRole("heading", { name: `${label} 지시서`, exact: true });
+    const claim = async () => {
+      await prework.getByRole("button", { name: "담당하기", exact: true }).click();
+      await page.getByRole("dialog", { name: "이 업무를 담당할까요?" }).getByRole("button", { name: "담당하기", exact: true }).click();
+      await expect(heading).toBeVisible();
+      await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+      await expect(inProgress.getByTestId(cardId)).toBeVisible();
+    };
+
+    await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+    await expect(waiting.getByTestId(cardId)).toContainText("10:30");
+    await claim();
+    const unassign = page.getByRole("button", { name: "담당 취소", exact: true });
+    await unassign.click();
+    if (queueType === "dispensing") {
+      await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했어요." })).toBeVisible();
+      await expect(heading).toBeVisible();
+      await expect(inProgress.getByTestId(cardId)).toBeVisible();
+      await unassign.click();
+    }
+    for (const reload of [false, true]) {
+      if (reload) await page.reload();
+      await expect(prework).toBeVisible();
+      await expect(prework.getByText(orderName, { exact: true }).first()).toBeVisible();
+      await expect(heading).toHaveCount(0);
+      await expect(waiting.getByTestId(cardId)).toContainText("10:30");
+      await expect(waiting.getByTestId(cardId)).not.toContainText("12:45");
+      await expect(waiting.getByTestId(cardId)).toHaveAttribute("data-selected", "true");
+      await expect(inProgress.getByTestId(cardId)).toHaveCount(0);
+      await expect(inProgress.getByTestId(`order-queue-item-live-fulfillment-${siblingId}`)).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`[?&]workItemId=${id}(&|$)`));
+    }
+    await expect(prework.locator("header")).toContainText("합성 환자");
+    await page.screenshot({ path: testInfo.outputPath("waiting-after-unassign.png") });
+    await page.getByRole("button", { name: "환자별 보기", exact: true }).click();
+    await expect(page.getByTestId(cardId).getByText("대기중", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
+    await claim();
+    await expect(page.getByRole("button", { name: "재개", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    if (queueType === "dispensing") expect(commands[1].commandId).toBe(commands[2].commandId);
+    expect(commands.map(({ action, startWork }) => ({ action, startWork }))).toEqual([
+      { action: "claim", startWork: true },
+      { action: "unassign", startWork: undefined },
+      ...(queueType === "dispensing" ? [{ action: "unassign", startWork: undefined }] : []),
+      { action: "claim", startWork: true },
+    ]);
   });
 }
 

@@ -113,6 +113,17 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
       } else if (action === "start") {
         document.canStart = false;
         document.items.forEach(item => { if (item.status === "requested") { item.status = "in_progress"; contexts[item.id].status = "in_progress"; } });
+      } else if (action === "unassign") {
+        document.mainAssigneeId = null;
+        document.mainAssigneeName = null;
+        document.canClaim = true;
+        document.canUnassign = false;
+        document.items.forEach(item => {
+          if (item.status !== "in_progress") return;
+          item.status = "paused";
+          item.assigneeId = null;
+          item.assigneeName = null;
+        });
       } else if (action === "complete_all") {
         if (document.items.some(item => item.resultRequired)) return route.fulfill({ status: 409, json: { ok: false, error: "actual_execution_result_required" } });
         document.finalized = true; document.canCompleteAll = false;
@@ -284,6 +295,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     document.revision = "2";
     document.firstStartedAt = "2026-10-31T00:05:00+00:00";
     document.canStart = true;
+    document.canUnassign = true;
     document.changes = [{ id: "synthetic-edit", orderId: id, createdAt: "2026-10-31T00:20:00Z",
       actorName: "합성 수의사", changeType: "re_request",
       before: { ...before, instruction: item.instruction }, after: { ...after, instruction: item.instruction } }];
@@ -339,6 +351,12 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await expect(page.getByText("09:05", { exact: true })).toBeVisible();
     await expect(modified).toContainText("합성 품목 1");
     expect(actions).toEqual(["start"]);
+
+    await page.getByRole("button", { name: "담당 취소", exact: true }).click();
+    await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+    await expect(page.getByTestId("order-queue-status-waiting").locator(card)).toBeVisible();
+    await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
+    expect(actions).toEqual(["start", "unassign"]);
   });
 }
 
