@@ -28,7 +28,6 @@ export type InstructionViewItem = {
   change: "added" | "modified" | "existing";
   canAssign: boolean;
   canComplete: boolean;
-  canReopen: boolean;
   previous?: Partial<InstructionViewItem>;
 };
 export type InstructionViewOrder = {
@@ -47,7 +46,7 @@ export type InstructionViewEvent = {
   changes: { itemId: string; field: string; before: string; after: string }[];
 };
 export type InstructionViewAction = {
-  type: "assign" | "toggle_complete";
+  type: "assign" | "complete";
   itemId?: string;
   assignees?: string[];
 };
@@ -250,7 +249,6 @@ export function createInstructionView(document: InstructionDocument) {
           : "existing",
       canAssign: item.canAssign,
       canComplete: item.canComplete,
-      canReopen: item.canReopen,
       previous,
     };
   });

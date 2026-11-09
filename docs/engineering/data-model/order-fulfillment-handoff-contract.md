@@ -184,6 +184,24 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
 - After releasing a replacement attempt, 업무 계속하기 checks the latest instructions and claims and resumes the existing attempt for an eligible assignee. Its earlier start remains in the instruction history.
 
+## Reopening a completed dispensing or treatment instruction
+
+- The finalized instruction body keeps filters, sorting, density, disclosures,
+  and history available. Row completion and assignment controls are disabled.
+  The table history dialog is available even when there are no revisions.
+- The header's `완료 ⌄` offers `진행 중으로 변경` when the server reports an
+  eligible completed item. A set confirmation submits one selected item through
+  the existing revision-checked `reopen` command. Other items and queue types
+  keep their state and results. In an unfinished set, the same header menu
+  offers `완료 항목 다시 진행` for eligible completed items.
+- After reopening, the existing `담당 취소` command is available in the header
+  when the server permits it. A released first attempt follows the waiting
+  flow above. Order cancellation remains a chart action.
+- Completed execution history opens in read-only mode from the body. Existing
+  authorized record corrections and common instruction edits open explicitly
+  from the header document menu. Current server permission, instruction
+  acknowledgement, billing lock, and command retry rules apply.
+
 ## Chart navigation to a dispensing or treatment instruction — 2026-11-09
 
 - A confirmed executable order with a current dispensing or treatment work item

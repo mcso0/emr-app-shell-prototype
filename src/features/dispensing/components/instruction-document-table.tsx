@@ -168,11 +168,13 @@ function OrderCard({
   editSetInstruction,
   refresh,
 }: Props & { order: Order }) {
+  const readOnly = o.status === "completed";
   const [collapsed, setCollapsed] = useState(false),
     [density, setDensity] = useState(40),
     [sort, setSort] = useState(false),
     [pending, setPending] = useState(false),
     [hidden, setHidden] = useState<string[]>([]);
+  const visibleItems = pending ? o.items.filter(item => !["completed", "cancelled"].includes(item.status)) : o.items;
 
   async function copy(link: boolean) {
     try {
@@ -386,7 +388,6 @@ function OrderCard({
         <Button
           variant="outline"
           className="fd-tool fd-history"
-          disabled={busy || !events.some((event) => event.orderId === o.id)}
           onClick={() => history(o.id)}
         >
           <Icon name="history" />
@@ -419,12 +420,9 @@ function OrderCard({
       </header>
       {!collapsed && (
         <div className="fd-sections">
+          {pending && !visibleItems.length && <p className="p-3 text-sm text-muted-foreground" role="status">미완료 오더가 없어요.</p>}
           {groups.map(([key, title]) => {
-            let rows = o.items.filter(
-              (i) =>
-                group(i) === key &&
-                (!pending || !["completed", "cancelled"].includes(i.status)),
-            );
+            let rows = visibleItems.filter(item => group(item) === key);
             if (sort)
               rows = [...rows].sort((a, b) => a.name.localeCompare(b.name));
             if (!rows.length) return null;
@@ -583,7 +581,7 @@ function OrderCard({
                                           variant="ghost"
                                           className="fd-assignee"
                                           aria-label={`${i.name} 담당 선택`}
-                                          disabled={busy || !i.canAssign}
+                                          disabled={busy || readOnly || !i.canAssign}
                                         />
                                       }
                                     >
@@ -605,6 +603,7 @@ function OrderCard({
                                           checked={i.assignees.includes(id)}
                                           disabled={
                                             busy ||
+                                            readOnly ||
                                             !i.canAssign ||
                                             i.assignees.includes(id)
                                           }
@@ -633,16 +632,11 @@ function OrderCard({
                                 <Button
                                   variant="outline"
                                   className={`fd-complete ${i.status === "completed" ? "is-complete" : ""}`}
-                                  aria-label={`${i.name} ${i.status === "completed" ? "완료 해제" : "완료"}`}
+                                  aria-label={`${i.name} 완료`}
                                   aria-pressed={i.status === "completed"}
-                                  disabled={
-                                    busy ||
-                                    (i.status === "completed"
-                                      ? !i.canReopen
-                                      : !i.canComplete)
-                                  }
+                                  disabled={busy || readOnly || i.status === "completed" || !i.canComplete}
                                   onClick={() =>
-                                    act(o.id, "toggle_complete", {
+                                    act(o.id, "complete", {
                                       itemId: i.id,
                                     })
                                   }

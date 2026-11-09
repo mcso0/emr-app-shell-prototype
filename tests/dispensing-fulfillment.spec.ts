@@ -1559,13 +1559,16 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await page.getByRole("button", { name: "오더별 보기", exact: true }).click();
     await expect(waiting.getByTestId(cardId)).toContainText("10:30");
     await claim();
-    const unassign = page.getByRole("button", { name: "담당 취소", exact: true });
-    await unassign.click();
+    const unassign = async () => {
+      await page.getByRole("button", { name: "업무 상태 변경" }).click();
+      await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
+    };
+    await unassign();
     if (queueType === "dispensing") {
       await expect(page.getByRole("alert").filter({ hasText: "변경을 저장하지 못했어요." })).toBeVisible();
       await expect(heading).toBeVisible();
       await expect(inProgress.getByTestId(cardId)).toBeVisible();
-      await unassign.click();
+      await unassign();
     }
     for (const reload of [false, true]) {
       if (reload) await page.reload();

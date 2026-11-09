@@ -87,7 +87,7 @@ begin
  jsonb_strip_nulls(jsonb_build_object('action',action,'commandId',gen_random_uuid(),'expectedRevision',d->>'revision','itemId',item_id,'assigneeId',assignee)));
 end $$;
 do $$
-declare d jsonb; cmd jsonb; previous_result jsonb; events_before bigint; orders_before bigint; notifications_before bigint;
+declare d jsonb; cmd jsonb; previous_result jsonb; sibling_before jsonb; events_before bigint; orders_before bigint; notifications_before bigint;
 begin
  d:=public.clair_get_fulfillment_instruction('workspace-a','40000000-0000-4000-8000-000000000002');
  if d->>'name' is distinct from 'Synthetic set' or d#>>'{items,0,name}' is distinct from 'Synthetic item 1' then raise exception 'canonical snapshot names missing'; end if;
@@ -127,6 +127,8 @@ begin
  select count(*) into events_before from order_task_events;
  select count(*) into orders_before from order_events;
  select count(*) into notifications_before from notification_events;
+ select to_jsonb(w) into sibling_before from order_fulfillment_work_items w where w.id='40000000-0000-4000-8000-000000000003';
+ begin perform pg_temp.command('unassign'); raise exception 'completed set released directly'; exception when insufficient_privilege then null; end;
  select result_snapshot into previous_result from order_tasks where id='30000000-0000-4000-8000-000000000002';
  d:=pg_temp.command('reopen','40000000-0000-4000-8000-000000000002');
  if (select count(*) from notification_events)<>notifications_before then raise exception 'undo emitted notification'; end if;
@@ -136,6 +138,9 @@ begin
  begin update order_tasks set status='in_progress' where id='30000000-0000-4000-8000-000000000003'; raise exception 'direct reopen bypass'; exception when object_not_in_prerequisite_state then null; end;
  d:=pg_temp.command('unassign');
  if d->>'mainAssigneeId' is not null or (select status from order_fulfillment_work_items where id='40000000-0000-4000-8000-000000000002')<>'paused' then raise exception 'unassign did not pause'; end if;
+ if (select to_jsonb(w) from order_fulfillment_work_items w where w.id='40000000-0000-4000-8000-000000000003') is distinct from sibling_before then
+   raise exception 'reopen or unassign changed the completed sibling';
+ end if;
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
  d:=pg_temp.command('claim');
  if not (d->>'canResume')::boolean then raise exception 'claim resumed paused work'; end if;

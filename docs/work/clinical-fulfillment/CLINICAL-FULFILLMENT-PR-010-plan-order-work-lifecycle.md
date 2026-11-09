@@ -2296,3 +2296,22 @@ non-billable synthetic dispensing order and one non-billable synthetic
 treatment order. Verify completion without an execution result and verify
 cleanup of the smoke fixtures. Capture the previous Ready deployment and
 both replaced database functions and grants before applying the migration.
+
+### Completed dispensing and treatment instruction actions — 2026-11-09
+
+승욱 approved local implementation from `origin/main` `899f0203` in an isolated
+worktree. The [instruction reopening contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#reopening-a-completed-dispensing-or-treatment-instruction)
+defines the read-only body, one-item reopen confirmation, and separate header
+actions for assignment release and authorized corrections. The implementation
+uses the existing instruction API and command permissions.
+
+Local Playwright verification uses synthetic HTTP responses. It covers the
+read-only tools and empty history, single-item reopen retry, separation of
+record viewing and correction, and a completed treatment set reopened for one
+selected child. Releasing and reclaiming that child preserves the completed
+sibling and the selected queue item across reload. The isolated PostgreSQL
+fixture confirms that a finalized set cannot be released directly and that
+reopen followed by release preserves the completed sibling and prior results.
+The instruction workspace stories pass. The existing common-header integration
+story reports the same Next.js router error on the baseline. Production
+verification remains outside this local implementation.

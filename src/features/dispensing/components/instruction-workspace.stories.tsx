@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, within, waitFor } from "storybook/test";
 import { syntheticInstruction } from "../instruction-fixtures";
 import type { InstructionIntent } from "../use-fulfillment-instruction";
-import { InstructionActions, InstructionBody } from "./instruction-workspace";
+import { InstructionActions, InstructionBody, InstructionDocumentOutputMenu } from "./instruction-workspace";
 
 function Example({
   single = false,
@@ -104,6 +104,7 @@ function Example({
     <div style={{ width, maxWidth: "100%" }}>
       <div className="flex items-center justify-end gap-2">
         <InstructionActions workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
+        <InstructionDocumentOutputMenu workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
       </div>
       <InstructionBody
         controller={controller}
@@ -134,17 +135,18 @@ export const SetInstruction: Story = {
       within(body.getByRole("dialog")).getByRole("button", { name: "완료" }),
     );
     await expect(
-      canvas.getByRole("button", { name: "합성 품목 A 완료 해제" }),
-    ).toBeEnabled();
+      canvas.getByRole("button", { name: "합성 품목 A 완료" }),
+    ).toBeDisabled();
     await expect(
       canvas.getByRole("button", { name: "조제 완료" }),
     ).toBeEnabled();
-    await userEvent.click(
-      canvas.getByRole("button", { name: "합성 품목 A 완료 해제" }),
-    );
-    await expect(
-      canvas.getByRole("button", { name: "합성 품목 A 완료" }),
-    ).toBeEnabled();
+    await userEvent.click(canvas.getByRole("button", { name: "업무 상태 변경" }));
+    await userEvent.click(await body.findByRole("menuitem", { name: "완료 항목 다시 진행" }));
+    const reopen = within(await body.findByRole("dialog", { name: "진행 중으로 변경할까요?" }));
+    await userEvent.click(reopen.getByRole("radio", { name: "합성 품목 A" }));
+    await userEvent.click(reopen.getByRole("button", { name: "진행 중으로 변경" }));
+    await expect(canvas.getByRole("button", { name: "합성 품목 A 완료" })).toBeEnabled();
+    await expect(canvas.getByRole("button", { name: "합성 완료 품목 완료" })).toBeDisabled();
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
@@ -202,7 +204,7 @@ export const CommonInstruction: Story = {
     await waitFor(() =>
       expect(body.queryByRole("dialog")).not.toBeInTheDocument(),
     );
-    await userEvent.click(canvas.getByRole("button", { name: /합성 조제 세트 더 보기/ }));
+    await userEvent.click(canvas.getByRole("button", { name: "문서 추가 작업" }));
     await userEvent.click(await body.findByRole("menuitem", { name: "세트 공통 지시 수정" }));
     const dialog = within(body.getByRole("dialog"));
     await userEvent.clear(dialog.getByRole("textbox", { name: "공통 지시" }));
@@ -218,11 +220,11 @@ export const CommonInstruction: Story = {
       canvas.getAllByText("변경된 공통 지시", { exact: true })[0],
     ).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "합성 품목 A 완료 해제" }),
-    ).toBeEnabled();
+      canvas.getByRole("button", { name: "합성 품목 A 완료" }),
+    ).toBeDisabled();
     await expect(
-      canvas.getByRole("button", { name: "합성 품목 B 완료 해제" }),
-    ).toBeEnabled();
+      canvas.getByRole("button", { name: "합성 품목 B 완료" }),
+    ).toBeDisabled();
   },
 };
 
