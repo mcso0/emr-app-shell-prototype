@@ -1150,7 +1150,7 @@ export function DispensingSidePanel({
     <EmrOrderQueueSidePanel
       emptyObjectLabel="조제/처치 업무"
       getTaskCardItem={getDispensingTaskCardItem}
-      patientGrouping={{ workspaceId, readable: fulfillmentQueue.status !== "permission_denied", ready: fulfillmentQueue.status === "ready" || fulfillmentQueue.status === "empty" }}
+      patientGrouping={{ workspaceId, readable: fulfillmentQueue.status !== "permission_denied" }}
       items={items}
       loading={fulfillmentQueue.status === "loading"}
       readStatus={fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied" ? fulfillmentQueue.status : undefined}

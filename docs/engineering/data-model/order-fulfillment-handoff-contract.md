@@ -589,11 +589,13 @@ Assignment filtering uses assignedToUserId, not whether a display name resolves.
 Selection still uses exact lab result, imaging study, or fulfillment queue
 item/work item IDs. Switching views never writes or replaces the selected
 task. Filtering out the selection retains its detail and provides a condition
-reset action. A private realtime event still triggers the existing API refetch;
-only newly returned stable IDs produce a new-work notice. The current reading
-anchor remains until the user requests 목록에서 보기. Authentication or
-permission denial clears cached queue rows; network failures retain their
-existing recovery behavior. No synthetic scenario controls enter the app.
+reset action. Private realtime events trigger the existing API refetch. New
+tasks appear according to the current filters and sort without a new-work
+banner. Keep the selected task and the visible scroll anchor during the refresh.
+Show 재요청 on each affected task card. Patient group headings show the visible
+task count and any urgent count. Authentication or permission denial clears
+cached queue rows. Network failures retain their existing recovery behavior.
+No synthetic scenario controls enter the app.
 
 The additive v2 projection returns nullable originChartId and
 originChartCreatedAt from the exact workspace/encounter/order/soap_notes joins.

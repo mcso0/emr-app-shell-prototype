@@ -1830,7 +1830,7 @@ export function LabSidePanel({
         {fulfillmentQueue.status === "error" ? <EmrQueueEmptyState
           kind="read-error" placement="panel-center" title="업무 대기열을 불러오지 못했습니다"
           primaryAction={<Button variant="outline" size="sm" onClick={() => { void fulfillmentQueue.refresh(); }}>재시도</Button>}
-        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedLabResultId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectLabResult} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"} ready={fulfillmentQueue.status === "ready"}>
+        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedLabResultId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectLabResult} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"}>
 
         {showLabQueueLoadingState ? (
           <EmrQueueLoadingState
@@ -2084,7 +2084,7 @@ export function ImagingSidePanel({
         {fulfillmentQueue.status === "error" ? <EmrQueueEmptyState
           kind="read-error" placement="panel-center" title="업무 대기열을 불러오지 못했습니다"
           primaryAction={<Button variant="outline" size="sm" onClick={() => { void fulfillmentQueue.refresh(); }}>재시도</Button>}
-        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedImagingStudyId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectImagingStudy} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"} ready={fulfillmentQueue.status === "ready"}>
+        /> : <PatientQueueContent key={`${workspaceId}:${selectedDate}`} active={patientView} allRows={patientRows} rows={visiblePatientRows} selectedId={effectiveSelectedImagingStudyId} groupSort={patientSort} orderSort={patientOrderSort} onSelect={handleSelectImagingStudy} onClearConditions={() => { setPatientFilter("all"); closeSearch(); }} readable={fulfillmentQueue.status !== "permission_denied"}>
 
         {showImagingQueueLoadingState ? (
           <EmrQueueLoadingState
