@@ -27,13 +27,12 @@ type ExecutionResultDialogProps = {
   workspaceId: string; workItemId: string; taskId?: string; open: boolean;
   ownershipAllowed?: boolean; ownershipKey?: string; authorityStatus?: string;
   /** Instruction completion may save directly from requested/paused; the server checks roles. */
-  instructionCompletion?: boolean;
   onOpenChange: (open: boolean) => void; onSaved: () => Promise<void>;
 };
 export function ExecutionResultDialog(props: ExecutionResultDialogProps) {
   return props.open ? <ExecutionResultDialogContent key={`${props.workspaceId}:${props.workItemId}:${props.taskId ?? "current"}`} {...props} /> : null;
 }
-function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, instructionCompletion = false, onOpenChange, onSaved }: ExecutionResultDialogProps) {
+function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, ownershipAllowed, ownershipKey, authorityStatus, onOpenChange, onSaved }: ExecutionResultDialogProps) {
   const [context, setContext] = useState<ExecutionContext | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -90,7 +89,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
     payload[field.key] = ["number", "signed_number"].includes(field.type) ? Number(value) : field.type === "lines" ? value.split("\n").map(x => x.trim()).filter(Boolean) : value;
   }
   const canWrite = ownershipAllowed !== false && (!authorityStatus || authorityStatus === context?.status) && context?.canRecord && context.isCurrentAttempt &&
-    ((context.status === "in_progress" || instructionCompletion && ["dispensing", "treatment"].includes(context.clinicalOrderType) && ["requested", "paused"].includes(context.status)) && context.results.length === 0 || context.status === "completed" && amending);
+    (context.status === "in_progress" && context.results.length === 0 || context.status === "completed" && amending);
   const valid = context && parseExecutionPayload(context.clinicalOrderType, payload, context.planSnapshot) && performedAt &&
     Number.isFinite(new Date(performedAt).getTime()) && (!amending || amendmentReason.trim());
   const save = async () => {
@@ -177,7 +176,7 @@ function ExecutionResultDialogContent({ workspaceId, workItemId, taskId, open, o
             }}>기록 정정</Button> : null}
           </section> : null}
           {ownershipAllowed === false || !context.canRecord ? <p className="text-sm text-muted-foreground">조회 전용입니다. 수행기록을 변경할 수 없습니다.</p> : null}
-          {context.status === "requested" && !instructionCompletion ? <p className="text-sm">먼저 업무를 시작한 뒤 실제 수행값을 기록해 주세요.</p> : null}
+          {context.status === "requested" ? <p className="text-sm">먼저 업무를 시작한 뒤 실제 수행값을 기록해 주세요.</p> : null}
           {canWrite ? <fieldset disabled={saving} className="space-y-3">
             <legend className="mb-3 font-semibold">{amending ? "기록 정정 · 기존 실제값에서 수정" : "실제 수행값 · 직접 입력"}</legend>
             <div className="space-y-1"><label htmlFor="execution-performed-at" className="text-sm">실제 수행 시각 *</label><div className="flex gap-2">
