@@ -124,7 +124,7 @@ declare
   technician constant uuid := '49110946-0000-4000-8000-000000000002';
   admin constant uuid := '49110946-0000-4000-8000-000000000003';
   actor uuid; order_id uuid; work_item_id uuid; n integer;
-  doc jsonb; context jsonb; payload jsonb;
+  doc jsonb;
 begin
   if has_table_privilege(current_user,'public.orders','UPDATE')
     or has_function_privilege(current_user,
@@ -177,21 +177,13 @@ begin
       or (doc->>'canCompleteAll')::boolean is distinct from true then
       raise exception 'assigned technician lacks completion permission %',n;
     end if;
-    begin
-      perform public.clair_mutate_fulfillment_instruction(w,work_item_id,jsonb_build_object(
-        'action','complete_all','commandId',gen_random_uuid(),'expectedRevision',doc->>'revision'));
-      raise exception 'completion accepted without actual result %',n;
-    exception when raise_exception then
-      if sqlerrm <> 'actual_execution_result_required' then raise; end if;
-    end;
-    context := public.clair_get_order_execution_context(w,work_item_id,null);
-    payload := case n when 1 then '{"preparedQuantity":1,"preparedUnit":"tablet"}'::jsonb
-      else '{"performedProcedure":"합성 처치","outcome":"합성 완료"}'::jsonb end;
-    perform public.clair_record_order_execution_result(w,current_setting('request.jwt.claim.sub')::uuid,work_item_id,
-      (context->>'workItemRevision')::bigint,context->>'planSha256',0,gen_random_uuid(),now(),
-      payload,case when n=1 then '합성 준비수량 확인' end,null);
-    doc := public.clair_get_fulfillment_instruction(w,work_item_id);
-    if doc#>>'{items,0,status}' is distinct from 'completed' or doc->>'finalized' is distinct from 'true' then
+    if doc#>>'{items,0,resultRequired}' is distinct from 'false' then
+      raise exception 'actual result still required %',n;
+    end if;
+    doc := public.clair_mutate_fulfillment_instruction(w,work_item_id,jsonb_build_object(
+      'action','complete_all','commandId',gen_random_uuid(),'expectedRevision',doc->>'revision'));
+    if doc#>>'{items,0,status}' is distinct from 'completed' or doc->>'finalized' is distinct from 'true'
+      or doc#>>'{items,0,hasResult}' is distinct from 'false' then
       raise exception 'technician did not finalize order %',n;
     end if;
   end loop;
@@ -209,8 +201,9 @@ declare
   w constant text := 'synthetic-vet-cancel';
 begin
   if (select count(*) from public.orders where workspace_id=w and status='completed') <> 2
-    or (select count(*) from public.order_execution_result_versions where workspace_id=w
-      and recorded_by_user_id='49110946-0000-4000-8000-000000000002') <> 2
+    or exists(select 1 from public.order_execution_result_versions where workspace_id=w)
+    or (select count(*) from public.order_task_events where workspace_id=w and event_type='completed'
+      and actor_user_id='49110946-0000-4000-8000-000000000002') <> 2
     or (select count(*) from public.order_fulfillment_work_items where workspace_id=w and status='cancelled') <> 4
     or (select count(*) from public.orders where workspace_id=w and status='cancelled') <> 5
     or (select count(*) from public.order_fulfillment_work_items where workspace_id=w and status='requested') <> 2

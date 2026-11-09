@@ -264,6 +264,23 @@ remote application and deployment still require 승욱's confirmation.
   The oral infobar depends only on nonblank current text; stored audit/snapshots
   are retained. No historical data repair is part of this candidate.
 
+## Complete dispensing and treatment as ordered — 2026-11-09
+
+The dispensing and treatment instruction screens use the confirmed order as the
+work plan. The authorized performer confirms completion without re-entering
+quantities, procedures, or outcomes. Item completion and explicit set
+finalization use the existing instruction commands and record the actor and
+completion time. Existing result history remains available for review and
+authorized correction.
+
+Migration `20261109053938_fulfillment_complete_as_ordered.sql` changes the
+instruction read and the task completion trigger. The trigger accepts completion
+without an actual result only for dispensing and treatment tasks with the
+existing transaction-scoped instruction completion capability. The command
+still checks workspace, actor, revision, and current instruction acknowledgement.
+Treatment medication validation and explicit billing requests still apply.
+Apply the migration before deploying the completion screen.
+
 ## Current Inventory
 
 | Area | Existing route or source | Current boundary |

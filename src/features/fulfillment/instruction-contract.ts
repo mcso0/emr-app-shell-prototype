@@ -131,7 +131,7 @@ export function instructionCompletionConfirmation(
     title:
       itemId && document.isSet ? "이 항목을 완료할까요?" : "오더를 완료할까요?",
     description:
-      !itemId && unfinished > 0
+      document.isSet && !itemId && unfinished > 0
         ? `미완료 항목 ${unfinished}개도 함께 완료됩니다.`
         : document.isSet && itemId
           ? "이 항목의 작업을 완료합니다. 세트 오더는 상단에서 완료해 주세요."

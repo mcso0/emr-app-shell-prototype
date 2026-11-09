@@ -104,14 +104,19 @@ test("combined patient history search, dates and staff filters keep category nav
   await expect(aside.getByRole("button", { name: "필터", exact: true }).locator('[data-slot="history-filter-indicator"]')).toHaveCount(0);
 });
 
-test("actual execution UI starts empty, records completion, reloads history and appends an explicit correction", async ({ page }) => {
+test("existing dispensing execution history preserves the confirmed plan and appends an explicit correction", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const id = "97080000-0000-4000-8000-000000000001";
   let context: ExecutionContext = { workspaceId, workItemId: id, taskId: id, orderId: id, encounterId: id,
-    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "dispensing", status: "in_progress", isCurrentAttempt: true,
+    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "dispensing", status: "completed", isCurrentAttempt: true,
     planSnapshot: { detailInputs: { dose: 0.5, doseUnit: "tablet", totalQuantity: 8 }, calculationOutputs: { plannedPracticalTotalQuantity: 8, dispenseUnit: "tablet" } },
-    planSha256: "a".repeat(64), resultRequired: true, canRecord: true, results: [] };
+    planSha256: "a".repeat(64), resultRequired: true, canRecord: true, results: [{
+      id: "97080000-0000-4000-8000-000000000002", version: 1, previousResultId: null, schemaVersion: 1,
+      payload: { preparedQuantity: 7.5, preparedUnit: "tablet" }, performedAt: "2026-09-06T00:00:00.000Z",
+      performedByUserId: id, recordedByUserId: id, recordedAt: "2026-09-06T00:00:00.000Z",
+      varianceReason: "합성 계량 차이", amendmentReason: null, planSha256: "a".repeat(64),
+    }] };
   const bodies: Array<Record<string, unknown>> = [];
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async route => {
     const queueType = new URL(route.request().url()).searchParams.get("queueType");
@@ -151,21 +156,8 @@ test("actual execution UI starts empty, records completion, reloads history and 
   });
   await expect(page.getByText("합성 수행 환자").first()).toBeVisible();
   await expect(page.getByText("합성 수의사").first()).toBeVisible();
-  await openInstructionCompletion(page);
-  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
-  await expect(dialog.getByLabel("실제 준비수량", { exact: false })).toHaveValue("");
-  await expect(dialog.getByLabel("실제 수행 시각", { exact: false })).toHaveValue("");
-  await expect(dialog.getByRole("button", { name: "수행기록 저장 및 완료" })).toBeDisabled();
-  await dialog.getByRole("button", { name: "현재 시각" }).click();
-  await dialog.getByLabel("실제 준비수량", { exact: false }).fill("7.5");
-  await dialog.getByLabel("실제 준비 단위", { exact: false }).fill("tablet");
-  await dialog.getByLabel("계획과의 차이 사유").fill("합성 계량 차이");
-  await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
-  await expect.poll(() => bodies.length).toBe(1);
-  expect(bodies[0].payload).toEqual({ preparedQuantity: 7.5, preparedUnit: "tablet" });
-  expect(context.planSnapshot).toMatchObject({ calculationOutputs: { plannedPracticalTotalQuantity: 8 } });
-  await expect(dialog).not.toBeVisible();
   await openInstructionExecutionHistory(page);
+  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
   await expect(dialog.getByText("버전 1", { exact: false })).toBeVisible();
   await dialog.getByRole("button", { name: "기록 정정", exact: true }).click();
   await expect(dialog.getByLabel("실제 준비수량", { exact: false })).toHaveValue("7.5");
@@ -173,22 +165,29 @@ test("actual execution UI starts empty, records completion, reloads history and 
   await expect(dialog.getByRole("button", { name: "정정 저장" })).toBeDisabled();
   await dialog.getByLabel("정정 사유", { exact: false }).fill("합성 수량 재확인");
   await dialog.getByRole("button", { name: "정정 저장" }).click();
-  await expect.poll(() => bodies.length).toBe(2);
-  expect(bodies[1]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 수량 재확인", payload: { preparedQuantity: 8 } });
+  await expect.poll(() => bodies.length).toBe(1);
+  expect(bodies[0]).toMatchObject({ expectedResultVersion: 1, amendmentReason: "합성 수량 재확인", payload: { preparedQuantity: 8 } });
   await expect(dialog.getByText("버전 2", { exact: false })).toBeVisible();
   expect(context.results[0].payload.preparedQuantity).toBe(7.5);
+  expect(context.planSnapshot).toMatchObject({ calculationOutputs: { plannedPracticalTotalQuantity: 8 } });
 });
 
-test("treatment V2 actual UI requires explicit count, measurement and device identity while keeping planned values separate", async ({ page }) => {
+test("existing treatment V2 execution history displays recorded measurements separately from the plan", async ({ page }) => {
   await grantCheongdamWorkspaceAccess(page);
   const workspaceId = PREPARED_EMPTY_CLINIC_WORKSPACE_ID;
   const id = "97040000-0000-4000-8000-000000000001";
-  let context: ExecutionContext = { workspaceId, workItemId: id, taskId: id, orderId: id, encounterId: id,
-    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "treatment", status: "in_progress", isCurrentAttempt: true,
+  const context: ExecutionContext = { workspaceId, workItemId: id, taskId: id, orderId: id, encounterId: id,
+    attemptNo: 1, workItemRevision: 2, clinicalOrderType: "treatment", status: "completed", isCurrentAttempt: true,
     planSnapshot: { detailSchemaVersion: 2, detailInputs: { procedureKind: "measurement", method: "합성 안압 측정",
       plannedProcedureCount: 1, procedureCountUnit: "session", measurementUnit: "mmHg", deviceProtocol: "TONOVET Plus 합성 수기 프로필" } },
-    planSha256: "b".repeat(64), resultRequired: true, canRecord: true, results: [] };
-  let posted: Record<string, unknown> | null = null;
+    planSha256: "b".repeat(64), resultRequired: true, canRecord: true, results: [{
+      id: "97040000-0000-4000-8000-000000000002", version: 1, previousResultId: null, schemaVersion: 1,
+      payload: { performedProcedure: "합성 안압 측정", outcome: "합성 측정값 기록", performedCount: 1,
+        performedCountUnit: "session", measurementValue: 12, measurementUnit: "mmHg",
+        deviceIdentity: "합성 TONOVET Plus 장비", deviceSettingsPolicy: "not_adjustable" },
+      performedAt: "2026-09-06T00:00:00.000Z", recordedAt: "2026-09-06T00:00:00.000Z", performedByUserId: id,
+      recordedByUserId: id, varianceReason: null, amendmentReason: null, planSha256: "b".repeat(64),
+    }] };
   await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items?*`, async route => {
     const queueType = new URL(route.request().url()).searchParams.get("queueType");
     await route.fulfill({ json: { ok: true, workItems: queueType === "treatment" ? [{ workspaceId, id, orderId: id, encounterId: id,
@@ -199,41 +198,16 @@ test("treatment V2 actual UI requires explicit count, measurement and device ide
     }] : [] } });
   });
   await installExecutionInstruction(page, workspaceId, id, () => context);
-  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, async route => {
-    if (route.request().method() === "POST") {
-      const body = route.request().postDataJSON(); posted = body;
-      context = { ...context, status: "completed", workItemRevision: 3, results: [{ id: "97040000-0000-4000-8000-000000000002",
-        version: 1, previousResultId: null, schemaVersion: 1, payload: body.payload, performedAt: body.performedAt,
-        performedByUserId: id, recordedByUserId: id, recordedAt: new Date().toISOString(),
-        varianceReason: body.varianceReason, amendmentReason: null, planSha256: context.planSha256 }] };
-    }
-    await route.fulfill({ json: { ok: true, context } });
-  });
+  await page.route(`**/api/workspaces/${workspaceId}/fulfillment/work-items/${id}/execution`, route =>
+    route.fulfill({ json: { ok: true, context } }));
   await page.goto(`/w/${workspaceId}/dispensing?modulePanel=open`);
   await page.getByTestId(`order-queue-item-live-fulfillment-${id}`).click();
-  await openInstructionCompletion(page);
-  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
-  await expect(dialog.getByLabel("실제 시행 횟수", { exact: false })).toHaveValue("");
-  await expect(dialog.getByLabel("실제 측정값", { exact: false })).toHaveValue("");
-  await dialog.getByRole("button", { name: "현재 시각", exact: true }).click();
-  await dialog.getByLabel("실제 시행한 처치", { exact: false }).fill("합성 안압 측정");
-  await dialog.getByLabel("시행 결과", { exact: false }).fill("합성 측정값 기록");
-  await dialog.getByLabel("실제 시행 횟수", { exact: false }).fill("1");
-  await dialog.getByLabel("실제 횟수 단위", { exact: false }).fill("session");
-  await dialog.getByLabel("실제 측정값", { exact: false }).fill("12");
-  await dialog.getByLabel("실제 측정 단위", { exact: false }).fill("mmHg");
-  await expect(dialog.getByRole("button", { name: "수행기록 저장 및 완료" })).toBeDisabled();
-  await dialog.getByLabel("실제 사용 장비·모델", { exact: false }).fill("합성 TONOVET Plus 장비");
-  await dialog.getByLabel("장비 설정 기록 방식", { exact: false }).click();
-  await page.getByRole("option", { name: "조절 설정 없음 · 해당 없음" }).click();
-  await dialog.getByRole("button", { name: "수행기록 저장 및 완료" }).click();
-  await expect.poll(() => posted).not.toBeNull();
-  expect(posted).toMatchObject({ payload: { performedCount: 1, performedCountUnit: "session", measurementValue: 12,
-    measurementUnit: "mmHg", deviceSettingsPolicy: "not_adjustable" } });
-  await expect(dialog).not.toBeVisible();
   await openInstructionExecutionHistory(page);
+  const dialog = page.getByRole("dialog", { name: "실제 수행기록" });
   await expect(dialog.getByText("버전 1", { exact: false })).toBeVisible();
-  expect(context.planSnapshot.detailInputs).not.toHaveProperty("measurementValue");
+  await expect(dialog.getByText("12", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("합성 TONOVET Plus 장비", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("TONOVET Plus 합성 수기 프로필", { exact: true })).toBeVisible();
 });
 
 async function grantCheongdamWorkspaceAccess(page: Page) {
@@ -1623,11 +1597,6 @@ for (const queueType of ["dispensing", "treatment"] as const) {
   });
 }
 
-async function openInstructionCompletion(page: Page) {
-  await page.getByRole("button", { name: "합성 작업 완료", exact: true }).click();
-  await page.getByRole("button", { name: "합성 작업 수행값 입력", exact: true }).click();
-}
-
 async function openInstructionExecutionHistory(page: Page) {
   await page.getByRole("button", { name: "합성 지시서 더 보기", exact: true }).click();
   await page.getByRole("menuitem", { name: "수행기록", exact: true }).click();
@@ -1643,7 +1612,7 @@ async function installExecutionInstruction(page: Page, workspaceId: string, id: 
       revision: String(context.workItemRevision), finalized: context.status === "completed", canEditInstruction: false,
       canCompleteAll: context.status !== "completed", instruction: "합성 테스트", changes: [], items: [{ ...structuredClone(syntheticInstruction.items[0]),
         id, orderId: id, taskId: id, name: "합성 작업", status: context.status === "completed" ? "completed" : "in_progress",
-        plan: context.planSnapshot, sourceSnapshot: {}, resultRequired: context.results.length === 0, hasResult: context.results.length > 0,
+        plan: context.planSnapshot, sourceSnapshot: {}, resultRequired: false, hasResult: context.results.length > 0,
         canComplete: context.status !== "completed", canReopen: context.status === "completed" }] };
     return route.fulfill({ json: { ok: true, document } });
   });

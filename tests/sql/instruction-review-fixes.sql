@@ -106,11 +106,18 @@ begin
  perform set_config('test.actor','00000000-0000-4000-8000-000000000002',true);
  d:=public.clair_mutate_fulfillment_instruction('workspace-a',peer,jsonb_build_object('action','unassign','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
  perform set_config('test.actor','00000000-0000-4000-8000-000000000003',true);
- ctx:=public.clair_get_order_execution_context('workspace-a',peer);
- perform public.clair_record_order_execution_result('workspace-a',auth.uid(),peer,(ctx->>'workItemRevision')::bigint,ctx->>'planSha256',0,gen_random_uuid(),now(),'{"preparedQuantity":1,"preparedUnit":"T"}',null,null);
  d:=public.clair_get_fulfillment_instruction('workspace-a',peer);
- if (d->>'finalized')::boolean then raise exception 'all results implicitly finalized set'; end if;
- d:=public.clair_mutate_fulfillment_instruction('workspace-a',peer,jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision'));
- if not (d->>'finalized')::boolean then raise exception 'requester cannot finalize set'; end if;
- raise notice 'PASS: current names, read purity, requester requested/paused result completion, rollback on invalid input, old-owner denial, explicit set finalization';
+ if (d->>'finalized')::boolean then raise exception 'set was finalized early'; end if;
+ saved:=jsonb_build_object('action','complete_all','commandId',gen_random_uuid(),'expectedRevision',d->>'revision');
+ d:=public.clair_mutate_fulfillment_instruction('workspace-a',peer,saved);
+ if not (d->>'finalized')::boolean or d#>>'{items,1,status}' is distinct from 'completed'
+   or d#>>'{items,0,hasResult}' is distinct from 'true' or d#>>'{items,1,hasResult}' is distinct from 'false'
+   or (select count(*) from order_execution_result_versions)<>result_count+1
+   then raise exception 'requester could not finalize set without fabricating results'; end if;
+ select count(*) into event_count from order_task_events;
+ perform public.clair_mutate_fulfillment_instruction('workspace-a',peer,saved);
+ if (select count(*) from order_task_events)<>event_count
+   or exists(select 1 from private.fulfillment_instruction_completion_scope)
+   then raise exception 'completion replay duplicated events or leaked scope'; end if;
+ raise notice 'PASS: current names, read purity, existing result history, rollback on invalid input, old-owner denial, and direct set completion';
 end $$;
