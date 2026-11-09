@@ -225,12 +225,18 @@ test("claim assigns and starts before opening the instruction", async ({ page })
 });
 
 test("designated owner starts directly from prework", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
   const { actions } = await install(page, { owner: "mine", emptyOral: true });
   await page.getByRole("button", { name: "업무 시작하기" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("dispensing-after-start.png") });
   expect(actions).toEqual(["start"]);
+  expect(errors).toEqual([]);
 });
 
 test("direct start still requires acknowledgement of changed instructions", async ({ page }) => {
@@ -531,6 +537,8 @@ for (const owner of [undefined, "mine", "other"] as const) {
     await expect(entry).toHaveCount(0);
     await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
     await expect(page.getByRole("button", { name: "처치 시작", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "처치 지시서", exact: true })).toBeVisible({ timeout: 15000 });
+    await page.screenshot({ path: test.info().outputPath(`treatment-after-${owner ?? "claim"}.png`) });
     expect(actions).toEqual([owner === "mine" ? "start" : owner === "other" ? "takeover" : "claim"]);
     if (owner !== "mine") expect(assignmentWrites[0]).toMatchObject({
       startWork: true,

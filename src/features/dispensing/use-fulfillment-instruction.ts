@@ -1,7 +1,7 @@
 "use client";
 
 import { useTaskInstructionReview, type TaskInstructionReviewController } from "@/features/fulfillment/use-task-instruction-review";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   instructionDocumentSchema,
   instructionErrorMessages,
@@ -40,6 +40,7 @@ export function useFulfillmentInstruction(
   const [mutationFailure, setMutationFailure] = useState<{ endpoint: string | null; message: string } | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const generation = useRef(0);
+  const selection = useRef(0);
   const pending = useRef(false);
   const retry = useRef<{
     fingerprint: string;
@@ -52,6 +53,11 @@ export function useFulfillmentInstruction(
   const error = failure?.key === readKey ? failure.message : mutationFailure?.endpoint === endpoint ? mutationFailure.message : null;
   const setError = (message: string | null) =>
     setMutationFailure(message ? { endpoint, message } : null);
+
+  useLayoutEffect(() => {
+    selection.current += 1;
+    return () => { selection.current += 1; };
+  }, [endpoint]);
 
   useEffect(() => {
     const current = ++generation.current;
@@ -75,7 +81,10 @@ export function useFulfillmentInstruction(
           );
           // Preserve same-item content on transient failure; authorization/removal
           // failures must immediately withdraw previously loaded information.
-          if ([401, 403, 404].includes(response.status)) setLoaded(null);
+          if ([401, 403, 404].includes(response.status)) {
+            selection.current += 1;
+            setLoaded(null);
+          }
           return;
         }
         setFailure(null);
@@ -124,6 +133,7 @@ export function useFulfillmentInstruction(
     setBusy(true);
     try {
     const current = generation.current;
+    const selected = selection.current;
     const fingerprint = JSON.stringify({
       endpoint,
       intent,
@@ -133,7 +143,7 @@ export function useFulfillmentInstruction(
     if (retry.current?.fingerprint !== fingerprint && (startsOnAssignment || ["start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action))) {
       const targets = document.items.filter(item => ("itemId" in intent ? item.id === intent.itemId : true) && (intent.action === "reopen" || !["completed", "cancelled", "returned"].includes(item.status))).map(item => item.taskId);
       const ready = await instructionReview.check(targets);
-      if (generation.current !== current) return false;
+      if (selection.current !== selected) return false;
       if (!ready) { onReviewRequired?.(); return false; }
     }
     if (retry.current?.fingerprint !== fingerprint) {
@@ -154,7 +164,7 @@ export function useFulfillmentInstruction(
         body: JSON.stringify(retry.current.command),
       });
       const body = await response.json();
-      if (generation.current !== current) return false;
+      if (selection.current !== selected) return false;
       const parsed = instructionDocumentSchema.safeParse(body.document);
       if (!response.ok || body.ok !== true || !parsed.success) {
         if (body.error === "instruction_ack_required") {
@@ -171,10 +181,17 @@ export function useFulfillmentInstruction(
         return false;
       }
       retry.current = null;
+      // A queue refresh may start another read while this write is in flight.
+      // Its old snapshot cannot replace the successful command's document.
+      if (generation.current !== current) {
+        generation.current += 1;
+        refresh();
+      }
+      setFailure(null);
       setLoaded({ endpoint, document: parsed.data });
       return true;
     } catch {
-      if (generation.current === current)
+      if (selection.current === selected)
         setError(
           "변경 결과를 확인하지 못했어요. 다시 시도하면 같은 요청의 결과를 확인해요.",
         );
