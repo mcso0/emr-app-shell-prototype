@@ -2179,3 +2179,13 @@ then acknowledge the change and continue. Use non-billable fixtures and
 remove any temporary records and accounts after verification. Record the exact
 candidate, Preview, Release Check, DB readback, prior Ready deployment, and
 Production results in the PR. Stop on candidate drift or a failed gate.
+
+#### Released replacement attempts
+
+An existing replacement attempt can already have started and then been released.
+Its stored status is paused and it has no assignee. Keep its card and group in
+재요청 and show the modified orders in the instruction after reload. 업무 계속하기
+uses the existing claim-and-start command and current instruction review. A
+released first attempt still opens the waiting entry. This follow-up requires
+no migration or historical data rewrite. Verify both queues with synthetic
+fixtures and the reported Production order by read-only inspection.

@@ -177,7 +177,8 @@ begin
 end $$;
 
 do $$
-declare wi public.order_fulfillment_work_items; document jsonb;
+declare wi public.order_fulfillment_work_items; document jsonb; review jsonb; command jsonb;
+  task uuid; replacement_started_at timestamptz;
 begin
   perform set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
   for wi in select * from order_fulfillment_work_items where id in (
@@ -197,5 +198,43 @@ begin
       or (select started_at from order_fulfillment_work_items where id=wi.id) is not null then
       raise exception '% replacement did not preserve start history and pending edited work',wi.queue_type;
     end if;
+
+    task:=(document#>>'{items,0,taskId}')::uuid;
+    perform set_config('test.actor',coalesce(document->>'mainAssigneeId',auth.uid()::text),true);
+    review:=public.clair_get_task_instruction_review('workspace-a',task);
+    if (review->>'requiresAcknowledgement')::boolean then
+      perform public.clair_acknowledge_task_instructions('workspace-a',task,review#>>'{current,versionKey}');
+    end if;
+    document:=public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,jsonb_build_object(
+      'action',case when (document->>'canClaim')::boolean then 'claim' else 'start' end,
+      'commandId',gen_random_uuid(),'expectedRevision',document->>'revision')
+      ||case when (document->>'canClaim')::boolean then '{"startWork":true}'::jsonb else '{}'::jsonb end);
+    select started_at into replacement_started_at from order_fulfillment_work_items where id=wi.id;
+    document:=public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,jsonb_build_object(
+      'action','unassign','commandId',gen_random_uuid(),'expectedRevision',document->>'revision'));
+    if document->>'mainAssigneeId' is not null or document#>>'{items,0,status}' is distinct from 'paused'
+      or document#>>'{items,0,attemptNo}' is distinct from '2' or replacement_started_at is null then
+      raise exception '% did not release the started replacement attempt',wi.queue_type;
+    end if;
+
+    command:=jsonb_build_object('action','claim','startWork',true,'commandId',gen_random_uuid(),
+      'expectedRevision',document->>'revision');
+    review:=public.clair_get_task_instruction_review('workspace-a',task);
+    if (review->>'requiresAcknowledgement')::boolean then
+      begin
+        perform public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,command);
+        raise exception 'released replacement continued without acknowledgement';
+      exception when raise_exception then if sqlerrm<>'instruction_ack_required' then raise; end if; end;
+      perform public.clair_acknowledge_task_instructions('workspace-a',task,review#>>'{current,versionKey}');
+    end if;
+    document:=public.clair_mutate_fulfillment_instruction('workspace-a',wi.id,command);
+    if document#>>'{items,0,status}' is distinct from 'in_progress'
+      or document#>>'{items,0,taskId}' is distinct from task::text
+      or document#>>'{items,0,plan,detailInputs,instruction}' is distinct from 'Synthetic updated plan'
+      or (document->>'firstStartedAt')::timestamptz is distinct from wi.started_at
+      or (select started_at from order_fulfillment_work_items where id=wi.id) is distinct from replacement_started_at then
+      raise exception '% did not continue the existing modified instruction',wi.queue_type;
+    end if;
+    perform set_config('test.actor','00000000-0000-4000-8000-000000000001',true);
   end loop;
 end $$;

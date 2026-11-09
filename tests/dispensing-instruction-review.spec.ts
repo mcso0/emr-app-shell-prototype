@@ -106,7 +106,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
         document.items.forEach(item => {
           if (item.status === "completed") return;
           item.assigneeId = "synthetic-owner"; item.assigneeName = "합성 담당자"; item.canComplete = true;
-          if (startWork === true && item.status === "requested") {
+          if (startWork === true && (item.status === "requested" || item.status === "paused")) {
             item.status = "in_progress"; contexts[item.id].status = "in_progress";
           }
         });
@@ -279,7 +279,7 @@ test("direct start still requires acknowledgement of changed instructions", asyn
 
 for (const queueType of ["dispensing", "treatment"] as const) {
   test(`${queueType} re-request keeps the started instruction and requires review before continuing`, async ({ page }) => {
-    const { document, actions } = await install(page, { queueType, started: true });
+    const { document, actions, assignmentWrites } = await install(page, { queueType, started: true });
     const item = document.items[0];
     const before = queueType === "dispensing"
       ? { detailSchemaVersion: 1, detailInputs: { ...item.plan.detailInputs as object, frequency: "bid" } }
@@ -353,10 +353,28 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     expect(actions).toEqual(["start"]);
 
     await page.getByRole("button", { name: "담당 취소", exact: true }).click();
-    await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
-    await expect(page.getByTestId("order-queue-status-waiting").locator(card)).toBeVisible();
-    await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
+    await expect(page.getByTestId("order-queue-status-reRequested").locator(card)).toBeVisible();
+    requiresAcknowledgement = true;
+    await page.reload();
+    await expect(page.getByRole("heading", { name: queueType === "dispensing" ? "조제 지시서" : "처치 지시서", exact: true })).toBeVisible();
+    await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
+    await expect(modified).toContainText("합성 품목 1");
+    await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+    if (await toggle.getAttribute("aria-pressed") !== "true") await toggle.click();
+    await expect(card.getByText("재요청", { exact: true })).toBeVisible();
+    await toggle.click();
+    await expect(page.getByTestId("order-queue-status-reRequested").locator(card)).toBeVisible();
+
+    await continueWork.click();
+    await expect(review).toBeVisible();
     expect(actions).toEqual(["start", "unassign"]);
+    await review.getByRole("button", { name: "변경·남은 작업 범위 확인" }).click();
+    await expect(review).not.toBeVisible();
+    await continueWork.click();
+    await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
+    await expect(modified).toContainText("합성 품목 1");
+    expect(actions).toEqual(["start", "unassign", "claim"]);
+    expect(assignmentWrites).toEqual([expect.objectContaining({ action: "claim", startWork: true })]);
   });
 }
 
