@@ -186,6 +186,13 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 
 ## Reopening a completed dispensing or treatment instruction
 
+- In the instruction workspace, the toolbar shows the start time, current
+  status badge, assignee, width control, and `조제 완료` or `처치 완료` in
+  that order. The badge stays beside the start time or `미시작` as the
+  toolbar wraps. The request time field contains only its timestamp. When
+  completion and other actions are both allowed, the arrow beside the
+  completion button opens the available actions. The document menu next to
+  the copy link keeps its existing record tools.
 - The finalized instruction body keeps filters, sorting, density, disclosures,
   and history available. Row completion and assignment controls are disabled.
   The table history dialog is available even when there are no revisions.

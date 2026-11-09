@@ -9,7 +9,7 @@ const id = "97080000-0000-4000-8000-000000000081";
 const secondId = "97080000-0000-4000-8000-000000000082";
 const patientId = "97080000-0000-4000-8000-000000000083";
 
-async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; failReopen?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean } = {}) {
+async function install(page: Page, options: { beforeNavigate?: () => Promise<void>; queueType?: "dispensing" | "treatment"; set?: boolean; requester?: boolean; failSave?: boolean; failReopen?: boolean; emptyOral?: boolean; profileFailure?: boolean; started?: boolean; canUnassign?: boolean; owner?: "mine" | "other"; failAssignment?: boolean; staleAssignment?: boolean; assignmentDelay?: number; layoutFixture?: boolean; differentPatient?: boolean } = {}) {
   await page.addInitScript(([key, workspaceId]) => localStorage.setItem(key, JSON.stringify({
     currentWorkspaceId: workspaceId, workspaces: [{ id: workspaceId, displayName: "합성 검증 병원", representativeName: "합성 관리자", contactEmail: "synthetic@example.test", contactPhone: null, subscriptionStatus: "trialing", createdBySessionId: "playwright-default-session", createdAt: "2026-06-14T00:00:00.000Z" }],
     memberships: [{ id: "synthetic-membership", workspaceId, userSessionId: "playwright-default-session", displayName: "합성 관리자", email: "synthetic@example.test", roles: ["hospital_admin"], status: "active", createdAt: "2026-06-14T00:00:00.000Z", activatedAt: "2026-06-14T00:00:00.000Z" }], invitations: [], updatedAt: "2026-06-14T00:00:00.000Z",
@@ -17,7 +17,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   const document: InstructionDocument = {
     ...structuredClone(syntheticInstruction), queueType: options.queueType ?? "dispensing", rootOrderId: id, rootTaskId: id, name: "합성 검증 오더", isSet: options.set ?? false,
     mainAssigneeId: options.owner || options.started ? "synthetic-owner" : null, mainAssigneeName: options.owner || options.started ? "합성 기존 담당자" : null, revision: "1", finalized: false,
-    canClaim: !options.owner && !options.started, canTakeover: options.owner === "other", canStart: options.owner === "mine" && !options.started, canResume: false, canUnassign: false, canCompleteAll: options.requester ?? true, canEditInstruction: false,
+    canClaim: !options.owner && !options.started, canTakeover: options.owner === "other", canStart: options.owner === "mine" && !options.started, canResume: false, canUnassign: options.canUnassign ?? false, canCompleteAll: options.requester ?? true, canEditInstruction: false,
     changes: [], instruction: "", oralInstruction: { chartId: id, revision: 2,
       instruction: options.emptyOral ? " \n " : "합성 경구제 전체 지시입니다. 긴 지시사항의 줄바꿈과 닫기 버튼을 확인합니다. ".repeat(3),
       history: [{ revision: 1, instruction: "이전 지시", createdAt: "2026-10-30T00:00:00.000Z", actorId: "synthetic-author", actorName: "합성 작성자" }], snapshots: [] },
@@ -168,6 +168,67 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
     await expect(entryAction).toHaveCSS("height", "32px");
   }
   return { document, writes, actions, assignmentWrites, completionWrites, reopenWrites, requireInstructionReview: () => { requiresAcknowledgement = true; } };
+}
+
+for (const [queueType, label] of [["dispensing", "조제"], ["treatment", "처치"]] as const) {
+  test(`${queueType} header keeps the status beside the start time in narrow view`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const { actions } = await install(page, { queueType, started: true, canUnassign: true });
+    const header = page.locator('[data-slot="emr-page-header"]').filter({
+      has: page.getByRole("heading", { name: `${label} 지시서`, exact: true }),
+    });
+    const complete = header.getByRole("button", { name: `${label} 완료`, exact: true });
+    const group = header.getByRole("group", { name: `${label} 완료 보조 작업` });
+    const arrow = group.getByRole("button", { name: "업무 상태 변경" });
+    const info = page.locator('[data-slot="instruction-info-card"]');
+    const start = header.getByText(`${label} 시작 일시 09:05`, { exact: true });
+    const badge = header.getByTestId("instruction-status-label");
+    const narrow = header.getByRole("button", { name: "좁게 보기", exact: true });
+    await expect(header).toContainText(new RegExp(`${label} 시작 일시 09:05진행중합성 기존 담당자좁게 보기${label} 완료`));
+    await expect(page.getByTestId("instruction-status-label")).toHaveCount(1);
+    await expect(badge).toHaveText("진행중");
+    await expect(complete).toHaveCount(1);
+    await expect(group.getByRole("button", { name: `${label} 완료`, exact: true })).toBeEnabled();
+    const request = info.getByText("요청 일시", { exact: true }).locator("..");
+    await expect(request.locator('[data-slot="instruction-info-card-value"]')).toHaveText("2026.10.31 09:00");
+    await expect(info.getByText(`${label} 시작`, { exact: true })).toHaveCount(0);
+    await expect(info.getByText(`${label} 담당`, { exact: true })).toHaveCount(0);
+
+    await narrow.click();
+    const workspace = page.getByTestId("workspace-document");
+    await expect(workspace).toHaveAttribute("data-width-mode", "narrow");
+    await expect(workspace).toHaveCSS("max-width", "1120px");
+    for (const width of [1920, 768]) {
+      await page.setViewportSize({ width, height: 1080 });
+      await expect(start).toBeInViewport({ ratio: 0.99 });
+      await expect(badge).toBeInViewport({ ratio: 0.99 });
+      const [startBox, badgeBox] = await Promise.all([start.boundingBox(), badge.boundingBox()]);
+      const gap = badgeBox!.x - (startBox!.x + startBox!.width);
+      expect(gap).toBeGreaterThan(0);
+      expect(gap).toBeLessThanOrEqual(8);
+      expect(Math.abs(badgeBox!.y + badgeBox!.height / 2 - startBox!.y - startBox!.height / 2)).toBeLessThan(2);
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    const headerBox = (await header.boundingBox())!;
+    const infoBox = (await info.boundingBox())!;
+    await page.screenshot({
+      path: testInfo.outputPath("instruction-header.png"),
+      clip: { x: headerBox.x, y: headerBox.y, width: headerBox.width, height: infoBox.y + infoBox.height - headerBox.y },
+    });
+
+    await arrow.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("menuitem", { name: "담당 취소" })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(arrow).toBeFocused();
+    await complete.click();
+    const confirm = page.getByRole("dialog", { name: "오더를 완료할까요?" });
+    await expect(confirm).toBeVisible();
+    await confirm.getByRole("button", { name: "취소" }).click();
+    expect(actions).toEqual([]);
+  });
 }
 
 test("unassigned requester completes dispensing without result input and retries the same command on failure", async ({ page }) => {
@@ -385,7 +446,7 @@ test("designated owner starts directly from prework", async ({ page }) => {
   await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
-  await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+  await expect(page.getByText("조제 시작 일시 09:05", { exact: true })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("dispensing-after-start.png") });
   expect(actions).toEqual(["start"]);
   expect(errors).toEqual([]);
@@ -468,7 +529,8 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await expect(page.getByTestId("order-queue-status-waiting")).toHaveCount(0);
     await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
     await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
-    await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+    const startedAt = page.getByText(`${queueType === "dispensing" ? "조제" : "처치"} 시작 일시 09:05`, { exact: true });
+    await expect(startedAt).toBeVisible();
     const modified = page.locator(".fd-modified");
     await expect(modified).toContainText("수정된 오더");
     await expect(modified).toContainText("합성 품목 1");
@@ -490,7 +552,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await continueWork.click();
     await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
     await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
-    await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+    await expect(startedAt).toBeVisible();
     await expect(modified).toContainText("합성 품목 1");
     expect(actions).toEqual(["start"]);
 
@@ -502,7 +564,7 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await expect(page.getByRole("heading", { name: queueType === "dispensing" ? "조제 지시서" : "처치 지시서", exact: true })).toBeVisible();
     await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
     await expect(modified).toContainText("합성 품목 1");
-    await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+    await expect(startedAt).toBeVisible();
     if (await toggle.getAttribute("aria-pressed") !== "true") await toggle.click();
     await expect(card.getByText("재요청", { exact: true })).toBeVisible();
     await toggle.click();

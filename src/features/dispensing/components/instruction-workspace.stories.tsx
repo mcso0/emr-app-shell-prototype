@@ -103,7 +103,7 @@ function Example({
   return (
     <div style={{ width, maxWidth: "100%" }}>
       <div className="flex items-center justify-end gap-2">
-        <InstructionActions workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
+        <InstructionActions inDocumentToolbar workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
         <InstructionDocumentOutputMenu workspaceId="synthetic-workspace" controller={controller} onChanged={() => {}} />
       </div>
       <InstructionBody
@@ -137,10 +137,9 @@ export const SetInstruction: Story = {
     await expect(
       canvas.getByRole("button", { name: "합성 품목 A 완료" }),
     ).toBeDisabled();
-    await expect(
-      canvas.getByRole("button", { name: "조제 완료" }),
-    ).toBeEnabled();
-    await userEvent.click(canvas.getByRole("button", { name: "업무 상태 변경" }));
+    const completion = within(canvas.getByRole("group", { name: "조제 완료 보조 작업" }));
+    await expect(completion.getByRole("button", { name: "조제 완료" })).toBeEnabled();
+    await userEvent.click(completion.getByRole("button", { name: "업무 상태 변경" }));
     await userEvent.click(await body.findByRole("menuitem", { name: "완료 항목 다시 진행" }));
     const reopen = within(await body.findByRole("dialog", { name: "진행 중으로 변경할까요?" }));
     await userEvent.click(reopen.getByRole("radio", { name: "합성 품목 A" }));
