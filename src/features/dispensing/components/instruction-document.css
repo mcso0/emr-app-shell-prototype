@@ -1063,3 +1063,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.fd-table tr[data-instruction-target] > :is(td, th) {
+  background-color: var(--emr-state-selected);
+}
+
+.fd-table tr[data-instruction-target]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
