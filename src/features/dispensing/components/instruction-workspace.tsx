@@ -1,6 +1,5 @@
 "use client";
 
-import { PartialOrderWorkDialog } from "@/features/fulfillment/components/partial-order-work-dialog";
 import { OralInstructionInfobar } from "./oral-instruction-infobar";
 import { TaskInstructionReview } from "@/features/fulfillment/components/task-instruction-review";
 import { EmrContentLoadingState } from "@/components/emr/empty-state";
@@ -12,7 +11,7 @@ import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-e
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
-import { createInstructionView, isWaitingInstruction } from "../instruction-view-model";
+import { createInstructionView, hasPendingInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionDocumentTable } from "./instruction-document-table";
 
@@ -89,6 +88,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   const document = controller.document;
   if (!document) return null;
   const busy = controller.busy || controller.loading;
+  const continuingRerequest = Boolean(document.firstStartedAt) && hasPendingInstructionRerequest(document);
   const entryMode = document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked";
   const claimStartsWork = isWaitingInstruction(document);
   const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
@@ -158,7 +158,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       {!prework && document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}
       <Dialog open={takeover} onOpenChange={(open) => { if (!busy) setTakeover(open); }}>
         <EmrDialogShell title="담당자를 변경할까요?"
-          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하고 바로 업무를 시작합니다. 요청 수의사에게 사유가 전달됩니다.`}
+          description={`해당 업무는 ${document.mainAssigneeName ?? "다른 담당자"}님이 담당자로 지정된 업무입니다. 담당을 변경하고 ${continuingRerequest ? "업무를 이어갑니다." : "바로 업무를 시작합니다."} 요청 수의사에게 사유가 전달됩니다.`}
           secondaryAction={<Button variant="outline" disabled={busy} onClick={() => setTakeover(false)}>취소</Button>}
           primaryAction={<Button disabled={busy || !reason.trim() || !document.canTakeover} onClick={async () => {
             if (await controller.mutate({ action: "takeover", startWork: true, reason: reason.trim() }, () => setTakeover(false))) {
@@ -172,7 +172,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       </Dialog>
       {!prework && document.canStart ? (
         <Button size="sm" disabled={busy} onClick={() => void change("start")}>
-          {document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
+          {continuingRerequest ? "업무 계속하기" : document.queueType === "dispensing" ? "조제 시작" : "처치 시작"}
         </Button>
       ) : null}
       {document.canResume ? (
@@ -213,7 +213,6 @@ export function InstructionBody({
   workspaceId,
 }: Props) {
   const [confirmItem, setConfirmItem] = useState<string | null>(null);
-  const [partialTask, setPartialTask] = useState<{ taskId: string; name: string } | null>(null);
   const [historyItem, setHistoryItem] = useState<string | null | undefined>(
     undefined,
   );
@@ -338,10 +337,6 @@ export function InstructionBody({
           }}
         />
       ) : null}
-      {document && document.items.some(item => ["in_progress", "paused", "completed"].includes(item.status)) && <div className="flex flex-wrap gap-2 px-4 py-3">
-        {document.items.filter(item => ["in_progress", "paused", "completed"].includes(item.status)).map(item => <Button key={item.id} size="sm" variant="outline" onClick={() => setPartialTask({ taskId: item.taskId, name: item.name })}>{document.isSet ? `${item.name} · ` : ""}부분 수행 기록</Button>)}
-      </div>}
-      {partialTask && <PartialOrderWorkDialog key={partialTask.taskId} workspaceId={workspaceId} {...partialTask} onClose={() => setPartialTask(null)} onSaved={() => { controller.refresh(); onChanged(); }} />}
       {document && !document.items.length ? (
         <p className="p-6 text-sm text-muted-foreground">
           표시할 오더가 없어요.
@@ -403,8 +398,8 @@ export function InstructionBody({
                             doseUnit: "단위",
                             frequency: "횟수",
                             days: "일수",
-                            total: "총량",
-                            totalUnit: "총량 단위",
+                            total: document?.queueType === "dispensing" ? "요청 조제량" : "총량",
+                            totalUnit: document?.queueType === "dispensing" ? "요청 조제량 단위" : "총량 단위",
                             route: "경로",
                             medicationGuide: "복약",
                             storage: "보관",

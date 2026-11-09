@@ -177,6 +177,13 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - Applicable instructions appear below the order table. The scope labels are 전체 지시, 조제 지시 or 처치 지시, and 세트 지시. A required review opens through the existing start or completion flow.
 - Below vitals, the prework history reuses the chart timeline with Seoul dates, timestamps, and order names. It starts with the latest three past orders for the selected category and expands when more are available.
 
+## Dispensing and treatment re-request continuity — 2026-11-09
+
+- A pending replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
+- An instruction with prior work stays open after re-request and reload. The scoped instruction read returns the earliest start time of the displayed items across their attempts. A document without start history follows the prework entry.
+- The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
+- Releasing the assignment after continuation shows the waiting entry and queue group for that item. Its earlier start remains in the instruction history.
+
 ## Dispensing and treatment order cancellation authority — 2026-11-09
 
 Cancelling a confirmed dispensing or treatment order, including a set containing
@@ -606,6 +613,15 @@ product quantity; `theoreticalTotalQuantity` is its course total.
 `dispenseRequestSchemaVersion=1` and `preparationQuantityScope=course_total`.
 Execution-result quantities remain a separate contract. Product-unit billing
 uses the final course request; fixed-order/set pricing keeps its existing basis.
+
+In the confirmed dispensing order dialog, `총량` shows the saved theoretical
+total as a read-only value, with the saved legacy total as a fallback. The
+separate `요청 조제량` shows the final course request and its calculation mode.
+Open manual adjustment explicitly. A change that affects the course quantity
+requires reconfirming a manual request or returning it to automatic calculation
+before saving. Use the existing server calculation on save. The instruction
+table and its change history show the saved course request and unit under
+`요청 조제량`, falling back to the saved total for older instructions.
 
 The server captures a frozen `orders.dispense_request_rule_snapshot` on insert.
 It contains source, version, product key and rule. Updates and draft upserts

@@ -1,4 +1,6 @@
 import { getClinicalOrderFieldSchema } from "@/features/chart/order-execution-domain";
+import { formatPlanOrderTableUnit } from "@/features/chart/chart-order-table-presentation";
+import { getDispenseRequestCourseQuantity, getDispenseRequestUnit } from "@/features/chart/dispense-request-quantity";
 import type {
   InstructionDocument,
   InstructionItem,
@@ -50,6 +52,10 @@ export type InstructionViewAction = {
   assignees?: string[];
 };
 
+export function hasPendingInstructionRerequest(document: InstructionDocument) {
+  return document.items.some((item) => item.status === "requested" && item.attemptNo > 1);
+}
+
 export function isWaitingInstruction(document: InstructionDocument) {
   if (document.finalized || !document.items.length) return false;
   if (document.items.every((item) => item.status === "requested")) return true;
@@ -64,6 +70,7 @@ export function isWaitingInstruction(document: InstructionDocument) {
 
 export function getInstructionStatusLabel(document: InstructionDocument) {
   if (document.finalized) return "완료";
+  if (hasPendingInstructionRerequest(document)) return "재요청";
   const active = document.items.filter((item) => item.status !== "cancelled");
   if (!active.length) return "취소";
   if (active.every((item) => item.status === "returned")) return "반려";
@@ -88,7 +95,7 @@ function text(...values: unknown[]) {
   return "—";
 }
 
-/** Display persisted values verbatim. Never infer a clinical dose or total. */
+/** Display saved instructions and the canonical course request. */
 function displayFields(
   plan: Record<string, unknown>,
   source: Record<string, unknown>,
@@ -99,6 +106,8 @@ function displayFields(
   const calculation = record(
     plan.calculationOutputs ?? source.calculationOutputs,
   );
+  const requestQuantity = queueType === "dispensing" ? getDispenseRequestCourseQuantity(calculation) : null;
+  const requestUnit = requestQuantity === null ? null : getDispenseRequestUnit(calculation);
   // Explicit instructions, memos and treatment quantities belong here. Internal
   // calculation selectors and identifiers stay in the persisted plan.
   const instructionKeys = new Set(queueType === "dispensing"
@@ -132,11 +141,12 @@ function displayFields(
     frequency: text(inputs.frequency),
     days: text(inputs.durationDays),
     total: text(
+      requestQuantity,
       inputs.totalQuantity,
       calculation.plannedPracticalTotalQuantity,
       calculation.totalRequiredDispenseQuantity,
     ),
-    totalUnit: text(inputs.totalQuantityUnit, calculation.dispenseUnit),
+    totalUnit: text(formatPlanOrderTableUnit(requestUnit), inputs.totalQuantityUnit, calculation.dispenseUnit),
     route: text(inputs.route, inputs.administrationRoute),
     medicationGuide: text(inputs.medicationInstruction),
     storage: text(inputs.storageMethod),

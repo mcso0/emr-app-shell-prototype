@@ -47,7 +47,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   let assignmentFailures = options.failAssignment ? 1 : 0;
   const assignmentWrites: Record<string, unknown>[] = [];
   const workItems = () => document.items.map(item => ({ id: item.id, workspaceId, orderId: item.id, encounterId: id, patientId: options.differentPatient && item.id === secondId ? secondId : patientId,
-    taskId: item.id, taskAttemptNo: 1, requestCycle: 1, rowRevision: Number(document.revision), status: item.status,
+    taskId: item.taskId, taskAttemptNo: item.attemptNo, requestCycle: item.attemptNo, rowRevision: Number(document.revision), status: item.status,
     queueType: options.queueType ?? "dispensing", assignedToUserId: item.assigneeId, requestedByUserId: id,
     patientName: "합성 환자", guardianName: "합성 보호자", requesterName: "합성 수의사",
     startedAt: item.status === "in_progress" ? "2026-10-31T00:05:00.000Z" : null,
@@ -113,6 +113,17 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
       } else if (action === "start") {
         document.canStart = false;
         document.items.forEach(item => { if (item.status === "requested") { item.status = "in_progress"; contexts[item.id].status = "in_progress"; } });
+      } else if (action === "unassign") {
+        document.mainAssigneeId = null;
+        document.mainAssigneeName = null;
+        document.canClaim = true;
+        document.canUnassign = false;
+        document.items.forEach(item => {
+          if (item.status !== "in_progress") return;
+          item.status = "paused";
+          item.assigneeId = null;
+          item.assigneeName = null;
+        });
       } else if (action === "complete_all") {
         if (document.items.some(item => item.resultRequired)) return route.fulfill({ status: 409, json: { ok: false, error: "actual_execution_result_required" } });
         document.finalized = true; document.canCompleteAll = false;
@@ -144,7 +155,7 @@ async function install(page: Page, options: { beforeNavigate?: () => Promise<voi
   });
   await options.beforeNavigate?.();
   await page.goto(`/w/${workspaceId}/dispensing?date=2026-10-31&workItemId=${id}&queueItemId=live-fulfillment-${id}&modulePanel=open&aside=closed&right=closed`);
-  if (options.started) await expect(page.getByRole("heading", { name: "조제 지시서", exact: true })).toBeVisible();
+  if (options.started) await expect(page.getByRole("heading", { name: category === "treatment" ? "처치 지시서" : "조제 지시서", exact: true })).toBeVisible();
   else await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
   if (!options.started) {
     const entryAction = page.getByRole("button", { name: options.owner === "mine" ? "업무 시작하기" : "담당하기", exact: true });
@@ -271,6 +282,89 @@ test("direct start still requires acknowledgement of changed instructions", asyn
   await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
   expect(actions).toEqual(["start"]);
 });
+
+for (const queueType of ["dispensing", "treatment"] as const) {
+  test(`${queueType} re-request keeps the started instruction and requires review before continuing`, async ({ page }) => {
+    const { document, actions } = await install(page, { queueType, started: true });
+    const item = document.items[0];
+    const before = queueType === "dispensing"
+      ? { detailSchemaVersion: 1, detailInputs: { ...item.plan.detailInputs as object, frequency: "bid" } }
+      : { detailSchemaVersion: 3, detailInputs: { method: "변경 전 합성 처치" } };
+    const after = queueType === "dispensing"
+      ? { ...before, detailInputs: { ...before.detailInputs, frequency: "qid" } }
+      : { ...before, detailInputs: { method: "수정된 합성 처치" } };
+    item.status = "requested";
+    item.attemptNo = 2;
+    item.taskId = secondId;
+    item.plan = after;
+    document.rootTaskId = secondId;
+    document.revision = "2";
+    document.firstStartedAt = "2026-10-31T00:05:00+00:00";
+    document.canStart = true;
+    document.canUnassign = true;
+    document.changes = [{ id: "synthetic-edit", orderId: id, createdAt: "2026-10-31T00:20:00Z",
+      actorName: "합성 수의사", changeType: "re_request",
+      before: { ...before, instruction: item.instruction }, after: { ...after, instruction: item.instruction } }];
+    let requiresAcknowledgement = true;
+    await page.route("**/fulfillment/instruction-review*", route => {
+      if (route.request().method() === "POST") {
+        expect(route.request().postDataJSON()).toEqual({ taskId: secondId, versionKey: "b".repeat(64) });
+        requiresAcknowledgement = false;
+        return route.fulfill({ json: { ok: true } });
+      }
+      return route.fulfill({ json: { ok: true, reviews: [{
+        taskId: secondId, requiresAcknowledgement, previous: null, snapshots: [],
+        current: { chartId: id, scope: queueType, versions: { [queueType]: 2 }, versionKey: "b".repeat(64),
+          entries: [{ scope: queueType, orderId: id, kind: "clinical_edit", revision: 2,
+            instruction: "합성 변경 사항을 확인해 주세요.", deleted: false, legacy: false, actorName: null, createdAt: null }] },
+      }] } });
+    });
+
+    await page.reload();
+    const toggle = page.getByTestId("patient-queue-view-toggle");
+    await expect(toggle).toBeEnabled();
+    if (await toggle.getAttribute("aria-pressed") !== "true") await toggle.click();
+    const card = page.getByTestId(`order-queue-item-live-fulfillment-${id}`);
+    await expect(card.getByText("재요청", { exact: true })).toBeVisible();
+    await expect(card.getByText("09:00 합성 수의사 요청", { exact: true })).toBeVisible();
+    await toggle.click();
+    await expect(page.getByTestId("order-queue-status-reRequested").locator(card)).toBeVisible();
+    await expect(page.getByTestId("order-queue-status-waiting")).toHaveCount(0);
+    await expect(page.getByTestId("fulfillment-prework")).toHaveCount(0);
+    await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
+    await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+    const modified = page.locator(".fd-modified");
+    await expect(modified).toContainText("수정된 오더");
+    await expect(modified).toContainText("합성 품목 1");
+    if (queueType === "dispensing") {
+      await expect(modified.getByRole("button", { name: /복용 주기 .*변경 내용 보기/ })).toBeVisible();
+      await expect(modified).toContainText(/qid|하루 4회/i);
+    } else {
+      await expect(modified).toContainText("수정된 합성 처치");
+    }
+    expect(actions).toEqual([]);
+
+    const continueWork = page.getByRole("button", { name: "업무 계속하기" });
+    await continueWork.click();
+    const review = page.getByRole("dialog", { name: "지시사항 확인" });
+    await expect(review).toBeVisible();
+    expect(actions).toEqual([]);
+    await review.getByRole("button", { name: "변경·남은 작업 범위 확인" }).click();
+    await expect(review).not.toBeVisible();
+    await continueWork.click();
+    await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+    await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
+    await expect(page.getByText("09:05", { exact: true })).toBeVisible();
+    await expect(modified).toContainText("합성 품목 1");
+    expect(actions).toEqual(["start"]);
+
+    await page.getByRole("button", { name: "담당 취소", exact: true }).click();
+    await expect(page.getByTestId("fulfillment-prework")).toBeVisible();
+    await expect(page.getByTestId("order-queue-status-waiting").locator(card)).toBeVisible();
+    await expect(page.getByTestId("order-queue-status-reRequested")).toHaveCount(0);
+    expect(actions).toEqual(["start", "unassign"]);
+  });
+}
 
 test("takeover requires a reason, retains it on failure and retries one command", async ({ page }) => {
   const { actions, assignmentWrites } = await install(page, { owner: "other", set: true, failAssignment: true, requester: false });

@@ -81,6 +81,7 @@ export const instructionItemSchema = z.object({
 export const instructionDocumentSchema = z.object({
   oralInstruction: oralInstructionSchema.nullable().optional(),
   encounterNo: z.string().nullable().optional(),
+  firstStartedAt: z.iso.datetime({ offset: true }).nullish(),
   rootOrderId: id,
   rootTaskId: id,
   name: z.string(),
