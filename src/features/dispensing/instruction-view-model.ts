@@ -50,6 +50,18 @@ export type InstructionViewAction = {
   assignees?: string[];
 };
 
+export function isWaitingInstruction(document: InstructionDocument) {
+  if (document.finalized || !document.items.length) return false;
+  if (document.items.every((item) => item.status === "requested")) return true;
+  if (document.mainAssigneeId) return false;
+
+  const unfinished = document.items.filter(
+    (item) => !["completed", "cancelled", "returned"].includes(item.status),
+  );
+  return unfinished.some((item) => item.status === "paused") &&
+    unfinished.every((item) => !item.assigneeId && (item.status === "requested" || item.status === "paused"));
+}
+
 export function getInstructionStatusLabel(document: InstructionDocument) {
   if (document.finalized) return "완료";
   const active = document.items.filter((item) => item.status !== "cancelled");

@@ -70,7 +70,7 @@ import { FulfillmentExecutionActions } from "@/features/fulfillment/components/e
 import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
 import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
 import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
-import { getInstructionStatusLabel } from "./instruction-view-model";
+import { getInstructionStatusLabel, isWaitingInstruction } from "./instruction-view-model";
 import {
   getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
@@ -613,12 +613,15 @@ function applyFulfillmentToQueueItems(
 
 function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
   const isTreatment = workItem.queueType === "treatment";
+  const queueStatus = workItem.status === "paused" && !workItem.assignedToUserId
+    ? "requested"
+    : workItem.status;
   const timestamp =
     workItem.createdAt ?? new Date().toISOString();
   const time = formatOperatingShortTime(timestamp);
 
   return {
-    patientQueue: { assignedToUserId: workItem.assignedToUserId, patientId: workItem.patientId, workspaceId: workItem.workspaceId, status: workItem.status, priority: workItem.priority, requestedAt: workItem.createdAt, originChartId: workItem.originChartId, originChartCreatedAt: workItem.originChartCreatedAt },
+    patientQueue: { assignedToUserId: workItem.assignedToUserId, patientId: workItem.patientId, workspaceId: workItem.workspaceId, status: queueStatus, priority: workItem.priority, requestedAt: workItem.createdAt, originChartId: workItem.originChartId, originChartCreatedAt: workItem.originChartCreatedAt },
     id: `live-fulfillment-${workItem.id}`,
     instructionId: `${isTreatment ? "TR" : "RX"}-${workItem.id.slice(0, 8).toUpperCase()}`,
     patientName:
@@ -637,9 +640,9 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       workItem.startedAt
         ? formatOperatingShortTime(workItem.startedAt)
         : undefined,
-    statusId: mapFulfillmentToQueueStatusId(workItem.status, "waiting"),
+    statusId: mapFulfillmentToQueueStatusId(queueStatus, "waiting"),
     time,
-    waitMinutes: workItem.status === "requested" ? 0 : undefined,
+    waitMinutes: queueStatus === "requested" ? 0 : undefined,
   };
 }
 
@@ -1790,7 +1793,7 @@ function DispensingContentBody({
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
   const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
     && !instruction.document.finalized && instruction.document.items.length > 0
-    && (instruction.document.items.every((item) => item.status === "requested") || preworkCompletionRoot === instructionScope);
+    && (isWaitingInstruction(instruction.document) || preworkCompletionRoot === instructionScope);
   const entry = useOrderPrework({
     preserveLayoutWhilePending: true,
     scopeKey: `${workspaceId}:${selectedFulfillmentWorkItem?.id ?? ""}:${instructionScope ?? ""}`,
