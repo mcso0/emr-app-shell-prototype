@@ -152,7 +152,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
       </EmrWorkEntryAction> : null}
       {!prework && document.canClaim ? (
         <Button size="sm" disabled={busy} onClick={() => void change("claim")}>
-          담당하기
+          {continuingRerequest && claimStartsWork ? "업무 계속하기" : "담당하기"}
         </Button>
       ) : null}
       {!prework && document.canTakeover ? <Button size="sm" disabled={busy} onClick={() => setTakeover(true)}>담당하기</Button> : null}

@@ -126,10 +126,10 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
 
 ## Return released dispensing and treatment work to waiting — 2026-11-09
 
-- After a successful 담당 취소, a released item keeps its exact selection and
-  appears as 대기중 in both queue views.
-  An instruction with no main assignee opens prework when its remaining items
-  are unassigned and at least one item is paused.
+- After a successful 담당 취소, a released item keeps its exact selection.
+  A first attempt appears as 대기중 in both queue views and opens prework
+  when its remaining items are unassigned and at least one item is paused.
+  Released replacement attempts follow the re-request continuity rules below.
 - Confirming 담당하기 on that screen assigns and starts the remaining items in
   one command and opens the instruction. Existing timestamps and completed
   items are preserved. The flow uses the existing instruction acknowledgement
@@ -175,10 +175,10 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 
 ## Dispensing and treatment re-request continuity — 2026-11-09
 
-- A pending replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
+- A requested or released (paused and unassigned) replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
 - An instruction with prior work stays open after re-request and reload. The scoped instruction read returns the earliest start time of the displayed items across their attempts. A document without start history follows the prework entry.
 - The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
-- Releasing the assignment after continuation shows the waiting entry and queue group for that item. Its earlier start remains in the instruction history.
+- After releasing a replacement attempt, 업무 계속하기 checks the latest instructions and claims and resumes the existing attempt for an eligible assignee. Its earlier start remains in the instruction history.
 
 ## Dispensing and treatment order cancellation authority — 2026-11-09
 

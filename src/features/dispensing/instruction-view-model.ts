@@ -50,8 +50,16 @@ export type InstructionViewAction = {
   assignees?: string[];
 };
 
+export function isPendingFulfillmentRerequest(
+  status: InstructionItem["status"],
+  attemptNo: number,
+  assigneeId?: string | null,
+) {
+  return attemptNo > 1 && (status === "requested" || (status === "paused" && !assigneeId));
+}
+
 export function hasPendingInstructionRerequest(document: InstructionDocument) {
-  return document.items.some((item) => item.status === "requested" && item.attemptNo > 1);
+  return document.items.some((item) => isPendingFulfillmentRerequest(item.status, item.attemptNo, item.assigneeId));
 }
 
 export function isWaitingInstruction(document: InstructionDocument) {

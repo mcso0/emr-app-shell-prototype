@@ -70,7 +70,7 @@ import { FulfillmentExecutionActions } from "@/features/fulfillment/components/e
 import { loadFulfillmentEligibleAssigneesRoute } from "@/features/fulfillment/client-eligible-assignees";
 import { InstructionActions, InstructionBody } from "./components/instruction-workspace";
 import { useFulfillmentInstruction } from "./use-fulfillment-instruction";
-import { getInstructionStatusLabel, hasPendingInstructionRerequest, isWaitingInstruction } from "./instruction-view-model";
+import { getInstructionStatusLabel, hasPendingInstructionRerequest, isPendingFulfillmentRerequest, isWaitingInstruction } from "./instruction-view-model";
 import {
   getFulfillmentOrderDisplayName,
   getPatientHistoryStatus,
@@ -626,7 +626,7 @@ function createLiveQueueItem(workItem: FulfillmentWorkItem): OrderQueueItem {
       assignedToUserId: workItem.assignedToUserId,
       patientId: workItem.patientId,
       workspaceId: workItem.workspaceId,
-      status: statusId === "reRequested" && workItem.status === "requested" ? "re_requested" : queueStatus,
+      status: statusId === "reRequested" && queueStatus === "requested" ? "re_requested" : queueStatus,
       priority: workItem.priority,
       requestedAt: workItem.createdAt,
       originChartId: workItem.originChartId,
@@ -713,9 +713,10 @@ function mapFulfillmentToQueueStatusId(
   if (status === "completed") return "completed";
   if (status === "cancelled") return "canceled";
   if (status === "returned") return "reRequested";
+  if (isPendingFulfillmentRerequest(status, requestCycle ?? taskAttemptNo ?? 1, assignedToUserId)) return "reRequested";
   if (status === "paused" && !assignedToUserId) return "waiting";
   if (status === "in_progress" || status === "paused") return "inProgress";
-  if (status === "requested") return (requestCycle ?? taskAttemptNo ?? 1) > 1 ? "reRequested" : "waiting";
+  if (status === "requested") return "waiting";
   return fallback;
 }
 
@@ -1805,8 +1806,7 @@ function DispensingContentBody({
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
   const firstStartedAt = instruction.document?.firstStartedAt;
   const keepStartedRerequestOpen = firstStartedAt && instruction.document
-    && hasPendingInstructionRerequest(instruction.document)
-    && instruction.document.items.every((item) => item.status === "requested");
+    && hasPendingInstructionRerequest(instruction.document);
   const preworkEligible = !allowLegacyFixtureFallback && instruction.document && selectedFulfillmentWorkItem
     && !instruction.document.finalized && instruction.document.items.length > 0
     && (preworkCompletionRoot === instructionScope
