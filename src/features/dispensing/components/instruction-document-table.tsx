@@ -204,11 +204,12 @@ function OrderCard({
     measure();
     return () => observer.disconnect();
   }, [o.items, density, collapsed]);
+  const totalLabel = o.kind === "조제" ? "요청 조제량" : "총 용량";
   const fieldLabels: Record<string, string> = {
     dose: "1회 용량",
     doseUnit: "용량 단위",
-    total: "총 용량",
-    totalUnit: "총량 단위",
+    total: totalLabel,
+    totalUnit: o.kind === "조제" ? "요청 조제량 단위" : "총량 단위",
     frequency: o.kind === "처치" ? "수행 주기" : "복용 주기",
     days: "일수",
     route: "투여 경로",
@@ -439,7 +440,7 @@ function OrderCard({
                           "1회 용량",
                           "단위",
                           o.kind === "처치" ? "수행 주기" : "복용 주기",
-                          "총 용량",
+                          totalLabel,
                           "단위",
                           "",
                           "복약지도",
@@ -510,7 +511,7 @@ function OrderCard({
                                 </span>
                               </TableCell>
                               <TableCell
-                                data-label="총 용량"
+                                data-label={totalLabel}
                                 className="fd-number"
                               >
                                 {value(i, "total")}

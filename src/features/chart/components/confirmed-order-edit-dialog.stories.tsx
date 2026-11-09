@@ -5,14 +5,26 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ConfirmedOrderEditDialog } from "./confirmed-order-edit-dialog";
 import { confirmedOrderEditSchema, type ConfirmedOrderContext } from "../confirmed-order-edit-contract";
+import { updateDispensingPrescriptionInput } from "../dispense-request-quantity";
 import { OrderBillingChangeReview } from "@/features/billing/order-billing-change-review";
 import { PartialOrderWorkDialog } from "@/features/fulfillment/components/partial-order-work-dialog";
 
-type Scenario = "financial" | "clinical" | "retry" | "conflict" | "readonly" | "billing" | "partial" | "late" | "treatment";
+type Scenario = "financial" | "clinical" | "manual" | "retry" | "conflict" | "readonly" | "billing" | "partial" | "late" | "treatment";
 const id = (n: number) => `93000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 let state: ReturnType<typeof createFixture>;
 function createFixture(scenario: Scenario) {
   const context: ConfirmedOrderContext = { orderId: id(1), chartId: id(2), version: "synthetic-v1", detailInputs: { dose: 1, durationDays: 3 }, calculationOutputs: {}, detailSchemaVersion: 1, taskStatus: "in_progress", billingStage: "before", financial: { billingName: "합성 조제 청구", billingQuantity: 3, unitPriceKrw: 5000, taxClass: "non_taxable", billingReflectionEnabled: true, adjustmentSource: null, adjustmentAmountKrw: 0, adjustmentPercent: 0, adjustmentReason: "" }, pendingFinancial: null, canEditClinical: scenario !== "readonly", canEditFinancial: scenario !== "readonly", actualDispenseMode: "automatic", actualDispenseQuantity: 3 };
+  context.calculationOutputs = { theoreticalTotalQuantity: 3, actualDispenseUnit: "tablet" };
+  if (scenario === "clinical") {
+    context.detailInputs = {
+      ...context.detailInputs, frequency: "sid", totalOccurrences: 3,
+      taperSchedule: "합성 증감 일정", extraLabelSpeciesConfirmed: true, extraLabelSpeciesReason: "합성 확인 기록",
+    };
+  }
+  if (scenario === "manual") {
+    context.actualDispenseMode = "manual";
+    context.actualDispenseQuantity = 4;
+  }
   const requests: Record<string, unknown>[] = [];
   let failed = false, saved = 0, release: (() => void) | undefined;
   let changes = [{ orderId: id(1), proposalId: id(3), version: 1, before: context.financial!, proposed: { ...context.financial!, unitPriceKrw: 6000 }, canApprove: true, createdAt: "2026-11-03T00:00:00Z" }];
@@ -53,7 +65,7 @@ function Example({ scenario }: { scenario: Scenario }) {
   const saved = () => { state.recordSaved(); setCount(n => n + 1); };
   return <div className="p-6"><output aria-label="합성 저장 횟수">{count}</output><Button onClick={() => setOpen(value => !value)}>{open ? "합성 화면 전환" : "수정 열기"}</Button>
     {open && (scenario === "billing" ? <OrderBillingChangeReview workspaceId="synthetic-confirmed-edit" invoiceId={id(5)} reviewKey="synthetic-story-invoice" onApplied={saved} /> : scenario === "partial" ? <PartialOrderWorkDialog workspaceId="synthetic-confirmed-edit" taskId={id(4)} name="합성 조제" onClose={() => setOpen(false)} onSaved={saved} /> : <ConfirmedOrderEditDialog workspaceId="synthetic-confirmed-edit" chartId={id(2)} orderId={id(1)} name={scenario === "treatment" ? "합성 처치" : "합성 조제"} clinicalType={scenario === "treatment" ? "treatment" : "dispensing"} fieldLabels={{ dose: "용량", durationDays: "일수" }} onClose={() => setOpen(false)} onSaved={() => { saved(); setOpen(false); }}
-      renderClinical={(inputs, change, disabled) => <div className="grid grid-cols-2 gap-3">{([['dose', '용량'], ['durationDays', '일수']] as const).map(([key, label]) => <label className="grid gap-2 text-sm" key={key}>{label}<Input aria-label={label} disabled={disabled} type="number" value={Number(inputs[key])} onChange={e => change({ ...inputs, [key]: Number(e.target.value) })} /></label>)}</div>} />)}
+      renderClinical={(inputs, change, disabled) => <div className="grid grid-cols-2 gap-3">{([['dose', '용량'], ['durationDays', '일수']] as const).map(([key, label]) => <label className="grid gap-2 text-sm" key={key}>{label}<Input aria-label={label} disabled={disabled} type="number" value={Number(inputs[key])} onChange={e => change(updateDispensingPrescriptionInput(inputs, key, Number(e.target.value)))} /></label>)}</div>} />)}
   </div>;
 }
 const meta = { title: "Features/Chart/Confirmed Order Edit", component: Example, args: { scenario: "financial" as Scenario }, tags: ["autodocs"], parameters: { docs: { story: { inline: false, height: "920px" }, description: { component: "실제 수정·수납 확인·부분 수행 컴포넌트의 합성 통신 검증. DB 권한·원자성은 SQL 회귀 테스트로 별도 확인합니다. 진료 용량 예시는 합성 데이터입니다." } } }, beforeEach: ({ args }) => { state = createFixture(args.scenario); return state.install(); } } satisfies Meta<typeof Example>;
@@ -63,12 +75,74 @@ const body = (element: HTMLElement) => within(element.ownerDocument.body);
 async function editPrice(element: HTMLElement) { const screen = body(element); const price = await screen.findByLabelText("단가 (원)"); await userEvent.clear(price); await userEvent.type(price, "6000"); return screen; }
 export const FinancialOnlyAndSuccessiveEdit: Story = { play: async ({ canvasElement, canvas }) => {
  const screen = body(canvasElement); await screen.findByLabelText("단가 (원)"); await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
- await editPrice(canvasElement); await expect(screen.getByText("조제·처치 변경 안내는 보내지 않아요.")).toBeVisible(); await userEvent.dblClick(screen.getByRole("button", { name: "수정 저장" }));
+ await expect(screen.getByText("변경된 내용이 없어요.")).toHaveAttribute("role", "status");
+ await expect(screen.queryByLabelText(/수정 사유/)).toBeNull();
+ await expect(screen.getByLabelText("요청 조제량")).toHaveAttribute("readonly");
+ await userEvent.click(screen.getByRole("button", { name: "수동으로 조정" }));
+ await expect(screen.getByRole("spinbutton", { name: "요청 조제량" })).toBeEnabled();
+ await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
+ await userEvent.click(screen.getByRole("button", { name: /^닫기$/ }));
+ await editPrice(canvasElement);
+ await expect(screen.getByLabelText("수정 사유 (선택 입력)")).not.toBeRequired();
+ await expect(screen.getByText("조제·처치 변경 안내는 보내지 않아요.")).toBeVisible(); await userEvent.dblClick(screen.getByRole("button", { name: "수정 저장" }));
  await waitFor(() => expect(canvas.getByLabelText("합성 저장 횟수")).toHaveTextContent("1")); await expect(state.requests).toHaveLength(1); await expect(state.requests[0].clinical).toBeUndefined();
  await userEvent.click(canvas.getByRole("button", { name: "수정 열기" })); await expect(await screen.findByLabelText("단가 (원)")).toHaveValue(6000);
  await userEvent.clear(screen.getByLabelText("단가 (원)")); await userEvent.type(screen.getByLabelText("단가 (원)"), "7000"); await userEvent.click(screen.getByRole("button", { name: "수정 저장" })); await waitFor(() => expect(state.requests).toHaveLength(2)); await expect(state.requests[1].expectedVersion).toBe("synthetic-v2");
 } };
-export const ClinicalReason: Story = { args: { scenario: "clinical" }, play: async ({ canvasElement }) => { const screen = body(canvasElement); const days = await screen.findByLabelText("일수"); await userEvent.clear(days); await userEvent.type(days, "5"); await expect(screen.getByRole("button", { name: "수정 후 요청" })).toBeDisabled(); await userEvent.type(screen.getByLabelText("수정 사유 *"), "합성 일수 수정"); await userEvent.click(screen.getByRole("button", { name: "수정 후 요청" })); await waitFor(() => expect(state.requests).toHaveLength(1)); await expect(state.requests[0].financial).toBeUndefined(); } };
+export const ClinicalReason: Story = { args: { scenario: "clinical" }, play: async ({ canvasElement }) => {
+  const screen = body(canvasElement);
+  const days = await screen.findByLabelText("일수");
+  await userEvent.clear(days);
+  await userEvent.type(days, "5");
+  await expect(screen.getByLabelText("총량")).toHaveValue("저장 시 자동 계산");
+  await expect(screen.getByLabelText("요청 조제량")).toHaveValue("저장 시 자동 계산");
+  await userEvent.clear(days);
+  await userEvent.type(days, "3");
+  await expect(screen.getByText("변경된 내용이 없어요.")).toHaveAttribute("role", "status");
+  await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled();
+  await userEvent.clear(days);
+  await userEvent.type(days, "5");
+  const reason = screen.getByLabelText("수정 사유 (필수)");
+  await expect(reason).toBeRequired();
+  await expect(screen.getByRole("button", { name: "수정 후 요청" })).toBeDisabled();
+  await userEvent.type(reason, "합성 일수 수정");
+  await userEvent.click(screen.getByRole("button", { name: "수정 후 요청" }));
+  await waitFor(() => expect(state.requests).toHaveLength(1));
+  await expect(state.requests[0].financial).toBeUndefined();
+  await expect(state.requests[0].clinical).toEqual({
+    detailInputs: {
+      dose: 1, durationDays: 5, frequency: "sid",
+      taperSchedule: "합성 증감 일정", extraLabelSpeciesConfirmed: true, extraLabelSpeciesReason: "합성 확인 기록",
+    },
+    detailSchemaVersion: 1,
+    actualDispenseMode: "automatic",
+  });
+} };
+export const ManualRequestReconfirmation: Story = { args: { scenario: "manual" }, play: async ({ canvasElement }) => {
+  const screen = body(canvasElement);
+  const days = await screen.findByLabelText("일수");
+  await expect(screen.getByLabelText("요청 조제량")).toHaveValue("4 TAB");
+  await userEvent.clear(days);
+  await userEvent.type(days, "5");
+  await userEvent.type(screen.getByLabelText("수정 사유 (필수)"), "합성 일수 수정");
+  const save = screen.getByRole("button", { name: "수정 후 요청" });
+  await expect(save).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "요청 조제량 확인" }));
+  await expect(save).toBeEnabled();
+  await userEvent.click(screen.getByRole("button", { name: "수동으로 조정" }));
+  const quantity = screen.getByRole("spinbutton", { name: "요청 조제량" });
+  await userEvent.clear(quantity);
+  await expect(save).toBeDisabled();
+  await userEvent.type(quantity, "6");
+  await expect(save).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "요청 조제량 확인" }));
+  await userEvent.click(save);
+  await waitFor(() => expect(state.requests).toHaveLength(1));
+  await expect(state.requests[0].clinical).toMatchObject({
+    actualDispenseMode: "manual",
+    actualDispenseQuantity: 6,
+  });
+} };
 export const SaveFailureRetry: Story = { args: { scenario: "retry" }, play: async ({ canvasElement }) => { const screen = await editPrice(canvasElement); await userEvent.click(screen.getByRole("button", { name: "수정 저장" })); await screen.findByRole("alert"); await expect(screen.getByLabelText("단가 (원)")).toHaveValue(6000); await userEvent.click(screen.getByRole("button", { name: "수정 저장" })); await waitFor(() => expect(state.requests).toHaveLength(2)); await expect(state.requests[0].commandId).toBe(state.requests[1].commandId); } };
 export const ConflictPreservesInput: Story = { args: { scenario: "conflict" }, play: async ({ canvasElement }) => { const screen = await editPrice(canvasElement); await userEvent.click(screen.getByRole("button", { name: "수정 저장" })); await screen.findByRole("alert"); await expect(screen.getByLabelText("단가 (원)")).toHaveValue(6000); await expect(screen.getByRole("button", { name: "수정 저장" })).toBeDisabled(); await userEvent.click(screen.getByRole("button", { name: "입력을 버리고 최신 내용 조회" })); await waitFor(() => expect(screen.getByLabelText("단가 (원)")).toHaveValue(5000)); } };
 export const ReadOnly: Story = { args: { scenario: "readonly" }, play: async ({ canvasElement }) => { const screen = body(canvasElement); await expect(await screen.findByLabelText("단가 (원)")).toBeDisabled(); await expect(screen.getByLabelText("일수")).toBeDisabled(); } };

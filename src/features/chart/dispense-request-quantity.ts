@@ -114,6 +114,13 @@ export function getDispenseRequestCourseQuantity(outputs: Record<string, unknown
   return typeof count === "number" && count > 0 && Number.isFinite(count) ? actual * count : null;
 }
 
+export function getDispenseRequestUnit(outputs: Record<string, unknown>): string | null {
+  for (const unit of [outputs.actualDispenseUnit, outputs.plannedPracticalDispenseUnit, outputs.dispenseUnit]) {
+    if (typeof unit === "string" && unit.trim()) return unit;
+  }
+  return null;
+}
+
 export function getDispenseRequestDisplayPrecision(outputs: Record<string, unknown>): number {
   const policy = outputs.preparationPolicy;
   if (!policy || typeof policy !== "object" || Array.isArray(policy)) return 0;

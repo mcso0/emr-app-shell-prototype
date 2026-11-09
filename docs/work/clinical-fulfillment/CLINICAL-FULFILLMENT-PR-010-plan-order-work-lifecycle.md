@@ -2111,6 +2111,20 @@ workspace. Apply the forward migration before merging the UI, then verify the
 Ready Production source and repeat the role checks. Real data and provider
 operations are outside this release scope.
 
+### Confirmed dispensing order form and instruction quantities — 2026-11-09
+
+Local UI follow-up from `origin/main` `9f83ac93`. Hide taper and species
+exception inputs in confirmed dispensing edits and retain their saved values.
+Use the [course quantity display contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#local-course-dispense-request-candidate-2026-10-31)
+for the read-only total, manual request confirmation, and instruction values.
+Show the reason after a change and distinguish required clinical reasons from
+optional financial reasons. Explain disabled save when values match.
+
+Synthetic verification covered 14 Storybook cases, 19 Playwright cases, and
+three API adapter cases. It included reverting a prescription with stored
+occurrence counts, reconfirming a manual quantity, reading prior instruction
+quantities, and inspecting the unchanged dialog at 390px.
+
 ### Return released dispensing and treatment work to waiting — 2026-11-09
 
 승욱 approved local implementation from origin/main `34379835` in a separate
