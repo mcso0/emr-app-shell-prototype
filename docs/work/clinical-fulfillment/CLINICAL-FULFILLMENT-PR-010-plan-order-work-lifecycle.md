@@ -2379,3 +2379,17 @@ No linked users, memberships, orders, work items, storage objects, realtime
 messages, identities, sessions, refresh tokens, or matching Auth audit entries
 remained. The task audit, set revision, and workspace admin guards were enabled
 after commit.
+
+### Dispensing re-request change review — 2026-11-09
+
+Local implementation from `origin/main` `63b6107a` follows the
+[dispensing re-request display contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09).
+The dispensing instruction uses the existing authorized reads for saved values
+and the reason. It keeps acknowledgement and continuation separate.
+
+Local verification passed four focused Playwright cases and 33 Storybook
+browser stories. Coverage includes a saved quantity change, same-time edits
+to two set items, successive revisions, ambiguous history, empty and meaningful
+snapshots, partial work, keyboard focus return, failed acknowledgement and retry,
+and unchanged treatment continuation. The synthetic banner and review fit at
+360 px without horizontal overflow.

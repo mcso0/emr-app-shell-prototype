@@ -1,6 +1,9 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { getDispensingRerequestChanges } from "@/features/dispensing/instruction-view-model";
+import { syntheticInstruction } from "@/features/dispensing/instruction-fixtures";
+import type { InstructionDocument } from "../instruction-contract";
 import { TaskInstructionReview } from "./task-instruction-review";
 import { useTaskInstructionReview } from "../use-task-instruction-review";
 import { instructionReviewListSchema, type TaskInstructionReview as Review } from "../task-instruction-review-contract";
@@ -8,22 +11,48 @@ import { instructionReviewListSchema, type TaskInstructionReview as Review } fro
 const workspace = "synthetic-instruction-review";
 const first = "71000000-0000-4000-8000-000000000001";
 const second = "71000000-0000-4000-8000-000000000002";
-type Scenario = "history-normal" | "multiline" | "normal" | "conflict" | "deleted" | "read-failure" | "late-response" | "legacy-history" | "history-denied" | "history-failure" | "history-late" | "history-wrong-chart";
+const editTime = "2026-11-09T11:47:00Z";
+const before = { detailInputs: { frequency: "bid" }, calculationOutputs: { plannedPracticalTotalQuantity: 6, dispenseUnit: "APPL" } };
+const after = { detailInputs: { frequency: "tid" }, calculationOutputs: { plannedPracticalTotalQuantity: 9, dispenseUnit: "APPL" } };
+const dispensingDocument: InstructionDocument = {
+  ...syntheticInstruction,
+  isSet: false,
+  items: [{ ...syntheticInstruction.items[0], taskId: first, orderId: first, name: "합성 조제 오더 A", attemptNo: 2, plan: after }],
+  changes: [{ id: "synthetic-edit", orderId: first, createdAt: editTime, actorName: "합성 수의사", changeType: "re_request", before, after }],
+};
+type Scenario = "dispensing-rerequest" | "history-normal" | "multiline" | "normal" | "conflict" | "deleted" | "read-failure" | "late-response" | "legacy-history" | "history-denied" | "history-failure" | "history-late" | "history-wrong-chart";
 function createFixture(scenario: Scenario) {
   let revision = scenario.includes("history") ? 2 : 1, posts = 0, failed = scenario === "read-failure", held = scenario === "late-response";
   let release: (() => void) | undefined;
   let historyFailed = scenario === "history-failure", holdHistory = scenario === "history-late";
   const acknowledgements = new Set<string>();
-  const review = (taskId: string): Review => ({
-    taskId, requiresAcknowledgement: !acknowledgements.has(String(revision)), snapshots: scenario === "legacy-history" ? [{
-      phase: "requested", legacy: true, taskId, attemptNo: 1, capturedAt: "2026-10-31T03:00:00Z",
-      document: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { legacyPO: 1 }, versionKey: "c".repeat(64),
-        entries: [{ scope: "dispensing", revision: 1, instruction: "이전 경구제 전용 합성 기록", deleted: false, legacy: true, actorName: "합성 수의사", createdAt: "2026-10-31T02:00:00Z" }] },
-    }] : [],
-    current: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { overall: revision, dispensing: 0 }, versionKey: String(revision).repeat(64),
-      entries: [{ scope: "overall", revision, instruction: scenario === "deleted" ? "" : `${taskId === first ? "첫 작업" : "둘째 작업"} 합성 지시 ${revision}${scenario === "multiline" ? "\n추가 지시" : ""}`, deleted: scenario === "deleted", actorName: "합성 수의사", createdAt: "2026-11-01T03:00:00Z" }] },
-    previous: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { overall: 0, dispensing: 0 }, versionKey: "0".repeat(64), entries: [] },
-  });
+  const review = (taskId: string): Review => {
+    const base: Review = {
+      taskId, requiresAcknowledgement: !acknowledgements.has(String(revision)), snapshots: scenario === "legacy-history" ? [{
+        phase: "requested", legacy: true, taskId, attemptNo: 1, capturedAt: "2026-10-31T03:00:00Z",
+        document: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { legacyPO: 1 }, versionKey: "c".repeat(64),
+          entries: [{ scope: "dispensing", revision: 1, instruction: "이전 경구제 전용 합성 기록", deleted: false, legacy: true, actorName: "합성 수의사", createdAt: "2026-10-31T02:00:00Z" }] },
+      }] : [],
+      current: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { overall: revision, dispensing: 0 }, versionKey: String(revision).repeat(64),
+        entries: [{ scope: "overall", revision, instruction: scenario === "deleted" ? "" : `${taskId === first ? "첫 작업" : "둘째 작업"} 합성 지시 ${revision}${scenario === "multiline" ? "\n추가 지시" : ""}`, deleted: scenario === "deleted", actorName: "합성 수의사", createdAt: "2026-11-01T03:00:00Z" }] },
+      previous: { chartId: "72000000-0000-4000-8000-000000000001", scope: "dispensing", versions: { overall: 0, dispensing: 0 }, versionKey: "0".repeat(64), entries: [] },
+    };
+    if (scenario !== "dispensing-rerequest") return base;
+    const current = base.current!;
+    return {
+      ...base,
+      current: {
+        ...current,
+        entries: [{ scope: "dispensing", kind: "clinical_edit", orderId: first, revision: 1,
+          instruction: "빈도: bid → tid\n사유: 합성 복용 주기 조정", deleted: false, actorName: "합성 수의사", createdAt: editTime }],
+        partialWork: [{ taskId, attemptNo: 1, note: "합성 수행 기록", actorName: "합성 담당자", createdAt: editTime }],
+      },
+      snapshots: [
+        { phase: "requested", attemptNo: 1, taskId, capturedAt: editTime, document: current },
+        { phase: "requested", attemptNo: 2, taskId, capturedAt: editTime, document: base.previous! },
+      ],
+    };
+  };
   const install = () => {
     const original = globalThis.fetch;
     const intercept: typeof fetch = async (input, init) => {
@@ -70,7 +99,9 @@ function Example({ scenario }: { scenario: Scenario }) {
       <button onClick={() => setTaskId(second)}>작업 전환</button>
       <button onClick={() => { fixture.recover(); void controller.refresh(); }}>응답 복구</button></div>
     <output aria-label="합성 시작 횟수">{starts}</output>
-    <TaskInstructionReview controller={controller} />
+    <TaskInstructionReview controller={controller} dispensingChanges={scenario === "dispensing-rerequest"
+      ? getDispensingRerequestChanges(dispensingDocument, controller.reviews)
+      : undefined} />
   </div>;
 }
 const meta = {
@@ -201,8 +232,9 @@ export const HistoryRejectsWrongChart: Story = { args: { scenario: "history-wron
 export const LateHistoryCannotReopen: Story = { args: { scenario: "history-late" }, play: async ({ canvas, canvasElement }) => {
   const body = within(canvasElement.ownerDocument.body);
   await userEvent.click(await canvas.findByRole("button", { name: "변경이력 보기" }));
-  await body.findByRole("status");
-  await userEvent.click(body.getByRole("button", { name: "닫기" }));
+  const history = await body.findByRole("dialog", { name: "변경 이력" });
+  await waitFor(() => expect(history.querySelector('[aria-busy="true"]')).not.toBeNull());
+  await userEvent.click(within(history).getByRole("button", { name: /^닫기$/ }));
   await userEvent.click(canvas.getByRole("button", { name: "응답 복구" }));
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   await expect(body.queryByText("합성 전체 변경 기록")).not.toBeInTheDocument();
@@ -231,3 +263,26 @@ export const RevisionBadge: Story = { play: async ({ canvas, canvasElement }) =>
   await waitFor(() => expect(body.queryByRole("dialog")).not.toBeInTheDocument());
   await expect(canvas.getByText("변경됨")).toBeVisible();
 } };
+
+export const DispensingRerequest: Story = {
+  args: { scenario: "dispensing-rerequest" },
+  play: async ({ canvas, canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    const banner = await canvas.findByRole("complementary", { name: "조제 오더가 수정되었습니다" });
+    await expect(banner).toHaveTextContent("합성 조제 오더 A");
+    await expect(banner).toHaveTextContent("요청 조제량 6 APPL → 9 APPL");
+    const open = within(banner).getByRole("button", { name: "변경 내용 보기" });
+    await userEvent.click(open);
+    const review = within(await body.findByRole("dialog", { name: "조제 오더 변경 확인" }));
+    await waitFor(() => expect(review.getByRole("row", { name: /복용 주기 bid tid/ })).toBeVisible());
+    await expect(review.getByText("합성 복용 주기 조정")).toBeVisible();
+    await expect(review.getByText(/합성 수행 기록/)).toBeVisible();
+    await expect(review.getByRole("button", { name: "변경·남은 작업 범위 확인" })).toBeVisible();
+    await userEvent.click(review.getByText("요청·완료 당시 기록"));
+    await expect(review.getByText(/1회차 · 요청 당시/)).toBeVisible();
+    await expect(review.queryByText(/2회차 · 요청 당시/)).not.toBeInTheDocument();
+    await userEvent.click(review.getByRole("button", { name: /^닫기$/ }));
+    await waitFor(() => expect(open).toHaveFocus());
+    await expect(fixture.posts).toBe(0);
+  },
+};

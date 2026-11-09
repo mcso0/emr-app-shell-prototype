@@ -17,7 +17,7 @@ import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-e
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
-import { createInstructionView, getInstructionStatusLabel, hasPendingInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
+import { createInstructionView, getDispensingRerequestChanges, getInstructionStatusLabel, hasPendingInstructionRerequest, isWaitingInstruction } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionDocumentTable } from "./instruction-document-table";
 
@@ -307,7 +307,10 @@ export function InstructionBody({
         </div>
       ) : null}
       {controller.loading && !document ? <EmrContentLoadingState testId="instruction-document-loading" title="조제/처치 업무를 불러오는 중입니다" /> : null}
-      {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview} />}
+      {controller.instructionReview && <TaskInstructionReview controller={controller.instructionReview}
+        dispensingChanges={document?.queueType === "dispensing"
+          ? getDispensingRerequestChanges(document, controller.instructionReview.reviews)
+          : undefined} />}
       {!controller.instructionReview && document?.oralInstruction && <OralInstructionInfobar key={document.oralInstruction.chartId} instruction={document.oralInstruction} />}
       {view ? (
         <InstructionDocumentTable

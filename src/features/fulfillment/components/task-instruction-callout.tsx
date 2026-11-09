@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CdsAlertsInfoIcon } from "@/components/cds-icons/alerts-and-status";
 import { CdsActionsXIcon } from "@/components/cds-icons/actions-and-controls";
+import { CdsNavigationChevronRightIcon } from "@/components/cds-icons/navigation";
 import { CdsUtilitiesHistoryIcon } from "@/components/cds-icons/utilities-and-misc";
 import { OverallInstructionsHistoryDialog } from "@/features/chart/overall-instructions-history-dialog";
 import { createOverallInstructionsClient, InstructionRequestError } from "@/features/chart/overall-instructions-client";
 import { instructionScopeLabels, type OverallInstructions } from "@/features/chart/overall-instructions-contract";
-import type { EffectiveInstructions } from "../task-instruction-review-contract";
+import type { DispensingOrderChange, EffectiveInstructions } from "../task-instruction-review-contract";
 import styles from "./task-instruction-callout.module.css";
 
 function TaskInstructionHistory({ workspaceId, chartId, onClose, onReview }: { workspaceId: string; chartId: string; onClose: () => void; onReview: () => void }) {
@@ -70,8 +71,9 @@ function InstructionEntry({ item, showScope }: { item: EffectiveInstructions["en
 }
 
 /** One chart/version per card. UI-only actions never acknowledge instructions. */
-export function TaskInstructionCallout({ document, workspaceId, onReview }: {
+export function TaskInstructionCallout({ document, workspaceId, onReview, orderChange }: {
   document: EffectiveInstructions; workspaceId?: string; onReview: () => void;
+  orderChange?: DispensingOrderChange;
 }) {
   const [hidden, setHidden] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -87,19 +89,28 @@ export function TaskInstructionCallout({ document, workspaceId, onReview }: {
   const clinicalChanged = document.entries.some(item => item.kind === "clinical_edit");
   const changed = clinicalChanged || document.entries.some(item => item.revision > 1);
   const single = document.entries.length === 1 ? document.entries[0] : null;
-  const title = clinicalChanged ? "업무 내용 변경됨" : single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
+  const title = orderChange ? "조제 오더가 수정되었습니다" : clinicalChanged ? "업무 내용 변경됨" : single ? single.legacy ? "경구제 지시사항" : `${instructionScopeLabels[single.scope]}사항` : "총괄 지시사항";
+  const otherEntries = orderChange ? document.entries.filter(entry => entry !== orderChange.entry) : document.entries;
   return <div className={styles.container}>
     {hidden ? <Button ref={restoreRef} size="sm" variant="ghost" onClick={() => { movedFocus.current = true; setHidden(false); }}><CdsAlertsInfoIcon />지시사항 다시 보기</Button> :
-      <aside aria-labelledby={titleId} className={`${styles.card} ${changed ? "" : styles.withoutHistory}`}>
+      <aside aria-labelledby={titleId} className={`${styles.card} ${orderChange ? styles.orderChange : changed ? "" : styles.withoutHistory}`}>
         <div className={styles.symbol}><CdsAlertsInfoIcon aria-hidden="true" /></div>
         <div className={styles.content}>
-          <div className={styles.heading}><h3 id={titleId} className={styles.title}>{title}</h3>{changed && <Badge variant="secondary" size="sm" className={styles.changedBadge}>변경됨</Badge>}</div>
-          <div className={styles.entries}>
-            {document.entries.map(item => <InstructionEntry key={`${item.scope}:${item.kind ?? item.legacy}:${item.orderId ?? ""}`} item={item} showScope={!single} />)}
-          </div>
+          <div className={styles.heading}><h3 id={titleId} className={styles.title}>{title}</h3>{changed && !orderChange && <Badge variant="secondary" size="sm" className={styles.changedBadge}>변경됨</Badge>}</div>
+          {orderChange && <div className={styles.changeSummary}>
+            <span className={styles.orderName}>{orderChange.orderName}</span>
+            {orderChange.fields.slice(0, 2).map(field => <span key={field.key} className={styles.summaryField}>
+              {field.label} {field.before} → <strong>{field.after}</strong>
+            </span>)}
+          </div>}
+          {otherEntries.length > 0 && <div className={styles.entries}>
+            {otherEntries.map(item => <InstructionEntry key={`${item.scope}:${item.kind ?? item.legacy}:${item.orderId ?? ""}`} item={item} showScope={!single} />)}
+          </div>}
         </div>
         <div className={styles.actions}>
-          {changed && <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => clinicalChanged ? onReview() : setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>}
+          {orderChange ? <Button ref={historyRef} variant="outline" size="sm" aria-haspopup="dialog"
+            disabled={!workspaceId} onClick={onReview}>변경 내용 보기<CdsNavigationChevronRightIcon aria-hidden="true" /></Button>
+            : changed && <Button ref={historyRef} variant="ghost" className={`${styles.ghost} ${styles.history}`} aria-haspopup="dialog" disabled={!workspaceId} onClick={() => clinicalChanged ? onReview() : setHistoryOpen(true)}><CdsUtilitiesHistoryIcon /><span>변경이력 보기</span></Button>}
           <Button ref={changed ? undefined : historyRef} variant="ghost" className={`${styles.ghost} ${styles.icon}`} aria-label="지시사항 숨기기" onClick={() => { movedFocus.current = true; setHidden(true); }}><CdsActionsXIcon /></Button>
         </div>
       </aside>}
