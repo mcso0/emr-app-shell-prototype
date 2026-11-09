@@ -2,8 +2,9 @@
 
 import { formatInstructionValue } from "../instruction-view-model";
 
-import React, { useState, useRef, useLayoutEffect } from "react";
+import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Table,
@@ -63,6 +64,22 @@ export function InstructionRowDisclosure({ name, expanded, onToggle, controls }:
   );
 }
 
+export function InstructionItemRow({ focused, ...props }: React.ComponentProps<typeof TableRow> & { focused: boolean }) {
+  const rowRef = useRef<HTMLTableRowElement>(null);
+  const { hidden } = usePagePortalVisibility();
+  useEffect(() => {
+    if (!focused || hidden) return;
+    const frame = requestAnimationFrame(() => {
+      const row = rowRef.current;
+      row?.focus({ preventScroll: true });
+      row?.scrollIntoView({ block: "center", inline: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [focused, hidden]);
+
+  return <TableRow {...props} ref={rowRef} tabIndex={focused ? -1 : undefined} data-instruction-target={focused || undefined} />;
+}
+
 export function InstructionRowNote({ children, modified = false }: {
   children: React.ReactNode;
   modified?: boolean;
@@ -94,6 +111,7 @@ type Props = {
   names: Record<string, string>;
   eligibleAssignees: string[];
   busy?: boolean;
+  focusedItemId?: string;
   openExecutionHistory?: () => void;
   editSetInstruction?: () => void;
   refresh?: () => void;
@@ -145,6 +163,7 @@ function OrderCard({
   names,
   eligibleAssignees,
   busy,
+  focusedItemId,
   openExecutionHistory,
   editSetInstruction,
   refresh,
@@ -471,7 +490,7 @@ function OrderCard({
                         const expanded = hasDetails && !hidden.includes(i.id);
                         return (
                           <React.Fragment key={i.id}>
-                            <TableRow data-item={i.id}>
+                            <InstructionItemRow data-item={i.id} focused={i.id === focusedItemId}>
                               <TableCell>
                                 {hasDetails && (
                                   <InstructionRowDisclosure
@@ -641,7 +660,7 @@ function OrderCard({
                                 </Button>
                               </TableCell>
                               <TableCell />
-                            </TableRow>
+                            </InstructionItemRow>
                             {expanded && (
                               <TableRow className="fd-info-row">
                                 <TableCell colSpan={15}>

@@ -2236,3 +2236,17 @@ uses the existing claim-and-start command and current instruction review. A
 released first attempt still opens the waiting entry. This follow-up requires
 no migration or historical data rewrite. Verify both queues with synthetic
 fixtures and the reported Production order by read-only inspection.
+
+### Chart navigation to a dispensing or treatment instruction — 2026-11-09
+
+Local implementation from `origin/main` `ea2f1ed5`. The user approved the
+Plan/Order name-cell hover action. Each activation opens a confirmation naming
+the order and destination. The [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#chart-navigation-to-a-dispensing-or-treatment-instruction--2026-11-09)
+describes exact-item routing and recovery. The implementation uses the existing
+permission-checked read and workspace navigation.
+
+Focused Playwright coverage uses synthetic API responses. It covers long
+and duplicate names, hover and keyboard focus, unavailable actions,
+`취소` during a pending read, denied reads, due-date selection, and landing
+on the latest attempt in the instruction document or prework table. A stale
+item shows an explicit empty state.

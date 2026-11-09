@@ -1107,7 +1107,7 @@ export function DispensingSidePanel({
             workItemId: workItem?.id,
             queueItemId: itemId,
           },
-          removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
+          removeParams: ["imagingStudyId", "invoiceId", "labResultId", "focusWorkItemId"],
           search: searchParams,
           workspaceId,
         }),
@@ -1130,6 +1130,7 @@ export function DispensingSidePanel({
           "patientId",
           "workItemId",
           "queueItemId",
+          "focusWorkItemId",
         ],
         search: searchParams,
         workspaceId,
@@ -1373,7 +1374,7 @@ export function DispensingContentAside({
                 buildWorkspaceSurfaceRoute({
                   moduleId: targetModule,
                   params: { date, encounterId: first.encounterId, workItemId: first.id },
-                  removeParams: ["imagingStudyId", "invoiceId", "labResultId"],
+                  removeParams: ["imagingStudyId", "invoiceId", "labResultId", "focusWorkItemId"],
                   search: searchParams,
                   workspaceId,
                 }),
@@ -1723,13 +1724,14 @@ export function DispensingContent({
 }: ShellComponentProps) {
   const searchParams = useSearchParams();
   const selectedQueueItemId = useSelectedDispensingQueueItemId(moduleId);
+  const focusWorkItemId = searchParams.get("focusWorkItemId");
   const { selectedDate } = useSelectedOperatingDate(workspaceId, searchParams.get("date"));
   const fulfillmentQueue = useDispensingFulfillmentQueue(selectedDate);
   useQueueRealtimeRefresh({ workspaceId, scopeKey: "dispensing-owner-detail", onQueueChange: fulfillmentQueue.refresh });
-  const allowLegacyFixtureFallback = isLegacySalesDemoWorkspace(workspaceId);
+  const allowLegacyFixtureFallback = !focusWorkItemId && isLegacySalesDemoWorkspace(workspaceId);
   const currentWorkspaceQueueItems = useMemo(
-    () => getQueueItemsForWorkspace(workspaceId, fulfillmentQueue.workItems),
-    [fulfillmentQueue.workItems, workspaceId],
+    () => getQueueItemsForRuntime(fulfillmentQueue.workItems, { allowFixtureItems: allowLegacyFixtureFallback }),
+    [allowLegacyFixtureFallback, fulfillmentQueue.workItems],
   );
   const selectedQueueItem = useMemo(() => {
     return (
@@ -1760,6 +1762,7 @@ export function DispensingContent({
       moduleId={moduleId}
       workspaceId={workspaceId}
       selectedDate={selectedDate}
+      focusWorkItemId={focusWorkItemId}
       allowLegacyFixtureFallback={allowLegacyFixtureFallback}
       queueItemCount={currentWorkspaceQueueItems.length}
       selectedQueueItem={selectedQueueItem}
@@ -1775,9 +1778,11 @@ function DispensingContentBody({
   moduleId,
   workspaceId,
   selectedDate,
+  focusWorkItemId,
   queueItemCount,
   selectedQueueItem,
 }: DispensingContentBodyProps & {
+  focusWorkItemId?: string | null;
   onOpenChart?: (encounterId: string) => void;
   fulfillmentQueue: ReturnType<typeof useDispensingFulfillmentQueue>;
 }) {
@@ -1791,10 +1796,10 @@ function DispensingContentBody({
   const selectedQueueItemId = selectedQueueItem?.id;
   const selectedFulfillmentWorkItem = useMemo(
     () =>
-      findFulfillmentForQueueItem(
+      selectedQueueItem ? findFulfillmentForQueueItem(
         selectedQueueItem,
         fulfillmentQueue.workItems,
-      ),
+      ) : undefined,
     [fulfillmentQueue.workItems, selectedQueueItem],
   );
   const instruction = useFulfillmentInstruction(
@@ -1802,6 +1807,9 @@ function DispensingContentBody({
     !allowLegacyFixtureFallback ? selectedFulfillmentWorkItem?.id : undefined,
     selectedFulfillmentWorkItem ? String(selectedFulfillmentWorkItem.rowRevision) : undefined,
   );
+  const focusedItemId = selectedFulfillmentWorkItem?.id === focusWorkItemId
+    ? focusWorkItemId ?? undefined
+    : undefined;
   const [preworkCompletionRoot, setPreworkCompletionRoot] = useState<string | null>(null);
   const instructionScope = instruction.document ? `${instruction.document.rootTaskId}:${instruction.document.queueType}` : null;
   const firstStartedAt = instruction.document?.firstStartedAt;
@@ -1979,6 +1987,24 @@ function DispensingContentBody({
 
   if (!selectedQueueItem && (fulfillmentQueue.status === "error" || fulfillmentQueue.status === "permission_denied")) {
     return <div className="flex h-full min-h-0 flex-col px-4 py-3"><DispensingFulfillmentQueueNotice status={fulfillmentQueue.status} onRetry={fulfillmentQueue.refresh} /></div>;
+  }
+
+  const instructionTargetMissing = focusedItemId && instruction.document &&
+    !instruction.document.items.some(item => item.id === focusedItemId);
+  if ((!selectedQueueItem && focusWorkItemId) || instructionTargetMissing) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center px-4">
+        <EmrEmptyState
+          kind="no-scope-result"
+          priority="supporting"
+          surface="content"
+          title="연결된 조제·처치 오더를 찾을 수 없어요"
+          description={instructionTargetMissing ? "차트에서 지시서를 다시 열어 주세요." : undefined}
+          primaryAction={instructionTargetMissing ? undefined :
+            <Button variant="outline" onClick={() => void fulfillmentQueue.refresh()}>다시 조회</Button>}
+        />
+      </div>
+    );
   }
 
   if (!selectedQueueItem) {
@@ -2235,7 +2261,7 @@ function DispensingContentBody({
 
   if (prework && selectedFulfillmentWorkItem) return (
     <div data-slot="dispensing-content" className="flex h-full min-h-0 flex-col bg-[var(--emr-surface-panel)]">
-      <DispensingPreworkContext key={selectedFulfillmentWorkItem.id} controller={instruction} workItem={selectedFulfillmentWorkItem}
+      <DispensingPreworkContext key={selectedFulfillmentWorkItem.id} controller={instruction} workItem={selectedFulfillmentWorkItem} focusedItemId={focusedItemId}
         onChanged={fulfillmentQueue.refresh} onEntered={() => { instruction.refresh(); entry.enter(); }}
         onCompletionOpenChange={(open) => setPreworkCompletionRoot(open ? instructionScope : null)} />
     </div>
@@ -2333,7 +2359,7 @@ function DispensingContentBody({
           data-slot="instruction-result-scroll-content"
           className={cn("flex flex-col gap-4 pb-10 pt-3", !documentLayout && "px-4")}
         >
-          {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback ? <InstructionBody key={selectedFulfillmentWorkItem.id} controller={instruction} workspaceId={selectedFulfillmentWorkItem.workspaceId} onChanged={fulfillmentQueue.refresh} /> : visibleTableGroups.map((group, section) => {
+          {selectedFulfillmentWorkItem && !allowLegacyFixtureFallback ? <InstructionBody key={selectedFulfillmentWorkItem.id} controller={instruction} workspaceId={selectedFulfillmentWorkItem.workspaceId} onChanged={fulfillmentQueue.refresh} focusedItemId={focusedItemId} /> : visibleTableGroups.map((group, section) => {
             const completedCount = group.rows.filter(
               (row) => row.workStatus === "완료",
             ).length;

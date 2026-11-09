@@ -107,6 +107,7 @@ import {
 import { EmrConfirmDialogContent } from "@/components/emr/confirm-dialog-content";
 import { EmrDataTable } from "@/components/emr/emr-data-table";
 import { ChartOrderConfirmationBadge, ChartOrderWorkStatus } from "./components/chart-order-status";
+import { ChartInstructionNavigationDialog, type ChartInstructionTarget } from "./components/chart-instruction-navigation-dialog";
 import { chartOrderConfirmationRank, formatPlanOrderTableUnit, getChartOrderConfirmationState, getChartOrderProjectedLineTotal, getChartOrderWorkPresentation, isChartOrderPresentationConfirmed, sortChartOrderGroups } from "./chart-order-table-presentation";
 import { EmrIconButton } from "@/components/emr/icon-button";
 import { EmrPopoverShell } from "@/components/emr/popover-shell";
@@ -375,6 +376,7 @@ import type {
 } from "@/features/chart/server-order-execution-mutation-core";
 import type {
   ChartOrderExecutionReadModel,
+  ChartOrderQueueProjection,
   ChartOrderExecutionRevision,
   ChartOrderExecutionTask,
   ChartOrderExecutionTaskEvent,
@@ -8079,6 +8081,8 @@ function ChartOrderTable({
   onOpenHistory,
   onOpenMutation,
   onOpenInstruction,
+  onOpenInstructionNavigation,
+  instructionQueuesByTaskId,
   onEditDraftInstruction,
   instructionOrderIds,
   onLoadIntendedAssignees,
@@ -8120,6 +8124,8 @@ function ChartOrderTable({
   executionTasks: ChartOrderExecutionTask[];
   instructionOrderIds: Set<string>;
   onOpenInstruction: (orderId: string) => void;
+  onOpenInstructionNavigation?: (target: ChartInstructionTarget, trigger: HTMLElement) => void;
+  instructionQueuesByTaskId: ReadonlyMap<string, ChartOrderQueueProjection>;
   onEditDraftInstruction: (orderId: string) => void;
   hasAnyRows: boolean;
   invalidOrderIds: Set<string>;
@@ -8674,11 +8680,16 @@ function ChartOrderTable({
           const isSetParent = row.original.runtimeRow?.rowType === "set";
           const included = isChartOrderSetChildIncluded(row.original);
           const confirmed = isChartOrderConfirmedRow(row.original);
+          const task = row.original.executionTask;
+          const queue = confirmed && task?.taskRole === "execution"
+            ? instructionQueuesByTaskId.get(task.taskId) : undefined;
+          const queueType = queue?.queueType;
 
           return (
             <div
               className={cn(
                 "flex min-w-0 items-center gap-1.5",
+                orderScrollStyles.instructionCell,
                 isSetChild &&
                   "pl-4 before:h-5 before:w-px before:bg-[var(--emr-border-default)]",
               )}
@@ -8697,6 +8708,26 @@ function ChartOrderTable({
               >
                 {order.displayName}
               </EmrTableCellText>
+              {onOpenInstructionNavigation && queue?.orderId === order.id && (queueType === "dispensing" || queueType === "treatment") && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="xs"
+                  aria-label={`${order.displayName} 지시서로 이동`}
+                  className={cn("ml-auto shrink-0 px-1.5", orderScrollStyles.instructionAction)}
+                  data-instruction-order-id={order.id}
+                  data-row-interactive="true"
+                  onClick={(event) => onOpenInstructionNavigation({
+                    orderId: order.id,
+                    orderName: order.displayName,
+                    queueType,
+                    taskId: queue.taskId,
+                    workItemId: queue.workItemId,
+                  }, event.currentTarget)}
+                >
+                  지시서<CdsNavigationChevronRightIcon data-icon="inline-end" aria-hidden="true" />
+                </Button>
+              )}
               {isSetChild && !confirmed ? (
                 <Button
                   aria-label={`${order.displayName} 세트 ${included ? "제외" : "포함"}`}
@@ -9518,6 +9549,8 @@ function ChartOrderTable({
       intendedAssigneeLoadingOrderIds,
       intendedAssigneeOptionsByOrderId,
       intendedAssigneeSavingOrderIds,
+      instructionQueuesByTaskId,
+      onOpenInstructionNavigation,
       prebillingSavingOrderIds,
       orderTableMaxSize,
       writeDisabled,
@@ -12053,6 +12086,7 @@ const OrderArea = memo(function OrderArea({
   loading,
   onCollapsedChange,
   onNavigateToBilling,
+  onNavigateToInstruction,
   onOrderCountChange,
   orderGroups,
   writeDisabled: inheritedWriteDisabled,
@@ -12067,6 +12101,7 @@ const OrderArea = memo(function OrderArea({
   loading: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
   onNavigateToBilling?: (invoiceId?: string, orderIds?: string[]) => void;
+  onNavigateToInstruction?: (workItemId: string, date: string) => void;
   onOrderCountChange?: (count: number) => void;
   orderGroups: ChartOrderGroup[];
   writeDisabled: boolean;
@@ -12184,6 +12219,11 @@ const OrderArea = memo(function OrderArea({
   const [historyOrderId, setHistoryOrderId] = useState<string | null>(null);
   const [orderExecution, setOrderExecution] =
     useState<ChartOrderExecutionReadModel>();
+  const instructionQueuesByTaskId = useMemo(() => new Map(
+    orderExecution?.queues
+      .filter(queue => queue.queueType === "dispensing" || queue.queueType === "treatment")
+      .map(queue => [queue.taskId, queue]),
+  ), [orderExecution]);
   const [canCancelDispensingTreatmentOrders, setCanCancelDispensingTreatmentOrders] = useState(false);
   const [billingSummary, setBillingSummary] =
     useState<ChartOrderBillingSummary>();
@@ -12214,6 +12254,14 @@ const OrderArea = memo(function OrderArea({
   const intendedAssigneeSavingOrderIdsRef = useRef<Set<string>>(new Set());
   const [draftInstruction, setDraftInstruction] = useState<{ orderId: string; text: string } | null>(null);
   const [instructionWorkItemId, setInstructionWorkItemId] = useState<string | null>(null);
+  const [instructionTarget, setInstructionTarget] = useState<ChartInstructionTarget | null>(null);
+  const [instructionNavigationOpen, setInstructionNavigationOpen] = useState(false);
+  const instructionTableRef = useRef<HTMLElement>(null);
+  const openInstructionNavigation = useCallback((target: ChartInstructionTarget, trigger: HTMLElement) => {
+    instructionTableRef.current = trigger.closest('[data-slot="chart-order-table-surface"]');
+    setInstructionTarget(target);
+    setInstructionNavigationOpen(true);
+  }, []);
   const [confirmedEditId, setConfirmedEditId] = useState<string | null>(null);
   const [orderMutationDraft, setOrderMutationDraft] =
     useState<ChartOrderMutationDraft | null>(null);
@@ -15252,6 +15300,7 @@ const OrderArea = memo(function OrderArea({
             }
             selectionActionsHidden={
               orderActionDialog !== null ||
+              instructionNavigationOpen ||
               historyOrderId !== null ||
               detailOrderId !== null ||
               bulkOrderMutation !== null ||
@@ -15264,6 +15313,8 @@ const OrderArea = memo(function OrderArea({
             }
             density={orderTableDensity}
             executionTasks={orderExecution?.tasks ?? []}
+            instructionQueuesByTaskId={instructionQueuesByTaskId}
+            onOpenInstructionNavigation={onNavigateToInstruction ? openInstructionNavigation : undefined}
             instructionOrderIds={new Set((orderExecution?.queues ?? []).filter((queue) => ["dispensing", "treatment"].includes(queue.queueType)).flatMap((queue) => {
               const row = draftRows.find((row) => row.order.id === queue.orderId);
               return [queue.orderId, ...(row?.runtimeRow?.parentOrderId ? [row.runtimeRow.parentOrderId] : [])];
@@ -15376,6 +15427,20 @@ const OrderArea = memo(function OrderArea({
         {instructionWorkItemId ? <ChartInstructionDialog key={instructionWorkItemId}
           workspaceId={bundle.encounter.workspaceId} workItemId={instructionWorkItemId}
           onClose={() => setInstructionWorkItemId(null)} onChanged={() => { void refreshOrderExecution(); }} /> : null}
+        {instructionTarget && onNavigateToInstruction ? (
+          <ChartInstructionNavigationDialog
+            open={instructionNavigationOpen}
+            target={instructionTarget}
+            workspaceId={bundle.encounter.workspaceId}
+            encounterId={bundle.encounter.id}
+            actorHeaders={actorHeaders}
+            onClose={() => setInstructionNavigationOpen(false)}
+            onReturnFocus={() => instructionTableRef.current?.querySelector<HTMLElement>(
+              `[data-instruction-order-id="${CSS.escape(instructionTarget.orderId)}"]`,
+            ) ?? null}
+            onNavigate={onNavigateToInstruction}
+          />
+        ) : null}
         {confirmedEditId && mutationChartId && (() => {
           const row = draftRows.find(row => row.order.id === confirmedEditId);
           if (!row) return null;
@@ -17175,6 +17240,19 @@ export function ChartContent({
     },
     [activeEncounterId, onNavigateWorkspaceSurface, searchParams, workspaceId],
   );
+  const navigateToInstruction = useCallback((workItemId: string, date: string) => {
+    const href = buildWorkspaceSurfaceRoute({
+      moduleId: "dispensing",
+      params: {
+        date,
+        workItemId,
+        focusWorkItemId: workItemId,
+        modulePanel: searchParams.get("modulePanel"),
+      },
+      workspaceId,
+    });
+    onNavigateWorkspaceSurface?.(href, "dispensing");
+  }, [onNavigateWorkspaceSurface, searchParams, workspaceId]);
 
   if (!bundle || !effectiveBundle) {
     const refreshAction = moduleRefreshActions.treatment;
@@ -18111,6 +18189,7 @@ export function ChartContent({
               loading={orderLoading}
               onCollapsedChange={setOrderPanelCollapsed}
               onNavigateToBilling={navigateToBilling}
+              onNavigateToInstruction={onNavigateWorkspaceSurface ? navigateToInstruction : undefined}
               onOrderCountChange={handleCurrentChartOrderCountChange}
               orderGroups={orderGroups}
               draftWriteDisabled={chartWriteDisabled || chartSigned}
