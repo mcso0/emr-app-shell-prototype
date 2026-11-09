@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { Button } from "@/components/ui/button";
@@ -39,7 +39,11 @@ function hasDispenseQuantityChange(
 export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, clinicalType, dispensingAuthority = null, fieldLabels, renderClinical, onClose, onSaved }: {
   workspaceId: string; chartId: string; orderId: string; name: string; clinicalType: "dispensing" | "treatment"; fieldLabels?: Record<string, string>;
   dispensingAuthority?: PlanOrderAuthorityConfig | null;
-  renderClinical: (inputs: Record<string, unknown>, change: (inputs: Record<string, unknown>) => void, disabled: boolean) => ReactNode;
+  renderClinical: (inputs: Record<string, unknown>, change: (inputs: Record<string, unknown>) => void, disabled: boolean) => {
+    fields: ReactNode;
+    dispenseUnit?: ReactNode;
+    dispenseMemos?: ReactNode;
+  };
   onClose: () => void; onSaved: (context: ConfirmedOrderContext) => void;
 }) {
   const [context, setContext] = useState<ConfirmedOrderContext | null>(null);
@@ -54,6 +58,7 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [conflict, setConflict] = useState(false);
+  const adjustmentHintId = useId();
   const pending = useRef(false), generation = useRef(0);
   const retry = useRef<{ fingerprint: string; commandId: string } | null>(null);
   const endpoint = `/api/workspaces/${encodeURIComponent(workspaceId)}/chart/confirmed-order-edit`;
@@ -152,62 +157,71 @@ export function ConfirmedOrderEditDialog({ workspaceId, chartId, orderId, name, 
     finally { pending.current = false; if (current === generation.current) setBusy(false); }
   };
   const saveLabel = context?.billingStage === "requested" ? "변경 확인 요청" : clinicalChanged ? "수정 후 요청" : "수정 저장";
+  const clinicalFields = context && renderClinical(inputs, changeClinicalInputs, busy || !context.canEditClinical);
+  const financialDisabled = busy || !context?.canEditFinancial || context.billingStage === "locked";
   return <Dialog open onOpenChange={open => { if (!open && !pending.current) onClose(); }}>
     <EmrDialogShell title={`${name} · 오더 수정`} variant="wide-form" showCloseButton={!busy}
-      footerClassName="flex-col sm:flex-row"
-      footerMeta={<p role="status">{context && !changed && !conflict ? "변경된 내용이 없어요." : null}</p>}
+      footerClassName="flex-row"
       secondaryAction={<Button variant="outline" disabled={busy} onClick={onClose}>취소</Button>}
       primaryAction={<Button disabled={saveDisabled} onClick={() => void save()}>{busy ? "저장 중…" : saveLabel}</Button>}>
       {!context && !error && <p role="status">최신 오더를 불러오는 중…</p>}
       {context && <div className="space-y-6">
         <fieldset disabled={busy || !context.canEditClinical} className="space-y-3"><legend className="mb-3 text-sm font-semibold">업무 정보</legend>
           {!context.canEditClinical && <p className="text-sm text-muted-foreground">업무 수정 권한이 없어요.</p>}
-          {renderClinical(inputs, changeClinicalInputs, busy || !context.canEditClinical)}
-          {clinicalType === "dispensing" && <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid content-start gap-1.5 text-sm">
-              총량
-              <Input readOnly value={quantityInputsChanged ? "저장 시 자동 계산" : totalDisplay} />
-            </label>
-            <div className="grid content-start gap-1.5 text-sm">
-              <span>요청 조제량 · {mode === "manual" ? "수동 지정" : "자동 계산"}</span>
-              <div className="flex flex-wrap items-center gap-2">
-                {editingQuantity ? <>
-                  <Input aria-label="요청 조제량" className="min-w-20 flex-1" type="number" min="0" step="any" autoFocus
+          <div className="grid gap-3 sm:grid-cols-2">
+            {clinicalFields?.fields}
+            {clinicalType === "dispensing" && <>
+              {clinicalFields?.dispenseUnit}
+              <label className="grid content-start gap-1.5 text-sm">
+                총량
+                <Input readOnly value={quantityInputsChanged ? "저장 시 자동 계산" : totalDisplay} />
+              </label>
+              <div className="grid content-start gap-1.5 text-sm sm:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                  <span>요청 조제량 · {mode === "manual" ? "수동 지정" : "자동 계산"}</span>
+                  <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                    {editingQuantity && mode === "automatic" ? <Button size="sm" variant="outline" type="button" onClick={resetAutomaticQuantity}>닫기</Button> :
+                      !editingQuantity && <Button size="sm" variant="outline" type="button" onClick={() => {
+                        if (automaticPending) setQuantity("");
+                        setEditingQuantity(true);
+                      }}>수동으로 조정</Button>}
+                    {mode === "manual" && <Button size="sm" variant="outline" type="button" onClick={resetAutomaticQuantity}>자동 계산으로 되돌리기</Button>}
+                  </div>
+                </div>
+                {editingQuantity ? <div className="relative">
+                  <Input aria-label="요청 조제량" className={requestUnit ? "pr-20" : undefined} type="number" min="0" step="any" autoFocus
                     aria-invalid={invalidManualQuantity || undefined}
                     value={quantity} onChange={event => {
                       setQuantity(event.target.value);
                       setMode("manual");
                       setConfirmedQuantity(null);
                     }} />
-                  {requestUnit && <span>{requestUnit}</span>}
-                </> : <Input aria-label="요청 조제량" className="min-w-20 flex-1" readOnly
-                  value={automaticPending ? "저장 시 자동 계산" : requestDisplay} />}
-                {editingQuantity && mode === "automatic" ? <Button variant="outline" type="button" onClick={resetAutomaticQuantity}>닫기</Button> :
-                  !editingQuantity && <Button variant="outline" type="button" onClick={() => {
-                    if (automaticPending) setQuantity("");
-                    setEditingQuantity(true);
-                  }}>수동으로 조정</Button>}
-                {mode === "manual" && <Button variant="outline" type="button" onClick={resetAutomaticQuantity}>자동 계산으로 되돌리기</Button>}
+                  {requestUnit && <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">{requestUnit}</span>}
+                </div> : <Input aria-label="요청 조제량" readOnly value={automaticPending ? "저장 시 자동 계산" : requestDisplay} />}
+                {invalidManualQuantity && editingQuantity && <p className="text-sm text-destructive">0보다 큰 요청 조제량을 입력해 주세요.</p>}
+                {needsQuantityConfirmation && <div className="space-y-2">
+                  <p>처방 조건이 바뀌었어요. 수동으로 지정한 요청 조제량을 확인해 주세요.</p>
+                  <Button variant="outline" type="button" disabled={!manualQuantityValid}
+                    onClick={() => setConfirmedQuantity(confirmationKey)}>요청 조제량 확인</Button>
+                </div>}
               </div>
-              {invalidManualQuantity && editingQuantity && <p className="text-sm text-destructive">0보다 큰 요청 조제량을 입력해 주세요.</p>}
-              {needsQuantityConfirmation && <div className="space-y-2">
-                <p>처방 조건이 바뀌었어요. 수동으로 지정한 요청 조제량을 확인해 주세요.</p>
-                <Button variant="outline" type="button" disabled={!manualQuantityValid}
-                  onClick={() => setConfirmedQuantity(confirmationKey)}>요청 조제량 확인</Button>
-              </div>}
-            </div>
-          </div>}
+              {clinicalFields?.dispenseMemos}
+            </>}
+          </div>
         </fieldset>
-        {financial && <fieldset disabled={busy || !context.canEditFinancial || context.billingStage === "locked"} className="space-y-3"><legend className="mb-3 text-sm font-semibold">청구 정보</legend>
+        {financial && <fieldset disabled={financialDisabled} className="space-y-3"><legend className="mb-3 text-sm font-semibold">청구 정보</legend>
           {(!context.canEditFinancial || context.billingStage === "locked") && <p className="text-sm text-muted-foreground">{context.billingStage === "locked" ? "결제 중·완료된 금액은 수납 정정에서 처리해 주세요." : "청구 수정 권한이 없어요."}</p>}
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">청구명<Input value={financial.billingName} onChange={e => setFinancial({ ...financial, billingName: e.target.value })} /></label>
+          <div className="grid items-start gap-3 sm:grid-cols-2">
+            <label className="grid gap-1.5 text-sm sm:col-span-2">청구명<Input value={financial.billingName} onChange={e => setFinancial({ ...financial, billingName: e.target.value })} /></label>
             {([['billingQuantity', '청구 수량'], ['unitPriceKrw', '단가 (원)']] as const).map(([key, label]) => <label key={key} className="grid gap-1.5 text-sm">{label}<Input type="number" step="any" value={Number.isNaN(financial[key]) ? "" : financial[key]} onChange={e => setFinancial({ ...financial, [key]: e.target.value === "" ? NaN : Number(e.target.value) })} /></label>)}
-            <label className="grid gap-1.5 text-sm">할인·할증 방식<Select disabled={busy || !context.canEditFinancial || context.billingStage === "locked"} value={financial.adjustmentSource ?? "none"} onValueChange={value => setFinancial({ ...financial, adjustmentSource: value === "none" ? null : value as "amount" | "percent", ...(value === "none" ? { adjustmentAmountKrw: 0, adjustmentPercent: 0 } : {}) })}><SelectTrigger className="w-full" aria-label="할인·할증 방식"><SelectValue>{financial.adjustmentSource === "amount" ? "금액" : financial.adjustmentSource === "percent" ? "비율" : "없음"}</SelectValue></SelectTrigger><SelectContent><SelectItem value="none">없음</SelectItem><SelectItem value="amount">금액</SelectItem><SelectItem value="percent">비율</SelectItem></SelectContent></Select></label>
-            {financial.adjustmentSource && <label className="grid gap-1.5 text-sm">{financial.adjustmentSource === "amount" ? "할인·할증 (원)" : "할인·할증 (%)"}<Input type="number" step={financial.adjustmentSource === "amount" ? "1" : "any"} value={(financial.adjustmentSource === "amount" ? financial.adjustmentAmountKrw : financial.adjustmentPercent) || 0} onChange={e => setFinancial({ ...financial, [financial.adjustmentSource === "amount" ? "adjustmentAmountKrw" : "adjustmentPercent"]: e.target.value === "" ? NaN : Number(e.target.value) })} /></label>}
-            <label className="grid gap-1.5 text-sm">과세<Select disabled={busy || !context.canEditFinancial || context.billingStage === "locked"} value={financial.taxClass} onValueChange={value => { if (value === "taxable" || value === "non_taxable") setFinancial({ ...financial, taxClass: value }); }}><SelectTrigger className="w-full" aria-label="과세"><SelectValue>{financial.taxClass === "taxable" ? "과세" : "면세"}</SelectValue></SelectTrigger><SelectContent><SelectItem value="taxable">과세</SelectItem><SelectItem value="non_taxable">면세</SelectItem></SelectContent></Select></label>
-            <label className="flex items-center gap-2 text-sm"><Checkbox aria-label="청구에 반영" disabled={busy || !context.canEditFinancial || context.billingStage === "locked"} checked={financial.billingReflectionEnabled} onCheckedChange={checked => setFinancial({ ...financial, billingReflectionEnabled: Boolean(checked) })} />청구에 반영</label>
-          </div><p className="text-xs text-muted-foreground">할인은 음수, 할증은 양수로 입력해 주세요.</p>
+            <label className="grid gap-1.5 text-sm">과세 구분<Select disabled={financialDisabled} value={financial.taxClass} onValueChange={value => { if (value === "taxable" || value === "non_taxable") setFinancial({ ...financial, taxClass: value }); }}><SelectTrigger className="w-full" aria-label="과세 구분"><SelectValue>{financial.taxClass === "taxable" ? "과세" : "면세"}</SelectValue></SelectTrigger><SelectContent><SelectItem value="taxable">과세</SelectItem><SelectItem value="non_taxable">면세</SelectItem></SelectContent></Select></label>
+            <label className="flex h-[var(--clair-control-height-md)] items-center gap-2 text-sm sm:self-end"><Checkbox disabled={financialDisabled} checked={financial.billingReflectionEnabled} onCheckedChange={checked => setFinancial({ ...financial, billingReflectionEnabled: Boolean(checked) })} />청구에 반영</label>
+            <label className="grid gap-1.5 text-sm">할인·할증 방식<Select disabled={financialDisabled} value={financial.adjustmentSource ?? "none"} onValueChange={value => setFinancial({ ...financial, adjustmentSource: value === "none" ? null : value as "amount" | "percent", ...(value === "none" ? { adjustmentAmountKrw: 0, adjustmentPercent: 0 } : {}) })}><SelectTrigger className="w-full" aria-label="할인·할증 방식"><SelectValue>{financial.adjustmentSource === "amount" ? "금액" : financial.adjustmentSource === "percent" ? "비율" : "없음"}</SelectValue></SelectTrigger><SelectContent><SelectItem value="none">없음</SelectItem><SelectItem value="amount">금액</SelectItem><SelectItem value="percent">비율</SelectItem></SelectContent></Select></label>
+            {financial.adjustmentSource && <div className="grid gap-1.5">
+              <label className="grid gap-1.5 text-sm">{financial.adjustmentSource === "amount" ? "할인·할증 (원)" : "할인·할증 (%)"}<Input aria-describedby={adjustmentHintId} type="number" step={financial.adjustmentSource === "amount" ? "1" : "any"} value={(financial.adjustmentSource === "amount" ? financial.adjustmentAmountKrw : financial.adjustmentPercent) || 0} onChange={e => setFinancial({ ...financial, [financial.adjustmentSource === "amount" ? "adjustmentAmountKrw" : "adjustmentPercent"]: e.target.value === "" ? NaN : Number(e.target.value) })} /></label>
+              <p id={adjustmentHintId} className="text-xs text-muted-foreground">할인은 음수, 할증은 양수로 입력해 주세요.</p>
+            </div>}
+          </div>
         </fieldset>}
         {changed && <section className="rounded-lg border p-3 text-sm" aria-label="변경 내용"><h3 className="mb-2 font-medium">변경 내용</h3>
           {clinicalChanged && <><p>업무 내용 변경을 담당자에게 전달해요. 기존 수행 기록은 보존해요.</p>{changedFields.map(key => <p key={key}>{fieldLabels?.[key] ?? key}: {String(context.detailInputs[key] ?? "—")} → {String(inputs[key] ?? "—")}</p>)}</>}

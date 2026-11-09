@@ -2172,6 +2172,11 @@ three API adapter cases. It included reverting a prescription with stored
 occurrence counts, reconfirming a manual quantity, reading prior instruction
 quantities, and inspecting the unchanged dialog at 390px.
 
+The follow-up layout groups the dispensing quantities and pairs the memo fields.
+Keep tax class and billing reflection above the optional adjustment input.
+The footer shows cancel and save only. Save stays disabled when values match.
+Synthetic browser checks covered the adjustment modes and the 390px layout.
+
 ### Return released dispensing and treatment work to waiting — 2026-11-09
 
 승욱 approved local implementation from origin/main `34379835` in a separate
