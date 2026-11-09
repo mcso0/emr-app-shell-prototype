@@ -2110,3 +2110,25 @@ and ACLs, and rollback-only verification in the documented synthetic demo
 workspace. Apply the forward migration before merging the UI, then verify the
 Ready Production source and repeat the role checks. Real data and provider
 operations are outside this release scope.
+
+### Return released dispensing and treatment work to waiting — 2026-11-09
+
+승욱 approved local implementation from origin/main `34379835` in a separate
+worktree. Scope covers the prework and queue presentation, the forward
+instruction command migration, and disposable synthetic browser and SQL
+verification. See the [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#return-released-dispensing-and-treatment-work-to-waiting--2026-11-09).
+
+Local Chromium confirmed both queue types return to prework and move to 대기중
+with the exact selection and request time retained. Reload, the patient view,
+cancellation failure/retry, and direct instruction entry on reclaim passed.
+Nine focused browser cases passed, including adjacent assignment flows. The
+isolated PostgreSQL fixture passed for both queues, including acknowledgement,
+original start timestamps, and rejection while a separate set executor is
+still active. The database change remains local.
+
+승욱 approved applying this migration, merging the PR into main and verifying
+both queues on Production. Verify with temporary non-billable synthetic orders
+in the approved demo workspace. Confirm that 담당 취소 keeps the selected order
+and returns it to 대기중, then confirm 담당하기 opens the instruction directly.
+Remove the smoke fixtures and verify zero residual rows. Preserve the previous
+Ready deployment and the database function definition and grants for rollback.

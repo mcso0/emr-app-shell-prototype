@@ -12,7 +12,7 @@ import { EmrWorkEntryAction, EmrWorkEntryTrigger } from "@/components/emr/work-e
 import { EmrDialogShell } from "@/components/emr/dialog-shell";
 import { ExecutionResultDialog } from "@/features/fulfillment/components/execution-result-dialog";
 import { instructionCompletionConfirmation } from "@/features/fulfillment/instruction-contract";
-import { createInstructionView } from "../instruction-view-model";
+import { createInstructionView, isWaitingInstruction } from "../instruction-view-model";
 import type { FulfillmentInstructionController } from "../use-fulfillment-instruction";
 import { InstructionDocumentTable } from "./instruction-document-table";
 
@@ -90,7 +90,7 @@ function InstructionActionsContent({ controller, onChanged, workspaceId, prework
   if (!document) return null;
   const busy = controller.busy || controller.loading;
   const entryMode = document.canClaim ? "claim" : document.canTakeover ? "takeover" : document.canStart ? "start" : "blocked";
-  const claimStartsWork = document.items.length > 0 && document.items.every((item) => item.status === "requested");
+  const claimStartsWork = isWaitingInstruction(document);
   const claimIntent = { action: "claim" as const, ...(claimStartsWork ? { startWork: true as const } : {}) };
   const completionLabel = document.queueType === "dispensing" ? "조제 완료" : "처치 완료";
   const openCompletion = () => {
