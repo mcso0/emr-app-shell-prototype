@@ -5890,14 +5890,14 @@ const CHART_ORDER_SCROLL_COLUMN_WIDTH_PX = 137.25;
 const CHART_ORDER_COLUMN_SIZES: Record<string, number> = {
   select: 20,
   orderType: 72,
-  confirmation: 80,
+  confirmation: 88,
   displayName: 180,
-  status: 88,
+  status: 96,
   billingName: 144,
   billingReflection: 64,
   durationDays: 56,
   frequency: 72,
-  totalOccurrences: 64,
+  totalOccurrences: 72,
   doseBasis: 80,
   "detail-dose": 88,
   "detail-doseUnit": 88,
@@ -5916,7 +5916,7 @@ const CHART_ORDER_COLUMN_SIZES: Record<string, number> = {
   adjustmentReason: 126,
   taxClass: 56,
   assignee: 72,
-  requestedBy: 88,
+  requestedBy: 96,
 };
 function getChartOrderColumnSize(id: string) {
   return CHART_ORDER_COLUMN_SIZES[id] ?? CHART_ORDER_SCROLL_COLUMN_WIDTH_PX;
@@ -8647,8 +8647,8 @@ function ChartOrderTable({
       {
         id: "status",
         accessorFn: (row) => getChartOrderWorkPresentation(row).label,
-        size: 88,
-        minSize: 88,
+        size: getChartOrderColumnSize("status"),
+        minSize: getChartOrderColumnSize("status"),
         header: chartOrderSortLabels.status,
         sortingFn: (rowA, rowB) =>
           compareChartOrderValues(rowA.original, rowB.original, "status"),
