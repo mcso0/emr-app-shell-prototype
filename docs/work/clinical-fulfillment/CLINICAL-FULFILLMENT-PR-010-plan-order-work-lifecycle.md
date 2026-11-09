@@ -15,10 +15,38 @@ source_docs:
 dependencies:
   - "CLINICAL-FULFILLMENT-PR-009"
   - "CLINICAL-MASTER-PR-023"
-updated: "2026-11-03"
+updated: "2026-11-09"
 ---
 
 # Plan/Order Work Lifecycle And RPC Boundary
+
+## Single-entry response ordering — 2026-11-09
+
+Local fix from `origin/main` `34379835ae7ac449988f749da8b2dc8e0ff381a7`.
+Integrated the subsequent `main` updates through `75deb88f`, including released
+work returning to waiting, without changes to their assignment semantics.
+The instruction hook used its read generation to validate mutation responses.
+A background queue revision changed that generation during a claim, takeover
+or start, so the successful response and entry callback were discarded. A late
+requested-state read could then keep the user on prework, requiring another click.
+
+Track selected-document lifetime separately from read generations. Accept a
+successful command for the same selection, invalidate overlapping stale reads,
+and refresh its document. A different selection, A–B–A navigation, unmount, or
+a 401/403/404 read still rejects the pending write response. Existing atomic
+assignment/start, takeover reason, review, duplicate-command, server permission
+and medication-link contracts remain unchanged. No DB migration is required.
+
+Four synthetic component reproductions (claim/start in both queues) fail on the
+unmodified base and pass with the fix. The component scenarios also cover
+takeover during a refresh, withdrawn read permission, retry and late responses.
+The 23 focused Storybook cases, 42 app/API-contract cases and two integrated
+release-to-waiting/reclaim browser cases passed. Full lint,
+TypeScript, docs, secret and UX copy checks, the production build, the static
+Storybook build and Storybook startup smoke passed locally.
+Local app and API-contract verification uses synthetic HTTP fixtures; it does
+not establish authenticated hosted acceptance. No remote data changes or
+Production release is part of this local follow-up.
 
 ## Current accepted closeout — instruction review, 2026-11-01
 

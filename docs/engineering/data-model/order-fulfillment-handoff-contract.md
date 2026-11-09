@@ -121,6 +121,10 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
 - The server still checks the current actor, workspace, queue permission,
   instruction acknowledgement and any required medication link. Claim preserves
   existing child executors, and a mixed set keeps its other queue's work state.
+- A queue refresh for the same selected document must retain a successful entry
+  response. Older reads cannot restore its waiting state. Selecting another
+  document (including leaving and returning), unmounting, or a denied/removed
+  document read invalidates the pending response instead.
 - Assignment-only commands remain available to existing callers. The follow-up
   migration is verified in a scoped local PostgreSQL fixture.
 
