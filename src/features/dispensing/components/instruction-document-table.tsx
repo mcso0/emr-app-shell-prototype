@@ -3,7 +3,7 @@
 import { formatInstructionValue } from "../instruction-view-model";
 
 import React, { useEffect, useState, useRef, useLayoutEffect } from "react";
-import { EmrTableCellText } from "@/components/emr/table-primitives";
+import { EmrTableCellText, EmrTableColumnResizeHandle } from "@/components/emr/table-primitives";
 import { Button } from "@/components/ui/button";
 import { usePagePortalVisibility } from "@/components/emr/page-loading-boundary";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -106,6 +106,59 @@ const group = (i: Item) =>
     : ["completed", "cancelled"].includes(i.status)
       ? i.status
       : i.change;
+
+function getItemColumnWidth(handle: HTMLButtonElement) {
+  return handle.closest("tr")?.querySelector(".fd-col-1")?.getBoundingClientRect().width;
+}
+
+function InstructionItemResizeHandle({ onResize }: {
+  onResize: (width: number | undefined) => void;
+}) {
+  const drag = useRef<{ pointerId: number; x: number; width: number } | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeTo = (width: number) => onResize(Math.min(520, Math.max(120, Math.round(width))));
+
+  return (
+    <EmrTableColumnResizeHandle
+      aria-label="항목 컬럼 너비 조절"
+      className="left-1/2 right-auto -translate-x-1/2 before:left-1/2 before:top-1.5 before:h-3 before:-translate-x-1/2"
+      isResizing={isResizing}
+      onPointerDown={(event) => {
+        if (!event.isPrimary || event.button !== 0) return;
+        const width = getItemColumnWidth(event.currentTarget);
+        if (width === undefined) return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        drag.current = { pointerId: event.pointerId, x: event.clientX, width };
+        setIsResizing(true);
+      }}
+      onPointerMove={(event) => {
+        const start = drag.current;
+        if (start?.pointerId !== event.pointerId) return;
+        resizeTo(start.width + event.clientX - start.x);
+      }}
+      onLostPointerCapture={(event) => {
+        if (drag.current?.pointerId !== event.pointerId) return;
+        drag.current = null;
+        setIsResizing(false);
+      }}
+      onDoubleClick={() => onResize(undefined)}
+      onKeyDown={(event) => {
+        if (event.key === "Home") {
+          event.preventDefault();
+          onResize(undefined);
+          return;
+        }
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const width = getItemColumnWidth(event.currentTarget);
+        if (width === undefined) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 24 : 8;
+        resizeTo(width + (event.key === "ArrowRight" ? step : -step));
+      }}
+    />
+  );
+}
+
 type Props = {
   orders: Order[];
   events: FlowEvent[];
@@ -121,9 +174,19 @@ type Props = {
   notify: (message: string) => void;
 };
 export function InstructionDocumentTable(p: Props) {
+  const documentRef = useRef<HTMLDivElement>(null);
+  function resizeItemColumn(width: number | undefined) {
+    const style = documentRef.current?.style;
+    if (width === undefined) {
+      style?.removeProperty("--fd-item-column-resized-width");
+    } else {
+      style?.setProperty("--fd-item-column-resized-width", `${width}px`);
+    }
+  }
+
   return (
     <TooltipProvider delay={200}>
-      <div className="figma-document">
+      <div className="figma-document" ref={documentRef}>
         {[
           ["PO", "경구제 오더 그룹"],
           ["other", "기타 오더 그룹"],
@@ -146,7 +209,7 @@ export function InstructionDocumentTable(p: Props) {
             <React.Fragment key={route}>
               <div className="fd-group-label">{title}</div>
               {orders.map((o) => (
-                <OrderCard key={o.id} {...p} order={o} />
+                <OrderCard key={o.id} {...p} order={o} onItemColumnResize={resizeItemColumn} />
               ))}
             </React.Fragment>
           ) : null;
@@ -168,7 +231,8 @@ function OrderCard({
   openExecutionHistory,
   editSetInstruction,
   refresh,
-}: Props & { order: Order }) {
+  onItemColumnResize,
+}: Props & { order: Order; onItemColumnResize: (width: number | undefined) => void }) {
   const readOnly = o.status === "completed";
   const [collapsed, setCollapsed] = useState(false),
     [density, setDensity] = useState(40),
@@ -220,11 +284,14 @@ function OrderCard({
           const cell = n.closest("td");
           if (!cell) return;
           const c = getComputedStyle(cell);
+          const badgePadding = n.dataset.field === "frequency"
+            ? 2 * parseFloat(c.getPropertyValue("--fd-frequency-change-padding-inline"))
+            : 0;
           const available =
             cell.clientWidth -
             parseFloat(c.paddingLeft) -
             parseFloat(c.paddingRight) -
-            (n.dataset.field === "frequency" ? 16 : 0);
+            badgePadding;
           if (n.getBoundingClientRect().width > available)
             fields.add(n.dataset.field!);
         });
@@ -327,6 +394,7 @@ function OrderCard({
       ref={root}
       id={`instruction-${o.id}`}
       className={`fd-card ${o.set ? "fd-card-set" : "fd-card-single"}`}
+      data-dispensing={o.kind === "조제" || undefined}
       style={{ "--fd-row-height": `${density}px` } as React.CSSProperties}
     >
       <header className="fd-toolbar">
@@ -482,8 +550,10 @@ function OrderCard({
                           "작업 여부",
                           "",
                         ].map((text, n) => (
-                          <TableHead key={n} className={`fd-col-${n}`}>
-                            {[2, 8, 11].includes(n) ? (
+                          <TableHead key={n} className={`fd-col-${n}${n === 2 && o.kind === "조제" ? " relative" : ""}`}>
+                            {n === 2 && o.kind === "조제" ? (
+                              <InstructionItemResizeHandle onResize={onItemColumnResize} />
+                            ) : [2, 8, 11].includes(n) ? (
                               <Icon name="cell-divider" />
                             ) : n === 4 || n === 7 ? (
                               <span data-fd-unit={n === 4 ? "dose" : "total"}>{text}</span>
