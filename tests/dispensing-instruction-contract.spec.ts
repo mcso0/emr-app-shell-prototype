@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 import { instructionCommandSchema, instructionCompletionConfirmation } from "../src/features/fulfillment/instruction-contract";
 import { executeInstructionRequest } from "../src/features/fulfillment/server-instruction";
 import { syntheticInstruction } from "../src/features/dispensing/instruction-fixtures";
-import { createInstructionView, getInstructionStatusLabel } from "../src/features/dispensing/instruction-view-model";
+import type { TaskInstructionReview } from "../src/features/fulfillment/task-instruction-review-contract";
+import { createInstructionView, getDispensingRerequestChanges, getInstructionStatusLabel } from "../src/features/dispensing/instruction-view-model";
 
 const command = { action: "complete_all" as const, commandId: "00000000-0000-4000-8000-000000000001", expectedRevision: "revision-a" };
 
@@ -87,6 +88,45 @@ test("the dispensing instruction and history show the saved course request over 
     { itemId: item.id, field: "total", before: "4", after: "6" },
   ]);
   expect(view.orders[0].items[1]).toMatchObject({ total: "3", totalUnit: "T" });
+});
+
+test("dispensing change review keeps set items and successive edits separate", () => {
+  const document = structuredClone(syntheticInstruction);
+  const [first, second] = document.items;
+  first.attemptNo = 3;
+  second.attemptNo = 2;
+  const editedAt = "2026-11-09T11:47:00.123456+00:00";
+  const earlier = "2026-11-09T11:40:00.123456+00:00";
+  const revision = (orderId: string, createdAt: string, before: string, after: string) => ({
+    id: `${orderId}-${createdAt}`, orderId, createdAt, actorName: null, changeType: "re_request",
+    before: { detailInputs: { frequency: before } }, after: { detailInputs: { frequency: after } },
+  });
+  const firstRevision = revision(first.orderId, editedAt, "bid", "tid");
+  document.changes = [
+    revision(first.orderId, earlier, "sid", "bid"),
+    firstRevision,
+    revision(second.orderId, editedAt, "tid", "qid"),
+  ];
+  const review = (item: typeof first, createdAt: string, reason: string): TaskInstructionReview => ({
+    taskId: item.taskId, previous: null, snapshots: [], requiresAcknowledgement: true,
+    current: {
+      chartId: "synthetic-chart", scope: "dispensing", versions: {}, versionKey: "a".repeat(64),
+      entries: [{ orderId: item.orderId, scope: "dispensing", kind: "clinical_edit", revision: 2,
+        instruction: `복용 주기 변경\n사유: ${reason}`, deleted: false, actorName: null, createdAt }],
+    },
+  });
+  const reviews = [review(second, editedAt, "둘째 품목 변경"), review(first, editedAt, "첫째 품목 변경")];
+  const changes = getDispensingRerequestChanges(document, reviews);
+  expect(changes.get(first.taskId)).toMatchObject({
+    orderName: first.name, reason: "첫째 품목 변경", fields: [{ key: "frequency", before: "bid", after: "tid" }],
+  });
+  expect(changes.get(second.taskId)).toMatchObject({
+    orderName: second.name, reason: "둘째 품목 변경", fields: [{ key: "frequency", before: "tid", after: "qid" }],
+  });
+  expect(getDispensingRerequestChanges(document, [review(first, earlier, "이전 변경")]).get(first.taskId)).toBeNull();
+  expect(getDispensingRerequestChanges(document, [review(first, editedAt, "여러 줄\n사유: 원문")]).get(first.taskId)).toBeNull();
+  document.changes.push({ ...firstRevision, id: "duplicate" });
+  expect(getDispensingRerequestChanges(document, reviews).get(first.taskId)).toBeNull();
 });
 
 test("set instruction is composed for its own children without overwriting individual notes", () => {

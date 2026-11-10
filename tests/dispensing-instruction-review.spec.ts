@@ -498,11 +498,15 @@ for (const queueType of ["dispensing", "treatment"] as const) {
   test(`${queueType} re-request keeps the started instruction and requires review before continuing`, async ({ page }) => {
     const { document, actions, assignmentWrites } = await install(page, { queueType, started: true });
     const item = document.items[0];
+    const dispensing = queueType === "dispensing";
+    const editedAt = "2026-10-31T00:20:00Z";
     const before = queueType === "dispensing"
-      ? { detailSchemaVersion: 1, detailInputs: { ...item.plan.detailInputs as object, frequency: "bid" } }
+      ? { detailSchemaVersion: 1, detailInputs: { ...item.plan.detailInputs as object, frequency: "bid" },
+        calculationOutputs: { plannedPracticalTotalQuantity: 6, dispenseUnit: "APPL" } }
       : { detailSchemaVersion: 3, detailInputs: { method: "변경 전 합성 처치" } };
     const after = queueType === "dispensing"
-      ? { ...before, detailInputs: { ...before.detailInputs, frequency: "qid" } }
+      ? { ...before, detailInputs: { ...before.detailInputs, frequency: "tid" },
+        calculationOutputs: { plannedPracticalTotalQuantity: 9, dispenseUnit: "APPL" } }
       : { ...before, detailInputs: { method: "수정된 합성 처치" } };
     item.status = "requested";
     item.attemptNo = 2;
@@ -513,21 +517,35 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     document.firstStartedAt = "2026-10-31T00:05:00+00:00";
     document.canStart = true;
     document.canUnassign = true;
-    document.changes = [{ id: "synthetic-edit", orderId: id, createdAt: "2026-10-31T00:20:00Z",
+    document.changes = [{ id: "synthetic-edit", orderId: id, createdAt: editedAt,
       actorName: "합성 수의사", changeType: "re_request",
       before: { ...before, instruction: item.instruction }, after: { ...after, instruction: item.instruction } }];
+    const emptyDocument = { chartId: id, scope: queueType, entries: [], versions: {}, versionKey: "a".repeat(64) };
     let requiresAcknowledgement = true;
+    let failAcknowledgement = dispensing;
+    let reviewPosts = 0;
+    let mismatch = false;
     await page.route("**/fulfillment/instruction-review*", route => {
       if (route.request().method() === "POST") {
         expect(route.request().postDataJSON()).toEqual({ taskId: secondId, versionKey: "b".repeat(64) });
+        reviewPosts++;
+        if (failAcknowledgement) {
+          failAcknowledgement = false;
+          return route.fulfill({ status: 503, json: { ok: false } });
+        }
         requiresAcknowledgement = false;
         return route.fulfill({ json: { ok: true } });
       }
       return route.fulfill({ json: { ok: true, reviews: [{
-        taskId: secondId, requiresAcknowledgement, previous: null, snapshots: [],
+        taskId: secondId, requiresAcknowledgement, previous: emptyDocument,
+        snapshots: [1, 2].map(attemptNo => ({
+          phase: "requested", attemptNo, document: emptyDocument, capturedAt: editedAt,
+        })),
         current: { chartId: id, scope: queueType, versions: { [queueType]: 2 }, versionKey: "b".repeat(64),
           entries: [{ scope: queueType, orderId: id, kind: "clinical_edit", revision: 2,
-            instruction: "합성 변경 사항을 확인해 주세요.", deleted: false, legacy: false, actorName: null, createdAt: null }] },
+            instruction: dispensing ? "빈도: bid → tid\n사유: 합성 복용 주기 조정" : "합성 변경 사항을 확인해 주세요.",
+            deleted: false, legacy: false, actorName: "합성 수의사",
+            createdAt: mismatch ? "2026-10-31T00:25:00Z" : editedAt }] },
       }] } });
     });
 
@@ -550,19 +568,48 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await expect(modified).toContainText("합성 품목 1");
     if (queueType === "dispensing") {
       await expect(modified.getByRole("button", { name: /복용 주기 .*변경 내용 보기/ })).toBeVisible();
-      await expect(modified).toContainText(/qid|하루 4회/i);
+      await expect(modified).toContainText(/tid|하루 3회/i);
     } else {
       await expect(modified).toContainText("수정된 합성 처치");
     }
     expect(actions).toEqual([]);
 
     const continueWork = page.getByRole("button", { name: "업무 계속하기" });
+    const review = page.getByRole("dialog", { name: dispensing ? "조제 오더 변경 확인" : "지시사항 확인" });
+    const confirmLabel = dispensing ? "변경 확인" : "변경·남은 작업 범위 확인";
+    if (dispensing) {
+      const banner = page.getByRole("complementary", { name: "조제 오더가 수정되었습니다" });
+      await expect(banner).toContainText("합성 품목 1");
+      await expect(banner).toContainText("복용 주기 bid → tid");
+      await expect(banner).toContainText("요청 조제량 6 APPL → 9 APPL");
+      await expect(banner.getByText("변경됨", { exact: true })).toHaveCount(0);
+      await expect(banner.getByRole("button", { name: /펼치기/ })).toHaveCount(0);
+      const viewChanges = banner.getByRole("button", { name: "변경 내용 보기" });
+      await viewChanges.focus();
+      await page.keyboard.press("Enter");
+      const compare = review.getByRole("table", { name: "조제 오더 변경 전후" });
+      await expect(compare.getByRole("row", { name: /복용 주기 bid tid/ })).toBeVisible();
+      await expect(compare.getByRole("row", { name: /요청 조제량 6 APPL 9 APPL/ })).toBeVisible();
+      await expect(review.getByText("합성 복용 주기 조정")).toBeVisible();
+      await expect(review.getByText("요청·완료 당시 기록")).toHaveCount(0);
+      await expect(review.getByText("작성된 지시 없음")).toHaveCount(0);
+      await review.getByRole("button", { name: "닫기", exact: true }).click();
+      await expect(viewChanges).toBeFocused();
+      expect(reviewPosts).toBe(0);
+    }
     await continueWork.click();
-    const review = page.getByRole("dialog", { name: "지시사항 확인" });
     await expect(review).toBeVisible();
     expect(actions).toEqual([]);
-    await review.getByRole("button", { name: "변경·남은 작업 범위 확인" }).click();
+    const confirm = review.getByRole("button", { name: confirmLabel });
+    await confirm.click();
+    if (dispensing) {
+      await expect(review.getByRole("alert")).toContainText("확인을 저장하지 못했습니다.");
+      await expect(review.getByText("합성 복용 주기 조정")).toBeVisible();
+      expect(actions).toEqual([]);
+      await confirm.dblclick();
+    }
     await expect(review).not.toBeVisible();
+    expect(reviewPosts).toBe(dispensing ? 2 : 1);
     await continueWork.click();
     await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
     await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
@@ -587,13 +634,23 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     await continueWork.click();
     await expect(review).toBeVisible();
     expect(actions).toEqual(["start", "unassign"]);
-    await review.getByRole("button", { name: "변경·남은 작업 범위 확인" }).click();
+    await review.getByRole("button", { name: confirmLabel }).click();
     await expect(review).not.toBeVisible();
     await continueWork.click();
     await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
     await expect(modified).toContainText("합성 품목 1");
     expect(actions).toEqual(["start", "unassign", "claim"]);
     expect(assignmentWrites).toEqual([expect.objectContaining({ action: "claim", startWork: true })]);
+
+    if (dispensing) {
+      mismatch = true;
+      await page.reload();
+      await page.getByRole("button", { name: "변경이력 보기" }).click();
+      const unmatched = page.getByRole("dialog", { name: "지시사항 확인" });
+      await expect(unmatched.getByText(/합성 복용 주기 조정/)).toBeVisible();
+      await expect(unmatched.getByRole("table", { name: "조제 오더 변경 전후" })).toHaveCount(0);
+      await expect(unmatched.getByText("요청·완료 당시 기록")).toHaveCount(0);
+    }
   });
 }
 
