@@ -6,6 +6,8 @@ import type {
   InstructionItem,
 } from "@/features/fulfillment/instruction-contract";
 
+import type { DispensingOrderChange, TaskInstructionReview } from "@/features/fulfillment/task-instruction-review-contract";
+
 export type InstructionViewItem = {
   id: string;
   name: string;
@@ -315,3 +317,82 @@ export const formatInstructionValue = (k: string, v: unknown) =>
         : k === "storage"
           ? storageLabels[String(v)] || String(v)
           : String(v ?? "없음");
+
+const dispensingChangeLabels: Record<string, string> = {
+  dose: "1회 용량",
+  doseUnit: "용량 단위",
+  instruction: "지시",
+  memo: "메모",
+  administrationTiming: "복용 시점",
+  totalOccurrences: "총 시행 횟수",
+  maximumAuthorizedCount: "최대 허용 횟수",
+};
+
+function dispensingChangeValue(field: string, value: unknown) {
+  if (typeof value === "boolean") return value ? "예" : "아니요";
+  const formatted = text(value);
+  if (formatted === "—" && value && typeof value === "object") return JSON.stringify(value);
+  const displayField = field === "medicationInstruction" ? "medicationGuide" : field === "storageMethod" ? "storage" : field;
+  return formatInstructionValue(displayField, formatted);
+}
+
+export function getDispensingRerequestChanges(document: InstructionDocument, reviews: TaskInstructionReview[]) {
+  const result = new Map<string, DispensingOrderChange | null>();
+  if (document.queueType !== "dispensing") return result;
+
+  for (const item of document.items) {
+    if (item.attemptNo < 2) continue;
+    const review = reviews.find(review => review.taskId === item.taskId);
+    const entry = review?.current?.entries.find(entry => entry.kind === "clinical_edit" && entry.orderId === item.orderId);
+    if (!entry || entry.deleted) continue;
+    result.set(item.taskId, null);
+    if (!entry.createdAt) continue;
+
+    // The two records of a confirmed edit share the transaction timestamp.
+    // Keep the original review when the latest re-request cannot be matched uniquely.
+    const revisions = document.changes.filter(change => change.orderId === item.orderId && change.changeType === "re_request");
+    const revision = revisions.at(-1);
+    if (revision?.createdAt !== entry.createdAt ||
+        revisions.filter(change => change.createdAt === entry.createdAt).length !== 1) continue;
+
+    const reasonSeparator = "\n사유: ";
+    const reasonIndex = entry.instruction.indexOf(reasonSeparator);
+    if (reasonIndex < 0 || reasonIndex !== entry.instruction.lastIndexOf(reasonSeparator)) continue;
+    const reason = entry.instruction.slice(reasonIndex + reasonSeparator.length);
+    if (!reason.trim()) continue;
+
+    const before = displayFields(revision.before, {}, "", "dispensing");
+    const after = displayFields(revision.after, {}, "", "dispensing");
+    const beforeInputs = record(revision.before.detailInputs);
+    const afterInputs = record(revision.after.detailInputs);
+    const schemaVersion = revision.after.detailSchemaVersion ?? revision.before.detailSchemaVersion;
+    const schema = getClinicalOrderFieldSchema("dispensing", typeof schemaVersion === "number" ? schemaVersion : undefined);
+    const keys = new Set([...Object.keys(beforeInputs), ...Object.keys(afterInputs)]);
+    const fields: DispensingOrderChange["fields"] = [];
+
+    const add = (key: string, label: string, before: string, after: string) => {
+      if (before !== after) fields.push({ key, label, before, after });
+    };
+    const quantity = ({ total, totalUnit }: typeof before) =>
+      total === "—" || totalUnit === "—" ? total : `${total} ${totalUnit}`;
+    add("frequency", "복용 주기", before.frequency, after.frequency);
+    add("requestQuantity", "요청 조제량", quantity(before), quantity(after));
+    keys.delete("frequency");
+    if (before.total === text(beforeInputs.totalQuantity) && after.total === text(afterInputs.totalQuantity)) keys.delete("totalQuantity");
+    if (before.totalUnit === text(formatPlanOrderTableUnit(text(beforeInputs.totalQuantityUnit))) &&
+        after.totalUnit === text(formatPlanOrderTableUnit(text(afterInputs.totalQuantityUnit)))) keys.delete("totalQuantityUnit");
+
+    for (const key of keys) {
+      const label = Object.hasOwn(dispensingChangeLabels, key)
+        ? dispensingChangeLabels[key]
+        : schema?.fields.find(field => field.key === key)?.label ?? "기타 업무 항목";
+      add(key, label, dispensingChangeValue(key, beforeInputs[key]), dispensingChangeValue(key, afterInputs[key]));
+    }
+    const mode = (plan: Record<string, unknown>) =>
+      record(plan.calculationOutputs).actualDispenseSource === "manual_override" ? "수동 지정" : "자동 계산";
+    add("requestMode", "조제량 입력 방식", mode(revision.before), mode(revision.after));
+
+    if (fields.length) result.set(item.taskId, { entry, orderName: item.name || document.name, reason, fields });
+  }
+  return result;
+}

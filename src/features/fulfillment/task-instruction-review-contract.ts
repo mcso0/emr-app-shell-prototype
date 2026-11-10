@@ -24,3 +24,11 @@ export type TaskInstructionReview = z.infer<typeof taskInstructionReviewSchema>;
 export type EffectiveInstructions = z.infer<typeof effectiveInstructionsSchema>;
 
 export const instructionReviewTargetId = (item: TaskInstructionReview) => (item.taskId ?? item.orderId)!;
+
+/** Presentation from a dispensing order revision already matched to this review. */
+export type DispensingOrderChange = {
+  entry: EffectiveInstructions["entries"][number];
+  orderName: string;
+  reason: string;
+  fields: { key: string; label: string; before: string; after: string }[];
+};

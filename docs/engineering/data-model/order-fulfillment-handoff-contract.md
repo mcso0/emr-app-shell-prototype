@@ -184,6 +184,15 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 - The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
 - After releasing a replacement attempt, 업무 계속하기 checks the latest instructions and claims and resumes the existing attempt for an eligible assignee. Its earlier start remains in the instruction history.
 
+For a dispensing replacement attempt, the order-change banner names the item
+and previews the first two changes. The review shows saved before and after
+values, including the request quantity and unit, followed by the recorded reason.
+The UI combines values and reason only for a uniquely matched order and revision.
+Otherwise the original instruction text remains available. The review hides
+empty request or completion entries and keeps saved instructions and recorded
+partial work accessible. Opening or closing the review does not acknowledge the
+revision. Confirmation and resuming work remain separate actions.
+
 ## Reopening a completed dispensing or treatment instruction
 
 - In the instruction workspace, the toolbar shows the start time, current
