@@ -1960,7 +1960,15 @@ function DispensingContentBody({
     <EmrStatusBadge label={instructionStartStatus} marker="none" testId="instruction-status-label" />
   );
   const instructionInfoItems: Array<{ label: string; value: ReactNode }> = [
-    { label: "요청 일시", value: instructionRequestedAt },
+    {
+      label: "요청 일시",
+      value: usesInstructionWorkspace ? (
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          <span className="min-w-0 truncate">{instructionRequestedAt}</span>
+          {instructionStatusBadge}
+        </span>
+      ) : instructionRequestedAt,
+    },
     { label: "환자 정보", value: instructionPatientSummary },
     { label: "요청 수의사", value: instructionRequester },
     ...(!usesInstructionWorkspace ? [
@@ -2216,11 +2224,8 @@ function DispensingContentBody({
               <>
                 {usesInstructionWorkspace ? (
                   <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-                    <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-                      <span className="text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
-                        {`${instructionType} 시작 일시 ${instructionStartedAt}`}
-                      </span>
-                      {instructionStatusBadge}
+                    <span className="shrink-0 whitespace-nowrap text-[13px] font-medium leading-[18px] text-[var(--emr-text-secondary)]">
+                      {`${instructionType} 시작 일시 ${instructionStartedAt}`}
                     </span>
                     <span className="inline-flex min-w-0 items-center gap-2">
                       <Separator orientation="vertical" className="h-4 data-vertical:self-center" />
@@ -2313,7 +2318,9 @@ function DispensingContentBody({
               data-slot="instruction-info-card"
               className={cn(
                 "grid min-h-[72px] rounded-[var(--emr-document-info-radius)] border border-[var(--emr-document-info-divider)] bg-card px-[var(--emr-document-info-padding-x)] py-[var(--emr-document-info-padding-y)]",
-                usesInstructionWorkspace ? "grid-cols-3" : "grid-cols-[repeat(4,minmax(0,1fr))_minmax(max-content,1fr)]",
+                usesInstructionWorkspace
+                  ? "grid-cols-[minmax(max-content,1fr)_repeat(2,minmax(0,1fr))]"
+                  : "grid-cols-[repeat(4,minmax(0,1fr))_minmax(max-content,1fr)]",
               )}
             >
               {instructionInfoItems.map(({ label, value }) => (
