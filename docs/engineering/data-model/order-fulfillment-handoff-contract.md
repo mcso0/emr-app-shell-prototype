@@ -181,7 +181,8 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 
 - A requested or released (paused and unassigned) replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
 - An instruction with prior work stays open after re-request and reload. The scoped instruction read returns the earliest start time of the displayed items across their attempts. A document without start history follows the prework entry.
-- The instruction table shows changed rows under 수정된 오더. 업무 계속하기 uses the existing start command and acknowledgement checks for the current attempt. The re-request itself leaves that attempt pending.
+- The instruction table shows changed rows under 수정된 오더. The re-request leaves the current attempt pending. When 업무 계속하기 opens the review, acknowledging the latest changes continues the same start or claim-and-start command. The order moves to 진행중 when the command succeeds.
+- When 변경 내용 보기 or 변경이력 보기 opens the review, acknowledgement records the reviewed version. The order keeps its current work status.
 - After releasing a replacement attempt, 업무 계속하기 checks the latest instructions and claims and resumes the existing attempt for an eligible assignee. Its earlier start remains in the instruction history.
 
 For a dispensing replacement attempt, the order-change banner names the item
@@ -191,7 +192,7 @@ The UI combines values and reason only for a uniquely matched order and revision
 Otherwise the original instruction text remains available. The review hides
 empty request or completion entries and keeps saved instructions and recorded
 partial work accessible. Opening or closing the review does not acknowledge the
-revision. Confirmation and resuming work remain separate actions.
+revision.
 
 ## Reopening a completed dispensing or treatment instruction
 

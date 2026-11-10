@@ -72,7 +72,11 @@ export function TaskInstructionReview({ controller, renderInstructions, dispensi
     <Dialog open={controller.open} onOpenChange={open => { if (!open) controller.close(); }}>
       <EmrDialogShell title={hasDispensingChange ? "조제 오더 변경 확인" : "지시사항 확인"} variant="wide-form" showCloseButton={!controller.busy}
         secondaryAction={<Button variant="outline" disabled={controller.busy} onClick={controller.close}>닫기</Button>}
-        primaryAction={selected.some(item => item.requiresAcknowledgement) && <Button disabled={controller.busy} onClick={() => void controller.acknowledge()}>{controller.busy ? "확인 중…" : confirmLabel}</Button>}>
+        primaryAction={selected.some(item => item.requiresAcknowledgement) && (
+          <Button disabled={controller.busy} onClick={() => void controller.acknowledge()}>
+            {controller.busy ? "확인 중…" : controller.continuationLabel ?? confirmLabel}
+          </Button>
+        )}>
         <div className="space-y-6">{reviewItems.map(item => {
           const targetId = instructionReviewTargetId(item);
           const change = dispensingChanges?.get(targetId);
