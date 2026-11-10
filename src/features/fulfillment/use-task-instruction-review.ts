@@ -5,6 +5,8 @@ import { usePageReadiness } from "@/components/emr/page-loading-boundary";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { instructionReviewListSchema, instructionReviewTargetId, type TaskInstructionReview } from "./task-instruction-review-contract";
 
+type ReviewContinuation = { label: string; run: () => Promise<void> };
+
 export function useTaskInstructionReview(workspaceId: string | undefined, taskIds: readonly string[], revisionKey?: string, targetKind: "task" | "order" = "task", contextId = "") {
   const ids = [...new Set(taskIds)].sort().join(",");
   const endpoint = workspaceId ? `/api/workspaces/${encodeURIComponent(workspaceId)}/fulfillment/instruction-review` : null;
@@ -16,7 +18,7 @@ export function useTaskInstructionReview(workspaceId: string | undefined, taskId
   const requests = useRef(new Set<AbortController>());
   const [loaded, setLoaded] = useState<{ identity: string; reviews: TaskInstructionReview[] } | null>(null);
   const [failure, setFailure] = useState<{ identity: string; message: string } | null>(null);
-  const [openFor, setOpenFor] = useState<{ identity: string; ids: string[] } | null>(null);
+  const [openFor, setOpenFor] = useState<{ identity: string; ids: string[]; continuation?: ReviewContinuation } | null>(null);
   const [busyFor, setBusyFor] = useState<string | null>(null);
   const reviews = loaded?.identity === identity ? loaded.reviews : [];
   const error = failure?.identity === identity ? failure.message : null;
@@ -60,14 +62,14 @@ export function useTaskInstructionReview(workspaceId: string | undefined, taskId
     };
   }, [read, revisionKey, identity]);
 
-  const check = async (targets = ids ? ids.split(",") : []) => {
+  const check = async (targets = ids ? ids.split(",") : [], continuation?: ReviewContinuation) => {
     if (!endpoint || targets.length === 0) return true;
     if (pending.current) return false;
     pending.current = true; setBusyFor(identity);
     try {
       const current = await read(targets);
       if (!current || active.current !== identity) return false;
-      if (current.some(item => item.requiresAcknowledgement)) { setOpenFor({ identity, ids: targets }); return false; }
+      if (current.some(item => item.requiresAcknowledgement)) { setOpenFor({ identity, ids: targets, continuation }); return false; }
       return true;
     } finally { if (active.current === identity) { pending.current = false; setBusyFor(null); } }
   };
@@ -77,6 +79,7 @@ export function useTaskInstructionReview(workspaceId: string | undefined, taskId
     const selected = reviews.filter(item => openFor.ids.includes(instructionReviewTargetId(item)) && item.requiresAcknowledgement && item.current);
     const unique = selected.filter((item, index) => selected.findIndex(other => other.current?.chartId === item.current?.chartId && other.current?.versionKey === item.current?.versionKey) === index);
     const abort = new AbortController(); requests.current.add(abort);
+    let acknowledged = false;
     try {
       for (const item of unique) {
         const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, signal: abort.signal,
@@ -89,21 +92,35 @@ export function useTaskInstructionReview(workspaceId: string | undefined, taskId
         }
       }
       const current = await read(openFor.ids);
-      if (active.current === identity && current && !current.some(item => item.requiresAcknowledgement)) setOpenFor(null);
+      acknowledged =
+        !abort.signal.aborted &&
+        active.current === identity &&
+        current !== null &&
+        !current.some(item => item.requiresAcknowledgement);
     } catch (failure) {
       if (!abort.signal.aborted && active.current === identity) setFailure({ identity, message: failure instanceof Error ? failure.message : "확인을 저장하지 못했습니다." });
     } finally {
       requests.current.delete(abort);
       if (active.current === identity) { pending.current = false; setBusyFor(null); }
     }
+    if (acknowledged) {
+      setOpenFor(null);
+      await openFor.continuation?.run();
+    }
+  };
+  const openReview = (continuation?: ReviewContinuation) => {
+    const targets = ids ? ids.split(",") : reviews.map(instructionReviewTargetId);
+    setOpenFor({ identity, ids: targets, continuation });
+    void read(targets);
   };
   return {
     workspaceId, reviews, error, busy: busyFor === identity, open: openFor?.identity === identity,
+    continuationLabel: openFor?.identity === identity ? openFor.continuation?.label : undefined,
     selected: reviews.filter(item => openFor?.identity === identity && openFor.ids.includes(instructionReviewTargetId(item))),
     refresh: () => read(ids ? ids.split(",") : reviews.map(instructionReviewTargetId)), check, acknowledge,
-    show: () => { setOpenFor({ identity, ids: ids ? ids.split(",") : reviews.map(instructionReviewTargetId) }); void read(ids ? ids.split(",") : reviews.map(instructionReviewTargetId)); },
+    show: () => openReview(),
     close: () => { if (!pending.current) setOpenFor(null); },
-    requireReview: () => { const targets = ids ? ids.split(",") : reviews.map(instructionReviewTargetId); setOpenFor({ identity, ids: targets }); void read(targets); },
+    requireReview: openReview,
   };
 }
 export type TaskInstructionReviewController = ReturnType<typeof useTaskInstructionReview>;

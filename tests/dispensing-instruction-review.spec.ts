@@ -495,8 +495,9 @@ test("direct start still requires acknowledgement of changed instructions", asyn
 });
 
 for (const queueType of ["dispensing", "treatment"] as const) {
-  test(`${queueType} re-request keeps the started instruction and requires review before continuing`, async ({ page }) => {
-    const { document, actions, assignmentWrites } = await install(page, { queueType, started: true });
+  test(`${queueType} re-request continues from action review and only records history review`, async ({ page }) => {
+    const failAssignment = queueType === "dispensing";
+    const { document, actions, assignmentWrites } = await install(page, { queueType, started: true, failAssignment });
     const item = document.items[0];
     const dispensing = queueType === "dispensing";
     const editedAt = "2026-10-31T00:20:00Z";
@@ -523,15 +524,23 @@ for (const queueType of ["dispensing", "treatment"] as const) {
     const emptyDocument = { chartId: id, scope: queueType, entries: [], versions: {}, versionKey: "a".repeat(64) };
     let requiresAcknowledgement = true;
     let failAcknowledgement = dispensing;
-    let reviewPosts = 0;
     let mismatch = false;
+    let version = 2;
+    let rejectFirstReview = queueType === "dispensing";
+    const acknowledgementVersions: string[] = [];
     await page.route("**/fulfillment/instruction-review*", route => {
+      const versionKey = String(version).repeat(64);
       if (route.request().method() === "POST") {
-        expect(route.request().postDataJSON()).toEqual({ taskId: secondId, versionKey: "b".repeat(64) });
-        reviewPosts++;
+        expect(route.request().postDataJSON()).toEqual({ taskId: secondId, versionKey });
+        acknowledgementVersions.push(versionKey);
         if (failAcknowledgement) {
           failAcknowledgement = false;
           return route.fulfill({ status: 503, json: { ok: false } });
+        }
+        if (rejectFirstReview) {
+          rejectFirstReview = false;
+          version++;
+          return route.fulfill({ status: 409, json: { ok: false, error: "instruction_version_conflict" } });
         }
         requiresAcknowledgement = false;
         return route.fulfill({ json: { ok: true } });
@@ -541,8 +550,8 @@ for (const queueType of ["dispensing", "treatment"] as const) {
         snapshots: [1, 2].map(attemptNo => ({
           phase: "requested", attemptNo, document: emptyDocument, capturedAt: editedAt,
         })),
-        current: { chartId: id, scope: queueType, versions: { [queueType]: 2 }, versionKey: "b".repeat(64),
-          entries: [{ scope: queueType, orderId: id, kind: "clinical_edit", revision: 2,
+        current: { chartId: id, scope: queueType, versions: { [queueType]: version }, versionKey,
+          entries: [{ scope: queueType, orderId: id, kind: "clinical_edit", revision: version,
             instruction: dispensing ? "빈도: bid → tid\n사유: 합성 복용 주기 조정" : "합성 변경 사항을 확인해 주세요.",
             deleted: false, legacy: false, actorName: "합성 수의사",
             createdAt: mismatch ? "2026-10-31T00:25:00Z" : editedAt }] },
@@ -595,27 +604,33 @@ for (const queueType of ["dispensing", "treatment"] as const) {
       await expect(review.getByText("작성된 지시 없음")).toHaveCount(0);
       await review.getByRole("button", { name: "닫기", exact: true }).click();
       await expect(viewChanges).toBeFocused();
-      expect(reviewPosts).toBe(0);
+      expect(acknowledgementVersions).toEqual([]);
     }
     await continueWork.click();
     await expect(review).toBeVisible();
     expect(actions).toEqual([]);
-    const confirm = review.getByRole("button", { name: confirmLabel });
-    await confirm.click();
-    if (dispensing) {
+    const confirmContinue = review.getByRole("button", {
+      name: queueType === "dispensing" ? "확인하고 조제 계속" : "확인하고 처치 계속",
+    });
+    if (queueType === "dispensing") {
+      await confirmContinue.click();
       await expect(review.getByRole("alert")).toContainText("확인을 저장하지 못했습니다.");
       await expect(review.getByText("합성 복용 주기 조정")).toBeVisible();
       expect(actions).toEqual([]);
-      await confirm.dblclick();
+      await confirmContinue.click();
+      await expect(review.getByRole("alert")).toContainText("지시가 다시 변경되었습니다.");
+      await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
+      expect(actions).toEqual([]);
     }
+    await confirmContinue.evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
     await expect(review).not.toBeVisible();
-    expect(reviewPosts).toBe(dispensing ? 2 : 1);
-    await continueWork.click();
     await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
     await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
     await expect(startedAt).toBeVisible();
     await expect(modified).toContainText("합성 품목 1");
     expect(actions).toEqual(["start"]);
+    expect(acknowledgementVersions).toEqual(queueType === "dispensing"
+      ? ["2".repeat(64), "2".repeat(64), "3".repeat(64)] : ["2".repeat(64)]);
 
     await page.getByRole("button", { name: "업무 상태 변경" }).click();
     await page.getByRole("menuitem", { name: "담당 취소", exact: true }).click();
@@ -633,14 +648,32 @@ for (const queueType of ["dispensing", "treatment"] as const) {
 
     await continueWork.click();
     await expect(review).toBeVisible();
+    await review.getByRole("button", { name: "닫기", exact: true }).last().click();
+    await expect(review).not.toBeVisible();
+    await page.getByRole("button", { name: dispensing ? "변경 내용 보기" : "변경이력 보기", exact: true }).click();
     expect(actions).toEqual(["start", "unassign"]);
     await review.getByRole("button", { name: confirmLabel }).click();
     await expect(review).not.toBeVisible();
+    await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
+    expect(actions).toEqual(["start", "unassign"]);
+
+    version++;
+    requiresAcknowledgement = true;
     await continueWork.click();
+    await confirmContinue.click();
+    if (failAssignment) {
+      await expect(page.getByText("변경을 저장하지 못했어요. 다시 시도해 주세요.")).toBeVisible();
+      await expect(page.getByTestId("instruction-status-label")).toHaveText("재요청");
+      const acknowledgementCount = acknowledgementVersions.length;
+      await continueWork.click();
+      await expect(page.getByTestId("instruction-status-label")).toHaveText("진행중");
+      expect(acknowledgementVersions).toHaveLength(acknowledgementCount);
+      expect(assignmentWrites[1].commandId).toBe(assignmentWrites[0].commandId);
+    }
     await expect(page.getByTestId("order-queue-status-inProgress").locator(card)).toBeVisible();
     await expect(modified).toContainText("합성 품목 1");
-    expect(actions).toEqual(["start", "unassign", "claim"]);
-    expect(assignmentWrites).toEqual([expect.objectContaining({ action: "claim", startWork: true })]);
+    expect(actions).toEqual(failAssignment ? ["start", "unassign", "claim", "claim"] : ["start", "unassign", "claim"]);
+    expect(assignmentWrites[0]).toEqual(expect.objectContaining({ action: "claim", startWork: true }));
 
     if (dispensing) {
       mismatch = true;

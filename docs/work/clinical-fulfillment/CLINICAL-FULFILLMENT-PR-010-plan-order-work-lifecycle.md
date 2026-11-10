@@ -2385,7 +2385,7 @@ after commit.
 Local implementation from `origin/main` `63b6107a` follows the
 [dispensing re-request display contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09).
 The dispensing instruction uses the existing authorized reads for saved values
-and the reason. It keeps acknowledgement and continuation separate.
+and the reason. PR #1080 retained the original two-step continuation flow.
 
 Local verification passed four focused Playwright cases and 33 Storybook
 browser stories. Coverage includes a saved quantity change, same-time edits
@@ -2393,6 +2393,31 @@ to two set items, successive revisions, ambiguous history, empty and meaningful
 snapshots, partial work, keyboard focus return, failed acknowledgement and retry,
 and unchanged treatment continuation. The synthetic banner and review fit at
 360 px without horizontal overflow.
+
+### Continue a re-request after confirmation — 2026-11-09
+
+The [handoff contract](../../engineering/data-model/order-fulfillment-handoff-contract.md#dispensing-and-treatment-re-request-continuity--2026-11-09)
+distinguishes the two review entry paths. 업무 계속하기 carries the start or
+claim-and-start action through successful acknowledgement. 변경 내용 보기
+and 변경이력 보기 record acknowledgement only. The existing server command
+checks the current version and work permissions before changing the status.
+
+Local synthetic browser tests covered both queues, a closed review followed
+by history review, duplicate confirmation clicks, a changed instruction
+version, and a failed claim retried with the same command. This change is
+at the local verification stage.
+
+Playwright passed 49 cases. Two prework summary text assertions also failed
+on the unmodified baseline. Storybook passed 13 cases. The late history
+loading status assertion also failed on the unmodified baseline.
+
+The requested release covers this PR and Production verification of both
+entry paths in dispensing and treatment. Use synthetic browser responses for
+the Preview. For persisted Production verification, scope a dedicated
+temporary workspace, test identity, and four non-billable synthetic orders
+to the two paths in both queues. Verify acknowledgement and the resulting
+work status, then clean up the temporary fixtures under separate explicit
+authorization.
 
 ### Dispensing instruction item column — 2026-11-09
 

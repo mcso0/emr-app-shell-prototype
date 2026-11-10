@@ -127,13 +127,24 @@ export function useFulfillmentInstruction(
 
   const document = loaded?.endpoint === endpoint ? loaded.document : null;
   const instructionReview = useTaskInstructionReview(workspaceId, document?.items.map(item => item.taskId) ?? [], document?.revision);
-  const mutate = async (intent: InstructionIntent, onReviewRequired?: () => void) => {
+  const mutate = async (
+    intent: InstructionIntent,
+    onReviewRequired?: () => void,
+    continueAfterReview?: { label: string; onSuccess: () => void },
+  ): Promise<boolean> => {
     if (!endpoint || !document || loading || (failure?.key === readKey && failure.read) || pending.current) return false;
     pending.current = true;
     setBusy(true);
     try {
     const current = generation.current;
     const selected = selection.current;
+    const continuation = continueAfterReview && {
+      label: continueAfterReview.label,
+      run: async () => {
+        if (selection.current !== selected) return;
+        if (await mutate(intent, onReviewRequired, continueAfterReview)) continueAfterReview.onSuccess();
+      },
+    };
     const fingerprint = JSON.stringify({
       endpoint,
       intent,
@@ -142,7 +153,7 @@ export function useFulfillmentInstruction(
     const startsOnAssignment = "startWork" in intent && intent.startWork === true;
     if (retry.current?.fingerprint !== fingerprint && (startsOnAssignment || ["start", "resume", "start_item", "reopen", "complete", "complete_all"].includes(intent.action))) {
       const targets = document.items.filter(item => ("itemId" in intent ? item.id === intent.itemId : true) && (intent.action === "reopen" || !["completed", "cancelled", "returned"].includes(item.status))).map(item => item.taskId);
-      const ready = await instructionReview.check(targets);
+      const ready = await instructionReview.check(targets, continuation);
       if (selection.current !== selected) return false;
       if (!ready) { onReviewRequired?.(); return false; }
     }
@@ -168,7 +179,7 @@ export function useFulfillmentInstruction(
       const parsed = instructionDocumentSchema.safeParse(body.document);
       if (!response.ok || body.ok !== true || !parsed.success) {
         if (body.error === "instruction_ack_required") {
-          instructionReview.requireReview();
+          instructionReview.requireReview(continuation);
           retry.current = null;
           onReviewRequired?.();
           return false;
