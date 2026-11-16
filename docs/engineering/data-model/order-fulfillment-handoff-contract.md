@@ -133,7 +133,7 @@ is not applied remotely. Work/evidence: [CLINICAL-FULFILLMENT-PR-010](../../work
 - After a successful 담당 취소, a released item keeps its exact selection.
   A first attempt appears as 대기중 in both queue views and opens prework
   when its remaining items are unassigned and at least one item is paused.
-  Released replacement attempts follow the re-request continuity rules below.
+  A released replacement attempt uses the same entry screen and displays 재요청.
 - Confirming 담당하기 on that screen assigns and starts the remaining items in
   one command and opens the instruction. Existing timestamps and completed
   items are preserved. The flow uses the existing instruction acknowledgement
@@ -180,10 +180,10 @@ No new API, role policy, migration or remote data change belongs to this UI slic
 ## Dispensing and treatment re-request continuity — 2026-11-09
 
 - A requested or released (paused and unassigned) replacement attempt appears as 재요청 on the patient card and in the order queue group. The card retains the original request time and requester.
-- An instruction with prior work stays open after re-request and reload. The scoped instruction read returns the earliest start time of the displayed items across their attempts. A document without start history follows the prework entry.
+- A re-request with prior work and a current main assignee keeps the instruction open. The scoped instruction read returns the earliest start time of the displayed items across their attempts. Waiting work with no main assignee opens prework even when an earlier attempt has a start time.
 - The instruction table shows changed rows under 수정된 오더. The re-request leaves the current attempt pending. When 업무 계속하기 opens the review, acknowledging the latest changes continues the same start or claim-and-start command. The order moves to 진행중 when the command succeeds.
 - When 변경 내용 보기 or 변경이력 보기 opens the review, acknowledgement records the reviewed version. The order keeps its current work status.
-- After releasing a replacement attempt, 업무 계속하기 checks the latest instructions and claims and resumes the existing attempt for an eligible assignee. Its earlier start remains in the instruction history.
+- After releasing a replacement attempt, the selected prework screen displays 재요청 beside the request time. It stays open on reload. 담당하기 checks the latest instructions and claims and starts the existing attempt for an eligible assignee. When that action requires acknowledgement, confirming the review continues the assignment. Opening 변경 내용 보기 from prework records acknowledgement without assigning or starting work. The earlier start remains in the instruction history.
 
 For a dispensing replacement attempt, the order-change banner names the item
 and previews the first two changes. The review shows saved before and after

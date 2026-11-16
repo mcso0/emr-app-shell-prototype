@@ -2244,12 +2244,16 @@ Production results in the PR. Stop on candidate drift or a failed gate.
 #### Released replacement attempts
 
 An existing replacement attempt can already have started and then been released.
-Its stored status is paused and it has no assignee. Keep its card and group in
-재요청 and show the modified orders in the instruction after reload. 업무 계속하기
-uses the existing claim-and-start command and current instruction review. A
-released first attempt still opens the waiting entry. This follow-up requires
-no migration or historical data rewrite. Verify both queues with synthetic
-fixtures and the reported Production order by read-only inspection.
+Its stored status is paused and it has no assignee. As of the 2026-11-16 local
+follow-up, the selected order returns to the 담당하기 screen and keeps its
+재요청 badge in the entry summary and queue. Reclaim uses the existing
+revision-checked claim-and-start command and instruction review. Acknowledging
+from 변경 내용 보기 records the review alone. The original start time remains
+available when the instruction opens again. The change uses the existing API
+and schema.
+
+Local browser fixtures verified dispensing and treatment after unassign,
+reload, change review and reclaim, including a failed claim and retry.
 
 ### Chart navigation to a dispensing or treatment instruction — 2026-11-09
 
